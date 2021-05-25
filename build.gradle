@@ -8,6 +8,20 @@ repositories {
     mavenCentral()
 }
 
+
+distributions {
+    main {
+        contents {
+            from {
+                [
+                    'authentication-api.yml'
+                ]
+            }
+
+        }
+    }
+}
+
 def dependencyVersions = [
     dropwizard:'2.0.21',
     junit_version: '5.6.0'
@@ -27,4 +41,10 @@ test {
 }
 
 mainClassName = 'uk.gov.di.AuthenticationApiApplication'
+
+task cfPush(type: Exec) {
+    commandLine 'cf', 'push', 'di-authentication-api', '-p', 'build/distributions/di-authentication-api.zip'
+}
+
+cfPush.dependsOn build
 
