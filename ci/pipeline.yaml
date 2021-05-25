@@ -1,0 +1,72 @@
+resource_types:
+  - name: cf-cli
+    type: docker-image
+    source:
+      repository: nulldriver/cf-cli-resource
+
+resources:
+  - name: di-authentication-api
+    type: git
+    icon: github
+    source:
+      uri: https://github.com/alphagov/di-authentication-api.git
+      ignore_paths:
+        - ci/pipeline.yaml
+      branch: main
+
+  - name: pipeline-src
+    type: git
+    icon: github
+    source:
+      uri: https://github.com/alphagov/di-authentication-api.git
+      paths:
+        - ci/pipeline.yaml
+      branch: main
+
+  - name: di-authentication-api-upload
+    type: cf-cli
+    icon: cloud-upload
+    source:
+      api: https://api.london.cloud.service.gov.uk
+      username: ((cf-username))
+      password: ((cf-password))
+      org: gds-digital-identity-authentication
+      space: build
+
+jobs:
+  - name: update-pipeline
+    plan:
+      - get: pipeline-src
+        trigger: true
+      - set_pipeline: di-authentication-api
+        file: pipeline-src/ci/pipeline.yaml
+
+  - name: deploy-app
+    plan:
+    - get: di-authentication-api
+      trigger: true
+    - task: build
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source:
+            repository: gradle
+            tag: 7.0.2-jdk16
+        inputs:
+          - name: di-authentication-api
+        outputs:
+          - name: di-authentication-api-zip
+        run:
+          path: /bin/bash
+          args:
+            - -euc
+            - |
+              cd di-authentication-api
+              gradle --no-daemon build
+              cp build/distributions/di-authentication-api.zip ../di-authentication-api-zip/
+    - put: di-authentication-api-upload
+      params:
+        command: push
+        manifest: di-authentication-api/manifest.yml
+        path: di-authentication-api-zip/di-authentication-api.zip

@@ -1,0 +1,11 @@
+---
+applications:
+  - name: di-authentication-api
+    path: build/distributions/di-authentication-api.zip
+    memory: 1G
+    buildpack: java_buildpack
+    command: cd di-authentication-api && bin/di-authentication-api server ./authentication-api.yml
+    env:
+      JAVA_HOME: "../.java-buildpack/open_jdk_jre"
+      JBP_CONFIG_OPEN_JDK_JRE: '{ jre: { version: 16.+}}'
+      BASE_URL: https://di-authentication-api.london.cloudapps.digital/

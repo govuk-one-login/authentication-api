@@ -1,0 +1,50 @@
+apply plugin: 'java'
+apply plugin: 'application'
+apply plugin: 'idea'
+
+group 'uk.gov.di'
+
+repositories {
+    mavenCentral()
+}
+
+
+distributions {
+    main {
+        contents {
+            from {
+                [
+                    'authentication-api.yml'
+                ]
+            }
+
+        }
+    }
+}
+
+def dependencyVersions = [
+    dropwizard:'2.0.21',
+    junit_version: '5.6.0'
+]
+
+dependencies {
+    implementation "io.dropwizard:dropwizard-core:${dependencyVersions.dropwizard}"
+
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit_version}"
+
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit_version}"
+}
+
+test {
+    useJUnitPlatform()
+    workingDir = rootDir
+}
+
+mainClassName = 'uk.gov.di.AuthenticationApiApplication'
+
+task cfPush(type: Exec) {
+    commandLine 'cf', 'push', 'di-authentication-api', '-p', 'build/distributions/di-authentication-api.zip'
+}
+
+cfPush.dependsOn build
+
