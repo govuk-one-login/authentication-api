@@ -4,3 +4,5 @@ server:
   connector:
     type: http
     port: 8080
+
+baseUrl: ${BASE_URL:-http://localhost:8080/}
