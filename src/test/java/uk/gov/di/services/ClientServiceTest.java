@@ -20,9 +20,7 @@ import java.util.Optional;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 
 class ClientServiceTest {
     private static final AuthorizationCodeService AUTHORIZATION_CODE_SERVICE =
