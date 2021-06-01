@@ -41,6 +41,80 @@ jobs:
       - set_pipeline: di-authentication-api
         file: pipeline-src/ci/pipeline.yaml
 
+  - name: deploy-lambda
+    plan:
+      - get: di-authentication-api
+        trigger: true
+      - task: build
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source:
+              repository: gradle
+              tag: 7.0.0-jdk11
+          inputs:
+            - name: di-authentication-api
+          outputs:
+            - name: lambda-zip
+          run:
+            path: /bin/bash
+            args:
+              - -euc
+              - |
+                cd di-authentication-api
+                gradle --no-daemon :serverless:lambda:buildZip
+                cp serverless/lambda/build/distributions/lambda.zip ../lambda-zip/
+      - task: terraform-plan
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source:
+              repository: hashicorp/terraform
+              tag: 0.14.10
+          params:
+            DEPLOYER_ROLE_ARN: ((deployer-role-arn))
+          inputs:
+            - name: lambda-zip
+            - name: di-authentication-api
+          outputs:
+            - name: terraform-plan
+          run:
+            path: /bin/sh
+            args:
+              - -euc
+              - |
+                cd di-authentication-api/ci/terraform
+                terraform init -input=false -backend-config "role_arn=${DEPLOYER_ROLE_ARN}"
+                terraform plan \
+                  -var 'lambda-zip-file=../../../lambda-zip/lambda.zip' \
+                  -var "deployer-role-arn=${DEPLOYER_ROLE_ARN}" \
+                  -out=../../../terraform-plan/terraform.plan
+
+      - task: terraform-apply
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source:
+              repository: hashicorp/terraform
+              tag: 0.14.10
+          params:
+            DEPLOYER_ROLE_ARN: ((deployer-role-arn))
+          inputs:
+            - name: lambda-zip
+            - name: di-authentication-api
+            - name: terraform-plan
+          run:
+            path: /bin/sh
+            args:
+              - -euc
+              - |
+                cd di-authentication-api/ci/terraform
+                terraform init -input=false -backend-config "role_arn=${DEPLOYER_ROLE_ARN}"
+                terraform apply -auto-approve ../../../terraform-plan/terraform.plan
+
   - name: deploy-app
     plan:
     - get: di-authentication-api
