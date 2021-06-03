@@ -9,10 +9,7 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.services.AuthorizationCodeService;
-import uk.gov.di.services.ClientService;
-import uk.gov.di.services.TokenService;
-import uk.gov.di.services.UserService;
+import uk.gov.di.services.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -31,7 +28,7 @@ public class TokenHandlerTest {
     private final UserService USER_SERVICE = mock(UserService.class);
     private final AuthorizationCodeService AUTHORIZATION_CODE_SERVICE = mock(AuthorizationCodeService.class);
     private final TokenService TOKEN_SERVICE = mock(TokenService.class);
-    private final ClientService CLIENT_SERVICE = mock(ClientService.class);
+    private final ClientService CLIENT_SERVICE = mock(InMemoryClientService.class);
 
     @BeforeEach
     public void setUp() {
