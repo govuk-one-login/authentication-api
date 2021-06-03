@@ -6,10 +6,7 @@ import uk.gov.di.entity.Client;
 import uk.gov.di.entity.ClientRegistrationRequest;
 import uk.gov.di.services.ClientService;
 
-import javax.validation.constraints.NotEmpty;
 import javax.ws.rs.Consumes;
-import javax.ws.rs.CookieParam;
-import javax.ws.rs.FormParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -18,8 +15,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
 import java.net.URI;
-import java.util.List;
-import java.util.Optional;
 
 @Path("/connect")
 public class ClientRegistrationResource {

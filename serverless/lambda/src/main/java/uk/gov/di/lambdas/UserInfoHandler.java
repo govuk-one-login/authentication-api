@@ -6,40 +6,45 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ParseException;
-import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
-
-import java.util.HashMap;
-import java.util.Map;
+import uk.gov.di.services.InMemoryUserInfoService;
+import uk.gov.di.services.TokenService;
+import uk.gov.di.services.UserInfoService;
 
 public class UserInfoHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final Map<String, UserInfo> userInfo = new HashMap<String, UserInfo>() {{
-        put("joe.bloggs@digital.cabinet-office.gov.uk", new UserInfo(new Subject()) {{
-            setGivenName("Joe");
-            setFamilyName("Bloggs");
-            setEmailAddress("joe.bloggs@digital.cabinet-office.gov.uk");
-        }});
-    }};
+    private final TokenService tokenService;
+    private final UserInfoService userInfoService;
+
+    public UserInfoHandler(TokenService tokenService, UserInfoService userInfoService) {
+        this.tokenService = tokenService;
+        this.userInfoService = userInfoService;
+    }
+
+    public UserInfoHandler() {
+        tokenService = new TokenService();
+        userInfoService = new InMemoryUserInfoService();
+    }
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
         LambdaLogger logger = context.getLogger();
+        APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent = new APIGatewayProxyResponseEvent();
 
         try {
             AccessToken accessToken = AccessToken.parse(input.getHeaders().get("Authorization"));
             logger.log("Access Token = " + accessToken.getValue());
+            String emailForToken = tokenService.getEmailForToken(accessToken);
+            UserInfo userInfo = userInfoService.getInfoForEmail(emailForToken);
 
-            APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent = new APIGatewayProxyResponseEvent();
             apiGatewayProxyResponseEvent.setStatusCode(200);
-            apiGatewayProxyResponseEvent.setBody(userInfo.get("joe.bloggs@digital.cabinet-office.gov.uk").toJSONString());
+            apiGatewayProxyResponseEvent.setBody(userInfo.toJSONString());
 
             return apiGatewayProxyResponseEvent;
         } catch (ParseException e) {
             logger.log("Access Token Invalid");
 
-            APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent = new APIGatewayProxyResponseEvent();
             apiGatewayProxyResponseEvent.setStatusCode(401);
             apiGatewayProxyResponseEvent.setBody(e.getMessage());
 
@@ -47,7 +52,6 @@ public class UserInfoHandler implements RequestHandler<APIGatewayProxyRequestEve
         } catch (NullPointerException e) {
             logger.log("Access Token Invalid");
 
-            APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent = new APIGatewayProxyResponseEvent();
             apiGatewayProxyResponseEvent.setStatusCode(401);
             apiGatewayProxyResponseEvent.setBody("No access token present");
 
