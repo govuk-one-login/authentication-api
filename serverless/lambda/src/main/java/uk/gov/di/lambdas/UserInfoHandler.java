@@ -1,4 +1,4 @@
-package uk.gov.di.userinfo;
+package uk.gov.di.lambdas;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.LambdaLogger;
