@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  aws:
+    build:
+      context: docker
+      dockerfile: localstack.Dockerfile
+    environment:
+      SERVICES: lambda, apigateway, iam
+      EDGE_PORT: "45678"
+      EXTERNAL_HOSTNAME: ${AWS_HOSTNAME:-localhost}
+      DEFAULT_REGION: eu-west-2
+      TEST_AWS_ACCOUNT_ID: 123456789012
+      DEBUG: "1"
+    networks:
+      - di-authentication-api-net
+    volumes:
+      - ./serverless/lambda/build/distributions:/dist/lambda/
+    ports:
+      - 45678:45678
+
+networks:
+  di-authentication-api-net:

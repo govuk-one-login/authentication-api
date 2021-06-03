@@ -4,7 +4,6 @@ resource "aws_api_gateway_rest_api" "di-authentication-api" {
 
 output "di-authentication-api-id" {
   value = aws_api_gateway_rest_api.di-authentication-api.id
-  sensitive = true
 }
 
 output "root_resource_id" {
