@@ -11,24 +11,12 @@ import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
-import uk.gov.di.entity.Client;
 import uk.gov.di.services.*;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class TokenHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
-
-    List<Client> clients = List.of(
-            new Client(
-                    "client-name",
-                    "test-id",
-                    "test-secret",
-                    List.of("email"),
-                    List.of("code"),
-                    List.of("http://localhost:8080"),
-                    List.of("contact@example.com")));
 
     private final ClientService clientService;
     private final AuthorizationCodeService authorizationCodeService;
@@ -43,7 +31,7 @@ public class TokenHandler implements RequestHandler<APIGatewayProxyRequestEvent,
     }
 
     public TokenHandler() {
-        clientService = new ClientService(clients, new AuthorizationCodeService());
+        clientService = new InMemoryClientService(new AuthorizationCodeService());
         authorizationCodeService = new AuthorizationCodeService();
         tokenService = new TokenService();
         authenticationService = new UserService();
