@@ -14,7 +14,9 @@ dependencies {
             "com.amazonaws:aws-lambda-java-events:2.2.5",
             "com.nimbusds:oauth2-oidc-sdk:9.3.1",
             "com.nimbusds:nimbus-jose-jwt:9.8.1"
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0',
+                        'com.amazonaws:aws-lambda-java-tests:1.0.0',
+                        'org.mockito:mockito-core:3.9.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
 }
 

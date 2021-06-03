@@ -7,21 +7,18 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
+import com.nimbusds.oauth2.sdk.TokenRequest;
+import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import uk.gov.di.entity.Client;
-import uk.gov.di.services.AuthenticationService;
-import uk.gov.di.services.AuthorizationCodeService;
-import uk.gov.di.services.ClientService;
-import uk.gov.di.services.TokenService;
-import uk.gov.di.services.UserService;
+import uk.gov.di.services.*;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 public class TokenHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
@@ -35,10 +32,24 @@ public class TokenHandler implements RequestHandler<APIGatewayProxyRequestEvent,
                     List.of("http://localhost:8080"),
                     List.of("contact@example.com")));
 
-    private ClientService clientService = new ClientService(clients, new AuthorizationCodeService());
-    private AuthorizationCodeService authorizationCodeService = new AuthorizationCodeService();
-    private TokenService tokenService = new TokenService();
-    private AuthenticationService authenticationService = new UserService();
+    private final ClientService clientService;
+    private final AuthorizationCodeService authorizationCodeService;
+    private final TokenService tokenService;
+    private final AuthenticationService authenticationService;
+
+    public TokenHandler(ClientService clientService, AuthorizationCodeService authorizationCodeService, TokenService tokenService, AuthenticationService authenticationService) {
+        this.clientService = clientService;
+        this.authorizationCodeService = authorizationCodeService;
+        this.tokenService = tokenService;
+        this.authenticationService = authenticationService;
+    }
+
+    public TokenHandler() {
+        clientService = new ClientService(clients, new AuthorizationCodeService());
+        authorizationCodeService = new AuthorizationCodeService();
+        tokenService = new TokenService();
+        authenticationService = new UserService();
+    }
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
