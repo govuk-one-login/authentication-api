@@ -85,7 +85,7 @@ jobs:
             args:
               - -euc
               - |
-                cd di-authentication-api/ci/terraform
+                cd di-authentication-api/ci/terraform/aws
                 terraform init -input=false -backend-config "role_arn=${DEPLOYER_ROLE_ARN}"
                 terraform plan \
                   -var 'lambda-zip-file=../../../lambda-zip/lambda.zip' \
@@ -111,7 +111,7 @@ jobs:
             args:
               - -euc
               - |
-                cd di-authentication-api/ci/terraform
+                cd di-authentication-api/ci/terraform/aws
                 terraform init -input=false -backend-config "role_arn=${DEPLOYER_ROLE_ARN}"
                 terraform apply -auto-approve ../../../terraform-plan/terraform.plan
 

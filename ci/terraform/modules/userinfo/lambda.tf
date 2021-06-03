@@ -1,5 +1,5 @@
-resource "aws_iam_role" "iam_for_lambda" {
-  name = "iam_for_lambda"
+resource "aws_iam_role" "iam_for_userinfo_lambda" {
+  name = "iam_for_userinfo_lambda"
 
   assume_role_policy = <<EOF
 {
@@ -21,19 +21,8 @@ EOF
 resource "aws_lambda_function" "userinfo_lambda" {
   filename = var.lambda-zip-file
   function_name = "UserInfoLambda"
-  role = aws_iam_role.iam_for_lambda.arn
+  role = aws_iam_role.iam_for_userinfo_lambda.arn
   handler = "uk.gov.di.lambdas.UserInfoHandler::handleRequest"
-
-  source_code_hash = filebase64sha256(var.lambda-zip-file)
-
-  runtime = "java11"
-}
-
-resource "aws_lambda_function" "token_lambda" {
-  filename = var.lambda-zip-file
-  function_name = "TokenLambda"
-  role = aws_iam_role.iam_for_lambda.arn
-  handler = "uk.gov.di.lambdas.TokenHandler::handleRequest"
 
   source_code_hash = filebase64sha256(var.lambda-zip-file)
 
@@ -46,8 +35,8 @@ resource "aws_lambda_function" "token_lambda" {
   runtime = "java11"
 }
 
-resource "aws_iam_policy" "lambda_logging" {
-  name        = "lambda_logging"
+resource "aws_iam_policy" "userinfo_lambda_logging" {
+  name        = "userinfo_lambda_logging"
   path        = "/"
   description = "IAM policy for logging from a lambda"
 
@@ -71,6 +60,6 @@ EOF
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_logs" {
-  role       = aws_iam_role.iam_for_lambda.name
-  policy_arn = aws_iam_policy.lambda_logging.arn
+  role       = aws_iam_role.iam_for_userinfo_lambda.name
+  policy_arn = aws_iam_policy.userinfo_lambda_logging.arn
 }
