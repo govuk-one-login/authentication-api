@@ -90,7 +90,7 @@ jobs:
                 terraform plan \
                   -var 'lambda-zip-file=../../../../lambda-zip/lambda.zip' \
                   -var "deployer-role-arn=${DEPLOYER_ROLE_ARN}" \
-                  -out=../../../terraform-plan/terraform.plan
+                  -out=../../../../terraform-plan/terraform.plan
 
       - task: terraform-apply
         config:
@@ -113,7 +113,7 @@ jobs:
               - |
                 cd di-authentication-api/ci/terraform/aws
                 terraform init -input=false -backend-config "role_arn=${DEPLOYER_ROLE_ARN}"
-                terraform apply -auto-approve ../../../terraform-plan/terraform.plan
+                terraform apply -auto-approve ../../../../terraform-plan/terraform.plan
 
   - name: deploy-app
     plan:
