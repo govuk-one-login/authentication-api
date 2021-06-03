@@ -3,5 +3,6 @@
 build/
 .gradle
 build
-ci/terraform/.terraform/
+**/.terraform/
+**/.terraform.lock.hcl
 
