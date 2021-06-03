@@ -12,6 +12,8 @@ import uk.gov.di.services.InMemoryUserInfoService;
 import uk.gov.di.services.TokenService;
 import uk.gov.di.services.UserInfoService;
 
+import java.util.NoSuchElementException;
+
 public class UserInfoHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final TokenService tokenService;
@@ -35,7 +37,8 @@ public class UserInfoHandler implements RequestHandler<APIGatewayProxyRequestEve
         try {
             AccessToken accessToken = AccessToken.parse(input.getHeaders().get("Authorization"));
             logger.log("Access Token = " + accessToken.getValue());
-            String emailForToken = tokenService.getEmailForToken(accessToken);
+
+            String emailForToken = tokenService.getEmailForToken(accessToken).orElseThrow();
             UserInfo userInfo = userInfoService.getInfoForEmail(emailForToken);
 
             apiGatewayProxyResponseEvent.setStatusCode(200);
@@ -43,19 +46,27 @@ public class UserInfoHandler implements RequestHandler<APIGatewayProxyRequestEve
 
             return apiGatewayProxyResponseEvent;
         } catch (ParseException e) {
-            logger.log("Access Token Invalid");
+            logger.log("Access Token Not Parsable");
 
             apiGatewayProxyResponseEvent.setStatusCode(401);
-            apiGatewayProxyResponseEvent.setBody(e.getMessage());
+            apiGatewayProxyResponseEvent.setBody("Access Token Not Parsable");
 
             return apiGatewayProxyResponseEvent;
         } catch (NullPointerException e) {
-            logger.log("Access Token Invalid");
+            logger.log("Access Token Not Present");
 
             apiGatewayProxyResponseEvent.setStatusCode(401);
             apiGatewayProxyResponseEvent.setBody("No access token present");
 
             return apiGatewayProxyResponseEvent;
+        } catch (NoSuchElementException e) {
+            logger.log("Access Token Invalid");
+
+            apiGatewayProxyResponseEvent.setStatusCode(401);
+            apiGatewayProxyResponseEvent.setBody("Access Token Invalid");
+
+            return apiGatewayProxyResponseEvent;
+
         }
     }
 }

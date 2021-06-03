@@ -20,11 +20,7 @@ import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public class TokenService {
 
@@ -83,8 +79,8 @@ public class TokenService {
         return accessToken;
     }
 
-    public String getEmailForToken(AccessToken token) {
-        return tokensMap.get(token);
+    public Optional<String> getEmailForToken(AccessToken token) {
+        return Optional.ofNullable(tokensMap.get(token));
     }
 
     public JWK getSigningKey() {
