@@ -14,7 +14,12 @@ variable "environment" {
   default = "local"
 }
 
-variable "api-deployment-stage-name" {
+variable "api_deployment_stage_name" {
   type = string
   default = "local"
+}
+
+variable "api_base_url" {
+  type = string
+  default = "http://localhost:8080"
 }

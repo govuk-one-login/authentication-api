@@ -18,3 +18,8 @@ variable "api-deployment-stage-name" {
   type = string
   default = "test"
 }
+
+variable "api_base_url" {
+  type = string
+  default = "http://localhost:8080"
+}
