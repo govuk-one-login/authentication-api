@@ -29,9 +29,10 @@ public class TokenService {
     private final Issuer issuer;
 
     private final Map<AccessToken, String> tokensMap = new HashMap<>();
+    private final ConfigurationService configService = new ConfigurationService();
 
     public TokenService() {
-        this.issuer = new Issuer(System.getenv("BASE_URL"));
+        this.issuer = new Issuer(configService.getBaseURL().get());
         try {
             signingKey = new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
             signer = new RSASSASigner(signingKey);
