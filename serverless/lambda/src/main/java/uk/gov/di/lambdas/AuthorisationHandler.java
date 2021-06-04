@@ -9,11 +9,11 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.AuthenticationResponse;
 import uk.gov.di.services.AuthorizationCodeService;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.InMemoryClientService;
 
-import java.net.URI;
 import java.util.Map;
 import java.util.Optional;
 
@@ -39,7 +39,7 @@ public class AuthorisationHandler implements RequestHandler<APIGatewayProxyReque
 
             return error
                     .map(e -> errorResponse(authRequest, e))
-                    .orElse(redirectResponse(authRequest.getRedirectionURI()));
+                    .orElse(redirectResponse(authRequest));
         } catch (ParseException e) {
             APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
             response.setStatusCode(400);
@@ -49,9 +49,11 @@ public class AuthorisationHandler implements RequestHandler<APIGatewayProxyReque
         }
     }
 
-    private APIGatewayProxyResponseEvent redirectResponse (URI redirectUri) {
+    private APIGatewayProxyResponseEvent redirectResponse (AuthenticationRequest authRequest) {
+        AuthenticationResponse authResponse = clientService
+                .getSuccessfulResponse(authRequest, "joe.bloggs@digital.cabinet-office.gov.uk");
         return new APIGatewayProxyResponseEvent().withStatusCode(302).withHeaders(
-                Map.of("Location", redirectUri.toString())
+                Map.of("Location", authResponse.toSuccessResponse().toURI().toString())
         );
     }
 
