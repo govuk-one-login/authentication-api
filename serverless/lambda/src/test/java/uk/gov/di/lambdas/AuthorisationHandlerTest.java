@@ -16,7 +16,6 @@ import uk.gov.di.services.ClientService;
 
 import java.net.MalformedURLException;
 import java.net.URI;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -55,13 +54,13 @@ class AuthorisationHandlerTest {
                 .thenReturn(authSuccessResponse);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setMultiValueQueryStringParameters(
+        event.setQueryStringParameters(
                 Map.of(
-                        "client_id", List.of("test-id"),
-                        "redirect_uri", List.of("http://localhost:8080"),
-                        "scope", List.of("email,openid,profile"),
-                        "response_type", List.of("code"),
-                        "state", List.of("some-state")
+                        "client_id", "test-id",
+                        "redirect_uri", "http://localhost:8080",
+                        "scope", "email,openid,profile",
+                        "response_type", "code",
+                        "state", "some-state"
                 )
         );
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, CONTEXT);
@@ -78,12 +77,12 @@ class AuthorisationHandlerTest {
     void shouldReturn400WhenAuthorisationRequestCannotBeParsed() {
         when(CLIENT_SERVICE.getErrorForAuthorizationRequest(any(AuthorizationRequest.class))).thenReturn(Optional.empty());
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setMultiValueQueryStringParameters(
+        event.setQueryStringParameters(
                 Map.of(
-                        "client_id", List.of("test-id"),
-                        "redirect_uri", List.of("http://localhost:8080"),
-                        "scope", List.of("email,openid,profile"),
-                        "invalid_parameter", List.of("nonsense")
+                        "client_id", "test-id",
+                        "redirect_uri", "http://localhost:8080",
+                        "scope", "email,openid,profile",
+                        "invalid_parameter", "nonsense"
                 )
         );
 
