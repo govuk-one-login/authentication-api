@@ -1,5 +1,5 @@
 output "token_url" {
-  value = module.token.base_url_token
+  value = module.token.base_url
 }
 
 output "userinfo_url" {
