@@ -39,7 +39,7 @@ public class AuthorisationHandler implements RequestHandler<APIGatewayProxyReque
 
             return error
                     .map(e -> errorResponse(authRequest, e))
-                    .orElse(redirectResponse(authRequest));
+                    .orElseGet(() -> redirectResponse(authRequest));
         } catch (ParseException e) {
             APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
             response.setStatusCode(400);
