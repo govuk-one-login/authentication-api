@@ -13,6 +13,7 @@ import com.nimbusds.oauth2.sdk.id.Issuer;
 import com.nimbusds.openid.connect.sdk.SubjectType;
 import com.nimbusds.openid.connect.sdk.claims.ClaimType;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
+import uk.gov.di.services.ConfigurationService;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -22,11 +23,21 @@ import java.util.Optional;
 
 public class WellknownHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
+    private ConfigurationService configService;
+
+    public WellknownHandler(ConfigurationService configService) {
+        this.configService = configService;
+    }
+
+    public WellknownHandler() {
+        this.configService = new ConfigurationService();
+    }
+
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
         APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent = new APIGatewayProxyResponseEvent();
         try {
-            Optional<String> baseUrl = Optional.ofNullable(context.getClientContext().getEnvironment().get("BASE_URL"));
+            Optional<String> baseUrl = configService.getBaseURL();
 
             var providerMetadata = new OIDCProviderMetadata(new Issuer(baseUrl.orElseThrow()),
                     List.of(SubjectType.PUBLIC), buildURI(".well-known/jwks.json", baseUrl.get()));

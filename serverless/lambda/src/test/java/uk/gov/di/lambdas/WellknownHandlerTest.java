@@ -1,6 +1,5 @@
 package uk.gov.di.lambdas;
 
-import com.amazonaws.services.lambda.runtime.ClientContext;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
@@ -10,10 +9,12 @@ import com.nimbusds.openid.connect.sdk.claims.ClaimType;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.services.ConfigurationService;
 
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -21,18 +22,17 @@ import static org.mockito.Mockito.when;
 
 class WellknownHandlerTest {
     private final Context CONTEXT = mock(Context.class);
-    private final ClientContext clientContext = mock(ClientContext.class);
+    private final ConfigurationService CONFIG_SERVICE = mock(ConfigurationService.class);
     private WellknownHandler handler;
 
     @BeforeEach
     public void setUp() {
-        handler = new WellknownHandler();
-        when(CONTEXT.getClientContext()).thenReturn(clientContext);
+        handler = new WellknownHandler(CONFIG_SERVICE);
     }
 
     @Test
     public void shouldReturn200WhenRequestIsSuccessful() throws ParseException {
-        when(CONTEXT.getClientContext().getEnvironment()).thenReturn(Map.of("BASE_URL", "http://localhost:8080/"));
+        when(CONFIG_SERVICE.getBaseURL()).thenReturn(Optional.of("http://localhost:8080/"));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
@@ -47,7 +47,7 @@ class WellknownHandlerTest {
 
     @Test
     public void shouldReturn500WhenConfigIsMissing() {
-        when(CONTEXT.getClientContext().getEnvironment()).thenReturn(Map.of());
+        when(CONFIG_SERVICE.getBaseURL()).thenReturn(Optional.empty());
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
