@@ -1,13 +1,13 @@
 resource "aws_api_gateway_resource" "endpoint_resource" {
   rest_api_id = var.rest_api_id
   parent_id   = var.root_resource_id
-  path_part   = var.endpoint-name
+  path_part   = var.endpoint_name
 }
 
 resource "aws_api_gateway_method" "endpoint_method" {
   rest_api_id   = var.rest_api_id
   resource_id   = aws_api_gateway_resource.endpoint_resource.id
-  http_method   = var.endpoint-method
+  http_method   = var.endpoint_method
   authorization = "NONE"
 }
 
@@ -18,12 +18,12 @@ resource "aws_api_gateway_integration" "endpoint_integration" {
 
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.authorize_lambda.invoke_arn
+  uri                     = aws_lambda_function.endpoint_lambda.invoke_arn
 }
 
 resource "aws_api_gateway_deployment" "endpoint_deployment" {
   rest_api_id = var.rest_api_id
-  stage_name  = var.api-deployment-stage-name
+  stage_name  = var.api_deployment_stage_name
 
   depends_on = [
     aws_api_gateway_integration.endpoint_integration,
@@ -33,7 +33,7 @@ resource "aws_api_gateway_deployment" "endpoint_deployment" {
 resource "aws_lambda_permission" "endpoint_execution_permission" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.authorize_lambda.function_name
+  function_name = aws_lambda_function.endpoint_lambda.function_name
   principal     = "apigateway.amazonaws.com"
 
   # The "/*/*" portion grants access from any method on any resource

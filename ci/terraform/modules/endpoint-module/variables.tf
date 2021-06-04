@@ -1,24 +1,24 @@
-variable "endpoint-name" {
+variable "endpoint_name" {
   type = string
 }
 
-variable "endpoint-method" {
+variable "endpoint_method" {
   type = string
 }
 
-variable "lambda-zip-file" {
+variable "lambda_zip_file" {
   type = string
 }
 
-variable "handler-function-name" {
+variable "handler_function_name" {
   type = string
 }
 
-variable "handler-environment-variables" {
+variable "handler_environment_variables" {
   type = map(string)
 }
 
-variable "handler-runtime" {
+variable "handler_runtime" {
   type    = string
   default = "java11"
 }
@@ -40,12 +40,12 @@ variable "environment" {
   default = "test"
 }
 
-variable "api-deployment-stage-name" {
+variable "api_deployment_stage_name" {
   type    = string
   default = "test"
 }
 
-variable "lambda-iam-policy" {
+variable "lambda_iam_policy" {
   type    = string
   default = <<EOF
 {

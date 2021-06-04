@@ -20,6 +20,6 @@ provider "aws" {
   region = "eu-west-2"
 
   assume_role {
-    role_arn = var.deployer-role-arn
+    role_arn = var.deployer_role_arn
   }
 }

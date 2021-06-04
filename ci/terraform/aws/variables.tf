@@ -1,9 +1,10 @@
-variable "lambda-zip-file" {
+variable "lambda_zip_file" {
   default     = "../../../serverless/lambda/build/distributions/lambda.zip"
   description = "Location of the Lambda ZIP file"
   type        = string
 }
-variable "deployer-role-arn" {
+
+variable "deployer_role_arn" {
   default     = ""
   description = "The name of the AWS role to assume, leave blank when running locally"
   type        = string
