@@ -18,6 +18,15 @@ services:
       - ./serverless/lambda/build/distributions:/dist/lambda/
     ports:
       - 45678:45678
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -c
+        - awslocal lambda list-functions
+      interval: 5s
+      timeout: 10s
+      start_period: 10s
 
 networks:
   di-authentication-api-net:
