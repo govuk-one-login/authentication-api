@@ -13,8 +13,9 @@ import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import uk.gov.di.services.*;
 
-import java.util.HashMap;
 import java.util.Map;
+
+import static uk.gov.di.helpers.RequestBodyHelper.PARSE_REQUEST_BODY;
 
 public class TokenHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
@@ -41,7 +42,7 @@ public class TokenHandler implements RequestHandler<APIGatewayProxyRequestEvent,
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
         APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent = new APIGatewayProxyResponseEvent();
         LambdaLogger logger = context.getLogger();
-        Map<String, String> requestBody = parseRequestBody(input.getBody());
+        Map<String, String> requestBody = PARSE_REQUEST_BODY(input.getBody());
 
         if (!requestBody.containsKey("code") || !requestBody.containsKey("client_id") || !requestBody.containsKey("client_secret")) {
             apiGatewayProxyResponseEvent.setStatusCode(400);
@@ -78,15 +79,5 @@ public class TokenHandler implements RequestHandler<APIGatewayProxyRequestEvent,
         apiGatewayProxyResponseEvent.setBody(tokenResponse.toJSONObject().toJSONString());
 
         return apiGatewayProxyResponseEvent;
-    }
-
-    private Map<String, String> parseRequestBody(String body) {
-        Map<String, String> query_pairs = new HashMap<>();
-        String[] splitString = body.split("&");
-        for (String pair : splitString) {
-            int index = pair.indexOf("=");
-            query_pairs.put(pair.substring(0, index), pair.substring(index + 1));
-        }
-        return query_pairs;
     }
 }
