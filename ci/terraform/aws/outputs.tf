@@ -1,7 +1,7 @@
-output "base_url_token" {
+output "token_url" {
   value = module.token.base_url_token
 }
 
-output "base_url_userinfo" {
-  value = module.userinfo.base_url_userinfo
+output "userinfo_url" {
+  value = module.userinfo.base_url
 }

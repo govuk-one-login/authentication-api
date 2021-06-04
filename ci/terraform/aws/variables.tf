@@ -14,7 +14,7 @@ variable "environment" {
   default = "test"
 }
 
-variable "api-deployment-stage-name" {
+variable "api_deployment_stage_name" {
   type = string
   default = "test"
 }
