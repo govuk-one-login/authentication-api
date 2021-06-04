@@ -1,12 +1,18 @@
 resource "aws_api_gateway_resource" "proxyWellknown" {
   rest_api_id = var.rest_api_id
   parent_id = var.root_resource_id
-  path_part = ".well-known/openid-configuration"
+  path_part = ".well-known"
+}
+
+resource "aws_api_gateway_resource" "proxyOpenIdConfiguration" {
+  rest_api_id = var.rest_api_id
+  parent_id = aws_api_gateway_resource.proxyWellknown.id
+  path_part = "openid-configuration"
 }
 
 resource "aws_api_gateway_method" "proxyMethodWellknown" {
   rest_api_id = var.rest_api_id
-  resource_id = aws_api_gateway_resource.proxyWellknown.id
+  resource_id = aws_api_gateway_resource.proxyOpenIdConfiguration.id
   http_method = "GET"
   authorization = "NONE"
 }
