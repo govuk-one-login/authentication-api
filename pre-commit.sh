@@ -5,7 +5,7 @@ source ./scripts/test-api.sh
 
 printf "\nRunning build and unit tests...\n"
 
-./gradlew clean build
+./gradlew clean build -x integration-tests:test
 
 build_and_test_exit_code=$?
 if [ ${build_and_test_exit_code} -ne 0 ]; then
@@ -14,7 +14,8 @@ if [ ${build_and_test_exit_code} -ne 0 ]; then
 fi
 
 startup
-test-api
+
+run-integration-tests
 
 build_and_test_exit_code=$?
 
