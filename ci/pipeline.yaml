@@ -137,7 +137,7 @@ jobs:
             - -euc
             - |
               cd di-authentication-api
-              gradle --no-daemon build
+              gradle --no-daemon build -x integration-tests:test
               cp build/distributions/di-authentication-api.zip ../di-authentication-api-zip/
     - put: di-authentication-api-upload
       params:

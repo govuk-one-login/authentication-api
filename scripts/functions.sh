@@ -72,3 +72,10 @@ startup() {
   run_terraform ci/terraform/localstack
   funky_started
 }
+
+run-integration-tests() {
+  pushd ci/terraform/localstack >/dev/null
+  export API_GATEWAY_ID="$(terraform output -raw api-gateway-root-id)"
+  popd >/dev/null
+  ./gradlew integration-tests:test
+}
