@@ -37,15 +37,15 @@ public class WellknownHandler implements RequestHandler<APIGatewayProxyRequestEv
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
         APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent = new APIGatewayProxyResponseEvent();
         try {
-            Optional<String> baseUrl = configService.getBaseURL();
+            String baseUrl = configService.getBaseURL().orElseThrow();
 
-            var providerMetadata = new OIDCProviderMetadata(new Issuer(baseUrl.orElseThrow()),
-                    List.of(SubjectType.PUBLIC), buildURI(".well-known/jwks.json", baseUrl.get()));
+            var providerMetadata = new OIDCProviderMetadata(new Issuer(baseUrl),
+                    List.of(SubjectType.PUBLIC), buildURI(".well-known/jwks.json", baseUrl));
 
-            providerMetadata.setTokenEndpointURI(buildURI("token", baseUrl.get()));
-            providerMetadata.setUserInfoEndpointURI(buildURI("userinfo", baseUrl.get()));
-            providerMetadata.setAuthorizationEndpointURI(buildURI("authorize", baseUrl.get()));
-            providerMetadata.setRegistrationEndpointURI(buildURI("connect/register", baseUrl.get()));
+            providerMetadata.setTokenEndpointURI(buildURI("token", baseUrl));
+            providerMetadata.setUserInfoEndpointURI(buildURI("userinfo", baseUrl));
+            providerMetadata.setAuthorizationEndpointURI(buildURI("authorize", baseUrl));
+            providerMetadata.setRegistrationEndpointURI(buildURI("connect/register", baseUrl));
             providerMetadata.setTokenEndpointAuthMethods(List.of(ClientAuthenticationMethod.CLIENT_SECRET_POST));
             providerMetadata.setScopes(new Scope("openid", "profile", "email"));
             providerMetadata.setResponseTypes(List.of(new ResponseType("code")));
