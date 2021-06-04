@@ -98,12 +98,12 @@ class AuthorisationHandlerTest {
         when(CLIENT_SERVICE.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
                 .thenReturn(Optional.of(OAuth2Error.INVALID_SCOPE));
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setMultiValueQueryStringParameters(
+        event.setQueryStringParameters(
                 Map.of(
-                        "client_id", List.of("test-id"),
-                        "redirect_uri", List.of("http://localhost:8080"),
-                        "scope", List.of("email,openid,profile,non-existent-scope"),
-                        "response_type", List.of("code")
+                        "client_id", "test-id",
+                        "redirect_uri", "http://localhost:8080",
+                        "scope", "email,openid,profile,non-existent-scope",
+                        "response_type", "code"
                 )
         );
 

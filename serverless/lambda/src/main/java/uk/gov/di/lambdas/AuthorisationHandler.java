@@ -14,8 +14,10 @@ import uk.gov.di.services.AuthorizationCodeService;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.InMemoryClientService;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class AuthorisationHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
@@ -33,7 +35,15 @@ public class AuthorisationHandler implements RequestHandler<APIGatewayProxyReque
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
 
         try {
-            var authRequest = AuthenticationRequest.parse(input.getMultiValueQueryStringParameters());
+            Map<String, List<String>> queryStringMultiValuedMap = input.getQueryStringParameters().entrySet()
+                    .stream()
+                    .collect(
+                            Collectors.toMap(
+                                    entry -> entry.getKey(),
+                                    entry -> List.of(entry.getValue())
+                            )
+                    );
+            var authRequest = AuthenticationRequest.parse(queryStringMultiValuedMap);
 
             Optional<ErrorObject> error = clientService.getErrorForAuthorizationRequest(authRequest);
 
