@@ -1,7 +1,7 @@
 module "token" {
   source = "../modules/endpoint-module"
 
-  endpoint-name = "token"
+  endpoint-name   = "token"
   endpoint-method = "POST"
   handler-environment-variables = {
     BASE_URL = var.api_base_url

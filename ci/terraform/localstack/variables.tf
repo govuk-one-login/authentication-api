@@ -10,16 +10,16 @@ variable "deployer-role-arn" {
 }
 
 variable "environment" {
-  type = string
+  type    = string
   default = "local"
 }
 
 variable "api_deployment_stage_name" {
-  type = string
+  type    = string
   default = "local"
 }
 
 variable "api_base_url" {
-  type = string
+  type    = string
   default = "http://localhost:8080"
 }
