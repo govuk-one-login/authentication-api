@@ -18,6 +18,10 @@ output "jwks" {
   value = "http://localhost:45678/restapis/${module.api_gateway_root.di_authentication_api_id}/${var.environment}/_user_request_/.well-known/jwks.json"
 }
 
+output "signup" {
+  value = "http://localhost:45678/restapis/${module.api_gateway_root.di_authentication_api_id}/${var.environment}/_user_request_/signup"
+}
+
 output "api_gateway_root_id" {
   value = module.api_gateway_root.di_authentication_api_id
 }

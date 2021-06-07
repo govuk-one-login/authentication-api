@@ -5,6 +5,9 @@ import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import uk.gov.di.entity.SignupRequest;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.UserService;
 import uk.gov.di.services.ValidationService;
@@ -19,6 +22,7 @@ public class SignUpHandler implements RequestHandler<APIGatewayProxyRequestEvent
 
     private AuthenticationService authenticationService;
     private ValidationService validationService;
+    private ObjectMapper objectMapper = new ObjectMapper();
 
     public SignUpHandler(AuthenticationService authenticationService, ValidationService validationService) {
         this.authenticationService = authenticationService;
@@ -35,27 +39,25 @@ public class SignUpHandler implements RequestHandler<APIGatewayProxyRequestEvent
         APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent = new APIGatewayProxyResponseEvent();
         LambdaLogger logger = context.getLogger();
 
-        Map<String, String> requestBody = PARSE_REQUEST_BODY(input.getBody());
+        try {
+            SignupRequest signupRequest = objectMapper.readValue(input.getBody(), SignupRequest.class);
 
-        if (!requestBody.containsKey("email") || !requestBody.containsKey("password") || !requestBody.containsKey("password-confirm")) {
+            Set<PasswordValidation> passwordValidationErrors = validationService.validatePassword(signupRequest.getPassword());
+
+            if (passwordValidationErrors.isEmpty()) {
+                authenticationService.signUp(signupRequest.getEmail(), signupRequest.getPassword());
+                apiGatewayProxyResponseEvent.setStatusCode(200);
+            } else {
+                apiGatewayProxyResponseEvent.setStatusCode(400);
+                apiGatewayProxyResponseEvent.setBody(passwordValidationErrors.toString());
+            }
+            return apiGatewayProxyResponseEvent;
+        } catch (JsonProcessingException e) {
             apiGatewayProxyResponseEvent.setStatusCode(400);
             apiGatewayProxyResponseEvent.setBody("Request is missing parameters");
             return apiGatewayProxyResponseEvent;
         }
 
-        String password = requestBody.get("password");
-        String passwordConfirm = requestBody.get("password-confirm");
-        String email = requestBody.get("email");
-        Set<PasswordValidation> passwordValidationErrors = validationService.validatePassword(password, passwordConfirm);
 
-        if (passwordValidationErrors.isEmpty()) {
-            authenticationService.signUp(email, password);
-            apiGatewayProxyResponseEvent.setStatusCode(200);
-            return apiGatewayProxyResponseEvent;
-        } else {
-            apiGatewayProxyResponseEvent.setStatusCode(400);
-            apiGatewayProxyResponseEvent.setBody(passwordValidationErrors.toString());
-            return apiGatewayProxyResponseEvent;
-        }
     }
 }

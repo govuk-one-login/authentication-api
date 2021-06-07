@@ -23,26 +23,18 @@ public class ValidationService {
         return emailErrors;
     }
 
-    public Set<PasswordValidation> validatePassword(String password, String retypedPassword) {
+    public Set<PasswordValidation> validatePassword(String password) {
         Set<PasswordValidation> passwordErrors = EnumSet.noneOf(PasswordValidation.class);
         boolean passwordIsEmpty = false;
-        boolean retypedPasswordIsEmpty = false;
         if (password == null  || password.isBlank()) {
             passwordErrors.add(PasswordValidation.EMPTY_PASSWORD_FIELD);
             passwordIsEmpty = true;
-        }
-        if (retypedPassword == null || retypedPassword.isBlank()) {
-            passwordErrors.add(PasswordValidation.EMPTY_RETYPE_PASSWORD_FIELD);
-            retypedPasswordIsEmpty = true;
         }
         if (!passwordIsEmpty && password.length() < 8) {
             passwordErrors.add(PasswordValidation.PASSWORD_TOO_SHORT);
         }
         if (!passwordIsEmpty && !PASSWORD_REGEX.matcher(password).matches()) {
             passwordErrors.add(PasswordValidation.NO_NUMBER_INCLUDED);
-        }
-        if (!passwordIsEmpty && !retypedPasswordIsEmpty && !password.equals(retypedPassword)) {
-            passwordErrors.add(PasswordValidation.PASSWORDS_DO_NOT_MATCH);
         }
         return passwordErrors;
     }

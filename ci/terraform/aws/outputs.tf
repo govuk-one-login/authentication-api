@@ -14,6 +14,10 @@ output "jwks_url" {
   value = module.jwks.base_url
 }
 
+output "signup_url" {
+  value = module.signup.base_url
+}
+
 
 
 output "openid_configuration_discovery_url" {
