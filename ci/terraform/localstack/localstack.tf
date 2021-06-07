@@ -1,4 +1,4 @@
-module "api-gateway-root" {
+module "api_gateway_root" {
   source = "../modules/api-gateway-root"
   providers = {
     aws = aws.localstack
@@ -6,50 +6,83 @@ module "api-gateway-root" {
   environment = var.environment
 }
 
-module "userinfo" {
-  source        = "../modules/userinfo"
+module "authorize" {
+  source = "../modules/endpoint-module"
   providers = {
     aws = aws.localstack
   }
-  rest_api_id = module.api-gateway-root.di-authentication-api-id
-  root_resource_id = module.api-gateway-root.root_resource_id
-  execution_arn = module.api-gateway-root.execution_arn
-  api-deployment-stage-name = var.api-deployment-stage-name
-  lambda-zip-file = var.lambda-zip-file
+
+  endpoint_name   = "authorize"
+  endpoint_method = "GET"
+  handler_environment_variables = {
+    BASE_URL = var.api_base_url
+  }
+  handler_function_name = "uk.gov.di.lambdas.AuthorisationHandler::handleRequest"
+
+  rest_api_id               = module.api_gateway_root.di_authentication_api_id
+  root_resource_id          = module.api_gateway_root.root_resource_id
+  execution_arn             = module.api_gateway_root.execution_arn
+  api_deployment_stage_name = var.api_deployment_stage_name
+  lambda_zip_file           = var.lambda_zip_file
+}
+
+module "openid_configuration_discovery" {
+  source = "../modules/endpoint-module"
+  providers = {
+    aws = aws.localstack
+  }
+
+  endpoint_name   = "openid-configuration"
+  endpoint_method = "GET"
+  handler_environment_variables = {
+    BASE_URL = var.api_base_url
+  }
+  handler_function_name = "uk.gov.di.lambdas.WellknownHandler::handleRequest"
+
+  rest_api_id               = module.api_gateway_root.di_authentication_api_id
+  root_resource_id          = module.api_gateway_root.wellknown_resource_id
+  execution_arn             = module.api_gateway_root.execution_arn
+  api_deployment_stage_name = var.api_deployment_stage_name
+  lambda_zip_file           = var.lambda_zip_file
+
 }
 
 module "token" {
-  source = "../modules/token"
+  source = "../modules/endpoint-module"
   providers = {
     aws = aws.localstack
   }
-  rest_api_id = module.api-gateway-root.di-authentication-api-id
-  root_resource_id = module.api-gateway-root.root_resource_id
-  execution_arn = module.api-gateway-root.execution_arn
-  api-deployment-stage-name = var.api-deployment-stage-name
-  lambda-zip-file = var.lambda-zip-file
+
+  endpoint_name   = "token"
+  endpoint_method = "POST"
+  handler_environment_variables = {
+    BASE_URL = var.api_base_url
+  }
+  handler_function_name = "uk.gov.di.lambdas.TokenHandler::handleRequest"
+
+  rest_api_id               = module.api_gateway_root.di_authentication_api_id
+  root_resource_id          = module.api_gateway_root.root_resource_id
+  execution_arn             = module.api_gateway_root.execution_arn
+  api_deployment_stage_name = var.api_deployment_stage_name
+  lambda_zip_file           = var.lambda_zip_file
 }
 
-module "authorize" {
-  source = "../modules/authorise"
+module "userinfo" {
+  source = "../modules/endpoint-module"
   providers = {
     aws = aws.localstack
   }
-  rest_api_id = module.api-gateway-root.di-authentication-api-id
-  root_resource_id = module.api-gateway-root.root_resource_id
-  execution_arn = module.api-gateway-root.execution_arn
-  api-deployment-stage-name = var.api-deployment-stage-name
-  lambda-zip-file = var.lambda-zip-file
-}
 
-module "wellknown" {
-  source = "../modules/wellknown"
-  providers = {
-    aws = aws.localstack
+  endpoint_name   = "userinfo"
+  endpoint_method = "GET"
+  handler_environment_variables = {
+    BASE_URL = var.api_base_url
   }
-  rest_api_id = module.api-gateway-root.di-authentication-api-id
-  root_resource_id = module.api-gateway-root.root_resource_id
-  execution_arn = module.api-gateway-root.execution_arn
-  api-deployment-stage-name = var.api-deployment-stage-name
-  lambda-zip-file = var.lambda-zip-file
+  handler_function_name = "uk.gov.di.lambdas.UserInfoHandler::handleRequest"
+
+  rest_api_id               = module.api_gateway_root.di_authentication_api_id
+  root_resource_id          = module.api_gateway_root.root_resource_id
+  execution_arn             = module.api_gateway_root.execution_arn
+  api_deployment_stage_name = var.api_deployment_stage_name
+  lambda_zip_file           = var.lambda_zip_file
 }

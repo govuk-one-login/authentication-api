@@ -3,7 +3,7 @@ terraform {
 
   required_providers {
     aws = {
-      source = "hashicorp/aws"
+      source  = "hashicorp/aws"
       version = "3.37.0"
     }
   }
@@ -17,9 +17,9 @@ terraform {
 }
 
 provider "aws" {
-  region  = "eu-west-2"
+  region = "eu-west-2"
 
   assume_role {
-    role_arn = var.deployer-role-arn
+    role_arn = var.deployer_role_arn
   }
 }

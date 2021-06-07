@@ -1,11 +1,19 @@
-output "base_url_token" {
-  value = module.token.base_url_token
+output "token_url" {
+  value = "http://localhost:45678/restapis/${module.api_gateway_root.di_authentication_api_id}/${var.environment}/_user_request_/token"
 }
 
-output "base_url_userinfo" {
-  value = module.userinfo.base_url_userinfo
+output "authorise_url" {
+  value = "http://localhost:45678/restapis/${module.api_gateway_root.di_authentication_api_id}/${var.environment}/_user_request_/authorize"
 }
 
-output "api-gateway-root-id" {
-  value = module.api-gateway-root.di-authentication-api-id
+output "userinfo_url" {
+  value = "http://localhost:45678/restapis/${module.api_gateway_root.di_authentication_api_id}/${var.environment}/_user_request_/userinfo"
+}
+
+output "openid_configuration_discovery_url" {
+  value = "http://localhost:45678/restapis/${module.api_gateway_root.di_authentication_api_id}/${var.environment}/_user_request_/.well-known/openid-configuration"
+}
+
+output "api_gateway_root_id" {
+  value = module.api_gateway_root.di_authentication_api_id
 }
