@@ -10,20 +10,22 @@ import com.nimbusds.openid.connect.sdk.OIDCError;
 import uk.gov.di.entity.Client;
 import uk.gov.di.helpers.AuthenticationResponseHelper;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public class InMemoryClientService implements ClientService {
 
-    private List<Client> clients = List.of(
-            new Client(
-                    "client-name",
-                            "test-id",
-                            "test-secret",
-                    List.of("code"),
-                            List.of("http://localhost:8080"),
-                            List.of("contact@example.com")));
+    private List<Client> clients = new ArrayList<>() {{
+        add(new Client(
+            "client-name",
+            "test-id",
+            "test-secret",
+            List.of("code"),
+            List.of("http://localhost:8080"),
+            List.of("contact@example.com")));
+    }};
 
     private AuthorizationCodeService authorizationCodeService;
 
