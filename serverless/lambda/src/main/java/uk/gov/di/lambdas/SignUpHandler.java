@@ -13,10 +13,7 @@ import uk.gov.di.services.UserService;
 import uk.gov.di.services.ValidationService;
 import uk.gov.di.validation.PasswordValidation;
 
-import java.util.Map;
 import java.util.Set;
-
-import static uk.gov.di.helpers.RequestBodyHelper.PARSE_REQUEST_BODY;
 
 public class SignUpHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 

@@ -1,25 +1,40 @@
 package uk.gov.di.entity;
 
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.List;
 
 public class Client {
 
+    @JsonProperty("client_name")
     private String clientName;
+
+    @JsonProperty("client_id")
     private String clientId;
+
+    @JsonProperty("client_secret")
     private String clientSecret;
-    private List<String> scopes;
+
+    @JsonProperty("response_types")
     private List<String> allowedResponseTypes;
-    private List<String> redirectUrls;
+
+    @JsonProperty("redirect_uris")
+    private List<String> redirectUris;
+
+    @JsonProperty("contacts")
     private List<String> contacts;
 
-    public Client(String clientName, String clientId, String clientSecret, List<String> scopes, List<String> allowedResponseTypes, List<String> redirectUrls, List<String> contacts) {
+    public Client(@JsonProperty(required = true, value = "client_name") String clientName,
+                  @JsonProperty(required = true, value = "client_id") String clientId,
+                  @JsonProperty(required = true, value = "client_secret") String clientSecret,
+                  @JsonProperty(required = true, value = "response_types") List<String> allowedResponseTypes,
+                  @JsonProperty(required = true, value = "redirect_uris") List<String> redirectUris,
+                  @JsonProperty(required = true, value = "contacts") List<String> contacts) {
         this.clientName = clientName;
         this.clientId = clientId;
         this.clientSecret = clientSecret;
-        this.scopes = scopes;
         this.allowedResponseTypes = allowedResponseTypes;
-        this.redirectUrls = redirectUrls;
+        this.redirectUris = redirectUris;
         this.contacts = contacts;
     }
 
@@ -35,16 +50,12 @@ public class Client {
         return clientSecret;
     }
 
-    public List<String> getScopes() {
-        return scopes;
-    }
-
     public List<String> getAllowedResponseTypes() {
         return allowedResponseTypes;
     }
 
-    public List<String> getRedirectUrls() {
-        return redirectUrls;
+    public List<String> getRedirectUris() {
+        return redirectUris;
     }
 
     public List<String> getContacts() {
