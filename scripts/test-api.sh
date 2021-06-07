@@ -5,10 +5,8 @@ test-api() {
   printf "\n\nRunning api tests...\n"
 
   pushd ci/terraform/localstack > /dev/null
-  apigatewayid="$(terraform output -raw api-gateway-root-id)"
+  url="$(terraform output -raw token_url)"
   popd > /dev/null
-
-  url="http://localhost:45678/restapis/${apigatewayid}/local/_user_request_/token"
 
   curl -i --location --request POST "${url}" \
     --header 'Content-Type: application/x-www-form-urlencoded' \

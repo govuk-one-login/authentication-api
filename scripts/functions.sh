@@ -75,7 +75,7 @@ startup() {
 
 run-integration-tests() {
   pushd ci/terraform/localstack >/dev/null
-  export API_GATEWAY_ID="$(terraform output -raw api-gateway-root-id)"
+  export API_GATEWAY_ID="$(terraform output -raw api_gateway_root_id)"
   popd >/dev/null
   ./gradlew integration-tests:test
 }

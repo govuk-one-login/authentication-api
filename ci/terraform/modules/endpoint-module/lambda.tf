@@ -6,7 +6,7 @@ resource "aws_iam_role" "lambda_iam_role" {
 
 resource "aws_lambda_function" "endpoint_lambda" {
   filename      = var.lambda_zip_file
-  function_name = "${var.endpoint_name}-${var.environment}-lambda"
+  function_name = replace("${var.endpoint_name}-${var.environment}-lambda", ".", "")
   role          = aws_iam_role.lambda_iam_role.arn
   handler       = var.handler_function_name
 
