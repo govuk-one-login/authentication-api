@@ -18,6 +18,10 @@ output "signup_url" {
   value = module.signup.base_url
 }
 
+output "register_url" {
+  value = module.register.base_url
+}
+
 
 
 output "openid_configuration_discovery_url" {
