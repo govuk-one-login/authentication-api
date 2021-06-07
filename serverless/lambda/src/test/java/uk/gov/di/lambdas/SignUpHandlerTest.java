@@ -34,9 +34,9 @@ class SignUpHandlerTest {
     @Test
     public void shouldReturn200IfSignUpIsSuccessful() {
         String password = "computer-1";
-        when(VALIDATION_SERVICE.validatePassword(password, password)).thenReturn(Collections.EMPTY_SET);
+        when(VALIDATION_SERVICE.validatePassword(eq(password))).thenReturn(Collections.EMPTY_SET);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody("password=computer-1&password-confirm=computer-1&email=joe.bloggs@test.com");
+        event.setBody("{ \"password\": \"computer-1\", \"email\": \"joe.bloggs@test.com\" }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
         verify(USER_SERVICE).signUp(eq("joe.bloggs@test.com"), eq(password));
@@ -47,7 +47,7 @@ class SignUpHandlerTest {
     @Test
     public void shouldReturn400IfAnyRequestParametersAreMissing() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody("password=computer-1&email=joe.bloggs@test.com");
+        event.setBody("{ \"email\": \"joe.bloggs@test.com\" }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
         assertEquals(400, result.getStatusCode());
@@ -57,10 +57,10 @@ class SignUpHandlerTest {
     @Test
     public void shouldReturn400IfPasswordFailsValidation() {
         String password = "computer";
-        when(VALIDATION_SERVICE.validatePassword(password, password)).thenReturn(Set.of(NO_NUMBER_INCLUDED));
+        when(VALIDATION_SERVICE.validatePassword(eq(password))).thenReturn(Set.of(NO_NUMBER_INCLUDED));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody("password=computer&password-confirm=computer&email=joe.bloggs@test.com");
+        event.setBody("{ \"password\": \"computer\", \"email\": \"joe.bloggs@test.com\" }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
         assertEquals(400, result.getStatusCode());
