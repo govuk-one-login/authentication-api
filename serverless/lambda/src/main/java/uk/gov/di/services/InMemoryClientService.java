@@ -21,7 +21,6 @@ public class InMemoryClientService implements ClientService {
                     "client-name",
                             "test-id",
                             "test-secret",
-                    List.of("email", "openid", "profile"),
                     List.of("code"),
                             List.of("http://localhost:8080"),
                             List.of("contact@example.com")));
@@ -42,16 +41,12 @@ public class InMemoryClientService implements ClientService {
 
         var client = clientMaybe.get();
 
-        if (!client.getRedirectUrls().contains(authRequest.getRedirectionURI().toString())) {
+        if (!client.getRedirectUris().contains(authRequest.getRedirectionURI().toString())) {
             return Optional.of(OAuth2Error.INVALID_REQUEST_URI);
         }
 
         if (!client.getAllowedResponseTypes().contains(authRequest.getResponseType().toString())) {
             return Optional.of(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE);
-        }
-
-        if (!client.getScopes().containsAll(authRequest.getScope().toStringList())) {
-            return Optional.of(OAuth2Error.INVALID_SCOPE);
         }
 
         return Optional.empty();
@@ -76,11 +71,7 @@ public class InMemoryClientService implements ClientService {
 
         String clientId = UUID.randomUUID().toString();
         String clientSecret = UUID.randomUUID().toString();
-        Client client = new Client(clientName, clientId, clientSecret, List.of(
-                "openid",
-                "email",
-                "profile"
-        ), List.of("code"), redirectUris, contacts);
+        Client client = new Client(clientName, clientId, clientSecret, List.of("code"), redirectUris, contacts);
         clients.add(client);
         return client;
     }
