@@ -15,15 +15,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TokenResourceIntegrationTest {
 
-    private static final String localTokenEndpointFormat = "http://localhost:45678/restapis/%s/local/_user_request_/token";
-    private final static String localApiGatewayId = Optional.ofNullable(System.getenv().get("API_GATEWAY_ID")).orElse("");
-    private final static String rootResourceUrl =
-            Optional.ofNullable(System.getenv().get("ROOT_RESOURCE_URL")).orElse(String.format(localTokenEndpointFormat, localApiGatewayId));
+    private final static String LOCAL_TOKEN_ENDPOINT_FORMAT = "http://localhost:45678/restapis/%s/local/_user_request_";
+    private final static String LOCAL_API_GATEWAY_ID = Optional.ofNullable(System.getenv().get("API_GATEWAY_ID")).orElse("");
+    private final static String ROOT_RESOURCE_URL =
+            Optional.ofNullable(System.getenv().get("ROOT_RESOURCE_URL")).orElse(String.format(LOCAL_TOKEN_ENDPOINT_FORMAT, LOCAL_API_GATEWAY_ID));
+
+    private final static String TOKEN_RESOURCE = "/token";
 
     @Test
     public void shouldCallTokenResourceAndReturn200() {
         Client client = ClientBuilder.newClient();
-        WebTarget webTarget = client.target(rootResourceUrl);
+        WebTarget webTarget = client.target(ROOT_RESOURCE_URL + TOKEN_RESOURCE);
 
         Invocation.Builder invocationBuilder = webTarget.request(MediaType.TEXT_PLAIN);
         Response response = invocationBuilder
