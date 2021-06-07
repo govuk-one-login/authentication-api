@@ -5,7 +5,7 @@ test-api() {
   printf "\n\nRunning api tests...\n"
 
   pushd ci/terraform/localstack > /dev/null
-  apigatewayid="$(terraform output -raw api-gateway-root-id)"
+  apigatewayid="$(terraform output -raw api_gateway_root_id)"
   popd > /dev/null
 
   url="http://localhost:45678/restapis/${apigatewayid}/local/_user_request_/token"
