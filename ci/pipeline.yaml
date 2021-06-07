@@ -88,8 +88,8 @@ jobs:
                 cd di-authentication-api/ci/terraform/aws
                 terraform init -input=false -backend-config "role_arn=${DEPLOYER_ROLE_ARN}"
                 terraform plan \
-                  -var 'lambda-zip-file=../../../../lambda-zip/lambda.zip' \
-                  -var "deployer-role-arn=${DEPLOYER_ROLE_ARN}" \
+                  -var 'lambda_zip_file=../../../../lambda-zip/lambda.zip' \
+                  -var "deployer_role_arn=${DEPLOYER_ROLE_ARN}" \
                   -out=../../../../terraform-plan/terraform.plan
 
       - task: terraform-apply
