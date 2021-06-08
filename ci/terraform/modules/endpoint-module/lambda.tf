@@ -11,7 +11,10 @@ resource "aws_lambda_function" "endpoint_lambda" {
   handler       = var.handler_function_name
 
   source_code_hash = filebase64sha256(var.lambda_zip_file)
-
+  vpc_config {
+    security_group_ids = [var.security_group_id]
+    subnet_ids = []
+  }
   environment {
     variables = var.handler_environment_variables
   }

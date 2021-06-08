@@ -6,5 +6,7 @@ resource "aws_elasticache_cluster" "sessions_store" {
   parameter_group_name = "default.redis6.x"
   engine_version       = "6.x"
   port                 = 6379
-
+  security_group_ids = [
+    aws_security_group.elasticache_security_group.id
+  ]
 }

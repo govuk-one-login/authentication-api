@@ -24,6 +24,7 @@ module "authorize" {
   execution_arn             = module.api_gateway_root.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.lambda_zip_file
+  security_group_id         = aws_security_group.elasticache_security_group.id
 }
 
 module "openid_configuration_discovery" {
@@ -44,6 +45,7 @@ module "openid_configuration_discovery" {
   execution_arn             = module.api_gateway_root.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.lambda_zip_file
+  security_group_id         = aws_security_group.elasticache_security_group.id
 }
 
 module "jwks" {
@@ -64,6 +66,7 @@ module "jwks" {
   execution_arn             = module.api_gateway_root.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.lambda_zip_file
+  security_group_id         = aws_security_group.elasticache_security_group.id
 }
 
 module "token" {
@@ -84,6 +87,7 @@ module "token" {
   execution_arn             = module.api_gateway_root.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.lambda_zip_file
+  security_group_id         = aws_security_group.elasticache_security_group.id
 }
 
 module "register" {
@@ -104,6 +108,7 @@ module "register" {
   execution_arn             = module.api_gateway_root.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.lambda_zip_file
+  security_group_id         = aws_security_group.elasticache_security_group.id
 }
 
 module "signup" {
@@ -124,6 +129,7 @@ module "signup" {
   execution_arn             = module.api_gateway_root.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.lambda_zip_file
+  security_group_id         = aws_security_group.elasticache_security_group.id
 }
 
 module "userinfo" {
@@ -144,4 +150,5 @@ module "userinfo" {
   execution_arn             = module.api_gateway_root.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.lambda_zip_file
+  security_group_id         = aws_security_group.elasticache_security_group.id
 }
