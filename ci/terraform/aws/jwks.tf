@@ -13,4 +13,5 @@ module "jwks" {
   execution_arn             = module.api_gateway_root.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.lambda_zip_file
+  security_group_id         = aws_security_group.elasticache_security_group.id
 }

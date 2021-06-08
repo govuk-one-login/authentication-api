@@ -63,3 +63,8 @@ variable "lambda_iam_policy" {
 }
 EOF
 }
+
+variable "security_group_id" {
+  type = string
+  description = "The id of the security for the lambda"
+}
