@@ -11,34 +11,40 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.entity.Session;
 import uk.gov.di.helpers.RequestBodyHelper;
 import uk.gov.di.services.ClientService;
+import uk.gov.di.services.ConfigurationService;
+import uk.gov.di.services.SessionService;
 
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 class AuthorisationHandlerTest {
 
     private final Context CONTEXT = mock(Context.class);
 
     private final ClientService CLIENT_SERVICE = mock(ClientService.class);
+    private final ConfigurationService CONFIGURATION_SERVICE = mock(ConfigurationService.class);
+    private final SessionService SESSION_SERVICE = mock(SessionService.class);
+
     private AuthorisationHandler handler;
 
     @BeforeEach
     public void setUp() {
-        handler = new AuthorisationHandler(CLIENT_SERVICE);
+        handler = new AuthorisationHandler(CLIENT_SERVICE, CONFIGURATION_SERVICE, SESSION_SERVICE);
     }
 
     @Test
-    void shouldRedirectToSuppliedUrlOnSuccess() throws MalformedURLException {
+    void shouldRedirectToLoginOnSuccess() {
         AuthorizationCode authCode = new AuthorizationCode();
         AuthenticationSuccessResponse authSuccessResponse = new AuthenticationSuccessResponse(
                 URI.create("http://localhost:8080"),
@@ -49,9 +55,14 @@ class AuthorisationHandlerTest {
                 null,
                 null);
 
+        final URI loginUrl = URI.create("http://example.com");
+        final Session session = new Session();
+
         when(CLIENT_SERVICE.getErrorForAuthorizationRequest(any(AuthorizationRequest.class))).thenReturn(Optional.empty());
         when(CLIENT_SERVICE.getSuccessfulResponse(any(AuthenticationRequest.class), eq("joe.bloggs@digital.cabinet-office.gov.uk")))
                 .thenReturn(authSuccessResponse);
+        when(CONFIGURATION_SERVICE.getLoginURI()).thenReturn(loginUrl);
+        when(SESSION_SERVICE.createSession()).thenReturn(session);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
@@ -68,9 +79,9 @@ class AuthorisationHandlerTest {
         Map<String, String> requestParams = RequestBodyHelper.PARSE_REQUEST_BODY(uri.getQuery());
 
         assertEquals(302, response.getStatusCode());
-        assertEquals("localhost:8080", uri.toURL().getAuthority());
-        assertEquals(authCode.toString(), requestParams.get("code"));
-        assertEquals("some-state", requestParams.get("state"));
+        assertEquals(loginUrl.getAuthority(), uri.getAuthority());
+        assertEquals(session.getSessionId(), requestParams.get("session-id"));
+        verify(SESSION_SERVICE).save(eq(session));
     }
 
     @Test
