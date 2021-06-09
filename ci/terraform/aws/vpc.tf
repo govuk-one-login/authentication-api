@@ -9,3 +9,12 @@ resource "aws_security_group" "elasticache_security_group" {
   vpc_id      = aws_vpc.authentication.id
   description = "Security group to allow access to Redis"
 }
+
+data "aws_availability_zones" "available" {}
+
+resource "aws_subnet" "authentication" {
+  count             = length(data.aws_availability_zones.available.names)
+  vpc_id            = aws_vpc.authentication.id
+  cidr_block        = "10.0.${count.index}.0/24"
+  availability_zone = data.aws_availability_zones.available.names[count.index]
+}

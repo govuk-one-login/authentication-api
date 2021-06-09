@@ -68,3 +68,8 @@ variable "security_group_id" {
   type = string
   description = "The id of the security for the lambda"
 }
+
+variable "subnet_id" {
+  type = list(string)
+  description = "The id of the subnets for the lambda"
+}
