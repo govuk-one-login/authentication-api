@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.helpers.RequestBodyHelper;
 import uk.gov.di.services.ClientService;
+import uk.gov.di.services.ConfigurationService;
 
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -30,15 +31,16 @@ class AuthorisationHandlerTest {
     private final Context CONTEXT = mock(Context.class);
 
     private final ClientService CLIENT_SERVICE = mock(ClientService.class);
+    private final ConfigurationService CONFIGURATION_SERVICE = mock(ConfigurationService.class);
     private AuthorisationHandler handler;
 
     @BeforeEach
     public void setUp() {
-        handler = new AuthorisationHandler(CLIENT_SERVICE);
+        handler = new AuthorisationHandler(CLIENT_SERVICE, CONFIGURATION_SERVICE);
     }
 
     @Test
-    void shouldRedirectToSuppliedUrlOnSuccess() throws MalformedURLException {
+    void shouldRedirectToLoginOnSuccess() throws MalformedURLException {
         AuthorizationCode authCode = new AuthorizationCode();
         AuthenticationSuccessResponse authSuccessResponse = new AuthenticationSuccessResponse(
                 URI.create("http://localhost:8080"),
@@ -49,9 +51,12 @@ class AuthorisationHandlerTest {
                 null,
                 null);
 
+        final String loginUrl = "http://example.com";
+
         when(CLIENT_SERVICE.getErrorForAuthorizationRequest(any(AuthorizationRequest.class))).thenReturn(Optional.empty());
         when(CLIENT_SERVICE.getSuccessfulResponse(any(AuthenticationRequest.class), eq("joe.bloggs@digital.cabinet-office.gov.uk")))
                 .thenReturn(authSuccessResponse);
+        when(CONFIGURATION_SERVICE.getLoginURL()).thenReturn(Optional.of(loginUrl));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
@@ -65,12 +70,9 @@ class AuthorisationHandlerTest {
         );
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, CONTEXT);
         URI uri = URI.create(response.getHeaders().get("Location"));
-        Map<String, String> requestParams = RequestBodyHelper.PARSE_REQUEST_BODY(uri.getQuery());
 
         assertEquals(302, response.getStatusCode());
-        assertEquals("localhost:8080", uri.toURL().getAuthority());
-        assertEquals(authCode.toString(), requestParams.get("code"));
-        assertEquals("some-state", requestParams.get("state"));
+        assertEquals(loginUrl, uri.toURL().toString());
     }
 
     @Test

@@ -12,6 +12,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationResponse;
 import uk.gov.di.services.AuthorizationCodeService;
 import uk.gov.di.services.ClientService;
+import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.InMemoryClientService;
 
 import java.util.List;
@@ -22,13 +23,19 @@ import java.util.stream.Collectors;
 public class AuthorisationHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final ClientService clientService;
+    private final ConfigurationService configurationService;
 
-    public AuthorisationHandler(ClientService clientService) {
+    public AuthorisationHandler(
+            ClientService clientService,
+            ConfigurationService configurationService
+            ) {
         this.clientService = clientService;
+        this.configurationService = configurationService;
     }
 
     public AuthorisationHandler() {
         this.clientService = new InMemoryClientService(new AuthorizationCodeService());
+        this.configurationService = new ConfigurationService();
     }
 
     @Override
@@ -63,7 +70,7 @@ public class AuthorisationHandler implements RequestHandler<APIGatewayProxyReque
         AuthenticationResponse authResponse = clientService
                 .getSuccessfulResponse(authRequest, "joe.bloggs@digital.cabinet-office.gov.uk");
         return new APIGatewayProxyResponseEvent().withStatusCode(302).withHeaders(
-                Map.of("Location", authResponse.toSuccessResponse().toURI().toString())
+                Map.of("Location", configurationService.getLoginURL().get())
         );
     }
 
