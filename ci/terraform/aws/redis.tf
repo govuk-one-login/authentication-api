@@ -11,7 +11,7 @@ resource "aws_elasticache_replication_group" "sessions_store" {
   node_type                     = "cache.t2.micro"
   number_cache_clusters         = length(data.aws_availability_zones.available.names)
   engine                        = "redis"
-  engine_version                = "6.x"
+  engine_version                = "6.0.5"
   parameter_group_name          = "default.redis6.x"
   port                          = 6379
 
