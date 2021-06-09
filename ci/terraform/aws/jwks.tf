@@ -14,4 +14,5 @@ module "jwks" {
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.lambda_zip_file
   security_group_id         = aws_security_group.elasticache_security_group.id
+  subnet_id                 = aws_subnet.authentication.*.id
 }

@@ -13,7 +13,7 @@ resource "aws_lambda_function" "endpoint_lambda" {
   source_code_hash = filebase64sha256(var.lambda_zip_file)
   vpc_config {
     security_group_ids = [var.security_group_id]
-    subnet_ids = []
+    subnet_ids = var.subnet_id
   }
   environment {
     variables = var.handler_environment_variables
@@ -49,4 +49,34 @@ EOF
 resource "aws_iam_role_policy_attachment" "lambda_logs" {
   role       = aws_iam_role.lambda_iam_role.name
   policy_arn = aws_iam_policy.endpoint_logging_policy.arn
+}
+
+resource "aws_iam_policy" "endpoint_networking_policy" {
+  name        = "${var.endpoint_name}_lambda_networking"
+  path        = "/"
+  description = "IAM policy for managing VPC connection for a lambda"
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeNetworkInterfaces",
+        "ec2:CreateNetworkInterface",
+        "ec2:DeleteNetworkInterface",
+        "ec2:DescribeInstances",
+        "ec2:AttachNetworkInterface"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_networking" {
+  role       = aws_iam_role.lambda_iam_role.name
+  policy_arn = aws_iam_policy.endpoint_networking_policy.arn
 }
