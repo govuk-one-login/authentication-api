@@ -9,11 +9,11 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.AuthenticationResponse;
 import uk.gov.di.services.AuthorizationCodeService;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.InMemoryClientService;
+import uk.gov.di.services.SessionService;
 
 import java.util.List;
 import java.util.Map;
@@ -24,18 +24,21 @@ public class AuthorisationHandler implements RequestHandler<APIGatewayProxyReque
 
     private final ClientService clientService;
     private final ConfigurationService configurationService;
+    private final SessionService sessionService;
 
     public AuthorisationHandler(
             ClientService clientService,
-            ConfigurationService configurationService
-            ) {
+            ConfigurationService configurationService,
+            SessionService sessionService) {
         this.clientService = clientService;
         this.configurationService = configurationService;
+        this.sessionService = sessionService;
     }
 
     public AuthorisationHandler() {
         this.clientService = new InMemoryClientService(new AuthorizationCodeService());
         this.configurationService = new ConfigurationService();
+        this.sessionService = new SessionService();
     }
 
     @Override
@@ -56,7 +59,7 @@ public class AuthorisationHandler implements RequestHandler<APIGatewayProxyReque
 
             return error
                     .map(e -> errorResponse(authRequest, e))
-                    .orElseGet(() -> redirectResponse(authRequest));
+                    .orElseGet(this::redirectResponse);
         } catch (ParseException e) {
             APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
             response.setStatusCode(400);
@@ -66,11 +69,9 @@ public class AuthorisationHandler implements RequestHandler<APIGatewayProxyReque
         }
     }
 
-    private APIGatewayProxyResponseEvent redirectResponse (AuthenticationRequest authRequest) {
-        AuthenticationResponse authResponse = clientService
-                .getSuccessfulResponse(authRequest, "joe.bloggs@digital.cabinet-office.gov.uk");
+    private APIGatewayProxyResponseEvent redirectResponse() {
         return new APIGatewayProxyResponseEvent().withStatusCode(302).withHeaders(
-                Map.of("Location", configurationService.getLoginURL().get())
+                Map.of("Location", configurationService.getLoginURI().toString()+"?session-id="+sessionService.createSession())
         );
     }
 

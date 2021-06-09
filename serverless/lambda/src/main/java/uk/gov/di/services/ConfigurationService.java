@@ -1,5 +1,6 @@
 package uk.gov.di.services;
 
+import java.net.URI;
 import java.util.Optional;
 
 public class ConfigurationService {
@@ -8,7 +9,7 @@ public class ConfigurationService {
         return Optional.ofNullable(System.getenv("BASE_URL"));
     }
 
-    public Optional<String> getLoginURL() {
-        return Optional.ofNullable(System.getenv("LOGIN_URL"));
+    public URI getLoginURI() {
+        return URI.create(System.getenv("LOGIN_URI"));
     }
 }
