@@ -9,6 +9,7 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import uk.gov.di.entity.Session;
 import uk.gov.di.services.AuthorizationCodeService;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ConfigurationService;
@@ -59,7 +60,7 @@ public class AuthorisationHandler implements RequestHandler<APIGatewayProxyReque
 
             return error
                     .map(e -> errorResponse(authRequest, e))
-                    .orElseGet(this::redirectResponse);
+                    .orElseGet(() -> createSessionAndRedirect(authRequest));
         } catch (ParseException e) {
             APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
             response.setStatusCode(400);
@@ -69,9 +70,14 @@ public class AuthorisationHandler implements RequestHandler<APIGatewayProxyReque
         }
     }
 
-    private APIGatewayProxyResponseEvent redirectResponse() {
+    private APIGatewayProxyResponseEvent createSessionAndRedirect(AuthenticationRequest authRequest) {
+        Session session = sessionService.createSession().setAuthenticationRequest(authRequest);
+        sessionService.save(session);
+
         return new APIGatewayProxyResponseEvent().withStatusCode(302).withHeaders(
-                Map.of("Location", configurationService.getLoginURI().toString()+"?session-id="+sessionService.createSession())
+                Map.of("Location", configurationService.getLoginURI().toString()
+                        + "?session-id=" + session.getSessionId()
+                )
         );
     }
 

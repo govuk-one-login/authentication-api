@@ -11,6 +11,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.entity.Session;
 import uk.gov.di.helpers.RequestBodyHelper;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ConfigurationService;
@@ -23,8 +24,9 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 class AuthorisationHandlerTest {
 
@@ -54,13 +56,13 @@ class AuthorisationHandlerTest {
                 null);
 
         final URI loginUrl = URI.create("http://example.com");
-        final String sessionId = "2j9fas9f19419jf9sadf9asdf";
+        final Session session = new Session();
 
         when(CLIENT_SERVICE.getErrorForAuthorizationRequest(any(AuthorizationRequest.class))).thenReturn(Optional.empty());
         when(CLIENT_SERVICE.getSuccessfulResponse(any(AuthenticationRequest.class), eq("joe.bloggs@digital.cabinet-office.gov.uk")))
                 .thenReturn(authSuccessResponse);
         when(CONFIGURATION_SERVICE.getLoginURI()).thenReturn(loginUrl);
-        when(SESSION_SERVICE.createSession()).thenReturn(sessionId);
+        when(SESSION_SERVICE.createSession()).thenReturn(session);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
@@ -78,7 +80,8 @@ class AuthorisationHandlerTest {
 
         assertEquals(302, response.getStatusCode());
         assertEquals(loginUrl.getAuthority(), uri.getAuthority());
-        assertEquals(sessionId, requestParams.get("session-id"));
+        assertEquals(session.getSessionId(), requestParams.get("session-id"));
+        verify(SESSION_SERVICE).save(eq(session));
     }
 
     @Test
