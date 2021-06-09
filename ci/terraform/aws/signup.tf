@@ -15,5 +15,4 @@ module "signup" {
   lambda_zip_file           = var.lambda_zip_file
   security_group_id         = aws_security_group.elasticache_security_group.id
   subnet_id                 = aws_subnet.authentication.*.id
-
 }

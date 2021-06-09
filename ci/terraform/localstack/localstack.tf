@@ -25,6 +25,7 @@ module "authorize" {
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.lambda_zip_file
   security_group_id         = aws_security_group.elasticache_security_group.id
+  subnet_id                 = aws_subnet.authentication.*.id
 }
 
 module "openid_configuration_discovery" {
@@ -46,6 +47,7 @@ module "openid_configuration_discovery" {
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.lambda_zip_file
   security_group_id         = aws_security_group.elasticache_security_group.id
+  subnet_id                 = aws_subnet.authentication.*.id
 }
 
 module "jwks" {
@@ -67,6 +69,7 @@ module "jwks" {
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.lambda_zip_file
   security_group_id         = aws_security_group.elasticache_security_group.id
+  subnet_id                 = aws_subnet.authentication.*.id
 }
 
 module "token" {
@@ -88,6 +91,7 @@ module "token" {
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.lambda_zip_file
   security_group_id         = aws_security_group.elasticache_security_group.id
+  subnet_id                 = aws_subnet.authentication.*.id
 }
 
 module "register" {
@@ -109,6 +113,7 @@ module "register" {
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.lambda_zip_file
   security_group_id         = aws_security_group.elasticache_security_group.id
+  subnet_id                 = aws_subnet.authentication.*.id
 }
 
 module "signup" {
@@ -130,6 +135,7 @@ module "signup" {
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.lambda_zip_file
   security_group_id         = aws_security_group.elasticache_security_group.id
+  subnet_id                 = aws_subnet.authentication.*.id
 }
 
 module "userinfo" {
@@ -151,4 +157,5 @@ module "userinfo" {
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.lambda_zip_file
   security_group_id         = aws_security_group.elasticache_security_group.id
+  subnet_id                 = aws_subnet.authentication.*.id
 }
