@@ -13,9 +13,11 @@ import uk.gov.di.services.ClientService;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventStatusMatcher.hasStatus;
 
 class ClientRegistrationHandlerTest {
 
@@ -43,7 +45,7 @@ class ClientRegistrationHandlerTest {
         event.setBody("{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"] }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
-        assertEquals(200, result.getStatusCode());
+        assertThat(result, hasStatus(200));
         Client clientResult = objectMapper.readValue(result.getBody(), Client.class);
         assertEquals(client.getClientId(), clientResult.getClientId());
     }
@@ -54,7 +56,7 @@ class ClientRegistrationHandlerTest {
         event.setBody("{\"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"] }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
-        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasStatus(400));
         assertEquals("Request is missing parameters", result.getBody());
     }
 }

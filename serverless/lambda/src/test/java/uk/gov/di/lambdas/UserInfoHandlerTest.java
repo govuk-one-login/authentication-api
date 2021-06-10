@@ -16,11 +16,13 @@ import uk.gov.di.services.UserInfoService;
 import java.util.Map;
 import java.util.Optional;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventStatusMatcher.hasStatus;
 
 public class UserInfoHandlerTest {
 
@@ -46,7 +48,7 @@ public class UserInfoHandlerTest {
         when(CONTEXT.getLogger()).thenReturn(mock(LambdaLogger.class));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
-        assertEquals(200, result.getStatusCode());
+        assertThat(result, hasStatus(200));
         UserInfo parse = UserInfo.parse(result.getBody());
         assertEquals(EMAIL_ADDRESS.get(), parse.getEmailAddress());
     }
@@ -58,7 +60,7 @@ public class UserInfoHandlerTest {
         when(CONTEXT.getLogger()).thenReturn(mock(LambdaLogger.class));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
-        assertEquals(401, result.getStatusCode());
+        assertThat(result, hasStatus(401));
         assertEquals("Access Token Not Parsable", result.getBody());
     }
 
@@ -68,7 +70,7 @@ public class UserInfoHandlerTest {
         when(CONTEXT.getLogger()).thenReturn(mock(LambdaLogger.class));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
-        assertEquals(401, result.getStatusCode());
+        assertThat(result, hasStatus(401));
         assertEquals("No access token present", result.getBody());
     }
 
@@ -81,7 +83,7 @@ public class UserInfoHandlerTest {
         when(CONTEXT.getLogger()).thenReturn(mock(LambdaLogger.class));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
-        assertEquals(401, result.getStatusCode());
+        assertThat(result, hasStatus(401));
         assertEquals("Access Token Invalid", result.getBody());
     }
 

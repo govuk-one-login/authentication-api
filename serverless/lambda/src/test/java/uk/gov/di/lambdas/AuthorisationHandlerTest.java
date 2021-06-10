@@ -29,6 +29,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventStatusMatcher.hasStatus;
 
 class AuthorisationHandlerTest {
 
@@ -80,7 +81,7 @@ class AuthorisationHandlerTest {
         URI uri = URI.create(response.getHeaders().get("Location"));
         Map<String, String> requestParams = RequestBodyHelper.PARSE_REQUEST_BODY(uri.getQuery());
 
-        assertEquals(302, response.getStatusCode());
+        assertThat(response, hasStatus(302));
         assertEquals(loginUrl.getAuthority(), uri.getAuthority());
 
         assertThat(requestParams, hasEntry("session-id", session.getSessionId()));
@@ -103,7 +104,7 @@ class AuthorisationHandlerTest {
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, CONTEXT);
 
-        assertEquals(400, response.getStatusCode());
+        assertThat(response, hasStatus(400));
         assertEquals("Cannot parse authentication request", response.getBody());
     }
 
@@ -123,7 +124,7 @@ class AuthorisationHandlerTest {
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, CONTEXT);
 
-        assertEquals(302, response.getStatusCode());
+        assertThat(response, hasStatus(302));
         assertEquals(
                 "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope",
                 response.getHeaders().get("Location")

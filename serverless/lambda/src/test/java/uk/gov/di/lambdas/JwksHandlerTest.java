@@ -13,9 +13,11 @@ import uk.gov.di.services.TokenService;
 
 import java.util.UUID;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventStatusMatcher.hasStatus;
 
 class JwksHandlerTest {
 
@@ -38,7 +40,7 @@ class JwksHandlerTest {
 
         JWKSet expectedJWKSet = new JWKSet(signingKey);
 
-        assertEquals(200, result.getStatusCode());
+        assertThat(result, hasStatus(200));
         assertEquals(expectedJWKSet.toString(true), result.getBody());
     }
 
@@ -49,7 +51,7 @@ class JwksHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
-        assertEquals(500, result.getStatusCode());
+        assertThat(result, hasStatus(500));
         assertEquals("Signing key is not present", result.getBody());
     }
 }

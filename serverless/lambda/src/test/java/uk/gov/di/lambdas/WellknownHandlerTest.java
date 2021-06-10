@@ -15,9 +15,11 @@ import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventStatusMatcher.hasStatus;
 
 class WellknownHandlerTest {
     private final Context CONTEXT = mock(Context.class);
@@ -38,7 +40,7 @@ class WellknownHandlerTest {
 
         URI expectedRegistrationURI = URI.create("http://localhost:8080/connect/register");
 
-        assertEquals(200, result.getStatusCode());
+        assertThat(result, hasStatus(200));
         assertEquals(List.of(GrantType.AUTHORIZATION_CODE), OIDCProviderMetadata.parse(result.getBody()).getGrantTypes());
         assertEquals(List.of(ClaimType.NORMAL), OIDCProviderMetadata.parse(result.getBody()).getClaimTypes());
         assertEquals(expectedRegistrationURI, OIDCProviderMetadata.parse(result.getBody()).getRegistrationEndpointURI());
@@ -51,7 +53,7 @@ class WellknownHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
-        assertEquals(500, result.getStatusCode());
+        assertThat(result, hasStatus(500));
         assertEquals("Service not configured", result.getBody());
     }
 }
