@@ -12,6 +12,8 @@ import uk.gov.di.services.UserService;
 import uk.gov.di.services.ValidationService;
 import uk.gov.di.validation.EmailValidation;
 
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 public class CheckUserExistsHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -33,6 +35,12 @@ public class CheckUserExistsHandler implements RequestHandler<APIGatewayProxyReq
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
         try {
+            Optional<Map<String, String>> headers = Optional.ofNullable(input.getHeaders());
+
+            if (headers.isEmpty() || !headers.get().containsKey("session-id")) {
+                return generateApiGatewayProxyResponse(400, "session-id is missing");
+            }
+
             CheckUserExistsRequest userExistsRequest = objectMapper.readValue(input.getBody(), CheckUserExistsRequest.class);
             Set<EmailValidation> emailErrors = validationService.validateEmailAddress(userExistsRequest.getEmail());
             if (!emailErrors.isEmpty()) {

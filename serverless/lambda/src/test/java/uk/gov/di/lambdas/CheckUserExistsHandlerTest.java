@@ -9,7 +9,9 @@ import uk.gov.di.services.UserService;
 import uk.gov.di.services.ValidationService;
 import uk.gov.di.validation.EmailValidation;
 
+import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
@@ -22,10 +24,12 @@ class CheckUserExistsHandlerTest {
     private final UserService USER_SERVICE = mock(UserService.class);
     private final ValidationService VALIDATION_SERVICE = mock(ValidationService.class);
     private CheckUserExistsHandler handler;
+    private String sessionId;
 
     @BeforeEach
     public void setup() {
         handler = new CheckUserExistsHandler(VALIDATION_SERVICE, USER_SERVICE);
+        sessionId = UUID.randomUUID().toString();
     }
 
     @Test
@@ -34,6 +38,7 @@ class CheckUserExistsHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"email\": \"joe.bloggs@digital.cabinet-office.gov.uk\" }");
+        event.setHeaders(Map.of("session-id", sessionId));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
         assertEquals(200, result.getStatusCode());
@@ -46,6 +51,7 @@ class CheckUserExistsHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"email\": \"joe.bloggs@digital.cabinet-office.gov.uk\" }");
+        event.setHeaders(Map.of("session-id", sessionId));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
         assertEquals(404, result.getStatusCode());
@@ -53,9 +59,10 @@ class CheckUserExistsHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfRequestIsMissingParameters() {
+    public void shouldReturn400IfRequestIsMissingEmail() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ }");
+        event.setHeaders(Map.of("session-id", sessionId));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
         assertEquals(400, result.getStatusCode());
@@ -64,7 +71,13 @@ class CheckUserExistsHandlerTest {
 
     @Test
     public void shouldReturn400IfRequestIsMissingSessionId() {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setBody("{ \"email\": \"joe.bloggs@digital.cabinet-office.gov.uk\" }");
 
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
+
+        assertEquals(400, result.getStatusCode());
+        assertEquals("session-id is missing", result.getBody());
     }
 
     @Test
@@ -72,6 +85,7 @@ class CheckUserExistsHandlerTest {
         when(VALIDATION_SERVICE.validateEmailAddress(eq("joe.bloggs"))).thenReturn(Set.of(EmailValidation.INCORRECT_FORMAT));
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"email\": \"joe.bloggs\" }");
+        event.setHeaders(Map.of("session-id", sessionId));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
         assertEquals(400, result.getStatusCode());
