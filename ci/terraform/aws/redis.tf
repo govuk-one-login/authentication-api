@@ -16,5 +16,5 @@ resource "aws_elasticache_replication_group" "sessions_store" {
   port                          = 6379
 
   subnet_group_name    = aws_elasticache_subnet_group.sessions_store.name
-  security_group_ids   = [aws_security_group.elasticache_security_group.id]
+  security_group_ids   = [aws_vpc.authentication.default_security_group_id]
 }

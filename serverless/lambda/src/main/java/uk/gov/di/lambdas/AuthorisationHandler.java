@@ -1,6 +1,7 @@
 package uk.gov.di.lambdas;
 
 import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
@@ -44,7 +45,8 @@ public class AuthorisationHandler implements RequestHandler<APIGatewayProxyReque
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
-
+        LambdaLogger logger = context.getLogger();
+        logger.log("Received authentication request");
         try {
             Map<String, List<String>> queryStringMultiValuedMap = input.getQueryStringParameters().entrySet()
                     .stream()
@@ -60,8 +62,10 @@ public class AuthorisationHandler implements RequestHandler<APIGatewayProxyReque
 
             return error
                     .map(e -> errorResponse(authRequest, e))
-                    .orElseGet(() -> createSessionAndRedirect(authRequest));
+                    .orElseGet(() -> createSessionAndRedirect(authRequest, logger));
         } catch (ParseException e) {
+            logger.log("Authentication request could not be parsed");
+            logger.log(e.getMessage());
             APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
             response.setStatusCode(400);
             response.setBody("Cannot parse authentication request");
@@ -70,10 +74,11 @@ public class AuthorisationHandler implements RequestHandler<APIGatewayProxyReque
         }
     }
 
-    private APIGatewayProxyResponseEvent createSessionAndRedirect(AuthenticationRequest authRequest) {
+    private APIGatewayProxyResponseEvent createSessionAndRedirect(AuthenticationRequest authRequest, LambdaLogger logger) {
         Session session = sessionService.createSession().setAuthenticationRequest(authRequest);
-        sessionService.save(session);
-
+        logger.log("Created session " + session.getSessionId());
+        sessionService.save(session, logger);
+        logger.log("Session saved successfully " + session.getSessionId());
         return new APIGatewayProxyResponseEvent().withStatusCode(302).withHeaders(
                 Map.of("Location", configurationService.getLoginURI().toString()
                         + "?session-id=" + session.getSessionId()
