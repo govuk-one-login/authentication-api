@@ -27,13 +27,13 @@ public class UserExistsResourceIntegrationTest {
     private final static String USEREXISTS_RESOURCE = "/userexists";
 
     @Test
-    public void shouldCallTokenResourceAndReturn200() {
+    public void shouldCallUserExistsResourceAndReturn200() {
         Client client = ClientBuilder.newClient();
         WebTarget webTarget = client.target(ROOT_RESOURCE_URL + USEREXISTS_RESOURCE);
 
         Invocation.Builder invocationBuilder = webTarget.request(MediaType.APPLICATION_JSON);
         MultivaluedMap headers = new MultivaluedHashMap();
-        headers.add("session-id",  UUID.randomUUID().toString());
+        headers.add("Session-Id",  UUID.randomUUID().toString());
 
         CheckUserExistsRequest request = new CheckUserExistsRequest("joe.bloggs@digital.cabinet-office.gov.uk");
 
