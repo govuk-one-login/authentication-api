@@ -38,7 +38,7 @@ class CheckUserExistsHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"email\": \"joe.bloggs@digital.cabinet-office.gov.uk\" }");
-        event.setHeaders(Map.of("session-id", sessionId));
+        event.setHeaders(Map.of("Session-Id", sessionId));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
         assertEquals(200, result.getStatusCode());
@@ -51,7 +51,7 @@ class CheckUserExistsHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"email\": \"joe.bloggs@digital.cabinet-office.gov.uk\" }");
-        event.setHeaders(Map.of("session-id", sessionId));
+        event.setHeaders(Map.of("Session-Id", sessionId));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
         assertEquals(404, result.getStatusCode());
@@ -62,7 +62,7 @@ class CheckUserExistsHandlerTest {
     public void shouldReturn400IfRequestIsMissingEmail() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ }");
-        event.setHeaders(Map.of("session-id", sessionId));
+        event.setHeaders(Map.of("Session-Id", sessionId));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
         assertEquals(400, result.getStatusCode());
@@ -77,7 +77,7 @@ class CheckUserExistsHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
         assertEquals(400, result.getStatusCode());
-        assertEquals("session-id is missing", result.getBody());
+        assertEquals("Session-Id is missing", result.getBody());
     }
 
     @Test
@@ -85,7 +85,7 @@ class CheckUserExistsHandlerTest {
         when(VALIDATION_SERVICE.validateEmailAddress(eq("joe.bloggs"))).thenReturn(Set.of(EmailValidation.INCORRECT_FORMAT));
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"email\": \"joe.bloggs\" }");
-        event.setHeaders(Map.of("session-id", sessionId));
+        event.setHeaders(Map.of("Session-Id", sessionId));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
         assertEquals(400, result.getStatusCode());

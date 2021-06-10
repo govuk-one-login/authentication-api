@@ -36,9 +36,8 @@ public class CheckUserExistsHandler implements RequestHandler<APIGatewayProxyReq
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
         try {
             Optional<Map<String, String>> headers = Optional.ofNullable(input.getHeaders());
-
-            if (headers.isEmpty() || !headers.get().containsKey("session-id")) {
-                return generateApiGatewayProxyResponse(400, "session-id is missing");
+            if (headers.isEmpty() || !headers.get().containsKey("Session-Id")) {
+                return generateApiGatewayProxyResponse(400, "Session-Id is missing");
             }
 
             CheckUserExistsRequest userExistsRequest = objectMapper.readValue(input.getBody(), CheckUserExistsRequest.class);
