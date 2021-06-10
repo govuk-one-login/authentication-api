@@ -16,7 +16,8 @@ dependencies {
             "com.nimbusds:nimbus-jose-jwt:9.8.1",
             "com.fasterxml.jackson.core:jackson-core:2.12.3",
             "com.fasterxml.jackson.core:jackson-databind:2.12.3",
-            "com.fasterxml.jackson.core:jackson-annotations:2.12.3"
+            "com.fasterxml.jackson.core:jackson-annotations:2.12.3",
+            "io.lettuce:lettuce-core:6.1.1.RELEASE"
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0',
                         'com.amazonaws:aws-lambda-java-tests:1.0.0',
                         'org.mockito:mockito-core:3.9.0',
