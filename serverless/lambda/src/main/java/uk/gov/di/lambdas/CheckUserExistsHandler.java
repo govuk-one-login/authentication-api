@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import uk.gov.di.entity.CheckUserExistsRequest;
+import uk.gov.di.entity.CheckUserExistsResponse;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.UserService;
 import uk.gov.di.services.ValidationService;
@@ -47,9 +48,13 @@ public class CheckUserExistsHandler implements RequestHandler<APIGatewayProxyReq
             }
             boolean userExists = authenticationService.userExists(userExistsRequest.getEmail());
             if (userExists) {
-                return generateApiGatewayProxyResponse(200, "User has an account");
+                CheckUserExistsResponse checkUserExistsResponse = new CheckUserExistsResponse(userExistsRequest.getEmail(), true);
+                String checkUserExistsResponseString = objectMapper.writeValueAsString(checkUserExistsResponse);
+                return generateApiGatewayProxyResponse(200, checkUserExistsResponseString);
             } else {
-                return generateApiGatewayProxyResponse(404, "User not found");
+                CheckUserExistsResponse checkUserExistsResponse = new CheckUserExistsResponse(userExistsRequest.getEmail(), false);
+                String checkUserExistsResponseString = objectMapper.writeValueAsString(checkUserExistsResponse);
+                return generateApiGatewayProxyResponse(200, checkUserExistsResponseString);
             }
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyResponse(400, "Request is missing parameters");

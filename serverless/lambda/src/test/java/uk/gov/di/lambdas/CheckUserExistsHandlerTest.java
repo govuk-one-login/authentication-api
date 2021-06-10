@@ -3,8 +3,11 @@ package uk.gov.di.lambdas;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.entity.CheckUserExistsResponse;
 import uk.gov.di.services.UserService;
 import uk.gov.di.services.ValidationService;
 import uk.gov.di.validation.EmailValidation;
@@ -25,6 +28,7 @@ class CheckUserExistsHandlerTest {
     private final ValidationService VALIDATION_SERVICE = mock(ValidationService.class);
     private CheckUserExistsHandler handler;
     private String sessionId;
+    private ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     public void setup() {
@@ -33,20 +37,22 @@ class CheckUserExistsHandlerTest {
     }
 
     @Test
-    public void shouldReturn200IfUserExists() {
+    public void shouldReturn200IfUserExists() throws JsonProcessingException {
         when(USER_SERVICE.userExists(eq("joe.bloggs@digital.cabinet-office.gov.uk"))).thenReturn(true);
-
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"email\": \"joe.bloggs@digital.cabinet-office.gov.uk\" }");
         event.setHeaders(Map.of("Session-Id", sessionId));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
         assertEquals(200, result.getStatusCode());
-        assertEquals("User has an account", result.getBody());
+
+        CheckUserExistsResponse checkUserExistsResponse = objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+        assertEquals("joe.bloggs@digital.cabinet-office.gov.uk", checkUserExistsResponse.getEmail());
+        assertEquals(true, checkUserExistsResponse.doesUserExist());
     }
 
     @Test
-    public void shouldReturn404IfUserDoesNotExist() {
+    public void shouldReturn200IfUserDoesNotExist() throws JsonProcessingException {
         when(USER_SERVICE.userExists(eq("joe.bloggs@digital.cabinet-office.gov.uk"))).thenReturn(false);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -54,8 +60,11 @@ class CheckUserExistsHandlerTest {
         event.setHeaders(Map.of("Session-Id", sessionId));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
-        assertEquals(404, result.getStatusCode());
-        assertEquals("User not found", result.getBody());
+        assertEquals(200, result.getStatusCode());
+
+        CheckUserExistsResponse checkUserExistsResponse = objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+        assertEquals("joe.bloggs@digital.cabinet-office.gov.uk", checkUserExistsResponse.getEmail());
+        assertEquals(false, checkUserExistsResponse.doesUserExist());
     }
 
     @Test
