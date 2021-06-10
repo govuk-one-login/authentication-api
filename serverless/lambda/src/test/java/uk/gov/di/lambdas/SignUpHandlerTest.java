@@ -11,12 +11,14 @@ import uk.gov.di.services.ValidationService;
 import java.util.Collections;
 import java.util.Set;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventStatusMatcher.hasStatus;
 import static uk.gov.di.validation.PasswordValidation.NO_NUMBER_INCLUDED;
 
 class SignUpHandlerTest {
@@ -41,7 +43,7 @@ class SignUpHandlerTest {
 
         verify(USER_SERVICE).signUp(eq("joe.bloggs@test.com"), eq(password));
 
-        assertEquals(200, result.getStatusCode());
+        assertThat(result, hasStatus(200));
     }
 
     @Test
@@ -50,7 +52,7 @@ class SignUpHandlerTest {
         event.setBody("{ \"email\": \"joe.bloggs@test.com\" }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
-        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasStatus(400));
         assertEquals("Request is missing parameters", result.getBody());
     }
 
@@ -63,7 +65,7 @@ class SignUpHandlerTest {
         event.setBody("{ \"password\": \"computer\", \"email\": \"joe.bloggs@test.com\" }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
-        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasStatus(400));
         assertTrue(result.getBody().contains(NO_NUMBER_INCLUDED.toString()));
     }
 }

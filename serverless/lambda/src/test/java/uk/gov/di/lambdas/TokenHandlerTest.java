@@ -9,14 +9,20 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.services.*;
+import uk.gov.di.services.AuthorizationCodeService;
+import uk.gov.di.services.ClientService;
+import uk.gov.di.services.InMemoryClientService;
+import uk.gov.di.services.TokenService;
+import uk.gov.di.services.UserService;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventStatusMatcher.hasStatus;
 
 public class TokenHandlerTest {
 
@@ -48,7 +54,7 @@ public class TokenHandlerTest {
         event.setBody("code=343242&client_id=test-id&client_secret=test-secret");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
-        assertEquals(200, result.getStatusCode());
+        assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(accessToken.getValue()));
     }
 
