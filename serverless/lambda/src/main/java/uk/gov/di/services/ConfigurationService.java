@@ -12,4 +12,8 @@ public class ConfigurationService {
     public URI getLoginURI() {
         return URI.create(System.getenv("LOGIN_URI"));
     }
+
+    public String getRedisURL() {
+        return System.getenv("REDIS_URL");
+    }
 }

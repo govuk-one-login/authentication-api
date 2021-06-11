@@ -1,6 +1,7 @@
 package uk.gov.di.lambdas;
 
 import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
@@ -44,6 +45,7 @@ class AuthorisationHandlerTest {
     @BeforeEach
     public void setUp() {
         handler = new AuthorisationHandler(CLIENT_SERVICE, CONFIGURATION_SERVICE, SESSION_SERVICE);
+        when(CONTEXT.getLogger()).thenReturn(mock(LambdaLogger.class));
     }
 
     @Test
@@ -86,7 +88,7 @@ class AuthorisationHandlerTest {
 
         assertThat(requestParams, hasEntry("session-id", session.getSessionId()));
 
-        verify(SESSION_SERVICE).save(eq(session));
+        verify(SESSION_SERVICE).save(eq(session), any(LambdaLogger.class));
     }
 
     @Test

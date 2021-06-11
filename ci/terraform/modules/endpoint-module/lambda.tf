@@ -9,6 +9,8 @@ resource "aws_lambda_function" "endpoint_lambda" {
   function_name = replace("${var.endpoint_name}-${var.environment}-lambda", ".", "")
   role          = aws_iam_role.lambda_iam_role.arn
   handler       = var.handler_function_name
+  timeout       = 30
+  memory_size = 512
 
   source_code_hash = filebase64sha256(var.lambda_zip_file)
   vpc_config {

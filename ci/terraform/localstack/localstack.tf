@@ -24,7 +24,7 @@ module "authorize" {
   execution_arn             = module.api_gateway_root.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.lambda_zip_file
-  security_group_id         = aws_security_group.elasticache_security_group.id
+  security_group_id         = aws_vpc.authentication.default_security_group_id
   subnet_id                 = aws_subnet.authentication.*.id
 }
 
@@ -46,7 +46,7 @@ module "openid_configuration_discovery" {
   execution_arn             = module.api_gateway_root.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.lambda_zip_file
-  security_group_id         = aws_security_group.elasticache_security_group.id
+  security_group_id         = aws_vpc.authentication.default_security_group_id
   subnet_id                 = aws_subnet.authentication.*.id
 }
 
@@ -68,7 +68,7 @@ module "jwks" {
   execution_arn             = module.api_gateway_root.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.lambda_zip_file
-  security_group_id         = aws_security_group.elasticache_security_group.id
+  security_group_id         = aws_vpc.authentication.default_security_group_id
   subnet_id                 = aws_subnet.authentication.*.id
 }
 
@@ -90,7 +90,7 @@ module "token" {
   execution_arn             = module.api_gateway_root.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.lambda_zip_file
-  security_group_id         = aws_security_group.elasticache_security_group.id
+  security_group_id         = aws_vpc.authentication.default_security_group_id
   subnet_id                 = aws_subnet.authentication.*.id
 }
 
@@ -112,7 +112,7 @@ module "register" {
   execution_arn             = module.api_gateway_root.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.lambda_zip_file
-  security_group_id         = aws_security_group.elasticache_security_group.id
+  security_group_id         = aws_vpc.authentication.default_security_group_id
   subnet_id                 = aws_subnet.authentication.*.id
 }
 
@@ -134,7 +134,7 @@ module "signup" {
   execution_arn             = module.api_gateway_root.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.lambda_zip_file
-  security_group_id         = aws_security_group.elasticache_security_group.id
+  security_group_id         = aws_vpc.authentication.default_security_group_id
   subnet_id                 = aws_subnet.authentication.*.id
 }
 
@@ -156,7 +156,7 @@ module "userinfo" {
   execution_arn             = module.api_gateway_root.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.lambda_zip_file
-  security_group_id         = aws_security_group.elasticache_security_group.id
+  security_group_id         = aws_vpc.authentication.default_security_group_id
   subnet_id                 = aws_subnet.authentication.*.id
 }
 
@@ -178,6 +178,6 @@ module "userexists" {
   execution_arn             = module.api_gateway_root.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.lambda_zip_file
-  security_group_id         = aws_security_group.elasticache_security_group.id
+  security_group_id         = aws_vpc.authentication.default_security_group_id
   subnet_id                 = aws_subnet.authentication.*.id
 }

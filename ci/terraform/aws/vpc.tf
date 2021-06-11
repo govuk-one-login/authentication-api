@@ -4,12 +4,6 @@ resource "aws_vpc" "authentication" {
   enable_dns_support   = true
 }
 
-resource "aws_security_group" "elasticache_security_group" {
-  name        = "${var.environment}-elasticache-security-group"
-  vpc_id      = aws_vpc.authentication.id
-  description = "Security group to allow access to Redis"
-}
-
 data "aws_availability_zones" "available" {}
 
 resource "aws_subnet" "authentication" {
@@ -17,4 +11,10 @@ resource "aws_subnet" "authentication" {
   vpc_id            = aws_vpc.authentication.id
   cidr_block        = "10.0.${count.index}.0/24"
   availability_zone = data.aws_availability_zones.available.names[count.index]
+}
+
+resource "aws_route_table_association" "private" {
+  count          = length(data.aws_availability_zones.available.names)
+  subnet_id      = element(aws_subnet.authentication.*.id,count.index)
+  route_table_id = aws_vpc.authentication.default_route_table_id
 }
