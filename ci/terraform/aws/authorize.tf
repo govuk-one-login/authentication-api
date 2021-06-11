@@ -6,7 +6,7 @@ module "authorize" {
   handler_environment_variables = {
     BASE_URL  = var.api_base_url
     LOGIN_URI = "https://di-authentication-frontend.london.cloudapps.digital/"
-    REDIS_URL = "${aws_elasticache_replication_group.sessions_store.primary_endpoint_address}:${aws_elasticache_replication_group.sessions_store.port}"
+    REDIS_URL = "redis://${aws_elasticache_replication_group.sessions_store.primary_endpoint_address}:${aws_elasticache_replication_group.sessions_store.port}"
   }
   handler_function_name = "uk.gov.di.lambdas.AuthorisationHandler::handleRequest"
 
