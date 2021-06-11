@@ -1,5 +1,7 @@
 package uk.gov.di.services;
 
+import uk.gov.di.entity.NotificationType;
+
 import java.net.URI;
 import java.util.Optional;
 
@@ -27,5 +29,18 @@ public class ConfigurationService {
 
     public String getRedisPassword() {
         return System.getenv("REDIS_PASSWORD");
+    }
+
+    public String getNotifyApiKey() {
+        return System.getenv("NOTIFY_API_KEY");
+    }
+
+    public String getNotificationTemplateId(NotificationType notificationType) {
+        switch(notificationType) {
+            case VERIFY_EMAIL:
+                return System.getenv("VERIFY_EMAIL_TEMPLATE_ID");
+            default:
+                throw new RuntimeException("NotificationType template ID does not exist");
+        }
     }
 }
