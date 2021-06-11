@@ -7,3 +7,7 @@ build
 **/.terraform.lock.hcl
 **/terraform.tfstate*
 **/out
+**/.classpath
+**/.project
+**/.settings
+**/bin
