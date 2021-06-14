@@ -14,7 +14,7 @@ data "aws_iam_policy_document" "queue_policy_document" {
     principals {
       type = "AWS"
 
-      identifiers = ["arn:aws:iam::${var.account_id}:root"]
+      identifiers = var.principals_arns
     }
 
     actions = [
