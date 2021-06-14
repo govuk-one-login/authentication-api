@@ -13,7 +13,19 @@ public class ConfigurationService {
         return URI.create(System.getenv("LOGIN_URI"));
     }
 
-    public String getRedisURL() {
-        return System.getenv("REDIS_URL");
+    public String getRedisHost() {
+        return System.getenv("REDIS_HOST");
+    }
+
+    public int getRedisPort() {
+        return Integer.parseInt(System.getenv().getOrDefault("REDIS_PORT", "6379"));
+    }
+
+    public boolean getUseRedisTLS() {
+        return Boolean.parseBoolean(System.getenv().getOrDefault("REDIS_TLS", "false"));
+    }
+
+    public String getRedisPassword() {
+        return System.getenv("REDIS_PASSWORD");
     }
 }
