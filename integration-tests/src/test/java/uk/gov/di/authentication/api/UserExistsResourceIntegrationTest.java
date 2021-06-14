@@ -12,8 +12,8 @@ import jakarta.ws.rs.core.MultivaluedHashMap;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.entity.CheckUserExistsRequest;
 import uk.gov.di.entity.CheckUserExistsResponse;
+import uk.gov.di.entity.UserWithEmailRequest;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -42,8 +42,8 @@ public class UserExistsResourceIntegrationTest {
         MultivaluedMap headers = new MultivaluedHashMap();
         headers.add("Session-Id", UUID.randomUUID().toString());
 
-        CheckUserExistsRequest request =
-                new CheckUserExistsRequest("joe.bloggs@digital.cabinet-office.gov.uk");
+        UserWithEmailRequest request =
+                new UserWithEmailRequest("joe.bloggs@digital.cabinet-office.gov.uk");
 
         Response response =
                 invocationBuilder

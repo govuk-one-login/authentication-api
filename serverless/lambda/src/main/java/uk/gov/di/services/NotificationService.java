@@ -19,11 +19,7 @@ public class NotificationService {
 
     public void sendEmail(String email, Map<String, Object> personalisation, String templateId) {
         try {
-            notifyClient.sendEmail(
-                    templateId,
-                    email,
-                    personalisation,
-                    "");
+            notifyClient.sendEmail(templateId, email, personalisation, "");
         } catch (NotificationClientException e) {
             throw new RuntimeException(e);
         }
@@ -34,7 +30,10 @@ public class NotificationService {
             return false;
         } else if (!validationCode.get(email).getCode().equals(code)) {
             return false;
-        } else if (validationCode.get(email).getTimeOfIssue().isAfter(validationCode.get(email).getTimeOfIssue().plusMinutes(15))) {
+        } else if (validationCode
+                .get(email)
+                .getTimeOfIssue()
+                .isAfter(validationCode.get(email).getTimeOfIssue().plusMinutes(15))) {
             validationCode.remove(email);
             return false;
         } else {

@@ -2,11 +2,11 @@ package uk.gov.di.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class CheckUserExistsRequest {
+public class UserWithEmailRequest {
 
     private String email;
 
-    public CheckUserExistsRequest(@JsonProperty(required = true, value = "email") String email) {
+    public UserWithEmailRequest(@JsonProperty(required = true, value = "email") String email) {
         this.email = email;
     }
 
