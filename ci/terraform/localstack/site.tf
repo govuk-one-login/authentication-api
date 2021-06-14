@@ -26,5 +26,6 @@ provider "aws" {
     lambda     = "http://localhost:45678"
     s3         = "http://localhost:45678"
     ec2        = "http://localhost:45678"
+    sqs        = "http://localhost:45678"
   }
 }
