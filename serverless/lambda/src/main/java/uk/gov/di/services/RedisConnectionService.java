@@ -34,7 +34,7 @@ public class RedisConnectionService implements AutoCloseable {
             logger.log("Opening Redis Connection");
             connection = client.connect();
             RedisStringCommands<String, String> sync = connection.sync();
-            sync.set(session.getSessionId(), objectMapper.writeValueAsString(this));
+            sync.set(session.getSessionId(), objectMapper.writeValueAsString(session));
             logger.log("Closing connection");
         } finally {
             if (connection!=null && connection.isOpen()) {
