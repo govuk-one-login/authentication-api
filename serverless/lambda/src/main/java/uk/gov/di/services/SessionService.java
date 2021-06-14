@@ -13,7 +13,8 @@ public class SessionService {
         try (RedisConnectionService redis = new RedisConnectionService(logger)) {
             redis.saveSession(session);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.log("Redis error: " + e.getMessage());
+            throw new RuntimeException(e);
         }
     }
 }
