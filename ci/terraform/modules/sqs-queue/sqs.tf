@@ -8,28 +8,59 @@ resource "aws_sqs_queue" "queue" {
 
 data "aws_iam_policy_document" "queue_policy_document" {
   statement {
-    sid    = "SendAndReceive"
+    sid    = "SendSQS"
     effect = "Allow"
 
     principals {
       type = "AWS"
-
-      identifiers = var.principals_arns
+      identifiers = var.sender_principal_arns
     }
 
     actions = [
       "sqs:SendMessage",
-      "sqs:ReceiveMessage",
       "sqs:ChangeMessageVisibility",
+      "sqs:GetQueueAttributes",
+    ]
+
+    resources = [
+      aws_sqs_queue.queue.arn
+    ]
+  }
+
+  statement {
+    sid    = "ReceiveSQS"
+    effect = "Allow"
+
+    principals {
+      type = "AWS"
+      identifiers = [aws_iam_role.lambda_iam_role.arn]
+    }
+
+    actions = [
+      "sqs:ReceiveMessage",
       "sqs:DeleteMessage",
       "sqs:GetQueueAttributes",
     ]
 
-    resources = [aws_sqs_queue.queue.arn]
+    resources = [
+      aws_sqs_queue.queue.arn
+    ]
   }
 }
 
-resource "aws_sqs_queue_policy" "event" {
+resource "aws_sqs_queue_policy" "queue_policy" {
   queue_url = aws_sqs_queue.queue.id
   policy    = data.aws_iam_policy_document.queue_policy_document.json
+}
+
+resource "aws_lambda_event_source_mapping" "lambda_sqs_mapping" {
+  event_source_arn = aws_sqs_queue.queue.arn
+  function_name    = aws_lambda_function.sqs_lambda.arn
+
+  depends_on = [
+    aws_sqs_queue.queue,
+    aws_sqs_queue_policy.queue_policy,
+    aws_lambda_function.sqs_lambda,
+    aws_iam_role.lambda_iam_role,
+  ]
 }
