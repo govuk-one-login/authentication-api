@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
-import io.lettuce.core.api.sync.RedisStringCommands;
 import uk.gov.di.entity.Session;
 
 import java.io.IOException;
@@ -29,17 +28,12 @@ public class RedisConnectionService implements AutoCloseable {
     }
 
     public void saveSession(Session session) throws IOException {
-        StatefulRedisConnection<String, String> connection = null;
-        try {
+        try (StatefulRedisConnection<String, String> connection = client.connect()){
             logger.log("Opening Redis Connection");
-            connection = client.connect();
-            RedisStringCommands<String, String> sync = connection.sync();
-            sync.set(session.getSessionId(), objectMapper.writeValueAsString(session));
+
+            connection.sync().set(session.getSessionId(), objectMapper.writeValueAsString(session));
+
             logger.log("Closing connection");
-        } finally {
-            if (connection!=null && connection.isOpen()) {
-                connection.close();
-            }
         }
     }
 
