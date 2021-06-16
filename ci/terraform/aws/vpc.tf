@@ -28,9 +28,7 @@ resource "aws_vpc_endpoint" "sqs" {
   vpc_id            = aws_vpc.authentication.id
   service_name      = data.aws_vpc_endpoint_service.sqs.service_name
 
-  subnet_ids = [
-    aws_subnet.authentication.*.id
-  ]
+  subnet_ids = aws_subnet.authentication.*.id
 
   security_group_ids = [
     aws_vpc.authentication.default_security_group_id

@@ -5,6 +5,7 @@ resource "aws_elasticache_subnet_group" "sessions_store" {
 
 resource "random_password" "redis_password" {
   length = 32
+  override_special = "!#$%&"
 }
 
 resource "aws_elasticache_replication_group" "sessions_store" {
