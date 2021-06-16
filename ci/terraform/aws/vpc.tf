@@ -18,3 +18,23 @@ resource "aws_route_table_association" "private" {
   subnet_id      = element(aws_subnet.authentication.*.id,count.index)
   route_table_id = aws_vpc.authentication.default_route_table_id
 }
+
+data "aws_vpc_endpoint_service" "sqs" {
+  service = "sqs"
+}
+
+resource "aws_vpc_endpoint" "sqs" {
+  vpc_endpoint_type = "Interface"
+  vpc_id            = aws_vpc.authentication.id
+  service_name      = data.aws_vpc_endpoint_service.sqs.service_name
+
+  subnet_ids = [
+    aws_subnet.authentication.*.id
+  ]
+
+  security_group_ids = [
+    aws_vpc.authentication.default_security_group_id
+  ]
+
+  private_dns_enabled = true
+}
