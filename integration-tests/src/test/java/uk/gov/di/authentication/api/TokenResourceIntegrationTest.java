@@ -9,19 +9,9 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class TokenResourceIntegrationTest {
-
-    private static final String LOCAL_TOKEN_ENDPOINT_FORMAT =
-            "http://localhost:45678/restapis/%s/local/_user_request_";
-    private static final String LOCAL_API_GATEWAY_ID =
-            Optional.ofNullable(System.getenv().get("API_GATEWAY_ID")).orElse("");
-    private static final String ROOT_RESOURCE_URL =
-            Optional.ofNullable(System.getenv().get("ROOT_RESOURCE_URL"))
-                    .orElse(String.format(LOCAL_TOKEN_ENDPOINT_FORMAT, LOCAL_API_GATEWAY_ID));
+public class TokenResourceIntegrationTest extends AuthorizationAPIResourceIntegrationTest {
 
     private static final String TOKEN_RESOURCE = "/token";
 
