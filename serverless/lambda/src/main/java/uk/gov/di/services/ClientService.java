@@ -12,8 +12,7 @@ import java.util.Optional;
 public interface ClientService {
     Optional<ErrorObject> getErrorForAuthorizationRequest(AuthorizationRequest authRequest);
 
-    AuthenticationResponse getSuccessfulResponse(
-            AuthenticationRequest authRequest, String email);
+    AuthenticationResponse getSuccessfulResponse(AuthenticationRequest authRequest, String email);
 
     boolean isValidClient(String clientId, String clientSecret);
 

@@ -14,7 +14,7 @@ public class ClientRegistrationRequest {
     @JsonCreator
     public ClientRegistrationRequest(
             @JsonProperty(required = true, value = "client_name") String clientName,
-            @JsonProperty(required = true, value = "redirect_uris")List<String> redirectUris,
+            @JsonProperty(required = true, value = "redirect_uris") List<String> redirectUris,
             @JsonProperty(required = true, value = "contacts") List<String> contacts) {
         this.clientName = clientName;
         this.redirectUris = redirectUris;

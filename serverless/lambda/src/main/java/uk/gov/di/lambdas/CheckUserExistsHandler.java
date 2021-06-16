@@ -17,13 +17,15 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-public class CheckUserExistsHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+public class CheckUserExistsHandler
+        implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private ValidationService validationService;
     private ObjectMapper objectMapper = new ObjectMapper();
     private AuthenticationService authenticationService;
 
-    public CheckUserExistsHandler(ValidationService validationService, AuthenticationService authenticationService) {
+    public CheckUserExistsHandler(
+            ValidationService validationService, AuthenticationService authenticationService) {
         this.validationService = validationService;
         this.authenticationService = authenticationService;
     }
@@ -34,26 +36,33 @@ public class CheckUserExistsHandler implements RequestHandler<APIGatewayProxyReq
     }
 
     @Override
-    public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
+    public APIGatewayProxyResponseEvent handleRequest(
+            APIGatewayProxyRequestEvent input, Context context) {
         try {
             Optional<Map<String, String>> headers = Optional.ofNullable(input.getHeaders());
             if (headers.isEmpty() || !headers.get().containsKey("Session-Id")) {
                 return generateApiGatewayProxyResponse(400, "Session-Id is missing");
             }
 
-            CheckUserExistsRequest userExistsRequest = objectMapper.readValue(input.getBody(), CheckUserExistsRequest.class);
-            Set<EmailValidation> emailErrors = validationService.validateEmailAddress(userExistsRequest.getEmail());
+            CheckUserExistsRequest userExistsRequest =
+                    objectMapper.readValue(input.getBody(), CheckUserExistsRequest.class);
+            Set<EmailValidation> emailErrors =
+                    validationService.validateEmailAddress(userExistsRequest.getEmail());
             if (!emailErrors.isEmpty()) {
                 return generateApiGatewayProxyResponse(400, emailErrors.toString());
             }
             boolean userExists = authenticationService.userExists(userExistsRequest.getEmail());
             if (userExists) {
-                CheckUserExistsResponse checkUserExistsResponse = new CheckUserExistsResponse(userExistsRequest.getEmail(), true);
-                String checkUserExistsResponseString = objectMapper.writeValueAsString(checkUserExistsResponse);
+                CheckUserExistsResponse checkUserExistsResponse =
+                        new CheckUserExistsResponse(userExistsRequest.getEmail(), true);
+                String checkUserExistsResponseString =
+                        objectMapper.writeValueAsString(checkUserExistsResponse);
                 return generateApiGatewayProxyResponse(200, checkUserExistsResponseString);
             } else {
-                CheckUserExistsResponse checkUserExistsResponse = new CheckUserExistsResponse(userExistsRequest.getEmail(), false);
-                String checkUserExistsResponseString = objectMapper.writeValueAsString(checkUserExistsResponse);
+                CheckUserExistsResponse checkUserExistsResponse =
+                        new CheckUserExistsResponse(userExistsRequest.getEmail(), false);
+                String checkUserExistsResponseString =
+                        objectMapper.writeValueAsString(checkUserExistsResponse);
                 return generateApiGatewayProxyResponse(200, checkUserExistsResponseString);
             }
         } catch (JsonProcessingException e) {
@@ -61,8 +70,10 @@ public class CheckUserExistsHandler implements RequestHandler<APIGatewayProxyReq
         }
     }
 
-    private APIGatewayProxyResponseEvent generateApiGatewayProxyResponse(int statusCode, String body) {
-        APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent = new APIGatewayProxyResponseEvent();
+    private APIGatewayProxyResponseEvent generateApiGatewayProxyResponse(
+            int statusCode, String body) {
+        APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent =
+                new APIGatewayProxyResponseEvent();
         apiGatewayProxyResponseEvent.setStatusCode(statusCode);
         apiGatewayProxyResponseEvent.setBody(body);
         return apiGatewayProxyResponseEvent;

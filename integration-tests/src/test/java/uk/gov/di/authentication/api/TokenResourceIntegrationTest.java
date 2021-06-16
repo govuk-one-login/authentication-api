@@ -15,12 +15,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TokenResourceIntegrationTest {
 
-    private final static String LOCAL_TOKEN_ENDPOINT_FORMAT = "http://localhost:45678/restapis/%s/local/_user_request_";
-    private final static String LOCAL_API_GATEWAY_ID = Optional.ofNullable(System.getenv().get("API_GATEWAY_ID")).orElse("");
-    private final static String ROOT_RESOURCE_URL =
-            Optional.ofNullable(System.getenv().get("ROOT_RESOURCE_URL")).orElse(String.format(LOCAL_TOKEN_ENDPOINT_FORMAT, LOCAL_API_GATEWAY_ID));
+    private static final String LOCAL_TOKEN_ENDPOINT_FORMAT =
+            "http://localhost:45678/restapis/%s/local/_user_request_";
+    private static final String LOCAL_API_GATEWAY_ID =
+            Optional.ofNullable(System.getenv().get("API_GATEWAY_ID")).orElse("");
+    private static final String ROOT_RESOURCE_URL =
+            Optional.ofNullable(System.getenv().get("ROOT_RESOURCE_URL"))
+                    .orElse(String.format(LOCAL_TOKEN_ENDPOINT_FORMAT, LOCAL_API_GATEWAY_ID));
 
-    private final static String TOKEN_RESOURCE = "/token";
+    private static final String TOKEN_RESOURCE = "/token";
 
     @Test
     public void shouldCallTokenResourceAndReturn200() {
@@ -28,8 +31,11 @@ public class TokenResourceIntegrationTest {
         WebTarget webTarget = client.target(ROOT_RESOURCE_URL + TOKEN_RESOURCE);
 
         Invocation.Builder invocationBuilder = webTarget.request(MediaType.TEXT_PLAIN);
-        Response response = invocationBuilder
-                .post(Entity.entity("code=123456789&client_id=test-id&client_secret=test-secret", MediaType.TEXT_PLAIN));
+        Response response =
+                invocationBuilder.post(
+                        Entity.entity(
+                                "code=123456789&client_id=test-id&client_secret=test-secret",
+                                MediaType.TEXT_PLAIN));
 
         assertEquals(200, response.getStatus());
     }

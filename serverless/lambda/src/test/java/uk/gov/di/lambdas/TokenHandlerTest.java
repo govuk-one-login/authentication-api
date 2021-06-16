@@ -32,23 +32,29 @@ public class TokenHandlerTest {
     private final UserInfo USER_INFO = mock(UserInfo.class);
     private final SignedJWT SIGNED_JWT = mock(SignedJWT.class);
     private final UserService USER_SERVICE = mock(UserService.class);
-    private final AuthorizationCodeService AUTHORIZATION_CODE_SERVICE = mock(AuthorizationCodeService.class);
+    private final AuthorizationCodeService AUTHORIZATION_CODE_SERVICE =
+            mock(AuthorizationCodeService.class);
     private final TokenService TOKEN_SERVICE = mock(TokenService.class);
     private final ClientService CLIENT_SERVICE = mock(InMemoryClientService.class);
 
     @BeforeEach
     public void setUp() {
-        handler = new TokenHandler(CLIENT_SERVICE, AUTHORIZATION_CODE_SERVICE, TOKEN_SERVICE, USER_SERVICE);
+        handler =
+                new TokenHandler(
+                        CLIENT_SERVICE, AUTHORIZATION_CODE_SERVICE, TOKEN_SERVICE, USER_SERVICE);
     }
 
     @Test
     public void shouldReturn200IfSuccessfulRequest() {
         BearerAccessToken accessToken = new BearerAccessToken();
         when(CLIENT_SERVICE.isValidClient(eq("test-id"), eq("test-secret"))).thenReturn(true);
-        when(TOKEN_SERVICE.issueToken(eq("joe.bloggs@digital.cabinet-office.gov.uk"))).thenReturn(accessToken);
-        when(USER_SERVICE.getInfoForEmail(eq("joe.bloggs@digital.cabinet-office.gov.uk"))).thenReturn(USER_INFO);
+        when(TOKEN_SERVICE.issueToken(eq("joe.bloggs@digital.cabinet-office.gov.uk")))
+                .thenReturn(accessToken);
+        when(USER_SERVICE.getInfoForEmail(eq("joe.bloggs@digital.cabinet-office.gov.uk")))
+                .thenReturn(USER_INFO);
         when(USER_INFO.getSubject()).thenReturn(new Subject());
-        when(TOKEN_SERVICE.generateIDToken(eq("test-id"), any(Subject.class))).thenReturn(SIGNED_JWT);
+        when(TOKEN_SERVICE.generateIDToken(eq("test-id"), any(Subject.class)))
+                .thenReturn(SIGNED_JWT);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("code=343242&client_id=test-id&client_secret=test-secret");
@@ -77,6 +83,5 @@ public class TokenHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertEquals("Request is missing parameters", result.getBody());
-
     }
 }

@@ -7,11 +7,9 @@ import java.util.UUID;
 
 public class Session {
 
-    @JsonProperty
-    private String sessionId;
+    @JsonProperty private String sessionId;
 
-    @JsonProperty
-    private AuthenticationRequest authenticationRequest;
+    @JsonProperty private AuthenticationRequest authenticationRequest;
 
     public Session() {
         this.sessionId = UUID.randomUUID().toString();

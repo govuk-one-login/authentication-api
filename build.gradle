@@ -22,7 +22,6 @@ distributions {
                     'authentication-api.yml'
                 ]
             }
-
         }
     }
 }

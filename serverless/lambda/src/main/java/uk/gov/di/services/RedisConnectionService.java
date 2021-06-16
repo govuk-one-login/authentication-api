@@ -18,17 +18,18 @@ public class RedisConnectionService implements AutoCloseable {
 
     public RedisConnectionService(LambdaLogger logger) {
         this.logger = logger;
-        RedisURI redisURI = RedisURI.builder()
-                .withHost(configService.getRedisHost())
-                .withPort(configService.getRedisPort())
-                .withSsl(configService.getUseRedisTLS())
-                .withPassword(configService.getRedisPassword().toCharArray())
-                .build();
+        RedisURI redisURI =
+                RedisURI.builder()
+                        .withHost(configService.getRedisHost())
+                        .withPort(configService.getRedisPort())
+                        .withSsl(configService.getUseRedisTLS())
+                        .withPassword(configService.getRedisPassword().toCharArray())
+                        .build();
         client = RedisClient.create(redisURI);
     }
 
     public void saveSession(Session session) throws IOException {
-        try (StatefulRedisConnection<String, String> connection = client.connect()){
+        try (StatefulRedisConnection<String, String> connection = client.connect()) {
             logger.log("Opening Redis Connection");
 
             connection.sync().set(session.getSessionId(), objectMapper.writeValueAsString(session));

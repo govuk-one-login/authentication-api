@@ -20,7 +20,8 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-public class WellknownHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+public class WellknownHandler
+        implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private ConfigurationService configService;
 
@@ -33,30 +34,37 @@ public class WellknownHandler implements RequestHandler<APIGatewayProxyRequestEv
     }
 
     @Override
-    public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
-        APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent = new APIGatewayProxyResponseEvent();
+    public APIGatewayProxyResponseEvent handleRequest(
+            APIGatewayProxyRequestEvent input, Context context) {
+        APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent =
+                new APIGatewayProxyResponseEvent();
         try {
             String baseUrl = configService.getBaseURL().orElseThrow();
 
-            var providerMetadata = new OIDCProviderMetadata(new Issuer(baseUrl),
-                    List.of(SubjectType.PUBLIC), buildURI(".well-known/jwks.json", baseUrl));
+            var providerMetadata =
+                    new OIDCProviderMetadata(
+                            new Issuer(baseUrl),
+                            List.of(SubjectType.PUBLIC),
+                            buildURI(".well-known/jwks.json", baseUrl));
 
             providerMetadata.setTokenEndpointURI(buildURI("token", baseUrl));
             providerMetadata.setUserInfoEndpointURI(buildURI("userinfo", baseUrl));
             providerMetadata.setAuthorizationEndpointURI(buildURI("authorize", baseUrl));
             providerMetadata.setRegistrationEndpointURI(buildURI("connect/register", baseUrl));
-            providerMetadata.setTokenEndpointAuthMethods(List.of(ClientAuthenticationMethod.CLIENT_SECRET_POST));
+            providerMetadata.setTokenEndpointAuthMethods(
+                    List.of(ClientAuthenticationMethod.CLIENT_SECRET_POST));
             providerMetadata.setScopes(new Scope("openid", "profile", "email"));
             providerMetadata.setResponseTypes(List.of(new ResponseType("code")));
             providerMetadata.setGrantTypes(List.of(GrantType.AUTHORIZATION_CODE));
             providerMetadata.setClaimTypes(List.of(ClaimType.NORMAL));
-            providerMetadata.setClaims(List.of("sub", "gender", "family_name", "given_name", "email"));
+            providerMetadata.setClaims(
+                    List.of("sub", "gender", "family_name", "given_name", "email"));
             providerMetadata.setIDTokenJWSAlgs(List.of(JWSAlgorithm.RS256));
 
             apiGatewayProxyResponseEvent.setStatusCode(200);
             apiGatewayProxyResponseEvent.setBody(providerMetadata.toString());
             return apiGatewayProxyResponseEvent;
-        } catch (URISyntaxException| NoSuchElementException e) {
+        } catch (URISyntaxException | NoSuchElementException e) {
             apiGatewayProxyResponseEvent.setStatusCode(500);
             apiGatewayProxyResponseEvent.setBody("Service not configured");
             return apiGatewayProxyResponseEvent;
@@ -65,6 +73,5 @@ public class WellknownHandler implements RequestHandler<APIGatewayProxyRequestEv
 
     private URI buildURI(String prefix, String baseUrl) throws URISyntaxException {
         return new URI(baseUrl + prefix);
-
     }
 }
