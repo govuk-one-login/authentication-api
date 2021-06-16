@@ -22,9 +22,11 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     private NotificationService notificationService;
     private ObjectMapper objectMapper = new ObjectMapper();
     private ConfigurationService configService;
-    private NotificationClient client = new NotificationClient(new ConfigurationService().getNotifyApiKey());
+    private NotificationClient client =
+            new NotificationClient(new ConfigurationService().getNotifyApiKey());
 
-    public NotificationHandler(NotificationService notificationService, ConfigurationService configService) {
+    public NotificationHandler(
+            NotificationService notificationService, ConfigurationService configService) {
         this.notificationService = notificationService;
         this.configService = configService;
     }
@@ -37,26 +39,27 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     @Override
     public Void handleRequest(SQSEvent event, Context context) {
 
-            for(SQSMessage msg : event.getRecords()){
-                try {
-                    NotifyRequest notifyRequest = objectMapper.readValue(msg.getBody(), NotifyRequest.class);
-                    switch (notifyRequest.getNotificationType()) {
-                        case VERIFY_EMAIL:
-                            Random rnd = new Random();
-                            String number = Integer.toString(rnd.nextInt(999999));
-                            Map<String, Object> personalisation = new HashMap<>();
-                            personalisation.put("validation-code", number);
-                            personalisation.put("email-address", notifyRequest.getDestination());
-                            notificationService.sendEmail(
-                                    notifyRequest.getDestination(),
-                                    personalisation,
-                                    configService.getNotificationTemplateId(VERIFY_EMAIL));
-                            break;
-                    }
-                } catch (JsonProcessingException e) {
-                    throw new RuntimeException(e);
+        for (SQSMessage msg : event.getRecords()) {
+            try {
+                NotifyRequest notifyRequest =
+                        objectMapper.readValue(msg.getBody(), NotifyRequest.class);
+                switch (notifyRequest.getNotificationType()) {
+                    case VERIFY_EMAIL:
+                        Random rnd = new Random();
+                        String number = Integer.toString(rnd.nextInt(999999));
+                        Map<String, Object> personalisation = new HashMap<>();
+                        personalisation.put("validation-code", number);
+                        personalisation.put("email-address", notifyRequest.getDestination());
+                        notificationService.sendEmail(
+                                notifyRequest.getDestination(),
+                                personalisation,
+                                configService.getNotificationTemplateId(VERIFY_EMAIL));
+                        break;
                 }
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
             }
-            return null;
+        }
+        return null;
     }
 }

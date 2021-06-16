@@ -36,11 +36,23 @@ public class ConfigurationService {
     }
 
     public String getNotificationTemplateId(NotificationType notificationType) {
-        switch(notificationType) {
+        switch (notificationType) {
             case VERIFY_EMAIL:
                 return System.getenv("VERIFY_EMAIL_TEMPLATE_ID");
             default:
                 throw new RuntimeException("NotificationType template ID does not exist");
         }
+    }
+
+    public String getEmailQueueUri() {
+        return System.getenv("SQS_EMAIL");
+    }
+
+    public String getAwsRegion() {
+        return System.getenv("AWS_REGION");
+    }
+
+    public Optional<String> getSqsEndpointUri() {
+        return Optional.of(System.getenv("SQS_ENDPOINT"));
     }
 }

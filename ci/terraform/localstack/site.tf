@@ -20,12 +20,12 @@ provider "aws" {
   skip_requesting_account_id  = true
 
   endpoints {
-    apigateway = "http://localhost:45678"
-    ecr        = "http://localhost:45678"
-    iam        = "http://localhost:45678"
-    lambda     = "http://localhost:45678"
-    s3         = "http://localhost:45678"
-    ec2        = "http://localhost:45678"
-    sqs        = "http://localhost:45678"
+    apigateway = var.localstack_endpoint
+    ecr        = var.localstack_endpoint
+    iam        = var.localstack_endpoint
+    lambda     = var.localstack_endpoint
+    s3         = var.localstack_endpoint
+    ec2        = var.localstack_endpoint
+    sqs        = var.localstack_endpoint
   }
 }

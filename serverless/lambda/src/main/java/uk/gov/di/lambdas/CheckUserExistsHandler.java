@@ -6,8 +6,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import uk.gov.di.entity.CheckUserExistsRequest;
 import uk.gov.di.entity.CheckUserExistsResponse;
+import uk.gov.di.entity.UserWithEmailRequest;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.UserService;
 import uk.gov.di.services.ValidationService;
@@ -16,6 +16,8 @@ import uk.gov.di.validation.EmailValidation;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+
+import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class CheckUserExistsHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -44,8 +46,8 @@ public class CheckUserExistsHandler
                 return generateApiGatewayProxyResponse(400, "Session-Id is missing");
             }
 
-            CheckUserExistsRequest userExistsRequest =
-                    objectMapper.readValue(input.getBody(), CheckUserExistsRequest.class);
+            UserWithEmailRequest userExistsRequest =
+                    objectMapper.readValue(input.getBody(), UserWithEmailRequest.class);
             Set<EmailValidation> emailErrors =
                     validationService.validateEmailAddress(userExistsRequest.getEmail());
             if (!emailErrors.isEmpty()) {
@@ -68,14 +70,5 @@ public class CheckUserExistsHandler
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyResponse(400, "Request is missing parameters");
         }
-    }
-
-    private APIGatewayProxyResponseEvent generateApiGatewayProxyResponse(
-            int statusCode, String body) {
-        APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent =
-                new APIGatewayProxyResponseEvent();
-        apiGatewayProxyResponseEvent.setStatusCode(statusCode);
-        apiGatewayProxyResponseEvent.setBody(body);
-        return apiGatewayProxyResponseEvent;
     }
 }

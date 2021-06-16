@@ -18,3 +18,8 @@ variable "api_base_url" {
   type    = string
   default = "http://localhost:8080"
 }
+
+variable "localstack_endpoint" {
+  type = string
+  default = "http://localhost:45678"
+}
