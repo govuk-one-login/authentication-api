@@ -2,6 +2,10 @@ resource "aws_iam_role" "lambda_iam_role" {
   name = "${var.environment}-${var.name}-sqs-lambda-role"
 
   assume_role_policy = var.lambda_iam_policy
+
+  tags = {
+    environment = var.environment
+  }
 }
 
 resource "aws_lambda_function" "sqs_lambda" {
@@ -22,6 +26,10 @@ resource "aws_lambda_function" "sqs_lambda" {
   }
 
   runtime = var.handler_runtime
+
+  tags = {
+    environment = var.environment
+  }
 }
 
 resource "aws_iam_policy" "lambda_logging_policy" {

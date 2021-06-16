@@ -32,4 +32,8 @@ resource "aws_elasticache_replication_group" "sessions_store" {
       engine_version
     ]
   }
+
+  tags = {
+    environment = var.environment
+  }
 }
