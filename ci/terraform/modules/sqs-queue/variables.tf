@@ -1,4 +1,4 @@
-variable "queue_name" {
+variable "name" {
   type    = string
 }
 
@@ -8,10 +8,6 @@ variable "environment" {
 
 variable "sender_principal_arns" {
   type = list(string)
-}
-
-variable "lambda_name" {
-  type = string
 }
 
 variable "handler_runtime" {
@@ -58,8 +54,4 @@ variable "security_group_id" {
 variable "subnet_id" {
   type = list(string)
   description = "The id of the subnets for the lambda"
-}
-
-variable "queue_arn" {
-  type = string
 }

@@ -1,5 +1,5 @@
 resource "aws_sqs_queue" "queue" {
-  name                      = "${var.environment}-${var.queue_name}-queue"
+  name                      = "${var.environment}-${var.name}-queue"
   delay_seconds             = 10
   max_message_size          = 2048
   message_retention_seconds = 1209600

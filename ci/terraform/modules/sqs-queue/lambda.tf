@@ -1,12 +1,12 @@
 resource "aws_iam_role" "lambda_iam_role" {
-  name = "${var.lambda_name}-${var.environment}-lambda-role"
+  name = "${var.environment}-${var.name}-sqs-lambda-role"
 
   assume_role_policy = var.lambda_iam_policy
 }
 
 resource "aws_lambda_function" "sqs_lambda" {
   filename      = var.lambda_zip_file
-  function_name = replace("${var.lambda_name}-${var.environment}-lambda", ".", "")
+  function_name = "${var.environment}-${var.name}-sqs-lambda"
   role          = aws_iam_role.lambda_iam_role.arn
   handler       = var.handler_function_name
   timeout       = 30
@@ -25,7 +25,7 @@ resource "aws_lambda_function" "sqs_lambda" {
 }
 
 resource "aws_iam_policy" "lambda_logging_policy" {
-  name        = "${var.lambda_name}_lambda_logging"
+  name        = "${var.environment}-${var.name}-sqs-lambda-logging"
   path        = "/"
   description = "IAM policy for logging from a lambda"
 
@@ -54,7 +54,7 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
 }
 
 resource "aws_iam_policy" "lambda_networking_policy" {
-  name        = "${var.lambda_name}_lambda_networking"
+  name        = "${var.environment}-${var.name}-sqs-lambda-networking"
   path        = "/"
   description = "IAM policy for managing VPC connection for a lambda"
 
