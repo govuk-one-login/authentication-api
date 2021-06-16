@@ -3,6 +3,8 @@ module "verify_code" {
 
   endpoint_name   = "verify-code"
   endpoint_method = "POST"
+  environment     = var.environment
+
   handler_environment_variables = {
     BASE_URL = var.api_base_url
     REDIS_HOST     = aws_elasticache_replication_group.sessions_store.primary_endpoint_address
@@ -12,11 +14,12 @@ module "verify_code" {
   }
   handler_function_name = "uk.gov.di.lambdas.VerifyCodeHandler::handleRequest"
 
-  rest_api_id               = module.api_gateway_root.di_authentication_api_id
-  root_resource_id          = module.api_gateway_root.root_resource_id
-  execution_arn             = module.api_gateway_root.execution_arn
+  rest_api_id               = aws_api_gateway_rest_api.di_authentication_api.id
+  root_resource_id          = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
+  execution_arn             = aws_api_gateway_rest_api.di_authentication_api.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.lambda_zip_file
   security_group_id         = aws_vpc.authentication.default_security_group_id
   subnet_id                 = aws_subnet.authentication.*.id
+  lambda_role_arn           = aws_iam_role.lambda_iam_role.arn
 }

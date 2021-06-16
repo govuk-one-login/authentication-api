@@ -2,6 +2,10 @@ resource "aws_vpc" "authentication" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_hostnames = true
   enable_dns_support   = true
+
+  tags = {
+    environment = var.environment
+  }
 }
 
 data "aws_availability_zones" "available" {}
@@ -11,6 +15,10 @@ resource "aws_subnet" "authentication" {
   vpc_id            = aws_vpc.authentication.id
   cidr_block        = "10.0.${count.index}.0/24"
   availability_zone = data.aws_availability_zones.available.names[count.index]
+
+  depends_on = [
+    aws_vpc.authentication,
+  ]
 
   tags = {
     environment = var.environment
@@ -34,6 +42,15 @@ resource "aws_vpc_endpoint" "sqs" {
   ]
 
   private_dns_enabled = true
+
+  depends_on = [
+    aws_vpc.authentication,
+    aws_subnet.authentication,
+  ]
+
+  tags = {
+    environment = var.environment
+  }
 }
 
 data "aws_vpc_endpoint_service" "dyanmodb" {

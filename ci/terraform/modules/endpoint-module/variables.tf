@@ -37,31 +37,11 @@ variable "execution_arn" {
 
 variable "environment" {
   type    = string
-  default = "test"
 }
 
 variable "api_deployment_stage_name" {
   type    = string
   default = "test"
-}
-
-variable "lambda_iam_policy" {
-  type    = string
-  default = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": "sts:AssumeRole",
-      "Principal": {
-        "Service": "lambda.amazonaws.com"
-      },
-      "Effect": "Allow",
-      "Sid": ""
-    }
-  ]
-}
-EOF
 }
 
 variable "security_group_id" {
@@ -72,4 +52,8 @@ variable "security_group_id" {
 variable "subnet_id" {
   type = list(string)
   description = "The id of the subnets for the lambda"
+}
+
+variable "lambda_role_arn" {
+  type = string
 }

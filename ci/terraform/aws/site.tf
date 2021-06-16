@@ -1,18 +1,22 @@
 terraform {
-  required_version = "> 0.14"
+  required_version = ">= 1.0"
 
   required_providers {
     aws = {
-      source  = "hashicorp/aws"
-      version = "3.37.0"
+      source = "hashicorp/aws"
+      version = ">= 3.45.0"
+    }
+    time = {
+      source = "hashicorp/time"
+      version = ">= 0.7.1"
+    }
+    random = {
+      source = "hashicorp/random"
+      version = ">= 3.1.0"
     }
   }
 
   backend "s3" {
-    bucket  = "digital-identity-dev-tfstate"
-    key     = "test-terraform.tfstate"
-    encrypt = true
-    region  = "eu-west-2"
   }
 }
 
