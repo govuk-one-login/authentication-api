@@ -1,12 +1,15 @@
 resource "aws_iam_role" "lambda_iam_role" {
-  name = "${var.endpoint_name}-${var.environment}-lambda-role"
+  name = "${var.environment}-${var.endpoint_name}-lambda-role"
 
   assume_role_policy = var.lambda_iam_policy
+  tags = {
+    environment = var.environment
+  }
 }
 
 resource "aws_lambda_function" "endpoint_lambda" {
   filename      = var.lambda_zip_file
-  function_name = replace("${var.endpoint_name}-${var.environment}-lambda", ".", "")
+  function_name = replace("${var.environment}-${var.endpoint_name}-lambda", ".", "")
   role          = aws_iam_role.lambda_iam_role.arn
   handler       = var.handler_function_name
   timeout       = 30
@@ -22,10 +25,14 @@ resource "aws_lambda_function" "endpoint_lambda" {
   }
 
   runtime = var.handler_runtime
+
+  tags = {
+    environment = var.environment
+  }
 }
 
 resource "aws_iam_policy" "endpoint_logging_policy" {
-  name        = "${var.endpoint_name}_lambda_logging"
+  name        = "${var.environment}-${var.endpoint_name}-lambda-logging"
   path        = "/"
   description = "IAM policy for logging from a lambda"
 
@@ -54,7 +61,7 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
 }
 
 resource "aws_iam_policy" "endpoint_networking_policy" {
-  name        = "${var.endpoint_name}_lambda_networking"
+  name        = "${var.environment}-${var.endpoint_name}-lambda-networking"
   path        = "/"
   description = "IAM policy for managing VPC connection for a lambda"
 

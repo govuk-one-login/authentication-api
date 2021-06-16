@@ -4,6 +4,10 @@ resource "aws_sqs_queue" "queue" {
   max_message_size          = 2048
   message_retention_seconds = 1209600
   receive_wait_time_seconds = 10
+
+  tags = {
+    environment = var.environment
+  }
 }
 
 data "aws_iam_policy_document" "queue_policy_document" {

@@ -1,5 +1,9 @@
 resource "aws_api_gateway_rest_api" "di_authentication_api" {
-  name = "di-authentication-api-${var.environment}"
+  name = "${var.environment}-di-authentication-api"
+
+  tags = {
+    environment = var.environment
+  }
 }
 
 resource "aws_api_gateway_resource" "wellknown_resource" {
