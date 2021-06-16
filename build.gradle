@@ -1,3 +1,8 @@
+plugins {
+    id "com.diffplug.spotless" version "5.13.0"
+}
+
+
 apply plugin: 'java'
 apply plugin: 'application'
 apply plugin: 'idea'
@@ -47,6 +52,19 @@ dependencies {
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit_version}"
 }
 
+spotless {
+    java {
+        target '**/*.java'
+        googleJavaFormat('1.9').aosp()
+        importOrder '', 'javax', 'java', '\\#'
+    }
+
+    groovyGradle {
+        target '**/*.gradle'
+        greclipse().configFile('tools/spotless-gradle.properties')
+    }
+}
+
 test {
     useJUnitPlatform()
     workingDir = rootDir
@@ -59,4 +77,5 @@ task cfPush(type: Exec) {
 }
 
 cfPush.dependsOn build
+compileJava.dependsOn 'spotlessApply'
 
