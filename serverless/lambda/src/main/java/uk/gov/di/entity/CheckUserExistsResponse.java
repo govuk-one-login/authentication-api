@@ -10,8 +10,9 @@ public class CheckUserExistsResponse {
     @JsonProperty("doesUserExist")
     private boolean doesUserExist;
 
-    public CheckUserExistsResponse(@JsonProperty(required = true, value = "email") String email,
-                                   @JsonProperty(required = true, value = "doesUserExist") boolean doesUserExist) {
+    public CheckUserExistsResponse(
+            @JsonProperty(required = true, value = "email") String email,
+            @JsonProperty(required = true, value = "doesUserExist") boolean doesUserExist) {
         this.email = email;
         this.doesUserExist = doesUserExist;
     }

@@ -22,7 +22,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public class AuthorisationHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+public class AuthorisationHandler
+        implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final ClientService clientService;
     private final ConfigurationService configurationService;
@@ -44,24 +45,23 @@ public class AuthorisationHandler implements RequestHandler<APIGatewayProxyReque
     }
 
     @Override
-    public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
+    public APIGatewayProxyResponseEvent handleRequest(
+            APIGatewayProxyRequestEvent input, Context context) {
         LambdaLogger logger = context.getLogger();
         logger.log("Received authentication request");
         try {
-            Map<String, List<String>> queryStringMultiValuedMap = input.getQueryStringParameters().entrySet()
-                    .stream()
-                    .collect(
-                            Collectors.toMap(
-                                    entry -> entry.getKey(),
-                                    entry -> List.of(entry.getValue())
-                            )
-                    );
+            Map<String, List<String>> queryStringMultiValuedMap =
+                    input.getQueryStringParameters().entrySet().stream()
+                            .collect(
+                                    Collectors.toMap(
+                                            entry -> entry.getKey(),
+                                            entry -> List.of(entry.getValue())));
             var authRequest = AuthenticationRequest.parse(queryStringMultiValuedMap);
 
-            Optional<ErrorObject> error = clientService.getErrorForAuthorizationRequest(authRequest);
+            Optional<ErrorObject> error =
+                    clientService.getErrorForAuthorizationRequest(authRequest);
 
-            return error
-                    .map(e -> errorResponse(authRequest, e))
+            return error.map(e -> errorResponse(authRequest, e))
                     .orElseGet(() -> createSessionAndRedirect(authRequest, logger));
         } catch (ParseException e) {
             logger.log("Authentication request could not be parsed");
@@ -74,27 +74,33 @@ public class AuthorisationHandler implements RequestHandler<APIGatewayProxyReque
         }
     }
 
-    private APIGatewayProxyResponseEvent createSessionAndRedirect(AuthenticationRequest authRequest, LambdaLogger logger) {
+    private APIGatewayProxyResponseEvent createSessionAndRedirect(
+            AuthenticationRequest authRequest, LambdaLogger logger) {
         Session session = sessionService.createSession().setAuthenticationRequest(authRequest);
         logger.log("Created session " + session.getSessionId());
         sessionService.save(session, logger);
         logger.log("Session saved successfully " + session.getSessionId());
-        return new APIGatewayProxyResponseEvent().withStatusCode(302).withHeaders(
-                Map.of("Location", configurationService.getLoginURI().toString()
-                        + "?session-id=" + session.getSessionId()
-                )
-        );
+        return new APIGatewayProxyResponseEvent()
+                .withStatusCode(302)
+                .withHeaders(
+                        Map.of(
+                                "Location",
+                                configurationService.getLoginURI().toString()
+                                        + "?session-id="
+                                        + session.getSessionId()));
     }
 
-    private APIGatewayProxyResponseEvent errorResponse(AuthorizationRequest authRequest, ErrorObject errorObject) {
-        AuthenticationErrorResponse error = new AuthenticationErrorResponse(
-                authRequest.getRedirectionURI(),
-                errorObject,
-                authRequest.getState(),
-                authRequest.getResponseMode());
+    private APIGatewayProxyResponseEvent errorResponse(
+            AuthorizationRequest authRequest, ErrorObject errorObject) {
+        AuthenticationErrorResponse error =
+                new AuthenticationErrorResponse(
+                        authRequest.getRedirectionURI(),
+                        errorObject,
+                        authRequest.getState(),
+                        authRequest.getResponseMode());
 
-        return new APIGatewayProxyResponseEvent().withStatusCode(302).withHeaders(
-                Map.of("Location", error.toURI().toString())
-        );
+        return new APIGatewayProxyResponseEvent()
+                .withStatusCode(302)
+                .withHeaders(Map.of("Location", error.toURI().toString()));
     }
 }

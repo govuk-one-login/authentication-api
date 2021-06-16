@@ -4,7 +4,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
-public class APIGatewayProxyResponseEventStatusMatcher extends TypeSafeDiagnosingMatcher<APIGatewayProxyResponseEvent> {
+public class APIGatewayProxyResponseEventStatusMatcher
+        extends TypeSafeDiagnosingMatcher<APIGatewayProxyResponseEvent> {
 
     private final int statusCode;
 
@@ -13,7 +14,8 @@ public class APIGatewayProxyResponseEventStatusMatcher extends TypeSafeDiagnosin
     }
 
     @Override
-    protected boolean matchesSafely(APIGatewayProxyResponseEvent item, Description mismatchDescription) {
+    protected boolean matchesSafely(
+            APIGatewayProxyResponseEvent item, Description mismatchDescription) {
         boolean matched = item.getStatusCode() == statusCode;
 
         if (!matched) {

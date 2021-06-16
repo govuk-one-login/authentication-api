@@ -26,7 +26,7 @@ public class ValidationService {
     public Set<PasswordValidation> validatePassword(String password) {
         Set<PasswordValidation> passwordErrors = EnumSet.noneOf(PasswordValidation.class);
         boolean passwordIsEmpty = false;
-        if (password == null  || password.isBlank()) {
+        if (password == null || password.isBlank()) {
             passwordErrors.add(PasswordValidation.EMPTY_PASSWORD_FIELD);
             passwordIsEmpty = true;
         }

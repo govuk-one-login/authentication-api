@@ -17,15 +17,19 @@ import java.util.UUID;
 
 public class InMemoryClientService implements ClientService {
 
-    private List<Client> clients = new ArrayList<>() {{
-        add(new Client(
-            "client-name",
-            "test-id",
-            "test-secret",
-            List.of("code"),
-            List.of("http://localhost:8080"),
-            List.of("contact@example.com")));
-    }};
+    private List<Client> clients =
+            new ArrayList<>() {
+                {
+                    add(
+                            new Client(
+                                    "client-name",
+                                    "test-id",
+                                    "test-secret",
+                                    List.of("code"),
+                                    List.of("http://localhost:8080"),
+                                    List.of("contact@example.com")));
+                }
+            };
 
     private AuthorizationCodeService authorizationCodeService;
 
@@ -64,8 +68,7 @@ public class InMemoryClientService implements ClientService {
     @Override
     public boolean isValidClient(String clientId, String clientSecret) {
         Optional<Client> client = getClient(clientId);
-        return client.map(c -> c.getClientSecret().equals(clientSecret))
-                .orElse(false);
+        return client.map(c -> c.getClientSecret().equals(clientSecret)).orElse(false);
     }
 
     @Override
@@ -73,7 +76,14 @@ public class InMemoryClientService implements ClientService {
 
         String clientId = UUID.randomUUID().toString();
         String clientSecret = UUID.randomUUID().toString();
-        Client client = new Client(clientName, clientId, clientSecret, List.of("code"), redirectUris, contacts);
+        Client client =
+                new Client(
+                        clientName,
+                        clientId,
+                        clientSecret,
+                        List.of("code"),
+                        redirectUris,
+                        contacts);
         clients.add(client);
         return client;
     }

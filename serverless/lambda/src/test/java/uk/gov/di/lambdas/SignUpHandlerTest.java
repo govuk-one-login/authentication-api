@@ -59,7 +59,8 @@ class SignUpHandlerTest {
     @Test
     public void shouldReturn400IfPasswordFailsValidation() {
         String password = "computer";
-        when(VALIDATION_SERVICE.validatePassword(eq(password))).thenReturn(Set.of(NO_NUMBER_INCLUDED));
+        when(VALIDATION_SERVICE.validatePassword(eq(password)))
+                .thenReturn(Set.of(NO_NUMBER_INCLUDED));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"password\": \"computer\", \"email\": \"joe.bloggs@test.com\" }");

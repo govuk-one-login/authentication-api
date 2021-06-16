@@ -12,7 +12,8 @@ import uk.gov.di.services.AuthorizationCodeService;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.InMemoryClientService;
 
-public class ClientRegistrationHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+public class ClientRegistrationHandler
+        implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private ClientService clientService;
     private ObjectMapper objectMapper = new ObjectMapper();
@@ -26,15 +27,18 @@ public class ClientRegistrationHandler implements RequestHandler<APIGatewayProxy
     }
 
     @Override
-    public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
+    public APIGatewayProxyResponseEvent handleRequest(
+            APIGatewayProxyRequestEvent input, Context context) {
         APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
 
         try {
-            ClientRegistrationRequest clientRegistrationRequest = objectMapper.readValue(input.getBody(), ClientRegistrationRequest.class);
-            Client client = clientService.addClient(
-                    clientRegistrationRequest.getClientName(),
-                    clientRegistrationRequest.getRedirectUris(),
-                    clientRegistrationRequest.getContacts());
+            ClientRegistrationRequest clientRegistrationRequest =
+                    objectMapper.readValue(input.getBody(), ClientRegistrationRequest.class);
+            Client client =
+                    clientService.addClient(
+                            clientRegistrationRequest.getClientName(),
+                            clientRegistrationRequest.getRedirectUris(),
+                            clientRegistrationRequest.getContacts());
             String clientString = objectMapper.writeValueAsString(client);
             response.setBody(clientString);
             response.setStatusCode(200);

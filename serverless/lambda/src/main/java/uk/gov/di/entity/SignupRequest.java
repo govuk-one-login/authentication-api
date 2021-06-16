@@ -2,7 +2,6 @@ package uk.gov.di.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-
 public class SignupRequest {
 
     private String email;

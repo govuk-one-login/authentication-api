@@ -20,7 +20,12 @@ import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.*;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 
 public class TokenService {
 
@@ -47,11 +52,7 @@ public class TokenService {
 
         IDTokenClaimsSet idTokenClaims =
                 new IDTokenClaimsSet(
-                        issuer,
-                        subject,
-                        List.of(new Audience(clientId)),
-                        expiryDate,
-                        new Date());
+                        issuer, subject, List.of(new Audience(clientId)), expiryDate, new Date());
 
         JWTClaimsSet jwtClaimsSet;
         try {

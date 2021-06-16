@@ -41,9 +41,15 @@ class WellknownHandlerTest {
         URI expectedRegistrationURI = URI.create("http://localhost:8080/connect/register");
 
         assertThat(result, hasStatus(200));
-        assertEquals(List.of(GrantType.AUTHORIZATION_CODE), OIDCProviderMetadata.parse(result.getBody()).getGrantTypes());
-        assertEquals(List.of(ClaimType.NORMAL), OIDCProviderMetadata.parse(result.getBody()).getClaimTypes());
-        assertEquals(expectedRegistrationURI, OIDCProviderMetadata.parse(result.getBody()).getRegistrationEndpointURI());
+        assertEquals(
+                List.of(GrantType.AUTHORIZATION_CODE),
+                OIDCProviderMetadata.parse(result.getBody()).getGrantTypes());
+        assertEquals(
+                List.of(ClaimType.NORMAL),
+                OIDCProviderMetadata.parse(result.getBody()).getClaimTypes());
+        assertEquals(
+                expectedRegistrationURI,
+                OIDCProviderMetadata.parse(result.getBody()).getRegistrationEndpointURI());
     }
 
     @Test

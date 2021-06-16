@@ -32,17 +32,26 @@ class ClientRegistrationHandlerTest {
     }
 
     @Test
-    public void shouldReturn200IfClientRegistrationRequestIsSuccessful() throws JsonProcessingException {
+    public void shouldReturn200IfClientRegistrationRequestIsSuccessful()
+            throws JsonProcessingException {
         String clientName = "test-client";
         List<String> redirectUris = List.of("http://localhost:8080/redirect-uri");
         List<String> contacts = List.of("joe.bloggs@test.com");
         String clientId = UUID.randomUUID().toString();
         String clientSecret = UUID.randomUUID().toString();
-        Client client = new Client(clientName, clientId, clientSecret, List.of("code"), redirectUris, contacts);
+        Client client =
+                new Client(
+                        clientName,
+                        clientId,
+                        clientSecret,
+                        List.of("code"),
+                        redirectUris,
+                        contacts);
         when(CLIENT_SERVICE.addClient(clientName, redirectUris, contacts)).thenReturn(client);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody("{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"] }");
+        event.setBody(
+                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"] }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
         assertThat(result, hasStatus(200));
@@ -53,7 +62,8 @@ class ClientRegistrationHandlerTest {
     @Test
     public void shouldReturn400IfAnyRequestParametersAreMissing() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody("{\"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"] }");
+        event.setBody(
+                "{\"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"] }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
 
         assertThat(result, hasStatus(400));

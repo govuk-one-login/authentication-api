@@ -11,20 +11,30 @@ import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
-import uk.gov.di.services.*;
+import uk.gov.di.services.AuthenticationService;
+import uk.gov.di.services.AuthorizationCodeService;
+import uk.gov.di.services.ClientService;
+import uk.gov.di.services.InMemoryClientService;
+import uk.gov.di.services.TokenService;
+import uk.gov.di.services.UserService;
 
 import java.util.Map;
 
 import static uk.gov.di.helpers.RequestBodyHelper.PARSE_REQUEST_BODY;
 
-public class TokenHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+public class TokenHandler
+        implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final ClientService clientService;
     private final AuthorizationCodeService authorizationCodeService;
     private final TokenService tokenService;
     private final AuthenticationService authenticationService;
 
-    public TokenHandler(ClientService clientService, AuthorizationCodeService authorizationCodeService, TokenService tokenService, AuthenticationService authenticationService) {
+    public TokenHandler(
+            ClientService clientService,
+            AuthorizationCodeService authorizationCodeService,
+            TokenService tokenService,
+            AuthenticationService authenticationService) {
         this.clientService = clientService;
         this.authorizationCodeService = authorizationCodeService;
         this.tokenService = tokenService;
@@ -39,12 +49,16 @@ public class TokenHandler implements RequestHandler<APIGatewayProxyRequestEvent,
     }
 
     @Override
-    public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
-        APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent = new APIGatewayProxyResponseEvent();
+    public APIGatewayProxyResponseEvent handleRequest(
+            APIGatewayProxyRequestEvent input, Context context) {
+        APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent =
+                new APIGatewayProxyResponseEvent();
         LambdaLogger logger = context.getLogger();
         Map<String, String> requestBody = PARSE_REQUEST_BODY(input.getBody());
 
-        if (!requestBody.containsKey("code") || !requestBody.containsKey("client_id") || !requestBody.containsKey("client_secret")) {
+        if (!requestBody.containsKey("code")
+                || !requestBody.containsKey("client_id")
+                || !requestBody.containsKey("client_secret")) {
             apiGatewayProxyResponseEvent.setStatusCode(400);
             apiGatewayProxyResponseEvent.setBody("Request is missing parameters");
             return apiGatewayProxyResponseEvent;
@@ -59,7 +73,7 @@ public class TokenHandler implements RequestHandler<APIGatewayProxyRequestEvent,
             apiGatewayProxyResponseEvent.setBody("client is not valid");
             return apiGatewayProxyResponseEvent;
         }
-//        String email = authorizationCodeService.getEmailForCode(code);
+        //        String email = authorizationCodeService.getEmailForCode(code);
         String email = "joe.bloggs@digital.cabinet-office.gov.uk";
 
         if (email.isEmpty()) {

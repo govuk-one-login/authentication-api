@@ -51,20 +51,24 @@ class AuthorisationHandlerTest {
     @Test
     void shouldRedirectToLoginOnSuccess() {
         AuthorizationCode authCode = new AuthorizationCode();
-        AuthenticationSuccessResponse authSuccessResponse = new AuthenticationSuccessResponse(
-                URI.create("http://localhost:8080"),
-                authCode,
-                null,
-                null,
-                new State("some-state"),
-                null,
-                null);
+        AuthenticationSuccessResponse authSuccessResponse =
+                new AuthenticationSuccessResponse(
+                        URI.create("http://localhost:8080"),
+                        authCode,
+                        null,
+                        null,
+                        new State("some-state"),
+                        null,
+                        null);
 
         final URI loginUrl = URI.create("http://example.com");
         final Session session = new Session();
 
-        when(CLIENT_SERVICE.getErrorForAuthorizationRequest(any(AuthorizationRequest.class))).thenReturn(Optional.empty());
-        when(CLIENT_SERVICE.getSuccessfulResponse(any(AuthenticationRequest.class), eq("joe.bloggs@digital.cabinet-office.gov.uk")))
+        when(CLIENT_SERVICE.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
+                .thenReturn(Optional.empty());
+        when(CLIENT_SERVICE.getSuccessfulResponse(
+                        any(AuthenticationRequest.class),
+                        eq("joe.bloggs@digital.cabinet-office.gov.uk")))
                 .thenReturn(authSuccessResponse);
         when(CONFIGURATION_SERVICE.getLoginURI()).thenReturn(loginUrl);
         when(SESSION_SERVICE.createSession()).thenReturn(session);
@@ -76,9 +80,7 @@ class AuthorisationHandlerTest {
                         "redirect_uri", "http://localhost:8080",
                         "scope", "email,openid,profile",
                         "response_type", "code",
-                        "state", "some-state"
-                )
-        );
+                        "state", "some-state"));
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, CONTEXT);
         URI uri = URI.create(response.getHeaders().get("Location"));
         Map<String, String> requestParams = RequestBodyHelper.PARSE_REQUEST_BODY(uri.getQuery());
@@ -93,16 +95,15 @@ class AuthorisationHandlerTest {
 
     @Test
     void shouldReturn400WhenAuthorisationRequestCannotBeParsed() {
-        when(CLIENT_SERVICE.getErrorForAuthorizationRequest(any(AuthorizationRequest.class))).thenReturn(Optional.empty());
+        when(CLIENT_SERVICE.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
+                .thenReturn(Optional.empty());
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
                 Map.of(
                         "client_id", "test-id",
                         "redirect_uri", "http://localhost:8080",
                         "scope", "email,openid,profile",
-                        "invalid_parameter", "nonsense"
-                )
-        );
+                        "invalid_parameter", "nonsense"));
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, CONTEXT);
 
@@ -120,16 +121,13 @@ class AuthorisationHandlerTest {
                         "client_id", "test-id",
                         "redirect_uri", "http://localhost:8080",
                         "scope", "email,openid,profile,non-existent-scope",
-                        "response_type", "code"
-                )
-        );
+                        "response_type", "code"));
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, CONTEXT);
 
         assertThat(response, hasStatus(302));
         assertEquals(
                 "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope",
-                response.getHeaders().get("Location")
-        );
+                response.getHeaders().get("Location"));
     }
 }

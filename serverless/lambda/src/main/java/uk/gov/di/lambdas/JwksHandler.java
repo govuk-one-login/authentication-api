@@ -7,7 +7,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.jose.jwk.JWKSet;
 import uk.gov.di.services.TokenService;
 
-public class JwksHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+public class JwksHandler
+        implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private TokenService tokenService;
 
@@ -20,8 +21,10 @@ public class JwksHandler implements RequestHandler<APIGatewayProxyRequestEvent, 
     }
 
     @Override
-    public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
-        APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent = new APIGatewayProxyResponseEvent();
+    public APIGatewayProxyResponseEvent handleRequest(
+            APIGatewayProxyRequestEvent input, Context context) {
+        APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent =
+                new APIGatewayProxyResponseEvent();
 
         JWKSet jwkSet;
         try {

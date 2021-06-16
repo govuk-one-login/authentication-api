@@ -14,7 +14,8 @@ import uk.gov.di.services.UserInfoService;
 
 import java.util.NoSuchElementException;
 
-public class UserInfoHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+public class UserInfoHandler
+        implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final TokenService tokenService;
     private final UserInfoService userInfoService;
@@ -30,9 +31,11 @@ public class UserInfoHandler implements RequestHandler<APIGatewayProxyRequestEve
     }
 
     @Override
-    public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
+    public APIGatewayProxyResponseEvent handleRequest(
+            APIGatewayProxyRequestEvent input, Context context) {
         LambdaLogger logger = context.getLogger();
-        APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent = new APIGatewayProxyResponseEvent();
+        APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent =
+                new APIGatewayProxyResponseEvent();
 
         try {
             AccessToken accessToken = AccessToken.parse(input.getHeaders().get("Authorization"));
@@ -66,7 +69,6 @@ public class UserInfoHandler implements RequestHandler<APIGatewayProxyRequestEve
             apiGatewayProxyResponseEvent.setBody("Access Token Invalid");
 
             return apiGatewayProxyResponseEvent;
-
         }
     }
 }

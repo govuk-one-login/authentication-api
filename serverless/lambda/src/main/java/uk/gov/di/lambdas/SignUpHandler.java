@@ -15,13 +15,15 @@ import uk.gov.di.validation.PasswordValidation;
 
 import java.util.Set;
 
-public class SignUpHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+public class SignUpHandler
+        implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private AuthenticationService authenticationService;
     private ValidationService validationService;
     private ObjectMapper objectMapper = new ObjectMapper();
 
-    public SignUpHandler(AuthenticationService authenticationService, ValidationService validationService) {
+    public SignUpHandler(
+            AuthenticationService authenticationService, ValidationService validationService) {
         this.authenticationService = authenticationService;
         this.validationService = validationService;
     }
@@ -32,14 +34,18 @@ public class SignUpHandler implements RequestHandler<APIGatewayProxyRequestEvent
     }
 
     @Override
-    public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
-        APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent = new APIGatewayProxyResponseEvent();
+    public APIGatewayProxyResponseEvent handleRequest(
+            APIGatewayProxyRequestEvent input, Context context) {
+        APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent =
+                new APIGatewayProxyResponseEvent();
         LambdaLogger logger = context.getLogger();
 
         try {
-            SignupRequest signupRequest = objectMapper.readValue(input.getBody(), SignupRequest.class);
+            SignupRequest signupRequest =
+                    objectMapper.readValue(input.getBody(), SignupRequest.class);
 
-            Set<PasswordValidation> passwordValidationErrors = validationService.validatePassword(signupRequest.getPassword());
+            Set<PasswordValidation> passwordValidationErrors =
+                    validationService.validatePassword(signupRequest.getPassword());
 
             if (passwordValidationErrors.isEmpty()) {
                 authenticationService.signUp(signupRequest.getEmail(), signupRequest.getPassword());
@@ -54,7 +60,5 @@ public class SignUpHandler implements RequestHandler<APIGatewayProxyRequestEvent
             apiGatewayProxyResponseEvent.setBody("Request is missing parameters");
             return apiGatewayProxyResponseEvent;
         }
-
-
     }
 }
