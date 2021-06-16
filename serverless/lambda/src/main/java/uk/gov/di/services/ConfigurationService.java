@@ -53,6 +53,6 @@ public class ConfigurationService {
     }
 
     public Optional<String> getSqsEndpointUri() {
-        return Optional.of(System.getenv("SQS_ENDPOINT"));
+        return Optional.ofNullable(System.getenv("SQS_ENDPOINT"));
     }
 }
