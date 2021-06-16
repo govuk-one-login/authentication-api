@@ -10,7 +10,7 @@ terraform {
 
   backend "s3" {
     bucket  = "digital-identity-dev-tfstate"
-    key     = "spike-terraform.tfstate"
+    key     = "test-terraform.tfstate"
     encrypt = true
     region  = "eu-west-2"
   }
