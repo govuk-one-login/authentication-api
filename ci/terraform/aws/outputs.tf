@@ -29,3 +29,7 @@ output "userexists_url" {
 output "openid_configuration_discovery_url" {
   value = "http://localhost:45678/restapis/${module.api_gateway_root.di_authentication_api_id}/${var.environment}/_user_request_/.wellknown/openid-configuration"
 }
+
+output "verify_email_url" {
+  value = module.verify_email.base_url
+}
