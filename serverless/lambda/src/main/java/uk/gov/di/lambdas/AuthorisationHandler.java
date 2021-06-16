@@ -17,10 +17,13 @@ import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.InMemoryClientService;
 import uk.gov.di.services.SessionService;
 
+import java.net.URLEncoder;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import static java.lang.String.format;
 
 public class AuthorisationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -28,6 +31,11 @@ public class AuthorisationHandler
     private final ClientService clientService;
     private final ConfigurationService configurationService;
     private final SessionService sessionService;
+
+    private interface ResponseParameters {
+        String SESSION_ID = "session-id";
+        String SCOPE = "scope";
+    }
 
     public AuthorisationHandler(
             ClientService clientService,
@@ -85,9 +93,15 @@ public class AuthorisationHandler
                 .withHeaders(
                         Map.of(
                                 "Location",
-                                configurationService.getLoginURI().toString()
-                                        + "?session-id="
-                                        + session.getSessionId()));
+                                format(
+                                        "%s?%s&%s",
+                                        configurationService.getLoginURI(),
+                                        buildEncodedParam(
+                                                ResponseParameters.SESSION_ID,
+                                                session.getSessionId()),
+                                        buildEncodedParam(
+                                                ResponseParameters.SCOPE,
+                                                authRequest.getScope().toString()))));
     }
 
     private APIGatewayProxyResponseEvent errorResponse(
@@ -102,5 +116,9 @@ public class AuthorisationHandler
         return new APIGatewayProxyResponseEvent()
                 .withStatusCode(302)
                 .withHeaders(Map.of("Location", error.toURI().toString()));
+    }
+
+    private String buildEncodedParam(String name, String value) {
+        return format("%s=%s", name, URLEncoder.encode(value));
     }
 }
