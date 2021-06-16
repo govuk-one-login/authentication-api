@@ -2,7 +2,6 @@ plugins {
     id "com.diffplug.spotless" version "5.13.0"
 }
 
-
 apply plugin: 'java'
 apply plugin: 'application'
 apply plugin: 'idea'
@@ -13,21 +12,7 @@ repositories {
     mavenCentral()
 }
 
-
-distributions {
-    main {
-        contents {
-            from {
-                [
-                    'authentication-api.yml'
-                ]
-            }
-        }
-    }
-}
-
 def dependencyVersions = [
-    dropwizard:'2.0.21',
     nimbus_oauth2_sdk: '9.3.1',
     nimbus_jose_jwt: '9.8.1',
     junit_version: '5.6.0',
@@ -35,16 +20,10 @@ def dependencyVersions = [
 ]
 
 dependencies {
-    implementation "io.dropwizard:dropwizard-core:${dependencyVersions.dropwizard}",
-            "com.nimbusds:oauth2-oidc-sdk:${dependencyVersions.nimbus_oauth2_sdk}",
+    implementation "com.nimbusds:oauth2-oidc-sdk:${dependencyVersions.nimbus_oauth2_sdk}",
             "com.nimbusds:nimbus-jose-jwt:${dependencyVersions.nimbus_jose_jwt}"
 
-    constraints {
-        implementation 'com.fasterxml.jackson.core:jackson-core:2.12.3'
-    }
-
     testImplementation "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit_version}",
-            "io.dropwizard:dropwizard-testing:${dependencyVersions.dropwizard}",
             "org.mockito:mockito-core:${dependencyVersions.mockito_version}",
             "org.mockito:mockito-junit-jupiter:${dependencyVersions.mockito_version}"
 
@@ -71,10 +50,5 @@ test {
 
 mainClassName = 'uk.gov.di.AuthenticationApiApplication'
 
-task cfPush(type: Exec) {
-    commandLine 'cf', 'push', 'di-authentication-api', '-p', 'build/distributions/di-authentication-api.zip'
-}
-
-cfPush.dependsOn build
 compileJava.dependsOn 'spotlessApply'
 
