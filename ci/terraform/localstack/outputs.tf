@@ -30,8 +30,8 @@ output "userexists_url" {
   value = "http://localhost:45678/restapis/${module.api_gateway_root.di_authentication_api_id}/${var.environment}/_user_request_/userexists"
 }
 
-output "verify_email_url" {
-  value = "http://localhost:45678/restapis/${module.api_gateway_root.di_authentication_api_id}/${var.environment}/_user_request_/verify-email"
+output "send_notification_url" {
+  value = "http://localhost:45678/restapis/${module.api_gateway_root.di_authentication_api_id}/${var.environment}/_user_request_/send-notification"
 }
 
 output "api_gateway_root_id" {
