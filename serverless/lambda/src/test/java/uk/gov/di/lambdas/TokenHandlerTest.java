@@ -26,39 +26,37 @@ import static uk.gov.di.matchers.APIGatewayProxyResponseEventStatusMatcher.hasSt
 
 public class TokenHandlerTest {
 
-    private final Context CONTEXT = mock(Context.class);
-
-    private TokenHandler handler;
-    private final UserInfo USER_INFO = mock(UserInfo.class);
-    private final SignedJWT SIGNED_JWT = mock(SignedJWT.class);
-    private final UserService USER_SERVICE = mock(UserService.class);
-    private final AuthorizationCodeService AUTHORIZATION_CODE_SERVICE =
+    private final Context context = mock(Context.class);
+    private final UserInfo userInfo = mock(UserInfo.class);
+    private final SignedJWT signedJWT = mock(SignedJWT.class);
+    private final UserService userService = mock(UserService.class);
+    private final AuthorizationCodeService authorizationCodeService =
             mock(AuthorizationCodeService.class);
-    private final TokenService TOKEN_SERVICE = mock(TokenService.class);
-    private final ClientService CLIENT_SERVICE = mock(InMemoryClientService.class);
+    private final TokenService tokenService = mock(TokenService.class);
+    private final ClientService clientService = mock(InMemoryClientService.class);
+    private TokenHandler handler;
 
     @BeforeEach
     public void setUp() {
         handler =
                 new TokenHandler(
-                        CLIENT_SERVICE, AUTHORIZATION_CODE_SERVICE, TOKEN_SERVICE, USER_SERVICE);
+                        clientService, authorizationCodeService, tokenService, userService);
     }
 
     @Test
     public void shouldReturn200IfSuccessfulRequest() {
         BearerAccessToken accessToken = new BearerAccessToken();
-        when(CLIENT_SERVICE.isValidClient(eq("test-id"), eq("test-secret"))).thenReturn(true);
-        when(TOKEN_SERVICE.issueToken(eq("joe.bloggs@digital.cabinet-office.gov.uk")))
+        when(clientService.isValidClient(eq("test-id"), eq("test-secret"))).thenReturn(true);
+        when(tokenService.issueToken(eq("joe.bloggs@digital.cabinet-office.gov.uk")))
                 .thenReturn(accessToken);
-        when(USER_SERVICE.getInfoForEmail(eq("joe.bloggs@digital.cabinet-office.gov.uk")))
-                .thenReturn(USER_INFO);
-        when(USER_INFO.getSubject()).thenReturn(new Subject());
-        when(TOKEN_SERVICE.generateIDToken(eq("test-id"), any(Subject.class)))
-                .thenReturn(SIGNED_JWT);
+        when(userService.getInfoForEmail(eq("joe.bloggs@digital.cabinet-office.gov.uk")))
+                .thenReturn(userInfo);
+        when(userInfo.getSubject()).thenReturn(new Subject());
+        when(tokenService.generateIDToken(eq("test-id"), any(Subject.class))).thenReturn(signedJWT);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("code=343242&client_id=test-id&client_secret=test-secret");
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(accessToken.getValue()));
@@ -66,10 +64,10 @@ public class TokenHandlerTest {
 
     @Test
     public void shouldReturn403IfClientIsNotValid() {
-        when(CLIENT_SERVICE.isValidClient(eq("invalid-id"), eq("test-secret"))).thenReturn(false);
+        when(clientService.isValidClient(eq("invalid-id"), eq("test-secret"))).thenReturn(false);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("code=343242&client_id=invalid-id&client_secret=test-secret");
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(403, result.getStatusCode());
         assertEquals("client is not valid", result.getBody());
@@ -79,7 +77,7 @@ public class TokenHandlerTest {
     public void shouldReturn400IfAnyRequestParametersAreMissing() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("code=343242&client_id=invalid-id");
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
         assertEquals("Request is missing parameters", result.getBody());

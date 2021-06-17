@@ -34,18 +34,17 @@ import static uk.gov.di.matchers.APIGatewayProxyResponseEventStatusMatcher.hasSt
 
 class AuthorisationHandlerTest {
 
-    private final Context CONTEXT = mock(Context.class);
-
-    private final ClientService CLIENT_SERVICE = mock(ClientService.class);
-    private final ConfigurationService CONFIGURATION_SERVICE = mock(ConfigurationService.class);
-    private final SessionService SESSION_SERVICE = mock(SessionService.class);
+    private final Context context = mock(Context.class);
+    private final ClientService clientService = mock(ClientService.class);
+    private final ConfigurationService configService = mock(ConfigurationService.class);
+    private final SessionService sessionService = mock(SessionService.class);
 
     private AuthorisationHandler handler;
 
     @BeforeEach
     public void setUp() {
-        handler = new AuthorisationHandler(CLIENT_SERVICE, CONFIGURATION_SERVICE, SESSION_SERVICE);
-        when(CONTEXT.getLogger()).thenReturn(mock(LambdaLogger.class));
+        handler = new AuthorisationHandler(clientService, configService, sessionService);
+        when(context.getLogger()).thenReturn(mock(LambdaLogger.class));
     }
 
     @Test
@@ -64,14 +63,14 @@ class AuthorisationHandlerTest {
         final URI loginUrl = URI.create("http://example.com");
         final Session session = new Session();
 
-        when(CLIENT_SERVICE.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
+        when(clientService.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
                 .thenReturn(Optional.empty());
-        when(CLIENT_SERVICE.getSuccessfulResponse(
+        when(clientService.getSuccessfulResponse(
                         any(AuthenticationRequest.class),
                         eq("joe.bloggs@digital.cabinet-office.gov.uk")))
                 .thenReturn(authSuccessResponse);
-        when(CONFIGURATION_SERVICE.getLoginURI()).thenReturn(loginUrl);
-        when(SESSION_SERVICE.createSession()).thenReturn(session);
+        when(configService.getLoginURI()).thenReturn(loginUrl);
+        when(sessionService.createSession()).thenReturn(session);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
@@ -81,7 +80,7 @@ class AuthorisationHandlerTest {
                         "scope", "email,openid,profile",
                         "response_type", "code",
                         "state", "some-state"));
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, CONTEXT);
+        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
         URI uri = URI.create(response.getHeaders().get("Location"));
         Map<String, String> requestParams = RequestBodyHelper.PARSE_REQUEST_BODY(uri.getQuery());
 
@@ -90,12 +89,12 @@ class AuthorisationHandlerTest {
 
         assertThat(requestParams, hasEntry("session-id", session.getSessionId()));
 
-        verify(SESSION_SERVICE).save(eq(session), any(LambdaLogger.class));
+        verify(sessionService).save(eq(session), any(LambdaLogger.class));
     }
 
     @Test
     void shouldReturn400WhenAuthorisationRequestCannotBeParsed() {
-        when(CLIENT_SERVICE.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
+        when(clientService.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
                 .thenReturn(Optional.empty());
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
@@ -105,7 +104,7 @@ class AuthorisationHandlerTest {
                         "scope", "email,openid,profile",
                         "invalid_parameter", "nonsense"));
 
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, CONTEXT);
+        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
         assertThat(response, hasStatus(400));
         assertEquals("Cannot parse authentication request", response.getBody());
@@ -113,7 +112,7 @@ class AuthorisationHandlerTest {
 
     @Test
     void shouldReturn400WhenAuthorisationRequestContainsInvalidData() {
-        when(CLIENT_SERVICE.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
+        when(clientService.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
                 .thenReturn(Optional.of(OAuth2Error.INVALID_SCOPE));
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
@@ -123,7 +122,7 @@ class AuthorisationHandlerTest {
                         "scope", "email,openid,profile,non-existent-scope",
                         "response_type", "code"));
 
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, CONTEXT);
+        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
         assertThat(response, hasStatus(302));
         assertEquals(

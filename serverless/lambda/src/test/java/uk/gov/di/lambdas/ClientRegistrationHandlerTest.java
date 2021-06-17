@@ -21,14 +21,14 @@ import static uk.gov.di.matchers.APIGatewayProxyResponseEventStatusMatcher.hasSt
 
 class ClientRegistrationHandlerTest {
 
-    private final Context CONTEXT = mock(Context.class);
-    private ClientRegistrationHandler handler;
-    private final ClientService CLIENT_SERVICE = mock(ClientService.class);
+    private final Context context = mock(Context.class);
+    private final ClientService clientService = mock(ClientService.class);
     private ObjectMapper objectMapper = new ObjectMapper();
+    private ClientRegistrationHandler handler;
 
     @BeforeEach
     public void setup() {
-        handler = new ClientRegistrationHandler(CLIENT_SERVICE);
+        handler = new ClientRegistrationHandler(clientService);
     }
 
     @Test
@@ -47,12 +47,12 @@ class ClientRegistrationHandlerTest {
                         List.of("code"),
                         redirectUris,
                         contacts);
-        when(CLIENT_SERVICE.addClient(clientName, redirectUris, contacts)).thenReturn(client);
+        when(clientService.addClient(clientName, redirectUris, contacts)).thenReturn(client);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
                 "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"] }");
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
         Client clientResult = objectMapper.readValue(result.getBody(), Client.class);
@@ -64,7 +64,7 @@ class ClientRegistrationHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
                 "{\"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"] }");
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
         assertEquals("Request is missing parameters", result.getBody());
