@@ -14,6 +14,8 @@ import uk.gov.di.services.UserInfoService;
 
 import java.util.NoSuchElementException;
 
+import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+
 public class UserInfoHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
@@ -34,9 +36,6 @@ public class UserInfoHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         LambdaLogger logger = context.getLogger();
-        APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent =
-                new APIGatewayProxyResponseEvent();
-
         try {
             AccessToken accessToken = AccessToken.parse(input.getHeaders().get("Authorization"));
             logger.log("Access Token = " + accessToken.getValue());
@@ -44,31 +43,19 @@ public class UserInfoHandler
             String emailForToken = tokenService.getEmailForToken(accessToken).orElseThrow();
             UserInfo userInfo = userInfoService.getInfoForEmail(emailForToken);
 
-            apiGatewayProxyResponseEvent.setStatusCode(200);
-            apiGatewayProxyResponseEvent.setBody(userInfo.toJSONString());
-
-            return apiGatewayProxyResponseEvent;
+            return generateApiGatewayProxyResponse(200, userInfo.toJSONString());
         } catch (ParseException e) {
             logger.log("Access Token Not Parsable");
 
-            apiGatewayProxyResponseEvent.setStatusCode(401);
-            apiGatewayProxyResponseEvent.setBody("Access Token Not Parsable");
-
-            return apiGatewayProxyResponseEvent;
+            return generateApiGatewayProxyResponse(401, "Access Token Not Parsable");
         } catch (NullPointerException e) {
             logger.log("Access Token Not Present");
 
-            apiGatewayProxyResponseEvent.setStatusCode(401);
-            apiGatewayProxyResponseEvent.setBody("No access token present");
-
-            return apiGatewayProxyResponseEvent;
+            return generateApiGatewayProxyResponse(401, "No access token present");
         } catch (NoSuchElementException e) {
             logger.log("Access Token Invalid");
 
-            apiGatewayProxyResponseEvent.setStatusCode(401);
-            apiGatewayProxyResponseEvent.setBody("Access Token Invalid");
-
-            return apiGatewayProxyResponseEvent;
+            return generateApiGatewayProxyResponse(401, "Access Token Invalid");
         }
     }
 }

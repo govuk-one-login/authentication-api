@@ -23,25 +23,25 @@ import static uk.gov.di.validation.PasswordValidation.NO_NUMBER_INCLUDED;
 
 class SignUpHandlerTest {
 
-    private final Context CONTEXT = mock(Context.class);
-    private final UserService USER_SERVICE = mock(UserService.class);
-    private final ValidationService VALIDATION_SERVICE = mock(ValidationService.class);
+    private final Context context = mock(Context.class);
+    private final UserService userService = mock(UserService.class);
+    private final ValidationService validationService = mock(ValidationService.class);
     private SignUpHandler handler;
 
     @BeforeEach
     public void setUp() {
-        handler = new SignUpHandler(USER_SERVICE, VALIDATION_SERVICE);
+        handler = new SignUpHandler(userService, validationService);
     }
 
     @Test
     public void shouldReturn200IfSignUpIsSuccessful() {
         String password = "computer-1";
-        when(VALIDATION_SERVICE.validatePassword(eq(password))).thenReturn(Collections.EMPTY_SET);
+        when(validationService.validatePassword(eq(password))).thenReturn(Collections.EMPTY_SET);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"password\": \"computer-1\", \"email\": \"joe.bloggs@test.com\" }");
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        verify(USER_SERVICE).signUp(eq("joe.bloggs@test.com"), eq(password));
+        verify(userService).signUp(eq("joe.bloggs@test.com"), eq(password));
 
         assertThat(result, hasStatus(200));
     }
@@ -50,7 +50,7 @@ class SignUpHandlerTest {
     public void shouldReturn400IfAnyRequestParametersAreMissing() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"email\": \"joe.bloggs@test.com\" }");
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
         assertEquals("Request is missing parameters", result.getBody());
@@ -59,12 +59,12 @@ class SignUpHandlerTest {
     @Test
     public void shouldReturn400IfPasswordFailsValidation() {
         String password = "computer";
-        when(VALIDATION_SERVICE.validatePassword(eq(password)))
+        when(validationService.validatePassword(eq(password)))
                 .thenReturn(Set.of(NO_NUMBER_INCLUDED));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"password\": \"computer\", \"email\": \"joe.bloggs@test.com\" }");
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
         assertTrue(result.getBody().contains(NO_NUMBER_INCLUDED.toString()));

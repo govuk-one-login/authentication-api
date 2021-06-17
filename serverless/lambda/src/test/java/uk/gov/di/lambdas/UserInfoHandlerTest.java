@@ -26,34 +26,32 @@ import static uk.gov.di.matchers.APIGatewayProxyResponseEventStatusMatcher.hasSt
 
 public class UserInfoHandlerTest {
 
-    private final Context CONTEXT = mock(Context.class);
-
-    private UserInfoHandler handler;
     private static final Optional<String> EMAIL_ADDRESS =
             Optional.of("joe.bloggs@digital.cabinet-office.gov.uk");
-    private final TokenService TOKEN_SERVICE = mock(TokenService.class);
-    private final UserInfoService USER_INFO_SERVICE = mock(UserInfoService.class);
-    private final UserInfo USER_INFO =
+    private final Context context = mock(Context.class);
+    private final TokenService tokenService = mock(TokenService.class);
+    private final UserInfoService userInfoService = mock(UserInfoService.class);
+    private final UserInfo userInfo =
             new UserInfo(new Subject()) {
                 {
                     setEmailAddress(EMAIL_ADDRESS.get());
                 }
             };
+    private UserInfoHandler handler;
 
     @BeforeEach
     public void setUp() {
-        handler = new UserInfoHandler(TOKEN_SERVICE, USER_INFO_SERVICE);
+        handler = new UserInfoHandler(tokenService, userInfoService);
     }
 
     @Test
     public void shouldReturn200IfSuccessfulRequest() throws ParseException {
-        when(TOKEN_SERVICE.getEmailForToken(any(BearerAccessToken.class)))
-                .thenReturn(EMAIL_ADDRESS);
-        when(USER_INFO_SERVICE.getInfoForEmail(eq(EMAIL_ADDRESS.get()))).thenReturn(USER_INFO);
+        when(tokenService.getEmailForToken(any(BearerAccessToken.class))).thenReturn(EMAIL_ADDRESS);
+        when(userInfoService.getInfoForEmail(eq(EMAIL_ADDRESS.get()))).thenReturn(userInfo);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Authorization", new BearerAccessToken().toAuthorizationHeader()));
-        when(CONTEXT.getLogger()).thenReturn(mock(LambdaLogger.class));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
+        when(context.getLogger()).thenReturn(mock(LambdaLogger.class));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
         UserInfo parse = UserInfo.parse(result.getBody());
@@ -64,8 +62,8 @@ public class UserInfoHandlerTest {
     public void shouldReturn401WhenBearerTokenIsNotParseable() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Authorization", "this-is-not-a-valid-token"));
-        when(CONTEXT.getLogger()).thenReturn(mock(LambdaLogger.class));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
+        when(context.getLogger()).thenReturn(mock(LambdaLogger.class));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(401));
         assertEquals("Access Token Not Parsable", result.getBody());
@@ -74,8 +72,8 @@ public class UserInfoHandlerTest {
     @Test
     public void shouldReturn401WhenAuthorizationHeaderIsMissing() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        when(CONTEXT.getLogger()).thenReturn(mock(LambdaLogger.class));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
+        when(context.getLogger()).thenReturn(mock(LambdaLogger.class));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(401));
         assertEquals("No access token present", result.getBody());
@@ -86,10 +84,10 @@ public class UserInfoHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Authorization", new BearerAccessToken().toAuthorizationHeader()));
 
-        when(TOKEN_SERVICE.getEmailForToken(any(BearerAccessToken.class)))
+        when(tokenService.getEmailForToken(any(BearerAccessToken.class)))
                 .thenReturn(Optional.empty());
-        when(CONTEXT.getLogger()).thenReturn(mock(LambdaLogger.class));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
+        when(context.getLogger()).thenReturn(mock(LambdaLogger.class));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(401));
         assertEquals("Access Token Invalid", result.getBody());

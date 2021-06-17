@@ -20,6 +20,8 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+
 public class WellknownHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
@@ -36,8 +38,6 @@ public class WellknownHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent =
-                new APIGatewayProxyResponseEvent();
         try {
             String baseUrl = configService.getBaseURL().orElseThrow();
 
@@ -61,13 +61,9 @@ public class WellknownHandler
                     List.of("sub", "gender", "family_name", "given_name", "email"));
             providerMetadata.setIDTokenJWSAlgs(List.of(JWSAlgorithm.RS256));
 
-            apiGatewayProxyResponseEvent.setStatusCode(200);
-            apiGatewayProxyResponseEvent.setBody(providerMetadata.toString());
-            return apiGatewayProxyResponseEvent;
+            return generateApiGatewayProxyResponse(200, providerMetadata.toString());
         } catch (URISyntaxException | NoSuchElementException e) {
-            apiGatewayProxyResponseEvent.setStatusCode(500);
-            apiGatewayProxyResponseEvent.setBody("Service not configured");
-            return apiGatewayProxyResponseEvent;
+            return generateApiGatewayProxyResponse(500, "Service not configured");
         }
     }
 

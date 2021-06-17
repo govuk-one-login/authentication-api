@@ -21,22 +21,22 @@ import static uk.gov.di.matchers.APIGatewayProxyResponseEventStatusMatcher.hasSt
 
 class JwksHandlerTest {
 
-    private final Context CONTEXT = mock(Context.class);
+    private final Context context = mock(Context.class);
+    private final TokenService tokenService = mock(TokenService.class);
     private JwksHandler handler;
-    private final TokenService TOKEN_SERVICE = mock(TokenService.class);
 
     @BeforeEach
     public void setUp() {
-        handler = new JwksHandler(TOKEN_SERVICE);
+        handler = new JwksHandler(tokenService);
     }
 
     @Test
     public void shouldReturn200WhenRequestIsSuccessful() throws JOSEException {
         JWK signingKey = new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
-        when(TOKEN_SERVICE.getSigningKey()).thenReturn(signingKey);
+        when(tokenService.getSigningKey()).thenReturn(signingKey);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         JWKSet expectedJWKSet = new JWKSet(signingKey);
 
@@ -46,10 +46,10 @@ class JwksHandlerTest {
 
     @Test
     public void shouldReturn500WhenSigningKeyIsNotPresent() {
-        when(TOKEN_SERVICE.getSigningKey()).thenReturn(null);
+        when(tokenService.getSigningKey()).thenReturn(null);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(500));
         assertEquals("Signing key is not present", result.getBody());

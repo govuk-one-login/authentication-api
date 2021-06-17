@@ -20,6 +20,7 @@ import uk.gov.di.services.UserService;
 
 import java.util.Map;
 
+import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.helpers.RequestBodyHelper.PARSE_REQUEST_BODY;
 
 public class TokenHandler
@@ -51,17 +52,13 @@ public class TokenHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent =
-                new APIGatewayProxyResponseEvent();
         LambdaLogger logger = context.getLogger();
         Map<String, String> requestBody = PARSE_REQUEST_BODY(input.getBody());
 
         if (!requestBody.containsKey("code")
                 || !requestBody.containsKey("client_id")
                 || !requestBody.containsKey("client_secret")) {
-            apiGatewayProxyResponseEvent.setStatusCode(400);
-            apiGatewayProxyResponseEvent.setBody("Request is missing parameters");
-            return apiGatewayProxyResponseEvent;
+            return generateApiGatewayProxyResponse(400, "Request is missing parameters");
         }
 
         AuthorizationCode code = new AuthorizationCode(requestBody.get("code"));
@@ -69,17 +66,13 @@ public class TokenHandler
         String clientID = requestBody.get("client_id");
 
         if (!clientService.isValidClient(clientID, clientSecret)) {
-            apiGatewayProxyResponseEvent.setStatusCode(403);
-            apiGatewayProxyResponseEvent.setBody("client is not valid");
-            return apiGatewayProxyResponseEvent;
+            return generateApiGatewayProxyResponse(403, "client is not valid");
         }
         //        String email = authorizationCodeService.getEmailForCode(code);
         String email = "joe.bloggs@digital.cabinet-office.gov.uk";
 
         if (email.isEmpty()) {
-            apiGatewayProxyResponseEvent.setStatusCode(403);
-            apiGatewayProxyResponseEvent.setBody("");
-            return apiGatewayProxyResponseEvent;
+            return generateApiGatewayProxyResponse(403, "");
         }
 
         AccessToken accessToken = tokenService.issueToken(email);
@@ -89,9 +82,6 @@ public class TokenHandler
         OIDCTokens oidcTokens = new OIDCTokens(idToken, accessToken, null);
         OIDCTokenResponse tokenResponse = new OIDCTokenResponse(oidcTokens);
 
-        apiGatewayProxyResponseEvent.setStatusCode(200);
-        apiGatewayProxyResponseEvent.setBody(tokenResponse.toJSONObject().toJSONString());
-
-        return apiGatewayProxyResponseEvent;
+        return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
     }
 }

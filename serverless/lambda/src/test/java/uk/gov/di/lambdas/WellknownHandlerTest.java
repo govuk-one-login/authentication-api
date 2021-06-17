@@ -22,21 +22,22 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventStatusMatcher.hasStatus;
 
 class WellknownHandlerTest {
-    private final Context CONTEXT = mock(Context.class);
-    private final ConfigurationService CONFIG_SERVICE = mock(ConfigurationService.class);
+
+    private final Context context = mock(Context.class);
+    private final ConfigurationService configService = mock(ConfigurationService.class);
     private WellknownHandler handler;
 
     @BeforeEach
     public void setUp() {
-        handler = new WellknownHandler(CONFIG_SERVICE);
+        handler = new WellknownHandler(configService);
     }
 
     @Test
     public void shouldReturn200WhenRequestIsSuccessful() throws ParseException {
-        when(CONFIG_SERVICE.getBaseURL()).thenReturn(Optional.of("http://localhost:8080/"));
+        when(configService.getBaseURL()).thenReturn(Optional.of("http://localhost:8080/"));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         URI expectedRegistrationURI = URI.create("http://localhost:8080/connect/register");
 
@@ -54,10 +55,10 @@ class WellknownHandlerTest {
 
     @Test
     public void shouldReturn500WhenConfigIsMissing() {
-        when(CONFIG_SERVICE.getBaseURL()).thenReturn(Optional.empty());
+        when(configService.getBaseURL()).thenReturn(Optional.empty());
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, CONTEXT);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(500));
         assertEquals("Service not configured", result.getBody());

@@ -7,6 +7,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.jose.jwk.JWKSet;
 import uk.gov.di.services.TokenService;
 
+import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+
 public class JwksHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
@@ -23,20 +25,12 @@ public class JwksHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent =
-                new APIGatewayProxyResponseEvent();
-
         JWKSet jwkSet;
         try {
             jwkSet = new JWKSet(tokenService.getSigningKey());
         } catch (IllegalArgumentException e) {
-            apiGatewayProxyResponseEvent.setBody("Signing key is not present");
-            apiGatewayProxyResponseEvent.setStatusCode(500);
-            return apiGatewayProxyResponseEvent;
+            return generateApiGatewayProxyResponse(500, "Signing key is not present");
         }
-
-        apiGatewayProxyResponseEvent.setBody(jwkSet.toString(true));
-        apiGatewayProxyResponseEvent.setStatusCode(200);
-        return apiGatewayProxyResponseEvent;
+        return generateApiGatewayProxyResponse(200, jwkSet.toString(true));
     }
 }
