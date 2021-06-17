@@ -182,19 +182,19 @@ module "userexists" {
   subnet_id                 = aws_subnet.authentication.*.id
 }
 
-module "verify_email" {
+module "send_notification" {
   source = "../modules/endpoint-module"
   providers = {
     aws = aws.localstack
   }
 
-  endpoint_name   = "verify-email"
+  endpoint_name   = "send-notification"
   endpoint_method = "POST"
   handler_environment_variables = {
     EMAIL_QUEUE_URL = module.email_notification_sqs_queue.queue_url
     SQS_ENDPOINT = var.localstack_endpoint
   }
-  handler_function_name = "uk.gov.di.lambdas.SendUserEmailHandler::handleRequest"
+  handler_function_name = "uk.gov.di.lambdas.SendNotificationHandler::handleRequest"
 
   rest_api_id               = module.api_gateway_root.di_authentication_api_id
   root_resource_id          = module.api_gateway_root.root_resource_id

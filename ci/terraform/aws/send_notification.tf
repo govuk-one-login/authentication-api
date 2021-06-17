@@ -1,12 +1,12 @@
-module "verify_email" {
+module "send_notification" {
   source = "../modules/endpoint-module"
 
-  endpoint_name   = "verify-email"
+  endpoint_name   = "send-notification"
   endpoint_method = "POST"
   handler_environment_variables = {
     EMAIL_QUEUE_URL = module.email_notification_sqs_queue.queue_url
   }
-  handler_function_name = "uk.gov.di.lambdas.SendUserEmailHandler::handleRequest"
+  handler_function_name = "uk.gov.di.lambdas.SendNotificationHandler::handleRequest"
 
   rest_api_id               = module.api_gateway_root.di_authentication_api_id
   root_resource_id          = module.api_gateway_root.root_resource_id
