@@ -12,6 +12,8 @@ import uk.gov.di.services.AuthorizationCodeService;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.InMemoryClientService;
 
+import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+
 public class ClientRegistrationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
@@ -29,8 +31,6 @@ public class ClientRegistrationHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
-
         try {
             ClientRegistrationRequest clientRegistrationRequest =
                     objectMapper.readValue(input.getBody(), ClientRegistrationRequest.class);
@@ -40,13 +40,9 @@ public class ClientRegistrationHandler
                             clientRegistrationRequest.getRedirectUris(),
                             clientRegistrationRequest.getContacts());
             String clientString = objectMapper.writeValueAsString(client);
-            response.setBody(clientString);
-            response.setStatusCode(200);
-            return response;
+            return generateApiGatewayProxyResponse(200, clientString);
         } catch (JsonProcessingException e) {
-            response.setStatusCode(400);
-            response.setBody("Request is missing parameters");
-            return response;
+            return generateApiGatewayProxyResponse(400, "Request is missing parameters");
         }
     }
 }

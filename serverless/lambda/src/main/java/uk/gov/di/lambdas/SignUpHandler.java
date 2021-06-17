@@ -15,6 +15,8 @@ import uk.gov.di.validation.PasswordValidation;
 
 import java.util.Set;
 
+import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+
 public class SignUpHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
@@ -36,8 +38,6 @@ public class SignUpHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent =
-                new APIGatewayProxyResponseEvent();
         LambdaLogger logger = context.getLogger();
 
         try {
@@ -49,16 +49,12 @@ public class SignUpHandler
 
             if (passwordValidationErrors.isEmpty()) {
                 authenticationService.signUp(signupRequest.getEmail(), signupRequest.getPassword());
-                apiGatewayProxyResponseEvent.setStatusCode(200);
+                return generateApiGatewayProxyResponse(200, "");
             } else {
-                apiGatewayProxyResponseEvent.setStatusCode(400);
-                apiGatewayProxyResponseEvent.setBody(passwordValidationErrors.toString());
+                return generateApiGatewayProxyResponse(400, passwordValidationErrors.toString());
             }
-            return apiGatewayProxyResponseEvent;
         } catch (JsonProcessingException e) {
-            apiGatewayProxyResponseEvent.setStatusCode(400);
-            apiGatewayProxyResponseEvent.setBody("Request is missing parameters");
-            return apiGatewayProxyResponseEvent;
+            return generateApiGatewayProxyResponse(400, "Request is missing parameters");
         }
     }
 }
