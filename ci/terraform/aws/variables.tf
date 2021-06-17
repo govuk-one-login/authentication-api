@@ -10,6 +10,11 @@ variable "deployer_role_arn" {
   type        = string
 }
 
+variable "notify_api_key" {
+  description = "The API key required to communicate with Notify"
+  type        = string
+}
+
 variable "environment" {
   type    = string
   default = "test"
