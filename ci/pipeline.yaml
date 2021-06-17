@@ -59,6 +59,7 @@ jobs:
               tag: 0.14.10
           params:
             DEPLOYER_ROLE_ARN: ((deployer-role-arn))
+            BUILD_NOTIFY_API_KEY: ((build-notify-api-key))
           inputs:
             - name: lambda-zip
             - name: di-authentication-api
@@ -74,6 +75,7 @@ jobs:
                 terraform plan \
                   -var 'lambda_zip_file=../../../../lambda-zip/lambda.zip' \
                   -var "deployer_role_arn=${DEPLOYER_ROLE_ARN}" \
+                  -var "notify_api_key=${BUILD_NOTIFY_API_KEY}" \
                   -out=../../../../terraform-plan/terraform.plan
 
       - task: terraform-apply
