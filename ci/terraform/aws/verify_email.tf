@@ -4,7 +4,7 @@ module "verify_email" {
   endpoint_name   = "verify-email"
   endpoint_method = "POST"
   handler_environment_variables = {
-    SQS_EMAIL = module.email_notification_sqs_queue.queue_name
+    EMAIL_QUEUE_URL = module.email_notification_sqs_queue.queue_url
   }
   handler_function_name = "uk.gov.di.lambdas.SendUserEmailHandler::handleRequest"
 

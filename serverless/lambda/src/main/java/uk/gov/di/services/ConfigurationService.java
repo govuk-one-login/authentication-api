@@ -45,7 +45,7 @@ public class ConfigurationService {
     }
 
     public String getEmailQueueUri() {
-        return System.getenv("SQS_EMAIL");
+        return System.getenv("EMAIL_QUEUE_URL");
     }
 
     public String getAwsRegion() {
