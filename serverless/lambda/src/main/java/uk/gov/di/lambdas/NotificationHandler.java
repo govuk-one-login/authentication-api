@@ -19,10 +19,9 @@ import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
 
 public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
-    private NotificationService notificationService;
-    private ObjectMapper objectMapper = new ObjectMapper();
-    private ConfigurationService configService;
-    private NotificationClient client;
+    private final NotificationService notificationService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ConfigurationService configService;
 
     public NotificationHandler(
             NotificationService notificationService, ConfigurationService configService) {
@@ -31,9 +30,9 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     }
 
     public NotificationHandler() {
-        client = new NotificationClient(configService.getNotifyApiKey());
-        this.notificationService = new NotificationService(client);
         this.configService = new ConfigurationService();
+        NotificationClient client = new NotificationClient(configService.getNotifyApiKey());
+        this.notificationService = new NotificationService(client);
     }
 
     @Override
