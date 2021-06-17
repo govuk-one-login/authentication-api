@@ -10,10 +10,10 @@ import uk.gov.di.entity.NotifyRequest;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.NotificationService;
 import uk.gov.service.notify.NotificationClient;
+import uk.gov.service.notify.NotificationClientException;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 
 import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
 
@@ -22,8 +22,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     private NotificationService notificationService;
     private ObjectMapper objectMapper = new ObjectMapper();
     private ConfigurationService configService;
-    private NotificationClient client =
-            new NotificationClient(new ConfigurationService().getNotifyApiKey());
+    private NotificationClient client;
 
     public NotificationHandler(
             NotificationService notificationService, ConfigurationService configService) {
@@ -32,6 +31,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     }
 
     public NotificationHandler() {
+        client = new NotificationClient(configService.getNotifyApiKey());
         this.notificationService = new NotificationService(client);
         this.configService = new ConfigurationService();
     }
@@ -45,10 +45,9 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                         objectMapper.readValue(msg.getBody(), NotifyRequest.class);
                 switch (notifyRequest.getNotificationType()) {
                     case VERIFY_EMAIL:
-                        Random rnd = new Random();
-                        String number = Integer.toString(rnd.nextInt(999999));
+                        String code = notificationService.generateSixDigitCode();
                         Map<String, Object> personalisation = new HashMap<>();
-                        personalisation.put("validation-code", number);
+                        personalisation.put("validation-code", code);
                         personalisation.put("email-address", notifyRequest.getDestination());
                         notificationService.sendEmail(
                                 notifyRequest.getDestination(),
@@ -57,7 +56,10 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                         break;
                 }
             } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException(
+                        "Error when mapping message from queue to a NotifyRequest", e);
+            } catch (NotificationClientException e) {
+                throw new RuntimeException("Error when sending email via Notify", e);
             }
         }
         return null;
