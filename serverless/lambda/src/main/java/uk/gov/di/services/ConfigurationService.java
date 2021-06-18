@@ -16,7 +16,7 @@ public class ConfigurationService {
     }
 
     public String getRedisHost() {
-        return System.getenv("REDIS_HOST");
+        return System.getenv().getOrDefault("REDIS_HOST", "redis");
     }
 
     public int getRedisPort() {
@@ -27,8 +27,12 @@ public class ConfigurationService {
         return Boolean.parseBoolean(System.getenv().getOrDefault("REDIS_TLS", "false"));
     }
 
-    public String getRedisPassword() {
-        return System.getenv("REDIS_PASSWORD");
+    public Optional<String> getRedisPassword() {
+        return Optional.ofNullable(System.getenv("REDIS_PASSWORD"));
+    }
+
+    public long getSessionExpiry() {
+        return Long.parseLong(System.getenv().getOrDefault("SESSION_EXPIRY", "1800"));
     }
 
     public String getNotifyApiKey() {

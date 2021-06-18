@@ -64,11 +64,11 @@ function funky_started() {
 }
 
 startup() {
-  stop_docker_services aws
+  stop_docker_services aws redis
   printf "\nStarting di-authentication-api...\n"
   ./gradlew clean build -x test
   printf "\nStarting Docker services...\n"
-  startup_docker aws
+  startup_docker aws redis
   run_terraform ci/terraform/localstack
   funky_started
 }
