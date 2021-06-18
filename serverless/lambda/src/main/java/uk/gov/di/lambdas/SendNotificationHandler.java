@@ -10,14 +10,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.entity.NotifyRequest;
 import uk.gov.di.entity.SendNotificationRequest;
+import uk.gov.di.entity.Session;
 import uk.gov.di.services.AwsSqsClient;
 import uk.gov.di.services.ConfigurationService;
+import uk.gov.di.services.SessionService;
 import uk.gov.di.services.ValidationService;
 import uk.gov.di.validation.EmailValidation;
 
+import java.util.Optional;
 import java.util.Set;
 
-import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.Messages.ERROR_INVALID_SESSION_ID;
+import static uk.gov.di.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class SendNotificationHandler
@@ -26,15 +30,17 @@ public class SendNotificationHandler
     private final ConfigurationService configurationService;
     private final ValidationService validationService;
     private final AwsSqsClient sqsClient;
+    private final SessionService sessionService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public SendNotificationHandler(
             ConfigurationService configurationService,
             ValidationService validationService,
-            AwsSqsClient sqsClient) {
+            AwsSqsClient sqsClient, SessionService sessionService) {
         this.configurationService = configurationService;
         this.validationService = validationService;
         this.sqsClient = sqsClient;
+        this.sessionService = sessionService;
     }
 
     public SendNotificationHandler() {
@@ -45,6 +51,7 @@ public class SendNotificationHandler
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
         this.validationService = new ValidationService();
+        sessionService = new SessionService(configurationService);
     }
 
     @Override
@@ -52,6 +59,10 @@ public class SendNotificationHandler
             APIGatewayProxyRequestEvent input, Context context) {
         LambdaLogger logger = context.getLogger();
 
+        Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
+        if (session.isEmpty()) {
+            return generateApiGatewayProxyResponse(400, ERROR_INVALID_SESSION_ID);
+        }
         try {
             SendNotificationRequest sendNotificationRequest =
                     objectMapper.readValue(input.getBody(), SendNotificationRequest.class);
@@ -63,10 +74,14 @@ public class SendNotificationHandler
                     if (!emailErrors.isEmpty()) {
                         return generateApiGatewayProxyResponse(400, emailErrors.toString());
                     }
+                    if (!session.get().validateSession(sendNotificationRequest.getEmail())) {
+                        return generateApiGatewayProxyResponse(400, ERROR_INVALID_SESSION_ID);
+                    }
                     NotifyRequest notifyRequest =
                             new NotifyRequest(
                                     sendNotificationRequest.getEmail(),
                                     sendNotificationRequest.getNotificationType());
+                    sessionService.save(session.get().setState(VERIFY_EMAIL_CODE_SENT));
                     sqsClient.send(serialiseRequest(notifyRequest));
                     return generateApiGatewayProxyResponse(200, "OK");
             }
