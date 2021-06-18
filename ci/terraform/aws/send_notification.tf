@@ -5,6 +5,10 @@ module "send_notification" {
   endpoint_method = "POST"
   handler_environment_variables = {
     EMAIL_QUEUE_URL = module.email_notification_sqs_queue.queue_url
+    REDIS_HOST     = aws_elasticache_replication_group.sessions_store.primary_endpoint_address
+    REDIS_PORT     = aws_elasticache_replication_group.sessions_store.port
+    REDIS_PASSWORD = random_password.redis_password.result
+    REDIS_TLS      = "true"
   }
   handler_function_name = "uk.gov.di.lambdas.SendNotificationHandler::handleRequest"
 

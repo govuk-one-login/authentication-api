@@ -36,7 +36,8 @@ public class SendNotificationHandler
     public SendNotificationHandler(
             ConfigurationService configurationService,
             ValidationService validationService,
-            AwsSqsClient sqsClient, SessionService sessionService) {
+            AwsSqsClient sqsClient,
+            SessionService sessionService) {
         this.configurationService = configurationService;
         this.validationService = validationService;
         this.sqsClient = sqsClient;
