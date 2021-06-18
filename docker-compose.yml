@@ -28,5 +28,16 @@ services:
       timeout: 10s
       start_period: 10s
 
+  redis:
+    image: redis:6.0.5-alpine
+    healthcheck:
+      test: '[[ $$(redis-cli ping 2> /dev/null) == "PONG" ]] || exit 1'
+      interval: 5s
+      timeout: 1m
+    ports:
+      - 6379:6379
+    networks:
+      - di-authentication-api-net
+
 networks:
   di-authentication-api-net:

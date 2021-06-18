@@ -49,7 +49,7 @@ public class AuthorisationHandler
     public AuthorisationHandler() {
         this.clientService = new InMemoryClientService(new AuthorizationCodeService());
         this.configurationService = new ConfigurationService();
-        this.sessionService = new SessionService();
+        this.sessionService = new SessionService(configurationService);
     }
 
     @Override
@@ -86,7 +86,7 @@ public class AuthorisationHandler
             AuthenticationRequest authRequest, LambdaLogger logger) {
         Session session = sessionService.createSession().setAuthenticationRequest(authRequest);
         logger.log("Created session " + session.getSessionId());
-        sessionService.save(session, logger);
+        sessionService.save(session);
         logger.log("Session saved successfully " + session.getSessionId());
         return new APIGatewayProxyResponseEvent()
                 .withStatusCode(302)

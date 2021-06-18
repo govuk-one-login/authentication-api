@@ -7,16 +7,20 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import uk.gov.di.entity.CheckUserExistsResponse;
+import uk.gov.di.entity.Session;
 import uk.gov.di.entity.UserWithEmailRequest;
 import uk.gov.di.services.AuthenticationService;
+import uk.gov.di.services.ConfigurationService;
+import uk.gov.di.services.SessionService;
 import uk.gov.di.services.UserService;
 import uk.gov.di.services.ValidationService;
 import uk.gov.di.validation.EmailValidation;
 
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
+import static uk.gov.di.entity.SessionState.USER_NOT_FOUND;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class CheckUserExistsHandler
@@ -25,48 +29,54 @@ public class CheckUserExistsHandler
     private ValidationService validationService;
     private ObjectMapper objectMapper = new ObjectMapper();
     private AuthenticationService authenticationService;
+    private final SessionService sessionService;
 
     public CheckUserExistsHandler(
-            ValidationService validationService, AuthenticationService authenticationService) {
+            ValidationService validationService,
+            AuthenticationService authenticationService,
+            SessionService sessionService) {
         this.validationService = validationService;
         this.authenticationService = authenticationService;
+        this.sessionService = sessionService;
     }
 
     public CheckUserExistsHandler() {
         this.validationService = new ValidationService();
         this.authenticationService = new UserService();
+        this.sessionService = new SessionService(new ConfigurationService());
     }
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         try {
-            Optional<Map<String, String>> headers = Optional.ofNullable(input.getHeaders());
-            if (headers.isEmpty() || !headers.get().containsKey("Session-Id")) {
-                return generateApiGatewayProxyResponse(400, "Session-Id is missing");
-            }
+            Optional<Session> session =
+                    sessionService.getSessionFromRequestHeaders(input.getHeaders());
+            if (session.isPresent()) {
+                session.get().setState(USER_NOT_FOUND);
+                UserWithEmailRequest userExistsRequest =
+                        objectMapper.readValue(input.getBody(), UserWithEmailRequest.class);
+                String emailAddress = userExistsRequest.getEmail();
+                Set<EmailValidation> emailErrors =
+                        validationService.validateEmailAddress(emailAddress);
+                if (!emailErrors.isEmpty()) {
+                    return generateApiGatewayProxyResponse(400, emailErrors.toString());
+                }
+                boolean userExists = authenticationService.userExists(emailAddress);
+                session.get().setEmailAddress(emailAddress);
+                if (userExists) {
+                    session.get().setState(AUTHENTICATION_REQUIRED);
+                }
+                CheckUserExistsResponse checkUserExistsResponse =
+                        new CheckUserExistsResponse(
+                                emailAddress, userExists, session.get().getState());
+                String checkUserExistsResponseString =
+                        objectMapper.writeValueAsString(checkUserExistsResponse);
+                sessionService.save(session.get());
 
-            UserWithEmailRequest userExistsRequest =
-                    objectMapper.readValue(input.getBody(), UserWithEmailRequest.class);
-            Set<EmailValidation> emailErrors =
-                    validationService.validateEmailAddress(userExistsRequest.getEmail());
-            if (!emailErrors.isEmpty()) {
-                return generateApiGatewayProxyResponse(400, emailErrors.toString());
-            }
-            boolean userExists = authenticationService.userExists(userExistsRequest.getEmail());
-            if (userExists) {
-                CheckUserExistsResponse checkUserExistsResponse =
-                        new CheckUserExistsResponse(userExistsRequest.getEmail(), true);
-                String checkUserExistsResponseString =
-                        objectMapper.writeValueAsString(checkUserExistsResponse);
-                return generateApiGatewayProxyResponse(200, checkUserExistsResponseString);
-            } else {
-                CheckUserExistsResponse checkUserExistsResponse =
-                        new CheckUserExistsResponse(userExistsRequest.getEmail(), false);
-                String checkUserExistsResponseString =
-                        objectMapper.writeValueAsString(checkUserExistsResponse);
                 return generateApiGatewayProxyResponse(200, checkUserExistsResponseString);
             }
+            return generateApiGatewayProxyResponse(400, "Session-Id is missing or invalid");
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyResponse(400, "Request is missing parameters");
         }

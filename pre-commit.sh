@@ -19,7 +19,7 @@ run-integration-tests
 
 build_and_test_exit_code=$?
 
-stop_docker_services aws
+stop_docker_services aws redis
 
 if [ ${build_and_test_exit_code} -ne 0 ]; then
   printf "\npre-commit failed.\n"

@@ -89,7 +89,7 @@ class AuthorisationHandlerTest {
 
         assertThat(requestParams, hasEntry("session-id", session.getSessionId()));
 
-        verify(sessionService).save(eq(session), any(LambdaLogger.class));
+        verify(sessionService).save(eq(session));
     }
 
     @Test
