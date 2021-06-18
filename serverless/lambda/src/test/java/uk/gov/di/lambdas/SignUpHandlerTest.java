@@ -18,7 +18,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventStatusMatcher.hasStatus;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.validation.PasswordValidation.NO_NUMBER_INCLUDED;
 
 class SignUpHandlerTest {
