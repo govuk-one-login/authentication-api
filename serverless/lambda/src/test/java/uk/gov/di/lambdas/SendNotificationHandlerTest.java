@@ -46,7 +46,8 @@ class SendNotificationHandlerTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final Context context = mock(Context.class);
     private final SendNotificationHandler handler =
-            new SendNotificationHandler(configurationService, validationService, awsSqsClient, sessionService);
+            new SendNotificationHandler(
+                    configurationService, validationService, awsSqsClient, sessionService);
 
     @BeforeEach
     void setup() {
@@ -78,7 +79,7 @@ class SendNotificationHandlerTest {
                                 (session) ->
                                         session.getState().equals(VERIFY_EMAIL_CODE_SENT)
                                                 && session.getEmailAddress()
-                                                .equals(TEST_EMAIL_ADDRESS)));
+                                                        .equals(TEST_EMAIL_ADDRESS)));
     }
 
     @Test
@@ -104,7 +105,7 @@ class SendNotificationHandlerTest {
                                 (session) ->
                                         session.getState().equals(VERIFY_EMAIL_CODE_SENT)
                                                 && session.getEmailAddress()
-                                                .equals(TEST_EMAIL_ADDRESS)));
+                                                        .equals(TEST_EMAIL_ADDRESS)));
     }
 
     @Test
