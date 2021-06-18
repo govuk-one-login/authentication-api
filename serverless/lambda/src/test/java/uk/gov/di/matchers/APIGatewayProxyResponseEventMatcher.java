@@ -45,4 +45,9 @@ public class APIGatewayProxyResponseEventMatcher<T>
         return new APIGatewayProxyResponseEventMatcher<>(
                 "status code", APIGatewayProxyResponseEvent::getStatusCode, statusCode);
     }
+
+    public static APIGatewayProxyResponseEventMatcher<String> hasBody(String body) {
+        return new APIGatewayProxyResponseEventMatcher<>(
+                "body", APIGatewayProxyResponseEvent::getBody, body);
+    }
 }
