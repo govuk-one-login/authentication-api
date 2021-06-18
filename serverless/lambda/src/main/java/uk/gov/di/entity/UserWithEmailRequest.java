@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class UserWithEmailRequest {
 
-    private String email;
+    protected String email;
 
     public UserWithEmailRequest(@JsonProperty(required = true, value = "email") String email) {
         this.email = email;

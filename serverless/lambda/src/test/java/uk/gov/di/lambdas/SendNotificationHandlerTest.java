@@ -53,7 +53,7 @@ class SendNotificationHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
                 format(
-                        "{ \"destination\": \"%s\", \"notificationType\": \"%s\" }",
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
                         TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -79,7 +79,7 @@ class SendNotificationHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
                 format(
-                        "{ \"destination\": \"%s\", \"notificationType\": \"%s\" }",
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
                         "joe.bloggs", VERIFY_EMAIL));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -99,7 +99,7 @@ class SendNotificationHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
                 format(
-                        "{ \"destination\": \"%s\", \"notificationType\": \"%s\" }",
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
                         TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -117,7 +117,7 @@ class SendNotificationHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
                 format(
-                        "{ \"destination\": \"%s\", \"notificationType\": \"%s\" }",
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
                         TEST_EMAIL_ADDRESS, "VERIFY_PASSWORD"));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 

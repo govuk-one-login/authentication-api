@@ -9,6 +9,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.entity.NotifyRequest;
+import uk.gov.di.entity.SendNotificationRequest;
 import uk.gov.di.services.AwsSqsClient;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.ValidationService;
@@ -52,15 +53,20 @@ public class SendNotificationHandler
         LambdaLogger logger = context.getLogger();
 
         try {
-            NotifyRequest notifyRequest =
-                    objectMapper.readValue(input.getBody(), NotifyRequest.class);
-            switch (notifyRequest.getNotificationType()) {
+            SendNotificationRequest sendNotificationRequest =
+                    objectMapper.readValue(input.getBody(), SendNotificationRequest.class);
+            switch (sendNotificationRequest.getNotificationType()) {
                 case VERIFY_EMAIL:
                     Set<EmailValidation> emailErrors =
-                            validationService.validateEmailAddress(notifyRequest.getDestination());
+                            validationService.validateEmailAddress(
+                                    sendNotificationRequest.getEmail());
                     if (!emailErrors.isEmpty()) {
                         return generateApiGatewayProxyResponse(400, emailErrors.toString());
                     }
+                    NotifyRequest notifyRequest =
+                            new NotifyRequest(
+                                    sendNotificationRequest.getEmail(),
+                                    sendNotificationRequest.getNotificationType());
                     sqsClient.send(serialiseRequest(notifyRequest));
                     return generateApiGatewayProxyResponse(200, "OK");
             }
