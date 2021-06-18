@@ -26,6 +26,8 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.Messages.ERROR_INVALID_SESSION_ID;
+import static uk.gov.di.Messages.ERROR_MISSING_REQUEST_PARAMETERS;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 
 class CheckUserExistsHandlerTest {
@@ -93,7 +95,7 @@ class CheckUserExistsHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        assertThat(result, hasBody("Request is missing parameters"));
+        assertThat(result, hasBody(ERROR_MISSING_REQUEST_PARAMETERS));
     }
 
     @Test
@@ -104,7 +106,7 @@ class CheckUserExistsHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        assertThat(result, hasBody("Session-Id is missing or invalid"));
+        assertThat(result, hasBody(ERROR_INVALID_SESSION_ID));
     }
 
     @Test

@@ -7,38 +7,56 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import uk.gov.di.entity.Session;
 import uk.gov.di.entity.SignupRequest;
+import uk.gov.di.entity.SignupResponse;
 import uk.gov.di.services.AuthenticationService;
+import uk.gov.di.services.ConfigurationService;
+import uk.gov.di.services.SessionService;
 import uk.gov.di.services.UserService;
 import uk.gov.di.services.ValidationService;
 import uk.gov.di.validation.PasswordValidation;
 
+import java.util.Optional;
 import java.util.Set;
 
+import static uk.gov.di.Messages.ERROR_INVALID_SESSION_ID;
+import static uk.gov.di.Messages.ERROR_MISSING_REQUEST_PARAMETERS;
+import static uk.gov.di.entity.SessionState.TWO_FACTOR_REQUIRED;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class SignUpHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private AuthenticationService authenticationService;
-    private ValidationService validationService;
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private final AuthenticationService authenticationService;
+    private final ValidationService validationService;
+    private final SessionService sessionService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public SignUpHandler(
-            AuthenticationService authenticationService, ValidationService validationService) {
+            AuthenticationService authenticationService,
+            ValidationService validationService,
+            SessionService sessionService) {
         this.authenticationService = authenticationService;
         this.validationService = validationService;
+        this.sessionService = sessionService;
     }
 
     public SignUpHandler() {
         this.authenticationService = new UserService();
         this.validationService = new ValidationService();
+        sessionService = new SessionService(new ConfigurationService());
     }
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         LambdaLogger logger = context.getLogger();
+
+        Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
+        if (session.isEmpty()) {
+            return generateApiGatewayProxyResponse(400, ERROR_INVALID_SESSION_ID);
+        }
 
         try {
             SignupRequest signupRequest =
@@ -49,12 +67,18 @@ public class SignUpHandler
 
             if (passwordValidationErrors.isEmpty()) {
                 authenticationService.signUp(signupRequest.getEmail(), signupRequest.getPassword());
-                return generateApiGatewayProxyResponse(200, "");
+
+                sessionService.save(
+                        session.get()
+                                .setState(TWO_FACTOR_REQUIRED)
+                                .setEmailAddress(signupRequest.getEmail()));
+                return generateApiGatewayProxyResponse(
+                        200, new SignupResponse(session.get().getState()));
             } else {
                 return generateApiGatewayProxyResponse(400, passwordValidationErrors.toString());
             }
         } catch (JsonProcessingException e) {
-            return generateApiGatewayProxyResponse(400, "Request is missing parameters");
+            return generateApiGatewayProxyResponse(400, ERROR_MISSING_REQUEST_PARAMETERS);
         }
     }
 }

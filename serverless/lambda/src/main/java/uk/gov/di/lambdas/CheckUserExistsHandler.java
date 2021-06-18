@@ -19,6 +19,8 @@ import uk.gov.di.validation.EmailValidation;
 import java.util.Optional;
 import java.util.Set;
 
+import static uk.gov.di.Messages.ERROR_INVALID_SESSION_ID;
+import static uk.gov.di.Messages.ERROR_MISSING_REQUEST_PARAMETERS;
 import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.entity.SessionState.USER_NOT_FOUND;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -76,9 +78,9 @@ public class CheckUserExistsHandler
 
                 return generateApiGatewayProxyResponse(200, checkUserExistsResponseString);
             }
-            return generateApiGatewayProxyResponse(400, "Session-Id is missing or invalid");
+            return generateApiGatewayProxyResponse(400, ERROR_INVALID_SESSION_ID);
         } catch (JsonProcessingException e) {
-            return generateApiGatewayProxyResponse(400, "Request is missing parameters");
+            return generateApiGatewayProxyResponse(400, ERROR_MISSING_REQUEST_PARAMETERS);
         }
     }
 }
