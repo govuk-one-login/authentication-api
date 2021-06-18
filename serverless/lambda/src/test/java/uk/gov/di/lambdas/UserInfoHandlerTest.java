@@ -22,7 +22,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventStatusMatcher.hasStatus;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class UserInfoHandlerTest {
 
@@ -66,7 +67,7 @@ public class UserInfoHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(401));
-        assertEquals("Access Token Not Parsable", result.getBody());
+        assertThat(result, hasBody("Access Token Not Parsable"));
     }
 
     @Test
@@ -76,7 +77,7 @@ public class UserInfoHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(401));
-        assertEquals("No access token present", result.getBody());
+        assertThat(result, hasBody("No access token present"));
     }
 
     @Test
@@ -90,6 +91,6 @@ public class UserInfoHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(401));
-        assertEquals("Access Token Invalid", result.getBody());
+        assertThat(result, hasBody("Access Token Invalid"));
     }
 }

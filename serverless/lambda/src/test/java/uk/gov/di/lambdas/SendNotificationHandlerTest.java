@@ -18,6 +18,7 @@ import uk.gov.di.validation.EmailValidation;
 import java.util.Set;
 
 import static java.lang.String.format;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
@@ -27,6 +28,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 
 class SendNotificationHandlerTest {
 
@@ -69,7 +71,7 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        assertEquals("Request is missing parameters", result.getBody());
+        assertThat(result, hasBody("Request is missing parameters"));
     }
 
     @Test

@@ -22,7 +22,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventStatusMatcher.hasStatus;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class TokenHandlerTest {
 
@@ -70,7 +71,7 @@ public class TokenHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(403, result.getStatusCode());
-        assertEquals("client is not valid", result.getBody());
+        assertThat(result, hasBody("client is not valid"));
     }
 
     @Test
@@ -80,6 +81,6 @@ public class TokenHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        assertEquals("Request is missing parameters", result.getBody());
+        assertThat(result, hasBody("Request is missing parameters"));
     }
 }

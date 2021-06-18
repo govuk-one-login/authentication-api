@@ -12,13 +12,13 @@ import java.util.Collections;
 import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventStatusMatcher.hasStatus;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.validation.PasswordValidation.NO_NUMBER_INCLUDED;
 
 class SignUpHandlerTest {
@@ -53,7 +53,7 @@ class SignUpHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertEquals("Request is missing parameters", result.getBody());
+        assertThat(result, hasBody("Request is missing parameters"));
     }
 
     @Test
