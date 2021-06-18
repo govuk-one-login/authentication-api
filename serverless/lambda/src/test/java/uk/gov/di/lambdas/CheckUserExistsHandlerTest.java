@@ -19,12 +19,14 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 
 class CheckUserExistsHandlerTest {
 
@@ -91,7 +93,7 @@ class CheckUserExistsHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        assertEquals("Request is missing parameters", result.getBody());
+        assertThat(result, hasBody("Request is missing parameters"));
     }
 
     @Test
@@ -102,7 +104,7 @@ class CheckUserExistsHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        assertEquals("Session-Id is missing or invalid", result.getBody());
+        assertThat(result, hasBody("Session-Id is missing or invalid"));
     }
 
     @Test
