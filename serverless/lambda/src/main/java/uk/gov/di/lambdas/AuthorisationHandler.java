@@ -33,7 +33,7 @@ public class AuthorisationHandler
     private final SessionService sessionService;
 
     private interface ResponseParameters {
-        String SESSION_ID = "session-id";
+        String SESSION_ID = "id";
         String SCOPE = "scope";
     }
 

@@ -88,7 +88,7 @@ class AuthorisationHandlerTest {
         assertThat(response, hasStatus(302));
         assertEquals(loginUrl.getAuthority(), uri.getAuthority());
 
-        assertThat(requestParams, hasEntry("session-id", session.getSessionId()));
+        assertThat(requestParams, hasEntry("id", session.getSessionId()));
 
         verify(sessionService).save(eq(session));
     }
