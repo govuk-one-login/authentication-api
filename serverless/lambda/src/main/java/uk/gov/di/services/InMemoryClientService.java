@@ -26,7 +26,7 @@ public class InMemoryClientService implements ClientService {
                                     "test-id",
                                     "test-secret",
                                     List.of("code"),
-                                    List.of("http://localhost:8080"),
+                                    List.of("http://localhost:8080", "https://di-auth-stub-relying-party-build.london.cloudapps.digital"),
                                     List.of("contact@example.com")));
                 }
             };
