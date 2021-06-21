@@ -2,19 +2,25 @@ package uk.gov.di.entity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+
+import java.util.List;
+import java.util.Map;
 
 import static uk.gov.di.entity.SessionState.NEW;
 
 public class Session {
 
-    @JsonProperty("session_id") private String sessionId;
+    @JsonProperty("session_id")
+    private String sessionId;
 
-    @JsonProperty("authentication_request") private AuthenticationRequest authenticationRequest;
+    @JsonProperty("authentication_request")
+    private Map<String, List<String>> authenticationRequest;
 
-    @JsonProperty("state") private SessionState state;
+    @JsonProperty("state")
+    private SessionState state;
 
-    @JsonProperty("email_address") private String emailAddress;
+    @JsonProperty("email_address")
+    private String emailAddress;
 
     public Session(String sessionId) {
         this.sessionId = sessionId;
@@ -24,7 +30,7 @@ public class Session {
     @JsonCreator
     public Session(
             @JsonProperty("session_id") String sessionId,
-            @JsonProperty("authentication_request") AuthenticationRequest authenticationRequest,
+            @JsonProperty("authentication_request") Map<String, List<String>> authenticationRequest,
             @JsonProperty("state") SessionState state,
             @JsonProperty("email_address") String emailAddress) {
         this.sessionId = sessionId;
@@ -37,11 +43,11 @@ public class Session {
         return sessionId;
     }
 
-    public AuthenticationRequest getAuthenticationRequest() {
+    public Map<String, List<String>> getAuthenticationRequest() {
         return authenticationRequest;
     }
 
-    public Session setAuthenticationRequest(AuthenticationRequest authenticationRequest) {
+    public Session setAuthenticationRequest(Map<String, List<String>> authenticationRequest) {
         this.authenticationRequest = authenticationRequest;
         return this;
     }

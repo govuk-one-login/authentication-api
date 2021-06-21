@@ -70,7 +70,12 @@ public class AuthorisationHandler
                     clientService.getErrorForAuthorizationRequest(authRequest);
 
             return error.map(e -> errorResponse(authRequest, e))
-                    .orElseGet(() -> createSessionAndRedirect(authRequest, logger));
+                    .orElseGet(
+                            () ->
+                                    createSessionAndRedirect(
+                                            queryStringMultiValuedMap,
+                                            logger,
+                                            authRequest.getScope().toString()));
         } catch (ParseException e) {
             logger.log("Authentication request could not be parsed");
             logger.log(e.getMessage());
@@ -83,7 +88,7 @@ public class AuthorisationHandler
     }
 
     private APIGatewayProxyResponseEvent createSessionAndRedirect(
-            AuthenticationRequest authRequest, LambdaLogger logger) {
+            Map<String, List<String>> authRequest, LambdaLogger logger, String scope) {
         Session session = sessionService.createSession().setAuthenticationRequest(authRequest);
         logger.log("Created session " + session.getSessionId());
         sessionService.save(session);
@@ -99,9 +104,7 @@ public class AuthorisationHandler
                                         buildEncodedParam(
                                                 ResponseParameters.SESSION_ID,
                                                 session.getSessionId()),
-                                        buildEncodedParam(
-                                                ResponseParameters.SCOPE,
-                                                authRequest.getScope().toString()))));
+                                        buildEncodedParam(ResponseParameters.SCOPE, scope))));
     }
 
     private APIGatewayProxyResponseEvent errorResponse(
