@@ -1,28 +1,76 @@
 #!/usr/bin/env bash
 
+set -euo pipefail
+
 source ./scripts/functions.sh
 source ./scripts/test-api.sh
 
-printf "\nRunning build and unit tests...\n"
+function usage() {
+  cat <<USAGE
+  A script to run the DCS unit, integration, and acceptance tests locally. Runs all tests by default.
 
-./gradlew clean build -x integration-tests:test
+  Usage:
+    $0 [-dig]
 
-build_and_test_exit_code=$?
-if [ ${build_and_test_exit_code} -ne 0 ]; then
-  printf "\nBuild and test failed.\n"
-  exit 1
+  Options:
+    -u  run the unit tests
+    -i  run the integration tests
+    -g  running in GitHub actions
+USAGE
+}
+RUN_UNIT=0
+RUN_INTEGRATION=0
+IN_GITHUB_ACTIONS=0
+
+if [[ $# -eq 0 ]] || [[ ( $# -eq 1 && ${1} == "-l" ) ]]; then
+  RUN_UNIT=1
+  RUN_INTEGRATION=1
 fi
 
-startup
+while getopts "uig" opt; do
+  case ${opt} in
+    u)
+      RUN_UNIT=1
+      ;;
+    i)
+      RUN_INTEGRATION=1
+      ;;
+    g)
+      IN_GITHUB_ACTIONS=1
+      ;;
+    *)
+      usage
+      exit 1
+      ;;
+  esac
+done
 
-run-integration-tests
+if [[ ${RUN_UNIT} -eq 1 ]]; then
+  printf "\nRunning build and unit tests...\n"
 
-build_and_test_exit_code=$?
+  ./gradlew clean build -x integration-tests:test
 
-stop_docker_services aws redis
+  build_and_test_exit_code=$?
+  if [ ${build_and_test_exit_code} -ne 0 ]; then
+    printf "\nBuild and test failed.\n"
+    exit 1
+  fi
+fi
 
-if [ ${build_and_test_exit_code} -ne 0 ]; then
-  printf "\npre-commit failed.\n"
-else
-  funky_success
+if [[ ${RUN_INTEGRATION} -eq 1 ]]; then
+  startup
+
+  run-integration-tests
+
+  build_and_test_exit_code=$?
+
+  stop_docker_services aws redis
+fi
+
+if [[ ${IN_GITHUB_ACTIONS} -eq 0 ]]; then
+  if [ ${build_and_test_exit_code} -ne 0 ]; then
+    printf "\npre-commit failed.\n"
+  else
+    funky_success
+  fi
 fi
