@@ -70,7 +70,11 @@ startup() {
   printf "\nStarting Docker services...\n"
   startup_docker aws redis
   run_terraform ci/terraform/localstack
-  funky_started
+  if [[ ${IN_GITHUB_ACTIONS} -eq 0 ]]; then
+    funky_started
+  else
+    printf "\nServices Started!\n"
+  fi
 }
 
 run-integration-tests() {
