@@ -1,6 +1,7 @@
 package uk.gov.di.services;
 
 import uk.gov.di.entity.Session;
+import uk.gov.di.helpers.IdGenerator;
 
 import java.util.Map;
 import java.util.Optional;
@@ -16,7 +17,7 @@ public class SessionService {
     }
 
     public Session createSession() {
-        return new Session();
+        return new Session(IdGenerator.generate());
     }
 
     public void save(Session session) {

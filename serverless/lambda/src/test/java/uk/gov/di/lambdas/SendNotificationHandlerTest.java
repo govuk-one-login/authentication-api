@@ -183,6 +183,8 @@ class SendNotificationHandlerTest {
 
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(new Session().setEmailAddress(TEST_EMAIL_ADDRESS)));
+                .thenReturn(
+                        Optional.of(
+                                new Session("a-session-id").setEmailAddress(TEST_EMAIL_ADDRESS)));
     }
 }

@@ -4,8 +4,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 
-import java.util.UUID;
-
 import static uk.gov.di.entity.SessionState.NEW;
 
 public class Session {
@@ -18,8 +16,8 @@ public class Session {
 
     @JsonProperty private String emailAddress;
 
-    public Session() {
-        this.sessionId = UUID.randomUUID().toString();
+    public Session(String sessionId) {
+        this.sessionId = sessionId;
         this.state = NEW;
     }
 
