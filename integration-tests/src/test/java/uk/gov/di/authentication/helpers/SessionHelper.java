@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.helpers;
 
 import uk.gov.di.entity.Session;
+import uk.gov.di.helpers.IdGenerator;
 import uk.gov.di.services.RedisConnectionService;
 
 import java.io.IOException;
@@ -12,7 +13,7 @@ public class SessionHelper {
         Optional<String> redisPassword = Optional.ofNullable(System.getenv("REDIS_PASSWORD"));
         try (RedisConnectionService redis =
                 new RedisConnectionService(redisHost, 6379, false, redisPassword, 1800)) {
-            Session session = new Session();
+            Session session = new Session(IdGenerator.generate());
             redis.saveSession(session);
             return session.getSessionId();
         }
