@@ -115,6 +115,6 @@ class SignUpHandlerTest {
 
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(new Session()));
+                .thenReturn(Optional.of(new Session("a-session-id")));
     }
 }

@@ -62,7 +62,7 @@ class AuthorisationHandlerTest {
                         null);
 
         final URI loginUrl = URI.create("http://example.com");
-        final Session session = new Session();
+        final Session session = new Session("a-session-id");
 
         when(clientService.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
                 .thenReturn(Optional.empty());
