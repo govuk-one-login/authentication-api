@@ -8,13 +8,13 @@ import static uk.gov.di.entity.SessionState.NEW;
 
 public class Session {
 
-    @JsonProperty private String sessionId;
+    @JsonProperty("session_id") private String sessionId;
 
-    @JsonProperty private AuthenticationRequest authenticationRequest;
+    @JsonProperty("authentication_request") private AuthenticationRequest authenticationRequest;
 
-    @JsonProperty private SessionState state;
+    @JsonProperty("state") private SessionState state;
 
-    @JsonProperty private String emailAddress;
+    @JsonProperty("email_address") private String emailAddress;
 
     public Session(String sessionId) {
         this.sessionId = sessionId;
