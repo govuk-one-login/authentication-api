@@ -5,6 +5,7 @@ on:
       - opened
       - reopened
       - ready_for_review
+      - synchronize
 
 jobs:
   unit-tests:
