@@ -41,10 +41,14 @@ function run_terraform() {
   rm -f terraform.tfstate
   rm -f terraform.tfstate.backup
   terraform init
-  terraform apply -auto-approve
+  printf "\nRunning terraform apply (quietly - output redirected to terraform.log)...\n"
+  terraform apply -auto-approve > terraform.log
   tf_exit_code=$?
-  if [ ${tf_exit_code} -ne 0 ]; then
+  if [ ${tf_exit_code} -eq 0 ]; then
+    printf "\nTerraform succeeded.\n"
+  else
     printf "\nTerraform failed.\n"
+    cat terraform.log
     exit 1
   fi
   popd >/dev/null

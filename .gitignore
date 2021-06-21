@@ -12,3 +12,4 @@ build
 **/.settings
 **/bin
 .java-version
+**/terraform.log
