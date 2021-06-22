@@ -23,3 +23,11 @@ variable "localstack_endpoint" {
   type = string
   default = "http://localhost:45678"
 }
+
+variable "notify_url" {
+  type = string
+}
+
+variable "notify_api_key" {
+  type = string
+}

@@ -58,6 +58,8 @@ if [[ ${RUN_UNIT} -eq 1 ]]; then
 fi
 
 if [[ ${RUN_INTEGRATION} -eq 1 ]]; then
+  export TF_VAR_notify_url="http://notify.internal:8888"
+  export TF_VAR_notify_api_key="my_test_key-$(uuidgen)-$(uuidgen)"
   startup
 
   run-integration-tests
