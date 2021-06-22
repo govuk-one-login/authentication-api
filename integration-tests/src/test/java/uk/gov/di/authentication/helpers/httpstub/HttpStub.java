@@ -31,7 +31,7 @@ class HttpStub {
         this(RANDOM_PORT, keyStorePath, keyStorePassword);
     }
 
-    private HttpStub(int port, String keyStorePath, String keyStorePassword) {
+    public HttpStub(int port, String keyStorePath, String keyStorePassword) {
         this(port, false, keyStorePath, keyStorePassword, null, null);
     }
 

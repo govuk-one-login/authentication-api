@@ -15,7 +15,7 @@ public class HttpStubExtension implements AfterAllCallback {
     }
 
     public HttpStubExtension(int port) {
-        httpStub = new HttpStub(null, null);
+        httpStub = new HttpStub(port, null, null);
         httpStub.start();
     }
 

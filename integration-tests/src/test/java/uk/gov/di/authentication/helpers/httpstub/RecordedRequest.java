@@ -1,11 +1,9 @@
 package uk.gov.di.authentication.helpers.httpstub;
 
-import com.google.common.collect.Iterables;
-import org.apache.commons.io.IOUtils;
 import org.eclipse.jetty.server.Request;
 
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.Reader;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -50,12 +48,12 @@ public class RecordedRequest {
 
     public String getHeader(String name) {
         List<String> values = headers.get(name.toLowerCase());
-        return values == null ? null : Iterables.getFirst(values, null);
+        return values == null ? null : values.get(0);
     }
 
     private static String readEntity(Request request) {
-        try (Reader in = request.getReader()) {
-            return IOUtils.toString(in);
+        try (BufferedReader in = request.getReader()) {
+            return in.lines().collect(Collectors.joining());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
