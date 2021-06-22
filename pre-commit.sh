@@ -48,9 +48,10 @@ done
 if [[ ${RUN_UNIT} -eq 1 ]]; then
   printf "\nRunning build and unit tests...\n"
 
+  set +e
   ./gradlew clean build -x integration-tests:test
-
   build_and_test_exit_code=$?
+  set -e
   if [ ${build_and_test_exit_code} -ne 0 ]; then
     printf "\nBuild and test failed.\n"
     exit 1
@@ -62,9 +63,10 @@ if [[ ${RUN_INTEGRATION} -eq 1 ]]; then
   export TF_VAR_notify_api_key="my_test_key-$(uuidgen)-$(uuidgen)"
   startup
 
+  set +e
   run-integration-tests
-
   build_and_test_exit_code=$?
+  set -e
 
   stop_docker_services aws redis
 fi
