@@ -11,7 +11,7 @@ repositories {
 
 dependencies {
     implementation "com.amazonaws:aws-lambda-java-core:1.2.1",
-            "com.amazonaws:aws-lambda-java-events:2.2.5",
+            "com.amazonaws:aws-lambda-java-events:3.9.0",
             "software.amazon.awssdk:sqs:2.16.78",
             "com.nimbusds:oauth2-oidc-sdk:9.9",
             "com.nimbusds:nimbus-jose-jwt:9.10",
