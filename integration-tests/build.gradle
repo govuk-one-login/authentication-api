@@ -10,7 +10,7 @@ repositories {
 }
 
 dependencies {
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0',
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.2',
             'org.glassfish.jersey.core:jersey-client:3.0.2',
             'org.glassfish.jersey.inject:jersey-hk2:3.0.2',
             'org.glassfish.jersey.media:jersey-media-json-jackson:3.0.2',
@@ -18,7 +18,7 @@ dependencies {
             "software.amazon.awssdk:sqs:2.16.78",
             "org.awaitility:awaitility:4.1.0",
             project(":serverless:lambda")
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.2'
 }
 
 test {
