@@ -12,6 +12,8 @@ services:
       DEFAULT_REGION: eu-west-2
       TEST_AWS_ACCOUNT_ID: 123456789012
       DEBUG: "1"
+    extra_hosts:
+      - "notify.internal:host-gateway"
     networks:
       - di-authentication-api-net
     volumes:

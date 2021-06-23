@@ -8,6 +8,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
+import static java.lang.String.format;
+
 public class NotificationService {
 
     private NotificationClient notifyClient;
@@ -25,7 +27,7 @@ public class NotificationService {
 
     public String generateSixDigitCode() {
         Random rnd = new Random();
-        String code = Integer.toString(rnd.nextInt(999999));
+        String code = format("%06d", rnd.nextInt(999999));
         return code;
     }
 

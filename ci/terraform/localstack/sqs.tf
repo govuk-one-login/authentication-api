@@ -8,7 +8,8 @@ module "email_notification_sqs_queue" {
   sender_principal_arns = [module.userexists.lambda_iam_role_arn]
   handler_environment_variables = {
     VERIFY_EMAIL_TEMPLATE_ID = "b7dbb02f-941b-4d72-ad64-84cbe5d77c2e"
-    NOTIFY_API_KEY = "some-api-key"
+    NOTIFY_URL     = var.notify_url
+    NOTIFY_API_KEY = var.notify_api_key
   }
   handler_function_name = "uk.gov.di.lambdas.NotificationHandler::handleRequest"
   lambda_zip_file = var.lambda_zip_file

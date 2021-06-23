@@ -48,6 +48,10 @@ public class ConfigurationService {
         }
     }
 
+    public Optional<String> getNotifyApiUrl() {
+        return Optional.ofNullable(System.getenv("NOTIFY_URL"));
+    }
+
     public String getEmailQueueUri() {
         return System.getenv("EMAIL_QUEUE_URL");
     }
