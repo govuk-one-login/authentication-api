@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.helpers.httpstub.HttpStubExtension;
 import uk.gov.di.entity.NotifyRequest;
@@ -12,6 +11,10 @@ import uk.gov.di.services.AwsSqsClient;
 
 import java.util.Optional;
 
+import static java.util.concurrent.TimeUnit.MINUTES;
+import static org.awaitility.Awaitility.await;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
 
@@ -47,7 +50,6 @@ public class SendEmailNotificationIntegrationTest {
             };
 
     @Test
-    @Timeout(60)
     void shouldCallNotifyWhenValidRequestIsAddedToQueue()
             throws JsonProcessingException, InterruptedException {
         NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL);
@@ -61,9 +63,9 @@ public class SendEmailNotificationIntegrationTest {
         ObjectMapper objectMapper = new ObjectMapper();
         client.send(objectMapper.writeValueAsString(notifyRequest));
 
-        while (notifyStub.getCountOfRequests() == 0) {
-            Thread.sleep(500);
-        }
+        await().atMost(1, MINUTES)
+                .untilAsserted(() -> assertThat(notifyStub.getCountOfRequests(), equalTo(1)));
+        
         JsonNode request = objectMapper.readTree(notifyStub.getLastRequest().getEntity());
         JsonNode personalisation = request.get("personalisation");
         assertEquals(TEST_EMAIL_ADDRESS, request.get("email_address").asText());
