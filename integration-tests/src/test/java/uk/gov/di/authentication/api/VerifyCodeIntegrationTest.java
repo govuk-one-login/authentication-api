@@ -17,9 +17,8 @@ import uk.gov.di.entity.VerifyCodeRequest;
 import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static uk.gov.di.authentication.api.AuthorizationAPIResourceIntegrationTest.ROOT_RESOURCE_URL;
 
-public class VerifyCodeIntegrationTest {
+public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
 
     private static final String VERIFY_CODE_ENDPOINT = "/verify-code";
 

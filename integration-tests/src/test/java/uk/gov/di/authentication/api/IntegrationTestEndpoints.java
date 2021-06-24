@@ -2,7 +2,7 @@ package uk.gov.di.authentication.api;
 
 import java.util.Optional;
 
-public class AuthorizationAPIResourceIntegrationTest {
+public class IntegrationTestEndpoints {
     protected static final String LOCAL_ENDPOINT_FORMAT =
             "http://localhost:45678/restapis/%s/local/_user_request_";
     protected static final String LOCAL_API_GATEWAY_ID =

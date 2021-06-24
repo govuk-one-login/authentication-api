@@ -11,14 +11,14 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class TokenResourceIntegrationTest extends AuthorizationAPIResourceIntegrationTest {
+public class TokenIntegrationTest extends IntegrationTestEndpoints {
 
-    private static final String TOKEN_RESOURCE = "/token";
+    private static final String TOKEN_ENDPOINT = "/token";
 
     @Test
     public void shouldCallTokenResourceAndReturn200() {
         Client client = ClientBuilder.newClient();
-        WebTarget webTarget = client.target(ROOT_RESOURCE_URL + TOKEN_RESOURCE);
+        WebTarget webTarget = client.target(ROOT_RESOURCE_URL + TOKEN_ENDPOINT);
 
         Invocation.Builder invocationBuilder = webTarget.request(MediaType.TEXT_PLAIN);
         Response response =
