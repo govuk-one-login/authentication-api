@@ -24,15 +24,19 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
 
     @Test
     public void shouldCallVerifyCodeEndpointToVerifyEmailAndReturn200() throws IOException {
+        String sessionId = SessionHelper.createSession();
+
+        SessionHelper.addEmailToSession(sessionId, "test@test.com");
+
+        String code = SessionHelper.generateAndSaveEmailCode("test@test.com");
+
         Client client = ClientBuilder.newClient();
         WebTarget webTarget = client.target(ROOT_RESOURCE_URL + VERIFY_CODE_ENDPOINT);
-        String sessionId = SessionHelper.createSession();
         Invocation.Builder invocationBuilder = webTarget.request(MediaType.APPLICATION_JSON);
-        MultivaluedMap headers = new MultivaluedHashMap();
+        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
 
-        VerifyCodeRequest codeRequest =
-                new VerifyCodeRequest(NotificationType.VERIFY_EMAIL, "123456");
+        VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.VERIFY_EMAIL, code);
 
         Response response =
                 invocationBuilder
