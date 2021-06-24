@@ -81,7 +81,8 @@ public class SendNotificationHandler
                     NotifyRequest notifyRequest =
                             new NotifyRequest(
                                     sendNotificationRequest.getEmail(),
-                                    sendNotificationRequest.getNotificationType());
+                                    sendNotificationRequest.getNotificationType(),
+                                    null);
                     sessionService.save(session.get().setState(VERIFY_EMAIL_CODE_SENT));
                     sqsClient.send(serialiseRequest(notifyRequest));
                     return generateApiGatewayProxyResponse(200, "OK");

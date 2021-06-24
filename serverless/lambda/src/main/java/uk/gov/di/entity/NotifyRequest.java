@@ -8,12 +8,16 @@ public class NotifyRequest {
 
     @JsonProperty private String destination;
 
+    @JsonProperty private String code;
+
     public NotifyRequest(
             @JsonProperty(required = true, value = "destination") String destination,
             @JsonProperty(required = true, value = "notificationType")
-                    NotificationType notificationType) {
+                    NotificationType notificationType,
+            @JsonProperty(value = "code") String code) {
         this.destination = destination;
         this.notificationType = notificationType;
+        this.code = code;
     }
 
     public NotificationType getNotificationType() {
@@ -22,5 +26,9 @@ public class NotifyRequest {
 
     public String getDestination() {
         return destination;
+    }
+
+    public String getCode() {
+        return code;
     }
 }

@@ -46,7 +46,7 @@ public class NotificationHandlerTest {
         when(configService.getNotificationTemplateId(VERIFY_EMAIL)).thenReturn(TEMPLATE_ID);
         when(notificationService.generateSixDigitCode()).thenReturn(CODE);
 
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL);
+        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, null);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -79,7 +79,7 @@ public class NotificationHandlerTest {
         when(configService.getNotificationTemplateId(VERIFY_EMAIL)).thenReturn(TEMPLATE_ID);
         when(notificationService.generateSixDigitCode()).thenReturn(CODE);
 
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL);
+        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, null);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
