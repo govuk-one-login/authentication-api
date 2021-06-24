@@ -85,7 +85,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    void shouldReturn400IfInvalidSessionProvided() throws JsonProcessingException {
+    void shouldReturn400IfInvalidSessionProvided() {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS))).thenReturn(Set.of());
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -153,7 +153,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenInvalidNotificationType() throws JsonProcessingException {
+    public void shouldReturn400WhenInvalidNotificationType() {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS))).thenReturn(Set.of());
 
         usingValidSession();
