@@ -27,6 +27,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -92,9 +93,6 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400IfInvalidSessionProvided() throws JsonProcessingException {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS))).thenReturn(Set.of());
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, null);
-        ObjectMapper objectMapper = new ObjectMapper();
-        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
@@ -105,7 +103,7 @@ class SendNotificationHandlerTest {
 
         assertEquals(400, result.getStatusCode());
 
-        verify(awsSqsClient, never()).send(serialisedRequest);
+        verify(awsSqsClient, never()).send(anyString());
         verify(sessionService, never())
                 .save(
                         argThat(
@@ -169,9 +167,6 @@ class SendNotificationHandlerTest {
     @Test
     public void shouldReturn400WhenInvalidNotificationType() throws JsonProcessingException {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS))).thenReturn(Set.of());
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, null);
-        ObjectMapper objectMapper = new ObjectMapper();
-        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -185,7 +180,7 @@ class SendNotificationHandlerTest {
         assertEquals(400, result.getStatusCode());
         assertTrue(result.getBody().contains("Request is missing parameters"));
 
-        verify(awsSqsClient, never()).send(serialisedRequest);
+        verify(awsSqsClient, never()).send(anyString());
     }
 
     private void usingValidSession() {
