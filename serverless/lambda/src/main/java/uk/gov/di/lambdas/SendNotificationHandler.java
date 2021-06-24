@@ -12,6 +12,7 @@ import uk.gov.di.entity.NotifyRequest;
 import uk.gov.di.entity.SendNotificationRequest;
 import uk.gov.di.entity.Session;
 import uk.gov.di.services.AwsSqsClient;
+import uk.gov.di.services.CodeGeneratorService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.SessionService;
 import uk.gov.di.services.ValidationService;
@@ -31,17 +32,20 @@ public class SendNotificationHandler
     private final ValidationService validationService;
     private final AwsSqsClient sqsClient;
     private final SessionService sessionService;
+    private final CodeGeneratorService codeGeneratorService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public SendNotificationHandler(
             ConfigurationService configurationService,
             ValidationService validationService,
             AwsSqsClient sqsClient,
-            SessionService sessionService) {
+            SessionService sessionService,
+            CodeGeneratorService codeGeneratorService) {
         this.configurationService = configurationService;
         this.validationService = validationService;
         this.sqsClient = sqsClient;
         this.sessionService = sessionService;
+        this.codeGeneratorService = codeGeneratorService;
     }
 
     public SendNotificationHandler() {
@@ -53,6 +57,7 @@ public class SendNotificationHandler
                         configurationService.getSqsEndpointUri());
         this.validationService = new ValidationService();
         sessionService = new SessionService(configurationService);
+        this.codeGeneratorService = new CodeGeneratorService();
     }
 
     @Override
@@ -81,7 +86,8 @@ public class SendNotificationHandler
                     NotifyRequest notifyRequest =
                             new NotifyRequest(
                                     sendNotificationRequest.getEmail(),
-                                    sendNotificationRequest.getNotificationType());
+                                    sendNotificationRequest.getNotificationType(),
+                                    codeGeneratorService.sixDigitCode());
                     sessionService.save(session.get().setState(VERIFY_EMAIL_CODE_SENT));
                     sqsClient.send(serialiseRequest(notifyRequest));
                     return generateApiGatewayProxyResponse(200, "OK");
