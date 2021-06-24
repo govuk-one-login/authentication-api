@@ -16,7 +16,8 @@ import java.util.Optional;
 import static uk.gov.di.Messages.ERROR_MISSING_REQUEST_PARAMETERS;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
-public class VerifyCodeHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+public class VerifyCodeHandler
+        implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final SessionService sessionService;
@@ -33,12 +34,14 @@ public class VerifyCodeHandler implements RequestHandler<APIGatewayProxyRequestE
     }
 
     @Override
-    public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
+    public APIGatewayProxyResponseEvent handleRequest(
+            APIGatewayProxyRequestEvent input, Context context) {
 
         Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
 
         try {
-            VerifyCodeRequest codeRequest = objectMapper.readValue(input.getBody(), VerifyCodeRequest.class);
+            VerifyCodeRequest codeRequest =
+                    objectMapper.readValue(input.getBody(), VerifyCodeRequest.class);
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyResponse(400, ERROR_MISSING_REQUEST_PARAMETERS);
         }

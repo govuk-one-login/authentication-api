@@ -35,9 +35,7 @@ class VerifyCodeRequestHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
         event.setBody(
-                format(
-                        "{ \"code\": \"123456\", \"notificationType\": \"%s\" }",
-                        VERIFY_EMAIL));
+                format("{ \"code\": \"123456\", \"notificationType\": \"%s\" }", VERIFY_EMAIL));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(200));
@@ -48,10 +46,7 @@ class VerifyCodeRequestHandlerTest {
     public void shouldReturn400IfRequestIsMissingNotificationType() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
-        event.setBody(
-                format(
-                        "{ \"code\": \"123456\"}",
-                        VERIFY_EMAIL));
+        event.setBody(format("{ \"code\": \"123456\"}", VERIFY_EMAIL));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
