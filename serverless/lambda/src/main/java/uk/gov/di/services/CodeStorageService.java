@@ -2,6 +2,8 @@ package uk.gov.di.services;
 
 import uk.gov.di.helpers.HashHelper;
 
+import java.util.Optional;
+
 public class CodeStorageService {
 
     private final RedisConnectionService redisConnectionService;
@@ -20,5 +22,11 @@ public class CodeStorageService {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public Optional<String> getCodeForEmail(String emailAddress) {
+        return Optional.ofNullable(
+                redisConnectionService.getValue(
+                        EMAIL_KEY_PREFIX + HashHelper.hashSha256String(emailAddress)));
     }
 }

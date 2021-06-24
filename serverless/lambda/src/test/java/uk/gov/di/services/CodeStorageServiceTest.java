@@ -2,8 +2,12 @@ package uk.gov.di.services;
 
 import org.junit.jupiter.api.Test;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class CodeStorageServiceTest {
 
@@ -24,5 +28,25 @@ class CodeStorageServiceTest {
                         + "f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a";
 
         verify(redisConnectionService).saveCodeWithExpiry(redisEmailKey, code, CODE_EXPIRY_TIME);
+    }
+
+    @Test
+    public void shouldRetrieveCodeForEmail() {
+        when(redisConnectionService.getValue(
+                        "email-code:f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a"))
+                .thenReturn("123456");
+
+        String codeForEmail = codeStorageService.getCodeForEmail("test@test.com").get();
+
+        assertThat(codeForEmail, is("123456"));
+    }
+
+    @Test
+    public void shouldReturnEmptyOptionalIfEmailCodeDoesNotExist() {
+        when(redisConnectionService.getValue(
+                        "email-code:f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a"))
+                .thenReturn(null);
+
+        assertTrue(codeStorageService.getCodeForEmail("test@test.com").isEmpty());
     }
 }
