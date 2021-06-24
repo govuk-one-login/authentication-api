@@ -12,6 +12,7 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.entity.NotifyRequest;
 import uk.gov.di.entity.Session;
 import uk.gov.di.services.AwsSqsClient;
+import uk.gov.di.services.CodeGeneratorService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.SessionService;
 import uk.gov.di.services.ValidationService;
@@ -44,10 +45,15 @@ class SendNotificationHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final Context context = mock(Context.class);
     private final SendNotificationHandler handler =
             new SendNotificationHandler(
-                    configurationService, validationService, awsSqsClient, sessionService);
+                    configurationService,
+                    validationService,
+                    awsSqsClient,
+                    sessionService,
+                    codeGeneratorService);
 
     @BeforeEach
     void setup() {
