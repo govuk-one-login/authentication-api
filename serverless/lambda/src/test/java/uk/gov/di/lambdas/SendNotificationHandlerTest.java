@@ -58,12 +58,13 @@ class SendNotificationHandlerTest {
     @BeforeEach
     void setup() {
         when(context.getLogger()).thenReturn(mock(LambdaLogger.class));
+        when(codeGeneratorService.sixDigitCode()).thenReturn("123456");
     }
 
     @Test
     void shouldReturn200AndPutMessageOnQueueForAValidRequest() throws JsonProcessingException {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS))).thenReturn(Set.of());
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, null);
+        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "123456");
         ObjectMapper objectMapper = new ObjectMapper();
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
@@ -147,7 +148,7 @@ class SendNotificationHandlerTest {
     @Test
     public void shouldReturn500IfMessageCannotBeSentToQueue() throws JsonProcessingException {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS))).thenReturn(Set.of());
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, null);
+        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "123456");
         ObjectMapper objectMapper = new ObjectMapper();
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
         doThrow(SdkClientException.class).when(awsSqsClient).send(eq(serialisedRequest));
