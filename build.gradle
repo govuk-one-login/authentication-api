@@ -21,7 +21,8 @@ def dependencyVersions = [
 
 dependencies {
     implementation "com.nimbusds:oauth2-oidc-sdk:${dependencyVersions.nimbus_oauth2_sdk}",
-            "com.nimbusds:nimbus-jose-jwt:${dependencyVersions.nimbus_jose_jwt}"
+            "com.nimbusds:nimbus-jose-jwt:${dependencyVersions.nimbus_jose_jwt}",
+            "commons-codec:commons-codec:1.15"
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit_version}",
             "org.mockito:mockito-core:${dependencyVersions.mockito_version}",
