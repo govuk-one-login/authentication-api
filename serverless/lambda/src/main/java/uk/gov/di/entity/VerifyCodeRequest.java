@@ -9,7 +9,8 @@ public class VerifyCodeRequest {
     @JsonProperty private String code;
 
     public VerifyCodeRequest(
-            @JsonProperty(required = true, value = "notificationType") NotificationType notificationType,
+            @JsonProperty(required = true, value = "notificationType")
+                    NotificationType notificationType,
             @JsonProperty(required = true, value = "code") String code) {
         this.notificationType = notificationType;
         this.code = code;
