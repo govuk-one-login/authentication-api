@@ -52,7 +52,7 @@ public class SendEmailNotificationIntegrationTest {
     @Test
     void shouldCallNotifyWhenValidRequestIsAddedToQueue()
             throws JsonProcessingException, InterruptedException {
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, null);
+        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "162534");
 
         AwsSqsClient client =
                 new AwsSqsClient(

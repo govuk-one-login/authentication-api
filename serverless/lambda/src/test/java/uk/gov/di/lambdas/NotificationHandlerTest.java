@@ -44,16 +44,15 @@ public class NotificationHandlerTest {
     public void shouldSuccessfullyProcessMessageFromSQSQueue()
             throws JsonProcessingException, NotificationClientException {
         when(configService.getNotificationTemplateId(VERIFY_EMAIL)).thenReturn(TEMPLATE_ID);
-        when(notificationService.generateSixDigitCode()).thenReturn(CODE);
 
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, null);
+        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
         handler.handleRequest(sqsEvent, context);
 
         Map<String, Object> personalisation = new HashMap<>();
-        personalisation.put("validation-code", CODE);
+        personalisation.put("validation-code", "654321");
         personalisation.put("email-address", notifyRequest.getDestination());
 
         verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, TEMPLATE_ID);
@@ -77,14 +76,13 @@ public class NotificationHandlerTest {
     public void shouldThrowExceptionIfNotifyIsUnableToSendEmail()
             throws JsonProcessingException, NotificationClientException {
         when(configService.getNotificationTemplateId(VERIFY_EMAIL)).thenReturn(TEMPLATE_ID);
-        when(notificationService.generateSixDigitCode()).thenReturn(CODE);
 
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, null);
+        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
         Map<String, Object> personalisation = new HashMap<>();
-        personalisation.put("validation-code", CODE);
+        personalisation.put("validation-code", "654321");
         personalisation.put("email-address", notifyRequest.getDestination());
         doThrow(NotificationClientException.class)
                 .when(notificationService)
