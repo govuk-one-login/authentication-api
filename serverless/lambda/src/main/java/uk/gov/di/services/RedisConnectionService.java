@@ -24,6 +24,15 @@ public class RedisConnectionService implements AutoCloseable {
         this.sessionExpiry = sessionExpiry;
     }
 
+    public RedisConnectionService(ConfigurationService configurationService) {
+        this(
+                configurationService.getRedisHost(),
+                configurationService.getRedisPort(),
+                configurationService.getUseRedisTLS(),
+                configurationService.getRedisPassword(),
+                configurationService.getSessionExpiry());
+    }
+
     public void saveSession(Session session) throws IOException {
         try (StatefulRedisConnection<String, String> connection = client.connect()) {
             connection
