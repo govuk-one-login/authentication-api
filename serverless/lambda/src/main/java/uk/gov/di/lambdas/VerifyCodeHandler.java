@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.VerifyCodeRequest;
+import uk.gov.di.entity.VerifyCodeResponse;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.SessionService;
 
@@ -16,6 +17,7 @@ import java.util.Optional;
 import static uk.gov.di.Messages.ERROR_INVALID_NOTIFICATION_TYPE;
 import static uk.gov.di.Messages.ERROR_INVALID_SESSION_ID;
 import static uk.gov.di.Messages.ERROR_MISSING_REQUEST_PARAMETERS;
+import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class VerifyCodeHandler
@@ -49,7 +51,9 @@ public class VerifyCodeHandler
                     objectMapper.readValue(input.getBody(), VerifyCodeRequest.class);
             switch (codeRequest.getNotificationType()) {
                 case VERIFY_EMAIL:
-                    return generateApiGatewayProxyResponse(200, "OK");
+                    sessionService.save(session.get().setState(EMAIL_CODE_VERIFIED));
+                    return generateApiGatewayProxyResponse(
+                            200, new VerifyCodeResponse(session.get().getState()));
             }
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyResponse(400, ERROR_MISSING_REQUEST_PARAMETERS);
