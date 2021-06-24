@@ -52,7 +52,7 @@ public class SendEmailNotificationIntegrationTest {
     @Test
     void shouldCallNotifyWhenValidRequestIsAddedToQueue()
             throws JsonProcessingException, InterruptedException {
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL);
+        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "162534");
 
         AwsSqsClient client =
                 new AwsSqsClient(
@@ -65,7 +65,7 @@ public class SendEmailNotificationIntegrationTest {
 
         await().atMost(1, MINUTES)
                 .untilAsserted(() -> assertThat(notifyStub.getCountOfRequests(), equalTo(1)));
-        
+
         JsonNode request = objectMapper.readTree(notifyStub.getLastRequest().getEntity());
         JsonNode personalisation = request.get("personalisation");
         assertEquals(TEST_EMAIL_ADDRESS, request.get("email_address").asText());

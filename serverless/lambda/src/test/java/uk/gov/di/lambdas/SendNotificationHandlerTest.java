@@ -12,6 +12,7 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.entity.NotifyRequest;
 import uk.gov.di.entity.Session;
 import uk.gov.di.services.AwsSqsClient;
+import uk.gov.di.services.CodeGeneratorService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.SessionService;
 import uk.gov.di.services.ValidationService;
@@ -26,6 +27,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -44,20 +46,26 @@ class SendNotificationHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final Context context = mock(Context.class);
     private final SendNotificationHandler handler =
             new SendNotificationHandler(
-                    configurationService, validationService, awsSqsClient, sessionService);
+                    configurationService,
+                    validationService,
+                    awsSqsClient,
+                    sessionService,
+                    codeGeneratorService);
 
     @BeforeEach
     void setup() {
         when(context.getLogger()).thenReturn(mock(LambdaLogger.class));
+        when(codeGeneratorService.sixDigitCode()).thenReturn("123456");
     }
 
     @Test
     void shouldReturn200AndPutMessageOnQueueForAValidRequest() throws JsonProcessingException {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS))).thenReturn(Set.of());
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL);
+        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "123456");
         ObjectMapper objectMapper = new ObjectMapper();
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
@@ -73,21 +81,12 @@ class SendNotificationHandlerTest {
         assertEquals(200, result.getStatusCode());
 
         verify(awsSqsClient).send(serialisedRequest);
-        verify(sessionService)
-                .save(
-                        argThat(
-                                (session) ->
-                                        session.getState().equals(VERIFY_EMAIL_CODE_SENT)
-                                                && session.getEmailAddress()
-                                                        .equals(TEST_EMAIL_ADDRESS)));
+        verify(sessionService).save(argThat(this::isSessionWithEmailSent));
     }
 
     @Test
-    void shouldReturn400IfInvalidSessionProvided() throws JsonProcessingException {
+    void shouldReturn400IfInvalidSessionProvided() {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS))).thenReturn(Set.of());
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL);
-        ObjectMapper objectMapper = new ObjectMapper();
-        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
@@ -98,14 +97,8 @@ class SendNotificationHandlerTest {
 
         assertEquals(400, result.getStatusCode());
 
-        verify(awsSqsClient, never()).send(serialisedRequest);
-        verify(sessionService, never())
-                .save(
-                        argThat(
-                                (session) ->
-                                        session.getState().equals(VERIFY_EMAIL_CODE_SENT)
-                                                && session.getEmailAddress()
-                                                        .equals(TEST_EMAIL_ADDRESS)));
+        verify(awsSqsClient, never()).send(anyString());
+        verify(sessionService, never()).save(argThat(this::isSessionWithEmailSent));
     }
 
     @Test
@@ -141,7 +134,7 @@ class SendNotificationHandlerTest {
     @Test
     public void shouldReturn500IfMessageCannotBeSentToQueue() throws JsonProcessingException {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS))).thenReturn(Set.of());
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL);
+        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "123456");
         ObjectMapper objectMapper = new ObjectMapper();
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
         doThrow(SdkClientException.class).when(awsSqsClient).send(eq(serialisedRequest));
@@ -160,11 +153,8 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenInvalidNotificationType() throws JsonProcessingException {
+    public void shouldReturn400WhenInvalidNotificationType() {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS))).thenReturn(Set.of());
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL);
-        ObjectMapper objectMapper = new ObjectMapper();
-        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -178,7 +168,7 @@ class SendNotificationHandlerTest {
         assertEquals(400, result.getStatusCode());
         assertTrue(result.getBody().contains("Request is missing parameters"));
 
-        verify(awsSqsClient, never()).send(serialisedRequest);
+        verify(awsSqsClient, never()).send(anyString());
     }
 
     private void usingValidSession() {
@@ -186,5 +176,10 @@ class SendNotificationHandlerTest {
                 .thenReturn(
                         Optional.of(
                                 new Session("a-session-id").setEmailAddress(TEST_EMAIL_ADDRESS)));
+    }
+
+    private boolean isSessionWithEmailSent(Session session) {
+        return session.getState().equals(VERIFY_EMAIL_CODE_SENT)
+                && session.getEmailAddress().equals(TEST_EMAIL_ADDRESS);
     }
 }

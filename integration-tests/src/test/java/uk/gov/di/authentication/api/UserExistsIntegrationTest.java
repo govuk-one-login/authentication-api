@@ -20,15 +20,15 @@ import java.io.IOException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
 
-public class UserExistsResourceIntegrationTest extends AuthorizationAPIResourceIntegrationTest {
+public class UserExistsIntegrationTest extends IntegrationTestEndpoints {
 
-    private static final String USEREXISTS_RESOURCE = "/userexists";
+    private static final String USEREXISTS_ENDPOINT = "/userexists";
     private ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
     public void shouldCallUserExistsResourceAndReturn200() throws IOException {
         Client client = ClientBuilder.newClient();
-        WebTarget webTarget = client.target(ROOT_RESOURCE_URL + USEREXISTS_RESOURCE);
+        WebTarget webTarget = client.target(ROOT_RESOURCE_URL + USEREXISTS_ENDPOINT);
         String sessionId = SessionHelper.createSession();
         Invocation.Builder invocationBuilder = webTarget.request(MediaType.APPLICATION_JSON);
         MultivaluedMap headers = new MultivaluedHashMap();

@@ -12,6 +12,7 @@ import uk.gov.di.entity.NotifyRequest;
 import uk.gov.di.entity.SendNotificationRequest;
 import uk.gov.di.entity.Session;
 import uk.gov.di.services.AwsSqsClient;
+import uk.gov.di.services.CodeGeneratorService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.SessionService;
 import uk.gov.di.services.ValidationService;
@@ -20,6 +21,7 @@ import uk.gov.di.validation.EmailValidation;
 import java.util.Optional;
 import java.util.Set;
 
+import static uk.gov.di.Messages.ERROR_INVALID_NOTIFICATION_TYPE;
 import static uk.gov.di.Messages.ERROR_INVALID_SESSION_ID;
 import static uk.gov.di.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -31,17 +33,20 @@ public class SendNotificationHandler
     private final ValidationService validationService;
     private final AwsSqsClient sqsClient;
     private final SessionService sessionService;
+    private final CodeGeneratorService codeGeneratorService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public SendNotificationHandler(
             ConfigurationService configurationService,
             ValidationService validationService,
             AwsSqsClient sqsClient,
-            SessionService sessionService) {
+            SessionService sessionService,
+            CodeGeneratorService codeGeneratorService) {
         this.configurationService = configurationService;
         this.validationService = validationService;
         this.sqsClient = sqsClient;
         this.sessionService = sessionService;
+        this.codeGeneratorService = codeGeneratorService;
     }
 
     public SendNotificationHandler() {
@@ -53,6 +58,7 @@ public class SendNotificationHandler
                         configurationService.getSqsEndpointUri());
         this.validationService = new ValidationService();
         sessionService = new SessionService(configurationService);
+        this.codeGeneratorService = new CodeGeneratorService();
     }
 
     @Override
@@ -81,12 +87,13 @@ public class SendNotificationHandler
                     NotifyRequest notifyRequest =
                             new NotifyRequest(
                                     sendNotificationRequest.getEmail(),
-                                    sendNotificationRequest.getNotificationType());
+                                    sendNotificationRequest.getNotificationType(),
+                                    codeGeneratorService.sixDigitCode());
                     sessionService.save(session.get().setState(VERIFY_EMAIL_CODE_SENT));
                     sqsClient.send(serialiseRequest(notifyRequest));
                     return generateApiGatewayProxyResponse(200, "OK");
             }
-            return generateApiGatewayProxyResponse(400, "Notification type not handled");
+            return generateApiGatewayProxyResponse(400, ERROR_INVALID_NOTIFICATION_TYPE);
         } catch (SdkClientException ex) {
             logger.log("Error sending message to queue: " + ex.getMessage());
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");

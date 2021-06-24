@@ -2,30 +2,22 @@ package uk.gov.di.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class NotifyRequest {
+public class VerifyCodeRequest {
 
     @JsonProperty private NotificationType notificationType;
 
-    @JsonProperty private String destination;
-
     @JsonProperty private String code;
 
-    public NotifyRequest(
-            @JsonProperty(required = true, value = "destination") String destination,
+    public VerifyCodeRequest(
             @JsonProperty(required = true, value = "notificationType")
                     NotificationType notificationType,
-            @JsonProperty(value = "code") String code) {
-        this.destination = destination;
+            @JsonProperty(required = true, value = "code") String code) {
         this.notificationType = notificationType;
         this.code = code;
     }
 
     public NotificationType getNotificationType() {
         return notificationType;
-    }
-
-    public String getDestination() {
-        return destination;
     }
 
     public String getCode() {

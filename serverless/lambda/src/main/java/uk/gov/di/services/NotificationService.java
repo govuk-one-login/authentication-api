@@ -6,9 +6,6 @@ import uk.gov.service.notify.NotificationClientException;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
-
-import static java.lang.String.format;
 
 public class NotificationService {
 
@@ -23,12 +20,6 @@ public class NotificationService {
     public void sendEmail(String email, Map<String, Object> personalisation, String templateId)
             throws NotificationClientException {
         notifyClient.sendEmail(templateId, email, personalisation, "");
-    }
-
-    public String generateSixDigitCode() {
-        Random rnd = new Random();
-        String code = format("%06d", rnd.nextInt(999999));
-        return code;
     }
 
     public boolean validateCode(String email, String code) {

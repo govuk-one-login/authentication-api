@@ -20,15 +20,15 @@ import java.io.IOException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.entity.SessionState.TWO_FACTOR_REQUIRED;
 
-public class SignupResourceIntegrationTest extends AuthorizationAPIResourceIntegrationTest {
+public class SignupIntegrationTest extends IntegrationTestEndpoints {
 
-    private static final String SIGNUP_RESOURCE = "/signup";
+    private static final String SIGNUP_ENDPOINT = "/signup";
     private ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
     public void shouldCallUserExistsResourceAndReturn200() throws IOException {
         Client client = ClientBuilder.newClient();
-        WebTarget webTarget = client.target(ROOT_RESOURCE_URL + SIGNUP_RESOURCE);
+        WebTarget webTarget = client.target(ROOT_RESOURCE_URL + SIGNUP_ENDPOINT);
         String sessionId = SessionHelper.createSession();
         Invocation.Builder invocationBuilder = webTarget.request(MediaType.APPLICATION_JSON);
         MultivaluedMap headers = new MultivaluedHashMap();

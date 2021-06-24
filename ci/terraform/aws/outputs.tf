@@ -33,3 +33,7 @@ output "openid_configuration_discovery_url" {
 output "send_notification_url" {
   value = module.send_notification.base_url
 }
+
+output "verify_code_url" {
+  value = module.verify_code.base_url
+}

@@ -48,9 +48,8 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                         objectMapper.readValue(msg.getBody(), NotifyRequest.class);
                 switch (notifyRequest.getNotificationType()) {
                     case VERIFY_EMAIL:
-                        String code = notificationService.generateSixDigitCode();
                         Map<String, Object> personalisation = new HashMap<>();
-                        personalisation.put("validation-code", code);
+                        personalisation.put("validation-code", notifyRequest.getCode());
                         personalisation.put("email-address", notifyRequest.getDestination());
                         notificationService.sendEmail(
                                 notifyRequest.getDestination(),
