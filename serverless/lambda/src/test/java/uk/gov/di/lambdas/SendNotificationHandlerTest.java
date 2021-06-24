@@ -81,13 +81,7 @@ class SendNotificationHandlerTest {
         assertEquals(200, result.getStatusCode());
 
         verify(awsSqsClient).send(serialisedRequest);
-        verify(sessionService)
-                .save(
-                        argThat(
-                                (session) ->
-                                        session.getState().equals(VERIFY_EMAIL_CODE_SENT)
-                                                && session.getEmailAddress()
-                                                        .equals(TEST_EMAIL_ADDRESS)));
+        verify(sessionService).save(argThat(this::isSessionWithEmailSent));
     }
 
     @Test
@@ -104,13 +98,7 @@ class SendNotificationHandlerTest {
         assertEquals(400, result.getStatusCode());
 
         verify(awsSqsClient, never()).send(anyString());
-        verify(sessionService, never())
-                .save(
-                        argThat(
-                                (session) ->
-                                        session.getState().equals(VERIFY_EMAIL_CODE_SENT)
-                                                && session.getEmailAddress()
-                                                        .equals(TEST_EMAIL_ADDRESS)));
+        verify(sessionService, never()).save(argThat(this::isSessionWithEmailSent));
     }
 
     @Test
@@ -188,5 +176,10 @@ class SendNotificationHandlerTest {
                 .thenReturn(
                         Optional.of(
                                 new Session("a-session-id").setEmailAddress(TEST_EMAIL_ADDRESS)));
+    }
+
+    private boolean isSessionWithEmailSent(Session session) {
+        return session.getState().equals(VERIFY_EMAIL_CODE_SENT)
+                && session.getEmailAddress().equals(TEST_EMAIL_ADDRESS);
     }
 }
