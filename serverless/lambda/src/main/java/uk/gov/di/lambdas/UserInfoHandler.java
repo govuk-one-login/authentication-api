@@ -8,6 +8,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
+import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.InMemoryUserInfoService;
 import uk.gov.di.services.TokenService;
 import uk.gov.di.services.UserInfoService;
@@ -21,14 +22,20 @@ public class UserInfoHandler
 
     private final TokenService tokenService;
     private final UserInfoService userInfoService;
+    private final ConfigurationService configurationService;
 
-    public UserInfoHandler(TokenService tokenService, UserInfoService userInfoService) {
+    public UserInfoHandler(
+            TokenService tokenService,
+            UserInfoService userInfoService,
+            ConfigurationService configurationService) {
         this.tokenService = tokenService;
         this.userInfoService = userInfoService;
+        this.configurationService = configurationService;
     }
 
     public UserInfoHandler() {
-        tokenService = new TokenService();
+        configurationService = new ConfigurationService();
+        tokenService = new TokenService(configurationService);
         userInfoService = new InMemoryUserInfoService();
     }
 

@@ -31,13 +31,12 @@ public class TokenService {
 
     private final RSAKey signingKey;
     private final JWSSigner signer;
-    private final Issuer issuer;
 
     private final Map<AccessToken, String> tokensMap = new HashMap<>();
-    private final ConfigurationService configService = new ConfigurationService();
+    private final ConfigurationService configService;
 
-    public TokenService() {
-        this.issuer = new Issuer(configService.getBaseURL().get());
+    public TokenService(ConfigurationService configService) {
+        this.configService = configService;
         try {
             signingKey = new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
             signer = new RSASSASigner(signingKey);
@@ -49,7 +48,9 @@ public class TokenService {
     public SignedJWT generateIDToken(String clientId, Subject subject) {
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+        Optional<String> baseUrl = configService.getBaseURL();
 
+        Issuer issuer = new Issuer(baseUrl.get());
         IDTokenClaimsSet idTokenClaims =
                 new IDTokenClaimsSet(
                         issuer, subject, List.of(new Audience(clientId)), expiryDate, new Date());
