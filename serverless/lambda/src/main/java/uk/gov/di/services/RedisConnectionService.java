@@ -38,10 +38,6 @@ public class RedisConnectionService implements AutoCloseable {
                 session.getSessionId(), objectMapper.writeValueAsString(session), sessionExpiry);
     }
 
-    public void saveCodeWithExpiry(String key, String value, long expiry) {
-        saveWithExpiry(key, value, expiry);
-    }
-
     public void saveWithExpiry(String key, String value, long expiry) {
         try (StatefulRedisConnection<String, String> connection = client.connect()) {
             connection.sync().setex(key, expiry, value);
