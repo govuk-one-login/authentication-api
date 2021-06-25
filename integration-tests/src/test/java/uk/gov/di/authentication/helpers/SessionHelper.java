@@ -37,12 +37,12 @@ public class SessionHelper {
         }
     }
 
-    public static String generateAndSaveEmailCode(String email) {
+    public static String generateAndSaveEmailCode(String email, long codeExpiryTime) {
         try (RedisConnectionService redis =
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, 1800)) {
 
             var code = new CodeGeneratorService().sixDigitCode();
-            new CodeStorageService(redis).saveEmailCode(email, code);
+            new CodeStorageService(redis).saveEmailCode(email, code, codeExpiryTime);
 
             return code;
         }

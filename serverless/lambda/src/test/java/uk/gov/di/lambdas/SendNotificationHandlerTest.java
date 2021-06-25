@@ -27,6 +27,7 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -44,6 +45,7 @@ class SendNotificationHandlerTest {
 
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_SIX_DIGIT_CODE = "123456";
+    private static final long CODE_EXPIRY_TIME = 900;
     private final ValidationService validationService = mock(ValidationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
@@ -86,7 +88,8 @@ class SendNotificationHandlerTest {
         assertEquals(200, result.getStatusCode());
 
         verify(awsSqsClient).send(serialisedRequest);
-        verify(codeStorageService).saveEmailCode(TEST_EMAIL_ADDRESS, TEST_SIX_DIGIT_CODE);
+        verify(codeStorageService)
+                .saveEmailCode(TEST_EMAIL_ADDRESS, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME);
         verify(sessionService).save(argThat(this::isSessionWithEmailSent));
     }
 
@@ -104,7 +107,7 @@ class SendNotificationHandlerTest {
         assertEquals(400, result.getStatusCode());
 
         verify(awsSqsClient, never()).send(anyString());
-        verify(codeStorageService, never()).saveEmailCode(anyString(), anyString());
+        verify(codeStorageService, never()).saveEmailCode(anyString(), anyString(), anyLong());
         verify(sessionService, never()).save(argThat(this::isSessionWithEmailSent));
     }
 
@@ -177,7 +180,7 @@ class SendNotificationHandlerTest {
         assertTrue(result.getBody().contains("Request is missing parameters"));
 
         verify(awsSqsClient, never()).send(anyString());
-        verify(codeStorageService, never()).saveEmailCode(anyString(), anyString());
+        verify(codeStorageService, never()).saveEmailCode(anyString(), anyString(), anyLong());
     }
 
     private void usingValidSession() {

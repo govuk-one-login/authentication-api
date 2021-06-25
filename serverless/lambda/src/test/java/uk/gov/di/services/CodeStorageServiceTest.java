@@ -16,12 +16,12 @@ class CodeStorageServiceTest {
     private final CodeStorageService codeStorageService =
             new CodeStorageService(redisConnectionService);
     private static final String EMAIL_KEY_PREFIX = "email-code:";
-    private static final long CODE_EXPIRY_TIME = 900l;
+    private static final long CODE_EXPIRY_TIME = 900;
 
     @Test
     public void shouldCallRedisWithValidCodeAndHashedEmail() {
         String code = "123456";
-        codeStorageService.saveEmailCode("test@test.com", "123456");
+        codeStorageService.saveEmailCode("test@test.com", "123456", CODE_EXPIRY_TIME);
 
         String redisEmailKey =
                 EMAIL_KEY_PREFIX

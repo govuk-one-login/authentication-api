@@ -93,13 +93,12 @@ public class SendNotificationHandler
                     }
                     String code = codeGeneratorService.sixDigitCode();
 
-
                     NotifyRequest notifyRequest =
                             new NotifyRequest(
                                     sendNotificationRequest.getEmail(),
                                     sendNotificationRequest.getNotificationType(),
                                     code);
-                    codeStorageService.saveEmailCode(sendNotificationRequest.getEmail(), code);
+                    codeStorageService.saveEmailCode(sendNotificationRequest.getEmail(), code, 900);
                     sessionService.save(session.get().setState(VERIFY_EMAIL_CODE_SENT));
                     sqsClient.send(serialiseRequest(notifyRequest));
                     return generateApiGatewayProxyResponse(200, "OK");
