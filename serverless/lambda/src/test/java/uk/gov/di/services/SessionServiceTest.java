@@ -3,6 +3,11 @@ package uk.gov.di.services;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.Session;
 
+import java.util.Map;
+
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -25,5 +30,21 @@ class SessionServiceTest {
                 "{\"session_id\":\"session-id\",\"authentication_request\":null,\"state\":\"NEW\",\"email_address\":null}";
 
         verify(redis).saveWithExpiry("session-id", serialisedSession, 1234L);
+    }
+
+    @Test
+    public void shouldRetrieveSessionUsingRequestHeaders() {
+        var serialisedSession =
+                "{\"session_id\":\"session-id\",\"authentication_request\":null,\"state\":\"NEW\",\"email_address\":null}";
+
+        when(redis.keyExists("session-id")).thenReturn(true);
+        when(redis.getValue("session-id")).thenReturn(serialisedSession);
+
+        var sessionInRedis =
+                sessionService.getSessionFromRequestHeaders(Map.of("Session-Id", "session-id"));
+
+        sessionInRedis.ifPresentOrElse(
+                session -> assertThat(session.getSessionId(), is("session-id")),
+                () -> fail("Could not retrieve result"));
     }
 }
