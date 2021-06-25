@@ -14,6 +14,7 @@ import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.AuthorizationCodeService;
 import uk.gov.di.services.ClientService;
+import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.InMemoryClientService;
 import uk.gov.di.services.TokenService;
 import uk.gov.di.services.UserService;
@@ -30,22 +31,26 @@ public class TokenHandler
     private final AuthorizationCodeService authorizationCodeService;
     private final TokenService tokenService;
     private final AuthenticationService authenticationService;
+    private final ConfigurationService configurationService;
 
     public TokenHandler(
             ClientService clientService,
             AuthorizationCodeService authorizationCodeService,
             TokenService tokenService,
-            AuthenticationService authenticationService) {
+            AuthenticationService authenticationService,
+            ConfigurationService configurationService) {
         this.clientService = clientService;
         this.authorizationCodeService = authorizationCodeService;
         this.tokenService = tokenService;
         this.authenticationService = authenticationService;
+        this.configurationService = configurationService;
     }
 
     public TokenHandler() {
+        configurationService = new ConfigurationService();
         clientService = new InMemoryClientService(new AuthorizationCodeService());
         authorizationCodeService = new AuthorizationCodeService();
-        tokenService = new TokenService();
+        tokenService = new TokenService(configurationService);
         authenticationService = new UserService();
     }
 
