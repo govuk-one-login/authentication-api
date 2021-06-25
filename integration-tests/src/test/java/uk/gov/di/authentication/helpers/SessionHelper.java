@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.helpers;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import uk.gov.di.entity.Session;
 import uk.gov.di.helpers.IdGenerator;
 import uk.gov.di.services.CodeGeneratorService;
@@ -18,19 +19,22 @@ public class SessionHelper {
 
     public static String createSession() throws IOException {
         try (RedisConnectionService redis =
-                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, 1800)) {
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
             Session session = new Session(IdGenerator.generate());
-            redis.saveSession(session);
+            redis.saveWithExpiry(
+                    session.getSessionId(), new ObjectMapper().writeValueAsString(session), 1800);
             return session.getSessionId();
         }
     }
 
     public static void addEmailToSession(String sessionId, String emailAddress) {
         try (RedisConnectionService redis =
-                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, 1800)) {
-            Session session = redis.loadSession(sessionId);
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
+            Session session =
+                    new ObjectMapper().readValue(redis.getValue(sessionId), Session.class);
             session.setEmailAddress(emailAddress);
-            redis.saveSession(session);
+            redis.saveWithExpiry(
+                    session.getSessionId(), new ObjectMapper().writeValueAsString(session), 1800);
 
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -39,7 +43,7 @@ public class SessionHelper {
 
     public static String generateAndSaveEmailCode(String email, long codeExpiryTime) {
         try (RedisConnectionService redis =
-                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, 1800)) {
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
 
             var code = new CodeGeneratorService().sixDigitCode();
             new CodeStorageService(redis).saveEmailCode(email, code, codeExpiryTime);
