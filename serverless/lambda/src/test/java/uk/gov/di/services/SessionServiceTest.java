@@ -67,4 +67,13 @@ class SessionServiceTest {
         var session = sessionService.getSessionFromRequestHeaders(Map.of("Something", "Else"));
         assertTrue(session.isEmpty());
     }
+
+    @Test
+    public void shouldNotRetrieveSessionIfNotPresentInRedis() {
+        when(redis.keyExists("session-id")).thenReturn(false);
+
+        var session = sessionService.getSessionFromRequestHeaders(Map.of("Session-Id", "session-id"));
+
+        assertTrue(session.isEmpty());
+    }
 }
