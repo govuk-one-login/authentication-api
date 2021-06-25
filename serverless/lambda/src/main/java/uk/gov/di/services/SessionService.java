@@ -24,7 +24,10 @@ public class SessionService {
 
     public void save(Session session) {
         try (RedisConnectionService redis = getRedisConnection()) {
-            redis.saveSession(session);
+            redis.saveWithExpiry(
+                    session.getSessionId(),
+                    OBJECT_MAPPER.writeValueAsString(session),
+                    configurationService.getSessionExpiry());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

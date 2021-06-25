@@ -21,7 +21,8 @@ public class SessionHelper {
         try (RedisConnectionService redis =
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, 1800)) {
             Session session = new Session(IdGenerator.generate());
-            redis.saveSession(session);
+            redis.saveWithExpiry(
+                    session.getSessionId(), new ObjectMapper().writeValueAsString(session), 1800);
             return session.getSessionId();
         }
     }
@@ -32,7 +33,8 @@ public class SessionHelper {
             Session session =
                     new ObjectMapper().readValue(redis.getValue(sessionId), Session.class);
             session.setEmailAddress(emailAddress);
-            redis.saveSession(session);
+            redis.saveWithExpiry(
+                    session.getSessionId(), new ObjectMapper().writeValueAsString(session), 1800);
 
         } catch (IOException e) {
             throw new RuntimeException(e);

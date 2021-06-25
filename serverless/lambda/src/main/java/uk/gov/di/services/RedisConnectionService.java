@@ -4,9 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
-import uk.gov.di.entity.Session;
 
-import java.io.IOException;
 import java.util.Optional;
 
 public class RedisConnectionService implements AutoCloseable {
@@ -31,11 +29,6 @@ public class RedisConnectionService implements AutoCloseable {
                 configurationService.getUseRedisTLS(),
                 configurationService.getRedisPassword(),
                 configurationService.getSessionExpiry());
-    }
-
-    public void saveSession(Session session) throws IOException {
-        saveWithExpiry(
-                session.getSessionId(), objectMapper.writeValueAsString(session), sessionExpiry);
     }
 
     public void saveWithExpiry(String key, String value, long expiry) {
