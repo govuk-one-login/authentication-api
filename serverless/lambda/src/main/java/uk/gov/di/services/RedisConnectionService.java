@@ -24,6 +24,15 @@ public class RedisConnectionService implements AutoCloseable {
         this.sessionExpiry = sessionExpiry;
     }
 
+    public RedisConnectionService(ConfigurationService configurationService) {
+        this(
+                configurationService.getRedisHost(),
+                configurationService.getRedisPort(),
+                configurationService.getUseRedisTLS(),
+                configurationService.getRedisPassword(),
+                configurationService.getSessionExpiry());
+    }
+
     public void saveSession(Session session) throws IOException {
         try (StatefulRedisConnection<String, String> connection = client.connect()) {
             connection
@@ -32,6 +41,12 @@ public class RedisConnectionService implements AutoCloseable {
                             session.getSessionId(),
                             sessionExpiry,
                             objectMapper.writeValueAsString(session));
+        }
+    }
+
+    public void saveCodeWithExpiry(String key, String value, long expiry) {
+        try (StatefulRedisConnection<String, String> connection = client.connect()) {
+            connection.sync().setex(key, expiry, value);
         }
     }
 
@@ -45,6 +60,12 @@ public class RedisConnectionService implements AutoCloseable {
     public boolean sessionExists(String sessionId) {
         try (StatefulRedisConnection<String, String> connection = client.connect()) {
             return (connection.sync().exists(sessionId) == 1);
+        }
+    }
+
+    public String getValue(String key) {
+        try (StatefulRedisConnection<String, String> connection = client.connect()) {
+            return connection.sync().get(key);
         }
     }
 

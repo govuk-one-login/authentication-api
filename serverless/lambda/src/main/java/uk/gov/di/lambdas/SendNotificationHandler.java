@@ -13,7 +13,9 @@ import uk.gov.di.entity.SendNotificationRequest;
 import uk.gov.di.entity.Session;
 import uk.gov.di.services.AwsSqsClient;
 import uk.gov.di.services.CodeGeneratorService;
+import uk.gov.di.services.CodeStorageService;
 import uk.gov.di.services.ConfigurationService;
+import uk.gov.di.services.RedisConnectionService;
 import uk.gov.di.services.SessionService;
 import uk.gov.di.services.ValidationService;
 import uk.gov.di.validation.EmailValidation;
@@ -34,6 +36,7 @@ public class SendNotificationHandler
     private final AwsSqsClient sqsClient;
     private final SessionService sessionService;
     private final CodeGeneratorService codeGeneratorService;
+    private final CodeStorageService codeStorageService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public SendNotificationHandler(
@@ -41,12 +44,14 @@ public class SendNotificationHandler
             ValidationService validationService,
             AwsSqsClient sqsClient,
             SessionService sessionService,
-            CodeGeneratorService codeGeneratorService) {
+            CodeGeneratorService codeGeneratorService,
+            CodeStorageService codeStorageService) {
         this.configurationService = configurationService;
         this.validationService = validationService;
         this.sqsClient = sqsClient;
         this.sessionService = sessionService;
         this.codeGeneratorService = codeGeneratorService;
+        this.codeStorageService = codeStorageService;
     }
 
     public SendNotificationHandler() {
@@ -59,6 +64,8 @@ public class SendNotificationHandler
         this.validationService = new ValidationService();
         sessionService = new SessionService(configurationService);
         this.codeGeneratorService = new CodeGeneratorService();
+        this.codeStorageService =
+                new CodeStorageService(new RedisConnectionService(configurationService));
     }
 
     @Override
@@ -84,11 +91,14 @@ public class SendNotificationHandler
                     if (!session.get().validateSession(sendNotificationRequest.getEmail())) {
                         return generateApiGatewayProxyResponse(400, ERROR_INVALID_SESSION_ID);
                     }
+                    String code = codeGeneratorService.sixDigitCode();
+
                     NotifyRequest notifyRequest =
                             new NotifyRequest(
                                     sendNotificationRequest.getEmail(),
                                     sendNotificationRequest.getNotificationType(),
-                                    codeGeneratorService.sixDigitCode());
+                                    code);
+                    codeStorageService.saveEmailCode(sendNotificationRequest.getEmail(), code, 900);
                     sessionService.save(session.get().setState(VERIFY_EMAIL_CODE_SENT));
                     sqsClient.send(serialiseRequest(notifyRequest));
                     return generateApiGatewayProxyResponse(200, "OK");

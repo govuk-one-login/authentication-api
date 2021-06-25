@@ -13,6 +13,7 @@ import uk.gov.di.entity.NotifyRequest;
 import uk.gov.di.entity.Session;
 import uk.gov.di.services.AwsSqsClient;
 import uk.gov.di.services.CodeGeneratorService;
+import uk.gov.di.services.CodeStorageService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.SessionService;
 import uk.gov.di.services.ValidationService;
@@ -26,6 +27,7 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -42,11 +44,14 @@ import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 class SendNotificationHandlerTest {
 
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
+    private static final String TEST_SIX_DIGIT_CODE = "123456";
+    private static final long CODE_EXPIRY_TIME = 900;
     private final ValidationService validationService = mock(ValidationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
+    private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final Context context = mock(Context.class);
     private final SendNotificationHandler handler =
             new SendNotificationHandler(
@@ -54,18 +59,20 @@ class SendNotificationHandlerTest {
                     validationService,
                     awsSqsClient,
                     sessionService,
-                    codeGeneratorService);
+                    codeGeneratorService,
+                    codeStorageService);
 
     @BeforeEach
     void setup() {
         when(context.getLogger()).thenReturn(mock(LambdaLogger.class));
-        when(codeGeneratorService.sixDigitCode()).thenReturn("123456");
+        when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);
     }
 
     @Test
     void shouldReturn200AndPutMessageOnQueueForAValidRequest() throws JsonProcessingException {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS))).thenReturn(Set.of());
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "123456");
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_SIX_DIGIT_CODE);
         ObjectMapper objectMapper = new ObjectMapper();
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
@@ -81,6 +88,8 @@ class SendNotificationHandlerTest {
         assertEquals(200, result.getStatusCode());
 
         verify(awsSqsClient).send(serialisedRequest);
+        verify(codeStorageService)
+                .saveEmailCode(TEST_EMAIL_ADDRESS, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME);
         verify(sessionService).save(argThat(this::isSessionWithEmailSent));
     }
 
@@ -98,6 +107,7 @@ class SendNotificationHandlerTest {
         assertEquals(400, result.getStatusCode());
 
         verify(awsSqsClient, never()).send(anyString());
+        verify(codeStorageService, never()).saveEmailCode(anyString(), anyString(), anyLong());
         verify(sessionService, never()).save(argThat(this::isSessionWithEmailSent));
     }
 
@@ -134,7 +144,8 @@ class SendNotificationHandlerTest {
     @Test
     public void shouldReturn500IfMessageCannotBeSentToQueue() throws JsonProcessingException {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS))).thenReturn(Set.of());
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "123456");
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_SIX_DIGIT_CODE);
         ObjectMapper objectMapper = new ObjectMapper();
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
         doThrow(SdkClientException.class).when(awsSqsClient).send(eq(serialisedRequest));
@@ -169,6 +180,7 @@ class SendNotificationHandlerTest {
         assertTrue(result.getBody().contains("Request is missing parameters"));
 
         verify(awsSqsClient, never()).send(anyString());
+        verify(codeStorageService, never()).saveEmailCode(anyString(), anyString(), anyLong());
     }
 
     private void usingValidSession() {
