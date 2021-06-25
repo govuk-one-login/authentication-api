@@ -54,7 +54,6 @@ public class SessionService {
                 configurationService.getRedisHost(),
                 configurationService.getRedisPort(),
                 configurationService.getUseRedisTLS(),
-                configurationService.getRedisPassword(),
-                configurationService.getSessionExpiry());
+                configurationService.getRedisPassword());
     }
 }

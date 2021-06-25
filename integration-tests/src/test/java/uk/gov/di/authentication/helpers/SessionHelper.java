@@ -19,7 +19,7 @@ public class SessionHelper {
 
     public static String createSession() throws IOException {
         try (RedisConnectionService redis =
-                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, 1800)) {
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
             Session session = new Session(IdGenerator.generate());
             redis.saveWithExpiry(
                     session.getSessionId(), new ObjectMapper().writeValueAsString(session), 1800);
@@ -29,7 +29,7 @@ public class SessionHelper {
 
     public static void addEmailToSession(String sessionId, String emailAddress) {
         try (RedisConnectionService redis =
-                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, 1800)) {
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
             Session session =
                     new ObjectMapper().readValue(redis.getValue(sessionId), Session.class);
             session.setEmailAddress(emailAddress);
@@ -43,7 +43,7 @@ public class SessionHelper {
 
     public static String generateAndSaveEmailCode(String email, long codeExpiryTime) {
         try (RedisConnectionService redis =
-                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, 1800)) {
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
 
             var code = new CodeGeneratorService().sixDigitCode();
             new CodeStorageService(redis).saveEmailCode(email, code, codeExpiryTime);

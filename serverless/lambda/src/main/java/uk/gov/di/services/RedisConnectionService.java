@@ -1,6 +1,5 @@
 package uk.gov.di.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
@@ -9,17 +8,14 @@ import java.util.Optional;
 
 public class RedisConnectionService implements AutoCloseable {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
     private final RedisClient client;
-    private final long sessionExpiry;
 
     public RedisConnectionService(
-            String host, int port, boolean useSsl, Optional<String> password, long sessionExpiry) {
+            String host, int port, boolean useSsl, Optional<String> password) {
         RedisURI.Builder builder = RedisURI.builder().withHost(host).withPort(port).withSsl(useSsl);
         if (password.isPresent()) builder.withPassword(password.get().toCharArray());
         RedisURI redisURI = builder.build();
         this.client = RedisClient.create(redisURI);
-        this.sessionExpiry = sessionExpiry;
     }
 
     public RedisConnectionService(ConfigurationService configurationService) {
@@ -27,8 +23,7 @@ public class RedisConnectionService implements AutoCloseable {
                 configurationService.getRedisHost(),
                 configurationService.getRedisPort(),
                 configurationService.getUseRedisTLS(),
-                configurationService.getRedisPassword(),
-                configurationService.getSessionExpiry());
+                configurationService.getRedisPassword());
     }
 
     public void saveWithExpiry(String key, String value, long expiry) {
