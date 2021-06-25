@@ -98,7 +98,10 @@ public class SendNotificationHandler
                                     sendNotificationRequest.getEmail(),
                                     sendNotificationRequest.getNotificationType(),
                                     code);
-                    codeStorageService.saveEmailCode(sendNotificationRequest.getEmail(), code, 900);
+                    codeStorageService.saveEmailCode(
+                            sendNotificationRequest.getEmail(),
+                            code,
+                            configurationService.getEmailCodeExpiry());
                     sessionService.save(session.get().setState(VERIFY_EMAIL_CODE_SENT));
                     sqsClient.send(serialiseRequest(notifyRequest));
                     return generateApiGatewayProxyResponse(200, "OK");
