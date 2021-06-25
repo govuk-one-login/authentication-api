@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.helpers;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import uk.gov.di.entity.Session;
 import uk.gov.di.helpers.IdGenerator;
 import uk.gov.di.services.CodeGeneratorService;
@@ -28,7 +29,8 @@ public class SessionHelper {
     public static void addEmailToSession(String sessionId, String emailAddress) {
         try (RedisConnectionService redis =
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, 1800)) {
-            Session session = redis.loadSession(sessionId);
+            Session session =
+                    new ObjectMapper().readValue(redis.getValue(sessionId), Session.class);
             session.setEmailAddress(emailAddress);
             redis.saveSession(session);
 

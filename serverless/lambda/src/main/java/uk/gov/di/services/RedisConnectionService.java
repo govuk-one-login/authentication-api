@@ -44,13 +44,6 @@ public class RedisConnectionService implements AutoCloseable {
         }
     }
 
-    public Session loadSession(String sessionId) throws IOException {
-        try (StatefulRedisConnection<String, String> connection = client.connect()) {
-            String result = connection.sync().get(sessionId);
-            return objectMapper.readValue(result, Session.class);
-        }
-    }
-
     public boolean sessionExists(String sessionId) {
         try (StatefulRedisConnection<String, String> connection = client.connect()) {
             return (connection.sync().exists(sessionId) == 1);

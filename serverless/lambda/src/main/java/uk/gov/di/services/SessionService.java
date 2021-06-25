@@ -1,5 +1,6 @@
 package uk.gov.di.services;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import uk.gov.di.entity.Session;
 import uk.gov.di.helpers.IdGenerator;
 
@@ -9,6 +10,7 @@ import java.util.Optional;
 public class SessionService {
 
     private static final String SESSION_ID_HEADER = "Session-Id";
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final ConfigurationService configurationService;
 
@@ -35,7 +37,8 @@ public class SessionService {
         try (RedisConnectionService redis = getRedisConnection()) {
             String sessionId = headers.get(SESSION_ID_HEADER);
             if (redis.sessionExists(sessionId)) {
-                return Optional.of(redis.loadSession(sessionId));
+                return Optional.of(
+                        OBJECT_MAPPER.readValue(redis.getValue(sessionId), Session.class));
             }
             return Optional.empty();
         } catch (Exception e) {
