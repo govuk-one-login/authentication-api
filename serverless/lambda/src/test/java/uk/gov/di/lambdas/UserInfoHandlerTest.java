@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.TokenService;
 import uk.gov.di.services.UserInfoService;
 
@@ -31,6 +32,7 @@ public class UserInfoHandlerTest {
             Optional.of("joe.bloggs@digital.cabinet-office.gov.uk");
     private final Context context = mock(Context.class);
     private final TokenService tokenService = mock(TokenService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final UserInfoService userInfoService = mock(UserInfoService.class);
     private final UserInfo userInfo =
             new UserInfo(new Subject()) {
@@ -42,7 +44,7 @@ public class UserInfoHandlerTest {
 
     @BeforeEach
     public void setUp() {
-        handler = new UserInfoHandler(tokenService, userInfoService);
+        handler = new UserInfoHandler(tokenService, userInfoService, configurationService);
     }
 
     @Test
