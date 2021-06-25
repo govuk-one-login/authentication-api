@@ -32,9 +32,9 @@ public class RedisConnectionService implements AutoCloseable {
         }
     }
 
-    public boolean sessionExists(String sessionId) {
+    public boolean keyExists(String key) {
         try (StatefulRedisConnection<String, String> connection = client.connect()) {
-            return (connection.sync().exists(sessionId) == 1);
+            return (connection.sync().exists(key) == 1);
         }
     }
 

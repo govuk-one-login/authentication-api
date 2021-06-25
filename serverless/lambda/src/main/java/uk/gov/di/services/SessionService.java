@@ -39,7 +39,7 @@ public class SessionService {
         }
         try (RedisConnectionService redis = getRedisConnection()) {
             String sessionId = headers.get(SESSION_ID_HEADER);
-            if (redis.sessionExists(sessionId)) {
+            if (redis.keyExists(sessionId)) {
                 return Optional.of(
                         OBJECT_MAPPER.readValue(redis.getValue(sessionId), Session.class));
             }
