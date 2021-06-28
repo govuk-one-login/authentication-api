@@ -8,6 +8,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.NotifyRequest;
 import uk.gov.di.entity.SendNotificationRequest;
 import uk.gov.di.entity.Session;
@@ -23,9 +24,8 @@ import uk.gov.di.validation.EmailValidation;
 import java.util.Optional;
 import java.util.Set;
 
-import static uk.gov.di.Messages.ERROR_INVALID_NOTIFICATION_TYPE;
-import static uk.gov.di.Messages.ERROR_INVALID_SESSION_ID;
 import static uk.gov.di.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
+import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class SendNotificationHandler
@@ -75,7 +75,7 @@ public class SendNotificationHandler
 
         Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
         if (session.isEmpty()) {
-            return generateApiGatewayProxyResponse(400, ERROR_INVALID_SESSION_ID);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         }
         try {
             SendNotificationRequest sendNotificationRequest =
@@ -89,7 +89,7 @@ public class SendNotificationHandler
                         return generateApiGatewayProxyResponse(400, emailErrors.toString());
                     }
                     if (!session.get().validateSession(sendNotificationRequest.getEmail())) {
-                        return generateApiGatewayProxyResponse(400, ERROR_INVALID_SESSION_ID);
+                        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
                     }
                     String code = codeGeneratorService.sixDigitCode();
 
@@ -106,7 +106,7 @@ public class SendNotificationHandler
                     sqsClient.send(serialiseRequest(notifyRequest));
                     return generateApiGatewayProxyResponse(200, "OK");
             }
-            return generateApiGatewayProxyResponse(400, ERROR_INVALID_NOTIFICATION_TYPE);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
         } catch (SdkClientException ex) {
             logger.log("Error sending message to queue: " + ex.getMessage());
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");

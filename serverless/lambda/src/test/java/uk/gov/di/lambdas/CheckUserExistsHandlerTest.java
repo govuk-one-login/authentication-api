@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.CheckUserExistsResponse;
+import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.services.SessionService;
 import uk.gov.di.services.UserService;
@@ -26,8 +27,6 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.Messages.ERROR_INVALID_SESSION_ID;
-import static uk.gov.di.Messages.ERROR_MISSING_REQUEST_PARAMETERS;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 
 class CheckUserExistsHandlerTest {
@@ -86,7 +85,7 @@ class CheckUserExistsHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfRequestIsMissingEmail() {
+    public void shouldReturn400IfRequestIsMissingEmail() throws JsonProcessingException {
         usingValidSession();
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -95,18 +94,22 @@ class CheckUserExistsHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        assertThat(result, hasBody(ERROR_MISSING_REQUEST_PARAMETERS));
+
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1001);
+        assertThat(result, hasBody(expectedResponse));
     }
 
     @Test
-    public void shouldReturn400IfRequestIsMissingSessionId() {
+    public void shouldReturn400IfRequestIsMissingSessionId() throws JsonProcessingException {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"email\": \"joe.bloggs@digital.cabinet-office.gov.uk\" }");
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        assertThat(result, hasBody(ERROR_INVALID_SESSION_ID));
+
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1000);
+        assertThat(result, hasBody(expectedResponse));
     }
 
     @Test

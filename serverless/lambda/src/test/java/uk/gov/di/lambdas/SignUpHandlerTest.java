@@ -7,6 +7,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.SignupResponse;
 import uk.gov.di.services.SessionService;
@@ -27,8 +28,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.Messages.ERROR_INVALID_SESSION_ID;
-import static uk.gov.di.Messages.ERROR_MISSING_REQUEST_PARAMETERS;
 import static uk.gov.di.entity.SessionState.TWO_FACTOR_REQUIRED;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -82,11 +81,13 @@ class SignUpHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(ERROR_INVALID_SESSION_ID));
+
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1000);
+        assertThat(result, hasBody(expectedResponse));
     }
 
     @Test
-    public void shouldReturn400IfAnyRequestParametersAreMissing() {
+    public void shouldReturn400IfAnyRequestParametersAreMissing() throws JsonProcessingException {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
@@ -94,7 +95,9 @@ class SignUpHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(ERROR_MISSING_REQUEST_PARAMETERS));
+
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1001);
+        assertThat(result, hasBody(expectedResponse));
     }
 
     @Test
