@@ -11,6 +11,7 @@ import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
+import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.AuthorizationCodeService;
 import uk.gov.di.services.ClientService;
@@ -21,6 +22,7 @@ import uk.gov.di.services.UserService;
 
 import java.util.Map;
 
+import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.helpers.RequestBodyHelper.PARSE_REQUEST_BODY;
 
@@ -63,7 +65,7 @@ public class TokenHandler
         if (!requestBody.containsKey("code")
                 || !requestBody.containsKey("client_id")
                 || !requestBody.containsKey("client_secret")) {
-            return generateApiGatewayProxyResponse(400, "Request is missing parameters");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
 
         AuthorizationCode code = new AuthorizationCode(requestBody.get("code"));

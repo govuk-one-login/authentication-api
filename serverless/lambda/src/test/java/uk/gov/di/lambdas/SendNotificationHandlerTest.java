@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.NotifyRequest;
 import uk.gov.di.entity.Session;
 import uk.gov.di.services.AwsSqsClient;
@@ -17,11 +18,9 @@ import uk.gov.di.services.CodeStorageService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.SessionService;
 import uk.gov.di.services.ValidationService;
-import uk.gov.di.validation.EmailValidation;
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -71,7 +70,8 @@ class SendNotificationHandlerTest {
 
     @Test
     void shouldReturn200AndPutMessageOnQueueForAValidRequest() throws JsonProcessingException {
-        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS))).thenReturn(Set.of());
+        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
+                .thenReturn(Optional.empty());
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_SIX_DIGIT_CODE);
         ObjectMapper objectMapper = new ObjectMapper();
@@ -96,7 +96,8 @@ class SendNotificationHandlerTest {
 
     @Test
     void shouldReturn400IfInvalidSessionProvided() {
-        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS))).thenReturn(Set.of());
+        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
+                .thenReturn(Optional.empty());
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
@@ -113,7 +114,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfRequestIsMissingEmail() {
+    public void shouldReturn400IfRequestIsMissingEmail() throws JsonProcessingException {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
@@ -121,13 +122,14 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        assertThat(result, hasBody("Request is missing parameters"));
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1001);
+        assertThat(result, hasBody(expectedResponse));
     }
 
     @Test
-    public void shouldReturn400IfEmailAddressIsInvalid() {
+    public void shouldReturn400IfEmailAddressIsInvalid() throws JsonProcessingException {
         when(validationService.validateEmailAddress(eq("joe.bloggs")))
-                .thenReturn(Set.of(EmailValidation.INCORRECT_FORMAT));
+                .thenReturn(Optional.of(ErrorResponse.ERROR_1004));
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
@@ -139,12 +141,15 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        assertTrue(result.getBody().contains(EmailValidation.INCORRECT_FORMAT.toString()));
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1004);
+
+        assertThat(result, hasBody(expectedResponse));
     }
 
     @Test
     public void shouldReturn500IfMessageCannotBeSentToQueue() throws JsonProcessingException {
-        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS))).thenReturn(Set.of());
+        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
+                .thenReturn(Optional.empty());
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_SIX_DIGIT_CODE);
         ObjectMapper objectMapper = new ObjectMapper();
@@ -165,8 +170,9 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenInvalidNotificationType() {
-        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS))).thenReturn(Set.of());
+    public void shouldReturn400WhenInvalidNotificationType() throws JsonProcessingException {
+        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
+                .thenReturn(Optional.empty());
 
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -178,7 +184,9 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        assertTrue(result.getBody().contains("Request is missing parameters"));
+
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1001);
+        assertThat(result, hasBody(expectedResponse));
 
         verify(awsSqsClient, never()).send(anyString());
         verify(codeStorageService, never()).saveEmailCode(anyString(), anyString(), anyLong());

@@ -13,15 +13,14 @@ import uk.gov.di.entity.Session;
 import uk.gov.di.services.SessionService;
 import uk.gov.di.services.UserService;
 import uk.gov.di.services.ValidationService;
-import uk.gov.di.validation.EmailValidation;
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
@@ -61,7 +60,7 @@ class CheckUserExistsHandlerTest {
                 objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
         assertEquals(
                 "joe.bloggs@digital.cabinet-office.gov.uk", checkUserExistsResponse.getEmail());
-        assertEquals(true, checkUserExistsResponse.doesUserExist());
+        assertTrue(checkUserExistsResponse.doesUserExist());
     }
 
     @Test
@@ -81,7 +80,7 @@ class CheckUserExistsHandlerTest {
                 objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
         assertEquals(
                 "joe.bloggs@digital.cabinet-office.gov.uk", checkUserExistsResponse.getEmail());
-        assertEquals(false, checkUserExistsResponse.doesUserExist());
+        assertFalse(checkUserExistsResponse.doesUserExist());
     }
 
     @Test
@@ -113,10 +112,10 @@ class CheckUserExistsHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfEmailAddressIsInvalid() {
+    public void shouldReturn400IfEmailAddressIsInvalid() throws JsonProcessingException {
         usingValidSession();
         when(validationService.validateEmailAddress(eq("joe.bloggs")))
-                .thenReturn(Set.of(EmailValidation.INCORRECT_FORMAT));
+                .thenReturn(Optional.of(ErrorResponse.ERROR_1004));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"email\": \"joe.bloggs\" }");
@@ -124,7 +123,9 @@ class CheckUserExistsHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        assertTrue(result.getBody().contains(EmailValidation.INCORRECT_FORMAT.toString()));
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1004);
+
+        assertThat(result, hasBody(expectedResponse));
     }
 
     private void usingValidSession() {

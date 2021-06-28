@@ -19,10 +19,8 @@ import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.RedisConnectionService;
 import uk.gov.di.services.SessionService;
 import uk.gov.di.services.ValidationService;
-import uk.gov.di.validation.EmailValidation;
 
 import java.util.Optional;
-import java.util.Set;
 
 import static uk.gov.di.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -82,11 +80,11 @@ public class SendNotificationHandler
                     objectMapper.readValue(input.getBody(), SendNotificationRequest.class);
             switch (sendNotificationRequest.getNotificationType()) {
                 case VERIFY_EMAIL:
-                    Set<EmailValidation> emailErrors =
+                    Optional<ErrorResponse> emailErrorResponse =
                             validationService.validateEmailAddress(
                                     sendNotificationRequest.getEmail());
-                    if (!emailErrors.isEmpty()) {
-                        return generateApiGatewayProxyResponse(400, emailErrors.toString());
+                    if (!emailErrorResponse.isEmpty()) {
+                        return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
                     }
                     if (!session.get().validateSession(sendNotificationRequest.getEmail())) {
                         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
@@ -112,7 +110,7 @@ public class SendNotificationHandler
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
         } catch (JsonProcessingException e) {
             logger.log("Error parsing request: " + e.getMessage());
-            return generateApiGatewayProxyResponse(400, "Request is missing parameters");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
     }
 
