@@ -22,7 +22,7 @@ import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
 
 public class UserExistsIntegrationTest extends IntegrationTestEndpoints {
 
-    private static final String USEREXISTS_ENDPOINT = "/userexists";
+    private static final String USEREXISTS_ENDPOINT = "/user-exists";
     private ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
