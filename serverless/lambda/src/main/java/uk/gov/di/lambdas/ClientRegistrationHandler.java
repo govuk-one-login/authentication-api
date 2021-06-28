@@ -8,10 +8,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import uk.gov.di.entity.Client;
 import uk.gov.di.entity.ClientRegistrationRequest;
+import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.services.AuthorizationCodeService;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.InMemoryClientService;
 
+import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class ClientRegistrationHandler
@@ -42,7 +44,7 @@ public class ClientRegistrationHandler
             String clientString = objectMapper.writeValueAsString(client);
             return generateApiGatewayProxyResponse(200, clientString);
         } catch (JsonProcessingException e) {
-            return generateApiGatewayProxyResponse(400, "Request is missing parameters");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
     }
 }
