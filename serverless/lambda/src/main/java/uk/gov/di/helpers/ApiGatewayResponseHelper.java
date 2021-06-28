@@ -24,7 +24,7 @@ public class ApiGatewayResponseHelper {
                     statusCode, new ObjectMapper().writeValueAsString(errorResponse));
         } catch (JsonProcessingException e) {
             LOGGER.warn("Unable to generateApiGatewayProxyErrorResponse: " + e);
-            return generateApiGatewayProxyResponse(500, "");
+            return generateApiGatewayProxyResponse(500, "Internal server error");
         }
     }
 

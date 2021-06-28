@@ -5,8 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public enum ErrorResponse {
     ERROR_1000(1000, "Session-Id is missing or invalid"),
     ERROR_1001(1001, "Request is missing parameters"),
-    ERROR_1002(1002, "Notification type is invalid"),
-    ERROR_1003(1003, "Email code provided does not match the code sent");
+    ERROR_1002(1002, "Notification type is invalid");
 
     @JsonProperty("code")
     private int code;

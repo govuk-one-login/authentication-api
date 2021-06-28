@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import uk.gov.di.entity.CheckUserExistsResponse;
+import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.UserWithEmailRequest;
 import uk.gov.di.services.AuthenticationService;
@@ -19,10 +20,9 @@ import uk.gov.di.validation.EmailValidation;
 import java.util.Optional;
 import java.util.Set;
 
-import static uk.gov.di.Messages.ERROR_INVALID_SESSION_ID;
-import static uk.gov.di.Messages.ERROR_MISSING_REQUEST_PARAMETERS;
 import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.entity.SessionState.USER_NOT_FOUND;
+import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class CheckUserExistsHandler
@@ -78,9 +78,9 @@ public class CheckUserExistsHandler
 
                 return generateApiGatewayProxyResponse(200, checkUserExistsResponseString);
             }
-            return generateApiGatewayProxyResponse(400, ERROR_INVALID_SESSION_ID);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         } catch (JsonProcessingException e) {
-            return generateApiGatewayProxyResponse(400, ERROR_MISSING_REQUEST_PARAMETERS);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
     }
 }
