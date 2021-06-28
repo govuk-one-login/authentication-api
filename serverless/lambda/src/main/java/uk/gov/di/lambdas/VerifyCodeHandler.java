@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.VerifyCodeRequest;
 import uk.gov.di.entity.VerifyCodeResponse;
@@ -16,11 +17,9 @@ import uk.gov.di.services.SessionService;
 
 import java.util.Optional;
 
-import static uk.gov.di.Messages.ERROR_INVALID_NOTIFICATION_TYPE;
-import static uk.gov.di.Messages.ERROR_INVALID_SESSION_ID;
-import static uk.gov.di.Messages.ERROR_MISMATCHED_EMAIL_CODE;
-import static uk.gov.di.Messages.ERROR_MISSING_REQUEST_PARAMETERS;
+import static uk.gov.di.entity.SessionState.EMAIL_CODE_NOT_VALID;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
+import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class VerifyCodeHandler
@@ -52,7 +51,7 @@ public class VerifyCodeHandler
 
         Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
         if (session.isEmpty()) {
-            return generateApiGatewayProxyResponse(400, ERROR_INVALID_SESSION_ID);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         }
 
         try {
@@ -64,7 +63,8 @@ public class VerifyCodeHandler
                             codeStorageService.getCodeForEmail(session.get().getEmailAddress());
 
                     if (code.isEmpty() || !code.get().equals(codeRequest.getCode())) {
-                        return generateApiGatewayProxyResponse(400, ERROR_MISMATCHED_EMAIL_CODE);
+                        return generateApiGatewayProxyResponse(
+                                200, session.get().setState(EMAIL_CODE_NOT_VALID));
                     }
                     codeStorageService.deleteCodeForEmail(session.get().getEmailAddress());
                     sessionService.save(session.get().setState(EMAIL_CODE_VERIFIED));
@@ -72,9 +72,8 @@ public class VerifyCodeHandler
                             200, new VerifyCodeResponse(session.get().getState()));
             }
         } catch (JsonProcessingException e) {
-            return generateApiGatewayProxyResponse(400, ERROR_MISSING_REQUEST_PARAMETERS);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
-
-        return generateApiGatewayProxyResponse(400, ERROR_INVALID_NOTIFICATION_TYPE);
+        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
     }
 }

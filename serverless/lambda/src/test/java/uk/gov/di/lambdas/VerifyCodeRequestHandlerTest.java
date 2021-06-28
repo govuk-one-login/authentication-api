@@ -7,6 +7,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.VerifyCodeResponse;
 import uk.gov.di.services.CodeStorageService;
@@ -19,13 +20,12 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.Messages.ERROR_INVALID_SESSION_ID;
-import static uk.gov.di.Messages.ERROR_MISMATCHED_EMAIL_CODE;
-import static uk.gov.di.Messages.ERROR_MISSING_REQUEST_PARAMETERS;
 import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.entity.SessionState.EMAIL_CODE_NOT_VALID;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -63,7 +63,8 @@ class VerifyCodeRequestHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfRequestCodeDoesNotMatchStoredCode() {
+    public void shouldReturnEmailCodeNotValidStateIfRequestCodeDoesNotMatchStoredCode()
+            throws JsonProcessingException {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
         event.setBody(
@@ -73,12 +74,14 @@ class VerifyCodeRequestHandlerTest {
         when(codeStorageService.getCodeForEmail("test@test.com")).thenReturn(Optional.of("654321"));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(ERROR_MISMATCHED_EMAIL_CODE));
+        Session sessionResponse = new ObjectMapper().readValue(result.getBody(), Session.class);
+
+        assertThat(result, hasStatus(200));
+        assertEquals(EMAIL_CODE_NOT_VALID, sessionResponse.getState());
     }
 
     @Test
-    public void shouldReturn400IfRequestIsMissingNotificationType() {
+    public void shouldReturn400IfRequestIsMissingNotificationType() throws JsonProcessingException {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
         event.setBody(format("{ \"code\": \"123456\"}"));
@@ -87,11 +90,13 @@ class VerifyCodeRequestHandlerTest {
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(ERROR_MISSING_REQUEST_PARAMETERS));
+
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1001);
+        assertThat(result, hasBody(expectedResponse));
     }
 
     @Test
-    public void shouldReturn400IfSessionIdIsInvalid() {
+    public void shouldReturn400IfSessionIdIsInvalid() throws JsonProcessingException {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
         event.setBody(
@@ -101,11 +106,12 @@ class VerifyCodeRequestHandlerTest {
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(ERROR_INVALID_SESSION_ID));
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1000);
+        assertThat(result, hasBody(expectedResponse));
     }
 
     @Test
-    public void shouldReturn400IfNotificationTypeIsNotValid() {
+    public void shouldReturn400IfNotificationTypeIsNotValid() throws JsonProcessingException {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
         event.setBody(
@@ -114,8 +120,9 @@ class VerifyCodeRequestHandlerTest {
                 .thenReturn(Optional.of(SESSION));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1001);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(ERROR_MISSING_REQUEST_PARAMETERS));
+        assertThat(result, hasBody(expectedResponse));
     }
 }
