@@ -28,24 +28,12 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
     @Test
     public void shouldCallVerifyCodeEndpointToVerifyEmailAndReturn200() throws IOException {
         String sessionId = SessionHelper.createSession();
-
         SessionHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
         String code = SessionHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
-
-        Client client = ClientBuilder.newClient();
-        WebTarget webTarget = client.target(ROOT_RESOURCE_URL + VERIFY_CODE_ENDPOINT);
-        Invocation.Builder invocationBuilder = webTarget.request(MediaType.APPLICATION_JSON);
-        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
-        headers.add("Session-Id", sessionId);
-
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.VERIFY_EMAIL, code);
 
-        Response response =
-                invocationBuilder
-                        .headers(headers)
-                        .post(Entity.entity(codeRequest, MediaType.APPLICATION_JSON));
-
+        Response response = sendRequest(sessionId, codeRequest);
         assertEquals(200, response.getStatus());
     }
 
@@ -53,27 +41,42 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
     public void shouldCallVerifyCodeEndpointToVerifyEmailAndReturn400WhenCodeHasExpired()
             throws IOException, InterruptedException {
         String sessionId = SessionHelper.createSession();
-
         SessionHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
         String code = SessionHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 2);
+        VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.VERIFY_EMAIL, code);
 
+        TimeUnit.SECONDS.sleep(3);
+        Response response = sendRequest(sessionId, codeRequest);
+
+        assertEquals(400, response.getStatus());
+        assertEquals(ERROR_MISMATCHED_EMAIL_CODE, response.readEntity(String.class));
+    }
+
+    @Test
+    public void shouldReturn400WhenUserTriesCodeThatTheyHaveAlreadyUsed() throws IOException {
+        String sessionId = SessionHelper.createSession();
+        SessionHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        String code = SessionHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
+        VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.VERIFY_EMAIL, code);
+
+        Response response = sendRequest(sessionId, codeRequest);
+        assertEquals(200, response.getStatus());
+
+        Response response2 = sendRequest(sessionId, codeRequest);
+        assertEquals(400, response2.getStatus());
+        assertEquals(ERROR_MISMATCHED_EMAIL_CODE, response2.readEntity(String.class));
+    }
+
+    private Response sendRequest(String sessionId, VerifyCodeRequest codeRequest) {
         Client client = ClientBuilder.newClient();
         WebTarget webTarget = client.target(ROOT_RESOURCE_URL + VERIFY_CODE_ENDPOINT);
         Invocation.Builder invocationBuilder = webTarget.request(MediaType.APPLICATION_JSON);
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
 
-        VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.VERIFY_EMAIL, code);
-
-        TimeUnit.SECONDS.sleep(3);
-
-        Response response =
-                invocationBuilder
-                        .headers(headers)
-                        .post(Entity.entity(codeRequest, MediaType.APPLICATION_JSON));
-
-        assertEquals(400, response.getStatus());
-        assertEquals(ERROR_MISMATCHED_EMAIL_CODE, response.readEntity(String.class));
+        return invocationBuilder
+                .headers(headers)
+                .post(Entity.entity(codeRequest, MediaType.APPLICATION_JSON));
     }
 }
