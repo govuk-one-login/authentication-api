@@ -20,8 +20,8 @@ public class CodeStorageService {
     public void saveEmailCode(String email, String code, long codeExpiryTime) {
         String encodedhash = HashHelper.hashSha256String(email);
         String key = EMAIL_KEY_PREFIX + encodedhash;
-        try (RedisConnectionService redis = redisConnectionService) {
-            redis.saveWithExpiry(key, code, codeExpiryTime);
+        try {
+            redisConnectionService.saveWithExpiry(key, code, codeExpiryTime);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
