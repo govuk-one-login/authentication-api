@@ -9,6 +9,7 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.TokenService;
 
 import java.util.UUID;
@@ -23,11 +24,12 @@ class JwksHandlerTest {
 
     private final Context context = mock(Context.class);
     private final TokenService tokenService = mock(TokenService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private JwksHandler handler;
 
     @BeforeEach
     public void setUp() {
-        handler = new JwksHandler(tokenService);
+        handler = new JwksHandler(tokenService, configurationService);
     }
 
     @Test

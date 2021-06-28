@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.jwk.JWKSet;
+import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.TokenService;
 
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -12,14 +13,17 @@ import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxy
 public class JwksHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private TokenService tokenService;
+    private final TokenService tokenService;
+    private final ConfigurationService configurationService;
 
-    public JwksHandler(TokenService tokenService) {
+    public JwksHandler(TokenService tokenService, ConfigurationService configurationService) {
         this.tokenService = tokenService;
+        this.configurationService = configurationService;
     }
 
     public JwksHandler() {
-        this.tokenService = new TokenService();
+        this.configurationService = new ConfigurationService();
+        this.tokenService = new TokenService(configurationService);
     }
 
     @Override

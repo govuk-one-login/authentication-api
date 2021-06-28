@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.services.AuthorizationCodeService;
 import uk.gov.di.services.ClientService;
+import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.InMemoryClientService;
 import uk.gov.di.services.TokenService;
 import uk.gov.di.services.UserService;
@@ -31,6 +32,7 @@ public class TokenHandlerTest {
     private final UserInfo userInfo = mock(UserInfo.class);
     private final SignedJWT signedJWT = mock(SignedJWT.class);
     private final UserService userService = mock(UserService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuthorizationCodeService authorizationCodeService =
             mock(AuthorizationCodeService.class);
     private final TokenService tokenService = mock(TokenService.class);
@@ -41,7 +43,11 @@ public class TokenHandlerTest {
     public void setUp() {
         handler =
                 new TokenHandler(
-                        clientService, authorizationCodeService, tokenService, userService);
+                        clientService,
+                        authorizationCodeService,
+                        tokenService,
+                        userService,
+                        configurationService);
     }
 
     @Test

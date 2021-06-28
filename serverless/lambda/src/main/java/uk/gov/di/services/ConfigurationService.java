@@ -39,6 +39,10 @@ public class ConfigurationService {
         return System.getenv("NOTIFY_API_KEY");
     }
 
+    public long getEmailCodeExpiry() {
+        return Long.parseLong(System.getenv().getOrDefault("EMAIL_CODE_EXPIRY", "900"));
+    }
+
     public String getNotificationTemplateId(NotificationType notificationType) {
         switch (notificationType) {
             case VERIFY_EMAIL:
