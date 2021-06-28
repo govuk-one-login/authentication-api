@@ -166,7 +166,7 @@ module "userexists" {
     aws = aws.localstack
   }
 
-  endpoint_name   = "userexists"
+  endpoint_name   = "user-exists"
   endpoint_method = "POST"
   handler_environment_variables = {
     BASE_URL = var.api_base_url

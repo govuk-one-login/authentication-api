@@ -44,6 +44,12 @@ public class RedisConnectionService implements AutoCloseable {
         }
     }
 
+    public long deleteValue(String key) {
+        try (StatefulRedisConnection<String, String> connection = client.connect()) {
+            return connection.sync().del(key);
+        }
+    }
+
     @Override
     public void close() {
         client.shutdown();

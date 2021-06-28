@@ -49,4 +49,13 @@ class CodeStorageServiceTest {
 
         assertTrue(codeStorageService.getCodeForEmail("test@test.com").isEmpty());
     }
+
+    @Test
+    public void shouldCallRedisToDeleteCodeWithHashedEmail() {
+        codeStorageService.deleteCodeForEmail("test@test.com");
+
+        verify(redisConnectionService)
+                .deleteValue(
+                        "email-code:f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a");
+    }
 }

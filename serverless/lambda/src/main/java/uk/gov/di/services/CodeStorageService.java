@@ -1,10 +1,14 @@
 package uk.gov.di.services;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.gov.di.helpers.HashHelper;
 
 import java.util.Optional;
 
 public class CodeStorageService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(CodeStorageService.class);
 
     private final RedisConnectionService redisConnectionService;
     private static final String EMAIL_KEY_PREFIX = "email-code:";
@@ -27,5 +31,15 @@ public class CodeStorageService {
         return Optional.ofNullable(
                 redisConnectionService.getValue(
                         EMAIL_KEY_PREFIX + HashHelper.hashSha256String(emailAddress)));
+    }
+
+    public void deleteCodeForEmail(String emailAddress) {
+        long numberOfKeysRemoved =
+                redisConnectionService.deleteValue(
+                        EMAIL_KEY_PREFIX + HashHelper.hashSha256String(emailAddress));
+
+        if (numberOfKeysRemoved == 0) {
+            LOGGER.info("No key was deleted for: " + emailAddress);
+        }
     }
 }
