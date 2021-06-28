@@ -15,10 +15,8 @@ import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.SessionService;
 import uk.gov.di.services.UserService;
 import uk.gov.di.services.ValidationService;
-import uk.gov.di.validation.EmailValidation;
 
 import java.util.Optional;
-import java.util.Set;
 
 import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.entity.SessionState.USER_NOT_FOUND;
@@ -59,10 +57,10 @@ public class CheckUserExistsHandler
                 UserWithEmailRequest userExistsRequest =
                         objectMapper.readValue(input.getBody(), UserWithEmailRequest.class);
                 String emailAddress = userExistsRequest.getEmail();
-                Set<EmailValidation> emailErrors =
+                Optional<ErrorResponse> errorResponse =
                         validationService.validateEmailAddress(emailAddress);
-                if (!emailErrors.isEmpty()) {
-                    return generateApiGatewayProxyResponse(400, emailErrors.toString());
+                if (!errorResponse.isEmpty()) {
+                    return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
                 }
                 boolean userExists = authenticationService.userExists(emailAddress);
                 session.get().setEmailAddress(emailAddress);

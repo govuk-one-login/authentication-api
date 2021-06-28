@@ -3,12 +3,15 @@ package uk.gov.di.lambdas;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.services.AuthorizationCodeService;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ConfigurationService;
@@ -81,12 +84,13 @@ public class TokenHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfAnyRequestParametersAreMissing() {
+    public void shouldReturn400IfAnyRequestParametersAreMissing() throws JsonProcessingException {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("code=343242&client_id=invalid-id");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        assertThat(result, hasBody("Request is missing parameters"));
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1001);
+        assertThat(result, hasBody(expectedResponse));
     }
 }
