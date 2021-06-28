@@ -20,6 +20,7 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.Messages.ERROR_INVALID_SESSION_ID;
 import static uk.gov.di.Messages.ERROR_MISMATCHED_EMAIL_CODE;
@@ -53,8 +54,8 @@ class VerifyCodeRequestHandlerTest {
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(SESSION));
         when(codeStorageService.getCodeForEmail("test@test.com")).thenReturn(Optional.of("123456"));
-
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        verify(codeStorageService).deleteCodeForEmail("test@test.com");
         assertThat(result, hasStatus(200));
         VerifyCodeResponse codeResponse =
                 new ObjectMapper().readValue(result.getBody(), VerifyCodeResponse.class);
