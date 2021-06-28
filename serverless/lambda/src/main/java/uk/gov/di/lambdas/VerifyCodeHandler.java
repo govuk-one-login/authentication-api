@@ -66,7 +66,7 @@ public class VerifyCodeHandler
                     if (code.isEmpty() || !code.get().equals(codeRequest.getCode())) {
                         return generateApiGatewayProxyResponse(400, ERROR_MISMATCHED_EMAIL_CODE);
                     }
-
+                    codeStorageService.deleteCodeForEmail(session.get().getEmailAddress());
                     sessionService.save(session.get().setState(EMAIL_CODE_VERIFIED));
                     return generateApiGatewayProxyResponse(
                             200, new VerifyCodeResponse(session.get().getState()));
