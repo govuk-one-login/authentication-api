@@ -53,3 +53,13 @@ variable "external_redis_host" {
   type    = string
   default = null
 }
+
+variable "aws_endpoint" {
+  type    = string
+  default = null
+}
+
+variable "use_localstack" {
+  type    = bool
+  default = false
+}
