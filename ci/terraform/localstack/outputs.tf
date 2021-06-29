@@ -14,6 +14,10 @@ output "openid_configuration_discovery_url" {
   value = "http://localhost:45678/restapis/${module.api_gateway_root.di_authentication_api_id}/${var.environment}/_user_request_/.well-known/openid-configuration"
 }
 
+output "login" {
+  value = "http://localhost:45678/restapis/${module.api_gateway_root.di_authentication_api_id}/${var.environment}/_user_request_/login"
+}
+
 output "jwks" {
   value = "http://localhost:45678/restapis/${module.api_gateway_root.di_authentication_api_id}/${var.environment}/_user_request_/.well-known/jwks.json"
 }
