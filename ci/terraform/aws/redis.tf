@@ -1,4 +1,6 @@
 resource "aws_elasticache_subnet_group" "sessions_store" {
+  count = var.use_localstack ? 0 : 1
+
   name       = "${var.environment}-session-store-cache-subnet"
   subnet_ids = aws_subnet.authentication.*.id
   depends_on = [
@@ -18,6 +20,8 @@ resource "random_password" "redis_password" {
 }
 
 resource "aws_elasticache_replication_group" "sessions_store" {
+  count = var.use_localstack ? 0 : 1
+
   automatic_failover_enabled    = true
   availability_zones            = data.aws_availability_zones.available.names
   replication_group_id          = "${var.environment}-sessions-store"
@@ -34,7 +38,7 @@ resource "aws_elasticache_replication_group" "sessions_store" {
   auth_token                 = random_password.redis_password.result
   apply_immediately          = true
 
-  subnet_group_name    = aws_elasticache_subnet_group.sessions_store.name
+  subnet_group_name    = aws_elasticache_subnet_group.sessions_store[0].name
   security_group_ids   = [aws_vpc.authentication.default_security_group_id]
 
   lifecycle {

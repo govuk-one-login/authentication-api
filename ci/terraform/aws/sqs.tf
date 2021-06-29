@@ -42,6 +42,7 @@ resource "aws_sqs_queue" "email_queue" {
 
 resource "time_sleep" "wait_60_seconds" {
   depends_on = [aws_sqs_queue.email_queue]
+  count      = var.use_localstack ? 0 : 1
 
   create_duration = "60s"
 }
@@ -134,6 +135,7 @@ resource "aws_lambda_function" "email_sqs_lambda" {
     variables = {
       VERIFY_EMAIL_TEMPLATE_ID = "b7dbb02f-941b-4d72-ad64-84cbe5d77c2e"
       NOTIFY_API_KEY           = var.notify_api_key
+      NOTIFY_URL               = var.notify_url
     }
   }
 

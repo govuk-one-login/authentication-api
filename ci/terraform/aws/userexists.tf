@@ -7,10 +7,10 @@ module "userexists" {
 
   handler_environment_variables = {
     BASE_URL = var.api_base_url
-    REDIS_HOST     = aws_elasticache_replication_group.sessions_store.primary_endpoint_address
-    REDIS_PORT     = aws_elasticache_replication_group.sessions_store.port
-    REDIS_PASSWORD = random_password.redis_password.result
-    REDIS_TLS      = "true"
+    REDIS_HOST     = var.use_localstack ? var.external_redis_host : aws_elasticache_replication_group.sessions_store[0].primary_endpoint_address
+    REDIS_PORT     = var.use_localstack ? var.external_redis_port : aws_elasticache_replication_group.sessions_store[0].port
+    REDIS_PASSWORD = var.use_localstack ? var.external_redis_password : random_password.redis_password.result
+    REDIS_TLS      = var.redis_use_tls
   }
   handler_function_name = "uk.gov.di.lambdas.CheckUserExistsHandler::handleRequest"
 

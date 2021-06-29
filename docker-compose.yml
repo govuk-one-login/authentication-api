@@ -25,7 +25,7 @@ services:
         - CMD
         - bash
         - -c
-        - awslocal lambda list-functions
+        - awslocal s3 ls terraform-state
       interval: 5s
       timeout: 10s
       start_period: 10s

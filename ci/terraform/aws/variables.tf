@@ -15,6 +15,11 @@ variable "notify_api_key" {
   type        = string
 }
 
+variable "notify_url" {
+  type    = string
+  default = null
+}
+
 variable "environment" {
   type    = string
   default = "test"
@@ -49,11 +54,6 @@ variable "lambda_iam_policy" {
 EOF
 }
 
-variable "external_redis_host" {
-  type    = string
-  default = null
-}
-
 variable "aws_endpoint" {
   type    = string
   default = null
@@ -62,4 +62,24 @@ variable "aws_endpoint" {
 variable "use_localstack" {
   type    = bool
   default = false
+}
+
+variable "external_redis_host" {
+  type    = string
+  default = "redis"
+}
+
+variable "external_redis_port" {
+  type    = number
+  default = 6379
+}
+
+variable "external_redis_password" {
+  type    = string
+  default = null
+}
+
+variable "redis_use_tls" {
+  type    = string
+  default = "true"
 }

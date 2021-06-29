@@ -37,3 +37,7 @@
 //output "verify_code_url" {
 //  value = module.verify_code.base_url
 //}
+
+output "api_gateway_root_id" {
+  value = aws_api_gateway_rest_api.di_authentication_api.id
+}
