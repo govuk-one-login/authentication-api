@@ -1,7 +1,9 @@
 package uk.gov.di.entity;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+@JsonFormat(shape = JsonFormat.Shape.OBJECT)
 public enum ErrorResponse {
     ERROR_1000(1000, "Session-Id is missing or invalid"),
     ERROR_1001(1001, "Request is missing parameters"),
@@ -20,7 +22,10 @@ public enum ErrorResponse {
 
     ErrorResponse(
             @JsonProperty(required = true, value = "code") int code,
-            @JsonProperty(required = true, value = "message") String message) {}
+            @JsonProperty(required = true, value = "message") String message) {
+        this.code = code;
+        this.message = message;
+    }
 
     public int getCode() {
         return code;
