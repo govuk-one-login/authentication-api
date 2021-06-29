@@ -12,7 +12,8 @@ public enum ErrorResponse {
     ERROR_1004(1004, "Email address is in an incorrect format"),
     ERROR_1005(1005, "Password is empty"),
     ERROR_1006(1006, "Password must be at least 8 characters"),
-    ERROR_1007(1007, "Password must contain a number");
+    ERROR_1007(1007, "Password must contain a number"),
+    ERROR_1008(1008, "Invalid login credentials");
 
     @JsonProperty("code")
     private int code;
