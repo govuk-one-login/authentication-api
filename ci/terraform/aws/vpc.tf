@@ -36,6 +36,23 @@ resource "aws_vpc_endpoint" "sqs" {
   private_dns_enabled = true
 }
 
+data "aws_vpc_endpoint_service" "dyanmodb" {
+  service = "dynamodb"
+}
+
+resource "aws_vpc_endpoint" "dyanmodb" {
+  vpc_endpoint_type = "Gateway"
+  vpc_id            = aws_vpc.authentication.id
+  service_name      = data.aws_vpc_endpoint_service.dyanmodb.service_name
+}
+
+resource "aws_vpc_endpoint_route_table_association" "dynamodb" {
+  vpc_endpoint_id = aws_vpc_endpoint.dyanmodb.id
+  count = length(data.aws_availability_zones.available.names)
+
+  route_table_id         = aws_route_table.private_route_table[count.index].id
+}
+
 resource "aws_subnet" "authentication_public" {
   count             = length(data.aws_availability_zones.available.names)
   vpc_id            = aws_vpc.authentication.id
