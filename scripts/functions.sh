@@ -38,8 +38,7 @@ function startup_docker() {
 
 function run_terraform() {
   pushd "$1" >/dev/null
-  rm -f terraform.tfstate
-  rm -f terraform.tfstate.backup
+  rm -fr .terraform/ *.tfstate
   terraform init -backend-config=localstack.hcl
   printf "\nRunning terraform apply (quietly - output redirected to terraform.log)...\n"
   set +e
