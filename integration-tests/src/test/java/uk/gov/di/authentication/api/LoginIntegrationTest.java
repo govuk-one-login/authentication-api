@@ -12,30 +12,30 @@ import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.SessionHelper;
-import uk.gov.di.entity.SignupRequest;
-import uk.gov.di.entity.SignupResponse;
+import uk.gov.di.entity.LoginRequest;
+import uk.gov.di.entity.LoginResponse;
 
 import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static uk.gov.di.entity.SessionState.TWO_FACTOR_REQUIRED;
+import static uk.gov.di.entity.SessionState.AUTHENTICATED;
 
-public class SignupIntegrationTest extends IntegrationTestEndpoints {
+public class LoginIntegrationTest extends IntegrationTestEndpoints {
 
-    private static final String SIGNUP_ENDPOINT = "/signup";
+    private static final String LOGIN_ENDPOINT = "/login";
     private ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
-    public void shouldCallSignupEndpointAndReturn200() throws IOException {
+    public void shouldCallLoginEndpointAndReturn200() throws IOException {
         Client client = ClientBuilder.newClient();
-        WebTarget webTarget = client.target(ROOT_RESOURCE_URL + SIGNUP_ENDPOINT);
+        WebTarget webTarget = client.target(ROOT_RESOURCE_URL + LOGIN_ENDPOINT);
         String sessionId = SessionHelper.createSession();
         Invocation.Builder invocationBuilder = webTarget.request(MediaType.APPLICATION_JSON);
         MultivaluedMap headers = new MultivaluedHashMap();
         headers.add("Session-Id", sessionId);
 
-        SignupRequest request =
-                new SignupRequest("joe.bloggs@digital.cabinet-office.gov.uk", "1-valid-password");
+        LoginRequest request =
+                new LoginRequest("joe.bloggs@digital.cabinet-office.gov.uk", "password");
 
         Response response =
                 invocationBuilder
@@ -45,8 +45,7 @@ public class SignupIntegrationTest extends IntegrationTestEndpoints {
         assertEquals(200, response.getStatus());
 
         String responseString = response.readEntity(String.class);
-        SignupResponse signupResponse =
-                objectMapper.readValue(responseString, SignupResponse.class);
-        assertEquals(TWO_FACTOR_REQUIRED, signupResponse.getSessionState());
+        LoginResponse loginResponse = objectMapper.readValue(responseString, LoginResponse.class);
+        assertEquals(AUTHENTICATED, loginResponse.getSessionState());
     }
 }
