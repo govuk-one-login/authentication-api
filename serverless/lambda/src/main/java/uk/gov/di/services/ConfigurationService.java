@@ -31,6 +31,10 @@ public class ConfigurationService {
         return Optional.ofNullable(System.getenv("REDIS_PASSWORD"));
     }
 
+    public String getEnvironment() {
+        return System.getenv("ENVIRONMENT");
+    }
+
     public long getSessionExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("SESSION_EXPIRY", "1800"));
     }
@@ -66,5 +70,9 @@ public class ConfigurationService {
 
     public Optional<String> getSqsEndpointUri() {
         return Optional.ofNullable(System.getenv("SQS_ENDPOINT"));
+    }
+
+    public Optional<String> getDynamoEndpointUri() {
+        return Optional.ofNullable(System.getenv("DYNAMO_ENDPOINT"));
     }
 }
