@@ -57,7 +57,7 @@ jobs:
             type: registry-image
             source:
               repository: hashicorp/terraform
-              tag: 0.14.10
+              tag: 1.0.0
           params:
             DEPLOYER_ROLE_ARN: ((deployer-role-arn))
             BUILD_NOTIFY_API_KEY: ((build-notify-api-key))
@@ -94,7 +94,7 @@ jobs:
             type: registry-image
             source:
               repository: hashicorp/terraform
-              tag: 0.14.10
+              tag: 1.0.0
           params:
             DEPLOYER_ROLE_ARN: ((deployer-role-arn))
             DEPLOY_ENVIRONMENT: test
