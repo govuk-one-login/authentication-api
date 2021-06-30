@@ -13,8 +13,8 @@ import uk.gov.di.entity.SignupRequest;
 import uk.gov.di.entity.SignupResponse;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.ConfigurationService;
+import uk.gov.di.services.DynamoService;
 import uk.gov.di.services.SessionService;
-import uk.gov.di.services.UserService;
 import uk.gov.di.services.ValidationService;
 
 import java.util.Optional;
@@ -41,9 +41,14 @@ public class SignUpHandler
     }
 
     public SignUpHandler() {
-        this.authenticationService = new UserService();
+        ConfigurationService configurationService = new ConfigurationService();
+        this.authenticationService =
+                new DynamoService(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEnvironment(),
+                        configurationService.getDynamoEndpointUri());
         this.validationService = new ValidationService();
-        sessionService = new SessionService(new ConfigurationService());
+        sessionService = new SessionService(configurationService);
     }
 
     @Override

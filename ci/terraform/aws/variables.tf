@@ -64,6 +64,12 @@ variable "aws_dynamodb_endpoint" {
   default = null
 }
 
+variable "lambda_dynamo_endpoint" {
+  type    = string
+  default = "http://dynamodb:8000"
+  description = "The endpoint that the Lambda must use to connect to DynamoDB API. This may or may not be the same as aws_dynamodb_endpoint"
+}
+
 variable "use_localstack" {
   type    = bool
   default = false

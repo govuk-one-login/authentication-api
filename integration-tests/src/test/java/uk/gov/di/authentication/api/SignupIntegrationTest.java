@@ -11,6 +11,7 @@ import jakarta.ws.rs.core.MultivaluedHashMap;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.SessionHelper;
 import uk.gov.di.entity.SignupRequest;
 import uk.gov.di.entity.SignupResponse;
@@ -18,6 +19,7 @@ import uk.gov.di.entity.SignupResponse;
 import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.entity.SessionState.TWO_FACTOR_REQUIRED;
 
 public class SignupIntegrationTest extends IntegrationTestEndpoints {
@@ -48,5 +50,6 @@ public class SignupIntegrationTest extends IntegrationTestEndpoints {
         SignupResponse signupResponse =
                 objectMapper.readValue(responseString, SignupResponse.class);
         assertEquals(TWO_FACTOR_REQUIRED, signupResponse.getSessionState());
+        assertTrue(DynamoHelper.userExists("joe.bloggs@digital.cabinet-office.gov.uk"));
     }
 }
