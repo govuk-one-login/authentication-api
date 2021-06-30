@@ -59,6 +59,11 @@ variable "aws_endpoint" {
   default = null
 }
 
+variable "aws_dynamodb_endpoint" {
+  type    = string
+  default = null
+}
+
 variable "use_localstack" {
   type    = bool
   default = false

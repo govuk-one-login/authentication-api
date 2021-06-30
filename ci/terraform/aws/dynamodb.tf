@@ -1,6 +1,4 @@
 resource "aws_dynamodb_table" "user_credentials_table" {
-  count = var.use_localstack ? 0 : 1
-
   name           = "${var.environment}-user-credentials"
   billing_mode   = "PROVISIONED"
   write_capacity = 5
@@ -32,8 +30,6 @@ resource "aws_dynamodb_table" "user_credentials_table" {
 }
 
 resource "aws_dynamodb_table" "user_profile_table" {
-  count = var.use_localstack ? 0 : 1
-
   name           = "${var.environment}-user-profile"
   billing_mode   = "PROVISIONED"
   write_capacity = 5
@@ -82,8 +78,8 @@ data "aws_iam_policy_document" "dynamo_policy_document" {
       "dynamodb:PutItem",
     ]
     resources = [
-      aws_dynamodb_table.user_credentials_table[0].arn,
-      aws_dynamodb_table.user_profile_table[0].arn
+      aws_dynamodb_table.user_credentials_table.arn,
+      aws_dynamodb_table.user_profile_table.arn
     ]
   }
 }
