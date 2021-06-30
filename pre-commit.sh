@@ -70,7 +70,7 @@ if [[ ${RUN_INTEGRATION} -eq 1 ]]; then
   build_and_test_exit_code=$?
   set -e
 
-  stop_docker_services aws redis
+  stop_docker_services aws redis dynamodb
 fi
 
 if [[ ${IN_GITHUB_ACTIONS} -eq 0 ]]; then

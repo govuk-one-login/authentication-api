@@ -41,5 +41,18 @@ services:
     networks:
       - di-authentication-api-net
 
+  dynamodb:
+    command: "-jar DynamoDBLocal.jar -sharedDb -optimizeDbBeforeStartup -dbPath ."
+    working_dir: /home/dynamodblocal
+    image: amazon/dynamodb-local:latest
+    healthcheck:
+      test: curl http://localhost:8000
+      interval: 5s
+      timeout: 1m
+    ports:
+      - 8000:8000
+    networks:
+      - di-authentication-api-net
+
 networks:
   di-authentication-api-net:

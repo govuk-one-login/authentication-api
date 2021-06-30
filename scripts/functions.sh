@@ -69,11 +69,11 @@ function funky_started() {
 }
 
 startup() {
-  stop_docker_services aws redis
+  stop_docker_services aws redis dynamodb
   printf "\nStarting di-authentication-api...\n"
   ./gradlew clean build -x test
   printf "\nStarting Docker services...\n"
-  startup_docker aws redis
+  startup_docker aws redis dynamodb
   run_terraform ci/terraform/aws
   if [[ ${IN_GITHUB_ACTIONS} -eq 0 ]]; then
     funky_started
