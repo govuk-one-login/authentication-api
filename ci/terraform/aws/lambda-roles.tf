@@ -1,39 +1,14 @@
 resource "aws_iam_role" "lambda_iam_role" {
-  name = "${var.environment}-${var.name}-sqs-lambda-role"
+  name = "${var.environment}-standard-lambda-role"
 
   assume_role_policy = var.lambda_iam_policy
-
   tags = {
     environment = var.environment
   }
 }
 
-resource "aws_lambda_function" "sqs_lambda" {
-  filename      = var.lambda_zip_file
-  function_name = "${var.environment}-${var.name}-sqs-lambda"
-  role          = aws_iam_role.lambda_iam_role.arn
-  handler       = var.handler_function_name
-  timeout       = 30
-  memory_size   = 512
-
-  source_code_hash = filebase64sha256(var.lambda_zip_file)
-  vpc_config {
-    security_group_ids = [var.security_group_id]
-    subnet_ids = var.subnet_id
-  }
-  environment {
-    variables = var.handler_environment_variables
-  }
-
-  runtime = var.handler_runtime
-
-  tags = {
-    environment = var.environment
-  }
-}
-
-resource "aws_iam_policy" "lambda_logging_policy" {
-  name        = "${var.environment}-${var.name}-sqs-lambda-logging"
+resource "aws_iam_policy" "endpoint_logging_policy" {
+  name        = "${var.environment}-standard-lambda-logging"
   path        = "/"
   description = "IAM policy for logging from a lambda"
 
@@ -58,11 +33,11 @@ EOF
 
 resource "aws_iam_role_policy_attachment" "lambda_logs" {
   role       = aws_iam_role.lambda_iam_role.name
-  policy_arn = aws_iam_policy.lambda_logging_policy.arn
+  policy_arn = aws_iam_policy.endpoint_logging_policy.arn
 }
 
-resource "aws_iam_policy" "lambda_networking_policy" {
-  name        = "${var.environment}-${var.name}-sqs-lambda-networking"
+resource "aws_iam_policy" "endpoint_networking_policy" {
+  name        = "${var.environment}-standard-lambda-networking"
   path        = "/"
   description = "IAM policy for managing VPC connection for a lambda"
 
@@ -88,5 +63,24 @@ EOF
 
 resource "aws_iam_role_policy_attachment" "lambda_networking" {
   role       = aws_iam_role.lambda_iam_role.name
-  policy_arn = aws_iam_policy.lambda_networking_policy.arn
+  policy_arn = aws_iam_policy.endpoint_networking_policy.arn
+}
+
+resource "aws_iam_role" "sqs_lambda_iam_role" {
+  name = "${var.environment}-sqs-lambda-role"
+
+  assume_role_policy = var.lambda_iam_policy
+  tags = {
+    environment = var.environment
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "sqs_lambda_logs" {
+  role       = aws_iam_role.sqs_lambda_iam_role.name
+  policy_arn = aws_iam_policy.endpoint_logging_policy.arn
+}
+
+resource "aws_iam_role_policy_attachment" "sqs_lambda_networking" {
+  role       = aws_iam_role.sqs_lambda_iam_role.name
+  policy_arn = aws_iam_policy.endpoint_networking_policy.arn
 }
