@@ -13,3 +13,4 @@ build
 **/bin
 .java-version
 **/terraform.log
+ci/terraform/**/*.plan

@@ -61,6 +61,8 @@ fi
 if [[ ${RUN_INTEGRATION} -eq 1 ]]; then
   export TF_VAR_notify_url="http://notify.internal:8888"
   export TF_VAR_notify_api_key="my_test_key-$(uuidgen)-$(uuidgen)"
+  export AWS_ACCESS_KEY_ID="mock-access-key"
+  export AWS_SECRET_ACCESS_KEY="mock-secret-key"
   startup
 
   set +e
@@ -68,7 +70,7 @@ if [[ ${RUN_INTEGRATION} -eq 1 ]]; then
   build_and_test_exit_code=$?
   set -e
 
-  stop_docker_services aws redis
+  stop_docker_services aws redis dynamodb
 fi
 
 if [[ ${IN_GITHUB_ACTIONS} -eq 0 ]]; then

@@ -1,10 +1,7 @@
 package uk.gov.di.services;
 
 import org.junit.jupiter.api.Test;
-import uk.gov.di.validation.EmailValidation;
-import uk.gov.di.validation.PasswordValidation;
-
-import java.util.Set;
+import uk.gov.di.entity.ErrorResponse;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -15,8 +12,7 @@ public class ValidationServiceTest {
 
     @Test
     public void shouldRejectEmptyEmail() {
-        assertEquals(
-                Set.of(EmailValidation.EMPTY_EMAIL), validationService.validateEmailAddress(""));
+        assertEquals(ErrorResponse.ERROR_1003, validationService.validateEmailAddress("").get());
     }
 
     @Test
@@ -26,14 +22,13 @@ public class ValidationServiceTest {
         var newlinesEmail = System.lineSeparator() + System.lineSeparator();
 
         assertEquals(
-                Set.of(EmailValidation.EMPTY_EMAIL),
-                validationService.validateEmailAddress(spacesEmail));
+                ErrorResponse.ERROR_1003,
+                validationService.validateEmailAddress(spacesEmail).get());
         assertEquals(
-                Set.of(EmailValidation.EMPTY_EMAIL),
-                validationService.validateEmailAddress(tabsEmail));
+                ErrorResponse.ERROR_1003, validationService.validateEmailAddress(tabsEmail).get());
         assertEquals(
-                Set.of(EmailValidation.EMPTY_EMAIL),
-                validationService.validateEmailAddress(newlinesEmail));
+                ErrorResponse.ERROR_1003,
+                validationService.validateEmailAddress(newlinesEmail).get());
     }
 
     @Test
@@ -43,14 +38,13 @@ public class ValidationServiceTest {
         var noDotsEmail = "test@examplegovuk";
 
         assertEquals(
-                Set.of(EmailValidation.INCORRECT_FORMAT),
-                validationService.validateEmailAddress(noAtsEmail));
+                ErrorResponse.ERROR_1004, validationService.validateEmailAddress(noAtsEmail).get());
         assertEquals(
-                Set.of(EmailValidation.INCORRECT_FORMAT),
-                validationService.validateEmailAddress(multipleAtsEmail));
+                ErrorResponse.ERROR_1004,
+                validationService.validateEmailAddress(multipleAtsEmail).get());
         assertEquals(
-                Set.of(EmailValidation.INCORRECT_FORMAT),
-                validationService.validateEmailAddress(noDotsEmail));
+                ErrorResponse.ERROR_1004,
+                validationService.validateEmailAddress(noDotsEmail).get());
     }
 
     @Test
@@ -65,32 +59,16 @@ public class ValidationServiceTest {
         var shortPassword = "passw0r";
 
         assertEquals(
-                Set.of(PasswordValidation.PASSWORD_TOO_SHORT),
-                validationService.validatePassword(shortPassword));
+                ErrorResponse.ERROR_1006, validationService.validatePassword(shortPassword).get());
     }
 
     @Test
     public void shouldRejectEmptyPassword() {
-        assertEquals(
-                Set.of(PasswordValidation.EMPTY_PASSWORD_FIELD),
-                validationService.validatePassword(""));
-    }
-
-    @Test
-    public void shouldGiveMultipleErrorsForShortPasswordWithNoNumbers() {
-        var shortPasswordWithNoNumbers = "pass";
-
-        assertEquals(
-                Set.of(
-                        PasswordValidation.NO_NUMBER_INCLUDED,
-                        PasswordValidation.PASSWORD_TOO_SHORT),
-                validationService.validatePassword(shortPasswordWithNoNumbers));
+        assertEquals(ErrorResponse.ERROR_1005, validationService.validatePassword("").get());
     }
 
     @Test
     public void shouldNotThrowNullPointerIfPasswordInputsAreNull() {
-        assertEquals(
-                Set.of(PasswordValidation.EMPTY_PASSWORD_FIELD),
-                validationService.validatePassword(null));
+        assertEquals(ErrorResponse.ERROR_1005, validationService.validatePassword(null).get());
     }
 }

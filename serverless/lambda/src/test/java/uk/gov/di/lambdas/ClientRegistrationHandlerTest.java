@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.Client;
+import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.services.ClientService;
 
 import java.util.List;
@@ -61,13 +62,14 @@ class ClientRegistrationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfAnyRequestParametersAreMissing() {
+    public void shouldReturn400IfAnyRequestParametersAreMissing() throws JsonProcessingException {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
                 "{\"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"] }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody("Request is missing parameters"));
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1001);
+        assertThat(result, hasBody(expectedResponse));
     }
 }

@@ -1,10 +1,8 @@
 package uk.gov.di.services;
 
-import uk.gov.di.validation.EmailValidation;
-import uk.gov.di.validation.PasswordValidation;
+import uk.gov.di.entity.ErrorResponse;
 
-import java.util.EnumSet;
-import java.util.Set;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 public class ValidationService {
@@ -12,30 +10,26 @@ public class ValidationService {
     private static final Pattern EMAIL_REGEX = Pattern.compile("[^@]+@[^@]+\\.[^@]*");
     private static final Pattern PASSWORD_REGEX = Pattern.compile(".*\\d.*");
 
-    public Set<EmailValidation> validateEmailAddress(String email) {
-        Set<EmailValidation> emailErrors = EnumSet.noneOf(EmailValidation.class);
+    public Optional<ErrorResponse> validateEmailAddress(String email) {
         if (email.isBlank()) {
-            emailErrors.add(EmailValidation.EMPTY_EMAIL);
+            return Optional.of(ErrorResponse.ERROR_1003);
         }
         if (!email.isBlank() && !EMAIL_REGEX.matcher(email).matches()) {
-            emailErrors.add(EmailValidation.INCORRECT_FORMAT);
+            return Optional.of(ErrorResponse.ERROR_1004);
         }
-        return emailErrors;
+        return Optional.empty();
     }
 
-    public Set<PasswordValidation> validatePassword(String password) {
-        Set<PasswordValidation> passwordErrors = EnumSet.noneOf(PasswordValidation.class);
-        boolean passwordIsEmpty = false;
+    public Optional<ErrorResponse> validatePassword(String password) {
         if (password == null || password.isBlank()) {
-            passwordErrors.add(PasswordValidation.EMPTY_PASSWORD_FIELD);
-            passwordIsEmpty = true;
+            return Optional.of(ErrorResponse.ERROR_1005);
         }
-        if (!passwordIsEmpty && password.length() < 8) {
-            passwordErrors.add(PasswordValidation.PASSWORD_TOO_SHORT);
+        if (password.length() < 8) {
+            return Optional.of(ErrorResponse.ERROR_1006);
         }
-        if (!passwordIsEmpty && !PASSWORD_REGEX.matcher(password).matches()) {
-            passwordErrors.add(PasswordValidation.NO_NUMBER_INCLUDED);
+        if (!PASSWORD_REGEX.matcher(password).matches()) {
+            return Optional.of(ErrorResponse.ERROR_1007);
         }
-        return passwordErrors;
+        return Optional.empty();
     }
 }

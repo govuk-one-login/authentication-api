@@ -7,32 +7,27 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.SignupResponse;
 import uk.gov.di.services.SessionService;
 import uk.gov.di.services.UserService;
 import uk.gov.di.services.ValidationService;
 
-import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.Messages.ERROR_INVALID_SESSION_ID;
-import static uk.gov.di.Messages.ERROR_MISSING_REQUEST_PARAMETERS;
 import static uk.gov.di.entity.SessionState.TWO_FACTOR_REQUIRED;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
-import static uk.gov.di.validation.PasswordValidation.NO_NUMBER_INCLUDED;
 
 class SignUpHandlerTest {
 
@@ -50,7 +45,7 @@ class SignUpHandlerTest {
     @Test
     public void shouldReturn200IfSignUpIsSuccessful() throws JsonProcessingException {
         String password = "computer-1";
-        when(validationService.validatePassword(eq(password))).thenReturn(Collections.EMPTY_SET);
+        when(validationService.validatePassword(eq(password))).thenReturn(Optional.empty());
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
@@ -75,18 +70,20 @@ class SignUpHandlerTest {
     @Test
     public void shouldReturn400IfSessionIdMissing() throws JsonProcessingException {
         String password = "computer-1";
-        when(validationService.validatePassword(eq(password))).thenReturn(Collections.EMPTY_SET);
+        when(validationService.validatePassword(eq(password))).thenReturn(Optional.empty());
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"password\": \"computer-1\", \"email\": \"joe.bloggs@test.com\" }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(ERROR_INVALID_SESSION_ID));
+
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1000);
+        assertThat(result, hasBody(expectedResponse));
     }
 
     @Test
-    public void shouldReturn400IfAnyRequestParametersAreMissing() {
+    public void shouldReturn400IfAnyRequestParametersAreMissing() throws JsonProcessingException {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
@@ -94,14 +91,16 @@ class SignUpHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(ERROR_MISSING_REQUEST_PARAMETERS));
+
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1001);
+        assertThat(result, hasBody(expectedResponse));
     }
 
     @Test
-    public void shouldReturn400IfPasswordFailsValidation() {
+    public void shouldReturn400IfPasswordFailsValidation() throws JsonProcessingException {
         String password = "computer";
         when(validationService.validatePassword(eq(password)))
-                .thenReturn(Set.of(NO_NUMBER_INCLUDED));
+                .thenReturn(Optional.of(ErrorResponse.ERROR_1007));
 
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -110,7 +109,10 @@ class SignUpHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertTrue(result.getBody().contains(NO_NUMBER_INCLUDED.toString()));
+
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1007);
+
+        assertThat(result, hasBody(expectedResponse));
     }
 
     private void usingValidSession() {
