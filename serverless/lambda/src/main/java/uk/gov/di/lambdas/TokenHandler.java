@@ -7,18 +7,18 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
-import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.AuthorizationCodeService;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ConfigurationService;
+import uk.gov.di.services.DynamoService;
 import uk.gov.di.services.InMemoryClientService;
 import uk.gov.di.services.TokenService;
-import uk.gov.di.services.UserService;
 
 import java.util.Map;
 
@@ -53,7 +53,11 @@ public class TokenHandler
         clientService = new InMemoryClientService(new AuthorizationCodeService());
         authorizationCodeService = new AuthorizationCodeService();
         tokenService = new TokenService(configurationService);
-        authenticationService = new UserService();
+        this.authenticationService =
+                new DynamoService(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEnvironment(),
+                        configurationService.getDynamoEndpointUri());
     }
 
     @Override
@@ -83,8 +87,8 @@ public class TokenHandler
         }
 
         AccessToken accessToken = tokenService.issueToken(email);
-        UserInfo userInfo = authenticationService.getInfoForEmail(email);
-        SignedJWT idToken = tokenService.generateIDToken(clientID, userInfo.getSubject());
+        Subject subject = authenticationService.getSubjectFromEmail(email);
+        SignedJWT idToken = tokenService.generateIDToken(clientID, subject);
 
         OIDCTokens oidcTokens = new OIDCTokens(idToken, accessToken, null);
         OIDCTokenResponse tokenResponse = new OIDCTokenResponse(oidcTokens);

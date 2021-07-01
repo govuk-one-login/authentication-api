@@ -37,7 +37,7 @@ public class SignupIntegrationTest extends IntegrationTestEndpoints {
         headers.add("Session-Id", sessionId);
 
         SignupRequest request =
-                new SignupRequest("joe.bloggs@digital.cabinet-office.gov.uk", "1-valid-password");
+                new SignupRequest("joe.bloggs+5@digital.cabinet-office.gov.uk", "1-valid-password");
 
         Response response =
                 invocationBuilder
@@ -50,6 +50,6 @@ public class SignupIntegrationTest extends IntegrationTestEndpoints {
         SignupResponse signupResponse =
                 objectMapper.readValue(responseString, SignupResponse.class);
         assertEquals(TWO_FACTOR_REQUIRED, signupResponse.getSessionState());
-        assertTrue(DynamoHelper.userExists("joe.bloggs@digital.cabinet-office.gov.uk"));
+        assertTrue(DynamoHelper.userExists("joe.bloggs+5@digital.cabinet-office.gov.uk"));
     }
 }

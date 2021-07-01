@@ -8,6 +8,7 @@ import jakarta.ws.rs.client.WebTarget;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.helpers.DynamoHelper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -19,7 +20,7 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
     public void shouldCallTokenResourceAndReturn200() {
         Client client = ClientBuilder.newClient();
         WebTarget webTarget = client.target(ROOT_RESOURCE_URL + TOKEN_ENDPOINT);
-
+        DynamoHelper.signUp("joe.bloggs@digital.cabinet-office.gov.uk", "password-1");
         Invocation.Builder invocationBuilder = webTarget.request(MediaType.TEXT_PLAIN);
         Response response =
                 invocationBuilder.post(

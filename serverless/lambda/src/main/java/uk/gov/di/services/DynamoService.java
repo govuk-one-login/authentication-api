@@ -6,7 +6,6 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.entity.UserCredentials;
@@ -92,8 +91,7 @@ public class DynamoService implements AuthenticationService {
         return false;
     }
 
-    @Override
-    public UserInfo getInfoForEmail(String email) {
-        return null;
+    public Subject getSubjectFromEmail(String email) {
+        return new Subject(userProfileMapper.load(UserProfile.class, email).getSubjectID());
     }
 }
