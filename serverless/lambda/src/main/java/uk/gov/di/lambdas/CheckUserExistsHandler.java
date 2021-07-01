@@ -12,8 +12,8 @@ import uk.gov.di.entity.Session;
 import uk.gov.di.entity.UserWithEmailRequest;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.ConfigurationService;
+import uk.gov.di.services.DynamoService;
 import uk.gov.di.services.SessionService;
-import uk.gov.di.services.UserService;
 import uk.gov.di.services.ValidationService;
 
 import java.util.Optional;
@@ -41,9 +41,14 @@ public class CheckUserExistsHandler
     }
 
     public CheckUserExistsHandler() {
+        ConfigurationService configurationService = new ConfigurationService();
         this.validationService = new ValidationService();
-        this.authenticationService = new UserService();
-        this.sessionService = new SessionService(new ConfigurationService());
+        this.sessionService = new SessionService(configurationService);
+        this.authenticationService =
+                new DynamoService(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEnvironment(),
+                        configurationService.getDynamoEndpointUri());
     }
 
     @Override
