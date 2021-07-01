@@ -6,6 +6,8 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import de.mkammerer.argon2.Argon2;
+import de.mkammerer.argon2.Argon2Factory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.entity.UserCredentials;
@@ -62,11 +64,12 @@ public class DynamoService implements AuthenticationService {
     public void signUp(String email, String password) {
         String dateTime = LocalDateTime.now().toString();
         Subject subject = new Subject();
+        String hashedPassword = hashPassword(password);
         UserCredentials userCredentials =
                 new UserCredentials()
                         .setEmail(email)
                         .setSubjectID(subject.toString())
-                        .setPassword(password)
+                        .setPassword(hashedPassword)
                         .setCreated(dateTime)
                         .setUpdated(dateTime);
         UserProfile userProfile =
@@ -83,7 +86,7 @@ public class DynamoService implements AuthenticationService {
     @Override
     public boolean login(String email, String password) {
         UserCredentials userCredentials = userCredentialsMapper.load(UserCredentials.class, email);
-        return userCredentials.getPassword().equals(password);
+        return verifyPassword(userCredentials.getPassword(), password);
     }
 
     @Override
@@ -93,5 +96,17 @@ public class DynamoService implements AuthenticationService {
 
     public Subject getSubjectFromEmail(String email) {
         return new Subject(userProfileMapper.load(UserProfile.class, email).getSubjectID());
+    }
+
+    private static final String hashPassword(String password) {
+        Argon2 argon2 = Argon2Factory.create();
+        String hashedPassword = argon2.hash(1, 15625, 2, password.toCharArray());
+        return hashedPassword;
+    }
+
+    private static final boolean verifyPassword(String hashedPassword, String password) {
+        Argon2 argon2 = Argon2Factory.create();
+        boolean verified = argon2.verify(hashedPassword, password.toCharArray());
+        return verified;
     }
 }
