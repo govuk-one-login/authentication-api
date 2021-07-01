@@ -12,8 +12,8 @@ import uk.gov.di.entity.LoginResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.ConfigurationService;
+import uk.gov.di.services.DynamoService;
 import uk.gov.di.services.SessionService;
-import uk.gov.di.services.UserService;
 
 import java.util.Optional;
 
@@ -35,8 +35,13 @@ public class LoginHandler
     }
 
     public LoginHandler() {
-        this.sessionService = new SessionService(new ConfigurationService());
-        this.authenticationService = new UserService();
+        ConfigurationService configurationService = new ConfigurationService();
+        this.sessionService = new SessionService(configurationService);
+        this.authenticationService =
+                new DynamoService(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEnvironment(),
+                        configurationService.getDynamoEndpointUri());
     }
 
     @Override
@@ -49,6 +54,10 @@ public class LoginHandler
 
         try {
             LoginRequest loginRequest = objectMapper.readValue(input.getBody(), LoginRequest.class);
+            boolean userHasAccount = authenticationService.userExists(loginRequest.getEmail());
+            if (!userHasAccount) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
+            }
             boolean hasValidCredentials =
                     authenticationService.login(
                             loginRequest.getEmail(), loginRequest.getPassword());

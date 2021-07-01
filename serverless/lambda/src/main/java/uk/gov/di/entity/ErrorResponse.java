@@ -14,7 +14,8 @@ public enum ErrorResponse {
     ERROR_1006(1006, "Password must be at least 8 characters"),
     ERROR_1007(1007, "Password must contain a number"),
     ERROR_1008(1008, "Invalid login credentials"),
-    ERROR_1009(1009, "An account with this email address already exists");
+    ERROR_1009(1009, "An account with this email address already exists"),
+    ERROR_1010(1010, "An account with this email address does not exist");
 
     @JsonProperty("code")
     private int code;
