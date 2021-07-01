@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.CheckUserExistsResponse;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
+import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.SessionService;
-import uk.gov.di.services.UserService;
 import uk.gov.di.services.ValidationService;
 
 import java.util.Map;
@@ -31,7 +31,7 @@ import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 class CheckUserExistsHandlerTest {
 
     private final Context context = mock(Context.class);
-    private final UserService userService = mock(UserService.class);
+    private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ValidationService validationService = mock(ValidationService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private CheckUserExistsHandler handler;
@@ -40,14 +40,16 @@ class CheckUserExistsHandlerTest {
 
     @BeforeEach
     public void setup() {
-        handler = new CheckUserExistsHandler(validationService, userService, sessionService);
+        handler =
+                new CheckUserExistsHandler(
+                        validationService, authenticationService, sessionService);
         sessionId = UUID.randomUUID().toString();
     }
 
     @Test
     public void shouldReturn200IfUserExists() throws JsonProcessingException {
         usingValidSession();
-        when(userService.userExists(eq("joe.bloggs@digital.cabinet-office.gov.uk")))
+        when(authenticationService.userExists(eq("joe.bloggs@digital.cabinet-office.gov.uk")))
                 .thenReturn(true);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"email\": \"joe.bloggs@digital.cabinet-office.gov.uk\" }");
@@ -66,7 +68,7 @@ class CheckUserExistsHandlerTest {
     @Test
     public void shouldReturn200IfUserDoesNotExist() throws JsonProcessingException {
         usingValidSession();
-        when(userService.userExists(eq("joe.bloggs@digital.cabinet-office.gov.uk")))
+        when(authenticationService.userExists(eq("joe.bloggs@digital.cabinet-office.gov.uk")))
                 .thenReturn(false);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();

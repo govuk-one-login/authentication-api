@@ -1,17 +1,15 @@
 package uk.gov.di.services;
 
-import com.nimbusds.openid.connect.sdk.claims.UserInfo;
+import com.nimbusds.oauth2.sdk.id.Subject;
 
 public interface AuthenticationService {
-    public boolean userExists(String email);
+    boolean userExists(String email);
 
-    public void signUp(String email, String password);
+    void signUp(String email, String password);
 
-    public boolean verifyAccessCode(String username, String code);
+    boolean login(String email, String password);
 
-    public boolean login(String email, String password);
+    boolean isEmailVerificationRequired();
 
-    public boolean isEmailVerificationRequired();
-
-    public UserInfo getInfoForEmail(String email);
+    Subject getSubjectFromEmail(String email);
 }
