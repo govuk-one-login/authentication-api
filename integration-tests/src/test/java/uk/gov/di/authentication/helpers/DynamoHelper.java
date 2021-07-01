@@ -16,4 +16,8 @@ public class DynamoHelper {
     public static boolean userExists(String email) {
         return DYNAMO_SERVICE.userExists(email);
     }
+
+    public static void signUp(String email, String password) {
+        DYNAMO_SERVICE.signUp(email, password);
+    }
 }

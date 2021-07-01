@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.SignupResponse;
+import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.SessionService;
-import uk.gov.di.services.UserService;
 import uk.gov.di.services.ValidationService;
 
 import java.util.Map;
@@ -32,27 +32,28 @@ import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 class SignUpHandlerTest {
 
     private final Context context = mock(Context.class);
-    private final UserService userService = mock(UserService.class);
+    private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ValidationService validationService = mock(ValidationService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private SignUpHandler handler;
 
     @BeforeEach
     public void setUp() {
-        handler = new SignUpHandler(userService, validationService, sessionService);
+        handler = new SignUpHandler(authenticationService, validationService, sessionService);
     }
 
     @Test
     public void shouldReturn200IfSignUpIsSuccessful() throws JsonProcessingException {
         String password = "computer-1";
         when(validationService.validatePassword(eq(password))).thenReturn(Optional.empty());
+        when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(false);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
         event.setBody("{ \"password\": \"computer-1\", \"email\": \"joe.bloggs@test.com\" }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        verify(userService).signUp(eq("joe.bloggs@test.com"), eq(password));
+        verify(authenticationService).signUp(eq("joe.bloggs@test.com"), eq(password));
         verify(sessionService)
                 .save(
                         argThat(
@@ -111,6 +112,25 @@ class SignUpHandlerTest {
         assertThat(result, hasStatus(400));
 
         String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1007);
+
+        assertThat(result, hasBody(expectedResponse));
+    }
+
+    @Test
+    public void shouldReturn400IfUserAlreadyExists() throws JsonProcessingException {
+        String password = "computer-1";
+        when(validationService.validatePassword(eq(password))).thenReturn(Optional.empty());
+        when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(true);
+
+        usingValidSession();
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", "a-session-id"));
+        event.setBody("{ \"password\": \"computer\", \"email\": \"joe.bloggs@test.com\" }");
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1009);
 
         assertThat(result, hasBody(expectedResponse));
     }

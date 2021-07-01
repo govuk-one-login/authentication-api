@@ -29,12 +29,11 @@ public class UserService implements AuthenticationService {
     }
 
     @Override
-    public boolean signUp(String email, String password) {
+    public void signUp(String email, String password) {
         credentialsMap.put(email, password);
         UserInfo userInfo = new UserInfo(new Subject());
         userInfo.setEmailAddress(email);
         userInfoMap.put(email, userInfo);
-        return true;
     }
 
     @Override

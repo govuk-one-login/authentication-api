@@ -60,7 +60,7 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
-    public boolean signUp(String email, String password) {
+    public void signUp(String email, String password) {
         String dateTime = LocalDateTime.now().toString();
         Subject subject = new Subject();
         UserCredentials userCredentials =
@@ -79,7 +79,6 @@ public class DynamoService implements AuthenticationService {
                         .setUpdated(dateTime);
         userCredentialsMapper.save(userCredentials);
         userProfileMapper.save(userProfile);
-        return true;
     }
 
     @Override

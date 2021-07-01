@@ -69,6 +69,9 @@ public class SignUpHandler
                     validationService.validatePassword(signupRequest.getPassword());
 
             if (passwordValidationErrors.isEmpty()) {
+                if (authenticationService.userExists(signupRequest.getEmail())) {
+                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
+                }
                 authenticationService.signUp(signupRequest.getEmail(), signupRequest.getPassword());
 
                 sessionService.save(
