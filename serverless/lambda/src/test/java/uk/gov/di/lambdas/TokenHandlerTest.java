@@ -12,12 +12,12 @@ import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.ErrorResponse;
+import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.AuthorizationCodeService;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.InMemoryClientService;
 import uk.gov.di.services.TokenService;
-import uk.gov.di.services.UserService;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -34,7 +34,7 @@ public class TokenHandlerTest {
     private final Context context = mock(Context.class);
     private final UserInfo userInfo = mock(UserInfo.class);
     private final SignedJWT signedJWT = mock(SignedJWT.class);
-    private final UserService userService = mock(UserService.class);
+    private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuthorizationCodeService authorizationCodeService =
             mock(AuthorizationCodeService.class);
@@ -49,7 +49,7 @@ public class TokenHandlerTest {
                         clientService,
                         authorizationCodeService,
                         tokenService,
-                        userService,
+                        authenticationService,
                         configurationService);
     }
 
@@ -59,7 +59,7 @@ public class TokenHandlerTest {
         when(clientService.isValidClient(eq("test-id"), eq("test-secret"))).thenReturn(true);
         when(tokenService.issueToken(eq("joe.bloggs@digital.cabinet-office.gov.uk")))
                 .thenReturn(accessToken);
-        when(userService.getInfoForEmail(eq("joe.bloggs@digital.cabinet-office.gov.uk")))
+        when(authenticationService.getInfoForEmail(eq("joe.bloggs@digital.cabinet-office.gov.uk")))
                 .thenReturn(userInfo);
         when(userInfo.getSubject()).thenReturn(new Subject());
         when(tokenService.generateIDToken(eq("test-id"), any(Subject.class))).thenReturn(signedJWT);

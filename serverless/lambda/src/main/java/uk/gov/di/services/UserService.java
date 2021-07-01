@@ -37,11 +37,6 @@ public class UserService implements AuthenticationService {
     }
 
     @Override
-    public boolean verifyAccessCode(String username, String code) {
-        return true;
-    }
-
-    @Override
     public boolean login(String email, String password) {
         return credentialsMap.containsKey(email) && credentialsMap.get(email).equals(password);
     }

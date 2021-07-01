@@ -82,11 +82,6 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
-    public boolean verifyAccessCode(String username, String code) {
-        return false;
-    }
-
-    @Override
     public boolean login(String email, String password) {
         UserCredentials userCredentials = userCredentialsMapper.load(UserCredentials.class, email);
         return userCredentials.getPassword().equals(password);
