@@ -88,7 +88,8 @@ public class DynamoService implements AuthenticationService {
 
     @Override
     public boolean login(String email, String password) {
-        return false;
+        UserCredentials userCredentials = userCredentialsMapper.load(UserCredentials.class, email);
+        return userCredentials.getPassword().equals(password);
     }
 
     @Override
