@@ -5,11 +5,13 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
+import com.amazonaws.util.Base64;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.entity.UserCredentials;
 import uk.gov.di.entity.UserProfile;
+import uk.gov.di.helpers.Argon2Helper;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -62,11 +64,12 @@ public class DynamoService implements AuthenticationService {
     public void signUp(String email, String password) {
         String dateTime = LocalDateTime.now().toString();
         Subject subject = new Subject();
+        String hashedPassword = hashPassword(password);
         UserCredentials userCredentials =
                 new UserCredentials()
                         .setEmail(email)
                         .setSubjectID(subject.toString())
-                        .setPassword(password)
+                        .setPassword(hashedPassword)
                         .setCreated(dateTime)
                         .setUpdated(dateTime);
         UserProfile userProfile =
@@ -83,7 +86,7 @@ public class DynamoService implements AuthenticationService {
     @Override
     public boolean login(String email, String password) {
         UserCredentials userCredentials = userCredentialsMapper.load(UserCredentials.class, email);
-        return userCredentials.getPassword().equals(password);
+        return verifyPassword(userCredentials.getPassword(), password);
     }
 
     @Override
@@ -93,5 +96,13 @@ public class DynamoService implements AuthenticationService {
 
     public Subject getSubjectFromEmail(String email) {
         return new Subject(userProfileMapper.load(UserProfile.class, email).getSubjectID());
+    }
+
+    private static String hashPassword(String password) {
+        return Base64.encodeAsString(Argon2Helper.argon2Hash(password.getBytes()));
+    }
+
+    private static boolean verifyPassword(String hashedPassword, String password) {
+        return hashedPassword.equals(hashPassword(password));
     }
 }
