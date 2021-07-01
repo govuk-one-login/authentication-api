@@ -73,10 +73,10 @@ if [[ ${RUN_INTEGRATION} -eq 1 ]]; then
   stop_docker_services aws redis dynamodb
 fi
 
-if [[ ${IN_GITHUB_ACTIONS} -eq 0 ]]; then
-  if [ ${build_and_test_exit_code} -ne 0 ]; then
-    printf "\npre-commit failed.\n"
-  else
+if [ ${build_and_test_exit_code} -ne 0 ]; then
+  printf "\npre-commit failed.\n"
+else
+  if [[ ${IN_GITHUB_ACTIONS} -eq 0 ]]; then
     funky_success
   fi
 fi
