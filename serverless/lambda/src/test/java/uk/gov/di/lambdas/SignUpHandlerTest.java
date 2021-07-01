@@ -119,8 +119,7 @@ class SignUpHandlerTest {
     @Test
     public void shouldReturn400IfUserAlreadyExists() throws JsonProcessingException {
         String password = "computer-1";
-        when(validationService.validatePassword(eq(password)))
-                .thenReturn(Optional.empty());
+        when(validationService.validatePassword(eq(password))).thenReturn(Optional.empty());
         when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(true);
 
         usingValidSession();

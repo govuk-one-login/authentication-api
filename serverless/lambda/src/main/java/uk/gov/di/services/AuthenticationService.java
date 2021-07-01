@@ -5,7 +5,7 @@ import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 public interface AuthenticationService {
     public boolean userExists(String email);
 
-    public boolean signUp(String email, String password);
+    public void signUp(String email, String password);
 
     public boolean verifyAccessCode(String username, String code);
 
