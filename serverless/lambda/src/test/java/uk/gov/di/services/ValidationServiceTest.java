@@ -3,6 +3,8 @@ package uk.gov.di.services;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.ErrorResponse;
 
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -12,7 +14,8 @@ public class ValidationServiceTest {
 
     @Test
     public void shouldRejectEmptyEmail() {
-        assertEquals(ErrorResponse.ERROR_1003, validationService.validateEmailAddress("").get());
+        assertEquals(
+                Optional.of(ErrorResponse.ERROR_1003), validationService.validateEmailAddress(""));
     }
 
     @Test
@@ -22,13 +25,14 @@ public class ValidationServiceTest {
         var newlinesEmail = System.lineSeparator() + System.lineSeparator();
 
         assertEquals(
-                ErrorResponse.ERROR_1003,
-                validationService.validateEmailAddress(spacesEmail).get());
+                Optional.of(ErrorResponse.ERROR_1003),
+                validationService.validateEmailAddress(spacesEmail));
         assertEquals(
-                ErrorResponse.ERROR_1003, validationService.validateEmailAddress(tabsEmail).get());
+                Optional.of(ErrorResponse.ERROR_1003),
+                validationService.validateEmailAddress(tabsEmail));
         assertEquals(
-                ErrorResponse.ERROR_1003,
-                validationService.validateEmailAddress(newlinesEmail).get());
+                Optional.of(ErrorResponse.ERROR_1003),
+                validationService.validateEmailAddress(newlinesEmail));
     }
 
     @Test
@@ -38,13 +42,14 @@ public class ValidationServiceTest {
         var noDotsEmail = "test@examplegovuk";
 
         assertEquals(
-                ErrorResponse.ERROR_1004, validationService.validateEmailAddress(noAtsEmail).get());
+                Optional.of(ErrorResponse.ERROR_1004),
+                validationService.validateEmailAddress(noAtsEmail));
         assertEquals(
-                ErrorResponse.ERROR_1004,
-                validationService.validateEmailAddress(multipleAtsEmail).get());
+                Optional.of(ErrorResponse.ERROR_1004),
+                validationService.validateEmailAddress(multipleAtsEmail));
         assertEquals(
-                ErrorResponse.ERROR_1004,
-                validationService.validateEmailAddress(noDotsEmail).get());
+                Optional.of(ErrorResponse.ERROR_1004),
+                validationService.validateEmailAddress(noDotsEmail));
     }
 
     @Test
@@ -59,16 +64,51 @@ public class ValidationServiceTest {
         var shortPassword = "passw0r";
 
         assertEquals(
-                ErrorResponse.ERROR_1006, validationService.validatePassword(shortPassword).get());
+                Optional.of(ErrorResponse.ERROR_1006),
+                validationService.validatePassword(shortPassword));
     }
 
     @Test
     public void shouldRejectEmptyPassword() {
-        assertEquals(ErrorResponse.ERROR_1005, validationService.validatePassword("").get());
+        assertEquals(Optional.of(ErrorResponse.ERROR_1005), validationService.validatePassword(""));
     }
 
     @Test
     public void shouldNotThrowNullPointerIfPasswordInputsAreNull() {
-        assertEquals(ErrorResponse.ERROR_1005, validationService.validatePassword(null).get());
+        assertEquals(
+                Optional.of(ErrorResponse.ERROR_1005), validationService.validatePassword(null));
+    }
+
+    @Test
+    public void shouldReturnErrorIsPhoneNumberContainsLetter() {
+        assertEquals(
+                Optional.of(ErrorResponse.ERROR_1012),
+                validationService.validatePhoneNumber("0123456789A"));
+    }
+
+    @Test
+    public void shouldReturnErrorIsPhoneNumberIsLessThan10Characters() {
+        assertEquals(
+                Optional.of(ErrorResponse.ERROR_1012),
+                validationService.validatePhoneNumber("0123456789"));
+    }
+
+    @Test
+    public void shouldReturnErrorIsPhoneNumberIsTooLong() {
+        assertEquals(
+                Optional.of(ErrorResponse.ERROR_1012),
+                validationService.validatePhoneNumber("012345678999"));
+    }
+
+    @Test
+    public void shouldNotReturnErrorIsPhoneNumberIsValid() {
+        assertEquals(Optional.empty(), validationService.validatePhoneNumber("01234567891"));
+    }
+
+    @Test
+    public void shouldReturnErrorIsPhoneNumberContainsNonnumericCharacters() {
+        assertEquals(
+                Optional.of(ErrorResponse.ERROR_1012),
+                validationService.validatePhoneNumber("202-456-1111"));
     }
 }
