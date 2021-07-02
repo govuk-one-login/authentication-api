@@ -22,6 +22,11 @@ public class NotificationService {
         notifyClient.sendEmail(templateId, email, personalisation, "");
     }
 
+    public void sendText(String phoneNumber, Map<String, Object> personalisation, String templateId)
+            throws NotificationClientException {
+        notifyClient.sendSms(templateId, phoneNumber, personalisation, "");
+    }
+
     public boolean validateCode(String email, String code) {
         if (!validationCode.containsKey(email)) {
             return false;
