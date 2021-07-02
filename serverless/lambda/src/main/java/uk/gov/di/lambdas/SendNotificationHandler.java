@@ -9,6 +9,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.entity.ErrorResponse;
+import uk.gov.di.entity.NotificationType;
 import uk.gov.di.entity.NotifyRequest;
 import uk.gov.di.entity.SendNotificationRequest;
 import uk.gov.di.entity.SendNotificationResponse;
@@ -85,9 +86,24 @@ public class SendNotificationHandler
             }
             switch (sendNotificationRequest.getNotificationType()) {
                 case VERIFY_EMAIL:
-                    return handleVerifyEmailRequest(sendNotificationRequest, session.get());
+                    Optional<ErrorResponse> emailErrorResponse =
+                            validationService.validateEmailAddress(
+                                    sendNotificationRequest.getEmail());
+                    if (emailErrorResponse.isPresent()) {
+                        return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
+                    }
+                    return handleNotificationRequest(
+                            sendNotificationRequest.getEmail(),
+                            sendNotificationRequest.getNotificationType(),
+                            session.get());
                 case VERIFY_PHONE_NUMBER:
-                    return handleVerifyPhoneNumberRequest(sendNotificationRequest, session.get());
+                    if (sendNotificationRequest.getPhoneNumber() == null) {
+                        return generateApiGatewayProxyResponse(400, ErrorResponse.ERROR_1011);
+                    }
+                    return handleNotificationRequest(
+                            sendNotificationRequest.getPhoneNumber(),
+                            sendNotificationRequest.getNotificationType(),
+                            session.get());
             }
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
         } catch (SdkClientException ex) {
@@ -99,24 +115,25 @@ public class SendNotificationHandler
         }
     }
 
-    private APIGatewayProxyResponseEvent handleVerifyPhoneNumberRequest(
-            SendNotificationRequest sendNotificationRequest, Session session)
+    private APIGatewayProxyResponseEvent handleNotificationRequest(
+            String destination, NotificationType notificationType, Session session)
             throws JsonProcessingException {
-        if (sendNotificationRequest.getPhoneNumber() == null) {
-            return generateApiGatewayProxyResponse(400, ErrorResponse.ERROR_1011);
-        }
-        String code = codeGeneratorService.sixDigitCode();
 
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        sendNotificationRequest.getPhoneNumber(),
-                        sendNotificationRequest.getNotificationType(),
-                        code);
-        codeStorageService.savePhoneNumberCode(
-                sendNotificationRequest.getPhoneNumber(),
-                code,
-                configurationService.getCodeExpiry());
-        sessionService.save(session.setState(VERIFY_PHONE_NUMBER_CODE_SENT));
+        String code = codeGeneratorService.sixDigitCode();
+        NotifyRequest notifyRequest = new NotifyRequest(destination, notificationType, code);
+
+        switch (notificationType) {
+            case VERIFY_EMAIL:
+                codeStorageService.saveEmailCode(
+                        destination, code, configurationService.getCodeExpiry());
+                sessionService.save(session.setState(VERIFY_EMAIL_CODE_SENT));
+                break;
+            case VERIFY_PHONE_NUMBER:
+                codeStorageService.savePhoneNumberCode(
+                        destination, code, configurationService.getCodeExpiry());
+                sessionService.save(session.setState(VERIFY_PHONE_NUMBER_CODE_SENT));
+                break;
+        }
         sqsClient.send(serialiseRequest(notifyRequest));
         return generateApiGatewayProxyResponse(
                 200, new SendNotificationResponse(session.getState()));
@@ -124,28 +141,5 @@ public class SendNotificationHandler
 
     private String serialiseRequest(Object request) throws JsonProcessingException {
         return objectMapper.writeValueAsString(request);
-    }
-
-    private APIGatewayProxyResponseEvent handleVerifyEmailRequest(
-            SendNotificationRequest sendNotificationRequest, Session session)
-            throws JsonProcessingException {
-        Optional<ErrorResponse> emailErrorResponse =
-                validationService.validateEmailAddress(sendNotificationRequest.getEmail());
-        if (emailErrorResponse.isPresent()) {
-            return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
-        }
-        String code = codeGeneratorService.sixDigitCode();
-
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        sendNotificationRequest.getEmail(),
-                        sendNotificationRequest.getNotificationType(),
-                        code);
-        codeStorageService.saveEmailCode(
-                sendNotificationRequest.getEmail(), code, configurationService.getCodeExpiry());
-        sessionService.save(session.setState(VERIFY_EMAIL_CODE_SENT));
-        sqsClient.send(serialiseRequest(notifyRequest));
-        return generateApiGatewayProxyResponse(
-                200, new SendNotificationResponse(session.getState()));
     }
 }
