@@ -11,6 +11,7 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.NotifyRequest;
 import uk.gov.di.entity.SendNotificationRequest;
+import uk.gov.di.entity.SendNotificationResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.services.AwsSqsClient;
 import uk.gov.di.services.CodeGeneratorService;
@@ -23,6 +24,7 @@ import uk.gov.di.services.ValidationService;
 import java.util.Optional;
 
 import static uk.gov.di.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
+import static uk.gov.di.entity.SessionState.VERIFY_PHONE_NUMBER_CODE_SENT;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
@@ -78,31 +80,14 @@ public class SendNotificationHandler
         try {
             SendNotificationRequest sendNotificationRequest =
                     objectMapper.readValue(input.getBody(), SendNotificationRequest.class);
+            if (!session.get().validateSession(sendNotificationRequest.getEmail())) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+            }
             switch (sendNotificationRequest.getNotificationType()) {
                 case VERIFY_EMAIL:
-                    Optional<ErrorResponse> emailErrorResponse =
-                            validationService.validateEmailAddress(
-                                    sendNotificationRequest.getEmail());
-                    if (!emailErrorResponse.isEmpty()) {
-                        return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
-                    }
-                    if (!session.get().validateSession(sendNotificationRequest.getEmail())) {
-                        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-                    }
-                    String code = codeGeneratorService.sixDigitCode();
-
-                    NotifyRequest notifyRequest =
-                            new NotifyRequest(
-                                    sendNotificationRequest.getEmail(),
-                                    sendNotificationRequest.getNotificationType(),
-                                    code);
-                    codeStorageService.saveEmailCode(
-                            sendNotificationRequest.getEmail(),
-                            code,
-                            configurationService.getEmailCodeExpiry());
-                    sessionService.save(session.get().setState(VERIFY_EMAIL_CODE_SENT));
-                    sqsClient.send(serialiseRequest(notifyRequest));
-                    return generateApiGatewayProxyResponse(200, "OK");
+                    return handleVerifyEmailRequest(sendNotificationRequest, session.get());
+                case VERIFY_PHONE_NUMBER:
+                    return handleVerifyPhoneNumberRequest(sendNotificationRequest, session.get());
             }
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
         } catch (SdkClientException ex) {
@@ -114,7 +99,55 @@ public class SendNotificationHandler
         }
     }
 
+    private APIGatewayProxyResponseEvent handleVerifyPhoneNumberRequest(
+            SendNotificationRequest sendNotificationRequest, Session session)
+            throws JsonProcessingException {
+        if (sendNotificationRequest.getPhoneNumber() == null) {
+            return generateApiGatewayProxyResponse(400, ErrorResponse.ERROR_1011);
+        }
+        String code = codeGeneratorService.sixDigitCode();
+
+        NotifyRequest notifyRequest =
+                new NotifyRequest(
+                        sendNotificationRequest.getPhoneNumber(),
+                        sendNotificationRequest.getNotificationType(),
+                        code);
+        codeStorageService.savePhoneNumberCode(
+                sendNotificationRequest.getPhoneNumber(),
+                code,
+                configurationService.getEmailCodeExpiry());
+        sessionService.save(session.setState(VERIFY_PHONE_NUMBER_CODE_SENT));
+        sqsClient.send(serialiseRequest(notifyRequest));
+        return generateApiGatewayProxyResponse(
+                200, new SendNotificationResponse(session.getState()));
+    }
+
     private String serialiseRequest(Object request) throws JsonProcessingException {
         return objectMapper.writeValueAsString(request);
+    }
+
+    private APIGatewayProxyResponseEvent handleVerifyEmailRequest(
+            SendNotificationRequest sendNotificationRequest, Session session)
+            throws JsonProcessingException {
+        Optional<ErrorResponse> emailErrorResponse =
+                validationService.validateEmailAddress(sendNotificationRequest.getEmail());
+        if (emailErrorResponse.isPresent()) {
+            return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
+        }
+        String code = codeGeneratorService.sixDigitCode();
+
+        NotifyRequest notifyRequest =
+                new NotifyRequest(
+                        sendNotificationRequest.getEmail(),
+                        sendNotificationRequest.getNotificationType(),
+                        code);
+        codeStorageService.saveEmailCode(
+                sendNotificationRequest.getEmail(),
+                code,
+                configurationService.getEmailCodeExpiry());
+        sessionService.save(session.setState(VERIFY_EMAIL_CODE_SENT));
+        sqsClient.send(serialiseRequest(notifyRequest));
+        return generateApiGatewayProxyResponse(
+                200, new SendNotificationResponse(session.getState()));
     }
 }
