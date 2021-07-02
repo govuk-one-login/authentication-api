@@ -12,6 +12,7 @@ public class CodeStorageService {
 
     private final RedisConnectionService redisConnectionService;
     private static final String EMAIL_KEY_PREFIX = "email-code:";
+    private static final String PHONE_NUMBER_KEY_PREFIX = "phone-number-code:";
 
     public CodeStorageService(RedisConnectionService redisConnectionService) {
         this.redisConnectionService = redisConnectionService;
@@ -20,6 +21,16 @@ public class CodeStorageService {
     public void saveEmailCode(String email, String code, long codeExpiryTime) {
         String encodedhash = HashHelper.hashSha256String(email);
         String key = EMAIL_KEY_PREFIX + encodedhash;
+        try {
+            redisConnectionService.saveWithExpiry(key, code, codeExpiryTime);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void savePhoneNumberCode(String phoneNumber, String code, long codeExpiryTime) {
+        String hashedPhoneNumber = HashHelper.hashSha256String(phoneNumber);
+        String key = PHONE_NUMBER_KEY_PREFIX + hashedPhoneNumber;
         try {
             redisConnectionService.saveWithExpiry(key, code, codeExpiryTime);
         } catch (Exception e) {

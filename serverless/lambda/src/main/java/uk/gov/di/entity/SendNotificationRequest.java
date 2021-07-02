@@ -2,28 +2,40 @@ package uk.gov.di.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import static java.lang.String.format;
-
 public class SendNotificationRequest extends UserWithEmailRequest {
 
     private final NotificationType notificationType;
+    private final String phoneNumber;
 
     public SendNotificationRequest(
             @JsonProperty(required = true, value = "email") String email,
             @JsonProperty(required = true, value = "notificationType")
-                    NotificationType notificationType) {
+                    NotificationType notificationType,
+            @JsonProperty(value = "phoneNumber") String phoneNumber) {
         super(email);
         this.notificationType = notificationType;
+        this.phoneNumber = phoneNumber;
     }
 
     public NotificationType getNotificationType() {
         return notificationType;
     }
 
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
     @Override
     public String toString() {
-        return format(
-                "SendNotificationRequest{ email='%s', notificationType = '%s' }",
-                email, notificationType);
+        return "SendNotificationRequest{"
+                + "notificationType="
+                + notificationType
+                + ", phoneNumber='"
+                + phoneNumber
+                + '\''
+                + ", email='"
+                + email
+                + '\''
+                + '}';
     }
 }

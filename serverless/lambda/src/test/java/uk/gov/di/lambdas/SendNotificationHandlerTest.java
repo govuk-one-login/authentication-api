@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.NotifyRequest;
+import uk.gov.di.entity.SendNotificationResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.services.AwsSqsClient;
 import uk.gov.di.services.CodeGeneratorService;
@@ -24,6 +25,7 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -37,12 +39,15 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
+import static uk.gov.di.entity.SessionState.VERIFY_PHONE_NUMBER_CODE_SENT;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 
 class SendNotificationHandlerTest {
 
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
+    private static final String TEST_PHONE_NUMBER = "1234567891";
     private static final String TEST_SIX_DIGIT_CODE = "123456";
     private static final long CODE_EXPIRY_TIME = 900;
     private final ValidationService validationService = mock(ValidationService.class);
@@ -64,7 +69,7 @@ class SendNotificationHandlerTest {
     @BeforeEach
     void setup() {
         when(context.getLogger()).thenReturn(mock(LambdaLogger.class));
-        when(configurationService.getEmailCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
+        when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
         when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);
     }
 
@@ -87,6 +92,9 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(200, result.getStatusCode());
+        SendNotificationResponse response =
+                new ObjectMapper().readValue(result.getBody(), SendNotificationResponse.class);
+        assertThat(VERIFY_EMAIL_CODE_SENT, equalTo(response.getSessionState()));
 
         verify(awsSqsClient).send(serialisedRequest);
         verify(codeStorageService)
@@ -130,7 +138,8 @@ class SendNotificationHandlerTest {
     public void shouldReturn400IfEmailAddressIsInvalid() throws JsonProcessingException {
         when(validationService.validateEmailAddress(eq("joe.bloggs")))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1004));
-        usingValidSession();
+        when(sessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(new Session("a-session-id").setEmailAddress("joe.bloggs")));
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
         event.setBody(
@@ -190,6 +199,40 @@ class SendNotificationHandlerTest {
 
         verify(awsSqsClient, never()).send(anyString());
         verify(codeStorageService, never()).saveEmailCode(anyString(), anyString(), anyLong());
+    }
+
+    @Test
+    public void shouldReturn200WhenVerifyTypeIsVerifyPhoneNumber() throws JsonProcessingException {
+        usingValidSession();
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", "a-session-id"));
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
+                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(200, result.getStatusCode());
+        SendNotificationResponse response =
+                new ObjectMapper().readValue(result.getBody(), SendNotificationResponse.class);
+        assertThat(VERIFY_PHONE_NUMBER_CODE_SENT, equalTo(response.getSessionState()));
+    }
+
+    @Test
+    public void shouldReturn400WhenVerifyTypeIsVerifyPhoneNumberButRequestIsMissingNumber()
+            throws JsonProcessingException {
+        usingValidSession();
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", "a-session-id"));
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(400, result.getStatusCode());
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1011);
+        assertThat(result, hasBody(expectedResponse));
     }
 
     private void usingValidSession() {
