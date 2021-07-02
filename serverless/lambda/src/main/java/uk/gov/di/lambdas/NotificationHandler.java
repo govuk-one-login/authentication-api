@@ -15,7 +15,9 @@ import uk.gov.service.notify.NotificationClientException;
 import java.util.HashMap;
 import java.util.Map;
 
+import static java.lang.String.format;
 import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.entity.NotificationType.VERIFY_PHONE_NUMBER;
 
 public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
@@ -46,22 +48,37 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             try {
                 NotifyRequest notifyRequest =
                         objectMapper.readValue(msg.getBody(), NotifyRequest.class);
-                switch (notifyRequest.getNotificationType()) {
-                    case VERIFY_EMAIL:
-                        Map<String, Object> personalisation = new HashMap<>();
-                        personalisation.put("validation-code", notifyRequest.getCode());
-                        personalisation.put("email-address", notifyRequest.getDestination());
-                        notificationService.sendEmail(
-                                notifyRequest.getDestination(),
-                                personalisation,
-                                configService.getNotificationTemplateId(VERIFY_EMAIL));
-                        break;
+                try {
+                    switch (notifyRequest.getNotificationType()) {
+                        case VERIFY_EMAIL:
+                            Map<String, Object> emailPersonalisation = new HashMap<>();
+                            emailPersonalisation.put("validation-code", notifyRequest.getCode());
+                            emailPersonalisation.put(
+                                    "email-address", notifyRequest.getDestination());
+                            notificationService.sendEmail(
+                                    notifyRequest.getDestination(),
+                                    emailPersonalisation,
+                                    configService.getNotificationTemplateId(VERIFY_EMAIL));
+                            break;
+                        case VERIFY_PHONE_NUMBER:
+                            Map<String, Object> textPersonalisation = new HashMap<>();
+                            textPersonalisation.put("validation-code", notifyRequest.getCode());
+                            notificationService.sendText(
+                                    notifyRequest.getDestination(),
+                                    textPersonalisation,
+                                    configService.getNotificationTemplateId(VERIFY_PHONE_NUMBER));
+                            break;
+                    }
+                } catch (NotificationClientException e) {
+                    throw new RuntimeException(
+                            format(
+                                    "Error sending with Notify using NotificationType: %s",
+                                    notifyRequest.getNotificationType()),
+                            e);
                 }
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(
                         "Error when mapping message from queue to a NotifyRequest", e);
-            } catch (NotificationClientException e) {
-                throw new RuntimeException("Error when sending email via Notify", e);
             }
         }
         return null;
