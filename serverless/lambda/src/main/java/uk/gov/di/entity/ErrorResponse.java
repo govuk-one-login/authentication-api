@@ -17,7 +17,8 @@ public enum ErrorResponse {
     ERROR_1009(1009, "An account with this email address already exists"),
     ERROR_1010(1010, "An account with this email address does not exist"),
     ERROR_1011(1011, "Phone number is missing"),
-    ERROR_1012(1011, "Phone number is invalid");
+    ERROR_1012(1011, "Phone number is invalid"),
+    ERROR_1013(1002, "Update profile type is invalid");
 
     @JsonProperty("code")
     private int code;

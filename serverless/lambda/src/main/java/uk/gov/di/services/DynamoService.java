@@ -98,6 +98,11 @@ public class DynamoService implements AuthenticationService {
         return new Subject(userProfileMapper.load(UserProfile.class, email).getSubjectID());
     }
 
+    @Override
+    public void updatePhoneNumber(String email, String phoneNumber) {
+        userProfileMapper.load(UserProfile.class, email).setPhoneNumber(phoneNumber);
+    }
+
     private static String hashPassword(String password) {
         return Base64.encodeAsString(Argon2Helper.argon2Hash(password.getBytes()));
     }
