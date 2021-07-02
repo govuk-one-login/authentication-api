@@ -23,10 +23,12 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.entity.NotificationType.VERIFY_PHONE_NUMBER;
 
 public class NotificationHandlerTest {
 
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
+    private static final String TEST_PHONE_NUMBER = "01234567891";
     private static final String TEMPLATE_ID = "fdsfdssd";
     private static final String CODE = "123456";
     private final Context context = mock(Context.class);
@@ -41,7 +43,7 @@ public class NotificationHandlerTest {
     }
 
     @Test
-    public void shouldSuccessfullyProcessMessageFromSQSQueue()
+    public void shouldSuccessfullyProcessEmailMessageFromSQSQueue()
             throws JsonProcessingException, NotificationClientException {
         when(configService.getNotificationTemplateId(VERIFY_EMAIL)).thenReturn(TEMPLATE_ID);
 
@@ -56,6 +58,25 @@ public class NotificationHandlerTest {
         personalisation.put("email-address", notifyRequest.getDestination());
 
         verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, TEMPLATE_ID);
+    }
+
+    @Test
+    public void shouldSuccessfullyProcessPhoneMessageFromSQSQueue()
+            throws JsonProcessingException, NotificationClientException {
+        when(configService.getNotificationTemplateId(VERIFY_PHONE_NUMBER)).thenReturn(TEMPLATE_ID);
+
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321");
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        Map<String, Object> personalisation = new HashMap<>();
+        personalisation.put("validation-code", "654321");
+
+        verify(notificationService)
+                .sendText(notifyRequest.getDestination(), personalisation, TEMPLATE_ID);
     }
 
     @Test
@@ -94,7 +115,36 @@ public class NotificationHandlerTest {
                         () -> handler.handleRequest(sqsEvent, context),
                         "Expected to throw exception");
 
-        assertEquals("Error when sending email via Notify", exception.getMessage());
+        assertEquals(
+                "Error sending with Notify using NotificationType: VERIFY_EMAIL",
+                exception.getMessage());
+    }
+
+    @Test
+    public void shouldThrowExceptionIfNotifyIsUnableToSendText()
+            throws JsonProcessingException, NotificationClientException {
+        when(configService.getNotificationTemplateId(VERIFY_PHONE_NUMBER)).thenReturn(TEMPLATE_ID);
+
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321");
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        Map<String, Object> personalisation = new HashMap<>();
+        personalisation.put("validation-code", "654321");
+        doThrow(NotificationClientException.class)
+                .when(notificationService)
+                .sendText(TEST_PHONE_NUMBER, personalisation, TEMPLATE_ID);
+
+        RuntimeException exception =
+                assertThrows(
+                        RuntimeException.class,
+                        () -> handler.handleRequest(sqsEvent, context),
+                        "Expected to throw exception");
+
+        assertEquals(
+                "Error sending with Notify using NotificationType: VERIFY_PHONE_NUMBER",
+                exception.getMessage());
     }
 
     private SQSEvent generateSQSEvent(String messageBody) {
