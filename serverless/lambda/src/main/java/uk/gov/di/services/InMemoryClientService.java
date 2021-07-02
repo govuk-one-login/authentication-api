@@ -28,6 +28,7 @@ public class InMemoryClientService implements ClientService {
                                     List.of("code"),
                                     List.of(
                                             "http://localhost:8081/oidc/callback",
+                                            "http://localhost:3000/",
                                             "https://di-auth-stub-relying-party-build.london.cloudapps.digital/oidc/callback"),
                                     List.of("contact@example.com")));
                 }
