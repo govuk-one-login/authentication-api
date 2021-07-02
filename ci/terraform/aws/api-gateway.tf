@@ -34,6 +34,7 @@ resource "aws_api_gateway_deployment" "deployment" {
     module.token,
     module.userexists,
     module.userinfo,
+    module.update_profile,
   ]
 }
 
@@ -52,6 +53,7 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
     module.token,
     module.userexists,
     module.userinfo,
+    module.update_profile,
     aws_api_gateway_deployment.deployment,
   ]
 }
