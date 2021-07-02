@@ -100,8 +100,16 @@ public class SendNotificationHandler
                     if (sendNotificationRequest.getPhoneNumber() == null) {
                         return generateApiGatewayProxyResponse(400, ErrorResponse.ERROR_1011);
                     }
+                    String phoneNumber =
+                            removeWhitespaceFromPhoneNumber(
+                                    sendNotificationRequest.getPhoneNumber());
+                    Optional<ErrorResponse> errorResponse =
+                            validationService.validatePhoneNumber(phoneNumber);
+                    if (errorResponse.isPresent()) {
+                        return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
+                    }
                     return handleNotificationRequest(
-                            sendNotificationRequest.getPhoneNumber(),
+                            phoneNumber,
                             sendNotificationRequest.getNotificationType(),
                             session.get());
             }
@@ -113,6 +121,10 @@ public class SendNotificationHandler
             logger.log("Error parsing request: " + e.getMessage());
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
+    }
+
+    private String removeWhitespaceFromPhoneNumber(String phoneNumber) {
+        return phoneNumber.replaceAll("\\s+", "");
     }
 
     private APIGatewayProxyResponseEvent handleNotificationRequest(

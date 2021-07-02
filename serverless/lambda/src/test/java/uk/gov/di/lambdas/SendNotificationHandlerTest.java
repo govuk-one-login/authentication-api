@@ -47,7 +47,7 @@ import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 class SendNotificationHandlerTest {
 
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final String TEST_PHONE_NUMBER = "1234567891";
+    private static final String TEST_PHONE_NUMBER = "01234567891";
     private static final String TEST_SIX_DIGIT_CODE = "123456";
     private static final long CODE_EXPIRY_TIME = 900;
     private final ValidationService validationService = mock(ValidationService.class);
@@ -232,6 +232,25 @@ class SendNotificationHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1011);
+        assertThat(result, hasBody(expectedResponse));
+    }
+
+    @Test
+    public void shouldReturn400WhenPhoneNumberIsInvalid() throws JsonProcessingException {
+        when(validationService.validatePhoneNumber(eq("123456789")))
+                .thenReturn(Optional.of(ErrorResponse.ERROR_1012));
+        usingValidSession();
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", "a-session-id"));
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
+                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, "123456789"));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(400, result.getStatusCode());
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1012);
+
         assertThat(result, hasBody(expectedResponse));
     }
 

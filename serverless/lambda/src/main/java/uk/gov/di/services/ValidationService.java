@@ -1,5 +1,7 @@
 package uk.gov.di.services;
 
+import com.google.i18n.phonenumbers.NumberParseException;
+import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import uk.gov.di.entity.ErrorResponse;
 
 import java.util.Optional;
@@ -31,5 +33,21 @@ public class ValidationService {
             return Optional.of(ErrorResponse.ERROR_1007);
         }
         return Optional.empty();
+    }
+
+    public Optional<ErrorResponse> validatePhoneNumber(String phoneNumberInput) {
+        if ((!phoneNumberInput.matches("[0-9]+")) || (phoneNumberInput.length() < 10)) {
+            return Optional.of(ErrorResponse.ERROR_1012);
+        }
+        PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
+        try {
+            var phoneNumber = phoneUtil.parse(phoneNumberInput, "GB");
+            if (phoneUtil.isValidNumber(phoneNumber)) {
+                return Optional.empty();
+            }
+            return Optional.of(ErrorResponse.ERROR_1012);
+        } catch (NumberParseException e) {
+            return Optional.of(ErrorResponse.ERROR_1012);
+        }
     }
 }
