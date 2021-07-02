@@ -25,7 +25,7 @@ import static uk.gov.di.entity.SessionState.TWO_FACTOR_REQUIRED;
 public class SignupIntegrationTest extends IntegrationTestEndpoints {
 
     private static final String SIGNUP_ENDPOINT = "/signup";
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
     public void shouldCallSignupEndpointAndReturn200() throws IOException {
@@ -37,7 +37,7 @@ public class SignupIntegrationTest extends IntegrationTestEndpoints {
         headers.add("Session-Id", sessionId);
 
         SignupRequest request =
-                new SignupRequest("joe.bloggs+5@digital.cabinet-office.gov.uk", "1-valid-password");
+                new SignupRequest("joe.bloggs+5@digital.cabinet-office.gov.uk", "password-1");
 
         Response response =
                 invocationBuilder
