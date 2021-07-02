@@ -69,7 +69,7 @@ class SendNotificationHandlerTest {
     @BeforeEach
     void setup() {
         when(context.getLogger()).thenReturn(mock(LambdaLogger.class));
-        when(configurationService.getEmailCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
+        when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
         when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);
     }
 

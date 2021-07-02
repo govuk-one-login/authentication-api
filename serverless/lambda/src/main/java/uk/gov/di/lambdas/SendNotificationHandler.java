@@ -115,7 +115,7 @@ public class SendNotificationHandler
         codeStorageService.savePhoneNumberCode(
                 sendNotificationRequest.getPhoneNumber(),
                 code,
-                configurationService.getEmailCodeExpiry());
+                configurationService.getCodeExpiry());
         sessionService.save(session.setState(VERIFY_PHONE_NUMBER_CODE_SENT));
         sqsClient.send(serialiseRequest(notifyRequest));
         return generateApiGatewayProxyResponse(
@@ -142,9 +142,7 @@ public class SendNotificationHandler
                         sendNotificationRequest.getNotificationType(),
                         code);
         codeStorageService.saveEmailCode(
-                sendNotificationRequest.getEmail(),
-                code,
-                configurationService.getEmailCodeExpiry());
+                sendNotificationRequest.getEmail(), code, configurationService.getCodeExpiry());
         sessionService.save(session.setState(VERIFY_EMAIL_CODE_SENT));
         sqsClient.send(serialiseRequest(notifyRequest));
         return generateApiGatewayProxyResponse(
