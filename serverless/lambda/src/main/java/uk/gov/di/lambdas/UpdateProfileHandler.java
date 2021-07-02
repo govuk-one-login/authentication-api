@@ -58,7 +58,7 @@ public class UpdateProfileHandler
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
             switch (profileRequest.getUpdateProfileType()) {
-                case UPDATE_PHONE_NUMBER:
+                case ADD_PHONE_NUMBER:
                     authenticationService.updatePhoneNumber(
                             profileRequest.getEmail(), profileRequest.getProfileInformation());
 

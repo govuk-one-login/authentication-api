@@ -23,7 +23,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.entity.UpdateProfileType.UPDATE_PHONE_NUMBER;
+import static uk.gov.di.entity.UpdateProfileType.ADD_PHONE_NUMBER;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -50,7 +50,7 @@ class UpdateProfileHandlerTest {
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, UPDATE_PHONE_NUMBER, PHONE_NUMBER));
+                        TEST_EMAIL_ADDRESS, ADD_PHONE_NUMBER, PHONE_NUMBER));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         verify(authenticationService).updatePhoneNumber(eq(TEST_EMAIL_ADDRESS), eq(PHONE_NUMBER));
@@ -67,7 +67,7 @@ class UpdateProfileHandlerTest {
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\"}",
-                        TEST_EMAIL_ADDRESS, UPDATE_PHONE_NUMBER));
+                        TEST_EMAIL_ADDRESS, ADD_PHONE_NUMBER));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         verify(authenticationService, never())
