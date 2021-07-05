@@ -28,9 +28,9 @@ public class CodeStorageService {
         }
     }
 
-    public void savePhoneNumberCode(String phoneNumber, String code, long codeExpiryTime) {
-        String hashedPhoneNumber = HashHelper.hashSha256String(phoneNumber);
-        String key = PHONE_NUMBER_KEY_PREFIX + hashedPhoneNumber;
+    public void savePhoneNumberCode(String emailAddress, String code, long codeExpiryTime) {
+        String hashedEmailAddress = HashHelper.hashSha256String(emailAddress);
+        String key = PHONE_NUMBER_KEY_PREFIX + hashedEmailAddress;
         try {
             redisConnectionService.saveWithExpiry(key, code, codeExpiryTime);
         } catch (Exception e) {
