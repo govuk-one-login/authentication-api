@@ -51,4 +51,15 @@ public class SessionHelper {
             return code;
         }
     }
+
+    public static String generateAndSavePhoneNumberCode(String email, long codeExpiryTime) {
+        try (RedisConnectionService redis =
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
+
+            var code = new CodeGeneratorService().sixDigitCode();
+            new CodeStorageService(redis).savePhoneNumberCode(email, code, codeExpiryTime);
+
+            return code;
+        }
+    }
 }

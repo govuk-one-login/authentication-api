@@ -29,7 +29,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
-    public void shouldCallVerifyCodeEndpointToVerifyEmailAndReturn200() throws IOException {
+    public void shouldCallVerifyCodeEndpointToVerifyEmailCodeAndReturn200() throws IOException {
         String sessionId = SessionHelper.createSession();
         SessionHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
@@ -41,7 +41,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
     }
 
     @Test
-    public void shouldCallVerifyCodeEndpointAndReturn200WitUpdatedStateWhenCodeHasExpired()
+    public void shouldCallVerifyCodeEndpointAndReturn200WitUpdatedStateWhenEmailCodeHasExpired()
             throws IOException, InterruptedException {
         String sessionId = SessionHelper.createSession();
         SessionHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
@@ -59,7 +59,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
     }
 
     @Test
-    public void shouldReturn200WithNewStateWhenUserTriesCodeThatTheyHaveAlreadyUsed()
+    public void shouldReturn200WithNewStateWhenUserTriesEmailCodeThatTheyHaveAlreadyUsed()
             throws IOException {
         String sessionId = SessionHelper.createSession();
         SessionHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
@@ -76,6 +76,39 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
                 objectMapper.readValue(
                         response2.readEntity(String.class), VerifyCodeResponse.class);
         assertEquals(SessionState.EMAIL_CODE_NOT_VALID, codeResponse.getSessionState());
+    }
+
+    @Test
+    public void shouldCallVerifyCodeEndpointToVerifyPhoneCodeAndReturn200() throws IOException {
+        String sessionId = SessionHelper.createSession();
+        SessionHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
+
+        String code = SessionHelper.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
+        VerifyCodeRequest codeRequest =
+                new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
+
+        Response response = sendRequest(sessionId, codeRequest);
+        assertEquals(200, response.getStatus());
+    }
+
+    @Test
+    public void
+            shouldCallVerifyCodeEndpointAndReturn200WitUpdatedStateWhenPhoneNumberCodeHasExpired()
+                    throws IOException, InterruptedException {
+        String sessionId = SessionHelper.createSession();
+        SessionHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
+
+        String code = SessionHelper.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 2);
+        VerifyCodeRequest codeRequest =
+                new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
+
+        TimeUnit.SECONDS.sleep(3);
+        Response response = sendRequest(sessionId, codeRequest);
+
+        assertEquals(200, response.getStatus());
+        VerifyCodeResponse codeResponse =
+                objectMapper.readValue(response.readEntity(String.class), VerifyCodeResponse.class);
+        assertEquals(SessionState.PHONE_NUMBER_CODE_NOT_VALID, codeResponse.getSessionState());
     }
 
     private Response sendRequest(String sessionId, VerifyCodeRequest codeRequest) {
