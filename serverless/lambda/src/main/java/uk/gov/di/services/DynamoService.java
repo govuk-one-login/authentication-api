@@ -7,8 +7,6 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
 import com.amazonaws.util.Base64;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import uk.gov.di.entity.UserCredentials;
 import uk.gov.di.entity.UserProfile;
 import uk.gov.di.helpers.Argon2Helper;
@@ -18,17 +16,13 @@ import java.util.Optional;
 
 public class DynamoService implements AuthenticationService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DynamoService.class);
-
-    private final AmazonDynamoDB dynamoDB;
     private final DynamoDBMapper userCredentialsMapper;
     private final DynamoDBMapper userProfileMapper;
     private static final String USER_CREDENTIALS_TABLE = "user-credentials";
     private static final String USER_PROFILE_TABLE = "user-profile";
 
     public DynamoService(String region, String environment, Optional<String> dynamoEndpoint) {
-        LOGGER.info("Dynamo Endpoint: " + dynamoEndpoint);
-        this.dynamoDB =
+        AmazonDynamoDB dynamoDB =
                 dynamoEndpoint
                         .map(
                                 t ->
@@ -101,6 +95,11 @@ public class DynamoService implements AuthenticationService {
     @Override
     public void updatePhoneNumber(String email, String phoneNumber) {
         userProfileMapper.load(UserProfile.class, email).setPhoneNumber(phoneNumber);
+    }
+
+    @Override
+    public void updatePhoneNumberVerifiedStatus(String email, boolean verifiedStatus) {
+        userProfileMapper.load(UserProfile.class, email).setPhoneNumberVerified(verifiedStatus);
     }
 
     private static String hashPassword(String password) {

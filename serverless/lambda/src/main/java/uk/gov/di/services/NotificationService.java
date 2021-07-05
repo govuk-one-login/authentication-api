@@ -26,21 +26,4 @@ public class NotificationService {
             throws NotificationClientException {
         notifyClient.sendSms(templateId, phoneNumber, personalisation, "");
     }
-
-    public boolean validateCode(String email, String code) {
-        if (!validationCode.containsKey(email)) {
-            return false;
-        } else if (!validationCode.get(email).getCode().equals(code)) {
-            return false;
-        } else if (validationCode
-                .get(email)
-                .getTimeOfIssue()
-                .isAfter(validationCode.get(email).getTimeOfIssue().plusMinutes(15))) {
-            validationCode.remove(email);
-            return false;
-        } else {
-            validationCode.remove(email);
-            return true;
-        }
-    }
 }

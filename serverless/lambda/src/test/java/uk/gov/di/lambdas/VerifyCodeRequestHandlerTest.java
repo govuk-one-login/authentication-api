@@ -11,7 +11,7 @@ import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.VerifyCodeResponse;
 import uk.gov.di.services.CodeStorageService;
-import uk.gov.di.services.ConfigurationService;
+import uk.gov.di.services.DynamoService;
 import uk.gov.di.services.SessionService;
 
 import java.util.Map;
@@ -21,6 +21,7 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
@@ -38,13 +39,13 @@ class VerifyCodeRequestHandlerTest {
             new Session("session-id").setEmailAddress("test@test.com");
     private final Context context = mock(Context.class);
     private final SessionService sessionService = mock(SessionService.class);
-    private final ConfigurationService configService = mock(ConfigurationService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
+    private final DynamoService dynamoService = mock(DynamoService.class);
     private VerifyCodeHandler handler;
 
     @BeforeEach
     public void setup() {
-        handler = new VerifyCodeHandler(sessionService, configService, codeStorageService);
+        handler = new VerifyCodeHandler(sessionService, codeStorageService, dynamoService);
     }
 
     @Test
@@ -81,6 +82,7 @@ class VerifyCodeRequestHandlerTest {
         assertThat(result, hasStatus(200));
         VerifyCodeResponse codeResponse =
                 new ObjectMapper().readValue(result.getBody(), VerifyCodeResponse.class);
+        verify(dynamoService).updatePhoneNumberVerifiedStatus("test@test.com", true);
         assertThat(codeResponse.getSessionState(), equalTo(PHONE_NUMBER_CODE_VERIFIED));
     }
 
@@ -123,6 +125,7 @@ class VerifyCodeRequestHandlerTest {
 
         assertThat(result, hasStatus(200));
         assertThat(codeResponse.getSessionState(), equalTo(PHONE_NUMBER_CODE_NOT_VALID));
+        verify(dynamoService, never()).updatePhoneNumberVerifiedStatus("test@test.com", true);
     }
 
     @Test
