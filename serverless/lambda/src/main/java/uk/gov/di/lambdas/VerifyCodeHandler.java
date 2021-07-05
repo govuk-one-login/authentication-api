@@ -19,6 +19,8 @@ import java.util.Optional;
 
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_NOT_VALID;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
+import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_NOT_VALID;
+import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
@@ -64,11 +66,22 @@ public class VerifyCodeHandler
 
                     if (code.isEmpty() || !code.get().equals(codeRequest.getCode())) {
                         sessionService.save(session.get().setState(EMAIL_CODE_NOT_VALID));
-                        return generateApiGatewayProxyResponse(
-                                200, new VerifyCodeResponse(session.get().getState()));
+                    } else {
+                        codeStorageService.deleteCodeForEmail(session.get().getEmailAddress());
+                        sessionService.save(session.get().setState(EMAIL_CODE_VERIFIED));
                     }
-                    codeStorageService.deleteCodeForEmail(session.get().getEmailAddress());
-                    sessionService.save(session.get().setState(EMAIL_CODE_VERIFIED));
+                    return generateApiGatewayProxyResponse(
+                            200, new VerifyCodeResponse(session.get().getState()));
+                case VERIFY_PHONE_NUMBER:
+                    Optional<String> phoneNumberCode =
+                            codeStorageService.getPhoneNumberCode(session.get().getEmailAddress());
+                    if (phoneNumberCode.isEmpty()
+                            || !phoneNumberCode.get().equals(codeRequest.getCode())) {
+                        sessionService.save(session.get().setState(PHONE_NUMBER_CODE_NOT_VALID));
+                    } else {
+                        codeStorageService.deletePhoneNumberCode(session.get().getEmailAddress());
+                        sessionService.save(session.get().setState(PHONE_NUMBER_CODE_VERIFIED));
+                    }
                     return generateApiGatewayProxyResponse(
                             200, new VerifyCodeResponse(session.get().getState()));
             }

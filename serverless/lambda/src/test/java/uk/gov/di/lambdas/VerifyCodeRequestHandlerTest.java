@@ -24,8 +24,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_NOT_VALID;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
+import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_NOT_VALID;
+import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -45,7 +48,7 @@ class VerifyCodeRequestHandlerTest {
     }
 
     @Test
-    public void shouldReturn200ForValidRequest() throws JsonProcessingException {
+    public void shouldReturn200ForValidVerifyEmailRequest() throws JsonProcessingException {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
         event.setBody(
@@ -59,6 +62,26 @@ class VerifyCodeRequestHandlerTest {
         VerifyCodeResponse codeResponse =
                 new ObjectMapper().readValue(result.getBody(), VerifyCodeResponse.class);
         assertThat(codeResponse.getSessionState(), equalTo(EMAIL_CODE_VERIFIED));
+    }
+
+    @Test
+    public void shouldReturn200ForValidVerifyPhoneNumberRequest() throws JsonProcessingException {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", "a-session-id"));
+        event.setBody(
+                format(
+                        "{ \"code\": \"123456\", \"notificationType\": \"%s\" }",
+                        VERIFY_PHONE_NUMBER));
+        when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
+                .thenReturn(Optional.of(SESSION));
+        when(codeStorageService.getPhoneNumberCode("test@test.com"))
+                .thenReturn(Optional.of("123456"));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        verify(codeStorageService).deletePhoneNumberCode("test@test.com");
+        assertThat(result, hasStatus(200));
+        VerifyCodeResponse codeResponse =
+                new ObjectMapper().readValue(result.getBody(), VerifyCodeResponse.class);
+        assertThat(codeResponse.getSessionState(), equalTo(PHONE_NUMBER_CODE_VERIFIED));
     }
 
     @Test
@@ -78,6 +101,28 @@ class VerifyCodeRequestHandlerTest {
 
         assertThat(result, hasStatus(200));
         assertThat(codeResponse.getSessionState(), equalTo(EMAIL_CODE_NOT_VALID));
+    }
+
+    @Test
+    public void shouldReturnPhoneNumberCodeNotValidStateIfRequestCodeDoesNotMatchStoredCode()
+            throws JsonProcessingException {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", "a-session-id"));
+        event.setBody(
+                format(
+                        "{ \"code\": \"123456\", \"notificationType\": \"%s\" }",
+                        VERIFY_PHONE_NUMBER));
+        when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
+                .thenReturn(Optional.of(SESSION));
+        when(codeStorageService.getPhoneNumberCode("test@test.com"))
+                .thenReturn(Optional.of("654321"));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        VerifyCodeResponse codeResponse =
+                new ObjectMapper().readValue(result.getBody(), VerifyCodeResponse.class);
+
+        assertThat(result, hasStatus(200));
+        assertThat(codeResponse.getSessionState(), equalTo(PHONE_NUMBER_CODE_NOT_VALID));
     }
 
     @Test

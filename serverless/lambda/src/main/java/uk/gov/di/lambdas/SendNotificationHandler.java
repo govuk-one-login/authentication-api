@@ -142,7 +142,7 @@ public class SendNotificationHandler
                 break;
             case VERIFY_PHONE_NUMBER:
                 codeStorageService.savePhoneNumberCode(
-                        destination, code, configurationService.getCodeExpiry());
+                        session.getEmailAddress(), code, configurationService.getCodeExpiry());
                 sessionService.save(session.setState(VERIFY_PHONE_NUMBER_CODE_SENT));
                 break;
         }
