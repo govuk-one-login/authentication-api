@@ -6,6 +6,8 @@ import uk.gov.di.helpers.HashHelper;
 
 import java.util.Optional;
 
+import static java.lang.String.format;
+
 public class CodeStorageService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CodeStorageService.class);
@@ -38,6 +40,12 @@ public class CodeStorageService {
         }
     }
 
+    public Optional<String> getPhoneNumberCode(String emailAddress) {
+        return Optional.ofNullable(
+                redisConnectionService.getValue(
+                        PHONE_NUMBER_KEY_PREFIX + HashHelper.hashSha256String(emailAddress)));
+    }
+
     public Optional<String> getCodeForEmail(String emailAddress) {
         return Optional.ofNullable(
                 redisConnectionService.getValue(
@@ -50,7 +58,18 @@ public class CodeStorageService {
                         EMAIL_KEY_PREFIX + HashHelper.hashSha256String(emailAddress));
 
         if (numberOfKeysRemoved == 0) {
-            LOGGER.info("No key was deleted for: " + emailAddress);
+            LOGGER.info(format("No %s key was deleted for: %s", EMAIL_KEY_PREFIX, emailAddress));
+        }
+    }
+
+    public void deletePhoneNumberCode(String emailAddress) {
+        long numberOfKeysRemoved =
+                redisConnectionService.deleteValue(
+                        PHONE_NUMBER_KEY_PREFIX + HashHelper.hashSha256String(emailAddress));
+
+        if (numberOfKeysRemoved == 0) {
+            LOGGER.info(
+                    format("No %s key was deleted for: %s", PHONE_NUMBER_KEY_PREFIX, emailAddress));
         }
     }
 }
