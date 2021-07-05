@@ -12,4 +12,6 @@ public interface AuthenticationService {
     boolean isEmailVerificationRequired();
 
     Subject getSubjectFromEmail(String email);
+
+    void updatePhoneNumber(String email, String profileInformation);
 }
