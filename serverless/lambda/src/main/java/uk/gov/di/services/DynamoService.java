@@ -97,6 +97,11 @@ public class DynamoService implements AuthenticationService {
         userProfileMapper.load(UserProfile.class, email).setPhoneNumber(phoneNumber);
     }
 
+    @Override
+    public void updatePhoneNumberVerifiedStatus(String email, boolean verifiedStatus) {
+        userProfileMapper.load(UserProfile.class, email).setPhoneNumberVerified(verifiedStatus);
+    }
+
     private static String hashPassword(String password) {
         return Base64.encodeAsString(Argon2Helper.argon2Hash(password.getBytes()));
     }

@@ -14,4 +14,6 @@ public interface AuthenticationService {
     Subject getSubjectFromEmail(String email);
 
     void updatePhoneNumber(String email, String profileInformation);
+
+    void updatePhoneNumberVerifiedStatus(String email, boolean verifiedStatus);
 }

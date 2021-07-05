@@ -12,6 +12,7 @@ import uk.gov.di.entity.VerifyCodeRequest;
 import uk.gov.di.entity.VerifyCodeResponse;
 import uk.gov.di.services.CodeStorageService;
 import uk.gov.di.services.ConfigurationService;
+import uk.gov.di.services.DynamoService;
 import uk.gov.di.services.RedisConnectionService;
 import uk.gov.di.services.SessionService;
 
@@ -29,22 +30,28 @@ public class VerifyCodeHandler
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final SessionService sessionService;
-    private final ConfigurationService configService;
     private final CodeStorageService codeStorageService;
+    private final DynamoService dynamoService;
 
     public VerifyCodeHandler(
             SessionService sessionService,
-            ConfigurationService configService,
-            CodeStorageService codeStorageService) {
+            CodeStorageService codeStorageService,
+            DynamoService dynamoService) {
         this.sessionService = sessionService;
-        this.configService = configService;
         this.codeStorageService = codeStorageService;
+        this.dynamoService = dynamoService;
     }
 
     public VerifyCodeHandler() {
-        this.configService = new ConfigurationService();
-        this.sessionService = new SessionService(configService);
-        this.codeStorageService = new CodeStorageService(new RedisConnectionService(configService));
+        ConfigurationService configurationService = new ConfigurationService();
+        this.sessionService = new SessionService(configurationService);
+        this.codeStorageService =
+                new CodeStorageService(new RedisConnectionService(configurationService));
+        this.dynamoService =
+                new DynamoService(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEnvironment(),
+                        configurationService.getDynamoEndpointUri());
     }
 
     @Override
@@ -80,6 +87,8 @@ public class VerifyCodeHandler
                         sessionService.save(session.get().setState(PHONE_NUMBER_CODE_NOT_VALID));
                     } else {
                         codeStorageService.deletePhoneNumberCode(session.get().getEmailAddress());
+                        dynamoService.updatePhoneNumberVerifiedStatus(
+                                session.get().getEmailAddress(), true);
                         sessionService.save(session.get().setState(PHONE_NUMBER_CODE_VERIFIED));
                     }
                     return generateApiGatewayProxyResponse(
