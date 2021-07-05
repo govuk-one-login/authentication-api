@@ -13,9 +13,9 @@ import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.SessionHelper;
 import uk.gov.di.entity.NotificationType;
-import uk.gov.di.entity.Session;
 import uk.gov.di.entity.SessionState;
 import uk.gov.di.entity.VerifyCodeRequest;
+import uk.gov.di.entity.VerifyCodeResponse;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -26,6 +26,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
 
     private static final String VERIFY_CODE_ENDPOINT = "/verify-code";
     public static final String EMAIL_ADDRESS = "test@test.com";
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
     public void shouldCallVerifyCodeEndpointToVerifyEmailAndReturn200() throws IOException {
@@ -52,11 +53,9 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         Response response = sendRequest(sessionId, codeRequest);
 
         assertEquals(200, response.getStatus());
-        SessionState expectedState =
-                new ObjectMapper()
-                        .readValue(response.readEntity(String.class), Session.class)
-                        .getState();
-        assertEquals(SessionState.EMAIL_CODE_NOT_VALID, expectedState);
+        VerifyCodeResponse codeResponse =
+                objectMapper.readValue(response.readEntity(String.class), VerifyCodeResponse.class);
+        assertEquals(SessionState.EMAIL_CODE_NOT_VALID, codeResponse.getSessionState());
     }
 
     @Test
@@ -73,11 +72,10 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         Response response2 = sendRequest(sessionId, codeRequest);
         assertEquals(200, response2.getStatus());
 
-        SessionState expectedState =
-                new ObjectMapper()
-                        .readValue(response2.readEntity(String.class), Session.class)
-                        .getState();
-        assertEquals(SessionState.EMAIL_CODE_NOT_VALID, expectedState);
+        VerifyCodeResponse codeResponse =
+                objectMapper.readValue(
+                        response2.readEntity(String.class), VerifyCodeResponse.class);
+        assertEquals(SessionState.EMAIL_CODE_NOT_VALID, codeResponse.getSessionState());
     }
 
     private Response sendRequest(String sessionId, VerifyCodeRequest codeRequest) {

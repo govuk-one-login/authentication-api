@@ -61,13 +61,9 @@ public class UpdateProfileHandler
                 case ADD_PHONE_NUMBER:
                     authenticationService.updatePhoneNumber(
                             profileRequest.getEmail(), profileRequest.getProfileInformation());
-
+                    sessionService.save(session.get().setState(ADDED_UNVERIFIED_PHONE_NUMBER));
                     return generateApiGatewayProxyResponse(
-                            200,
-                            new UpdateProfileResponse(
-                                    session.get()
-                                            .setState(ADDED_UNVERIFIED_PHONE_NUMBER)
-                                            .getState()));
+                            200, new UpdateProfileResponse(session.get().getState()));
             }
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);

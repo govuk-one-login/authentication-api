@@ -63,8 +63,9 @@ public class VerifyCodeHandler
                             codeStorageService.getCodeForEmail(session.get().getEmailAddress());
 
                     if (code.isEmpty() || !code.get().equals(codeRequest.getCode())) {
+                        sessionService.save(session.get().setState(EMAIL_CODE_NOT_VALID));
                         return generateApiGatewayProxyResponse(
-                                200, session.get().setState(EMAIL_CODE_NOT_VALID));
+                                200, new VerifyCodeResponse(session.get().getState()));
                     }
                     codeStorageService.deleteCodeForEmail(session.get().getEmailAddress());
                     sessionService.save(session.get().setState(EMAIL_CODE_VERIFIED));
