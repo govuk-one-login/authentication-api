@@ -75,11 +75,9 @@ public class CheckUserExistsHandler
                 CheckUserExistsResponse checkUserExistsResponse =
                         new CheckUserExistsResponse(
                                 emailAddress, userExists, session.get().getState());
-                String checkUserExistsResponseString =
-                        objectMapper.writeValueAsString(checkUserExistsResponse);
                 sessionService.save(session.get());
 
-                return generateApiGatewayProxyResponse(200, checkUserExistsResponseString);
+                return generateApiGatewayProxyResponse(200, checkUserExistsResponse);
             }
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         } catch (JsonProcessingException e) {

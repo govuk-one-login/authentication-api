@@ -20,7 +20,6 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -74,10 +73,11 @@ class VerifyCodeRequestHandlerTest {
         when(codeStorageService.getCodeForEmail("test@test.com")).thenReturn(Optional.of("654321"));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-        Session sessionResponse = new ObjectMapper().readValue(result.getBody(), Session.class);
+        VerifyCodeResponse codeResponse =
+                new ObjectMapper().readValue(result.getBody(), VerifyCodeResponse.class);
 
         assertThat(result, hasStatus(200));
-        assertEquals(EMAIL_CODE_NOT_VALID, sessionResponse.getState());
+        assertThat(codeResponse.getSessionState(), equalTo(EMAIL_CODE_NOT_VALID));
     }
 
     @Test
