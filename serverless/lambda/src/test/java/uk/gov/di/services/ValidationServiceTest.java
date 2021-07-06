@@ -2,11 +2,17 @@ package uk.gov.di.services;
 
 import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.ErrorResponse;
+import uk.gov.di.entity.Session;
 
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
+import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_NOT_VALID;
+import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
 
 public class ValidationServiceTest {
 
@@ -110,5 +116,42 @@ public class ValidationServiceTest {
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1012),
                 validationService.validatePhoneNumber("202-456-1111"));
+    }
+
+    @Test
+    public void shouldReturnCorrectStateWhenPhoneCodeMatchesStored() {
+        assertEquals(
+                PHONE_NUMBER_CODE_VERIFIED,
+                validationService.validatePhoneVerificationCode(
+                        Optional.of("123456"), "123456", mock(Session.class), 5));
+    }
+
+    @Test
+    public void shouldReturnCorrectStateWhenStoredCodeIsEmpty() {
+        assertEquals(
+                PHONE_NUMBER_CODE_NOT_VALID,
+                validationService.validatePhoneVerificationCode(
+                        Optional.empty(), "123456", mock(Session.class), 5));
+    }
+
+    @Test
+    public void
+            shouldReturnCorrectStateWhenStoredCodeDoesMatchInputAndRetryLimitHasNotBeenReached() {
+        Session session = mock(Session.class);
+        when(session.getRetryCount()).thenReturn(1);
+        assertEquals(
+                PHONE_NUMBER_CODE_NOT_VALID,
+                validationService.validatePhoneVerificationCode(
+                        Optional.of("654321"), "123456", session, 5));
+    }
+
+    @Test
+    public void shouldReturnCorrectStateWhenStoredCodeDoesMatchInputAndRetryLimitHasBeenReached() {
+        Session session = mock(Session.class);
+        when(session.getRetryCount()).thenReturn(6);
+        assertEquals(
+                PHONE_NUMBER_CODE_MAX_RETRIES_REACHED,
+                validationService.validatePhoneVerificationCode(
+                        Optional.of("654321"), "123456", session, 5));
     }
 }

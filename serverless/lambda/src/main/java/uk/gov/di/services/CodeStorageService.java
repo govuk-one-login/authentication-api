@@ -15,6 +15,8 @@ public class CodeStorageService {
     private final RedisConnectionService redisConnectionService;
     private static final String EMAIL_KEY_PREFIX = "email-code:";
     private static final String PHONE_NUMBER_KEY_PREFIX = "phone-number-code:";
+    private static final String CODE_BLOCKED_KEY_PREFIX = "code-blocked:";
+    private static final String CODE_BLOCKED_VALUE = "blocked";
 
     public CodeStorageService(RedisConnectionService redisConnectionService) {
         this.redisConnectionService = redisConnectionService;
@@ -30,6 +32,16 @@ public class CodeStorageService {
         }
     }
 
+    public void saveCodeBlockedForSession(String email, String sessionId, long codeBlockedTime) {
+        String encodedHash = HashHelper.hashSha256String(email);
+        String key = CODE_BLOCKED_KEY_PREFIX + encodedHash + sessionId;
+        try {
+            redisConnectionService.saveWithExpiry(key, CODE_BLOCKED_VALUE, codeBlockedTime);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public void savePhoneNumberCode(String emailAddress, String code, long codeExpiryTime) {
         String hashedEmailAddress = HashHelper.hashSha256String(emailAddress);
         String key = PHONE_NUMBER_KEY_PREFIX + hashedEmailAddress;
@@ -38,6 +50,14 @@ public class CodeStorageService {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public boolean isCodeBlockedForSession(String emailAddress, String sessionId) {
+        return redisConnectionService.getValue(
+                        CODE_BLOCKED_KEY_PREFIX
+                                + HashHelper.hashSha256String(emailAddress)
+                                + sessionId)
+                != null;
     }
 
     public Optional<String> getPhoneNumberCode(String emailAddress) {

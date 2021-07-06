@@ -15,12 +15,13 @@ import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoService;
 import uk.gov.di.services.RedisConnectionService;
 import uk.gov.di.services.SessionService;
+import uk.gov.di.services.ValidationService;
 
 import java.util.Optional;
 
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_NOT_VALID;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
-import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_NOT_VALID;
+import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -32,18 +33,24 @@ public class VerifyCodeHandler
     private final SessionService sessionService;
     private final CodeStorageService codeStorageService;
     private final DynamoService dynamoService;
+    private final ConfigurationService configurationService;
+    private final ValidationService validationService;
 
     public VerifyCodeHandler(
             SessionService sessionService,
             CodeStorageService codeStorageService,
-            DynamoService dynamoService) {
+            DynamoService dynamoService,
+            ConfigurationService configurationService,
+            ValidationService validationService) {
         this.sessionService = sessionService;
         this.codeStorageService = codeStorageService;
         this.dynamoService = dynamoService;
+        this.configurationService = configurationService;
+        this.validationService = validationService;
     }
 
     public VerifyCodeHandler() {
-        ConfigurationService configurationService = new ConfigurationService();
+        this.configurationService = new ConfigurationService();
         this.sessionService = new SessionService(configurationService);
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
@@ -52,6 +59,7 @@ public class VerifyCodeHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEnvironment(),
                         configurationService.getDynamoEndpointUri());
+        this.validationService = new ValidationService();
     }
 
     @Override
@@ -80,16 +88,37 @@ public class VerifyCodeHandler
                     return generateApiGatewayProxyResponse(
                             200, new VerifyCodeResponse(session.get().getState()));
                 case VERIFY_PHONE_NUMBER:
-                    Optional<String> phoneNumberCode =
-                            codeStorageService.getPhoneNumberCode(session.get().getEmailAddress());
-                    if (phoneNumberCode.isEmpty()
-                            || !phoneNumberCode.get().equals(codeRequest.getCode())) {
-                        sessionService.save(session.get().setState(PHONE_NUMBER_CODE_NOT_VALID));
+                    if (codeStorageService.isCodeBlockedForSession(
+                            session.get().getEmailAddress(), session.get().getSessionId())) {
+                        sessionService.save(
+                                session.get().setState(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED));
                     } else {
-                        codeStorageService.deletePhoneNumberCode(session.get().getEmailAddress());
-                        dynamoService.updatePhoneNumberVerifiedStatus(
-                                session.get().getEmailAddress(), true);
-                        sessionService.save(session.get().setState(PHONE_NUMBER_CODE_VERIFIED));
+                        Optional<String> phoneNumberCode =
+                                codeStorageService.getPhoneNumberCode(
+                                        session.get().getEmailAddress());
+                        sessionService.save(
+                                session.get()
+                                        .setState(
+                                                validationService.validatePhoneVerificationCode(
+                                                        phoneNumberCode,
+                                                        codeRequest.getCode(),
+                                                        session.get(),
+                                                        configurationService
+                                                                .getPhoneCodeMaxRetries())));
+                        if (session.get().getState().equals(PHONE_NUMBER_CODE_VERIFIED)) {
+                            codeStorageService.deletePhoneNumberCode(
+                                    session.get().getEmailAddress());
+                            dynamoService.updatePhoneNumberVerifiedStatus(
+                                    session.get().getEmailAddress(), true);
+                        } else if (session.get()
+                                .getState()
+                                .equals(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED)) {
+                            codeStorageService.saveCodeBlockedForSession(
+                                    session.get().getEmailAddress(),
+                                    session.get().getSessionId(),
+                                    configurationService.getCodeExpiry());
+                            sessionService.save(session.get().resetRetryCount());
+                        }
                     }
                     return generateApiGatewayProxyResponse(
                             200, new VerifyCodeResponse(session.get().getState()));

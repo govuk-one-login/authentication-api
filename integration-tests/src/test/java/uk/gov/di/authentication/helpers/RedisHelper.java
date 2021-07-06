@@ -10,7 +10,7 @@ import uk.gov.di.services.RedisConnectionService;
 import java.io.IOException;
 import java.util.Optional;
 
-public class SessionHelper {
+public class RedisHelper {
 
     private static final String REDIS_HOST =
             System.getenv().getOrDefault("REDIS_HOST", "localhost");
@@ -60,6 +60,16 @@ public class SessionHelper {
             new CodeStorageService(redis).savePhoneNumberCode(email, code, codeExpiryTime);
 
             return code;
+        }
+    }
+
+    public static void blockPhoneCode(String email, String sessionId) {
+        try (RedisConnectionService redis =
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
+
+            var code = new CodeGeneratorService().sixDigitCode();
+            new CodeStorageService(redis).saveCodeBlockedForSession(email, sessionId, 10);
+            ;
         }
     }
 }

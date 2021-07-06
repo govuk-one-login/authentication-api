@@ -143,7 +143,8 @@ public class SendNotificationHandler
             case VERIFY_PHONE_NUMBER:
                 codeStorageService.savePhoneNumberCode(
                         session.getEmailAddress(), code, configurationService.getCodeExpiry());
-                sessionService.save(session.setState(VERIFY_PHONE_NUMBER_CODE_SENT));
+                sessionService.save(
+                        session.setState(VERIFY_PHONE_NUMBER_CODE_SENT).resetRetryCount());
                 break;
         }
         sqsClient.send(serialiseRequest(notifyRequest));

@@ -29,7 +29,7 @@ class SessionServiceTest {
         sessionService.save(session);
 
         var serialisedSession =
-                "{\"session_id\":\"session-id\",\"authentication_request\":null,\"state\":\"NEW\",\"email_address\":null}";
+                "{\"session_id\":\"session-id\",\"authentication_request\":null,\"state\":\"NEW\",\"email_address\":null,\"retry_count\":0}";
 
         verify(redis).saveWithExpiry("session-id", serialisedSession, 1234L);
     }
@@ -37,7 +37,7 @@ class SessionServiceTest {
     @Test
     public void shouldRetrieveSessionUsingRequestHeaders() {
         var serialisedSession =
-                "{\"session_id\":\"session-id\",\"authentication_request\":null,\"state\":\"NEW\",\"email_address\":null}";
+                "{\"session_id\":\"session-id\",\"authentication_request\":null,\"state\":\"NEW\",\"email_address\":null,\"retry_count\":0}";
 
         when(redis.keyExists("session-id")).thenReturn(true);
         when(redis.getValue("session-id")).thenReturn(serialisedSession);

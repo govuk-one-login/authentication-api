@@ -3,9 +3,15 @@ package uk.gov.di.services;
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import uk.gov.di.entity.ErrorResponse;
+import uk.gov.di.entity.Session;
+import uk.gov.di.entity.SessionState;
 
 import java.util.Optional;
 import java.util.regex.Pattern;
+
+import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
+import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_NOT_VALID;
+import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
 
 public class ValidationService {
 
@@ -49,5 +55,18 @@ public class ValidationService {
         } catch (NumberParseException e) {
             return Optional.of(ErrorResponse.ERROR_1012);
         }
+    }
+
+    public SessionState validatePhoneVerificationCode(
+            Optional<String> phoneNumberCode, String input, Session session, int maxRetries) {
+        if (phoneNumberCode.isEmpty() || !phoneNumberCode.get().equals(input)) {
+            session.incrementRetryCount();
+            if (session.getRetryCount() > maxRetries) {
+                return PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
+            } else {
+                return PHONE_NUMBER_CODE_NOT_VALID;
+            }
+        }
+        return PHONE_NUMBER_CODE_VERIFIED;
     }
 }
