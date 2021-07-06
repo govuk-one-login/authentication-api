@@ -2,10 +2,9 @@ package uk.gov.di.services;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
-
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -103,15 +102,13 @@ class CodeStorageServiceTest {
     public void shouldRetrieveSessionIdWhenCodeIsBlocked() {
         when(redisConnectionService.getValue(REDIS_BLOCKED_KEY)).thenReturn(CODE_BLOCKED_VALUE);
 
-        assertThat(
-                codeStorageService.getCodeBlockedForSession(TEST_EMAIL, SESSION_ID),
-                is(Optional.of(CODE_BLOCKED_VALUE)));
+        assertTrue(codeStorageService.isCodeBlockedForSession(TEST_EMAIL, SESSION_ID));
     }
 
     @Test
     public void shouldReturnEmptyOptionalWhenCodeIsNotBlockedForSession() {
         when(redisConnectionService.getValue(REDIS_BLOCKED_KEY)).thenReturn(null);
 
-        assertTrue(codeStorageService.getCodeBlockedForSession(TEST_EMAIL, SESSION_ID).isEmpty());
+        assertFalse(codeStorageService.isCodeBlockedForSession(TEST_EMAIL, SESSION_ID));
     }
 }

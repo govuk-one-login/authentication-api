@@ -52,12 +52,12 @@ public class CodeStorageService {
         }
     }
 
-    public Optional<String> getCodeBlockedForSession(String emailAddress, String sessionId) {
-        return Optional.ofNullable(
-                redisConnectionService.getValue(
+    public boolean isCodeBlockedForSession(String emailAddress, String sessionId) {
+        return redisConnectionService.getValue(
                         CODE_BLOCKED_KEY_PREFIX
                                 + HashHelper.hashSha256String(emailAddress)
-                                + sessionId));
+                                + sessionId)
+                != null;
     }
 
     public Optional<String> getPhoneNumberCode(String emailAddress) {

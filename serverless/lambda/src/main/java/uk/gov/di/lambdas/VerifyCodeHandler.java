@@ -88,28 +88,37 @@ public class VerifyCodeHandler
                     return generateApiGatewayProxyResponse(
                             200, new VerifyCodeResponse(session.get().getState()));
                 case VERIFY_PHONE_NUMBER:
-                    Optional<String> phoneNumberCode =
-                            codeStorageService.getPhoneNumberCode(session.get().getEmailAddress());
-                    sessionService.save(
-                            session.get()
-                                    .setState(
-                                            validationService.validatePhoneVerificationCode(
-                                                    phoneNumberCode,
-                                                    codeRequest.getCode(),
-                                                    session.get(),
-                                                    configurationService
-                                                            .getPhoneCodeMaxRetries())));
-                    if (session.get().getState().equals(PHONE_NUMBER_CODE_VERIFIED)) {
-                        codeStorageService.deletePhoneNumberCode(session.get().getEmailAddress());
-                        dynamoService.updatePhoneNumberVerifiedStatus(
-                                session.get().getEmailAddress(), true);
-                    } else if (session.get()
-                            .getState()
-                            .equals(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED)) {
-                        codeStorageService.saveCodeBlockedForSession(
-                                session.get().getEmailAddress(),
-                                session.get().getSessionId(),
-                                configurationService.getCodeExpiry());
+                    if (codeStorageService.isCodeBlockedForSession(
+                            session.get().getEmailAddress(), session.get().getSessionId())) {
+                        sessionService.save(
+                                session.get().setState(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED));
+                    } else {
+                        Optional<String> phoneNumberCode =
+                                codeStorageService.getPhoneNumberCode(
+                                        session.get().getEmailAddress());
+                        sessionService.save(
+                                session.get()
+                                        .setState(
+                                                validationService.validatePhoneVerificationCode(
+                                                        phoneNumberCode,
+                                                        codeRequest.getCode(),
+                                                        session.get(),
+                                                        configurationService
+                                                                .getPhoneCodeMaxRetries())));
+                        if (session.get().getState().equals(PHONE_NUMBER_CODE_VERIFIED)) {
+                            codeStorageService.deletePhoneNumberCode(
+                                    session.get().getEmailAddress());
+                            dynamoService.updatePhoneNumberVerifiedStatus(
+                                    session.get().getEmailAddress(), true);
+                        } else if (session.get()
+                                .getState()
+                                .equals(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED)) {
+                            codeStorageService.saveCodeBlockedForSession(
+                                    session.get().getEmailAddress(),
+                                    session.get().getSessionId(),
+                                    configurationService.getCodeExpiry());
+                            sessionService.save(session.get().resetRetryCount());
+                        }
                     }
                     return generateApiGatewayProxyResponse(
                             200, new VerifyCodeResponse(session.get().getState()));

@@ -41,8 +41,6 @@ import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 class VerifyCodeRequestHandlerTest {
 
     public static final String TEST_EMAIL_ADDRESS = "test@test.com";
-    private static final Session SESSION =
-            new Session("session-id").setEmailAddress(TEST_EMAIL_ADDRESS);
     public static final String CODE = "123456";
     private final Context context = mock(Context.class);
     private final SessionService sessionService = mock(SessionService.class);
@@ -50,6 +48,7 @@ class VerifyCodeRequestHandlerTest {
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final ValidationService validationService = mock(ValidationService.class);
+    private final Session session = new Session("session-id").setEmailAddress(TEST_EMAIL_ADDRESS);
     private VerifyCodeHandler handler;
 
     @BeforeEach
@@ -136,7 +135,7 @@ class VerifyCodeRequestHandlerTest {
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
         event.setBody(format("{ \"code\": \"%s\"}", CODE));
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
-                .thenReturn(Optional.of(SESSION));
+                .thenReturn(Optional.of(session));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
@@ -184,13 +183,30 @@ class VerifyCodeRequestHandlerTest {
                 new ObjectMapper().readValue(result.getBody(), VerifyCodeResponse.class);
         assertThat(result, hasStatus(200));
         assertThat(codeResponse.getSessionState(), equalTo(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED));
+        assertThat(session.getRetryCount(), equalTo(0));
         verify(dynamoService, never()).updatePhoneNumberVerifiedStatus(TEST_EMAIL_ADDRESS, true);
         verify(codeStorageService)
-                .saveCodeBlockedForSession(TEST_EMAIL_ADDRESS, SESSION.getSessionId(), 900);
+                .saveCodeBlockedForSession(TEST_EMAIL_ADDRESS, session.getSessionId(), 900);
+    }
+
+    @Test
+    public void shouldReturnMaxReachedWhenCodeIsBlocked() throws JsonProcessingException {
+        final String USER_INPUT = "123456";
+        when(codeStorageService.isCodeBlockedForSession(TEST_EMAIL_ADDRESS, session.getSessionId()))
+                .thenReturn(true);
+
+        APIGatewayProxyResponseEvent result =
+                makeCallWithCode(USER_INPUT, VERIFY_PHONE_NUMBER.toString());
+
+        VerifyCodeResponse codeResponse =
+                new ObjectMapper().readValue(result.getBody(), VerifyCodeResponse.class);
+        assertThat(result, hasStatus(200));
+        assertThat(codeResponse.getSessionState(), equalTo(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED));
+        verify(codeStorageService, never()).getPhoneNumberCode(session.getEmailAddress());
     }
 
     private APIGatewayProxyResponseEvent makeCallWithCode(String code, String notificationType) {
-        return makeCallWithCode(code, notificationType, Optional.of(SESSION));
+        return makeCallWithCode(code, notificationType, Optional.of(session));
     }
 
     private APIGatewayProxyResponseEvent makeCallWithCode(
