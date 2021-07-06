@@ -12,7 +12,7 @@ import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
-import uk.gov.di.authentication.helpers.SessionHelper;
+import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.entity.LoginRequest;
 import uk.gov.di.entity.LoginResponse;
 
@@ -33,7 +33,7 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
         DynamoHelper.signUp(email, password);
         Client client = ClientBuilder.newClient();
         WebTarget webTarget = client.target(ROOT_RESOURCE_URL + LOGIN_ENDPOINT);
-        String sessionId = SessionHelper.createSession();
+        String sessionId = RedisHelper.createSession();
         Invocation.Builder invocationBuilder = webTarget.request(MediaType.APPLICATION_JSON);
         MultivaluedMap headers = new MultivaluedHashMap();
         headers.add("Session-Id", sessionId);
@@ -60,7 +60,7 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
         DynamoHelper.signUp(email, "wrong-password");
         Client client = ClientBuilder.newClient();
         WebTarget webTarget = client.target(ROOT_RESOURCE_URL + LOGIN_ENDPOINT);
-        String sessionId = SessionHelper.createSession();
+        String sessionId = RedisHelper.createSession();
         Invocation.Builder invocationBuilder = webTarget.request(MediaType.APPLICATION_JSON);
         MultivaluedMap headers = new MultivaluedHashMap();
         headers.add("Session-Id", sessionId);

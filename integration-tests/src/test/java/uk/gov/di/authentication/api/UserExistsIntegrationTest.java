@@ -12,7 +12,7 @@ import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
-import uk.gov.di.authentication.helpers.SessionHelper;
+import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.entity.CheckUserExistsResponse;
 import uk.gov.di.entity.UserWithEmailRequest;
 
@@ -33,7 +33,7 @@ public class UserExistsIntegrationTest extends IntegrationTestEndpoints {
     public void shouldCallUserExistsEndpointAndReturnAuthenticationRequestStateWhenUserExists()
             throws IOException {
         String emailAddress = "joe.bloggs+1@digital.cabinet-office.gov.uk";
-        String sessionId = SessionHelper.createSession();
+        String sessionId = RedisHelper.createSession();
         DynamoHelper.signUp(emailAddress, "password-1");
         MultivaluedMap headers = new MultivaluedHashMap();
         headers.add("Session-Id", sessionId);
@@ -53,7 +53,7 @@ public class UserExistsIntegrationTest extends IntegrationTestEndpoints {
     public void shouldCallUserExistsEndpointAndReturnUserNotFoundStateWhenUserDoesNotExist()
             throws IOException {
         String emailAddress = "joe.bloggs+2@digital.cabinet-office.gov.uk";
-        String sessionId = SessionHelper.createSession();
+        String sessionId = RedisHelper.createSession();
         MultivaluedMap headers = new MultivaluedHashMap();
         headers.add("Session-Id", sessionId);
         UserWithEmailRequest request = new UserWithEmailRequest(emailAddress);

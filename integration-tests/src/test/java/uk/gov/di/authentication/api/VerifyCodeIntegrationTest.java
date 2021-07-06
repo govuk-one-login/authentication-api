@@ -11,7 +11,7 @@ import jakarta.ws.rs.core.MultivaluedHashMap;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.helpers.SessionHelper;
+import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.entity.NotificationType;
 import uk.gov.di.entity.SessionState;
 import uk.gov.di.entity.VerifyCodeRequest;
@@ -30,10 +30,10 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
 
     @Test
     public void shouldCallVerifyCodeEndpointToVerifyEmailCodeAndReturn200() throws IOException {
-        String sessionId = SessionHelper.createSession();
-        SessionHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        String sessionId = RedisHelper.createSession();
+        RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
-        String code = SessionHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
+        String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.VERIFY_EMAIL, code);
 
         Response response = sendRequest(sessionId, codeRequest);
@@ -43,10 +43,10 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
     @Test
     public void shouldCallVerifyCodeEndpointAndReturn200WitUpdatedStateWhenEmailCodeHasExpired()
             throws IOException, InterruptedException {
-        String sessionId = SessionHelper.createSession();
-        SessionHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        String sessionId = RedisHelper.createSession();
+        RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
-        String code = SessionHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 2);
+        String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 2);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.VERIFY_EMAIL, code);
 
         TimeUnit.SECONDS.sleep(3);
@@ -61,9 +61,9 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
     @Test
     public void shouldReturn200WithNewStateWhenUserTriesEmailCodeThatTheyHaveAlreadyUsed()
             throws IOException {
-        String sessionId = SessionHelper.createSession();
-        SessionHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
-        String code = SessionHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
+        String sessionId = RedisHelper.createSession();
+        RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.VERIFY_EMAIL, code);
 
         Response response = sendRequest(sessionId, codeRequest);
@@ -80,10 +80,10 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
 
     @Test
     public void shouldCallVerifyCodeEndpointToVerifyPhoneCodeAndReturn200() throws IOException {
-        String sessionId = SessionHelper.createSession();
-        SessionHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        String sessionId = RedisHelper.createSession();
+        RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
-        String code = SessionHelper.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
+        String code = RedisHelper.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest =
                 new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
 
@@ -95,10 +95,10 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
     public void
             shouldCallVerifyCodeEndpointAndReturn200WitUpdatedStateWhenPhoneNumberCodeHasExpired()
                     throws IOException, InterruptedException {
-        String sessionId = SessionHelper.createSession();
-        SessionHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        String sessionId = RedisHelper.createSession();
+        RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
-        String code = SessionHelper.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 2);
+        String code = RedisHelper.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 2);
         VerifyCodeRequest codeRequest =
                 new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
 
@@ -109,6 +109,24 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         VerifyCodeResponse codeResponse =
                 objectMapper.readValue(response.readEntity(String.class), VerifyCodeResponse.class);
         assertEquals(SessionState.PHONE_NUMBER_CODE_NOT_VALID, codeResponse.getSessionState());
+    }
+
+    @Test
+    public void shouldReturnMaxCodesReachedIfCodeIsBlocked() throws IOException {
+        String sessionId = RedisHelper.createSession();
+        RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        RedisHelper.blockPhoneCode(EMAIL_ADDRESS, sessionId);
+
+        VerifyCodeRequest codeRequest =
+                new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, "123456");
+
+        Response response = sendRequest(sessionId, codeRequest);
+
+        assertEquals(200, response.getStatus());
+        VerifyCodeResponse codeResponse =
+                objectMapper.readValue(response.readEntity(String.class), VerifyCodeResponse.class);
+        assertEquals(
+                SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED, codeResponse.getSessionState());
     }
 
     private Response sendRequest(String sessionId, VerifyCodeRequest codeRequest) {

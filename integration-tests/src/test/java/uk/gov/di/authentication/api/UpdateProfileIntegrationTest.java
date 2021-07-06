@@ -11,7 +11,7 @@ import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
-import uk.gov.di.authentication.helpers.SessionHelper;
+import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.entity.UpdateProfileRequest;
 
 import java.io.IOException;
@@ -26,8 +26,8 @@ public class UpdateProfileIntegrationTest extends IntegrationTestEndpoints {
 
     @Test
     public void shouldCallUpdateProfileEndpointAndReturn200() throws IOException {
-        String sessionId = SessionHelper.createSession();
-        SessionHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        String sessionId = RedisHelper.createSession();
+        RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
         DynamoHelper.signUp(EMAIL_ADDRESS, "password-1");
 
         UpdateProfileRequest request =
