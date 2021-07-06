@@ -32,6 +32,7 @@ import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_NOT_VALID;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
+import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_NOT_VALID;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
@@ -39,8 +40,10 @@ import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class VerifyCodeRequestHandlerTest {
 
+    public static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final Session SESSION =
-            new Session("session-id").setEmailAddress("test@test.com");
+            new Session("session-id").setEmailAddress(TEST_EMAIL_ADDRESS);
+    public static final String CODE = "123456";
     private final Context context = mock(Context.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
@@ -62,15 +65,11 @@ class VerifyCodeRequestHandlerTest {
 
     @Test
     public void shouldReturn200ForValidVerifyEmailRequest() throws JsonProcessingException {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", "a-session-id"));
-        event.setBody(
-                format("{ \"code\": \"123456\", \"notificationType\": \"%s\" }", VERIFY_EMAIL));
-        when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
-                .thenReturn(Optional.of(SESSION));
-        when(codeStorageService.getCodeForEmail("test@test.com")).thenReturn(Optional.of("123456"));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-        verify(codeStorageService).deleteCodeForEmail("test@test.com");
+        when(codeStorageService.getCodeForEmail(TEST_EMAIL_ADDRESS)).thenReturn(Optional.of(CODE));
+
+        APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, VERIFY_EMAIL.toString());
+
+        verify(codeStorageService).deleteCodeForEmail(TEST_EMAIL_ADDRESS);
         assertThat(result, hasStatus(200));
         VerifyCodeResponse codeResponse =
                 new ObjectMapper().readValue(result.getBody(), VerifyCodeResponse.class);
@@ -79,44 +78,34 @@ class VerifyCodeRequestHandlerTest {
 
     @Test
     public void shouldReturn200ForValidVerifyPhoneNumberRequest() throws JsonProcessingException {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         when(configurationService.getPhoneCodeMaxRetries()).thenReturn(5);
         when(validationService.validatePhoneVerificationCode(
-                        eq(Optional.of("123456")), eq("123456"), any(Session.class), eq(5)))
+                        eq(Optional.of(CODE)), eq(CODE), any(Session.class), eq(5)))
                 .thenReturn(PHONE_NUMBER_CODE_VERIFIED);
-        event.setHeaders(Map.of("Session-Id", "a-session-id"));
-        event.setBody(
-                format(
-                        "{ \"code\": \"123456\", \"notificationType\": \"%s\" }",
-                        VERIFY_PHONE_NUMBER));
-        when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
-                .thenReturn(Optional.of(SESSION));
-        when(codeStorageService.getPhoneNumberCode("test@test.com"))
-                .thenReturn(Optional.of("123456"));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-        verify(codeStorageService).deletePhoneNumberCode("test@test.com");
+        when(codeStorageService.getPhoneNumberCode(TEST_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(CODE));
+
+        APIGatewayProxyResponseEvent result =
+                makeCallWithCode(CODE, VERIFY_PHONE_NUMBER.toString());
+
+        verify(codeStorageService).deletePhoneNumberCode(TEST_EMAIL_ADDRESS);
+        verify(dynamoService).updatePhoneNumberVerifiedStatus(TEST_EMAIL_ADDRESS, true);
         assertThat(result, hasStatus(200));
         VerifyCodeResponse codeResponse =
                 new ObjectMapper().readValue(result.getBody(), VerifyCodeResponse.class);
-        verify(dynamoService).updatePhoneNumberVerifiedStatus("test@test.com", true);
         assertThat(codeResponse.getSessionState(), equalTo(PHONE_NUMBER_CODE_VERIFIED));
     }
 
     @Test
     public void shouldReturnEmailCodeNotValidStateIfRequestCodeDoesNotMatchStoredCode()
             throws JsonProcessingException {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", "a-session-id"));
-        event.setBody(
-                format("{ \"code\": \"123456\", \"notificationType\": \"%s\" }", VERIFY_EMAIL));
-        when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
-                .thenReturn(Optional.of(SESSION));
-        when(codeStorageService.getCodeForEmail("test@test.com")).thenReturn(Optional.of("654321"));
+        when(codeStorageService.getCodeForEmail(TEST_EMAIL_ADDRESS))
+                .thenReturn(Optional.of("654321"));
 
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, VERIFY_EMAIL.toString());
+
         VerifyCodeResponse codeResponse =
                 new ObjectMapper().readValue(result.getBody(), VerifyCodeResponse.class);
-
         assertThat(result, hasStatus(200));
         assertThat(codeResponse.getSessionState(), equalTo(EMAIL_CODE_NOT_VALID));
     }
@@ -124,38 +113,28 @@ class VerifyCodeRequestHandlerTest {
     @Test
     public void shouldReturnPhoneNumberCodeNotValidStateIfRequestCodeDoesNotMatchStoredCode()
             throws JsonProcessingException {
-        final String VALID_CODE = "654321";
-        final String USER_INPUT = "123456";
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         when(configurationService.getPhoneCodeMaxRetries()).thenReturn(5);
         when(validationService.validatePhoneVerificationCode(
-                        eq(Optional.of(VALID_CODE)), eq(USER_INPUT), any(Session.class), eq(5)))
+                        eq(Optional.of(CODE)), eq(CODE), any(Session.class), eq(5)))
                 .thenReturn(PHONE_NUMBER_CODE_NOT_VALID);
+        when(codeStorageService.getPhoneNumberCode(TEST_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(CODE));
 
-        event.setHeaders(Map.of("Session-Id", "a-session-id"));
-        event.setBody(
-                format(
-                        "{ \"code\": \"%s\", \"notificationType\": \"%s\" }",
-                        USER_INPUT, VERIFY_PHONE_NUMBER));
-        when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
-                .thenReturn(Optional.of(SESSION));
-        when(codeStorageService.getPhoneNumberCode("test@test.com"))
-                .thenReturn(Optional.of(VALID_CODE));
+        APIGatewayProxyResponseEvent result =
+                makeCallWithCode(CODE, VERIFY_PHONE_NUMBER.toString());
 
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         VerifyCodeResponse codeResponse =
                 new ObjectMapper().readValue(result.getBody(), VerifyCodeResponse.class);
-
         assertThat(result, hasStatus(200));
         assertThat(codeResponse.getSessionState(), equalTo(PHONE_NUMBER_CODE_NOT_VALID));
-        verify(dynamoService, never()).updatePhoneNumberVerifiedStatus("test@test.com", true);
+        verify(dynamoService, never()).updatePhoneNumberVerifiedStatus(TEST_EMAIL_ADDRESS, true);
     }
 
     @Test
     public void shouldReturn400IfRequestIsMissingNotificationType() throws JsonProcessingException {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
-        event.setBody(format("{ \"code\": \"123456\"}"));
+        event.setBody(format("{ \"code\": \"%s\"}", CODE));
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(SESSION));
 
@@ -168,14 +147,9 @@ class VerifyCodeRequestHandlerTest {
 
     @Test
     public void shouldReturn400IfSessionIdIsInvalid() throws JsonProcessingException {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", "a-session-id"));
-        event.setBody(
-                format("{ \"code\": \"123456\", \"notificationType\": \"%s\" }", VERIFY_EMAIL));
-        when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
-                .thenReturn(Optional.empty());
+        APIGatewayProxyResponseEvent result =
+                makeCallWithCode("123456", VERIFY_EMAIL.toString(), Optional.empty());
 
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
         String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1000);
         assertThat(result, hasBody(expectedResponse));
@@ -183,17 +157,54 @@ class VerifyCodeRequestHandlerTest {
 
     @Test
     public void shouldReturn400IfNotificationTypeIsNotValid() throws JsonProcessingException {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", "a-session-id"));
-        event.setBody(
-                format("{ \"code\": \"123456\", \"notificationType\": \"%s\" }", "VERIFY_TEXT"));
-        when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
-                .thenReturn(Optional.of(SESSION));
+        APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, "VERIFY_TEXT");
 
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1001);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(expectedResponse));
+    }
+
+    @Test
+    public void shouldUpdateRedisWhenUserHasReachedMaxCodeAttempts()
+            throws JsonProcessingException {
+        final String USER_INPUT = "123456";
+        when(configurationService.getPhoneCodeMaxRetries()).thenReturn(5);
+        when(configurationService.getCodeExpiry()).thenReturn(900L);
+        when(validationService.validatePhoneVerificationCode(
+                        eq(Optional.of(CODE)), eq(USER_INPUT), any(Session.class), eq(5)))
+                .thenReturn(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED);
+        when(codeStorageService.getPhoneNumberCode(TEST_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(CODE));
+
+        APIGatewayProxyResponseEvent result =
+                makeCallWithCode(USER_INPUT, VERIFY_PHONE_NUMBER.toString());
+
+        VerifyCodeResponse codeResponse =
+                new ObjectMapper().readValue(result.getBody(), VerifyCodeResponse.class);
+        assertThat(result, hasStatus(200));
+        assertThat(codeResponse.getSessionState(), equalTo(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED));
+        verify(dynamoService, never()).updatePhoneNumberVerifiedStatus(TEST_EMAIL_ADDRESS, true);
+        verify(codeStorageService)
+                .saveCodeBlockedForSession(TEST_EMAIL_ADDRESS, SESSION.getSessionId(), 900);
+    }
+
+    private APIGatewayProxyResponseEvent makeCallWithCode(String code, String notificationType) {
+        return makeCallWithCode(code, notificationType, Optional.of(SESSION));
+    }
+
+    private APIGatewayProxyResponseEvent makeCallWithCode(
+            String code, String notificationType, Optional<Session> session) {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(
+                Map.of(
+                        "Session-Id",
+                        session.map(s -> s.getSessionId()).orElse("invalid-session-id")));
+        event.setBody(
+                format(
+                        "{ \"code\": \"%s\", \"notificationType\": \"%s\" }",
+                        code, notificationType));
+        when(sessionService.getSessionFromRequestHeaders(event.getHeaders())).thenReturn(session);
+        return handler.handleRequest(event, context);
     }
 }

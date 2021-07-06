@@ -21,6 +21,7 @@ import java.util.Optional;
 
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_NOT_VALID;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
+import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -102,8 +103,14 @@ public class VerifyCodeHandler
                         codeStorageService.deletePhoneNumberCode(session.get().getEmailAddress());
                         dynamoService.updatePhoneNumberVerifiedStatus(
                                 session.get().getEmailAddress(), true);
+                    } else if (session.get()
+                            .getState()
+                            .equals(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED)) {
+                        codeStorageService.saveCodeBlockedForSession(
+                                session.get().getEmailAddress(),
+                                session.get().getSessionId(),
+                                configurationService.getCodeExpiry());
                     }
-
                     return generateApiGatewayProxyResponse(
                             200, new VerifyCodeResponse(session.get().getState()));
             }
