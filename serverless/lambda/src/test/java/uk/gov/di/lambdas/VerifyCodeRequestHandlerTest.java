@@ -11,8 +11,10 @@ import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.VerifyCodeResponse;
 import uk.gov.di.services.CodeStorageService;
+import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoService;
 import uk.gov.di.services.SessionService;
+import uk.gov.di.services.ValidationService;
 
 import java.util.Map;
 import java.util.Optional;
@@ -20,6 +22,8 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -41,11 +45,19 @@ class VerifyCodeRequestHandlerTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final ValidationService validationService = mock(ValidationService.class);
     private VerifyCodeHandler handler;
 
     @BeforeEach
     public void setup() {
-        handler = new VerifyCodeHandler(sessionService, codeStorageService, dynamoService);
+        handler =
+                new VerifyCodeHandler(
+                        sessionService,
+                        codeStorageService,
+                        dynamoService,
+                        configurationService,
+                        validationService);
     }
 
     @Test
@@ -68,6 +80,10 @@ class VerifyCodeRequestHandlerTest {
     @Test
     public void shouldReturn200ForValidVerifyPhoneNumberRequest() throws JsonProcessingException {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        when(configurationService.getPhoneCodeMaxRetries()).thenReturn(5);
+        when(validationService.validatePhoneVerificationCode(
+                        eq(Optional.of("123456")), eq("123456"), any(Session.class), eq(5)))
+                .thenReturn(PHONE_NUMBER_CODE_VERIFIED);
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
         event.setBody(
                 format(
@@ -108,16 +124,23 @@ class VerifyCodeRequestHandlerTest {
     @Test
     public void shouldReturnPhoneNumberCodeNotValidStateIfRequestCodeDoesNotMatchStoredCode()
             throws JsonProcessingException {
+        final String VALID_CODE = "654321";
+        final String USER_INPUT = "123456";
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        when(configurationService.getPhoneCodeMaxRetries()).thenReturn(5);
+        when(validationService.validatePhoneVerificationCode(
+                        eq(Optional.of(VALID_CODE)), eq(USER_INPUT), any(Session.class), eq(5)))
+                .thenReturn(PHONE_NUMBER_CODE_NOT_VALID);
+
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
         event.setBody(
                 format(
-                        "{ \"code\": \"123456\", \"notificationType\": \"%s\" }",
-                        VERIFY_PHONE_NUMBER));
+                        "{ \"code\": \"%s\", \"notificationType\": \"%s\" }",
+                        USER_INPUT, VERIFY_PHONE_NUMBER));
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(SESSION));
         when(codeStorageService.getPhoneNumberCode("test@test.com"))
-                .thenReturn(Optional.of("654321"));
+                .thenReturn(Optional.of(VALID_CODE));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         VerifyCodeResponse codeResponse =

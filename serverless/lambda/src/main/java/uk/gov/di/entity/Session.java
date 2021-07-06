@@ -22,6 +22,9 @@ public class Session {
     @JsonProperty("email_address")
     private String emailAddress;
 
+    @JsonProperty("retry_count")
+    private int retryCount;
+
     public Session(String sessionId) {
         this.sessionId = sessionId;
         this.state = NEW;
@@ -71,6 +74,20 @@ public class Session {
 
     public Session setEmailAddress(String emailAddress) {
         this.emailAddress = emailAddress;
+        return this;
+    }
+
+    public int getRetryCount() {
+        return retryCount;
+    }
+
+    public Session incrementRetryCount() {
+        this.retryCount = retryCount + 1;
+        return this;
+    }
+
+    public Session resetRetryCount() {
+        this.retryCount = 0;
         return this;
     }
 }

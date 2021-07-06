@@ -77,4 +77,8 @@ public class ConfigurationService {
     public Optional<String> getDynamoEndpointUri() {
         return Optional.ofNullable(System.getenv("DYNAMO_ENDPOINT"));
     }
+
+    public int getPhoneCodeMaxRetries() {
+        return Integer.parseInt(System.getenv().getOrDefault("PHONE_CODE_MAX_RETRIES", "5"));
+    }
 }
