@@ -21,6 +21,22 @@ resource "aws_api_gateway_resource" "connect_resource" {
 resource "aws_api_gateway_deployment" "deployment" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
 
+  triggers = {
+    redeployment = sha1(jsonencode([
+      module.authorize.resource_id,
+      module.jwks.resource_id,
+      module.openid_configuration_discovery.resource_id,
+      module.register.resource_id,
+      module.send_notification.resource_id,
+      module.signup.resource_id,
+      module.token.resource_id,
+      module.userexists.resource_id,
+      module.userinfo.resource_id,
+      module.update_profile.resource_id,
+      module.verify_code.resource_id,
+    ]))
+  }
+
   lifecycle {
     create_before_destroy = true
   }
@@ -35,6 +51,7 @@ resource "aws_api_gateway_deployment" "deployment" {
     module.userexists,
     module.userinfo,
     module.update_profile,
+    module.verify_code,
   ]
 }
 
@@ -54,6 +71,7 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
     module.userexists,
     module.userinfo,
     module.update_profile,
+    module.verify_code,
     aws_api_gateway_deployment.deployment,
   ]
 }
