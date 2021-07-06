@@ -94,12 +94,16 @@ public class DynamoService implements AuthenticationService {
 
     @Override
     public void updatePhoneNumber(String email, String phoneNumber) {
-        userProfileMapper.load(UserProfile.class, email).setPhoneNumber(phoneNumber);
+        userProfileMapper.save(
+                userProfileMapper.load(UserProfile.class, email).setPhoneNumber(phoneNumber));
     }
 
     @Override
     public void updatePhoneNumberVerifiedStatus(String email, boolean verifiedStatus) {
-        userProfileMapper.load(UserProfile.class, email).setPhoneNumberVerified(verifiedStatus);
+        userProfileMapper.save(
+                userProfileMapper
+                        .load(UserProfile.class, email)
+                        .setPhoneNumberVerified(verifiedStatus));
     }
 
     private static String hashPassword(String password) {
