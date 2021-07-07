@@ -2,6 +2,7 @@ package uk.gov.di.services;
 
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.id.ClientID;
 import uk.gov.di.entity.ClientRegistry;
 
 import java.util.List;
@@ -12,7 +13,15 @@ public interface ClientService {
 
     boolean isValidClient(String clientId);
 
-    ClientRegistry addClient(String clientName, List<String> redirectUris, List<String> contacts);
+    void addClient(
+            String clientID,
+            String clientName,
+            List<String> redirectUris,
+            List<String> contacts,
+            List<String> scopes,
+            String publicKey);
 
     Optional<ClientRegistry> getClient(String clientId);
+
+    ClientID generateClientID();
 }

@@ -63,7 +63,7 @@ public class TokenHandlerTest {
         when(tokenService.generateIDToken(eq("test-id"), any(Subject.class))).thenReturn(signedJWT);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody("code=343242&client_id=test-id&client_secret=test-secret");
+        event.setBody("code=343242&client_id=test-id");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -74,7 +74,7 @@ public class TokenHandlerTest {
     public void shouldReturn403IfClientIsNotValid() {
         when(clientService.isValidClient(eq("invalid-id"))).thenReturn(false);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody("code=343242&client_id=invalid-id&client_secret=test-secret");
+        event.setBody("code=343242&client_id=invalid-id");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(403, result.getStatusCode());
@@ -84,7 +84,7 @@ public class TokenHandlerTest {
     @Test
     public void shouldReturn400IfAnyRequestParametersAreMissing() throws JsonProcessingException {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody("code=343242&client_id=invalid-id");
+        event.setBody("code=343242");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());

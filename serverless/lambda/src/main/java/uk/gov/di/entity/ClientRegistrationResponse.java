@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
-public class Client {
+public class ClientRegistrationResponse {
 
     @JsonProperty("client_name")
     private String clientName;
@@ -18,7 +18,7 @@ public class Client {
     @JsonProperty("contacts")
     private List<String> contacts;
 
-    public Client(
+    public ClientRegistrationResponse(
             @JsonProperty(required = true, value = "client_name") String clientName,
             @JsonProperty(required = true, value = "client_id") String clientId,
             @JsonProperty(required = true, value = "redirect_uris") List<String> redirectUris,

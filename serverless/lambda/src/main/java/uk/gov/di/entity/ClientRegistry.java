@@ -12,7 +12,6 @@ public class ClientRegistry {
     private String publicKey;
     private List<String> scopes;
     private List<String> redirectUrls;
-    private String clientFriendlyName;
     private List<String> contacts;
 
     @DynamoDBHashKey(attributeName = "ClientID")
@@ -62,16 +61,6 @@ public class ClientRegistry {
 
     public ClientRegistry setRedirectUrls(List<String> redirectUrls) {
         this.redirectUrls = redirectUrls;
-        return this;
-    }
-
-    @DynamoDBAttribute(attributeName = "ClientFriendlyName")
-    public String getClientFriendlyName() {
-        return clientFriendlyName;
-    }
-
-    public ClientRegistry setClientFriendlyName(String clientFriendlyName) {
-        this.clientFriendlyName = clientFriendlyName;
         return this;
     }
 

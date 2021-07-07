@@ -13,7 +13,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import uk.gov.di.entity.Session;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ConfigurationService;
-import uk.gov.di.services.InMemoryClientService;
+import uk.gov.di.services.DynamoClientService;
 import uk.gov.di.services.SessionService;
 
 import java.net.URLEncoder;
@@ -28,8 +28,8 @@ public class AuthorisationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final ClientService clientService;
-    private final ConfigurationService configurationService;
     private final SessionService sessionService;
+    private final ConfigurationService configurationService;
 
     private interface ResponseParameters {
         String SESSION_ID = "id";
@@ -46,8 +46,12 @@ public class AuthorisationHandler
     }
 
     public AuthorisationHandler() {
-        this.clientService = new InMemoryClientService();
-        this.configurationService = new ConfigurationService();
+        configurationService = new ConfigurationService();
+        this.clientService =
+                new DynamoClientService(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEnvironment(),
+                        configurationService.getDynamoEndpointUri());
         this.sessionService = new SessionService(configurationService);
     }
 
