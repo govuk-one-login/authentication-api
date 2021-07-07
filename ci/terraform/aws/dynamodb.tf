@@ -60,6 +60,33 @@ resource "aws_dynamodb_table" "user_profile_table" {
   }
 }
 
+resource "aws_dynamodb_table" "client_registry_table" {
+  name           = "${var.environment}-client-registry"
+  billing_mode   = "PROVISIONED"
+  write_capacity = 5
+  read_capacity  = 5
+  hash_key       = "ClientID"
+
+  attribute {
+    name = "ClientID"
+    type = "S"
+  }
+
+  attribute {
+    name = "ClientName"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name               = "ClientNameIndex"
+    hash_key           = "ClientName"
+    write_capacity     = 5
+    read_capacity      = 5
+    projection_type    = "INCLUDE"
+    non_key_attributes = ["ClientID"]
+  }
+}
+
 data "aws_iam_policy_document" "dynamo_policy_document" {
   count = var.use_localstack ? 0 : 1
   statement {
@@ -79,7 +106,8 @@ data "aws_iam_policy_document" "dynamo_policy_document" {
     ]
     resources = [
       aws_dynamodb_table.user_credentials_table.arn,
-      aws_dynamodb_table.user_profile_table.arn
+      aws_dynamodb_table.user_profile_table.arn,
+      aws_dynamodb_table.client_registry_table.arn
     ]
   }
 }

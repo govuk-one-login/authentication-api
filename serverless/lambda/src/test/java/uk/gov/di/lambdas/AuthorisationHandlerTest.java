@@ -7,9 +7,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
-import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.Session;
@@ -51,25 +48,11 @@ class AuthorisationHandlerTest {
     @Test
     void shouldRedirectToLoginOnSuccess() {
         AuthorizationCode authCode = new AuthorizationCode();
-        AuthenticationSuccessResponse authSuccessResponse =
-                new AuthenticationSuccessResponse(
-                        URI.create("http://localhost:8080"),
-                        authCode,
-                        null,
-                        null,
-                        new State("some-state"),
-                        null,
-                        null);
-
         final URI loginUrl = URI.create("http://example.com");
         final Session session = new Session("a-session-id");
 
         when(clientService.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
                 .thenReturn(Optional.empty());
-        when(clientService.getSuccessfulResponse(
-                        any(AuthenticationRequest.class),
-                        eq("joe.bloggs@digital.cabinet-office.gov.uk")))
-                .thenReturn(authSuccessResponse);
         when(configService.getLoginURI()).thenReturn(loginUrl);
         when(sessionService.createSession()).thenReturn(session);
 

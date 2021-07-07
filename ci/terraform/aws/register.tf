@@ -3,10 +3,11 @@ module "register" {
 
   endpoint_name   = "register"
   endpoint_method = "POST"
-  environment     = var.environment
 
   handler_environment_variables = {
+    ENVIRONMENT = var.environment
     BASE_URL = var.api_base_url
+    DYNAMO_ENDPOINT = var.use_localstack ? var.lambda_dynamo_endpoint : null
   }
   handler_function_name = "uk.gov.di.lambdas.ClientRegistrationHandler::handleRequest"
 
@@ -18,6 +19,7 @@ module "register" {
   security_group_id         = aws_vpc.authentication.default_security_group_id
   subnet_id                 = aws_subnet.authentication.*.id
   lambda_role_arn           = aws_iam_role.lambda_iam_role.arn
+  environment               = var.environment
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_api,

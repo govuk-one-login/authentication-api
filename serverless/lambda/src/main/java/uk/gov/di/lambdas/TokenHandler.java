@@ -16,8 +16,8 @@ import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.AuthorizationCodeService;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ConfigurationService;
+import uk.gov.di.services.DynamoClientService;
 import uk.gov.di.services.DynamoService;
-import uk.gov.di.services.InMemoryClientService;
 import uk.gov.di.services.TokenService;
 
 import java.util.Map;
@@ -50,7 +50,11 @@ public class TokenHandler
 
     public TokenHandler() {
         configurationService = new ConfigurationService();
-        clientService = new InMemoryClientService(new AuthorizationCodeService());
+        clientService =
+                new DynamoClientService(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEnvironment(),
+                        configurationService.getDynamoEndpointUri());
         authorizationCodeService = new AuthorizationCodeService();
         tokenService = new TokenService(configurationService);
         this.authenticationService =
@@ -66,17 +70,14 @@ public class TokenHandler
         LambdaLogger logger = context.getLogger();
         Map<String, String> requestBody = PARSE_REQUEST_BODY(input.getBody());
 
-        if (!requestBody.containsKey("code")
-                || !requestBody.containsKey("client_id")
-                || !requestBody.containsKey("client_secret")) {
+        if (!requestBody.containsKey("code") || !requestBody.containsKey("client_id")) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
 
         AuthorizationCode code = new AuthorizationCode(requestBody.get("code"));
-        String clientSecret = requestBody.get("client_secret");
         String clientID = requestBody.get("client_id");
 
-        if (!clientService.isValidClient(clientID, clientSecret)) {
+        if (!clientService.isValidClient(clientID)) {
             return generateApiGatewayProxyResponse(403, "client is not valid");
         }
         //        String email = authorizationCodeService.getEmailForCode(code);

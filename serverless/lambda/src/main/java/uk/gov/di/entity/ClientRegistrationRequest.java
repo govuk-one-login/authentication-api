@@ -1,24 +1,37 @@
 package uk.gov.di.entity;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
 public class ClientRegistrationRequest {
 
+    @JsonProperty("client_name")
     private String clientName;
+
+    @JsonProperty("redirect_uris")
     private List<String> redirectUris;
+
+    @JsonProperty("contacts")
     private List<String> contacts;
 
-    @JsonCreator
+    @JsonProperty("public_key")
+    private String publicKey;
+
+    @JsonProperty("scopes")
+    private List<String> scopes;
+
     public ClientRegistrationRequest(
             @JsonProperty(required = true, value = "client_name") String clientName,
             @JsonProperty(required = true, value = "redirect_uris") List<String> redirectUris,
-            @JsonProperty(required = true, value = "contacts") List<String> contacts) {
+            @JsonProperty(required = true, value = "contacts") List<String> contacts,
+            @JsonProperty(required = true, value = "public_key") String publicKey,
+            @JsonProperty(required = true, value = "scopes") List<String> scopes) {
         this.clientName = clientName;
         this.redirectUris = redirectUris;
         this.contacts = contacts;
+        this.publicKey = publicKey;
+        this.scopes = scopes;
     }
 
     public String getClientName() {
@@ -31,5 +44,13 @@ public class ClientRegistrationRequest {
 
     public List<String> getContacts() {
         return contacts;
+    }
+
+    public String getPublicKey() {
+        return publicKey;
+    }
+
+    public List<String> getScopes() {
+        return scopes;
     }
 }
