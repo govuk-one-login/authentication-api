@@ -15,7 +15,6 @@ import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.AuthorizationCodeService;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ConfigurationService;
-import uk.gov.di.services.InMemoryClientService;
 import uk.gov.di.services.TokenService;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -37,7 +36,7 @@ public class TokenHandlerTest {
     private final AuthorizationCodeService authorizationCodeService =
             mock(AuthorizationCodeService.class);
     private final TokenService tokenService = mock(TokenService.class);
-    private final ClientService clientService = mock(InMemoryClientService.class);
+    private final ClientService clientService = mock(ClientService.class);
     private TokenHandler handler;
 
     @BeforeEach
@@ -55,7 +54,7 @@ public class TokenHandlerTest {
     public void shouldReturn200IfSuccessfulRequest() {
         Subject subject = new Subject();
         BearerAccessToken accessToken = new BearerAccessToken();
-        when(clientService.isValidClient(eq("test-id"), eq("test-secret"))).thenReturn(true);
+        when(clientService.isValidClient(eq("test-id"))).thenReturn(true);
         when(tokenService.issueToken(eq("joe.bloggs@digital.cabinet-office.gov.uk")))
                 .thenReturn(accessToken);
         when(authenticationService.getSubjectFromEmail(
@@ -73,7 +72,7 @@ public class TokenHandlerTest {
 
     @Test
     public void shouldReturn403IfClientIsNotValid() {
-        when(clientService.isValidClient(eq("invalid-id"), eq("test-secret"))).thenReturn(false);
+        when(clientService.isValidClient(eq("invalid-id"))).thenReturn(false);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("code=343242&client_id=invalid-id&client_secret=test-secret");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);

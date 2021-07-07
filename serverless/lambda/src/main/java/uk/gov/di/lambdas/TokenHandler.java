@@ -50,7 +50,7 @@ public class TokenHandler
 
     public TokenHandler() {
         configurationService = new ConfigurationService();
-        clientService = new InMemoryClientService(new AuthorizationCodeService());
+        clientService = new InMemoryClientService();
         authorizationCodeService = new AuthorizationCodeService();
         tokenService = new TokenService(configurationService);
         this.authenticationService =
@@ -73,10 +73,9 @@ public class TokenHandler
         }
 
         AuthorizationCode code = new AuthorizationCode(requestBody.get("code"));
-        String clientSecret = requestBody.get("client_secret");
         String clientID = requestBody.get("client_id");
 
-        if (!clientService.isValidClient(clientID, clientSecret)) {
+        if (!clientService.isValidClient(clientID)) {
             return generateApiGatewayProxyResponse(403, "client is not valid");
         }
         //        String email = authorizationCodeService.getEmailForCode(code);

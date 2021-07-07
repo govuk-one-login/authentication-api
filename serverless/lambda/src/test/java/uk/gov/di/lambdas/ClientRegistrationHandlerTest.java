@@ -8,9 +8,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.Client;
+import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.services.ClientService;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -25,7 +27,7 @@ class ClientRegistrationHandlerTest {
 
     private final Context context = mock(Context.class);
     private final ClientService clientService = mock(ClientService.class);
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private ClientRegistrationHandler handler;
 
     @BeforeEach
@@ -40,16 +42,17 @@ class ClientRegistrationHandlerTest {
         List<String> redirectUris = List.of("http://localhost:8080/redirect-uri");
         List<String> contacts = List.of("joe.bloggs@test.com");
         String clientId = UUID.randomUUID().toString();
-        String clientSecret = UUID.randomUUID().toString();
-        Client client =
-                new Client(
-                        clientName,
-                        clientId,
-                        clientSecret,
-                        List.of("code"),
-                        redirectUris,
-                        contacts);
-        when(clientService.addClient(clientName, redirectUris, contacts)).thenReturn(client);
+        Client client = new Client(clientName, clientId, redirectUris, contacts);
+        ClientRegistry clientRegistry =
+                new ClientRegistry()
+                        .setClientID(clientId)
+                        .setClientName(clientName)
+                        .setPublicKey("")
+                        .setClientFriendlyName("")
+                        .setScopes(Collections.singletonList(""))
+                        .setRedirectUrls(Collections.singletonList(""));
+        when(clientService.addClient(clientName, redirectUris, contacts))
+                .thenReturn(clientRegistry);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(

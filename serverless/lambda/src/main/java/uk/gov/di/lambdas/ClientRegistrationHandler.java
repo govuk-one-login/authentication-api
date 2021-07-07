@@ -8,8 +8,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import uk.gov.di.entity.Client;
 import uk.gov.di.entity.ClientRegistrationRequest;
+import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ErrorResponse;
-import uk.gov.di.services.AuthorizationCodeService;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.InMemoryClientService;
 
@@ -19,15 +19,15 @@ import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxy
 public class ClientRegistrationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private ClientService clientService;
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private final ClientService clientService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public ClientRegistrationHandler(ClientService clientService) {
         this.clientService = clientService;
     }
 
     public ClientRegistrationHandler() {
-        this.clientService = new InMemoryClientService(new AuthorizationCodeService());
+        this.clientService = new InMemoryClientService();
     }
 
     @Override
@@ -36,13 +36,20 @@ public class ClientRegistrationHandler
         try {
             ClientRegistrationRequest clientRegistrationRequest =
                     objectMapper.readValue(input.getBody(), ClientRegistrationRequest.class);
-            Client client =
+            ClientRegistry clientRegistry =
                     clientService.addClient(
                             clientRegistrationRequest.getClientName(),
                             clientRegistrationRequest.getRedirectUris(),
                             clientRegistrationRequest.getContacts());
-            String clientString = objectMapper.writeValueAsString(client);
-            return generateApiGatewayProxyResponse(200, clientString);
+
+            Client client =
+                    new Client(
+                            clientRegistry.getClientName(),
+                            clientRegistry.getClientID(),
+                            clientRegistry.getRedirectUrls(),
+                            clientRegistry.getContacts());
+
+            return generateApiGatewayProxyResponse(200, client);
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }

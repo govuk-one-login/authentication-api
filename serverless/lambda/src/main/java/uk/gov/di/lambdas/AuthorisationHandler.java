@@ -11,7 +11,6 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import uk.gov.di.entity.Session;
-import uk.gov.di.services.AuthorizationCodeService;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.InMemoryClientService;
@@ -47,7 +46,7 @@ public class AuthorisationHandler
     }
 
     public AuthorisationHandler() {
-        this.clientService = new InMemoryClientService(new AuthorizationCodeService());
+        this.clientService = new InMemoryClientService();
         this.configurationService = new ConfigurationService();
         this.sessionService = new SessionService(configurationService);
     }
