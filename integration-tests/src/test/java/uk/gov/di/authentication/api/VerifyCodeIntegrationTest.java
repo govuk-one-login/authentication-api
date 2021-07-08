@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
 
     private static final String VERIFY_CODE_ENDPOINT = "/verify-code";
-    public static final String EMAIL_ADDRESS = "test@test.com";
+    private static final String EMAIL_ADDRESS = "test@test.com";
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test

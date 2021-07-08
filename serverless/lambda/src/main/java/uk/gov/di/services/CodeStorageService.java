@@ -15,6 +15,7 @@ public class CodeStorageService {
     private final RedisConnectionService redisConnectionService;
     private static final String EMAIL_KEY_PREFIX = "email-code:";
     private static final String PHONE_NUMBER_KEY_PREFIX = "phone-number-code:";
+    private static final String MFA_KEY_PREFIX = "mfa-code:";
     private static final String CODE_BLOCKED_KEY_PREFIX = "code-blocked:";
     private static final String CODE_BLOCKED_VALUE = "blocked";
 
@@ -37,6 +38,16 @@ public class CodeStorageService {
         String key = CODE_BLOCKED_KEY_PREFIX + encodedHash + sessionId;
         try {
             redisConnectionService.saveWithExpiry(key, CODE_BLOCKED_VALUE, codeBlockedTime);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void saveMfaCode(String emailAddress, String code, long codeExpiryTime) {
+        String hashedEmailAddress = HashHelper.hashSha256String(emailAddress);
+        String key = MFA_KEY_PREFIX + hashedEmailAddress;
+        try {
+            redisConnectionService.saveWithExpiry(key, code, codeExpiryTime);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

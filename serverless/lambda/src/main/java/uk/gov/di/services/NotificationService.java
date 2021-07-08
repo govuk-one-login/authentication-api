@@ -1,17 +1,13 @@
 package uk.gov.di.services;
 
-import uk.gov.di.entity.NotificationCode;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
-import java.util.HashMap;
 import java.util.Map;
 
 public class NotificationService {
 
     private NotificationClient notifyClient;
-
-    private final Map<String, NotificationCode> validationCode = new HashMap<>();
 
     public NotificationService(NotificationClient notifyClient) {
         this.notifyClient = notifyClient;

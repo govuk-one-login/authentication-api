@@ -22,7 +22,7 @@ import static uk.gov.di.entity.UpdateProfileType.ADD_PHONE_NUMBER;
 public class UpdateProfileIntegrationTest extends IntegrationTestEndpoints {
 
     private static final String UPDATE_PROFILE_ENDPOINT = "/update-profile";
-    public static final String EMAIL_ADDRESS = "test@test.com";
+    private static final String EMAIL_ADDRESS = "test@test.com";
 
     @Test
     public void shouldCallUpdateProfileEndpointAndReturn200() throws IOException {
