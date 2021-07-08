@@ -7,9 +7,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
-import uk.gov.di.entity.SignupResponse;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.SessionService;
 import uk.gov.di.services.ValidationService;
@@ -63,8 +63,8 @@ class SignUpHandlerTest {
                                                         .equals("joe.bloggs@test.com")));
 
         assertThat(result, hasStatus(200));
-        SignupResponse response =
-                new ObjectMapper().readValue(result.getBody(), SignupResponse.class);
+        BaseAPIResponse response =
+                new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
         assertThat(response.getSessionState(), equalTo(TWO_FACTOR_REQUIRED));
     }
 

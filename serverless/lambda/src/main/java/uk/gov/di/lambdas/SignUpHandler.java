@@ -6,10 +6,10 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.SignupRequest;
-import uk.gov.di.entity.SignupResponse;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoService;
@@ -76,7 +76,7 @@ public class SignUpHandler
                                 .setState(TWO_FACTOR_REQUIRED)
                                 .setEmailAddress(signupRequest.getEmail()));
                 return generateApiGatewayProxyResponse(
-                        200, new SignupResponse(session.get().getState()));
+                        200, new BaseAPIResponse(session.get().getState()));
             } else {
                 return generateApiGatewayProxyErrorResponse(400, passwordValidationErrors.get());
             }

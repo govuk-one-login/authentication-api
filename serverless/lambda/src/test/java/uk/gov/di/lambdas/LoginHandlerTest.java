@@ -7,8 +7,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.ErrorResponse;
-import uk.gov.di.entity.LoginResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.SessionService;
@@ -52,8 +52,8 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(200));
 
-        LoginResponse response =
-                new ObjectMapper().readValue(result.getBody(), LoginResponse.class);
+        BaseAPIResponse response =
+                new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
         assertThat(response.getSessionState(), equalTo(AUTHENTICATED));
     }
 

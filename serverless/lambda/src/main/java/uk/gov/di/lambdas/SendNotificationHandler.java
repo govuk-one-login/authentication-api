@@ -8,11 +8,11 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.NotificationType;
 import uk.gov.di.entity.NotifyRequest;
 import uk.gov.di.entity.SendNotificationRequest;
-import uk.gov.di.entity.SendNotificationResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.services.AwsSqsClient;
 import uk.gov.di.services.CodeGeneratorService;
@@ -148,8 +148,7 @@ public class SendNotificationHandler
                 break;
         }
         sqsClient.send(serialiseRequest(notifyRequest));
-        return generateApiGatewayProxyResponse(
-                200, new SendNotificationResponse(session.getState()));
+        return generateApiGatewayProxyResponse(200, new BaseAPIResponse(session.getState()));
     }
 
     private String serialiseRequest(Object request) throws JsonProcessingException {

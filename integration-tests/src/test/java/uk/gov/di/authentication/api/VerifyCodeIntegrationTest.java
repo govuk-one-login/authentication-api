@@ -12,10 +12,10 @@ import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.RedisHelper;
+import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.NotificationType;
 import uk.gov.di.entity.SessionState;
 import uk.gov.di.entity.VerifyCodeRequest;
-import uk.gov.di.entity.VerifyCodeResponse;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -53,8 +53,8 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         Response response = sendRequest(sessionId, codeRequest);
 
         assertEquals(200, response.getStatus());
-        VerifyCodeResponse codeResponse =
-                objectMapper.readValue(response.readEntity(String.class), VerifyCodeResponse.class);
+        BaseAPIResponse codeResponse =
+                objectMapper.readValue(response.readEntity(String.class), BaseAPIResponse.class);
         assertEquals(SessionState.EMAIL_CODE_NOT_VALID, codeResponse.getSessionState());
     }
 
@@ -72,9 +72,8 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         Response response2 = sendRequest(sessionId, codeRequest);
         assertEquals(200, response2.getStatus());
 
-        VerifyCodeResponse codeResponse =
-                objectMapper.readValue(
-                        response2.readEntity(String.class), VerifyCodeResponse.class);
+        BaseAPIResponse codeResponse =
+                objectMapper.readValue(response2.readEntity(String.class), BaseAPIResponse.class);
         assertEquals(SessionState.EMAIL_CODE_NOT_VALID, codeResponse.getSessionState());
     }
 
@@ -106,8 +105,8 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         Response response = sendRequest(sessionId, codeRequest);
 
         assertEquals(200, response.getStatus());
-        VerifyCodeResponse codeResponse =
-                objectMapper.readValue(response.readEntity(String.class), VerifyCodeResponse.class);
+        BaseAPIResponse codeResponse =
+                objectMapper.readValue(response.readEntity(String.class), BaseAPIResponse.class);
         assertEquals(SessionState.PHONE_NUMBER_CODE_NOT_VALID, codeResponse.getSessionState());
     }
 
@@ -123,8 +122,8 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         Response response = sendRequest(sessionId, codeRequest);
 
         assertEquals(200, response.getStatus());
-        VerifyCodeResponse codeResponse =
-                objectMapper.readValue(response.readEntity(String.class), VerifyCodeResponse.class);
+        BaseAPIResponse codeResponse =
+                objectMapper.readValue(response.readEntity(String.class), BaseAPIResponse.class);
         assertEquals(
                 SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED, codeResponse.getSessionState());
     }
@@ -141,8 +140,8 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         Response response = sendRequest(sessionId, codeRequest);
 
         assertEquals(200, response.getStatus());
-        VerifyCodeResponse codeResponse =
-                objectMapper.readValue(response.readEntity(String.class), VerifyCodeResponse.class);
+        BaseAPIResponse codeResponse =
+                objectMapper.readValue(response.readEntity(String.class), BaseAPIResponse.class);
         assertEquals(SessionState.EMAIL_CODE_MAX_RETRIES_REACHED, codeResponse.getSessionState());
     }
 

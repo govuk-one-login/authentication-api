@@ -6,7 +6,7 @@ public class BaseAPIResponse {
 
     @JsonProperty protected SessionState sessionState;
 
-    protected BaseAPIResponse(
+    public BaseAPIResponse(
             @JsonProperty(required = true, value = "sessionState") SessionState sessionState) {
         this.sessionState = sessionState;
     }

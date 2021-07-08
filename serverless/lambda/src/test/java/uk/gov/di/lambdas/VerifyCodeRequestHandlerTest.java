@@ -7,9 +7,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
-import uk.gov.di.entity.VerifyCodeResponse;
 import uk.gov.di.services.CodeStorageService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoService;
@@ -74,8 +74,8 @@ class VerifyCodeRequestHandlerTest {
 
         verify(codeStorageService).deleteEmailCode(TEST_EMAIL_ADDRESS);
         assertThat(result, hasStatus(200));
-        VerifyCodeResponse codeResponse =
-                new ObjectMapper().readValue(result.getBody(), VerifyCodeResponse.class);
+        BaseAPIResponse codeResponse =
+                new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
         assertThat(codeResponse.getSessionState(), equalTo(EMAIL_CODE_VERIFIED));
     }
 
@@ -94,8 +94,8 @@ class VerifyCodeRequestHandlerTest {
         verify(codeStorageService).deletePhoneNumberCode(TEST_EMAIL_ADDRESS);
         verify(dynamoService).updatePhoneNumberVerifiedStatus(TEST_EMAIL_ADDRESS, true);
         assertThat(result, hasStatus(200));
-        VerifyCodeResponse codeResponse =
-                new ObjectMapper().readValue(result.getBody(), VerifyCodeResponse.class);
+        BaseAPIResponse codeResponse =
+                new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
         assertThat(codeResponse.getSessionState(), equalTo(PHONE_NUMBER_CODE_VERIFIED));
     }
 
@@ -110,8 +110,8 @@ class VerifyCodeRequestHandlerTest {
 
         APIGatewayProxyResponseEvent result = makeCallWithCode("123457", VERIFY_EMAIL.toString());
 
-        VerifyCodeResponse codeResponse =
-                new ObjectMapper().readValue(result.getBody(), VerifyCodeResponse.class);
+        BaseAPIResponse codeResponse =
+                new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
         assertThat(result, hasStatus(200));
         assertThat(codeResponse.getSessionState(), equalTo(EMAIL_CODE_NOT_VALID));
     }
@@ -129,8 +129,8 @@ class VerifyCodeRequestHandlerTest {
         APIGatewayProxyResponseEvent result =
                 makeCallWithCode(CODE, VERIFY_PHONE_NUMBER.toString());
 
-        VerifyCodeResponse codeResponse =
-                new ObjectMapper().readValue(result.getBody(), VerifyCodeResponse.class);
+        BaseAPIResponse codeResponse =
+                new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
         assertThat(result, hasStatus(200));
         assertThat(codeResponse.getSessionState(), equalTo(PHONE_NUMBER_CODE_NOT_VALID));
         verify(dynamoService, never()).updatePhoneNumberVerifiedStatus(TEST_EMAIL_ADDRESS, true);
@@ -186,8 +186,8 @@ class VerifyCodeRequestHandlerTest {
         APIGatewayProxyResponseEvent result =
                 makeCallWithCode(USER_INPUT, VERIFY_PHONE_NUMBER.toString());
 
-        VerifyCodeResponse codeResponse =
-                new ObjectMapper().readValue(result.getBody(), VerifyCodeResponse.class);
+        BaseAPIResponse codeResponse =
+                new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
         assertThat(result, hasStatus(200));
         assertThat(codeResponse.getSessionState(), equalTo(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED));
         assertThat(session.getRetryCount(), equalTo(0));
@@ -206,8 +206,8 @@ class VerifyCodeRequestHandlerTest {
         APIGatewayProxyResponseEvent result =
                 makeCallWithCode(USER_INPUT, VERIFY_PHONE_NUMBER.toString());
 
-        VerifyCodeResponse codeResponse =
-                new ObjectMapper().readValue(result.getBody(), VerifyCodeResponse.class);
+        BaseAPIResponse codeResponse =
+                new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
         assertThat(result, hasStatus(200));
         assertThat(codeResponse.getSessionState(), equalTo(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED));
         verify(codeStorageService, never()).getPhoneNumberCode(session.getEmailAddress());
@@ -226,8 +226,8 @@ class VerifyCodeRequestHandlerTest {
 
         APIGatewayProxyResponseEvent result = makeCallWithCode(USER_INPUT, VERIFY_EMAIL.toString());
 
-        VerifyCodeResponse codeResponse =
-                new ObjectMapper().readValue(result.getBody(), VerifyCodeResponse.class);
+        BaseAPIResponse codeResponse =
+                new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
         assertThat(result, hasStatus(200));
         assertThat(codeResponse.getSessionState(), equalTo(EMAIL_CODE_MAX_RETRIES_REACHED));
         assertThat(session.getRetryCount(), equalTo(0));
@@ -243,8 +243,8 @@ class VerifyCodeRequestHandlerTest {
 
         APIGatewayProxyResponseEvent result = makeCallWithCode(USER_INPUT, VERIFY_EMAIL.toString());
 
-        VerifyCodeResponse codeResponse =
-                new ObjectMapper().readValue(result.getBody(), VerifyCodeResponse.class);
+        BaseAPIResponse codeResponse =
+                new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
         assertThat(result, hasStatus(200));
         assertThat(codeResponse.getSessionState(), equalTo(EMAIL_CODE_MAX_RETRIES_REACHED));
     }

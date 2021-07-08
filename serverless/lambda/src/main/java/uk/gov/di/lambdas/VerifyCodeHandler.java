@@ -6,10 +6,10 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.VerifyCodeRequest;
-import uk.gov.di.entity.VerifyCodeResponse;
 import uk.gov.di.services.CodeStorageService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoService;
@@ -93,7 +93,7 @@ public class VerifyCodeHandler
                         processCodeSessionState(session.get());
                     }
                     return generateApiGatewayProxyResponse(
-                            200, new VerifyCodeResponse(session.get().getState()));
+                            200, new BaseAPIResponse(session.get().getState()));
                 case VERIFY_PHONE_NUMBER:
                     if (codeStorageService.isCodeBlockedForSession(
                             session.get().getEmailAddress(), session.get().getSessionId())) {
@@ -114,7 +114,7 @@ public class VerifyCodeHandler
                         processCodeSessionState(session.get());
                     }
                     return generateApiGatewayProxyResponse(
-                            200, new VerifyCodeResponse(session.get().getState()));
+                            200, new BaseAPIResponse(session.get().getState()));
             }
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);

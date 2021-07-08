@@ -6,10 +6,10 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.UpdateProfileRequest;
-import uk.gov.di.entity.UpdateProfileResponse;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoService;
@@ -63,7 +63,7 @@ public class UpdateProfileHandler
                             profileRequest.getEmail(), profileRequest.getProfileInformation());
                     sessionService.save(session.get().setState(ADDED_UNVERIFIED_PHONE_NUMBER));
                     return generateApiGatewayProxyResponse(
-                            200, new UpdateProfileResponse(session.get().getState()));
+                            200, new BaseAPIResponse(session.get().getState()));
             }
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
