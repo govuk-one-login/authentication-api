@@ -23,6 +23,8 @@ class CodeStorageServiceTest {
             "email-code:f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a";
     private static final String REDIS_PHONE_NUMBER_KEY =
             "phone-number-code:f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a";
+    private static final String REDIS_MFA_KEY =
+            "mfa-code:f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a";
     private static final String REDIS_BLOCKED_KEY =
             "code-blocked:f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a"
                     + SESSION_ID;
@@ -110,5 +112,12 @@ class CodeStorageServiceTest {
         when(redisConnectionService.getValue(REDIS_BLOCKED_KEY)).thenReturn(null);
 
         assertFalse(codeStorageService.isCodeBlockedForSession(TEST_EMAIL, SESSION_ID));
+    }
+
+    @Test
+    public void shouldCallRedisWithValidMfaCodeAndHashedEmail() {
+        codeStorageService.saveMfaCode(TEST_EMAIL, CODE, CODE_EXPIRY_TIME);
+
+        verify(redisConnectionService).saveWithExpiry(REDIS_MFA_KEY, CODE, CODE_EXPIRY_TIME);
     }
 }
