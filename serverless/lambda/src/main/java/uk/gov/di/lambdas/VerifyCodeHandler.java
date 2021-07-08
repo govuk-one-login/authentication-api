@@ -19,7 +19,7 @@ import uk.gov.di.services.ValidationService;
 
 import java.util.Optional;
 
-import static uk.gov.di.entity.SessionState.EMAIL_CODE_NOT_VALID;
+import static uk.gov.di.entity.SessionState.EMAIL_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
@@ -76,14 +76,21 @@ public class VerifyCodeHandler
                     objectMapper.readValue(input.getBody(), VerifyCodeRequest.class);
             switch (codeRequest.getNotificationType()) {
                 case VERIFY_EMAIL:
-                    Optional<String> code =
-                            codeStorageService.getCodeForEmail(session.get().getEmailAddress());
-
-                    if (code.isEmpty() || !code.get().equals(codeRequest.getCode())) {
-                        sessionService.save(session.get().setState(EMAIL_CODE_NOT_VALID));
+                    if (codeStorageService.isCodeBlockedForSession(
+                            session.get().getEmailAddress(), session.get().getSessionId())) {
+                        sessionService.save(session.get().setState(EMAIL_CODE_MAX_RETRIES_REACHED));
                     } else {
-                        codeStorageService.deleteCodeForEmail(session.get().getEmailAddress());
-                        sessionService.save(session.get().setState(EMAIL_CODE_VERIFIED));
+                        Optional<String> emailCode =
+                                codeStorageService.getEmailCode(session.get().getEmailAddress());
+                        sessionService.save(
+                                session.get()
+                                        .setState(
+                                                validationService.validateEmailVerificationCode(
+                                                        emailCode,
+                                                        codeRequest.getCode(),
+                                                        session.get(),
+                                                        configurationService.getCodeMaxRetries())));
+                        processCodeSessionState(session.get());
                     }
                     return generateApiGatewayProxyResponse(
                             200, new VerifyCodeResponse(session.get().getState()));
@@ -103,22 +110,8 @@ public class VerifyCodeHandler
                                                         phoneNumberCode,
                                                         codeRequest.getCode(),
                                                         session.get(),
-                                                        configurationService
-                                                                .getPhoneCodeMaxRetries())));
-                        if (session.get().getState().equals(PHONE_NUMBER_CODE_VERIFIED)) {
-                            codeStorageService.deletePhoneNumberCode(
-                                    session.get().getEmailAddress());
-                            dynamoService.updatePhoneNumberVerifiedStatus(
-                                    session.get().getEmailAddress(), true);
-                        } else if (session.get()
-                                .getState()
-                                .equals(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED)) {
-                            codeStorageService.saveCodeBlockedForSession(
-                                    session.get().getEmailAddress(),
-                                    session.get().getSessionId(),
-                                    configurationService.getCodeExpiry());
-                            sessionService.save(session.get().resetRetryCount());
-                        }
+                                                        configurationService.getCodeMaxRetries())));
+                        processCodeSessionState(session.get());
                     }
                     return generateApiGatewayProxyResponse(
                             200, new VerifyCodeResponse(session.get().getState()));
@@ -127,5 +120,25 @@ public class VerifyCodeHandler
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
+    }
+
+    private void blockCodeForSessionAndResetCount(Session session) {
+        codeStorageService.saveCodeBlockedForSession(
+                session.getEmailAddress(),
+                session.getSessionId(),
+                configurationService.getCodeExpiry());
+        sessionService.save(session.resetRetryCount());
+    }
+
+    private void processCodeSessionState(Session session) {
+        if (session.getState().equals(PHONE_NUMBER_CODE_VERIFIED)) {
+            codeStorageService.deletePhoneNumberCode(session.getEmailAddress());
+            dynamoService.updatePhoneNumberVerifiedStatus(session.getEmailAddress(), true);
+        } else if (session.getState().equals(EMAIL_CODE_VERIFIED)) {
+            codeStorageService.deleteEmailCode(session.getEmailAddress());
+        } else if (session.getState().equals(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED)
+                || session.getState().equals(EMAIL_CODE_MAX_RETRIES_REACHED)) {
+            blockCodeForSessionAndResetCount(session);
+        }
     }
 }

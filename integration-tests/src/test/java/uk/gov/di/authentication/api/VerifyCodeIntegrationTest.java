@@ -112,7 +112,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
     }
 
     @Test
-    public void shouldReturnMaxCodesReachedIfCodeIsBlocked() throws IOException {
+    public void shouldReturnMaxCodesReachedIfPhoneNumberCodeIsBlocked() throws IOException {
         String sessionId = RedisHelper.createSession();
         RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
         RedisHelper.blockPhoneCode(EMAIL_ADDRESS, sessionId);
@@ -127,6 +127,23 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
                 objectMapper.readValue(response.readEntity(String.class), VerifyCodeResponse.class);
         assertEquals(
                 SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED, codeResponse.getSessionState());
+    }
+
+    @Test
+    public void shouldReturnMaxCodesReachedIfEmailCodeIsBlocked() throws IOException {
+        String sessionId = RedisHelper.createSession();
+        RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        RedisHelper.blockPhoneCode(EMAIL_ADDRESS, sessionId);
+
+        VerifyCodeRequest codeRequest =
+                new VerifyCodeRequest(NotificationType.VERIFY_EMAIL, "123456");
+
+        Response response = sendRequest(sessionId, codeRequest);
+
+        assertEquals(200, response.getStatus());
+        VerifyCodeResponse codeResponse =
+                objectMapper.readValue(response.readEntity(String.class), VerifyCodeResponse.class);
+        assertEquals(SessionState.EMAIL_CODE_MAX_RETRIES_REACHED, codeResponse.getSessionState());
     }
 
     private Response sendRequest(String sessionId, VerifyCodeRequest codeRequest) {
