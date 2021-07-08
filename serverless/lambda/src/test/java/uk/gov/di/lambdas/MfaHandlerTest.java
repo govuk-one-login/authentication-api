@@ -3,9 +3,13 @@ package uk.gov.di.lambdas;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
+import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.CodeGeneratorService;
 import uk.gov.di.services.CodeStorageService;
 import uk.gov.di.services.ConfigurationService;
@@ -20,6 +24,7 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class MfaHandlerTest {
@@ -33,6 +38,7 @@ public class MfaHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
+    private final AuthenticationService authenticationService = mock(AuthenticationService.class);
 
     @BeforeEach
     public void setUp() {
@@ -41,14 +47,17 @@ public class MfaHandlerTest {
                         configurationService,
                         sessionService,
                         codeGeneratorService,
-                        codeStorageService);
+                        codeStorageService,
+                        authenticationService);
     }
 
     @Test
     public void shouldReturn200ForSuccessfulRequest() {
+        usingValidSession(TEST_EMAIL_ADDRESS);
+        when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
+                .thenReturn(Optional.of("01234567890"));
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
         when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
-        usingValidSession(TEST_EMAIL_ADDRESS);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
@@ -68,6 +77,22 @@ public class MfaHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
+    }
+
+    @Test
+    public void shouldReturnErrorResponseWhenUsersPhoneNumberIsNotStored()
+            throws JsonProcessingException {
+        usingValidSession(TEST_EMAIL_ADDRESS);
+        when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS)).thenReturn(Optional.empty());
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", "a-session-id"));
+        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1014);
+        assertThat(result, hasBody(expectedResponse));
     }
 
     private void usingValidSession(String email) {

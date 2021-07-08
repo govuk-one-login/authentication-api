@@ -106,6 +106,12 @@ public class DynamoService implements AuthenticationService {
                         .setPhoneNumberVerified(verifiedStatus));
     }
 
+    @Override
+    public Optional<String> getPhoneNumber(String email) {
+        return Optional.ofNullable(
+                userProfileMapper.load(UserProfile.class, email).getPhoneNumber());
+    }
+
     private static String hashPassword(String password) {
         return Base64.encodeAsString(Argon2Helper.argon2Hash(password.getBytes()));
     }

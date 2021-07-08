@@ -12,9 +12,9 @@ import static org.mockito.Mockito.when;
 
 class CodeStorageServiceTest {
 
-    public static final String TEST_EMAIL = "test@test.com";
-    public static final String CODE = "123456";
-    public static final String SESSION_ID = "session-id-1234";
+    private static final String TEST_EMAIL = "test@test.com";
+    private static final String CODE = "123456";
+    private static final String SESSION_ID = "session-id-1234";
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
     private final CodeStorageService codeStorageService =

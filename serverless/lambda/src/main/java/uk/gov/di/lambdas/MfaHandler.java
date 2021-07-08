@@ -10,9 +10,11 @@ import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.UserWithEmailRequest;
+import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.CodeGeneratorService;
 import uk.gov.di.services.CodeStorageService;
 import uk.gov.di.services.ConfigurationService;
+import uk.gov.di.services.DynamoService;
 import uk.gov.di.services.RedisConnectionService;
 import uk.gov.di.services.SessionService;
 
@@ -27,17 +29,20 @@ public class MfaHandler
     private final SessionService sessionService;
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
+    private final AuthenticationService authenticationService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public MfaHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
             CodeGeneratorService codeGeneratorService,
-            CodeStorageService codeStorageService) {
+            CodeStorageService codeStorageService,
+            AuthenticationService authenticationService) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
+        this.authenticationService = authenticationService;
     }
 
     public MfaHandler() {
@@ -46,6 +51,11 @@ public class MfaHandler
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
+        this.authenticationService =
+                new DynamoService(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEnvironment(),
+                        configurationService.getDynamoEndpointUri());
     }
 
     @Override
@@ -61,6 +71,14 @@ public class MfaHandler
                     objectMapper.readValue(input.getBody(), UserWithEmailRequest.class);
             if (!session.validateSession(userWithEmailRequest.getEmail())) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+            }
+            String phoneNumber =
+                    authenticationService
+                            .getPhoneNumber(userWithEmailRequest.getEmail())
+                            .orElse(null);
+
+            if (phoneNumber == null) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1014);
             }
             String code = codeGeneratorService.sixDigitCode();
             codeStorageService.saveMfaCode(

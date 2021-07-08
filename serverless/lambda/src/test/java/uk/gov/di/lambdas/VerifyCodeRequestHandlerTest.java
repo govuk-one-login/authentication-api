@@ -41,8 +41,8 @@ import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class VerifyCodeRequestHandlerTest {
 
-    public static final String TEST_EMAIL_ADDRESS = "test@test.com";
-    public static final String CODE = "123456";
+    private static final String TEST_EMAIL_ADDRESS = "test@test.com";
+    private static final String CODE = "123456";
     private final Context context = mock(Context.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
