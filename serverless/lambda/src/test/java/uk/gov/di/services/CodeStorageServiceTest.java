@@ -40,7 +40,7 @@ class CodeStorageServiceTest {
     public void shouldRetrieveEmailCode() {
         when(redisConnectionService.getValue(REDIS_EMAIL_KEY)).thenReturn(CODE);
 
-        String codeForEmail = codeStorageService.getCodeForEmail(TEST_EMAIL).get();
+        String codeForEmail = codeStorageService.getEmailCode(TEST_EMAIL).get();
 
         assertThat(codeForEmail, is(CODE));
     }
@@ -49,12 +49,12 @@ class CodeStorageServiceTest {
     public void shouldReturnEmptyOptionalIfEmailCodeDoesNotExist() {
         when(redisConnectionService.getValue(REDIS_EMAIL_KEY)).thenReturn(null);
 
-        assertTrue(codeStorageService.getCodeForEmail(TEST_EMAIL).isEmpty());
+        assertTrue(codeStorageService.getEmailCode(TEST_EMAIL).isEmpty());
     }
 
     @Test
     public void shouldCallRedisToDeleteEmailCodeWithHashedEmail() {
-        codeStorageService.deleteCodeForEmail(TEST_EMAIL);
+        codeStorageService.deleteEmailCode(TEST_EMAIL);
 
         verify(redisConnectionService).deleteValue(REDIS_EMAIL_KEY);
     }

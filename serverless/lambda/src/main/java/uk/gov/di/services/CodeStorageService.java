@@ -66,13 +66,13 @@ public class CodeStorageService {
                         PHONE_NUMBER_KEY_PREFIX + HashHelper.hashSha256String(emailAddress)));
     }
 
-    public Optional<String> getCodeForEmail(String emailAddress) {
+    public Optional<String> getEmailCode(String emailAddress) {
         return Optional.ofNullable(
                 redisConnectionService.getValue(
                         EMAIL_KEY_PREFIX + HashHelper.hashSha256String(emailAddress)));
     }
 
-    public void deleteCodeForEmail(String emailAddress) {
+    public void deleteEmailCode(String emailAddress) {
         long numberOfKeysRemoved =
                 redisConnectionService.deleteValue(
                         EMAIL_KEY_PREFIX + HashHelper.hashSha256String(emailAddress));

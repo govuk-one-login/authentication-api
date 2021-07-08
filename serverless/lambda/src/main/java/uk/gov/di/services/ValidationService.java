@@ -9,6 +9,9 @@ import uk.gov.di.entity.SessionState;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
+import static uk.gov.di.entity.SessionState.EMAIL_CODE_MAX_RETRIES_REACHED;
+import static uk.gov.di.entity.SessionState.EMAIL_CODE_NOT_VALID;
+import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_NOT_VALID;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
@@ -68,5 +71,18 @@ public class ValidationService {
             }
         }
         return PHONE_NUMBER_CODE_VERIFIED;
+    }
+
+    public SessionState validateEmailVerificationCode(
+            Optional<String> emailCode, String input, Session session, int maxRetries) {
+        if (emailCode.isEmpty() || !emailCode.get().equals(input)) {
+            session.incrementRetryCount();
+            if (session.getRetryCount() > maxRetries) {
+                return EMAIL_CODE_MAX_RETRIES_REACHED;
+            } else {
+                return EMAIL_CODE_NOT_VALID;
+            }
+        }
+        return EMAIL_CODE_VERIFIED;
     }
 }

@@ -10,6 +10,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.entity.SessionState.EMAIL_CODE_MAX_RETRIES_REACHED;
+import static uk.gov.di.entity.SessionState.EMAIL_CODE_NOT_VALID;
+import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_NOT_VALID;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
@@ -127,7 +130,7 @@ public class ValidationServiceTest {
     }
 
     @Test
-    public void shouldReturnCorrectStateWhenStoredCodeIsEmpty() {
+    public void shouldReturnCorrectStateWhenStoredPhoneCodeIsEmpty() {
         assertEquals(
                 PHONE_NUMBER_CODE_NOT_VALID,
                 validationService.validatePhoneVerificationCode(
@@ -136,7 +139,7 @@ public class ValidationServiceTest {
 
     @Test
     public void
-            shouldReturnCorrectStateWhenStoredCodeDoesMatchInputAndRetryLimitHasNotBeenReached() {
+            shouldReturnCorrectStateWhenStoredPhoneCodeDoesMatchInputAndRetryLimitHasNotBeenReached() {
         Session session = mock(Session.class);
         when(session.getRetryCount()).thenReturn(1);
         assertEquals(
@@ -146,12 +149,51 @@ public class ValidationServiceTest {
     }
 
     @Test
-    public void shouldReturnCorrectStateWhenStoredCodeDoesMatchInputAndRetryLimitHasBeenReached() {
+    public void
+            shouldReturnCorrectStateWhenStoredPhoneCodeDoesMatchInputAndRetryLimitHasBeenReached() {
         Session session = mock(Session.class);
         when(session.getRetryCount()).thenReturn(6);
         assertEquals(
                 PHONE_NUMBER_CODE_MAX_RETRIES_REACHED,
                 validationService.validatePhoneVerificationCode(
+                        Optional.of("654321"), "123456", session, 5));
+    }
+
+    @Test
+    public void shouldReturnCorrectStateWhenEmailCodeMatchesStored() {
+        assertEquals(
+                EMAIL_CODE_VERIFIED,
+                validationService.validateEmailVerificationCode(
+                        Optional.of("123456"), "123456", mock(Session.class), 5));
+    }
+
+    @Test
+    public void shouldReturnCorrectStateWhenStoredEmailCodeIsEmpty() {
+        assertEquals(
+                EMAIL_CODE_NOT_VALID,
+                validationService.validateEmailVerificationCode(
+                        Optional.empty(), "123456", mock(Session.class), 5));
+    }
+
+    @Test
+    public void
+            shouldReturnCorrectStateWhenStoredEmailCodeDoesMatchInputAndRetryLimitHasNotBeenReached() {
+        Session session = mock(Session.class);
+        when(session.getRetryCount()).thenReturn(1);
+        assertEquals(
+                EMAIL_CODE_NOT_VALID,
+                validationService.validateEmailVerificationCode(
+                        Optional.of("654321"), "123456", session, 5));
+    }
+
+    @Test
+    public void
+            shouldReturnCorrectStateWhenStoredEmailCodeDoesMatchInputAndRetryLimitHasBeenReached() {
+        Session session = mock(Session.class);
+        when(session.getRetryCount()).thenReturn(6);
+        assertEquals(
+                EMAIL_CODE_MAX_RETRIES_REACHED,
+                validationService.validateEmailVerificationCode(
                         Optional.of("654321"), "123456", session, 5));
     }
 }
