@@ -13,8 +13,8 @@ import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
+import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.SignupRequest;
-import uk.gov.di.entity.SignupResponse;
 
 import java.io.IOException;
 
@@ -47,9 +47,9 @@ public class SignupIntegrationTest extends IntegrationTestEndpoints {
         assertEquals(200, response.getStatus());
 
         String responseString = response.readEntity(String.class);
-        SignupResponse signupResponse =
-                objectMapper.readValue(responseString, SignupResponse.class);
-        assertEquals(TWO_FACTOR_REQUIRED, signupResponse.getSessionState());
+        BaseAPIResponse BaseAPIResponse =
+                objectMapper.readValue(responseString, BaseAPIResponse.class);
+        assertEquals(TWO_FACTOR_REQUIRED, BaseAPIResponse.getSessionState());
         assertTrue(DynamoHelper.userExists("joe.bloggs+5@digital.cabinet-office.gov.uk"));
     }
 }

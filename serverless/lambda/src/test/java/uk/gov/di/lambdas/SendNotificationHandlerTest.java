@@ -9,9 +9,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.NotifyRequest;
-import uk.gov.di.entity.SendNotificationResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.services.AwsSqsClient;
 import uk.gov.di.services.CodeGeneratorService;
@@ -92,8 +92,8 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(200, result.getStatusCode());
-        SendNotificationResponse response =
-                new ObjectMapper().readValue(result.getBody(), SendNotificationResponse.class);
+        BaseAPIResponse response =
+                new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
         assertThat(VERIFY_EMAIL_CODE_SENT, equalTo(response.getSessionState()));
 
         verify(awsSqsClient).send(serialisedRequest);
@@ -213,8 +213,8 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(200, result.getStatusCode());
-        SendNotificationResponse response =
-                new ObjectMapper().readValue(result.getBody(), SendNotificationResponse.class);
+        BaseAPIResponse response =
+                new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
         assertThat(VERIFY_PHONE_NUMBER_CODE_SENT, equalTo(response.getSessionState()));
     }
 
