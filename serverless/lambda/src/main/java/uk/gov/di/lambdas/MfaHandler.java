@@ -8,9 +8,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.ErrorResponse;
+import uk.gov.di.entity.NotifyRequest;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.UserWithEmailRequest;
 import uk.gov.di.services.AuthenticationService;
+import uk.gov.di.services.AwsSqsClient;
 import uk.gov.di.services.CodeGeneratorService;
 import uk.gov.di.services.CodeStorageService;
 import uk.gov.di.services.ConfigurationService;
@@ -18,6 +20,7 @@ import uk.gov.di.services.DynamoService;
 import uk.gov.di.services.RedisConnectionService;
 import uk.gov.di.services.SessionService;
 
+import static uk.gov.di.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.entity.SessionState.MFA_SMS_CODE_SENT;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -30,6 +33,7 @@ public class MfaHandler
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
     private final AuthenticationService authenticationService;
+    private final AwsSqsClient sqsClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public MfaHandler(
@@ -37,12 +41,14 @@ public class MfaHandler
             SessionService sessionService,
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService,
-            AuthenticationService authenticationService) {
+            AuthenticationService authenticationService,
+            AwsSqsClient sqsClient) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
         this.authenticationService = authenticationService;
+        this.sqsClient = sqsClient;
     }
 
     public MfaHandler() {
@@ -56,6 +62,11 @@ public class MfaHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEnvironment(),
                         configurationService.getDynamoEndpointUri());
+        this.sqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEmailQueueUri(),
+                        configurationService.getSqsEndpointUri());
     }
 
     @Override
@@ -84,6 +95,8 @@ public class MfaHandler
             codeStorageService.saveMfaCode(
                     userWithEmailRequest.getEmail(), code, configurationService.getCodeExpiry());
             sessionService.save(session.setState(MFA_SMS_CODE_SENT));
+            NotifyRequest notifyRequest = new NotifyRequest(phoneNumber, MFA_SMS, code);
+            sqsClient.send(objectMapper.writeValueAsString(notifyRequest));
             return generateApiGatewayProxyResponse(200, new BaseAPIResponse(session.getState()));
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);

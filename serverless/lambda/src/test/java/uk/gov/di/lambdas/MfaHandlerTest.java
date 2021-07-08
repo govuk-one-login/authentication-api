@@ -8,8 +8,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.ErrorResponse;
+import uk.gov.di.entity.NotifyRequest;
 import uk.gov.di.entity.Session;
 import uk.gov.di.services.AuthenticationService;
+import uk.gov.di.services.AwsSqsClient;
 import uk.gov.di.services.CodeGeneratorService;
 import uk.gov.di.services.CodeStorageService;
 import uk.gov.di.services.ConfigurationService;
@@ -24,12 +26,14 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class MfaHandlerTest {
 
     private MfaHandler handler;
+    private static final String PHONE_NUMBER = "01234567890";
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final String CODE = "123456";
     private static final long CODE_EXPIRY_TIME = 900;
@@ -39,6 +43,7 @@ public class MfaHandlerTest {
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+    private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
 
     @BeforeEach
     public void setUp() {
@@ -48,22 +53,25 @@ public class MfaHandlerTest {
                         sessionService,
                         codeGeneratorService,
                         codeStorageService,
-                        authenticationService);
+                        authenticationService,
+                        sqsClient);
     }
 
     @Test
-    public void shouldReturn200ForSuccessfulRequest() {
+    public void shouldReturn200ForSuccessfulMfaRequest() throws JsonProcessingException {
         usingValidSession(TEST_EMAIL_ADDRESS);
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of("01234567890"));
+                .thenReturn(Optional.of(PHONE_NUMBER));
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
         when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
+        NotifyRequest notifyRequest = new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
+        verify(sqsClient).send(new ObjectMapper().writeValueAsString(notifyRequest));
         verify(codeStorageService).saveMfaCode(TEST_EMAIL_ADDRESS, CODE, CODE_EXPIRY_TIME);
         assertThat(result, hasStatus(200));
     }
