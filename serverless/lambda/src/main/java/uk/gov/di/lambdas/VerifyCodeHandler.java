@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.ErrorResponse;
+import uk.gov.di.entity.NotificationType;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.VerifyCodeRequest;
 import uk.gov.di.services.CodeStorageService;
@@ -19,10 +20,10 @@ import uk.gov.di.services.ValidationService;
 
 import java.util.Optional;
 
-import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
-import static uk.gov.di.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
+import static uk.gov.di.entity.SessionState.MFA_CODE_MAX_RETRIES_REACHED;
+import static uk.gov.di.entity.SessionState.MFA_CODE_VERIFIED;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -84,7 +85,8 @@ public class VerifyCodeHandler
                     } else {
                         Optional<String> emailCode =
                                 codeStorageService.getOtpCode(
-                                        session.get().getEmailAddress(), VERIFY_EMAIL);
+                                        session.get().getEmailAddress(),
+                                        codeRequest.getNotificationType());
                         sessionService.save(
                                 session.get()
                                         .setState(
@@ -93,7 +95,7 @@ public class VerifyCodeHandler
                                                         codeRequest.getCode(),
                                                         session.get(),
                                                         configurationService.getCodeMaxRetries())));
-                        processCodeSessionState(session.get());
+                        processCodeSessionState(session.get(), codeRequest.getNotificationType());
                     }
                     return generateApiGatewayProxyResponse(
                             200, new BaseAPIResponse(session.get().getState()));
@@ -105,7 +107,8 @@ public class VerifyCodeHandler
                     } else {
                         Optional<String> phoneNumberCode =
                                 codeStorageService.getOtpCode(
-                                        session.get().getEmailAddress(), VERIFY_PHONE_NUMBER);
+                                        session.get().getEmailAddress(),
+                                        codeRequest.getNotificationType());
                         sessionService.save(
                                 session.get()
                                         .setState(
@@ -114,7 +117,28 @@ public class VerifyCodeHandler
                                                         codeRequest.getCode(),
                                                         session.get(),
                                                         configurationService.getCodeMaxRetries())));
-                        processCodeSessionState(session.get());
+                        processCodeSessionState(session.get(), codeRequest.getNotificationType());
+                    }
+                    return generateApiGatewayProxyResponse(
+                            200, new BaseAPIResponse(session.get().getState()));
+                case MFA_SMS:
+                    if (codeStorageService.isCodeBlockedForSession(
+                            session.get().getEmailAddress(), session.get().getSessionId())) {
+                        sessionService.save(session.get().setState(MFA_CODE_MAX_RETRIES_REACHED));
+                    } else {
+                        Optional<String> mfaCode =
+                                codeStorageService.getOtpCode(
+                                        session.get().getEmailAddress(),
+                                        codeRequest.getNotificationType());
+                        sessionService.save(
+                                session.get()
+                                        .setState(
+                                                validationService.validateMfaVerificationCode(
+                                                        mfaCode,
+                                                        codeRequest.getCode(),
+                                                        session.get(),
+                                                        configurationService.getCodeMaxRetries())));
+                        processCodeSessionState(session.get(), codeRequest.getNotificationType());
                     }
                     return generateApiGatewayProxyResponse(
                             200, new BaseAPIResponse(session.get().getState()));
@@ -133,14 +157,16 @@ public class VerifyCodeHandler
         sessionService.save(session.resetRetryCount());
     }
 
-    private void processCodeSessionState(Session session) {
+    private void processCodeSessionState(Session session, NotificationType notificationType) {
         if (session.getState().equals(PHONE_NUMBER_CODE_VERIFIED)) {
-            codeStorageService.deleteOtpCode(session.getEmailAddress(), VERIFY_PHONE_NUMBER);
+            codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
             dynamoService.updatePhoneNumberVerifiedStatus(session.getEmailAddress(), true);
-        } else if (session.getState().equals(EMAIL_CODE_VERIFIED)) {
-            codeStorageService.deleteOtpCode(session.getEmailAddress(), VERIFY_EMAIL);
+        } else if (session.getState().equals(EMAIL_CODE_VERIFIED)
+                || session.getState().equals(MFA_CODE_VERIFIED)) {
+            codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
         } else if (session.getState().equals(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED)
-                || session.getState().equals(EMAIL_CODE_MAX_RETRIES_REACHED)) {
+                || session.getState().equals(EMAIL_CODE_MAX_RETRIES_REACHED)
+                || session.getState().equals(MFA_CODE_MAX_RETRIES_REACHED)) {
             blockCodeForSessionAndResetCount(session);
         }
     }
