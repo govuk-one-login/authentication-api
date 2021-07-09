@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static java.lang.String.format;
+import static uk.gov.di.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.entity.NotificationType.VERIFY_PHONE_NUMBER;
 
@@ -67,6 +68,14 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                     notifyRequest.getDestination(),
                                     textPersonalisation,
                                     configService.getNotificationTemplateId(VERIFY_PHONE_NUMBER));
+                            break;
+                        case MFA_SMS:
+                            Map<String, Object> mfaPersonalisation = new HashMap<>();
+                            mfaPersonalisation.put("validation-code", notifyRequest.getCode());
+                            notificationService.sendText(
+                                    notifyRequest.getDestination(),
+                                    mfaPersonalisation,
+                                    configService.getNotificationTemplateId(MFA_SMS));
                             break;
                     }
                 } catch (NotificationClientException e) {

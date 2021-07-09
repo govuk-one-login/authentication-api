@@ -17,10 +17,11 @@ import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static uk.gov.di.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.entity.NotificationType.VERIFY_PHONE_NUMBER;
 
-public class SendEmailNotificationIntegrationTest {
+public class SendNotificationIntegrationTest {
 
     private static final String TEST_PHONE_NUMBER = "01234567811";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@example.com";
@@ -65,6 +66,30 @@ public class SendEmailNotificationIntegrationTest {
         registerText();
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "162534");
+
+        AwsSqsClient client =
+                new AwsSqsClient(
+                        "eu-west-2",
+                        "http://localhost:45678/123456789012/local-email-notification-queue",
+                        Optional.of("http://localhost:45678/"));
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        client.send(objectMapper.writeValueAsString(notifyRequest));
+
+        await().atMost(1, MINUTES)
+                .untilAsserted(() -> assertThat(notifyStub.getCountOfRequests(), equalTo(1)));
+
+        JsonNode request = objectMapper.readTree(notifyStub.getLastRequest().getEntity());
+        JsonNode personalisation = request.get("personalisation");
+        assertEquals(TEST_PHONE_NUMBER, request.get("phone_number").asText());
+        assertEquals(
+                VERIFICATION_CODE_LENGTH, personalisation.get("validation-code").asText().length());
+    }
+
+    @Test
+    void shouldCallNotifyWhenValidMfaRequestIsAddedToQueue() throws JsonProcessingException {
+        registerText();
+        NotifyRequest notifyRequest = new NotifyRequest(TEST_PHONE_NUMBER, MFA_SMS, "162534");
 
         AwsSqsClient client =
                 new AwsSqsClient(
