@@ -72,7 +72,7 @@ public class MfaHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         verify(sqsClient).send(new ObjectMapper().writeValueAsString(notifyRequest));
-        verify(codeStorageService).saveMfaCode(TEST_EMAIL_ADDRESS, CODE, CODE_EXPIRY_TIME);
+        verify(codeStorageService).saveOtpCode(TEST_EMAIL_ADDRESS, CODE, CODE_EXPIRY_TIME, MFA_SMS);
         assertThat(result, hasStatus(200));
     }
 

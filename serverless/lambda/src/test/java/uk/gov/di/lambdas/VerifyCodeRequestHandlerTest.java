@@ -66,13 +66,14 @@ class VerifyCodeRequestHandlerTest {
     @Test
     public void shouldReturn200ForValidVerifyEmailRequest() throws JsonProcessingException {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(codeStorageService.getEmailCode(TEST_EMAIL_ADDRESS)).thenReturn(Optional.of(CODE));
+        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
+                .thenReturn(Optional.of(CODE));
         when(validationService.validateEmailVerificationCode(
                         eq(Optional.of(CODE)), eq(CODE), any(Session.class), eq(5)))
                 .thenReturn(EMAIL_CODE_VERIFIED);
         APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, VERIFY_EMAIL.toString());
 
-        verify(codeStorageService).deleteEmailCode(TEST_EMAIL_ADDRESS);
+        verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL);
         assertThat(result, hasStatus(200));
         BaseAPIResponse codeResponse =
                 new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
@@ -85,13 +86,13 @@ class VerifyCodeRequestHandlerTest {
         when(validationService.validatePhoneVerificationCode(
                         eq(Optional.of(CODE)), eq(CODE), any(Session.class), eq(5)))
                 .thenReturn(PHONE_NUMBER_CODE_VERIFIED);
-        when(codeStorageService.getPhoneNumberCode(TEST_EMAIL_ADDRESS))
+        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(CODE));
 
         APIGatewayProxyResponseEvent result =
                 makeCallWithCode(CODE, VERIFY_PHONE_NUMBER.toString());
 
-        verify(codeStorageService).deletePhoneNumberCode(TEST_EMAIL_ADDRESS);
+        verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER);
         verify(dynamoService).updatePhoneNumberVerifiedStatus(TEST_EMAIL_ADDRESS, true);
         assertThat(result, hasStatus(200));
         BaseAPIResponse codeResponse =
@@ -103,7 +104,8 @@ class VerifyCodeRequestHandlerTest {
     public void shouldReturnEmailCodeNotValidStateIfRequestCodeDoesNotMatchStoredCode()
             throws JsonProcessingException {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(codeStorageService.getEmailCode(TEST_EMAIL_ADDRESS)).thenReturn(Optional.of(CODE));
+        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
+                .thenReturn(Optional.of(CODE));
         when(validationService.validateEmailVerificationCode(
                         eq(Optional.of(CODE)), eq("123457"), any(Session.class), eq(5)))
                 .thenReturn(EMAIL_CODE_NOT_VALID);
@@ -123,7 +125,7 @@ class VerifyCodeRequestHandlerTest {
         when(validationService.validatePhoneVerificationCode(
                         eq(Optional.of(CODE)), eq(CODE), any(Session.class), eq(5)))
                 .thenReturn(PHONE_NUMBER_CODE_NOT_VALID);
-        when(codeStorageService.getPhoneNumberCode(TEST_EMAIL_ADDRESS))
+        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(CODE));
 
         APIGatewayProxyResponseEvent result =
@@ -180,7 +182,7 @@ class VerifyCodeRequestHandlerTest {
         when(validationService.validatePhoneVerificationCode(
                         eq(Optional.of(CODE)), eq(USER_INPUT), any(Session.class), eq(5)))
                 .thenReturn(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED);
-        when(codeStorageService.getPhoneNumberCode(TEST_EMAIL_ADDRESS))
+        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(CODE));
 
         APIGatewayProxyResponseEvent result =
@@ -210,7 +212,8 @@ class VerifyCodeRequestHandlerTest {
                 new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
         assertThat(result, hasStatus(200));
         assertThat(codeResponse.getSessionState(), equalTo(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED));
-        verify(codeStorageService, never()).getPhoneNumberCode(session.getEmailAddress());
+        verify(codeStorageService, never())
+                .getOtpCode(session.getEmailAddress(), VERIFY_PHONE_NUMBER);
     }
 
     @Test
@@ -222,7 +225,8 @@ class VerifyCodeRequestHandlerTest {
         when(validationService.validateEmailVerificationCode(
                         eq(Optional.of(CODE)), eq(USER_INPUT), any(Session.class), eq(5)))
                 .thenReturn(EMAIL_CODE_MAX_RETRIES_REACHED);
-        when(codeStorageService.getEmailCode(TEST_EMAIL_ADDRESS)).thenReturn(Optional.of(CODE));
+        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
+                .thenReturn(Optional.of(CODE));
 
         APIGatewayProxyResponseEvent result = makeCallWithCode(USER_INPUT, VERIFY_EMAIL.toString());
 

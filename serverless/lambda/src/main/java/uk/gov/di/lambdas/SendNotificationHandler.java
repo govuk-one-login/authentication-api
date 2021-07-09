@@ -24,6 +24,8 @@ import uk.gov.di.services.ValidationService;
 
 import java.util.Optional;
 
+import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
 import static uk.gov.di.entity.SessionState.VERIFY_PHONE_NUMBER_CODE_SENT;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -136,13 +138,16 @@ public class SendNotificationHandler
 
         switch (notificationType) {
             case VERIFY_EMAIL:
-                codeStorageService.saveEmailCode(
-                        destination, code, configurationService.getCodeExpiry());
+                codeStorageService.saveOtpCode(
+                        destination, code, configurationService.getCodeExpiry(), VERIFY_EMAIL);
                 sessionService.save(session.setState(VERIFY_EMAIL_CODE_SENT));
                 break;
             case VERIFY_PHONE_NUMBER:
-                codeStorageService.savePhoneNumberCode(
-                        session.getEmailAddress(), code, configurationService.getCodeExpiry());
+                codeStorageService.saveOtpCode(
+                        session.getEmailAddress(),
+                        code,
+                        configurationService.getCodeExpiry(),
+                        VERIFY_PHONE_NUMBER);
                 sessionService.save(
                         session.setState(VERIFY_PHONE_NUMBER_CODE_SENT).resetRetryCount());
                 break;

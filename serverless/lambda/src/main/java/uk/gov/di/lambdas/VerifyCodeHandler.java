@@ -19,6 +19,8 @@ import uk.gov.di.services.ValidationService;
 
 import java.util.Optional;
 
+import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
@@ -81,7 +83,8 @@ public class VerifyCodeHandler
                         sessionService.save(session.get().setState(EMAIL_CODE_MAX_RETRIES_REACHED));
                     } else {
                         Optional<String> emailCode =
-                                codeStorageService.getEmailCode(session.get().getEmailAddress());
+                                codeStorageService.getOtpCode(
+                                        session.get().getEmailAddress(), VERIFY_EMAIL);
                         sessionService.save(
                                 session.get()
                                         .setState(
@@ -101,8 +104,8 @@ public class VerifyCodeHandler
                                 session.get().setState(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED));
                     } else {
                         Optional<String> phoneNumberCode =
-                                codeStorageService.getPhoneNumberCode(
-                                        session.get().getEmailAddress());
+                                codeStorageService.getOtpCode(
+                                        session.get().getEmailAddress(), VERIFY_PHONE_NUMBER);
                         sessionService.save(
                                 session.get()
                                         .setState(
@@ -132,10 +135,10 @@ public class VerifyCodeHandler
 
     private void processCodeSessionState(Session session) {
         if (session.getState().equals(PHONE_NUMBER_CODE_VERIFIED)) {
-            codeStorageService.deletePhoneNumberCode(session.getEmailAddress());
+            codeStorageService.deleteOtpCode(session.getEmailAddress(), VERIFY_PHONE_NUMBER);
             dynamoService.updatePhoneNumberVerifiedStatus(session.getEmailAddress(), true);
         } else if (session.getState().equals(EMAIL_CODE_VERIFIED)) {
-            codeStorageService.deleteEmailCode(session.getEmailAddress());
+            codeStorageService.deleteOtpCode(session.getEmailAddress(), VERIFY_EMAIL);
         } else if (session.getState().equals(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED)
                 || session.getState().equals(EMAIL_CODE_MAX_RETRIES_REACHED)) {
             blockCodeForSessionAndResetCount(session);

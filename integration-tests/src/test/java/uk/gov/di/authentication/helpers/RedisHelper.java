@@ -10,6 +10,9 @@ import uk.gov.di.services.RedisConnectionService;
 import java.io.IOException;
 import java.util.Optional;
 
+import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.entity.NotificationType.VERIFY_PHONE_NUMBER;
+
 public class RedisHelper {
 
     private static final String REDIS_HOST =
@@ -46,7 +49,7 @@ public class RedisHelper {
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
 
             var code = new CodeGeneratorService().sixDigitCode();
-            new CodeStorageService(redis).saveEmailCode(email, code, codeExpiryTime);
+            new CodeStorageService(redis).saveOtpCode(email, code, codeExpiryTime, VERIFY_EMAIL);
 
             return code;
         }
@@ -57,7 +60,8 @@ public class RedisHelper {
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
 
             var code = new CodeGeneratorService().sixDigitCode();
-            new CodeStorageService(redis).savePhoneNumberCode(email, code, codeExpiryTime);
+            new CodeStorageService(redis)
+                    .saveOtpCode(email, code, codeExpiryTime, VERIFY_PHONE_NUMBER);
 
             return code;
         }
