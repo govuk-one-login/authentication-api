@@ -23,7 +23,7 @@ module "mfa" {
   lambda_zip_file           = var.lambda_zip_file
   security_group_id         = aws_vpc.authentication.default_security_group_id
   subnet_id                 = aws_subnet.authentication.*.id
-  lambda_role_arn           = aws_iam_role.sqs_lambda_iam_role.arn
+  lambda_role_arn           = aws_iam_role.dynamo_sqs_lambda_iam_role.arn
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_api,
