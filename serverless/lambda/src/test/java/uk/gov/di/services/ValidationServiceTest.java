@@ -13,6 +13,9 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_NOT_VALID;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
+import static uk.gov.di.entity.SessionState.MFA_CODE_MAX_RETRIES_REACHED;
+import static uk.gov.di.entity.SessionState.MFA_CODE_NOT_VALID;
+import static uk.gov.di.entity.SessionState.MFA_CODE_VERIFIED;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_NOT_VALID;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
@@ -194,6 +197,44 @@ public class ValidationServiceTest {
         assertEquals(
                 EMAIL_CODE_MAX_RETRIES_REACHED,
                 validationService.validateEmailVerificationCode(
+                        Optional.of("654321"), "123456", session, 5));
+    }
+
+    @Test
+    public void shouldReturnCorrectStateWhenMfaCodeMatchesStored() {
+        assertEquals(
+                MFA_CODE_VERIFIED,
+                validationService.validateMfaVerificationCode(
+                        Optional.of("123456"), "123456", mock(Session.class), 5));
+    }
+
+    @Test
+    public void shouldReturnCorrectStateWhenStoredMfaCodeIsEmpty() {
+        assertEquals(
+                MFA_CODE_NOT_VALID,
+                validationService.validateMfaVerificationCode(
+                        Optional.empty(), "123456", mock(Session.class), 5));
+    }
+
+    @Test
+    public void
+            shouldReturnCorrectStateWhenStoredMfaCodeDoesMatchInputAndRetryLimitHasNotBeenReached() {
+        Session session = mock(Session.class);
+        when(session.getRetryCount()).thenReturn(1);
+        assertEquals(
+                MFA_CODE_NOT_VALID,
+                validationService.validateMfaVerificationCode(
+                        Optional.of("654321"), "123456", session, 5));
+    }
+
+    @Test
+    public void
+            shouldReturnCorrectStateWhenStoredMfaCodeDoesMatchInputAndRetryLimitHasBeenReached() {
+        Session session = mock(Session.class);
+        when(session.getRetryCount()).thenReturn(6);
+        assertEquals(
+                MFA_CODE_MAX_RETRIES_REACHED,
+                validationService.validateMfaVerificationCode(
                         Optional.of("654321"), "123456", session, 5));
     }
 }

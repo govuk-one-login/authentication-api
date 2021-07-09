@@ -9,6 +9,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.entity.NotificationType.MFA_SMS;
+import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.entity.NotificationType.VERIFY_PHONE_NUMBER;
 
 class CodeStorageServiceTest {
 
@@ -33,7 +36,7 @@ class CodeStorageServiceTest {
 
     @Test
     public void shouldCallRedisWithValidEmailCodeAndHashedEmail() {
-        codeStorageService.saveEmailCode(TEST_EMAIL, CODE, CODE_EXPIRY_TIME);
+        codeStorageService.saveOtpCode(TEST_EMAIL, CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
 
         verify(redisConnectionService).saveWithExpiry(REDIS_EMAIL_KEY, CODE, CODE_EXPIRY_TIME);
     }
@@ -42,7 +45,7 @@ class CodeStorageServiceTest {
     public void shouldRetrieveEmailCode() {
         when(redisConnectionService.getValue(REDIS_EMAIL_KEY)).thenReturn(CODE);
 
-        String codeForEmail = codeStorageService.getEmailCode(TEST_EMAIL).get();
+        String codeForEmail = codeStorageService.getOtpCode(TEST_EMAIL, VERIFY_EMAIL).get();
 
         assertThat(codeForEmail, is(CODE));
     }
@@ -51,19 +54,19 @@ class CodeStorageServiceTest {
     public void shouldReturnEmptyOptionalIfEmailCodeDoesNotExist() {
         when(redisConnectionService.getValue(REDIS_EMAIL_KEY)).thenReturn(null);
 
-        assertTrue(codeStorageService.getEmailCode(TEST_EMAIL).isEmpty());
+        assertTrue(codeStorageService.getOtpCode(TEST_EMAIL, VERIFY_EMAIL).isEmpty());
     }
 
     @Test
     public void shouldCallRedisToDeleteEmailCodeWithHashedEmail() {
-        codeStorageService.deleteEmailCode(TEST_EMAIL);
+        codeStorageService.deleteOtpCode(TEST_EMAIL, VERIFY_EMAIL);
 
         verify(redisConnectionService).deleteValue(REDIS_EMAIL_KEY);
     }
 
     @Test
     public void shouldCallRedisWithValidPhoneNumberCodeAndHashedEmailAddress() {
-        codeStorageService.savePhoneNumberCode(TEST_EMAIL, CODE, CODE_EXPIRY_TIME);
+        codeStorageService.saveOtpCode(TEST_EMAIL, CODE, CODE_EXPIRY_TIME, VERIFY_PHONE_NUMBER);
 
         verify(redisConnectionService)
                 .saveWithExpiry(REDIS_PHONE_NUMBER_KEY, CODE, CODE_EXPIRY_TIME);
@@ -73,7 +76,7 @@ class CodeStorageServiceTest {
     public void shouldRetrievePhoneNumberCode() {
         when(redisConnectionService.getValue(REDIS_PHONE_NUMBER_KEY)).thenReturn(CODE);
 
-        String codeForEmail = codeStorageService.getPhoneNumberCode(TEST_EMAIL).get();
+        String codeForEmail = codeStorageService.getOtpCode(TEST_EMAIL, VERIFY_PHONE_NUMBER).get();
 
         assertThat(codeForEmail, is(CODE));
     }
@@ -82,12 +85,12 @@ class CodeStorageServiceTest {
     public void shouldReturnEmptyOptionalIfPhoneNumberCodeDoesNotExist() {
         when(redisConnectionService.getValue(REDIS_PHONE_NUMBER_KEY)).thenReturn(null);
 
-        assertTrue(codeStorageService.getPhoneNumberCode(TEST_EMAIL).isEmpty());
+        assertTrue(codeStorageService.getOtpCode(TEST_EMAIL, VERIFY_PHONE_NUMBER).isEmpty());
     }
 
     @Test
     public void shouldCallRedisToDeletePhoneNumberCodeWithHashedEmail() {
-        codeStorageService.deletePhoneNumberCode(TEST_EMAIL);
+        codeStorageService.deleteOtpCode(TEST_EMAIL, VERIFY_PHONE_NUMBER);
 
         verify(redisConnectionService).deleteValue(REDIS_PHONE_NUMBER_KEY);
     }
@@ -116,7 +119,7 @@ class CodeStorageServiceTest {
 
     @Test
     public void shouldCallRedisWithValidMfaCodeAndHashedEmail() {
-        codeStorageService.saveMfaCode(TEST_EMAIL, CODE, CODE_EXPIRY_TIME);
+        codeStorageService.saveOtpCode(TEST_EMAIL, CODE, CODE_EXPIRY_TIME, MFA_SMS);
 
         verify(redisConnectionService).saveWithExpiry(REDIS_MFA_KEY, CODE, CODE_EXPIRY_TIME);
     }

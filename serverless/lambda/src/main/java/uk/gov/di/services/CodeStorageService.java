@@ -2,6 +2,7 @@ package uk.gov.di.services;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.entity.NotificationType;
 import uk.gov.di.helpers.HashHelper;
 
 import java.util.Optional;
@@ -23,16 +24,6 @@ public class CodeStorageService {
         this.redisConnectionService = redisConnectionService;
     }
 
-    public void saveEmailCode(String email, String code, long codeExpiryTime) {
-        String encodedhash = HashHelper.hashSha256String(email);
-        String key = EMAIL_KEY_PREFIX + encodedhash;
-        try {
-            redisConnectionService.saveWithExpiry(key, code, codeExpiryTime);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     public void saveCodeBlockedForSession(String email, String sessionId, long codeBlockedTime) {
         String encodedHash = HashHelper.hashSha256String(email);
         String key = CODE_BLOCKED_KEY_PREFIX + encodedHash + sessionId;
@@ -43,19 +34,14 @@ public class CodeStorageService {
         }
     }
 
-    public void saveMfaCode(String emailAddress, String code, long codeExpiryTime) {
+    public void saveOtpCode(
+            String emailAddress,
+            String code,
+            long codeExpiryTime,
+            NotificationType notificationType) {
         String hashedEmailAddress = HashHelper.hashSha256String(emailAddress);
-        String key = MFA_KEY_PREFIX + hashedEmailAddress;
-        try {
-            redisConnectionService.saveWithExpiry(key, code, codeExpiryTime);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public void savePhoneNumberCode(String emailAddress, String code, long codeExpiryTime) {
-        String hashedEmailAddress = HashHelper.hashSha256String(emailAddress);
-        String key = PHONE_NUMBER_KEY_PREFIX + hashedEmailAddress;
+        String prefix = getPrefixForNotificationType(notificationType);
+        String key = prefix + hashedEmailAddress;
         try {
             redisConnectionService.saveWithExpiry(key, code, codeExpiryTime);
         } catch (Exception e) {
@@ -71,36 +57,34 @@ public class CodeStorageService {
                 != null;
     }
 
-    public Optional<String> getPhoneNumberCode(String emailAddress) {
+    public Optional<String> getOtpCode(String emailAddress, NotificationType notificationType) {
+        String prefix = getPrefixForNotificationType(notificationType);
         return Optional.ofNullable(
                 redisConnectionService.getValue(
-                        PHONE_NUMBER_KEY_PREFIX + HashHelper.hashSha256String(emailAddress)));
+                        prefix + HashHelper.hashSha256String(emailAddress)));
     }
 
-    public Optional<String> getEmailCode(String emailAddress) {
-        return Optional.ofNullable(
-                redisConnectionService.getValue(
-                        EMAIL_KEY_PREFIX + HashHelper.hashSha256String(emailAddress)));
-    }
-
-    public void deleteEmailCode(String emailAddress) {
+    public void deleteOtpCode(String emailAddress, NotificationType notificationType) {
+        String prefix = getPrefixForNotificationType(notificationType);
         long numberOfKeysRemoved =
                 redisConnectionService.deleteValue(
-                        EMAIL_KEY_PREFIX + HashHelper.hashSha256String(emailAddress));
+                        prefix + HashHelper.hashSha256String(emailAddress));
 
         if (numberOfKeysRemoved == 0) {
-            LOGGER.info(format("No %s key was deleted for: %s", EMAIL_KEY_PREFIX, emailAddress));
+            LOGGER.info(format("No %s key was deleted for: %s", prefix, emailAddress));
         }
     }
 
-    public void deletePhoneNumberCode(String emailAddress) {
-        long numberOfKeysRemoved =
-                redisConnectionService.deleteValue(
-                        PHONE_NUMBER_KEY_PREFIX + HashHelper.hashSha256String(emailAddress));
-
-        if (numberOfKeysRemoved == 0) {
-            LOGGER.info(
-                    format("No %s key was deleted for: %s", PHONE_NUMBER_KEY_PREFIX, emailAddress));
+    private String getPrefixForNotificationType(NotificationType notificationType) {
+        switch (notificationType) {
+            case VERIFY_EMAIL:
+                return EMAIL_KEY_PREFIX;
+            case VERIFY_PHONE_NUMBER:
+                return PHONE_NUMBER_KEY_PREFIX;
+            case MFA_SMS:
+                return MFA_KEY_PREFIX;
         }
+        throw new RuntimeException(
+                format("No redis prefix key configured for %s", notificationType));
     }
 }

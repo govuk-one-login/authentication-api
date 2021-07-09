@@ -145,6 +145,18 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         assertEquals(SessionState.EMAIL_CODE_MAX_RETRIES_REACHED, codeResponse.getSessionState());
     }
 
+    @Test
+    public void shouldCallVerifyCodeEndpointToVerifyMfaCodeAndReturn200() throws IOException {
+        String sessionId = RedisHelper.createSession();
+        RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
+
+        String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
+        VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code);
+
+        Response response = sendRequest(sessionId, codeRequest);
+        assertEquals(200, response.getStatus());
+    }
+
     private Response sendRequest(String sessionId, VerifyCodeRequest codeRequest) {
         Client client = ClientBuilder.newClient();
         WebTarget webTarget = client.target(ROOT_RESOURCE_URL + VERIFY_CODE_ENDPOINT);

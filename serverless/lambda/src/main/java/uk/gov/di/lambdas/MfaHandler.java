@@ -92,8 +92,11 @@ public class MfaHandler
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1014);
             }
             String code = codeGeneratorService.sixDigitCode();
-            codeStorageService.saveMfaCode(
-                    userWithEmailRequest.getEmail(), code, configurationService.getCodeExpiry());
+            codeStorageService.saveOtpCode(
+                    userWithEmailRequest.getEmail(),
+                    code,
+                    configurationService.getCodeExpiry(),
+                    MFA_SMS);
             sessionService.save(session.setState(MFA_SMS_CODE_SENT));
             NotifyRequest notifyRequest = new NotifyRequest(phoneNumber, MFA_SMS, code);
             sqsClient.send(objectMapper.writeValueAsString(notifyRequest));

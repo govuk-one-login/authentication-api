@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.ErrorResponse;
+import uk.gov.di.entity.NotificationType;
 import uk.gov.di.entity.NotifyRequest;
 import uk.gov.di.entity.Session;
 import uk.gov.di.services.AwsSqsClient;
@@ -28,6 +29,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -98,7 +100,8 @@ class SendNotificationHandlerTest {
 
         verify(awsSqsClient).send(serialisedRequest);
         verify(codeStorageService)
-                .saveEmailCode(TEST_EMAIL_ADDRESS, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME);
+                .saveOtpCode(
+                        TEST_EMAIL_ADDRESS, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
         verify(sessionService).save(argThat(this::isSessionWithEmailSent));
     }
 
@@ -117,7 +120,8 @@ class SendNotificationHandlerTest {
         assertEquals(400, result.getStatusCode());
 
         verify(awsSqsClient, never()).send(anyString());
-        verify(codeStorageService, never()).saveEmailCode(anyString(), anyString(), anyLong());
+        verify(codeStorageService, never())
+                .saveOtpCode(anyString(), anyString(), anyLong(), any(NotificationType.class));
         verify(sessionService, never()).save(argThat(this::isSessionWithEmailSent));
     }
 
@@ -198,7 +202,8 @@ class SendNotificationHandlerTest {
         assertThat(result, hasBody(expectedResponse));
 
         verify(awsSqsClient, never()).send(anyString());
-        verify(codeStorageService, never()).saveEmailCode(anyString(), anyString(), anyLong());
+        verify(codeStorageService, never())
+                .saveOtpCode(anyString(), anyString(), anyLong(), any(NotificationType.class));
     }
 
     @Test

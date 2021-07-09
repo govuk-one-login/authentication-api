@@ -12,6 +12,9 @@ import java.util.regex.Pattern;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_NOT_VALID;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
+import static uk.gov.di.entity.SessionState.MFA_CODE_MAX_RETRIES_REACHED;
+import static uk.gov.di.entity.SessionState.MFA_CODE_NOT_VALID;
+import static uk.gov.di.entity.SessionState.MFA_CODE_VERIFIED;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_NOT_VALID;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
@@ -71,6 +74,19 @@ public class ValidationService {
             }
         }
         return PHONE_NUMBER_CODE_VERIFIED;
+    }
+
+    public SessionState validateMfaVerificationCode(
+            Optional<String> mfaCode, String input, Session session, int maxRetries) {
+        if (mfaCode.isEmpty() || !mfaCode.get().equals(input)) {
+            session.incrementRetryCount();
+            if (session.getRetryCount() > maxRetries) {
+                return MFA_CODE_MAX_RETRIES_REACHED;
+            } else {
+                return MFA_CODE_NOT_VALID;
+            }
+        }
+        return MFA_CODE_VERIFIED;
     }
 
     public SessionState validateEmailVerificationCode(
