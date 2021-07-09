@@ -53,6 +53,8 @@ public class ConfigurationService {
                 return System.getenv("VERIFY_EMAIL_TEMPLATE_ID");
             case VERIFY_PHONE_NUMBER:
                 return System.getenv("VERIFY_PHONE_NUMBER_TEMPLATE_ID");
+            case MFA_SMS:
+                return System.getenv("MFA_SMS_TEMPLATE_ID");
             default:
                 throw new RuntimeException("NotificationType template ID does not exist");
         }
