@@ -14,7 +14,7 @@ repositories {
 
 def dependencyVersions = [
     nimbus_oauth2_sdk: '9.9',
-    nimbus_jose_jwt: '9.10.1',
+    nimbus_jose_jwt: '9.11',
     junit_version: '5.7.2',
     mockito_version: '3.11.2',
 ]
