@@ -98,12 +98,12 @@ public class TokenHandler
         try {
             privateKeyJWT = PrivateKeyJWT.parse(input.getBody());
         } catch (ParseException e) {
-            return generateApiGatewayProxyResponse(400, "Invalid PrivateKeyJWT");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
         String clientID = privateKeyJWT.getClientID().toString();
         Optional<ClientRegistry> client = clientService.getClient(clientID);
         if (client.isEmpty()) {
-            return generateApiGatewayProxyResponse(403, "client is not valid");
+            return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1016);
         }
         ClientAuthenticationVerifier<?> authenticationVerifier =
                 new ClientAuthenticationVerifier<>(
@@ -113,7 +113,7 @@ public class TokenHandler
         try {
             authenticationVerifier.verify(privateKeyJWT, null, null);
         } catch (InvalidClientException | JOSEException e) {
-            return generateApiGatewayProxyResponse(403, "Unable to Verify PrivateKeyJWT");
+            return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1015);
         }
 
         //        String email = authorizationCodeService.getEmailForCode(code);

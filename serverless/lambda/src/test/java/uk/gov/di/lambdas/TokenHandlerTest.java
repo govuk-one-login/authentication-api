@@ -101,7 +101,7 @@ public class TokenHandlerTest {
     }
 
     @Test
-    public void shouldReturn403IfClientIsNotValid() throws JOSEException {
+    public void shouldReturn403IfClientIsNotValid() throws JOSEException, JsonProcessingException {
         when(clientService.getClient(eq("invalid-id"))).thenReturn(Optional.empty());
         KeyPair keyPair = generateRsaKeyPair();
 
@@ -109,7 +109,8 @@ public class TokenHandlerTest {
                 generateApiGatewayRequest(keyPair.getPrivate(), "invalid-id");
 
         assertEquals(403, result.getStatusCode());
-        assertThat(result, hasBody("client is not valid"));
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1016);
+        assertThat(result, hasBody(expectedResponse));
     }
 
     @Test
@@ -124,7 +125,7 @@ public class TokenHandlerTest {
     }
 
     @Test
-    public void shouldReturn403IfSignatureOfPrivateKeyJWTCantBeVerified() throws JOSEException {
+    public void shouldReturn403IfSignatureOfPrivateKeyJWTCantBeVerified() throws JOSEException, JsonProcessingException {
         KeyPair keyPairOne = generateRsaKeyPair();
         KeyPair keyPairTwo = generateRsaKeyPair();
         ClientRegistry clientRegistry =
@@ -144,6 +145,8 @@ public class TokenHandlerTest {
                 generateApiGatewayRequest(keyPairOne.getPrivate(), "test-id");
 
         assertThat(result, hasStatus(403));
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1015);
+        assertThat(result, hasBody(expectedResponse));
     }
 
     private APIGatewayProxyResponseEvent generateApiGatewayRequest(
