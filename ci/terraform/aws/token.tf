@@ -7,7 +7,7 @@ module "token" {
 
   handler_environment_variables = {
     ENVIRONMENT = var.environment
-    BASE_URL = var.api_base_url
+    BASE_URL = var.use_localstack ? "${var.aws_endpoint}/restapis/${aws_api_gateway_rest_api.di_authentication_api.id}/${var.api_deployment_stage_name}/_user_request_/token" : "${var.aws_endpoint}/token"
     DYNAMO_ENDPOINT = var.use_localstack ? var.lambda_dynamo_endpoint : null
   }
   handler_function_name = "uk.gov.di.lambdas.TokenHandler::handleRequest"
