@@ -4,18 +4,9 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ParseException;
-import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
-import com.nimbusds.oauth2.sdk.auth.Secret;
-import com.nimbusds.oauth2.sdk.auth.verifier.ClientAuthenticationVerifier;
-import com.nimbusds.oauth2.sdk.auth.verifier.ClientCredentialsSelector;
-import com.nimbusds.oauth2.sdk.auth.verifier.InvalidClientException;
-import com.nimbusds.oauth2.sdk.id.Audience;
-import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
@@ -30,14 +21,6 @@ import uk.gov.di.services.DynamoClientService;
 import uk.gov.di.services.DynamoService;
 import uk.gov.di.services.TokenService;
 
-import java.security.KeyFactory;
-import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.X509EncodedKeySpec;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -86,82 +69,50 @@ public class TokenHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        Map<String, String> requestBody = PARSE_REQUEST_BODY(input.getBody());
-
-        if (!requestBody.containsKey("code")
-                || !requestBody.containsKey("client_id")
-                || !requestBody.containsKey("grant_type")
-                || !requestBody.containsKey("redirect_uri")) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
-        }
         PrivateKeyJWT privateKeyJWT;
+        Map<String, String> requestBody;
         try {
+            requestBody = parseRequestParameters(input.getBody());
             privateKeyJWT = PrivateKeyJWT.parse(input.getBody());
         } catch (ParseException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
-        String clientID = privateKeyJWT.getClientID().toString();
+        String clientID = requestBody.get("client_id");
         Optional<ClientRegistry> client = clientService.getClient(clientID);
         if (client.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1016);
         }
-        ClientAuthenticationVerifier<?> authenticationVerifier =
-                new ClientAuthenticationVerifier<>(
-                        generateClientCredentialsSelector(client.get()),
-                        Collections.singleton(
-                                new Audience(configurationService.getBaseURL().orElseThrow())));
-        try {
-            authenticationVerifier.verify(privateKeyJWT, null, null);
-        } catch (InvalidClientException | JOSEException e) {
+        boolean privateKeyJWTIsValid =
+                tokenService.validatePrivateKeyJWTSignature(
+                        client.get().getPublicKey(),
+                        privateKeyJWT,
+                        configurationService.getBaseURL().orElseThrow());
+        if (!privateKeyJWTIsValid) {
             return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1015);
         }
-
-        //        String email = authorizationCodeService.getEmailForCode(code);
+        //        TODO: String email = authorizationCodeService.getEmailForCode(code);
         String email = "joe.bloggs@digital.cabinet-office.gov.uk";
 
         if (email.isEmpty()) {
             return generateApiGatewayProxyResponse(403, "");
         }
-
         AccessToken accessToken = tokenService.issueToken(email);
         Subject subject = authenticationService.getSubjectFromEmail(email);
         SignedJWT idToken = tokenService.generateIDToken(clientID, subject);
-
         OIDCTokens oidcTokens = new OIDCTokens(idToken, accessToken, null);
         OIDCTokenResponse tokenResponse = new OIDCTokenResponse(oidcTokens);
 
         return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
     }
 
-    private ClientCredentialsSelector<?> generateClientCredentialsSelector(
-            ClientRegistry clientRegistry) {
-        return new ClientCredentialsSelector<>() {
-            @Override
-            public List<Secret> selectClientSecrets(
-                    ClientID claimedClientID,
-                    ClientAuthenticationMethod authMethod,
-                    com.nimbusds.oauth2.sdk.auth.verifier.Context context) {
-                return null;
-            }
-
-            @Override
-            public List<PublicKey> selectPublicKeys(
-                    ClientID claimedClientID,
-                    ClientAuthenticationMethod authMethod,
-                    JWSHeader jwsHeader,
-                    boolean forceRefresh,
-                    com.nimbusds.oauth2.sdk.auth.verifier.Context context) {
-
-                String publicKey = clientRegistry.getPublicKey();
-                byte[] decodedKey = Base64.getMimeDecoder().decode(publicKey);
-                try {
-                    X509EncodedKeySpec x509publicKey = new X509EncodedKeySpec(decodedKey);
-                    KeyFactory kf = KeyFactory.getInstance("RSA");
-                    return Collections.singletonList(kf.generatePublic(x509publicKey));
-                } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        };
+    private Map<String, String> parseRequestParameters(String requestString) throws ParseException {
+        Map<String, String> requestBody = PARSE_REQUEST_BODY(requestString);
+        if (!requestBody.containsKey("code")
+                || !requestBody.containsKey("client_id")
+                || !requestBody.containsKey("grant_type")
+                || !requestBody.containsKey("redirect_uri")) {
+            throw new ParseException("Request is missing parameters");
+        }
+        return requestBody;
     }
 }

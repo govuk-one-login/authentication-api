@@ -51,6 +51,8 @@ import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 public class TokenHandlerTest {
 
     private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
+    private static final String CLIENT_ID = "test-id";
+    private static final String ENDPOINT_URI = "http://localhost/token";
     private final Context context = mock(Context.class);
     private final SignedJWT signedJWT = mock(SignedJWT.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
@@ -75,9 +77,10 @@ public class TokenHandlerTest {
     @Test
     public void shouldReturn200IfSuccessfulRequest() throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
+        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(CLIENT_ID, keyPair.getPrivate());
         ClientRegistry clientRegistry =
                 new ClientRegistry()
-                        .setClientID("test-id")
+                        .setClientID(CLIENT_ID)
                         .setClientName("test-client")
                         .setRedirectUrls(singletonList("http://localhost/redirect"))
                         .setScopes(singletonList("openid"))
@@ -85,16 +88,20 @@ public class TokenHandlerTest {
                         .setPublicKey(
                                 Base64.getMimeEncoder()
                                         .encodeToString(keyPair.getPublic().getEncoded()));
-        Subject subject = new Subject();
-        BearerAccessToken accessToken = new BearerAccessToken();
-        when(configurationService.getBaseURL()).thenReturn(Optional.of("http://localhost/token"));
-        when(clientService.getClient(eq("test-id"))).thenReturn(Optional.of(clientRegistry));
-        when(tokenService.issueToken(eq(TEST_EMAIL))).thenReturn(accessToken);
-        when(authenticationService.getSubjectFromEmail(eq(TEST_EMAIL))).thenReturn(subject);
-        when(tokenService.generateIDToken(eq("test-id"), any(Subject.class))).thenReturn(signedJWT);
 
-        APIGatewayProxyResponseEvent result =
-                generateApiGatewayRequest(keyPair.getPrivate(), "test-id");
+        BearerAccessToken accessToken = new BearerAccessToken();
+        when(configurationService.getBaseURL()).thenReturn(Optional.of(ENDPOINT_URI));
+        when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
+        when(tokenService.validatePrivateKeyJWTSignature(
+                        eq(clientRegistry.getPublicKey()),
+                        any(PrivateKeyJWT.class),
+                        eq(ENDPOINT_URI)))
+                .thenReturn(true);
+        when(tokenService.issueToken(eq(TEST_EMAIL))).thenReturn(accessToken);
+        when(authenticationService.getSubjectFromEmail(eq(TEST_EMAIL))).thenReturn(new Subject());
+        when(tokenService.generateIDToken(eq(CLIENT_ID), any(Subject.class))).thenReturn(signedJWT);
+
+        APIGatewayProxyResponseEvent result = generateApiGatewayRequest(privateKeyJWT, CLIENT_ID);
 
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(accessToken.getValue()));
@@ -102,11 +109,13 @@ public class TokenHandlerTest {
 
     @Test
     public void shouldReturn403IfClientIsNotValid() throws JOSEException, JsonProcessingException {
-        when(clientService.getClient(eq("invalid-id"))).thenReturn(Optional.empty());
+        String invalidClientID = "invalid-id";
+        when(clientService.getClient(eq(invalidClientID))).thenReturn(Optional.empty());
         KeyPair keyPair = generateRsaKeyPair();
+        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(invalidClientID, keyPair.getPrivate());
 
         APIGatewayProxyResponseEvent result =
-                generateApiGatewayRequest(keyPair.getPrivate(), "invalid-id");
+                generateApiGatewayRequest(privateKeyJWT, invalidClientID);
 
         assertEquals(403, result.getStatusCode());
         String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1016);
@@ -117,6 +126,7 @@ public class TokenHandlerTest {
     public void shouldReturn400IfAnyRequestParametersAreMissing() throws JsonProcessingException {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("code=343242");
+
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
@@ -125,12 +135,13 @@ public class TokenHandlerTest {
     }
 
     @Test
-    public void shouldReturn403IfSignatureOfPrivateKeyJWTCantBeVerified() throws JOSEException, JsonProcessingException {
+    public void shouldReturn403IfSignatureOfPrivateKeyJWTCantBeVerified()
+            throws JOSEException, JsonProcessingException {
         KeyPair keyPairOne = generateRsaKeyPair();
         KeyPair keyPairTwo = generateRsaKeyPair();
         ClientRegistry clientRegistry =
                 new ClientRegistry()
-                        .setClientID("test-id")
+                        .setClientID(CLIENT_ID)
                         .setClientName("test-client")
                         .setRedirectUrls(singletonList("http://localhost/redirect"))
                         .setScopes(singletonList("openid"))
@@ -138,27 +149,35 @@ public class TokenHandlerTest {
                         .setPublicKey(
                                 Base64.getMimeEncoder()
                                         .encodeToString(keyPairTwo.getPublic().getEncoded()));
-        when(configurationService.getBaseURL()).thenReturn(Optional.of("http://localhost/token"));
-        when(clientService.getClient(eq("test-id"))).thenReturn(Optional.of(clientRegistry));
+        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(CLIENT_ID, keyPairOne.getPrivate());
+        when(configurationService.getBaseURL()).thenReturn(Optional.of(ENDPOINT_URI));
+        when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
+        when(tokenService.validatePrivateKeyJWTSignature(
+                        eq(clientRegistry.getPublicKey()),
+                        any(PrivateKeyJWT.class),
+                        eq(ENDPOINT_URI)))
+                .thenReturn(false);
 
-        APIGatewayProxyResponseEvent result =
-                generateApiGatewayRequest(keyPairOne.getPrivate(), "test-id");
+        APIGatewayProxyResponseEvent result = generateApiGatewayRequest(privateKeyJWT, CLIENT_ID);
 
         assertThat(result, hasStatus(403));
         String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1015);
         assertThat(result, hasBody(expectedResponse));
     }
 
+    private PrivateKeyJWT generatePrivateKeyJWT(String clientID, PrivateKey privateKey)
+            throws JOSEException {
+        return new PrivateKeyJWT(
+                new ClientID(clientID),
+                URI.create(ENDPOINT_URI),
+                JWSAlgorithm.RS256,
+                (RSAPrivateKey) privateKey,
+                null,
+                null);
+    }
+
     private APIGatewayProxyResponseEvent generateApiGatewayRequest(
-            PrivateKey privateKey, String clientID) throws JOSEException {
-        PrivateKeyJWT privateKeyJWT =
-                new PrivateKeyJWT(
-                        new ClientID(clientID),
-                        URI.create("http://localhost/token"),
-                        JWSAlgorithm.RS256,
-                        (RSAPrivateKey) privateKey,
-                        null,
-                        null);
+            PrivateKeyJWT privateKeyJWT, String clientID) {
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put("grant_type", Collections.singletonList("authorization_code"));
         customParams.put("client_id", Collections.singletonList(clientID));
