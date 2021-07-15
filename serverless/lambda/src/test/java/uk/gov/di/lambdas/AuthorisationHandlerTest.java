@@ -49,7 +49,7 @@ class AuthorisationHandlerTest {
     void shouldRedirectToLoginOnSuccess() {
         AuthorizationCode authCode = new AuthorizationCode();
         final URI loginUrl = URI.create("http://example.com");
-        final Session session = new Session("a-session-id");
+        final Session session = new Session("a-session-id", "client-session-id");
 
         when(clientService.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
                 .thenReturn(Optional.empty());

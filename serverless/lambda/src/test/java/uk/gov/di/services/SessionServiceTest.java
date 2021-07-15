@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.Session;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -25,19 +26,22 @@ class SessionServiceTest {
     public void shouldPersistSessionToRedisWithExpiry() {
         when(configuration.getSessionExpiry()).thenReturn(1234L);
 
-        var session = new Session("session-id");
+        var session =
+                new Session("session-id", "client-session-id")
+                        .addClientSessionAuthorisationRequest(
+                                "client-session-id", Map.of("client_id", List.of("a-client-id")));
+
         sessionService.save(session);
 
         var serialisedSession =
-                "{\"session_id\":\"session-id\",\"authentication_request\":null,\"state\":\"NEW\",\"email_address\":null,\"retry_count\":0}";
-
+                "{\"session_id\":\"session-id\",\"client_session_id\":\"client-session-id\",\"authentication_requests\":{\"client-session-id\":{\"client_id\":[\"a-client-id\"]}},\"state\":\"NEW\",\"email_address\":null,\"retry_count\":0}";
         verify(redis).saveWithExpiry("session-id", serialisedSession, 1234L);
     }
 
     @Test
     public void shouldRetrieveSessionUsingRequestHeaders() {
         var serialisedSession =
-                "{\"session_id\":\"session-id\",\"authentication_request\":null,\"state\":\"NEW\",\"email_address\":null,\"retry_count\":0}";
+                "{\"session_id\":\"session-id\",\"client_session_id\":\"client-session-id\",\"authentication_requests\":{}},\"state\":\"NEW\",\"email_address\":null,\"retry_count\":0}";
 
         when(redis.keyExists("session-id")).thenReturn(true);
         when(redis.getValue("session-id")).thenReturn(serialisedSession);
