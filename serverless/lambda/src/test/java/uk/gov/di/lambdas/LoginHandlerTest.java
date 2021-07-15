@@ -7,9 +7,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.ErrorResponse;
+import uk.gov.di.entity.LoginResponse;
 import uk.gov.di.entity.Session;
+import uk.gov.di.helpers.RedactPhoneNumberHelper;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.SessionService;
 
@@ -30,6 +31,7 @@ class LoginHandlerTest {
 
     private static final String EMAIL = "computer-1";
     private static final String PASSWORD = "joe.bloggs@test.com";
+    private static final String PHONE_NUMBER = "01234567890";
     private LoginHandler handler;
     private final Context context = mock(Context.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
@@ -44,6 +46,7 @@ class LoginHandlerTest {
     public void shouldReturn200IfLoginIsSuccessful() throws JsonProcessingException {
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
+        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
@@ -52,9 +55,12 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(200));
 
-        BaseAPIResponse response =
-                new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
+        LoginResponse response =
+                new ObjectMapper().readValue(result.getBody(), LoginResponse.class);
         assertThat(response.getSessionState(), equalTo(AUTHENTICATED));
+        assertThat(
+                response.getRedactedPhoneNumber(),
+                equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
     }
 
     @Test

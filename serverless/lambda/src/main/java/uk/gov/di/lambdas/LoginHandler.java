@@ -6,9 +6,9 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.LoginRequest;
+import uk.gov.di.entity.LoginResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.ConfigurationService;
@@ -20,6 +20,7 @@ import java.util.Optional;
 import static uk.gov.di.entity.SessionState.AUTHENTICATED;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.helpers.RedactPhoneNumberHelper.redactPhoneNumber;
 
 public class LoginHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -64,9 +65,16 @@ public class LoginHandler
             if (!hasValidCredentials) {
                 return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
             }
+            String phoneNumber =
+                    authenticationService.getPhoneNumber(loginRequest.getEmail()).orElse(null);
+
+            if (phoneNumber == null) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1014);
+            }
+            String concatPhoneNumber = redactPhoneNumber(phoneNumber);
             sessionService.save(session.get().setState(AUTHENTICATED));
             return generateApiGatewayProxyResponse(
-                    200, new BaseAPIResponse(session.get().getState()));
+                    200, new LoginResponse(concatPhoneNumber, session.get().getState()));
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }

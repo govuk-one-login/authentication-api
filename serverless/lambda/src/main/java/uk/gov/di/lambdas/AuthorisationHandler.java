@@ -98,9 +98,7 @@ public class AuthorisationHandler
             LambdaLogger logger,
             Scope scope,
             ClientID clientId) {
-        Session session =
-                sessionService
-                        .createSession();
+        Session session = sessionService.createSession();
         session.addClientSessionAuthorisationRequest(session.getClientSessionId(), authRequest);
         logger.log(
                 format(

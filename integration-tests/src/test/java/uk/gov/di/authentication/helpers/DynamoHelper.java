@@ -26,6 +26,10 @@ public class DynamoHelper {
         DYNAMO_SERVICE.signUp(email, password);
     }
 
+    public static void addPhoneNumber(String email, String phoneNumber) {
+        DYNAMO_SERVICE.updatePhoneNumber(email, phoneNumber);
+    }
+
     public static void registerClient(
             String clientID,
             String clientName,
