@@ -13,8 +13,8 @@ import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
-import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.LoginRequest;
+import uk.gov.di.entity.LoginResponse;
 
 import java.io.IOException;
 
@@ -30,7 +30,9 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
     public void shouldCallLoginEndpointAndReturn200WhenLoginIsSuccessful() throws IOException {
         String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         String password = "password-1";
+        String phoneNumber = "01234567890";
         DynamoHelper.signUp(email, password);
+        DynamoHelper.addPhoneNumber(email, phoneNumber);
         Client client = ClientBuilder.newClient();
         WebTarget webTarget = client.target(ROOT_RESOURCE_URL + LOGIN_ENDPOINT);
         String sessionId = RedisHelper.createSession();
@@ -48,9 +50,8 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
         assertEquals(200, response.getStatus());
 
         String responseString = response.readEntity(String.class);
-        BaseAPIResponse BaseAPIResponse =
-                objectMapper.readValue(responseString, BaseAPIResponse.class);
-        assertEquals(AUTHENTICATED, BaseAPIResponse.getSessionState());
+        LoginResponse loginResponse = objectMapper.readValue(responseString, LoginResponse.class);
+        assertEquals(AUTHENTICATED, loginResponse.getSessionState());
     }
 
     @Test
