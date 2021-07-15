@@ -23,7 +23,7 @@ public class RedisHelper {
     public static String createSession() throws IOException {
         try (RedisConnectionService redis =
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
-            Session session = new Session(IdGenerator.generate());
+            Session session = new Session(IdGenerator.generate(), IdGenerator.generate());
             redis.saveWithExpiry(
                     session.getSessionId(), new ObjectMapper().writeValueAsString(session), 1800);
             return session.getSessionId();

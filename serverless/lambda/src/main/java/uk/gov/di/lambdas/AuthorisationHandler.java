@@ -8,6 +8,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import uk.gov.di.entity.Session;
@@ -78,7 +80,8 @@ public class AuthorisationHandler
                                     createSessionAndRedirect(
                                             queryStringMultiValuedMap,
                                             logger,
-                                            authRequest.getScope().toString()));
+                                            authRequest.getScope(),
+                                            authRequest.getClientID()));
         } catch (ParseException e) {
             logger.log("Authentication request could not be parsed");
             logger.log(e.getMessage());
@@ -91,9 +94,18 @@ public class AuthorisationHandler
     }
 
     private APIGatewayProxyResponseEvent createSessionAndRedirect(
-            Map<String, List<String>> authRequest, LambdaLogger logger, String scope) {
-        Session session = sessionService.createSession().setAuthenticationRequest(authRequest);
-        logger.log("Created session " + session.getSessionId());
+            Map<String, List<String>> authRequest,
+            LambdaLogger logger,
+            Scope scope,
+            ClientID clientId) {
+        Session session =
+                sessionService
+                        .createSession();
+        session.addClientSessionAuthorisationRequest(session.getClientSessionId(), authRequest);
+        logger.log(
+                format(
+                        "Created session %s for client %s - client session id = %s",
+                        session.getSessionId(), clientId.getValue(), session.getClientSessionId()));
         sessionService.save(session);
         logger.log("Session saved successfully " + session.getSessionId());
         return new APIGatewayProxyResponseEvent()
@@ -107,7 +119,8 @@ public class AuthorisationHandler
                                         buildEncodedParam(
                                                 ResponseParameters.SESSION_ID,
                                                 session.getSessionId()),
-                                        buildEncodedParam(ResponseParameters.SCOPE, scope))));
+                                        buildEncodedParam(
+                                                ResponseParameters.SCOPE, scope.toString()))));
     }
 
     private APIGatewayProxyResponseEvent errorResponse(

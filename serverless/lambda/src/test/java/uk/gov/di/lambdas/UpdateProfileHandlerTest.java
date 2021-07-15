@@ -82,6 +82,7 @@ class UpdateProfileHandlerTest {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(
                         Optional.of(
-                                new Session("a-session-id").setEmailAddress(TEST_EMAIL_ADDRESS)));
+                                new Session("a-session-id", "client-session-id")
+                                        .setEmailAddress(TEST_EMAIL_ADDRESS)));
     }
 }
