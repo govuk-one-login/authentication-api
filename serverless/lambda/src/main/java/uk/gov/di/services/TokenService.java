@@ -11,15 +11,29 @@ import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
+import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
+import com.nimbusds.oauth2.sdk.auth.Secret;
+import com.nimbusds.oauth2.sdk.auth.verifier.ClientAuthenticationVerifier;
+import com.nimbusds.oauth2.sdk.auth.verifier.ClientCredentialsSelector;
+import com.nimbusds.oauth2.sdk.auth.verifier.InvalidClientException;
 import com.nimbusds.oauth2.sdk.id.Audience;
+import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.Issuer;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
 
+import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Base64;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -88,5 +102,49 @@ public class TokenService {
 
     public JWK getSigningKey() {
         return signingKey;
+    }
+
+    public boolean validatePrivateKeyJWTSignature(
+            String publicKey, PrivateKeyJWT privateKeyJWT, String baseUrl) {
+        ClientAuthenticationVerifier<?> authenticationVerifier =
+                new ClientAuthenticationVerifier<>(
+                        generateClientCredentialsSelector(publicKey),
+                        Collections.singleton(new Audience(baseUrl)));
+        try {
+            authenticationVerifier.verify(privateKeyJWT, null, null);
+        } catch (InvalidClientException | JOSEException e) {
+            return false;
+        }
+        return true;
+    }
+
+    private ClientCredentialsSelector<?> generateClientCredentialsSelector(String publicKey) {
+        return new ClientCredentialsSelector<>() {
+            @Override
+            public List<Secret> selectClientSecrets(
+                    ClientID claimedClientID,
+                    ClientAuthenticationMethod authMethod,
+                    com.nimbusds.oauth2.sdk.auth.verifier.Context context) {
+                return null;
+            }
+
+            @Override
+            public List<PublicKey> selectPublicKeys(
+                    ClientID claimedClientID,
+                    ClientAuthenticationMethod authMethod,
+                    JWSHeader jwsHeader,
+                    boolean forceRefresh,
+                    com.nimbusds.oauth2.sdk.auth.verifier.Context context) {
+
+                byte[] decodedKey = Base64.getMimeDecoder().decode(publicKey);
+                try {
+                    X509EncodedKeySpec x509publicKey = new X509EncodedKeySpec(decodedKey);
+                    KeyFactory kf = KeyFactory.getInstance("RSA");
+                    return Collections.singletonList(kf.generatePublic(x509publicKey));
+                } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        };
     }
 }

@@ -6,7 +6,7 @@ module "userinfo" {
   environment     = var.environment
 
   handler_environment_variables = {
-    BASE_URL = var.api_base_url
+    BASE_URL = local.api_base_url
   }
   handler_function_name = "uk.gov.di.lambdas.UserInfoHandler::handleRequest"
 
