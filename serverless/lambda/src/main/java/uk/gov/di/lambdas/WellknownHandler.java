@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
 import com.nimbusds.oauth2.sdk.id.Issuer;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.SubjectType;
 import com.nimbusds.openid.connect.sdk.claims.ClaimType;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
@@ -44,7 +45,7 @@ public class WellknownHandler
             var providerMetadata =
                     new OIDCProviderMetadata(
                             new Issuer(baseUrl),
-                            List.of(SubjectType.PUBLIC),
+                            List.of(SubjectType.PUBLIC, SubjectType.PAIRWISE),
                             buildURI(".well-known/jwks.json", baseUrl));
 
             providerMetadata.setTokenEndpointURI(buildURI("token", baseUrl));
@@ -52,14 +53,21 @@ public class WellknownHandler
             providerMetadata.setAuthorizationEndpointURI(buildURI("authorize", baseUrl));
             providerMetadata.setRegistrationEndpointURI(buildURI("connect/register", baseUrl));
             providerMetadata.setTokenEndpointAuthMethods(
-                    List.of(ClientAuthenticationMethod.CLIENT_SECRET_POST));
-            providerMetadata.setScopes(new Scope("openid", "profile", "email"));
+                    List.of(ClientAuthenticationMethod.PRIVATE_KEY_JWT));
+            providerMetadata.setScopes(new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE));
             providerMetadata.setResponseTypes(List.of(new ResponseType("code")));
             providerMetadata.setGrantTypes(List.of(GrantType.AUTHORIZATION_CODE));
             providerMetadata.setClaimTypes(List.of(ClaimType.NORMAL));
             providerMetadata.setClaims(
-                    List.of("sub", "gender", "family_name", "given_name", "email"));
+                    List.of("sub", "email", "email_verified", "phone_number", "phone_number_verified"));
             providerMetadata.setIDTokenJWSAlgs(List.of(JWSAlgorithm.RS256));
+            providerMetadata.setTokenEndpointJWSAlgs(List.of(
+                    JWSAlgorithm.RS256, JWSAlgorithm.RS384, JWSAlgorithm.RS512,
+                    JWSAlgorithm.PS256, JWSAlgorithm.PS384, JWSAlgorithm.PS512,
+                    JWSAlgorithm.ES256, JWSAlgorithm.ES384, JWSAlgorithm.ES512,
+                    JWSAlgorithm.HS256, JWSAlgorithm.HS384, JWSAlgorithm.HS512
+            ));
+            providerMetadata.setServiceDocsURI(new URI("http://TBA"));
 
             return generateApiGatewayProxyResponse(200, providerMetadata.toString());
         } catch (URISyntaxException | NoSuchElementException e) {
