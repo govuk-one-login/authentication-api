@@ -38,6 +38,11 @@ public class AuthorisationHandler
         String SCOPE = "scope";
     }
 
+    private interface ResponseHeaders {
+        String LOCATION = "Location";
+        String SET_COOKIE = "Set-Cookie";
+    }
+
     public AuthorisationHandler(
             ClientService clientService,
             ConfigurationService configurationService,
@@ -110,15 +115,10 @@ public class AuthorisationHandler
                 .withStatusCode(302)
                 .withHeaders(
                         Map.of(
-                                "Location",
-                                format(
-                                        "%s?%s&%s",
-                                        configurationService.getLoginURI(),
-                                        buildEncodedParam(
-                                                ResponseParameters.SESSION_ID,
-                                                session.getSessionId()),
-                                        buildEncodedParam(
-                                                ResponseParameters.SCOPE, scope.toString()))));
+                                ResponseHeaders.LOCATION,
+                                buildLocationString(scope, session),
+                                ResponseHeaders.SET_COOKIE,
+                                buildCookieString(session)));
     }
 
     private APIGatewayProxyResponseEvent errorResponse(
@@ -137,5 +137,24 @@ public class AuthorisationHandler
 
     private String buildEncodedParam(String name, String value) {
         return format("%s=%s", name, URLEncoder.encode(value));
+    }
+
+    private String buildLocationString(Scope scope, Session session) {
+        return format(
+                "%s?%s&%s",
+                configurationService.getLoginURI(),
+                buildEncodedParam(
+                        ResponseParameters.SESSION_ID,
+                        session.getSessionId()),
+                buildEncodedParam(
+                        ResponseParameters.SCOPE, scope.toString()));
+    }
+
+    private String buildCookieString(Session session) {
+        return format(
+                "%s=%s.%s",
+                "gs",
+                session.getSessionId(),
+                session.getClientSessionId());
     }
 }
