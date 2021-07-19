@@ -55,6 +55,8 @@ class AuthorisationHandlerTest {
                 .thenReturn(Optional.empty());
         when(configService.getLoginURI()).thenReturn(loginUrl);
         when(sessionService.createSession()).thenReturn(session);
+        when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
+        when(configService.getSessionCookieMaxAge()).thenReturn(1800);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
@@ -68,7 +70,8 @@ class AuthorisationHandlerTest {
         URI uri = URI.create(response.getHeaders().get("Location"));
         Map<String, String> requestParams = RequestBodyHelper.PARSE_REQUEST_BODY(uri.getQuery());
 
-        final String expectedCookieString = "gs=a-session-id.client-session-id";
+        final String expectedCookieString =
+                "gs=a-session-id.client-session-id; Max-Age=1800; Secure; HttpOnly;";
 
         assertThat(response, hasStatus(302));
         assertEquals(loginUrl.getAuthority(), uri.getAuthority());

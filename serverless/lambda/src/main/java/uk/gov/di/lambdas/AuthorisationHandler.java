@@ -118,7 +118,10 @@ public class AuthorisationHandler
                                 ResponseHeaders.LOCATION,
                                 buildLocationString(scope, session),
                                 ResponseHeaders.SET_COOKIE,
-                                buildCookieString(session)));
+                                buildCookieString(
+                                        session,
+                                        configurationService.getSessionCookieMaxAge(),
+                                        configurationService.getSessionCookieAttributes())));
     }
 
     private APIGatewayProxyResponseEvent errorResponse(
@@ -143,18 +146,13 @@ public class AuthorisationHandler
         return format(
                 "%s?%s&%s",
                 configurationService.getLoginURI(),
-                buildEncodedParam(
-                        ResponseParameters.SESSION_ID,
-                        session.getSessionId()),
-                buildEncodedParam(
-                        ResponseParameters.SCOPE, scope.toString()));
+                buildEncodedParam(ResponseParameters.SESSION_ID, session.getSessionId()),
+                buildEncodedParam(ResponseParameters.SCOPE, scope.toString()));
     }
 
-    private String buildCookieString(Session session) {
+    private String buildCookieString(Session session, Integer maxAge, String attributes) {
         return format(
-                "%s=%s.%s",
-                "gs",
-                session.getSessionId(),
-                session.getClientSessionId());
+                "%s=%s.%s; Max-Age=%d; %s",
+                "gs", session.getSessionId(), session.getClientSessionId(), maxAge, attributes);
     }
 }
