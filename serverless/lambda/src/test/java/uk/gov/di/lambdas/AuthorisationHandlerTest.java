@@ -46,7 +46,7 @@ class AuthorisationHandlerTest {
     }
 
     @Test
-    void shouldRedirectToLoginOnSuccess() {
+    void shouldSetCookieAndRedirectToLoginOnSuccess() {
         AuthorizationCode authCode = new AuthorizationCode();
         final URI loginUrl = URI.create("http://example.com");
         final Session session = new Session("a-session-id", "client-session-id");
@@ -68,10 +68,13 @@ class AuthorisationHandlerTest {
         URI uri = URI.create(response.getHeaders().get("Location"));
         Map<String, String> requestParams = RequestBodyHelper.PARSE_REQUEST_BODY(uri.getQuery());
 
+        final String expectedCookieString = "gs=a-session-id.client-session-id";
+
         assertThat(response, hasStatus(302));
         assertEquals(loginUrl.getAuthority(), uri.getAuthority());
 
         assertThat(requestParams, hasEntry("id", session.getSessionId()));
+        assertEquals(expectedCookieString, response.getHeaders().get("Set-Cookie"));
 
         verify(sessionService).save(eq(session));
     }
