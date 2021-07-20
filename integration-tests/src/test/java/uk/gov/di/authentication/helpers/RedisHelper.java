@@ -2,6 +2,7 @@ package uk.gov.di.authentication.helpers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import uk.gov.di.entity.Session;
+import uk.gov.di.entity.SessionState;
 import uk.gov.di.helpers.IdGenerator;
 import uk.gov.di.services.CodeGeneratorService;
 import uk.gov.di.services.CodeStorageService;
@@ -61,6 +62,19 @@ public class RedisHelper {
             redis.saveWithExpiry(
                     session.getSessionId(), new ObjectMapper().writeValueAsString(session), 1800);
 
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void setSessionState(String sessionId, SessionState state) {
+        try (RedisConnectionService redis =
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
+            Session session =
+                    new ObjectMapper().readValue(redis.getValue(sessionId), Session.class);
+            session.setState(state);
+            redis.saveWithExpiry(
+                    session.getSessionId(), new ObjectMapper().writeValueAsString(session), 1800);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

@@ -82,9 +82,11 @@ public class AuthorisationHandler
             return error.map(e -> errorResponse(authRequest, e))
                     .orElseGet(
                             () ->
-                                    createSessionAndRedirect(
+                                    getOrCreateSessionAndRedirect(
                                             queryStringMultiValuedMap,
                                             logger,
+                                            sessionService.getSessionFromSessionCookie(
+                                                    input.getHeaders()),
                                             authRequest.getScope(),
                                             authRequest.getClientID()));
         } catch (ParseException e) {
@@ -96,6 +98,47 @@ public class AuthorisationHandler
 
             return response;
         }
+    }
+
+    private APIGatewayProxyResponseEvent getOrCreateSessionAndRedirect(
+            Map<String, List<String>> authRequest,
+            LambdaLogger logger,
+            Optional<Session> existingSession,
+            Scope scope,
+            ClientID clientId) {
+
+        /*
+           For a user without an existing Session proceed to login
+        */
+        if (existingSession.isEmpty()) {
+            return createSessionAndRedirect(authRequest, logger, scope, clientId);
+        }
+
+        /*
+           For a user with an existing Session = SSO scenario
+        */
+        Session session = existingSession.get();
+        updateSessionId(authRequest, logger, session, clientId);
+        return redirect(session, scope);
+    }
+
+    private void updateSessionId(
+            Map<String, List<String>> authRequest,
+            LambdaLogger logger,
+            Session session,
+            ClientID clientId) {
+        String oldSessionId = session.getSessionId();
+        sessionService.updateSessionId(session);
+        session.addClientSessionAuthorisationRequest(session.getClientSessionId(), authRequest);
+        logger.log(
+                format(
+                        "Updated session id from %s to %s for client %s - client session id = %s",
+                        oldSessionId,
+                        session.getSessionId(),
+                        clientId.getValue(),
+                        session.getClientSessionId()));
+        sessionService.save(session);
+        logger.log("Session saved successfully " + session.getSessionId());
     }
 
     private APIGatewayProxyResponseEvent createSessionAndRedirect(
@@ -111,6 +154,10 @@ public class AuthorisationHandler
                         session.getSessionId(), clientId.getValue(), session.getClientSessionId()));
         sessionService.save(session);
         logger.log("Session saved successfully " + session.getSessionId());
+        return redirect(session, scope);
+    }
+
+    private APIGatewayProxyResponseEvent redirect(Session session, Scope scope) {
         return new APIGatewayProxyResponseEvent()
                 .withStatusCode(302)
                 .withHeaders(
