@@ -83,4 +83,13 @@ public class ConfigurationService {
     public int getCodeMaxRetries() {
         return Integer.parseInt(System.getenv().getOrDefault("CODE_MAX_RETRIES", "5"));
     }
+
+    public int getSessionCookieMaxAge() {
+        return Integer.parseInt(System.getenv().getOrDefault("SESSION_COOKIE_MAX_AGE", "1800"));
+    }
+
+    public String getSessionCookieAttributes() {
+        return Optional.ofNullable(System.getenv("SESSION_COOKIE_ATTRIBUTES"))
+                .orElse("Secure; HttpOnly;");
+    }
 }
