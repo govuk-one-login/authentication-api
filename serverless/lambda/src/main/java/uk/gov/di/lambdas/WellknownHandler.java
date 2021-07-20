@@ -54,19 +54,33 @@ public class WellknownHandler
             providerMetadata.setRegistrationEndpointURI(buildURI("connect/register", baseUrl));
             providerMetadata.setTokenEndpointAuthMethods(
                     List.of(ClientAuthenticationMethod.PRIVATE_KEY_JWT));
-            providerMetadata.setScopes(new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE));
+            providerMetadata.setScopes(
+                    new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE));
             providerMetadata.setResponseTypes(List.of(new ResponseType("code")));
             providerMetadata.setGrantTypes(List.of(GrantType.AUTHORIZATION_CODE));
             providerMetadata.setClaimTypes(List.of(ClaimType.NORMAL));
             providerMetadata.setClaims(
-                    List.of("sub", "email", "email_verified", "phone_number", "phone_number_verified"));
+                    List.of(
+                            "sub",
+                            "email",
+                            "email_verified",
+                            "phone_number",
+                            "phone_number_verified"));
             providerMetadata.setIDTokenJWSAlgs(List.of(JWSAlgorithm.RS256));
-            providerMetadata.setTokenEndpointJWSAlgs(List.of(
-                    JWSAlgorithm.RS256, JWSAlgorithm.RS384, JWSAlgorithm.RS512,
-                    JWSAlgorithm.PS256, JWSAlgorithm.PS384, JWSAlgorithm.PS512,
-                    JWSAlgorithm.ES256, JWSAlgorithm.ES384, JWSAlgorithm.ES512,
-                    JWSAlgorithm.HS256, JWSAlgorithm.HS384, JWSAlgorithm.HS512
-            ));
+            providerMetadata.setTokenEndpointJWSAlgs(
+                    List.of(
+                            JWSAlgorithm.RS256,
+                            JWSAlgorithm.RS384,
+                            JWSAlgorithm.RS512,
+                            JWSAlgorithm.PS256,
+                            JWSAlgorithm.PS384,
+                            JWSAlgorithm.PS512,
+                            JWSAlgorithm.ES256,
+                            JWSAlgorithm.ES384,
+                            JWSAlgorithm.ES512,
+                            JWSAlgorithm.HS256,
+                            JWSAlgorithm.HS384,
+                            JWSAlgorithm.HS512));
             providerMetadata.setServiceDocsURI(new URI("http://TBA"));
 
             return generateApiGatewayProxyResponse(200, providerMetadata.toString());
