@@ -42,6 +42,7 @@ resource "aws_api_gateway_deployment" "deployment" {
       module.update_profile.resource_id,
       module.verify_code.resource_id,
       module.mfa.resource_id,
+      module.auth-code.resource_id,
     ]))
   }
 
@@ -61,6 +62,7 @@ resource "aws_api_gateway_deployment" "deployment" {
     module.update_profile,
     module.verify_code,
     module.mfa,
+    module.auth-code,
   ]
 }
 
@@ -82,6 +84,7 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
     module.update_profile,
     module.verify_code,
     module.mfa,
+    module.auth-code,
     aws_api_gateway_deployment.deployment,
   ]
 }
