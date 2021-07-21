@@ -10,6 +10,7 @@ public class ClientRegistry {
     private String clientID;
     private String clientName;
     private String publicKey;
+    private List<String> postLogoutRedirectUrls;
     private List<String> scopes;
     private List<String> redirectUrls;
     private List<String> contacts;
@@ -71,6 +72,16 @@ public class ClientRegistry {
 
     public ClientRegistry setContacts(List<String> contacts) {
         this.contacts = contacts;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "PostLogoutRedirectUrls")
+    public List<String> getPostLogoutRedirectUrls() {
+        return postLogoutRedirectUrls;
+    }
+
+    public ClientRegistry setPostLogoutRedirectUrls(List<String> postLogoutRedirectUrls) {
+        this.postLogoutRedirectUrls = postLogoutRedirectUrls;
         return this;
     }
 }

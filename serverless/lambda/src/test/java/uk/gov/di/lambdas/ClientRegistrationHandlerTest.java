@@ -18,9 +18,7 @@ import java.util.UUID;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -46,8 +44,9 @@ class ClientRegistrationHandlerTest {
         when(clientService.generateClientID()).thenReturn(new ClientID(clientId));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+
         event.setBody(
-                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"],  \"public_key\": \"some-public-key\"}");
+                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"],  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"]}");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -61,7 +60,8 @@ class ClientRegistrationHandlerTest {
                         redirectUris,
                         contacts,
                         singletonList("openid"),
-                        "some-public-key");
+                        "some-public-key",
+                        singletonList("http://localhost:8080/post-logout-redirect-uri"));
     }
 
     @Test
