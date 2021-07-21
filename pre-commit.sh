@@ -64,6 +64,8 @@ if [[ ${RUN_INTEGRATION} -eq 1 ]]; then
   export AWS_ACCESS_KEY_ID="mock-access-key"
   export AWS_SECRET_ACCESS_KEY="mock-secret-key"
   export STUB_RELYING_PARTY_REDIRECT_URI="https://di-auth-stub-relying-party-build.london.cloudapps.digital/"
+  export LOGIN_URI="https://di-authentication-frontend.london.cloudapps.digital/"
+
   startup
 
   set +e
