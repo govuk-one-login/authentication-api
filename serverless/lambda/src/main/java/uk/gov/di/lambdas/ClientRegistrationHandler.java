@@ -48,14 +48,16 @@ public class ClientRegistrationHandler
                     clientRegistrationRequest.getRedirectUris(),
                     clientRegistrationRequest.getContacts(),
                     clientRegistrationRequest.getScopes(),
-                    clientRegistrationRequest.getPublicKey());
+                    clientRegistrationRequest.getPublicKey(),
+                    clientRegistrationRequest.getPostLogoutRedirectUris());
 
             ClientRegistrationResponse clientRegistrationResponse =
                     new ClientRegistrationResponse(
                             clientRegistrationRequest.getClientName(),
                             clientID,
                             clientRegistrationRequest.getRedirectUris(),
-                            clientRegistrationRequest.getContacts());
+                            clientRegistrationRequest.getContacts(),
+                            clientRegistrationRequest.getPostLogoutRedirectUris());
 
             return generateApiGatewayProxyResponse(200, clientRegistrationResponse);
         } catch (JsonProcessingException e) {

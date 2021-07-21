@@ -18,15 +18,21 @@ public class ClientRegistrationResponse {
     @JsonProperty("contacts")
     private List<String> contacts;
 
+    @JsonProperty("post_logout_redirect_uris")
+    private List<String> postLogoutRedirectUris;
+
     public ClientRegistrationResponse(
             @JsonProperty(required = true, value = "client_name") String clientName,
             @JsonProperty(required = true, value = "client_id") String clientId,
             @JsonProperty(required = true, value = "redirect_uris") List<String> redirectUris,
-            @JsonProperty(required = true, value = "contacts") List<String> contacts) {
+            @JsonProperty(required = true, value = "contacts") List<String> contacts,
+            @JsonProperty(value = "post_logout_redirect_uris")
+                    List<String> postLogoutRedirectUris) {
         this.clientName = clientName;
         this.clientId = clientId;
         this.redirectUris = redirectUris;
         this.contacts = contacts;
+        this.postLogoutRedirectUris = postLogoutRedirectUris;
     }
 
     public String getClientName() {
@@ -43,5 +49,9 @@ public class ClientRegistrationResponse {
 
     public List<String> getContacts() {
         return contacts;
+    }
+
+    public List<String> getPostLogoutRedirectUris() {
+        return postLogoutRedirectUris;
     }
 }

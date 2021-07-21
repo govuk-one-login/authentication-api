@@ -44,7 +44,8 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
                 singletonList("localhost"),
                 singletonList("joe.bloggs@digital.cabinet-office.gov.uk"),
                 singletonList("openid"),
-                Base64.getMimeEncoder().encodeToString(KEY_PAIR.getPublic().getEncoded()));
+                Base64.getMimeEncoder().encodeToString(KEY_PAIR.getPublic().getEncoded()),
+                singletonList("http://localhost/post-redirect-logout"));
     }
 
     @Test

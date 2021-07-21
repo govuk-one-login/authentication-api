@@ -21,17 +21,23 @@ public class ClientRegistrationRequest {
     @JsonProperty("scopes")
     private List<String> scopes;
 
+    @JsonProperty("post_logout_redirect_uris")
+    private List<String> postLogoutRedirectUris;
+
     public ClientRegistrationRequest(
             @JsonProperty(required = true, value = "client_name") String clientName,
             @JsonProperty(required = true, value = "redirect_uris") List<String> redirectUris,
             @JsonProperty(required = true, value = "contacts") List<String> contacts,
             @JsonProperty(required = true, value = "public_key") String publicKey,
-            @JsonProperty(required = true, value = "scopes") List<String> scopes) {
+            @JsonProperty(required = true, value = "scopes") List<String> scopes,
+            @JsonProperty(value = "post_logout_redirect_uris")
+                    List<String> postLogoutRedirectUris) {
         this.clientName = clientName;
         this.redirectUris = redirectUris;
         this.contacts = contacts;
         this.publicKey = publicKey;
         this.scopes = scopes;
+        this.postLogoutRedirectUris = postLogoutRedirectUris;
     }
 
     public String getClientName() {
@@ -52,5 +58,9 @@ public class ClientRegistrationRequest {
 
     public List<String> getScopes() {
         return scopes;
+    }
+
+    public List<String> getPostLogoutRedirectUris() {
+        return postLogoutRedirectUris;
     }
 }

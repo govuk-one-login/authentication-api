@@ -73,7 +73,8 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
                 singletonList("http://localhost/redirect"),
                 singletonList("joe.bloggs@digital.cabinet-office.gov.uk"),
                 singletonList("openid"),
-                Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()));
+                Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
+                singletonList("http://localhost/post-logout-redirect"));
         DynamoHelper.signUp("joe.bloggs@digital.cabinet-office.gov.uk", "password-1");
     }
 
