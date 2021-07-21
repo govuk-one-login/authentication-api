@@ -19,7 +19,7 @@ import uk.gov.di.entity.LoginResponse;
 import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static uk.gov.di.entity.SessionState.AUTHENTICATED;
+import static uk.gov.di.entity.SessionState.LOGGED_IN;
 
 public class LoginIntegrationTest extends IntegrationTestEndpoints {
 
@@ -51,7 +51,7 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
 
         String responseString = response.readEntity(String.class);
         LoginResponse loginResponse = objectMapper.readValue(responseString, LoginResponse.class);
-        assertEquals(AUTHENTICATED, loginResponse.getSessionState());
+        assertEquals(LOGGED_IN, loginResponse.getSessionState());
     }
 
     @Test

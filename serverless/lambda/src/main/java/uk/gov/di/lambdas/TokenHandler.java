@@ -14,7 +14,6 @@ import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.services.AuthenticationService;
-import uk.gov.di.services.AuthorizationCodeService;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoClientService;
@@ -32,19 +31,16 @@ public class TokenHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final ClientService clientService;
-    private final AuthorizationCodeService authorizationCodeService;
     private final TokenService tokenService;
     private final AuthenticationService authenticationService;
     private final ConfigurationService configurationService;
 
     public TokenHandler(
             ClientService clientService,
-            AuthorizationCodeService authorizationCodeService,
             TokenService tokenService,
             AuthenticationService authenticationService,
             ConfigurationService configurationService) {
         this.clientService = clientService;
-        this.authorizationCodeService = authorizationCodeService;
         this.tokenService = tokenService;
         this.authenticationService = authenticationService;
         this.configurationService = configurationService;
@@ -57,7 +53,6 @@ public class TokenHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEnvironment(),
                         configurationService.getDynamoEndpointUri());
-        authorizationCodeService = new AuthorizationCodeService();
         tokenService = new TokenService(configurationService);
         this.authenticationService =
                 new DynamoService(

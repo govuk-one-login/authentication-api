@@ -18,5 +18,6 @@ public enum SessionState {
     MFA_CODE_MAX_RETRIES_REACHED,
     MFA_CODE_NOT_VALID,
     MFA_CODE_VERIFIED,
+    LOGGED_IN,
     AUTHENTICATED
 }

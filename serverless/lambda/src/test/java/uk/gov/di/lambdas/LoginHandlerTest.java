@@ -23,7 +23,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.entity.SessionState.AUTHENTICATED;
+import static uk.gov.di.entity.SessionState.LOGGED_IN;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -57,7 +57,7 @@ class LoginHandlerTest {
 
         LoginResponse response =
                 new ObjectMapper().readValue(result.getBody(), LoginResponse.class);
-        assertThat(response.getSessionState(), equalTo(AUTHENTICATED));
+        assertThat(response.getSessionState(), equalTo(LOGGED_IN));
         assertThat(
                 response.getRedactedPhoneNumber(),
                 equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));

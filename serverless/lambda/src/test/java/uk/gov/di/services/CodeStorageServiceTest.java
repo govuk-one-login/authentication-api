@@ -1,6 +1,8 @@
 package uk.gov.di.services;
 
+import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.helpers.IdGenerator;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -32,6 +34,7 @@ class CodeStorageServiceTest {
             "code-blocked:f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a"
                     + SESSION_ID;
     private static final long CODE_EXPIRY_TIME = 900;
+    private static final long AUTH_CODE_EXPIRY_TIME = 300;
     private static final String CODE_BLOCKED_VALUE = "blocked";
 
     @Test
@@ -122,5 +125,16 @@ class CodeStorageServiceTest {
         codeStorageService.saveOtpCode(TEST_EMAIL, CODE, CODE_EXPIRY_TIME, MFA_SMS);
 
         verify(redisConnectionService).saveWithExpiry(REDIS_MFA_KEY, CODE, CODE_EXPIRY_TIME);
+    }
+
+    @Test
+    public void shouldCallRedisWithAuthorizationCode() {
+        String authorizationCode = new AuthorizationCode().getValue();
+        String clientSessionId = IdGenerator.generate();
+        codeStorageService.saveAuthorizationCode(
+                authorizationCode, clientSessionId, AUTH_CODE_EXPIRY_TIME);
+
+        verify(redisConnectionService)
+                .saveWithExpiry(authorizationCode, clientSessionId, AUTH_CODE_EXPIRY_TIME);
     }
 }

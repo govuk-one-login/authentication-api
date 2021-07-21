@@ -17,7 +17,7 @@ import uk.gov.di.services.SessionService;
 
 import java.util.Optional;
 
-import static uk.gov.di.entity.SessionState.AUTHENTICATED;
+import static uk.gov.di.entity.SessionState.LOGGED_IN;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.helpers.RedactPhoneNumberHelper.redactPhoneNumber;
@@ -72,7 +72,7 @@ public class LoginHandler
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1014);
             }
             String concatPhoneNumber = redactPhoneNumber(phoneNumber);
-            sessionService.save(session.get().setState(AUTHENTICATED));
+            sessionService.save(session.get().setState(LOGGED_IN));
             return generateApiGatewayProxyResponse(
                     200, new LoginResponse(concatPhoneNumber, session.get().getState()));
         } catch (JsonProcessingException e) {

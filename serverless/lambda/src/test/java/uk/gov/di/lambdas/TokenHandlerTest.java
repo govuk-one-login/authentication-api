@@ -19,7 +19,6 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.services.AuthenticationService;
-import uk.gov.di.services.AuthorizationCodeService;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.TokenService;
@@ -57,8 +56,6 @@ public class TokenHandlerTest {
     private final SignedJWT signedJWT = mock(SignedJWT.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final AuthorizationCodeService authorizationCodeService =
-            mock(AuthorizationCodeService.class);
     private final TokenService tokenService = mock(TokenService.class);
     private final ClientService clientService = mock(ClientService.class);
     private TokenHandler handler;
@@ -67,11 +64,7 @@ public class TokenHandlerTest {
     public void setUp() {
         handler =
                 new TokenHandler(
-                        clientService,
-                        authorizationCodeService,
-                        tokenService,
-                        authenticationService,
-                        configurationService);
+                        clientService, tokenService, authenticationService, configurationService);
     }
 
     @Test
