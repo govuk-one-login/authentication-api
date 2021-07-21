@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.entity.SessionState.AUTHENTICATED;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 
 public class AuthCodeHandler
@@ -87,7 +88,7 @@ public class AuthCodeHandler
                 configurationService.getAuthCodeExpiry());
         AuthenticationSuccessResponse authenticationResponse =
                 authorizationService.generateSuccessfulAuthResponse(authorizationRequest, authCode);
-
+        sessionService.save(session.get().setState(AUTHENTICATED));
         return new APIGatewayProxyResponseEvent()
                 .withStatusCode(302)
                 .withHeaders(Map.of("Location", authenticationResponse.toURI().toString()));
