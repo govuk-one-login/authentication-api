@@ -1,17 +1,10 @@
 package uk.gov.di.authentication.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.ws.rs.client.Client;
-import jakarta.ws.rs.client.ClientBuilder;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.client.Invocation;
-import jakarta.ws.rs.client.WebTarget;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.MultivaluedHashMap;
-import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.RedisHelper;
+import uk.gov.di.authentication.helpers.RequestHelper;
 import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.NotificationType;
 import uk.gov.di.entity.SessionState;
@@ -36,7 +29,9 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.VERIFY_EMAIL, code);
 
-        Response response = sendRequest(sessionId, codeRequest);
+        Response response =
+                RequestHelper.requestWithSession(VERIFY_CODE_ENDPOINT, codeRequest, sessionId);
+
         assertEquals(200, response.getStatus());
     }
 
@@ -50,7 +45,9 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.VERIFY_EMAIL, code);
 
         TimeUnit.SECONDS.sleep(3);
-        Response response = sendRequest(sessionId, codeRequest);
+
+        Response response =
+                RequestHelper.requestWithSession(VERIFY_CODE_ENDPOINT, codeRequest, sessionId);
 
         assertEquals(200, response.getStatus());
         BaseAPIResponse codeResponse =
@@ -66,10 +63,14 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.VERIFY_EMAIL, code);
 
-        Response response = sendRequest(sessionId, codeRequest);
+        Response response =
+                RequestHelper.requestWithSession(VERIFY_CODE_ENDPOINT, codeRequest, sessionId);
+
         assertEquals(200, response.getStatus());
 
-        Response response2 = sendRequest(sessionId, codeRequest);
+        Response response2 =
+                RequestHelper.requestWithSession(VERIFY_CODE_ENDPOINT, codeRequest, sessionId);
+
         assertEquals(200, response2.getStatus());
 
         BaseAPIResponse codeResponse =
@@ -86,7 +87,9 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         VerifyCodeRequest codeRequest =
                 new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
 
-        Response response = sendRequest(sessionId, codeRequest);
+        Response response =
+                RequestHelper.requestWithSession(VERIFY_CODE_ENDPOINT, codeRequest, sessionId);
+
         assertEquals(200, response.getStatus());
     }
 
@@ -102,9 +105,12 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
                 new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
 
         TimeUnit.SECONDS.sleep(3);
-        Response response = sendRequest(sessionId, codeRequest);
+
+        Response response =
+                RequestHelper.requestWithSession(VERIFY_CODE_ENDPOINT, codeRequest, sessionId);
 
         assertEquals(200, response.getStatus());
+
         BaseAPIResponse codeResponse =
                 objectMapper.readValue(response.readEntity(String.class), BaseAPIResponse.class);
         assertEquals(SessionState.PHONE_NUMBER_CODE_NOT_VALID, codeResponse.getSessionState());
@@ -119,9 +125,11 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         VerifyCodeRequest codeRequest =
                 new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, "123456");
 
-        Response response = sendRequest(sessionId, codeRequest);
+        Response response =
+                RequestHelper.requestWithSession(VERIFY_CODE_ENDPOINT, codeRequest, sessionId);
 
         assertEquals(200, response.getStatus());
+
         BaseAPIResponse codeResponse =
                 objectMapper.readValue(response.readEntity(String.class), BaseAPIResponse.class);
         assertEquals(
@@ -137,9 +145,11 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         VerifyCodeRequest codeRequest =
                 new VerifyCodeRequest(NotificationType.VERIFY_EMAIL, "123456");
 
-        Response response = sendRequest(sessionId, codeRequest);
+        Response response =
+                RequestHelper.requestWithSession(VERIFY_CODE_ENDPOINT, codeRequest, sessionId);
 
         assertEquals(200, response.getStatus());
+
         BaseAPIResponse codeResponse =
                 objectMapper.readValue(response.readEntity(String.class), BaseAPIResponse.class);
         assertEquals(SessionState.EMAIL_CODE_MAX_RETRIES_REACHED, codeResponse.getSessionState());
@@ -153,19 +163,9 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code);
 
-        Response response = sendRequest(sessionId, codeRequest);
+        Response response =
+                RequestHelper.requestWithSession(VERIFY_CODE_ENDPOINT, codeRequest, sessionId);
+
         assertEquals(200, response.getStatus());
-    }
-
-    private Response sendRequest(String sessionId, VerifyCodeRequest codeRequest) {
-        Client client = ClientBuilder.newClient();
-        WebTarget webTarget = client.target(ROOT_RESOURCE_URL + VERIFY_CODE_ENDPOINT);
-        Invocation.Builder invocationBuilder = webTarget.request(MediaType.APPLICATION_JSON);
-        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
-        headers.add("Session-Id", sessionId);
-
-        return invocationBuilder
-                .headers(headers)
-                .post(Entity.entity(codeRequest, MediaType.APPLICATION_JSON));
     }
 }

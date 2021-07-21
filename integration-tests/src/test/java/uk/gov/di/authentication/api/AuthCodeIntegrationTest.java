@@ -4,18 +4,11 @@ import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
-import jakarta.ws.rs.client.Client;
-import jakarta.ws.rs.client.ClientBuilder;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.client.Invocation;
-import jakarta.ws.rs.client.WebTarget;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.MultivaluedHashMap;
-import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
+import uk.gov.di.authentication.helpers.RequestHelper;
 import uk.gov.di.entity.AuthCodeRequest;
 
 import java.io.IOException;
@@ -46,15 +39,8 @@ public class AuthCodeIntegrationTest extends IntegrationTestEndpoints {
                 clientSessionId, sessionId, generateAuthRequest().toParameters());
         setUpDynamo(keyPair);
 
-        Client client = ClientBuilder.newClient();
-        WebTarget webTarget = client.target(ROOT_RESOURCE_URL + AUTH_CODE_ENDPOINT);
-        Invocation.Builder invocationBuilder = webTarget.request(MediaType.APPLICATION_JSON);
-        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
-        headers.add("Session-Id", sessionId);
         Response response =
-                invocationBuilder
-                        .headers(headers)
-                        .post(Entity.entity(authCodeRequest, MediaType.APPLICATION_JSON));
+                RequestHelper.requestWithSession(AUTH_CODE_ENDPOINT, authCodeRequest, sessionId);
 
         assertEquals(302, response.getStatus());
     }

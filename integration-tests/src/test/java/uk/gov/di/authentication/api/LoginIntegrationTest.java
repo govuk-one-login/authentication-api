@@ -1,18 +1,11 @@
 package uk.gov.di.authentication.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.ws.rs.client.Client;
-import jakarta.ws.rs.client.ClientBuilder;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.client.Invocation;
-import jakarta.ws.rs.client.WebTarget;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.MultivaluedHashMap;
-import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
+import uk.gov.di.authentication.helpers.RequestHelper;
 import uk.gov.di.entity.LoginRequest;
 import uk.gov.di.entity.LoginResponse;
 
@@ -33,19 +26,11 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
         String phoneNumber = "01234567890";
         DynamoHelper.signUp(email, password);
         DynamoHelper.addPhoneNumber(email, phoneNumber);
-        Client client = ClientBuilder.newClient();
-        WebTarget webTarget = client.target(ROOT_RESOURCE_URL + LOGIN_ENDPOINT);
         String sessionId = RedisHelper.createSession();
-        Invocation.Builder invocationBuilder = webTarget.request(MediaType.APPLICATION_JSON);
-        MultivaluedMap headers = new MultivaluedHashMap();
-        headers.add("Session-Id", sessionId);
-
-        LoginRequest request = new LoginRequest(email, password);
 
         Response response =
-                invocationBuilder
-                        .headers(headers)
-                        .post(Entity.entity(request, MediaType.APPLICATION_JSON));
+                RequestHelper.requestWithSession(
+                        LOGIN_ENDPOINT, new LoginRequest(email, password), sessionId);
 
         assertEquals(200, response.getStatus());
 
@@ -60,18 +45,11 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
         String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
         String password = "password-1";
         DynamoHelper.signUp(email, "wrong-password");
-        Client client = ClientBuilder.newClient();
-        WebTarget webTarget = client.target(ROOT_RESOURCE_URL + LOGIN_ENDPOINT);
         String sessionId = RedisHelper.createSession();
-        Invocation.Builder invocationBuilder = webTarget.request(MediaType.APPLICATION_JSON);
-        MultivaluedMap headers = new MultivaluedHashMap();
-        headers.add("Session-Id", sessionId);
 
-        LoginRequest request = new LoginRequest(email, password);
         Response response =
-                invocationBuilder
-                        .headers(headers)
-                        .post(Entity.entity(request, MediaType.APPLICATION_JSON));
+                RequestHelper.requestWithSession(
+                        LOGIN_ENDPOINT, new LoginRequest(email, password), sessionId);
 
         assertEquals(401, response.getStatus());
     }
