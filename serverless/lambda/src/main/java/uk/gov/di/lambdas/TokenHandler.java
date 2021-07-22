@@ -25,7 +25,7 @@ import java.util.Optional;
 
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.helpers.RequestBodyHelper.PARSE_REQUEST_BODY;
+import static uk.gov.di.helpers.RequestBodyHelper.parseRequestBody;
 
 public class TokenHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -101,7 +101,7 @@ public class TokenHandler
     }
 
     private Map<String, String> parseRequestParameters(String requestString) throws ParseException {
-        Map<String, String> requestBody = PARSE_REQUEST_BODY(requestString);
+        Map<String, String> requestBody = parseRequestBody(requestString);
         if (!requestBody.containsKey("code")
                 || !requestBody.containsKey("client_id")
                 || !requestBody.containsKey("grant_type")
