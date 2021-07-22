@@ -9,7 +9,7 @@ import java.util.Map;
 
 public class RequestBodyHelper {
 
-    public static final Map<String, String> PARSE_REQUEST_BODY(String body) {
+    public static Map<String, String> PARSE_REQUEST_BODY(String body) {
         Map<String, String> query_pairs = new HashMap<>();
 
         for (NameValuePair pair : URLEncodedUtils.parse(body, Charset.defaultCharset())) {
