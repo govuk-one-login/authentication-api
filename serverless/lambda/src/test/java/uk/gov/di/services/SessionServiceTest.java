@@ -160,6 +160,19 @@ class SessionServiceTest {
         verify(redis).deleteValue("session-id");
     }
 
+    @Test
+    void shouldDeleteSessionIdFromRedis() {
+        var session =
+                new Session("session-id")
+                        .addClientSessionAuthorisationRequest(
+                                "client-session-id", Map.of("client_id", List.of("a-client-id")));
+
+        sessionService.save(session);
+        sessionService.deleteSessionFromRedis(session.getSessionId());
+
+        verify(redis).deleteValue("session-id");
+    }
+
     private String generateSearlizedSession() throws JsonProcessingException {
         ClientSession clientSession =
                 new ClientSession(Map.of("client_id", List.of("a-client-id")), LocalDateTime.now());

@@ -118,6 +118,10 @@ public class SessionService {
         }
     }
 
+    public void deleteSessionFromRedis(String sessionId) {
+        redisConnectionService.deleteValue(sessionId);
+    }
+
     public Optional<Session> readSessionFromRedis(String sessionId) {
         try {
             if (redisConnectionService.keyExists(sessionId)) {

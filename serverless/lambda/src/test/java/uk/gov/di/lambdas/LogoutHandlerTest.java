@@ -26,6 +26,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -42,12 +44,12 @@ class LogoutHandlerTest {
 
     @BeforeEach
     public void setUp() {
-        handler = new LogoutHandler(configurationService);
+        handler = new LogoutHandler(configurationService, sessionService);
         when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
     }
 
     @Test
-    public void shouldRedirectToDefaultLogoutUriForSuccessfulRequest() throws JOSEException {
+    public void shouldDeleteSessionAndRedirectToDefaultLogoutUri() throws JOSEException {
         RSAKey signingKey =
                 new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
         SignedJWT signedJWT =
@@ -55,7 +57,7 @@ class LogoutHandlerTest {
                         "client-id", new Subject(), "http://localhost-rp", signingKey);
         State state = new State();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        generateValidSession();
+        generateSessionFromCookie();
         event.setHeaders(Map.of(SET_COOKIE, buildCookieString()));
         event.setQueryStringParameters(
                 Map.of(
@@ -68,8 +70,25 @@ class LogoutHandlerTest {
         assertThat(response.getHeaders().get("Location"), equalTo(DEFAULT_LOGOUT_URI.toString()));
     }
 
-    private void generateValidSession() {
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
+    @Test
+    public void shouldRedirectToDefaultLogoutUriWhenNoCookieExists() {
+        State state = new State();
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setQueryStringParameters(
+                Map.of(
+                        "post_logout_redirect_uri",
+                        "http://localhost:8000/logout",
+                        "state",
+                        state.toString()));
+        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+
+        assertThat(response, hasStatus(302));
+        assertThat(response.getHeaders().get("Location"), equalTo(DEFAULT_LOGOUT_URI.toString()));
+        verify(sessionService, times(0)).deleteSessionFromRedis(SESSION_ID);
+    }
+
+    private void generateSessionFromCookie() {
+        when(sessionService.getSessionFromSessionCookie(anyMap()))
                 .thenReturn(Optional.of(new Session(SESSION_ID)));
     }
 
