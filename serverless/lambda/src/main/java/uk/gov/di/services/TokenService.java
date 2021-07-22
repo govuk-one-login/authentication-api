@@ -1,16 +1,13 @@
 package uk.gov.di.services;
 
 import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
-import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.auth.Secret;
@@ -19,22 +16,18 @@ import com.nimbusds.oauth2.sdk.auth.verifier.ClientCredentialsSelector;
 import com.nimbusds.oauth2.sdk.auth.verifier.InvalidClientException;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.oauth2.sdk.id.Issuer;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
-import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
+import uk.gov.di.helpers.IDTokenGenerator;
 
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Base64;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,33 +53,8 @@ public class TokenService {
     }
 
     public SignedJWT generateIDToken(String clientId, Subject subject) {
-        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
-        Optional<String> baseUrl = configService.getBaseURL();
-
-        Issuer issuer = new Issuer(baseUrl.get());
-        IDTokenClaimsSet idTokenClaims =
-                new IDTokenClaimsSet(
-                        issuer, subject, List.of(new Audience(clientId)), expiryDate, new Date());
-
-        JWTClaimsSet jwtClaimsSet;
-        try {
-            jwtClaimsSet = idTokenClaims.toJWTClaimsSet();
-        } catch (ParseException e) {
-            throw new RuntimeException("Can't convert IDTokenClaimsSet to JWTClaimsSet");
-        }
-        JWSHeader jwsHeader =
-                new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(signingKey.getKeyID()).build();
-        SignedJWT idToken;
-
-        try {
-            idToken = new SignedJWT(jwsHeader, jwtClaimsSet);
-            idToken.sign(signer);
-        } catch (JOSEException e) {
-            throw new RuntimeException(e);
-        }
-
-        return idToken;
+        return IDTokenGenerator.generateIDToken(
+                clientId, subject, configService.getBaseURL().get(), signingKey);
     }
 
     public AccessToken issueToken(String email) {
