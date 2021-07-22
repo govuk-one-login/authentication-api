@@ -29,7 +29,7 @@ public class ClientRegistrationIntegrationTest extends IntegrationTestEndpoints 
                         singletonList("http://localhost:1000/redirect"),
                         singletonList("test-client@test.com"),
                         "public-key",
-                          singletonList("openid"),
+                        singletonList("openid"),
                         singletonList("http://localhost/post-redirect-logout"));
 
         Response response =

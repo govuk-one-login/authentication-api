@@ -61,7 +61,8 @@ public class AuthCodeIntegrationTest extends IntegrationTestEndpoints {
                 singletonList(REDIRECT_URI.toString()),
                 singletonList("joe.bloggs@digital.cabinet-office.gov.uk"),
                 singletonList("openid"),
-                Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()));
+                Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
+                singletonList("http://localhost/post-redirect-logout"));
     }
 
     private KeyPair generateRsaKeyPair() {

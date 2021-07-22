@@ -15,6 +15,10 @@ public class ConfigurationService {
         return URI.create(System.getenv("LOGIN_URI"));
     }
 
+    public URI getDefaultLogoutURI() {
+        return URI.create(System.getenv("DEFAULT_LOGOUT_URI"));
+    }
+
     public String getRedisHost() {
         return System.getenv().getOrDefault("REDIS_HOST", "redis");
     }
