@@ -35,7 +35,7 @@ class WellknownHandlerTest {
 
     @Test
     public void shouldReturn200WhenRequestIsSuccessful() throws ParseException {
-        when(configService.getBaseURL()).thenReturn(Optional.of("http://localhost:8080/"));
+        when(configService.getBaseURL()).thenReturn(Optional.of("http://localhost:8080"));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
