@@ -68,7 +68,7 @@ class AuthorisationHandlerTest {
                         "state", "some-state"));
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
         URI uri = URI.create(response.getHeaders().get("Location"));
-        Map<String, String> requestParams = RequestBodyHelper.PARSE_REQUEST_BODY(uri.getQuery());
+        Map<String, String> requestParams = RequestBodyHelper.parseRequestBody(uri.getQuery());
 
         final String expectedCookieString =
                 "gs=a-session-id.client-session-id; Max-Age=1800; Secure; HttpOnly;";
