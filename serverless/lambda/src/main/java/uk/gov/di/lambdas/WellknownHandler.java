@@ -46,12 +46,12 @@ public class WellknownHandler
                     new OIDCProviderMetadata(
                             new Issuer(baseUrl),
                             List.of(SubjectType.PUBLIC, SubjectType.PAIRWISE),
-                            buildURI(".well-known/jwks.json", baseUrl));
+                            buildURI("/.well-known/jwks.json", baseUrl));
 
-            providerMetadata.setTokenEndpointURI(buildURI("token", baseUrl));
-            providerMetadata.setUserInfoEndpointURI(buildURI("userinfo", baseUrl));
-            providerMetadata.setAuthorizationEndpointURI(buildURI("authorize", baseUrl));
-            providerMetadata.setRegistrationEndpointURI(buildURI("connect/register", baseUrl));
+            providerMetadata.setTokenEndpointURI(buildURI("/token", baseUrl));
+            providerMetadata.setUserInfoEndpointURI(buildURI("/userinfo", baseUrl));
+            providerMetadata.setAuthorizationEndpointURI(buildURI("/authorize", baseUrl));
+            providerMetadata.setRegistrationEndpointURI(buildURI("/connect/register", baseUrl));
             providerMetadata.setTokenEndpointAuthMethods(
                     List.of(ClientAuthenticationMethod.PRIVATE_KEY_JWT));
             providerMetadata.setScopes(
