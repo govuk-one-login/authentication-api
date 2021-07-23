@@ -143,10 +143,7 @@ class SendNotificationHandlerTest {
         when(validationService.validateEmailAddress(eq("joe.bloggs")))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1004));
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(
-                        Optional.of(
-                                new Session("a-session-id", "client-session-id")
-                                        .setEmailAddress("joe.bloggs")));
+                .thenReturn(Optional.of(new Session("a-session-id").setEmailAddress("joe.bloggs")));
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
         event.setBody(
@@ -266,8 +263,7 @@ class SendNotificationHandlerTest {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(
                         Optional.of(
-                                new Session("a-session-id", "client-session-id")
-                                        .setEmailAddress(TEST_EMAIL_ADDRESS)));
+                                new Session("a-session-id").setEmailAddress(TEST_EMAIL_ADDRESS)));
     }
 
     private boolean isSessionWithEmailSent(Session session) {

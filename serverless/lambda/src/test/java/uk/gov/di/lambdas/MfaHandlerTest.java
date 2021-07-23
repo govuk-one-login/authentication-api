@@ -105,9 +105,6 @@ public class MfaHandlerTest {
 
     private void usingValidSession(String email) {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(
-                        Optional.of(
-                                new Session("a-session-id", "client-session-id")
-                                        .setEmailAddress(email)));
+                .thenReturn(Optional.of(new Session("a-session-id").setEmailAddress(email)));
     }
 }

@@ -1,8 +1,14 @@
 package uk.gov.di.services;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.Session;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -26,32 +32,30 @@ class SessionServiceTest {
 
     private final RedisConnectionService redis = mock(RedisConnectionService.class);
     private final ConfigurationService configuration = mock(ConfigurationService.class);
+    private final ObjectMapper objectMapper =
+            JsonMapper.builder().addModule(new JavaTimeModule()).build();
 
     private final SessionService sessionService = new SessionService(configuration, redis);
 
     @Test
-    public void shouldPersistSessionToRedisWithExpiry() {
+    public void shouldPersistSessionToRedisWithExpiry() throws JsonProcessingException {
         when(configuration.getSessionExpiry()).thenReturn(1234L);
 
+        ClientSession clientSession =
+                new ClientSession(Map.of("client_id", List.of("a-client-id")), LocalDateTime.now());
         var session =
-                new Session("session-id", "client-session-id")
-                        .addClientSessionAuthorisationRequest(
-                                "client-session-id", Map.of("client_id", List.of("a-client-id")));
+                new Session("session-id").setClientSession("client-session-id", clientSession);
 
         sessionService.save(session);
 
-        var serialisedSession =
-                "{\"session_id\":\"session-id\",\"client_session_id\":\"client-session-id\",\"authentication_requests\":{\"client-session-id\":{\"client_id\":[\"a-client-id\"]}},\"state\":\"NEW\",\"email_address\":null,\"retry_count\":0}";
-        verify(redis).saveWithExpiry("session-id", serialisedSession, 1234L);
+        verify(redis, times(1))
+                .saveWithExpiry("session-id", objectMapper.writeValueAsString(session), 1234L);
     }
 
     @Test
-    public void shouldRetrieveSessionUsingRequestHeaders() {
-        var serialisedSession =
-                "{\"session_id\":\"session-id\",\"client_session_id\":\"client-session-id\",\"authentication_requests\":{}},\"state\":\"NEW\",\"email_address\":null,\"retry_count\":0}";
-
+    public void shouldRetrieveSessionUsingRequestHeaders() throws JsonProcessingException {
         when(redis.keyExists("session-id")).thenReturn(true);
-        when(redis.getValue("session-id")).thenReturn(serialisedSession);
+        when(redis.getValue("session-id")).thenReturn(generateSearlizedSession());
 
         var sessionInRedis =
                 sessionService.getSessionFromRequestHeaders(Map.of("Session-Id", "session-id"));
@@ -116,19 +120,17 @@ class SessionServiceTest {
     }
 
     @Test
-    void shouldReturnSessionFromSessionCookieCalledWithValidCookieHeaderValues() {
-        String serialisedSession =
-                "{\"session_id\":\"session-id\",\"client_session_id\":\"client-session-id\",\"authentication_requests\":{\"client-session-id\":{\"client_id\":[\"a-client-id\"]}},\"state\":\"NEW\",\"email_address\":null,\"retry_count\":0}";
-
+    void shouldReturnSessionFromSessionCookieCalledWithValidCookieHeaderValues()
+            throws JsonProcessingException {
         when(redis.keyExists("session-id")).thenReturn(true);
-        when(redis.getValue("session-id")).thenReturn(serialisedSession);
+        when(redis.getValue("session-id")).thenReturn(generateSearlizedSession());
 
-        Optional<Session> session =
+        Optional<Session> sessionFromSessionCookie =
                 sessionService.getSessionFromSessionCookie(
                         Map.ofEntries(Map.entry(REQUEST_COOKIE_HEADER, "gs=session-id.456;")));
 
-        assertTrue(session.isPresent());
-        assertEquals("session-id", session.get().getSessionId());
+        assertTrue(sessionFromSessionCookie.isPresent());
+        assertEquals("session-id", sessionFromSessionCookie.get().getSessionId());
     }
 
     @Test
@@ -144,14 +146,26 @@ class SessionServiceTest {
     @Test
     void shouldUpdateSessionIdInRedisAndDeleteOldKey() {
         var session =
-                new Session("session-id", "client-session-id")
-                        .addClientSessionAuthorisationRequest(
-                                "client-session-id", Map.of("client_id", List.of("a-client-id")));
+                new Session("session-id")
+                        .setClientSession(
+                                "client-session-id",
+                                new ClientSession(
+                                        Map.of("client_id", List.of("a-client-id")),
+                                        LocalDateTime.now()));
 
         sessionService.save(session);
         sessionService.updateSessionId(session);
 
         verify(redis, times(2)).saveWithExpiry(anyString(), anyString(), anyLong());
         verify(redis).deleteValue("session-id");
+    }
+
+    private String generateSearlizedSession() throws JsonProcessingException {
+        ClientSession clientSession =
+                new ClientSession(Map.of("client_id", List.of("a-client-id")), LocalDateTime.now());
+        var session =
+                new Session("session-id").setClientSession("client-session-id", clientSession);
+
+        return objectMapper.writeValueAsString(session);
     }
 }

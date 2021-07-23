@@ -53,8 +53,7 @@ class VerifyCodeRequestHandlerTest {
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final ValidationService validationService = mock(ValidationService.class);
-    private final Session session =
-            new Session("session-id", "client-session-id").setEmailAddress(TEST_EMAIL_ADDRESS);
+    private final Session session = new Session("session-id").setEmailAddress(TEST_EMAIL_ADDRESS);
     private VerifyCodeHandler handler;
 
     @BeforeEach

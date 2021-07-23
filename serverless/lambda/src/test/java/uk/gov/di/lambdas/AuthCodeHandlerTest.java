@@ -13,6 +13,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.exceptions.ClientNotFoundException;
@@ -22,6 +23,7 @@ import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.SessionService;
 
 import java.net.URI;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 
@@ -170,10 +172,12 @@ class AuthCodeHandlerTest {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(
                         Optional.of(
-                                new Session(SESSION_ID, CLIENT_SESSION_ID)
-                                        .addClientSessionAuthorisationRequest(
+                                new Session(SESSION_ID)
+                                        .setClientSession(
                                                 CLIENT_SESSION_ID,
-                                                authorizationRequest.toParameters())));
+                                                new ClientSession(
+                                                        authorizationRequest.toParameters(),
+                                                        LocalDateTime.now()))));
         return authorizationRequest;
     }
 }

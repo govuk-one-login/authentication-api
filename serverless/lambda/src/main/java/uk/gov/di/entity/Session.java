@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.entity.SessionState.NEW;
@@ -14,11 +13,8 @@ public class Session {
     @JsonProperty("session_id")
     private String sessionId;
 
-    @JsonProperty("client_session_id")
-    private String clientSessionId;
-
-    @JsonProperty("authentication_requests")
-    private Map<String, Map<String, List<String>>> authenticationRequests;
+    @JsonProperty("client_sessions")
+    private Map<String, ClientSession> clientSessions;
 
     @JsonProperty("state")
     private SessionState state;
@@ -29,24 +25,20 @@ public class Session {
     @JsonProperty("retry_count")
     private int retryCount;
 
-    public Session(String sessionId, String clientSessionId) {
+    public Session(String sessionId) {
         this.sessionId = sessionId;
-        this.clientSessionId = clientSessionId;
         this.state = NEW;
-        this.authenticationRequests = new HashMap<>();
+        this.clientSessions = new HashMap<>();
     }
 
     @JsonCreator
     public Session(
             @JsonProperty("session_id") String sessionId,
-            @JsonProperty("client_session_id") String clientSessionId,
-            @JsonProperty("authentication_requests")
-                    Map<String, Map<String, List<String>>> authenticationRequests,
+            @JsonProperty("client_sessions") Map<String, ClientSession> clientSessions,
             @JsonProperty("state") SessionState state,
             @JsonProperty("email_address") String emailAddress) {
         this.sessionId = sessionId;
-        this.clientSessionId = clientSessionId;
-        this.authenticationRequests = authenticationRequests;
+        this.clientSessions = clientSessions;
         this.state = state;
         this.emailAddress = emailAddress;
     }
@@ -59,17 +51,12 @@ public class Session {
         this.sessionId = sessionId;
     }
 
-    public String getClientSessionId() {
-        return clientSessionId;
+    public Map<String, ClientSession> getClientSessions() {
+        return clientSessions;
     }
 
-    public Map<String, Map<String, List<String>>> getAuthenticationRequests() {
-        return authenticationRequests;
-    }
-
-    public Session addClientSessionAuthorisationRequest(
-            String clientSessionId, Map<String, List<String>> authRequest) {
-        authenticationRequests.put(clientSessionId, authRequest);
+    public Session setClientSession(String clientSessionId, ClientSession clientSessions) {
+        this.clientSessions.put(clientSessionId, clientSessions);
         return this;
     }
 

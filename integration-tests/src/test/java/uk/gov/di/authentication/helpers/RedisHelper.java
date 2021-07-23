@@ -1,6 +1,9 @@
 package uk.gov.di.authentication.helpers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.SessionState;
 import uk.gov.di.helpers.IdGenerator;
@@ -9,6 +12,7 @@ import uk.gov.di.services.CodeStorageService;
 import uk.gov.di.services.RedisConnectionService;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -22,14 +26,16 @@ public class RedisHelper {
             System.getenv().getOrDefault("REDIS_HOST", "localhost");
     private static final Optional<String> REDIS_PASSWORD =
             Optional.ofNullable(System.getenv("REDIS_PASSWORD"));
+    private static final ObjectMapper OBJECT_MAPPER =
+            JsonMapper.builder().addModule(new JavaTimeModule()).build();
 
     public static String createSession(String sessionId, String clientSessionId)
             throws IOException {
         try (RedisConnectionService redis =
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
-            Session session = new Session(sessionId, clientSessionId);
+            Session session = new Session(sessionId);
             redis.saveWithExpiry(
-                    session.getSessionId(), new ObjectMapper().writeValueAsString(session), 1800);
+                    session.getSessionId(), OBJECT_MAPPER.writeValueAsString(session), 1800);
             return session.getSessionId();
         }
     }
@@ -42,11 +48,11 @@ public class RedisHelper {
             String clientSessionId, String sessionId, Map<String, List<String>> authRequest) {
         try (RedisConnectionService redis =
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
-            Session session =
-                    new ObjectMapper().readValue(redis.getValue(sessionId), Session.class);
-            session.addClientSessionAuthorisationRequest(clientSessionId, authRequest);
+            Session session = OBJECT_MAPPER.readValue(redis.getValue(sessionId), Session.class);
+            session.setClientSession(
+                    clientSessionId, new ClientSession(authRequest, LocalDateTime.now()));
             redis.saveWithExpiry(
-                    session.getSessionId(), new ObjectMapper().writeValueAsString(session), 1800);
+                    session.getSessionId(), OBJECT_MAPPER.writeValueAsString(session), 1800);
 
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -56,11 +62,10 @@ public class RedisHelper {
     public static void addEmailToSession(String sessionId, String emailAddress) {
         try (RedisConnectionService redis =
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
-            Session session =
-                    new ObjectMapper().readValue(redis.getValue(sessionId), Session.class);
+            Session session = OBJECT_MAPPER.readValue(redis.getValue(sessionId), Session.class);
             session.setEmailAddress(emailAddress);
             redis.saveWithExpiry(
-                    session.getSessionId(), new ObjectMapper().writeValueAsString(session), 1800);
+                    session.getSessionId(), OBJECT_MAPPER.writeValueAsString(session), 1800);
 
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -70,11 +75,10 @@ public class RedisHelper {
     public static void setSessionState(String sessionId, SessionState state) {
         try (RedisConnectionService redis =
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
-            Session session =
-                    new ObjectMapper().readValue(redis.getValue(sessionId), Session.class);
+            Session session = OBJECT_MAPPER.readValue(redis.getValue(sessionId), Session.class);
             session.setState(state);
             redis.saveWithExpiry(
-                    session.getSessionId(), new ObjectMapper().writeValueAsString(session), 1800);
+                    session.getSessionId(), OBJECT_MAPPER.writeValueAsString(session), 1800);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -107,9 +111,7 @@ public class RedisHelper {
         try (RedisConnectionService redis =
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
 
-            var code = new CodeGeneratorService().sixDigitCode();
             new CodeStorageService(redis).saveCodeBlockedForSession(email, sessionId, 10);
-            ;
         }
     }
 }

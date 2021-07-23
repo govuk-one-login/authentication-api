@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,9 +46,8 @@ class AuthorisationHandlerTest {
 
     @Test
     void shouldSetCookieAndRedirectToLoginOnSuccess() {
-        AuthorizationCode authCode = new AuthorizationCode();
         final URI loginUrl = URI.create("http://example.com");
-        final Session session = new Session("a-session-id", "client-session-id");
+        final Session session = new Session("a-session-id");
 
         when(clientService.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
                 .thenReturn(Optional.empty());
@@ -57,6 +55,7 @@ class AuthorisationHandlerTest {
         when(sessionService.createSession()).thenReturn(session);
         when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
         when(configService.getSessionCookieMaxAge()).thenReturn(1800);
+        when(sessionService.generateClientSessionID()).thenReturn("client-session-id");
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
@@ -69,7 +68,6 @@ class AuthorisationHandlerTest {
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
         URI uri = URI.create(response.getHeaders().get("Location"));
         Map<String, String> requestParams = RequestBodyHelper.parseRequestBody(uri.getQuery());
-
         final String expectedCookieString =
                 "gs=a-session-id.client-session-id; Max-Age=1800; Secure; HttpOnly;";
 
