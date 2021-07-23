@@ -1,7 +1,6 @@
 package uk.gov.di.lambdas;
 
 import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -70,7 +69,6 @@ class SendNotificationHandlerTest {
 
     @BeforeEach
     void setup() {
-        when(context.getLogger()).thenReturn(mock(LambdaLogger.class));
         when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
         when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);
     }
