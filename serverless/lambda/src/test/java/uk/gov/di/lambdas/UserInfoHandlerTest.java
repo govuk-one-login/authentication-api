@@ -1,7 +1,6 @@
 package uk.gov.di.lambdas;
 
 import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ParseException;
@@ -53,7 +52,6 @@ public class UserInfoHandlerTest {
         when(userInfoService.getInfoForEmail(eq(EMAIL_ADDRESS.get()))).thenReturn(userInfo);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Authorization", new BearerAccessToken().toAuthorizationHeader()));
-        when(context.getLogger()).thenReturn(mock(LambdaLogger.class));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -65,7 +63,6 @@ public class UserInfoHandlerTest {
     public void shouldReturn401WhenBearerTokenIsNotParseable() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Authorization", "this-is-not-a-valid-token"));
-        when(context.getLogger()).thenReturn(mock(LambdaLogger.class));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(401));
@@ -75,7 +72,6 @@ public class UserInfoHandlerTest {
     @Test
     public void shouldReturn401WhenAuthorizationHeaderIsMissing() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        when(context.getLogger()).thenReturn(mock(LambdaLogger.class));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(401));
@@ -89,7 +85,6 @@ public class UserInfoHandlerTest {
 
         when(tokenService.getEmailForToken(any(BearerAccessToken.class)))
                 .thenReturn(Optional.empty());
-        when(context.getLogger()).thenReturn(mock(LambdaLogger.class));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(401));

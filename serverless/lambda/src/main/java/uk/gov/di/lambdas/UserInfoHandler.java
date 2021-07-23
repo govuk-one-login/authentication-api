@@ -1,13 +1,14 @@
 package uk.gov.di.lambdas;
 
 import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.InMemoryUserInfoService;
 import uk.gov.di.services.TokenService;
@@ -19,6 +20,8 @@ import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxy
 
 public class UserInfoHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserInfoHandler.class);
 
     private final TokenService tokenService;
     private final UserInfoService userInfoService;
@@ -42,25 +45,25 @@ public class UserInfoHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        LambdaLogger logger = context.getLogger();
+
         try {
             AccessToken accessToken = AccessToken.parse(input.getHeaders().get("Authorization"));
-            logger.log("Access Token = " + accessToken.getValue());
+            LOGGER.info("Access Token = {}", accessToken.getValue());
 
             String emailForToken = tokenService.getEmailForToken(accessToken).orElseThrow();
             UserInfo userInfo = userInfoService.getInfoForEmail(emailForToken);
 
             return generateApiGatewayProxyResponse(200, userInfo.toJSONString());
         } catch (ParseException e) {
-            logger.log("Access Token Not Parsable");
+            LOGGER.error("Access Token Not Parsable");
 
             return generateApiGatewayProxyResponse(401, "Access Token Not Parsable");
         } catch (NullPointerException e) {
-            logger.log("Access Token Not Present");
+            LOGGER.error("Access Token Not Present");
 
             return generateApiGatewayProxyResponse(401, "No access token present");
         } catch (NoSuchElementException e) {
-            logger.log("Access Token Invalid");
+            LOGGER.error("Access Token Invalid");
 
             return generateApiGatewayProxyResponse(401, "Access Token Invalid");
         }

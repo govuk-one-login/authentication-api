@@ -1,7 +1,6 @@
 package uk.gov.di.lambdas;
 
 import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
@@ -12,6 +11,8 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.Session;
 import uk.gov.di.services.ClientService;
@@ -30,6 +31,8 @@ import static java.lang.String.format;
 
 public class AuthorisationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AuthorisationHandler.class);
 
     private final ClientService clientService;
     private final SessionService sessionService;
@@ -67,8 +70,7 @@ public class AuthorisationHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        LambdaLogger logger = context.getLogger();
-        logger.log("Received authentication request");
+        LOGGER.info("Received authentication request");
         try {
             Map<String, List<String>> queryStringMultiValuedMap =
                     input.getQueryStringParameters().entrySet().stream()
@@ -86,14 +88,12 @@ public class AuthorisationHandler
                             () ->
                                     getOrCreateSessionAndRedirect(
                                             queryStringMultiValuedMap,
-                                            logger,
                                             sessionService.getSessionFromSessionCookie(
                                                     input.getHeaders()),
                                             authRequest.getScope(),
                                             authRequest.getClientID()));
         } catch (ParseException e) {
-            logger.log("Authentication request could not be parsed");
-            logger.log(e.getMessage());
+            LOGGER.error("Authentication request could not be parsed", e);
             APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
             response.setStatusCode(400);
             response.setBody("Cannot parse authentication request");
@@ -104,7 +104,6 @@ public class AuthorisationHandler
 
     private APIGatewayProxyResponseEvent getOrCreateSessionAndRedirect(
             Map<String, List<String>> authRequest,
-            LambdaLogger logger,
             Optional<Session> existingSession,
             Scope scope,
             ClientID clientId) {
@@ -113,7 +112,7 @@ public class AuthorisationHandler
            For a user without an existing Session proceed to login
         */
         if (existingSession.isEmpty()) {
-            return createSessionAndRedirect(authRequest, logger, scope, clientId);
+            return createSessionAndRedirect(authRequest, scope, clientId);
         }
 
         /*
@@ -121,13 +120,12 @@ public class AuthorisationHandler
         */
         Session session = existingSession.get();
         String clientSessionID = sessionService.generateClientSessionID();
-        updateSessionId(authRequest, logger, session, clientId, clientSessionID);
+        updateSessionId(authRequest, session, clientId, clientSessionID);
         return redirect(session, scope, clientSessionID);
     }
 
     private void updateSessionId(
             Map<String, List<String>> authRequest,
-            LambdaLogger logger,
             Session session,
             ClientID clientId,
             String clientSessionID) {
@@ -135,32 +133,31 @@ public class AuthorisationHandler
         sessionService.updateSessionId(session);
         session.setClientSession(
                 clientSessionID, new ClientSession(authRequest, LocalDateTime.now()));
-        logger.log(
-                format(
-                        "Updated session id from %s to %s for client %s - client session id = %s",
-                        oldSessionId,
-                        session.getSessionId(),
-                        clientId.getValue(),
-                        clientSessionID));
+        LOGGER.info(
+                "Updated session id from {} to {} for client {} - client session id = {}",
+                oldSessionId,
+                session.getSessionId(),
+                clientId.getValue(),
+                clientSessionID);
+
         sessionService.save(session);
-        logger.log("Session saved successfully " + session.getSessionId());
+        LOGGER.info("Session saved successfully {}", session.getSessionId());
     }
 
     private APIGatewayProxyResponseEvent createSessionAndRedirect(
-            Map<String, List<String>> authRequest,
-            LambdaLogger logger,
-            Scope scope,
-            ClientID clientId) {
+            Map<String, List<String>> authRequest, Scope scope, ClientID clientId) {
         Session session = sessionService.createSession();
+
         String clientSessionID = sessionService.generateClientSessionID();
         session.setClientSession(
                 clientSessionID, new ClientSession(authRequest, LocalDateTime.now()));
-        logger.log(
-                format(
-                        "Created session %s for client %s - client session id = %s",
-                        session.getSessionId(), clientId.getValue(), clientSessionID));
+        LOGGER.info(
+                "Created session {} for client {} - client session id = {}",
+                session.getSessionId(),
+                clientId.getValue(),
+                clientSessionID);
         sessionService.save(session);
-        logger.log("Session saved successfully " + session.getSessionId());
+        LOGGER.info("Session saved successfully {}", session.getSessionId());
         return redirect(session, scope, clientSessionID);
     }
 
