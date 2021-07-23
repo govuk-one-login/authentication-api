@@ -61,7 +61,7 @@ jobs:
           params:
             DEPLOYER_ROLE_ARN: ((deployer-role-arn))
             BUILD_NOTIFY_API_KEY: ((build-notify-api-key))
-            DEPLOY_ENVIRONMENT: test
+            DEPLOY_ENVIRONMENT: build
           inputs:
             - name: lambda-zip
             - name: di-authentication-api
@@ -97,7 +97,7 @@ jobs:
               tag: 1.0.0
           params:
             DEPLOYER_ROLE_ARN: ((deployer-role-arn))
-            DEPLOY_ENVIRONMENT: test
+            DEPLOY_ENVIRONMENT: build
           inputs:
             - name: lambda-zip
             - name: di-authentication-api
