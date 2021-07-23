@@ -70,7 +70,7 @@ class LogoutHandlerTest {
 
     private void generateValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(new Session(SESSION_ID, CLIENT_SESSION_ID)));
+                .thenReturn(Optional.of(new Session(SESSION_ID)));
     }
 
     private String buildCookieString() {

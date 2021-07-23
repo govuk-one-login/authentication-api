@@ -44,7 +44,11 @@ public class SessionService {
     }
 
     public Session createSession() {
-        return new Session(IdGenerator.generate(), IdGenerator.generate());
+        return new Session(IdGenerator.generate());
+    }
+
+    public String generateClientSessionID() {
+        return IdGenerator.generate();
     }
 
     public void save(Session session) {

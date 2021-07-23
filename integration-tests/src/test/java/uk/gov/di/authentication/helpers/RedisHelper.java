@@ -33,7 +33,7 @@ public class RedisHelper {
             throws IOException {
         try (RedisConnectionService redis =
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
-            Session session = new Session(sessionId, clientSessionId);
+            Session session = new Session(sessionId);
             redis.saveWithExpiry(
                     session.getSessionId(), OBJECT_MAPPER.writeValueAsString(session), 1800);
             return session.getSessionId();

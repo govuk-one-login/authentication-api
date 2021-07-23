@@ -172,7 +172,7 @@ class AuthCodeHandlerTest {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(
                         Optional.of(
-                                new Session(SESSION_ID, CLIENT_SESSION_ID)
+                                new Session(SESSION_ID)
                                         .setClientSession(
                                                 CLIENT_SESSION_ID,
                                                 new ClientSession(

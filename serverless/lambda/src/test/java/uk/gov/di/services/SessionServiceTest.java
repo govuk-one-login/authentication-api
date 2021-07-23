@@ -44,8 +44,7 @@ class SessionServiceTest {
         ClientSession clientSession =
                 new ClientSession(Map.of("client_id", List.of("a-client-id")), LocalDateTime.now());
         var session =
-                new Session("session-id", "client-session-id")
-                        .setClientSession("client-session-id", clientSession);
+                new Session("session-id").setClientSession("client-session-id", clientSession);
 
         sessionService.save(session);
 
@@ -147,7 +146,7 @@ class SessionServiceTest {
     @Test
     void shouldUpdateSessionIdInRedisAndDeleteOldKey() {
         var session =
-                new Session("session-id", "client-session-id")
+                new Session("session-id")
                         .setClientSession(
                                 "client-session-id",
                                 new ClientSession(
@@ -165,8 +164,7 @@ class SessionServiceTest {
         ClientSession clientSession =
                 new ClientSession(Map.of("client_id", List.of("a-client-id")), LocalDateTime.now());
         var session =
-                new Session("session-id", "client-session-id")
-                        .setClientSession("client-session-id", clientSession);
+                new Session("session-id").setClientSession("client-session-id", clientSession);
 
         return objectMapper.writeValueAsString(session);
     }

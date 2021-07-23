@@ -13,9 +13,6 @@ public class Session {
     @JsonProperty("session_id")
     private String sessionId;
 
-    @JsonProperty("client_session_id")
-    private String clientSessionId;
-
     @JsonProperty("client_sessions")
     private Map<String, ClientSession> clientSessions;
 
@@ -28,9 +25,8 @@ public class Session {
     @JsonProperty("retry_count")
     private int retryCount;
 
-    public Session(String sessionId, String clientSessionId) {
+    public Session(String sessionId) {
         this.sessionId = sessionId;
-        this.clientSessionId = clientSessionId;
         this.state = NEW;
         this.clientSessions = new HashMap<>();
     }
@@ -38,12 +34,10 @@ public class Session {
     @JsonCreator
     public Session(
             @JsonProperty("session_id") String sessionId,
-            @JsonProperty("client_session_id") String clientSessionId,
             @JsonProperty("client_sessions") Map<String, ClientSession> clientSessions,
             @JsonProperty("state") SessionState state,
             @JsonProperty("email_address") String emailAddress) {
         this.sessionId = sessionId;
-        this.clientSessionId = clientSessionId;
         this.clientSessions = clientSessions;
         this.state = state;
         this.emailAddress = emailAddress;
@@ -55,10 +49,6 @@ public class Session {
 
     public void setSessionId(String sessionId) {
         this.sessionId = sessionId;
-    }
-
-    public String getClientSessionId() {
-        return clientSessionId;
     }
 
     public Map<String, ClientSession> getClientSessions() {

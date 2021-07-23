@@ -120,26 +120,28 @@ public class AuthorisationHandler
            For a user with an existing Session = SSO scenario
         */
         Session session = existingSession.get();
-        updateSessionId(authRequest, logger, session, clientId);
-        return redirect(session, scope);
+        String clientSessionID = sessionService.generateClientSessionID();
+        updateSessionId(authRequest, logger, session, clientId, clientSessionID);
+        return redirect(session, scope, clientSessionID);
     }
 
     private void updateSessionId(
             Map<String, List<String>> authRequest,
             LambdaLogger logger,
             Session session,
-            ClientID clientId) {
+            ClientID clientId,
+            String clientSessionID) {
         String oldSessionId = session.getSessionId();
         sessionService.updateSessionId(session);
         session.setClientSession(
-                session.getClientSessionId(), new ClientSession(authRequest, LocalDateTime.now()));
+                clientSessionID, new ClientSession(authRequest, LocalDateTime.now()));
         logger.log(
                 format(
                         "Updated session id from %s to %s for client %s - client session id = %s",
                         oldSessionId,
                         session.getSessionId(),
                         clientId.getValue(),
-                        session.getClientSessionId()));
+                        clientSessionID));
         sessionService.save(session);
         logger.log("Session saved successfully " + session.getSessionId());
     }
@@ -150,18 +152,20 @@ public class AuthorisationHandler
             Scope scope,
             ClientID clientId) {
         Session session = sessionService.createSession();
+        String clientSessionID = sessionService.generateClientSessionID();
         session.setClientSession(
-                session.getClientSessionId(), new ClientSession(authRequest, LocalDateTime.now()));
+                clientSessionID, new ClientSession(authRequest, LocalDateTime.now()));
         logger.log(
                 format(
                         "Created session %s for client %s - client session id = %s",
-                        session.getSessionId(), clientId.getValue(), session.getClientSessionId()));
+                        session.getSessionId(), clientId.getValue(), clientSessionID));
         sessionService.save(session);
         logger.log("Session saved successfully " + session.getSessionId());
-        return redirect(session, scope);
+        return redirect(session, scope, clientSessionID);
     }
 
-    private APIGatewayProxyResponseEvent redirect(Session session, Scope scope) {
+    private APIGatewayProxyResponseEvent redirect(
+            Session session, Scope scope, String clientSessionID) {
         return new APIGatewayProxyResponseEvent()
                 .withStatusCode(302)
                 .withHeaders(
@@ -172,7 +176,8 @@ public class AuthorisationHandler
                                 buildCookieString(
                                         session,
                                         configurationService.getSessionCookieMaxAge(),
-                                        configurationService.getSessionCookieAttributes())));
+                                        configurationService.getSessionCookieAttributes(),
+                                        clientSessionID)));
     }
 
     private APIGatewayProxyResponseEvent errorResponse(
@@ -201,9 +206,10 @@ public class AuthorisationHandler
                 buildEncodedParam(ResponseParameters.SCOPE, scope.toString()));
     }
 
-    private String buildCookieString(Session session, Integer maxAge, String attributes) {
+    private String buildCookieString(
+            Session session, Integer maxAge, String attributes, String clientSessionID) {
         return format(
                 "%s=%s.%s; Max-Age=%d; %s",
-                "gs", session.getSessionId(), session.getClientSessionId(), maxAge, attributes);
+                "gs", session.getSessionId(), clientSessionID, maxAge, attributes);
     }
 }
