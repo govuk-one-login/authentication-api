@@ -12,6 +12,7 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.Session;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ConfigurationService;
@@ -19,6 +20,7 @@ import uk.gov.di.services.DynamoClientService;
 import uk.gov.di.services.SessionService;
 
 import java.net.URLEncoder;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -129,7 +131,8 @@ public class AuthorisationHandler
             ClientID clientId) {
         String oldSessionId = session.getSessionId();
         sessionService.updateSessionId(session);
-        session.addClientSessionAuthorisationRequest(session.getClientSessionId(), authRequest);
+        session.setClientSession(
+                session.getClientSessionId(), new ClientSession(authRequest, LocalDateTime.now()));
         logger.log(
                 format(
                         "Updated session id from %s to %s for client %s - client session id = %s",
@@ -147,7 +150,8 @@ public class AuthorisationHandler
             Scope scope,
             ClientID clientId) {
         Session session = sessionService.createSession();
-        session.addClientSessionAuthorisationRequest(session.getClientSessionId(), authRequest);
+        session.setClientSession(
+                session.getClientSessionId(), new ClientSession(authRequest, LocalDateTime.now()));
         logger.log(
                 format(
                         "Created session %s for client %s - client session id = %s",

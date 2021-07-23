@@ -1,6 +1,8 @@
 package uk.gov.di.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.entity.Session;
@@ -18,7 +20,8 @@ public class SessionService {
     private static final String SESSION_ID_HEADER = "Session-Id";
     public static final String REQUEST_COOKIE_HEADER = "Cookie";
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER =
+            JsonMapper.builder().addModule(new JavaTimeModule()).build();
 
     private final ConfigurationService configurationService;
     private final RedisConnectionService redisConnectionService;
@@ -111,7 +114,7 @@ public class SessionService {
         }
     }
 
-    private Optional<Session> readSessionFromRedis(String sessionId) {
+    public Optional<Session> readSessionFromRedis(String sessionId) {
         try {
             if (redisConnectionService.keyExists(sessionId)) {
                 return Optional.of(

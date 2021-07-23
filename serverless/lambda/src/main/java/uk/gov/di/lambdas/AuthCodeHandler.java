@@ -68,8 +68,9 @@ public class AuthCodeHandler
             authCodeRequest = objectMapper.readValue(input.getBody(), AuthCodeRequest.class);
             Map<String, List<String>> authRequest =
                     session.get()
-                            .getAuthenticationRequests()
-                            .get(authCodeRequest.getClientSessionId());
+                            .getClientSessions()
+                            .get(authCodeRequest.getClientSessionId())
+                            .getAuthRequestParams();
             authorizationRequest = AuthorizationRequest.parse(authRequest);
             if (!authorizationService.isClientRedirectUriValid(
                     authorizationRequest.getClientID(), authorizationRequest.getRedirectionURI())) {
