@@ -34,7 +34,7 @@ public class AuthCodeIntegrationTest extends IntegrationTestEndpoints {
         String clientSessionId = "some-client-session-id";
         AuthCodeRequest authCodeRequest = new AuthCodeRequest(clientSessionId);
         KeyPair keyPair = generateRsaKeyPair();
-        RedisHelper.createSession(sessionId, clientSessionId);
+        RedisHelper.createSession(sessionId);
         RedisHelper.addAuthRequestToSession(
                 clientSessionId, sessionId, generateAuthRequest().toParameters());
         setUpDynamo(keyPair);

@@ -11,12 +11,15 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.Session;
 import uk.gov.di.helpers.IDTokenGenerator;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.SessionService;
 
 import java.net.URI;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -24,6 +27,7 @@ import java.util.UUID;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -36,7 +40,7 @@ class LogoutHandlerTest {
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final SessionService sessionService = mock(SessionService.class);
-    private static final String SET_COOKIE = "Set-Cookie";
+    private static final String COOKIE = "Cookie";
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "client-session-id";
     private static final URI DEFAULT_LOGOUT_URI = URI.create("http://localhost/logout");
@@ -57,8 +61,10 @@ class LogoutHandlerTest {
                         "client-id", new Subject(), "http://localhost-rp", signingKey);
         State state = new State();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        generateSessionFromCookie();
-        event.setHeaders(Map.of(SET_COOKIE, buildCookieString()));
+        Session session = generateSession(CLIENT_SESSION_ID);
+        session.getClientSessions().get(CLIENT_SESSION_ID).setIdTokenHint(signedJWT.serialize());
+        generateSessionFromCookie(session);
+        event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
         event.setQueryStringParameters(
                 Map.of(
                         "id_token_hint", signedJWT.serialize(),
@@ -71,7 +77,7 @@ class LogoutHandlerTest {
     }
 
     @Test
-    public void shouldRedirectToDefaultLogoutUriWhenNoCookieExists() {
+    public void shouldDeleteSessionAndRedirectToDefaultLogoutUriWhenNoCookieExists() {
         State state = new State();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
@@ -87,14 +93,88 @@ class LogoutHandlerTest {
         verify(sessionService, times(0)).deleteSessionFromRedis(SESSION_ID);
     }
 
-    private void generateSessionFromCookie() {
-        when(sessionService.getSessionFromSessionCookie(anyMap()))
-                .thenReturn(Optional.of(new Session(SESSION_ID)));
+    @Test
+    public void shouldThrowWhenClientSessionIdIsNotFoundInSession() {
+        State state = new State();
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setQueryStringParameters(
+                Map.of(
+                        "post_logout_redirect_uri",
+                        "http://localhost:8000/logout",
+                        "state",
+                        state.toString()));
+        event.setHeaders(Map.of(COOKIE, buildCookieString("invalid-client-session-id")));
+        Session session = generateSession(CLIENT_SESSION_ID);
+        generateSessionFromCookie(session);
+
+        RuntimeException exception =
+                assertThrows(
+                        RuntimeException.class,
+                        () -> handler.handleRequest(event, context),
+                        "Expected to throw exception");
+
+        assertThat(
+                exception.getMessage(),
+                equalTo(
+                        format(
+                                "Client Session ID does not exist in Session: %s",
+                                session.getSessionId())));
     }
 
-    private String buildCookieString() {
+    @Test
+    public void shouldThrowWhenIDTokenHintIsNotFoundInSession() throws JOSEException {
+        RSAKey signingKey =
+                new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
+        SignedJWT signedJWT =
+                IDTokenGenerator.generateIDToken(
+                        "client-id", new Subject(), "http://localhost-rp", signingKey);
+        State state = new State();
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        Session session = generateSession(CLIENT_SESSION_ID);
+        generateSessionFromCookie(session);
+        event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
+        event.setQueryStringParameters(
+                Map.of(
+                        "id_token_hint", signedJWT.serialize(),
+                        "post_logout_redirect_uri", "http://localhost:8000/logout",
+                        "state", state.toString()));
+
+        RuntimeException exception =
+                assertThrows(
+                        RuntimeException.class,
+                        () -> handler.handleRequest(event, context),
+                        "Expected to throw exception");
+
+        assertThat(
+                exception.getMessage(),
+                equalTo(format("ID Token does not exist for Session: %s", session.getSessionId())));
+    }
+
+    private Session generateSession(String clientSessionID) {
+        ClientSession clientSession =
+                new ClientSession(
+                        Map.of(
+                                "client_id",
+                                List.of("a-client-id"),
+                                "redirect_uri",
+                                List.of("http://localhost:8080"),
+                                "scope",
+                                List.of("email,openid,profile"),
+                                "response_type",
+                                List.of("code"),
+                                "state",
+                                List.of("some-state")),
+                        LocalDateTime.now());
+        return new Session(SESSION_ID).setClientSession(clientSessionID, clientSession);
+    }
+
+    private void generateSessionFromCookie(Session session) {
+        when(sessionService.getSessionFromSessionCookie(anyMap())).thenReturn(Optional.of(session));
+    }
+
+    private String buildCookieString(String clientSessionID) {
         return format(
                 "%s=%s.%s; Max-Age=%d; %s",
-                "gs", SESSION_ID, CLIENT_SESSION_ID, 1800, "Secure; HttpOnly;");
+                "gs", SESSION_ID, clientSessionID, 1800, "Secure; HttpOnly;");
     }
 }
