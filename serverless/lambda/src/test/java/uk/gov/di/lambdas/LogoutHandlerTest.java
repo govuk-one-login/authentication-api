@@ -11,10 +11,12 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.Session;
 import uk.gov.di.helpers.IDTokenGenerator;
 import uk.gov.di.services.ConfigurationService;
+import uk.gov.di.services.DynamoClientService;
 import uk.gov.di.services.SessionService;
 
 import java.net.URI;
@@ -25,6 +27,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static java.lang.String.format;
+import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -40,20 +43,24 @@ class LogoutHandlerTest {
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private static final String COOKIE = "Cookie";
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "client-session-id";
-    private static final URI DEFAULT_LOGOUT_URI = URI.create("http://localhost/logout");
+    private static final URI DEFAULT_LOGOUT_URI =
+            URI.create("https://di-authentication-frontend.london.cloudapps.digital/signed-out");
     private LogoutHandler handler;
 
     @BeforeEach
     public void setUp() {
-        handler = new LogoutHandler(configurationService, sessionService);
+        handler = new LogoutHandler(configurationService, sessionService, dynamoClientService);
         when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
     }
 
     @Test
-    public void shouldDeleteSessionAndRedirectToDefaultLogoutUri() throws JOSEException {
+    public void shouldDeleteSessionAndRedirectToClientLogoutUri() throws JOSEException {
+        when(dynamoClientService.getClient("client-id"))
+                .thenReturn(Optional.of(createClientRegistry()));
         RSAKey signingKey =
                 new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
         SignedJWT signedJWT =
@@ -68,12 +75,12 @@ class LogoutHandlerTest {
         event.setQueryStringParameters(
                 Map.of(
                         "id_token_hint", signedJWT.serialize(),
-                        "post_logout_redirect_uri", "http://localhost:8000/logout",
+                        "post_logout_redirect_uri", "http://localhost/logout",
                         "state", state.toString()));
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
         assertThat(response, hasStatus(302));
-        assertThat(response.getHeaders().get("Location"), equalTo(DEFAULT_LOGOUT_URI.toString()));
+        assertThat(response.getHeaders().get("Location"), equalTo("http://localhost/logout"));
     }
 
     @Test
@@ -176,5 +183,16 @@ class LogoutHandlerTest {
         return format(
                 "%s=%s.%s; Max-Age=%d; %s",
                 "gs", SESSION_ID, clientSessionID, 1800, "Secure; HttpOnly;");
+    }
+
+    private ClientRegistry createClientRegistry() {
+        return new ClientRegistry()
+                .setClientID("client-id")
+                .setClientName("client-one")
+                .setPublicKey("public-key")
+                .setContacts(singletonList("contact-1"))
+                .setPostLogoutRedirectUrls(singletonList("http://localhost/logout"))
+                .setScopes(singletonList("openid"))
+                .setRedirectUrls(singletonList("http://localhost/redirect"));
     }
 }
