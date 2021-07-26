@@ -20,10 +20,10 @@ import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.helpers.IDTokenGenerator;
 
 import java.io.IOException;
+import java.net.HttpCookie;
 import java.net.URI;
 import java.util.UUID;
 
-import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -88,8 +88,7 @@ public class LogoutIntegrationTest extends IntegrationTestEndpoints {
     }
 
     private String buildCookieString(String sessionID, String clientSessionID) {
-        return format(
-                "%s=%s.%s; Max-Age=%d; %s",
-                "gs", sessionID, clientSessionID, 1800, "Secure; HttpOnly;");
+        var cookie = new HttpCookie("gs", sessionID + "." + clientSessionID);
+        return cookie.toString();
     }
 }

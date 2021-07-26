@@ -7,9 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.http.client.utils.URIBuilder;
 import uk.gov.di.entity.ClientRegistry;
-import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.Session;
-import uk.gov.di.exceptions.ClientNotFoundException;
 import uk.gov.di.helpers.CookieHelper;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoClientService;
@@ -95,25 +93,9 @@ public class LogoutHandler
                     idToken.getJWTClaimsSet().getAudience().stream().findFirst();
             sessionService.deleteSessionFromRedis(session.getSessionId());
             return audience.map(
-                            t -> {
-                                final ClientRegistry clientRegistry;
-                                try {
-                                    clientRegistry =
-                                            dynamoClientService
-                                                    .getClient(t)
-                                                    .orElseThrow(
-                                                            () -> new ClientNotFoundException(t));
-                                } catch (ClientNotFoundException e) {
-                                    throw new RuntimeException(
-                                            format(
-                                                    "Client not found in ClientRegistry for ClientID: %s",
-                                                    t));
-                                }
-                                String logoutURI =
-                                        validateClientRedirectUri(
-                                                queryStringParameters, clientRegistry);
-                                return generateLogoutResponse(URI.create(logoutURI), state);
-                            })
+                            a ->
+                                    validateClientIDAgainstClientRegistry(
+                                            queryStringParameters, a, state))
                     .orElse(generateDefaultLogoutResponse(state));
         } catch (ParseException e) {
             throw new RuntimeException();
@@ -125,25 +107,28 @@ public class LogoutHandler
     }
 
     private boolean doesIDTokenExistInSession(String idTokenHint, Session session) {
-        for (Map.Entry<String, ClientSession> t : session.getClientSessions().entrySet()) {
-            boolean idTokenHintExists =
-                    t.getValue().getIdTokenHint() != null
-                            && t.getValue().getIdTokenHint().equals(idTokenHint);
-            if (idTokenHintExists) {
-                return true;
-            }
-        }
-        return false;
+        return session.getClientSessions().values().stream()
+                .filter(t -> t.getIdTokenHint() != null)
+                .anyMatch(t -> t.getIdTokenHint().equals(idTokenHint));
     }
 
-    private String validateClientRedirectUri(
-            Map<String, String> queryStringParameters, ClientRegistry clientRegistry) {
+    private APIGatewayProxyResponseEvent validateClientIDAgainstClientRegistry(
+            Map<String, String> queryStringParameters, String clientID, Optional<String> state) {
+        ClientRegistry clientRegistry =
+                dynamoClientService
+                        .getClient(clientID)
+                        .orElseThrow(
+                                () ->
+                                        new RuntimeException(
+                                                format(
+                                                        "Client not found in ClientRegistry for ClientID: %s",
+                                                        clientID)));
         String postLogoutRedirectUri = queryStringParameters.get("post_logout_redirect_uri");
         if (!queryStringParameters.get("post_logout_redirect_uri").isBlank()
                 && clientRegistry.getPostLogoutRedirectUrls().contains(postLogoutRedirectUri)) {
-            return postLogoutRedirectUri;
+            return generateLogoutResponse(URI.create(postLogoutRedirectUri), state);
         }
-        return configurationService.getDefaultLogoutURI().toString();
+        return generateDefaultLogoutResponse(state);
     }
 
     private APIGatewayProxyResponseEvent generateDefaultLogoutResponse(Optional<String> state) {
@@ -153,7 +138,7 @@ public class LogoutHandler
     private APIGatewayProxyResponseEvent generateLogoutResponse(
             URI logoutUri, Optional<String> state) {
         URIBuilder uriBuilder = new URIBuilder(logoutUri);
-        state.map(s -> uriBuilder.addParameter("state", s));
+        state.ifPresent(s -> uriBuilder.addParameter("state", s));
         URI uri;
         try {
             uri = uriBuilder.build();

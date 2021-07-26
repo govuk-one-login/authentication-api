@@ -2,6 +2,7 @@ package uk.gov.di.helpers;
 
 import org.junit.jupiter.api.Test;
 
+import java.net.HttpCookie;
 import java.util.Map;
 import java.util.Optional;
 
@@ -13,8 +14,9 @@ public class CookieHelperTest {
 
     @Test
     void shouldReturnIdsFromValidCookie() {
+        HttpCookie cookie = new HttpCookie("gs", "session-id.456");
         Map<String, String> headers =
-                Map.ofEntries(Map.entry(REQUEST_COOKIE_HEADER, "gs=session-id.456;"));
+                Map.ofEntries(Map.entry(REQUEST_COOKIE_HEADER, cookie.toString()));
 
         Optional<SessionCookieIds> ids = CookieHelper.parseSessionCookie(headers);
 
@@ -24,6 +26,11 @@ public class CookieHelperTest {
 
     @Test
     void shouldReturnEmptyIfCookieMalformatted() {
+        assertEquals(
+                Optional.empty(),
+                CookieHelper.parseSessionCookie(
+                        Map.ofEntries(Map.entry(REQUEST_COOKIE_HEADER, "someinvalidvalue"))));
+
         assertEquals(Optional.empty(), CookieHelper.parseSessionCookie(Map.of()));
 
         assertEquals(
@@ -40,10 +47,18 @@ public class CookieHelperTest {
         assertEquals(
                 Optional.empty(),
                 CookieHelper.parseSessionCookie(
-                        Map.ofEntries(Map.entry(REQUEST_COOKIE_HEADER, "gs=no-semi-colon.123"))));
+                        Map.ofEntries(Map.entry(REQUEST_COOKIE_HEADER, "gs=no-dot;"))));
         assertEquals(
                 Optional.empty(),
                 CookieHelper.parseSessionCookie(
-                        Map.ofEntries(Map.entry(REQUEST_COOKIE_HEADER, "gs=no-dot;"))));
+                        Map.ofEntries(
+                                Map.entry(
+                                        REQUEST_COOKIE_HEADER,
+                                        "gs=one-value.two-value.three-value;"))));
+        assertEquals(
+                Optional.empty(),
+                CookieHelper.parseSessionCookie(
+                        Map.ofEntries(
+                                Map.entry(REQUEST_COOKIE_HEADER, "gsdsds=one-value.two-value"))));
     }
 }
