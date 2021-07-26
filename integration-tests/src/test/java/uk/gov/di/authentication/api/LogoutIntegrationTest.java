@@ -74,7 +74,8 @@ public class LogoutIntegrationTest extends IntegrationTestEndpoints {
                 response.getHeaders()
                         .get("Location")
                         .contains(
-                                "https://di-auth-stub-relying-party-build.london.cloudapps.digital/"));
+                                "https://di-auth-stub-relying-party-build.london.cloudapps.digital/?state="
+                                        + "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU"));
     }
 
     private AuthorizationRequest generateAuthRequest() {

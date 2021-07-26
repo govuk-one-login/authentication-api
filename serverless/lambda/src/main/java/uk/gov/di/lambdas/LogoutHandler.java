@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jwt.SignedJWT;
+import org.apache.http.client.utils.URIBuilder;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.Session;
@@ -14,6 +15,8 @@ import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoClientService;
 import uk.gov.di.services.SessionService;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.text.ParseException;
 import java.util.Map;
 import java.util.Optional;
@@ -49,15 +52,16 @@ public class LogoutHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        Optional<String> state = Optional.ofNullable(input.getQueryStringParameters().get("state"));
         Optional<Session> sessionFromSessionCookie =
                 sessionService.getSessionFromSessionCookie(input.getHeaders());
         return sessionFromSessionCookie
-                .map(t -> processLogoutRequest(t, input))
-                .orElse(generateDefaultLogoutResponse());
+                .map(t -> processLogoutRequest(t, input, state))
+                .orElse(generateDefaultLogoutResponse(state));
     }
 
     private APIGatewayProxyResponseEvent processLogoutRequest(
-            Session session, APIGatewayProxyRequestEvent input) {
+            Session session, APIGatewayProxyRequestEvent input, Optional<String> state) {
         Map<String, String> queryStringParameters = input.getQueryStringParameters();
         Optional<CookieHelper.SessionCookieIds> sessionCookieIds =
                 CookieHelper.parseSessionCookie(input.getHeaders());
@@ -71,7 +75,7 @@ public class LogoutHandler
         if (!queryStringParameters.containsKey("id_token_hint")
                 || queryStringParameters.get("id_token_hint").isBlank()) {
             sessionService.deleteSessionFromRedis(session.getSessionId());
-            return generateDefaultLogoutResponse();
+            return generateDefaultLogoutResponse(state);
         }
         if (!doesIDTokenExistInSession(queryStringParameters.get("id_token_hint"), session)) {
             throw new RuntimeException(
@@ -89,6 +93,7 @@ public class LogoutHandler
             SignedJWT idToken = SignedJWT.parse(idTokenHint);
             Optional<String> audience =
                     idToken.getJWTClaimsSet().getAudience().stream().findFirst();
+            sessionService.deleteSessionFromRedis(session.getSessionId());
             return audience.map(
                             t -> {
                                 final ClientRegistry clientRegistry;
@@ -107,11 +112,9 @@ public class LogoutHandler
                                 String logoutURI =
                                         validateClientRedirectUri(
                                                 queryStringParameters, clientRegistry);
-                                return new APIGatewayProxyResponseEvent()
-                                        .withStatusCode(302)
-                                        .withHeaders(Map.of("Location", logoutURI));
+                                return generateLogoutResponse(URI.create(logoutURI), state);
                             })
-                    .orElse(generateDefaultLogoutResponse());
+                    .orElse(generateDefaultLogoutResponse(state));
         } catch (ParseException e) {
             throw new RuntimeException();
         }
@@ -143,10 +146,22 @@ public class LogoutHandler
         return configurationService.getDefaultLogoutURI().toString();
     }
 
-    private APIGatewayProxyResponseEvent generateDefaultLogoutResponse() {
+    private APIGatewayProxyResponseEvent generateDefaultLogoutResponse(Optional<String> state) {
+        return generateLogoutResponse(configurationService.getDefaultLogoutURI(), state);
+    }
+
+    private APIGatewayProxyResponseEvent generateLogoutResponse(
+            URI logoutUri, Optional<String> state) {
+        URIBuilder uriBuilder = new URIBuilder(logoutUri);
+        state.map(s -> uriBuilder.addParameter("state", s));
+        URI uri;
+        try {
+            uri = uriBuilder.build();
+        } catch (URISyntaxException e) {
+            throw new RuntimeException("Unable to build URI");
+        }
         return new APIGatewayProxyResponseEvent()
                 .withStatusCode(302)
-                .withHeaders(
-                        Map.of("Location", configurationService.getDefaultLogoutURI().toString()));
+                .withHeaders(Map.of("Location", uri.toString()));
     }
 }

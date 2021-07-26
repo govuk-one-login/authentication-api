@@ -44,74 +44,103 @@ class LogoutHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
+    private static final State STATE = new State();
     private static final String COOKIE = "Cookie";
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "client-session-id";
     private static final URI DEFAULT_LOGOUT_URI =
             URI.create("https://di-authentication-frontend.london.cloudapps.digital/signed-out");
+    private static final URI CLIENT_LOGOUT_URI = URI.create("http://localhost/logout");
     private LogoutHandler handler;
+    private SignedJWT signedIDToken;
+    private final Session session = generateSession();
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws JOSEException {
         handler = new LogoutHandler(configurationService, sessionService, dynamoClientService);
         when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
+        RSAKey signingKey =
+                new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
+        signedIDToken =
+                IDTokenGenerator.generateIDToken(
+                        "client-id", new Subject(), "http://localhost-rp", signingKey);
     }
 
     @Test
-    public void shouldDeleteSessionAndRedirectToClientLogoutUri() throws JOSEException {
+    public void shouldDeleteSessionAndRedirectToClientLogoutUriForValidLogoutRequest() {
         when(dynamoClientService.getClient("client-id"))
                 .thenReturn(Optional.of(createClientRegistry()));
-        RSAKey signingKey =
-                new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
-        SignedJWT signedJWT =
-                IDTokenGenerator.generateIDToken(
-                        "client-id", new Subject(), "http://localhost-rp", signingKey);
-        State state = new State();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        Session session = generateSession(CLIENT_SESSION_ID);
-        session.getClientSessions().get(CLIENT_SESSION_ID).setIdTokenHint(signedJWT.serialize());
-        generateSessionFromCookie(session);
         event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
         event.setQueryStringParameters(
                 Map.of(
-                        "id_token_hint", signedJWT.serialize(),
-                        "post_logout_redirect_uri", "http://localhost/logout",
-                        "state", state.toString()));
+                        "id_token_hint", signedIDToken.serialize(),
+                        "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString(),
+                        "state", STATE.toString()));
+        session.getClientSessions()
+                .get(CLIENT_SESSION_ID)
+                .setIdTokenHint(signedIDToken.serialize());
+        generateSessionFromCookie(session);
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+        verify(sessionService, times(1)).deleteSessionFromRedis(SESSION_ID);
 
         assertThat(response, hasStatus(302));
-        assertThat(response.getHeaders().get("Location"), equalTo("http://localhost/logout"));
+        assertThat(
+                response.getHeaders().get("Location"),
+                equalTo(CLIENT_LOGOUT_URI + "?state=" + STATE));
     }
 
     @Test
-    public void shouldDeleteSessionAndRedirectToDefaultLogoutUriWhenNoCookieExists() {
-        State state = new State();
+    public void shouldNotReturnStateWhenStateIsNotSentInRequest() {
+        when(dynamoClientService.getClient("client-id"))
+                .thenReturn(Optional.of(createClientRegistry()));
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
+        event.setQueryStringParameters(
+                Map.of(
+                        "id_token_hint",
+                        signedIDToken.serialize(),
+                        "post_logout_redirect_uri",
+                        CLIENT_LOGOUT_URI.toString()));
+        session.getClientSessions()
+                .get(CLIENT_SESSION_ID)
+                .setIdTokenHint(signedIDToken.serialize());
+        generateSessionFromCookie(session);
+        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+
+        verify(sessionService, times(1)).deleteSessionFromRedis(SESSION_ID);
+        assertThat(response, hasStatus(302));
+        assertThat(response.getHeaders().get("Location"), equalTo(CLIENT_LOGOUT_URI.toString()));
+    }
+
+    @Test
+    public void shouldRedirectToDefaultLogoutUriWhenNoCookieExists() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
                 Map.of(
                         "post_logout_redirect_uri",
-                        "http://localhost:8000/logout",
+                        CLIENT_LOGOUT_URI.toString(),
                         "state",
-                        state.toString()));
+                        STATE.toString()));
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
         assertThat(response, hasStatus(302));
-        assertThat(response.getHeaders().get("Location"), equalTo(DEFAULT_LOGOUT_URI.toString()));
+        assertThat(
+                response.getHeaders().get("Location"),
+                equalTo(DEFAULT_LOGOUT_URI + "?state=" + STATE));
         verify(sessionService, times(0)).deleteSessionFromRedis(SESSION_ID);
     }
 
     @Test
     public void shouldThrowWhenClientSessionIdIsNotFoundInSession() {
-        State state = new State();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
                 Map.of(
                         "post_logout_redirect_uri",
-                        "http://localhost:8000/logout",
+                        CLIENT_LOGOUT_URI.toString(),
                         "state",
-                        state.toString()));
+                        STATE.toString()));
         event.setHeaders(Map.of(COOKIE, buildCookieString("invalid-client-session-id")));
-        Session session = generateSession(CLIENT_SESSION_ID);
         generateSessionFromCookie(session);
 
         RuntimeException exception =
@@ -129,22 +158,15 @@ class LogoutHandlerTest {
     }
 
     @Test
-    public void shouldThrowWhenIDTokenHintIsNotFoundInSession() throws JOSEException {
-        RSAKey signingKey =
-                new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
-        SignedJWT signedJWT =
-                IDTokenGenerator.generateIDToken(
-                        "client-id", new Subject(), "http://localhost-rp", signingKey);
-        State state = new State();
+    public void shouldThrowWhenIDTokenHintIsNotFoundInSession() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        Session session = generateSession(CLIENT_SESSION_ID);
-        generateSessionFromCookie(session);
         event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
         event.setQueryStringParameters(
                 Map.of(
-                        "id_token_hint", signedJWT.serialize(),
-                        "post_logout_redirect_uri", "http://localhost:8000/logout",
-                        "state", state.toString()));
+                        "id_token_hint", signedIDToken.serialize(),
+                        "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString(),
+                        "state", STATE.toString()));
+        generateSessionFromCookie(session);
 
         RuntimeException exception =
                 assertThrows(
@@ -155,9 +177,65 @@ class LogoutHandlerTest {
         assertThat(
                 exception.getMessage(),
                 equalTo(format("ID Token does not exist for Session: %s", session.getSessionId())));
+        verify(sessionService, times(0)).deleteSessionFromRedis(SESSION_ID);
     }
 
-    private Session generateSession(String clientSessionID) {
+    @Test
+    public void shouldThrowWhenClientIsNotFoundInClientRegistry() throws JOSEException {
+        RSAKey signingKey =
+                new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
+        SignedJWT signedJWT =
+                IDTokenGenerator.generateIDToken(
+                        "invalid-client-id", new Subject(), "http://localhost-rp", signingKey);
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
+        event.setQueryStringParameters(
+                Map.of(
+                        "id_token_hint", signedJWT.serialize(),
+                        "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString(),
+                        "state", STATE.toString()));
+        session.getClientSessions().get(CLIENT_SESSION_ID).setIdTokenHint(signedJWT.serialize());
+        generateSessionFromCookie(session);
+
+        RuntimeException exception =
+                assertThrows(
+                        RuntimeException.class,
+                        () -> handler.handleRequest(event, context),
+                        "Expected to throw exception");
+
+        assertThat(
+                exception.getMessage(),
+                equalTo(
+                        format(
+                                "Client not found in ClientRegistry for ClientID: %s",
+                                "invalid-client-id")));
+    }
+
+    @Test
+    public void shouldRedirectToDefaultLogoutUriWhenLogoutUriInRequestDoesNotMatchClientRegistry() {
+        when(dynamoClientService.getClient("client-id"))
+                .thenReturn(Optional.of(createClientRegistry()));
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
+        event.setQueryStringParameters(
+                Map.of(
+                        "id_token_hint", signedIDToken.serialize(),
+                        "post_logout_redirect_uri", "http://localhost/invalidlogout",
+                        "state", STATE.toString()));
+        session.getClientSessions()
+                .get(CLIENT_SESSION_ID)
+                .setIdTokenHint(signedIDToken.serialize());
+        generateSessionFromCookie(session);
+        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+
+        assertThat(response, hasStatus(302));
+        assertThat(
+                response.getHeaders().get("Location"),
+                equalTo(DEFAULT_LOGOUT_URI + "?state=" + STATE));
+        verify(sessionService, times(1)).deleteSessionFromRedis(SESSION_ID);
+    }
+
+    private Session generateSession() {
         ClientSession clientSession =
                 new ClientSession(
                         Map.of(
@@ -172,7 +250,7 @@ class LogoutHandlerTest {
                                 "state",
                                 List.of("some-state")),
                         LocalDateTime.now());
-        return new Session(SESSION_ID).setClientSession(clientSessionID, clientSession);
+        return new Session(SESSION_ID).setClientSession(CLIENT_SESSION_ID, clientSession);
     }
 
     private void generateSessionFromCookie(Session session) {
@@ -191,7 +269,7 @@ class LogoutHandlerTest {
                 .setClientName("client-one")
                 .setPublicKey("public-key")
                 .setContacts(singletonList("contact-1"))
-                .setPostLogoutRedirectUrls(singletonList("http://localhost/logout"))
+                .setPostLogoutRedirectUrls(singletonList(CLIENT_LOGOUT_URI.toString()))
                 .setScopes(singletonList("openid"))
                 .setRedirectUrls(singletonList("http://localhost/redirect"));
     }
