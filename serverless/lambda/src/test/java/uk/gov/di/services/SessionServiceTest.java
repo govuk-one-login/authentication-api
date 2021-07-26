@@ -26,7 +26,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.services.SessionService.REQUEST_COOKIE_HEADER;
+import static uk.gov.di.helpers.CookieHelper.REQUEST_COOKIE_HEADER;
 
 class SessionServiceTest {
 
@@ -96,27 +96,10 @@ class SessionServiceTest {
     @Test
     void
             shouldReturnOptionalEmptyWhenGetSessionFromSessionCookieCalledWithIncorrectCookieHeaderValues() {
-        assertEquals(Optional.empty(), sessionService.getSessionFromSessionCookie(Map.of()));
-        assertEquals(
-                Optional.empty(),
-                sessionService.getSessionFromSessionCookie(
-                        Map.ofEntries(Map.entry("header", "value"))));
-        assertEquals(
-                Optional.empty(),
-                sessionService.getSessionFromSessionCookie(
-                        Map.ofEntries(Map.entry(REQUEST_COOKIE_HEADER, ""))));
         assertEquals(
                 Optional.empty(),
                 sessionService.getSessionFromSessionCookie(
                         Map.ofEntries(Map.entry(REQUEST_COOKIE_HEADER, "gs=this is bad"))));
-        assertEquals(
-                Optional.empty(),
-                sessionService.getSessionFromSessionCookie(
-                        Map.ofEntries(Map.entry(REQUEST_COOKIE_HEADER, "gs=no-semi-colon.123"))));
-        assertEquals(
-                Optional.empty(),
-                sessionService.getSessionFromSessionCookie(
-                        Map.ofEntries(Map.entry(REQUEST_COOKIE_HEADER, "gs=no-dot;"))));
     }
 
     @Test
@@ -157,6 +140,22 @@ class SessionServiceTest {
         sessionService.updateSessionId(session);
 
         verify(redis, times(2)).saveWithExpiry(anyString(), anyString(), anyLong());
+        verify(redis).deleteValue("session-id");
+    }
+
+    @Test
+    void shouldDeleteSessionIdFromRedis() {
+        var session =
+                new Session("session-id")
+                        .setClientSession(
+                                "client-session-id",
+                                new ClientSession(
+                                        Map.of("client_id", List.of("a-client-id")),
+                                        LocalDateTime.now()));
+
+        sessionService.save(session);
+        sessionService.deleteSessionFromRedis(session.getSessionId());
+
         verify(redis).deleteValue("session-id");
     }
 

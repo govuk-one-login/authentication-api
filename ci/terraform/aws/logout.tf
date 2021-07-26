@@ -6,7 +6,7 @@ module "logout" {
   environment     = var.environment
 
   handler_environment_variables = {
-    DEFAULT_LOGOUT_URI = "https://www.gov.uk/"
+    DEFAULT_LOGOUT_URI = "https://di-authentication-frontend.london.cloudapps.digital/signed-out"
     BASE_URL       = local.api_base_url
     REDIS_HOST     = var.use_localstack ? var.external_redis_host : aws_elasticache_replication_group.sessions_store[0].primary_endpoint_address
     REDIS_PORT     = var.use_localstack ? var.external_redis_port : aws_elasticache_replication_group.sessions_store[0].port

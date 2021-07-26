@@ -2,8 +2,6 @@ package uk.gov.di.services;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.JWSSigner;
-import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
@@ -37,7 +35,6 @@ import java.util.UUID;
 public class TokenService {
 
     private final RSAKey signingKey;
-    private final JWSSigner signer;
 
     private final Map<AccessToken, String> tokensMap = new HashMap<>();
     private final ConfigurationService configService;
@@ -46,7 +43,6 @@ public class TokenService {
         this.configService = configService;
         try {
             signingKey = new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
-            signer = new RSASSASigner(signingKey);
         } catch (JOSEException e) {
             throw new RuntimeException(e);
         }

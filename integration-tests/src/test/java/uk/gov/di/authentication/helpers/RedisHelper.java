@@ -29,8 +29,7 @@ public class RedisHelper {
     private static final ObjectMapper OBJECT_MAPPER =
             JsonMapper.builder().addModule(new JavaTimeModule()).build();
 
-    public static String createSession(String sessionId, String clientSessionId)
-            throws IOException {
+    public static String createSession(String sessionId) throws IOException {
         try (RedisConnectionService redis =
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
             Session session = new Session(sessionId);
@@ -41,7 +40,7 @@ public class RedisHelper {
     }
 
     public static String createSession() throws IOException {
-        return createSession(IdGenerator.generate(), IdGenerator.generate());
+        return createSession(IdGenerator.generate());
     }
 
     public static void addAuthRequestToSession(
@@ -51,6 +50,20 @@ public class RedisHelper {
             Session session = OBJECT_MAPPER.readValue(redis.getValue(sessionId), Session.class);
             session.setClientSession(
                     clientSessionId, new ClientSession(authRequest, LocalDateTime.now()));
+            redis.saveWithExpiry(
+                    session.getSessionId(), OBJECT_MAPPER.writeValueAsString(session), 1800);
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void addIDTokenToSession(
+            String sessionId, String clientSessionId, String idTokenHint) {
+        try (RedisConnectionService redis =
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
+            Session session = OBJECT_MAPPER.readValue(redis.getValue(sessionId), Session.class);
+            session.getClientSessions().get(clientSessionId).setIdTokenHint(idTokenHint);
             redis.saveWithExpiry(
                     session.getSessionId(), OBJECT_MAPPER.writeValueAsString(session), 1800);
 
