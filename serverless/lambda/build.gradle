@@ -14,7 +14,7 @@ dependencies {
             "com.amazonaws:aws-lambda-java-events:3.9.0",
             "com.amazonaws:aws-java-sdk-dynamodb:1.12.31",
             "software.amazon.awssdk:sqs:2.16.88",
-            "com.nimbusds:oauth2-oidc-sdk:9.9",
+            "com.nimbusds:oauth2-oidc-sdk:9.10.1",
             "com.nimbusds:nimbus-jose-jwt:9.10.1",
             "com.fasterxml.jackson.core:jackson-core:2.12.3",
             "com.fasterxml.jackson.core:jackson-databind:2.12.3",
