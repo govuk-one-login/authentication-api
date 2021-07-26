@@ -7,7 +7,7 @@ module "authorize" {
 
   handler_environment_variables = {
     BASE_URL       = local.api_base_url
-    LOGIN_URI      = "https://di-authentication-frontend.london.cloudapps.digital/"
+    LOGIN_URI      = var.use_localstack ? "http://localhost:3000/" : "https://front.${var.environment}.${var.service_domain_name}/"
     REDIS_HOST     = var.use_localstack ? var.external_redis_host : aws_elasticache_replication_group.sessions_store[0].primary_endpoint_address
     REDIS_PORT     = var.use_localstack ? var.external_redis_port : aws_elasticache_replication_group.sessions_store[0].port
     REDIS_PASSWORD = var.use_localstack ? var.external_redis_password : random_password.redis_password.result

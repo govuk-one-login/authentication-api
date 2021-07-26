@@ -22,7 +22,6 @@ variable "notify_url" {
 
 variable "environment" {
   type    = string
-  default = "test"
 }
 
 variable "api_deployment_stage_name" {
@@ -93,4 +92,8 @@ variable "external_redis_password" {
 variable "redis_use_tls" {
   type    = string
   default = "true"
+}
+
+variable "service_domain_name" {
+  default = "auth.ida.digital.cabinet-office.gov.uk"
 }
