@@ -10,16 +10,20 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.OIDCError;
+import com.nimbusds.openid.connect.sdk.Prompt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.Session;
+import uk.gov.di.entity.SessionState;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ClientSessionService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoClientService;
 import uk.gov.di.services.SessionService;
 
+import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -70,13 +74,8 @@ public class AuthorisationHandler
             APIGatewayProxyRequestEvent input, Context context) {
         LOGGER.info("Received authentication request");
         try {
-            Map<String, List<String>> queryStringMultiValuedMap =
-                    input.getQueryStringParameters().entrySet().stream()
-                            .collect(
-                                    Collectors.toMap(
-                                            entry -> entry.getKey(),
-                                            entry -> List.of(entry.getValue())));
-            var authRequest = AuthenticationRequest.parse(queryStringMultiValuedMap);
+            Map<String, List<String>> queryStringParameters = getQueryStringParametersAsMap(input);
+            var authRequest = AuthenticationRequest.parse(queryStringParameters);
 
             Optional<ErrorObject> error =
                     clientService.getErrorForAuthorizationRequest(authRequest);
@@ -85,10 +84,10 @@ public class AuthorisationHandler
                     .orElseGet(
                             () ->
                                     getOrCreateSessionAndRedirect(
-                                            queryStringMultiValuedMap,
+                                            queryStringParameters,
                                             sessionService.getSessionFromSessionCookie(
                                                     input.getHeaders()),
-                                            authRequest.getClientID()));
+                                            authRequest));
         } catch (ParseException e) {
             LOGGER.error("Authentication request could not be parsed", e);
             APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
@@ -100,26 +99,64 @@ public class AuthorisationHandler
     }
 
     private APIGatewayProxyResponseEvent getOrCreateSessionAndRedirect(
-            Map<String, List<String>> authRequest,
+            Map<String, List<String>> authRequestParameters,
             Optional<Session> existingSession,
-            ClientID clientId) {
+            AuthenticationRequest authenticationRequest) {
 
-        /*
-           For a user without an existing Session proceed to login
-        */
-        if (existingSession.isEmpty()) {
-            return createSessionAndRedirect(authRequest, clientId);
+        if (authenticationRequest.getPrompt() != null) {
+            if (authenticationRequest.getPrompt().contains(Prompt.Type.CONSENT)
+                    || authenticationRequest.getPrompt().contains(Prompt.Type.SELECT_ACCOUNT)) {
+                return errorResponse(
+                        authenticationRequest, OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS);
+            }
+            if (authenticationRequest.getPrompt().contains(Prompt.Type.NONE)
+                    && !isUserAuthenticated(existingSession)) {
+                return errorResponse(authenticationRequest, OIDCError.LOGIN_REQUIRED);
+            }
+            if (authenticationRequest.getPrompt().contains(Prompt.Type.LOGIN)
+                    && isUserAuthenticated(existingSession)) {
+                existingSession.ifPresent(
+                        session -> session.setState(SessionState.AUTHENTICATION_REQUIRED));
+            }
         }
 
-        /*
-           For a user with an existing Session = SSO scenario
-        */
-        Session session = existingSession.get();
+        return existingSession
+                .map(
+                        session -> {
+                            return updateSessionAndRedirect(
+                                    authRequestParameters,
+                                    authenticationRequest,
+                                    session,
+                                    configurationService.getLoginURI());
+                        })
+                .orElseGet(
+                        () -> {
+                            return createSessionAndRedirect(
+                                    authRequestParameters,
+                                    authenticationRequest.getClientID(),
+                                    configurationService.getLoginURI());
+                        });
+    }
+
+    private APIGatewayProxyResponseEvent updateSessionAndRedirect(
+            Map<String, List<String>> authRequestParameters,
+            AuthenticationRequest authenticationRequest,
+            Session session,
+            URI redirectURI) {
         String clientSessionID =
                 clientSessionService.generateClientSession(
-                        new ClientSession(authRequest, LocalDateTime.now()));
-        updateSessionId(session, clientId, clientSessionID);
-        return redirect(session, clientSessionID);
+                        new ClientSession(authRequestParameters, LocalDateTime.now()));
+        updateSessionId(session, authenticationRequest.getClientID(), clientSessionID);
+        return redirect(session, clientSessionID, redirectURI);
+    }
+
+    private boolean isUserAuthenticated(Optional<Session> existingSession) {
+        return existingSession
+                .map(
+                        session -> {
+                            return session.getState().equals(SessionState.AUTHENTICATED);
+                        })
+                .orElse(Boolean.FALSE);
     }
 
     private void updateSessionId(Session session, ClientID clientId, String clientSessionID) {
@@ -138,7 +175,7 @@ public class AuthorisationHandler
     }
 
     private APIGatewayProxyResponseEvent createSessionAndRedirect(
-            Map<String, List<String>> authRequest, ClientID clientId) {
+            Map<String, List<String>> authRequest, ClientID clientId, URI redirectURI) {
         Session session = sessionService.createSession();
 
         String clientSessionID =
@@ -152,10 +189,11 @@ public class AuthorisationHandler
                 clientSessionID);
         sessionService.save(session);
         LOGGER.info("Session saved successfully {}", session.getSessionId());
-        return redirect(session, clientSessionID);
+        return redirect(session, clientSessionID, redirectURI);
     }
 
-    private APIGatewayProxyResponseEvent redirect(Session session, String clientSessionID) {
+    private APIGatewayProxyResponseEvent redirect(
+            Session session, String clientSessionID, URI redirectURI) {
         return new APIGatewayProxyResponseEvent()
                 .withStatusCode(302)
                 .withHeaders(
@@ -173,6 +211,10 @@ public class AuthorisationHandler
 
     private APIGatewayProxyResponseEvent errorResponse(
             AuthorizationRequest authRequest, ErrorObject errorObject) {
+        LOGGER.error(
+                "Returning error response: {} {}",
+                errorObject.getCode(),
+                errorObject.getDescription());
         AuthenticationErrorResponse error =
                 new AuthenticationErrorResponse(
                         authRequest.getRedirectionURI(),
@@ -182,7 +224,13 @@ public class AuthorisationHandler
 
         return new APIGatewayProxyResponseEvent()
                 .withStatusCode(302)
-                .withHeaders(Map.of("Location", error.toURI().toString()));
+                .withHeaders(Map.of(ResponseHeaders.LOCATION, error.toURI().toString()));
+    }
+
+    private Map<String, List<String>> getQueryStringParametersAsMap(
+            APIGatewayProxyRequestEvent input) {
+        return input.getQueryStringParameters().entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, entry -> List.of(entry.getValue())));
     }
 
     private String buildCookieString(
