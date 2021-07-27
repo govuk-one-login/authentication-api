@@ -13,6 +13,18 @@ import static uk.gov.di.helpers.CookieHelper.SessionCookieIds;
 public class CookieHelperTest {
 
     @Test
+    void shouldReturnIdsFromValidCookieStringWithMultipleCookeies() {
+        String cookieString = "Version=1; gs=session-id.456;name=ts";
+        Map<String, String> headers =
+                Map.ofEntries(Map.entry(REQUEST_COOKIE_HEADER, cookieString.toString()));
+
+        Optional<SessionCookieIds> ids = CookieHelper.parseSessionCookie(headers);
+
+        assertEquals("session-id", ids.get().getSessionId());
+        assertEquals("456", ids.get().getClientSessionId());
+    }
+
+    @Test
     void shouldReturnIdsFromValidCookie() {
         HttpCookie cookie = new HttpCookie("gs", "session-id.456");
         Map<String, String> headers =
