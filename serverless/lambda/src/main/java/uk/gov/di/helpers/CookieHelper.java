@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.HttpCookie;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
 
@@ -20,14 +21,23 @@ public class CookieHelper {
             return Optional.empty();
         }
         String cookies = headers.get(REQUEST_COOKIE_HEADER);
+
         LOGGER.debug("Session Cookie: {}", cookies);
+
+        String[] cookiesList = cookies.split(";");
+        String cookie =
+                Arrays.stream(cookiesList)
+                        .filter(t -> t.trim().startsWith("gs="))
+                        .findFirst()
+                        .orElse(null);
+
+        if (cookie == null) {
+            return Optional.empty();
+        }
+
         HttpCookie httpCookie;
         try {
-            httpCookie =
-                    HttpCookie.parse(cookies).stream()
-                            .filter(t -> t.getName().equals("gs"))
-                            .findFirst()
-                            .orElse(null);
+            httpCookie = HttpCookie.parse(cookie).stream().findFirst().orElse(null);
         } catch (IllegalArgumentException e) {
             return Optional.empty();
         }
