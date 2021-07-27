@@ -2,7 +2,9 @@ package uk.gov.di.services;
 
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
+import io.lettuce.core.TransactionResult;
 import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.api.sync.RedisCommands;
 
 import java.util.Optional;
 
@@ -47,6 +49,17 @@ public class RedisConnectionService implements AutoCloseable {
     public long deleteValue(String key) {
         try (StatefulRedisConnection<String, String> connection = client.connect()) {
             return connection.sync().del(key);
+        }
+    }
+
+    public String popValue(String key) {
+        try (StatefulRedisConnection<String, String> connection = client.connect()) {
+            RedisCommands<String, String> commands = connection.sync();
+            commands.multi();
+            commands.get(key);
+            commands.del(key);
+            TransactionResult result = commands.exec();
+            return result.get(0);
         }
     }
 
