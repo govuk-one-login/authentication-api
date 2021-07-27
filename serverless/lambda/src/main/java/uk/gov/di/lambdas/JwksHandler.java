@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.jwk.JWKSet;
 import uk.gov.di.services.ConfigurationService;
+import uk.gov.di.services.RedisConnectionService;
 import uk.gov.di.services.TokenService;
 
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -23,7 +24,9 @@ public class JwksHandler
 
     public JwksHandler() {
         this.configurationService = new ConfigurationService();
-        this.tokenService = new TokenService(configurationService);
+        this.tokenService =
+                new TokenService(
+                        configurationService, new RedisConnectionService(configurationService));
     }
 
     @Override

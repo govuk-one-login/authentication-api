@@ -50,6 +50,7 @@ import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 public class TokenHandlerTest {
 
     private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
+    private static final Subject TEST_SUBJECT = new Subject();
     private static final String CLIENT_ID = "test-id";
     private static final String ENDPOINT_URI = "http://localhost/token";
     private final Context context = mock(Context.class);
@@ -90,8 +91,8 @@ public class TokenHandlerTest {
                         any(PrivateKeyJWT.class),
                         eq(ENDPOINT_URI)))
                 .thenReturn(true);
-        when(tokenService.issueToken(eq(TEST_EMAIL))).thenReturn(accessToken);
-        when(authenticationService.getSubjectFromEmail(eq(TEST_EMAIL))).thenReturn(new Subject());
+        when(authenticationService.getSubjectFromEmail(eq(TEST_EMAIL))).thenReturn(TEST_SUBJECT);
+        when(tokenService.generateAndStoreAccessToken(eq(TEST_SUBJECT))).thenReturn(accessToken);
         when(tokenService.generateIDToken(eq(CLIENT_ID), any(Subject.class))).thenReturn(signedJWT);
 
         APIGatewayProxyResponseEvent result = generateApiGatewayRequest(privateKeyJWT, CLIENT_ID);

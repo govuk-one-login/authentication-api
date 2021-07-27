@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.InMemoryUserInfoService;
+import uk.gov.di.services.RedisConnectionService;
 import uk.gov.di.services.TokenService;
 import uk.gov.di.services.UserInfoService;
 
@@ -38,7 +39,9 @@ public class UserInfoHandler
 
     public UserInfoHandler() {
         configurationService = new ConfigurationService();
-        tokenService = new TokenService(configurationService);
+        tokenService =
+                new TokenService(
+                        configurationService, new RedisConnectionService(configurationService));
         userInfoService = new InMemoryUserInfoService();
     }
 

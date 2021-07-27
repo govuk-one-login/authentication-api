@@ -21,21 +21,25 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class TokenServiceTest {
 
     private ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final TokenService tokenService = new TokenService(configurationService);
+    private RedisConnectionService redisConnectionService = mock(RedisConnectionService.class);
+    private final TokenService tokenService =
+            new TokenService(configurationService, redisConnectionService);
     private static final Subject SUBJECT = new Subject("some-subject");
     private static final String BASE_URL = "http://example.com";
 
     @Test
-    public void shouldAssociateCreatedTokenWithEmailAddress() {
-        AccessToken token = tokenService.issueToken("test@digital.cabinet-office.gov.uk");
+    public void shouldGeneratedAccessTokenAndCallRedisToSave() {
+        when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
+        AccessToken token = tokenService.generateAndStoreAccessToken(SUBJECT);
 
-        assertEquals(
-                "test@digital.cabinet-office.gov.uk", tokenService.getEmailForToken(token).get());
+        verify(redisConnectionService)
+                .saveWithExpiry(token.toJSONString(), SUBJECT.toString(), 300L);
     }
 
     @Test
