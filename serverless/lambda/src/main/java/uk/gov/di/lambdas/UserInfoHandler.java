@@ -57,14 +57,16 @@ public class UserInfoHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        if (input.getHeaders() == null || !input.getHeaders().containsKey("Authorization")) {
+        if (input.getHeaders() == null
+                || !input.getHeaders().containsKey("Authorization")
+                || input.getHeaders().get("Authorization").isEmpty()) {
             LOGGER.error("AccessToken is missing from request");
             return generateApiGatewayProxyResponse(
                     401,
                     "",
                     new UserInfoErrorResponse(MISSING_TOKEN).toHTTPResponse().getHeaderMap());
         }
-        AccessToken accessToken = null;
+        AccessToken accessToken;
         try {
             accessToken = AccessToken.parse(input.getHeaders().get("Authorization"));
         } catch (Exception e) {
@@ -72,7 +74,7 @@ public class UserInfoHandler
                     format(
                             "Unable to parse AccessToken with headers: %s.\n\n Exception thrown: %s",
                             input.getHeaders(), e));
-            generateApiGatewayProxyResponse(
+            return generateApiGatewayProxyResponse(
                     401,
                     "",
                     new UserInfoErrorResponse(INVALID_TOKEN).toHTTPResponse().getHeaderMap());
@@ -95,6 +97,6 @@ public class UserInfoHandler
         UserProfile userProfile = authenticationService.getUserProfileFromSubject(subject);
         UserInfo userInfo = new UserInfo(new Subject(subject));
         userInfo.setEmailAddress(userProfile.getEmail());
-        return generateApiGatewayProxyResponse(200, userInfo.toJSONObject().toJSONString());
+        return generateApiGatewayProxyResponse(200, userInfo.toJSONString());
     }
 }
