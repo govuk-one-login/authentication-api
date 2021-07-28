@@ -16,6 +16,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
 import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -31,12 +32,17 @@ public class TokenServiceTest {
     private final TokenService tokenService =
             new TokenService(configurationService, redisConnectionService);
     private static final Subject SUBJECT = new Subject("some-subject");
+    private static final String CLIENT_ID = "some-client-id";
+    private static final List<String> SCOPES = List.of("openid", "email", "phone");
     private static final String BASE_URL = "http://example.com";
 
     @Test
     public void shouldGeneratedAccessTokenAndCallRedisToSave() {
+        Optional<String> baseUrl = Optional.of(BASE_URL);
+        when(configurationService.getBaseURL()).thenReturn(baseUrl);
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
-        AccessToken token = tokenService.generateAndStoreAccessToken(SUBJECT);
+
+        AccessToken token = tokenService.generateAndStoreAccessToken(CLIENT_ID, SUBJECT, SCOPES);
 
         verify(redisConnectionService)
                 .saveWithExpiry(token.toJSONString(), SUBJECT.toString(), 300L);

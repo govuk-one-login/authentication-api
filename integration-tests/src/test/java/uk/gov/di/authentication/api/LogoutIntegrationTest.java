@@ -17,7 +17,7 @@ import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
-import uk.gov.di.helpers.IDTokenGenerator;
+import uk.gov.di.helpers.TokenGenerator;
 
 import java.io.IOException;
 import java.net.HttpCookie;
@@ -40,7 +40,7 @@ public class LogoutIntegrationTest extends IntegrationTestEndpoints {
         RSAKey signingKey =
                 new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
         SignedJWT signedJWT =
-                IDTokenGenerator.generateIDToken(
+                TokenGenerator.generateIDToken(
                         "client-id", new Subject(), "http://localhost/issuer", signingKey);
         RedisHelper.createSession(sessionId);
         RedisHelper.addAuthRequestToSession(
