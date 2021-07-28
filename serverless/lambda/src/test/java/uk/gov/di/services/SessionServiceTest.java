@@ -41,10 +41,7 @@ class SessionServiceTest {
     public void shouldPersistSessionToRedisWithExpiry() throws JsonProcessingException {
         when(configuration.getSessionExpiry()).thenReturn(1234L);
 
-        ClientSession clientSession =
-                new ClientSession(Map.of("client_id", List.of("a-client-id")), LocalDateTime.now());
-        var session =
-                new Session("session-id").setClientSession("client-session-id", clientSession);
+        var session = new Session("session-id").addClientSession("client-session-id");
 
         sessionService.save(session);
 
@@ -128,13 +125,7 @@ class SessionServiceTest {
 
     @Test
     void shouldUpdateSessionIdInRedisAndDeleteOldKey() {
-        var session =
-                new Session("session-id")
-                        .setClientSession(
-                                "client-session-id",
-                                new ClientSession(
-                                        Map.of("client_id", List.of("a-client-id")),
-                                        LocalDateTime.now()));
+        var session = new Session("session-id").addClientSession("client-session-id");
 
         sessionService.save(session);
         sessionService.updateSessionId(session);
@@ -145,13 +136,7 @@ class SessionServiceTest {
 
     @Test
     void shouldDeleteSessionIdFromRedis() {
-        var session =
-                new Session("session-id")
-                        .setClientSession(
-                                "client-session-id",
-                                new ClientSession(
-                                        Map.of("client_id", List.of("a-client-id")),
-                                        LocalDateTime.now()));
+        var session = new Session("session-id").addClientSession("client-session-id");
 
         sessionService.save(session);
         sessionService.deleteSessionFromRedis(session.getSessionId());
@@ -162,8 +147,7 @@ class SessionServiceTest {
     private String generateSearlizedSession() throws JsonProcessingException {
         ClientSession clientSession =
                 new ClientSession(Map.of("client_id", List.of("a-client-id")), LocalDateTime.now());
-        var session =
-                new Session("session-id").setClientSession("client-session-id", clientSession);
+        var session = new Session("session-id").addClientSession("client-session-id");
 
         return objectMapper.writeValueAsString(session);
     }

@@ -15,6 +15,7 @@ import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.exceptions.ClientNotFoundException;
 import uk.gov.di.services.AuthorizationService;
+import uk.gov.di.services.ClientSessionService;
 import uk.gov.di.services.CodeStorageService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.RedisConnectionService;
@@ -35,16 +36,19 @@ public class AuthCodeHandler
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ConfigurationService configurationService;
     private final AuthorizationService authorizationService;
+    private final ClientSessionService clientSessionService;
 
     public AuthCodeHandler(
             SessionService sessionService,
             CodeStorageService codeStorageService,
             ConfigurationService configurationService,
-            AuthorizationService authorizationService) {
+            AuthorizationService authorizationService,
+            ClientSessionService clientSessionService) {
         this.sessionService = sessionService;
         this.codeStorageService = codeStorageService;
         this.configurationService = configurationService;
         this.authorizationService = authorizationService;
+        this.clientSessionService = clientSessionService;
     }
 
     public AuthCodeHandler() {
@@ -53,6 +57,7 @@ public class AuthCodeHandler
         codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
         authorizationService = new AuthorizationService(configurationService);
+        clientSessionService = new ClientSessionService(configurationService);
     }
 
     @Override
@@ -67,9 +72,8 @@ public class AuthCodeHandler
         try {
             authCodeRequest = objectMapper.readValue(input.getBody(), AuthCodeRequest.class);
             Map<String, List<String>> authRequest =
-                    session.get()
-                            .getClientSessions()
-                            .get(authCodeRequest.getClientSessionId())
+                    clientSessionService
+                            .getClientSession(authCodeRequest.getClientSessionId())
                             .getAuthRequestParams();
             authorizationRequest = AuthorizationRequest.parse(authRequest);
             if (!authorizationService.isClientRedirectUriValid(

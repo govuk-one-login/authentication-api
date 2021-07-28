@@ -9,6 +9,7 @@ import org.apache.http.client.utils.URIBuilder;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.Session;
 import uk.gov.di.helpers.CookieHelper;
+import uk.gov.di.services.ClientSessionService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoClientService;
 import uk.gov.di.services.SessionService;
@@ -17,6 +18,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.ParseException;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -27,6 +29,7 @@ public class LogoutHandler
     private final ConfigurationService configurationService;
     private final SessionService sessionService;
     private final DynamoClientService dynamoClientService;
+    private final ClientSessionService clientSessionService;
 
     public LogoutHandler() {
         this.configurationService = new ConfigurationService();
@@ -36,15 +39,18 @@ public class LogoutHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEnvironment(),
                         configurationService.getDynamoEndpointUri());
+        this.clientSessionService = new ClientSessionService(configurationService);
     }
 
     public LogoutHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
-            DynamoClientService dynamoClientService) {
+            DynamoClientService dynamoClientService,
+            ClientSessionService clientSessionService) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.dynamoClientService = dynamoClientService;
+        this.clientSessionService = clientSessionService;
     }
 
     @Override
@@ -64,7 +70,7 @@ public class LogoutHandler
         Optional<CookieHelper.SessionCookieIds> sessionCookieIds =
                 CookieHelper.parseSessionCookie(input.getHeaders());
 
-        if (!session.getClientSessions().containsKey(sessionCookieIds.get().getClientSessionId())) {
+        if (!session.getClientSessions().contains(sessionCookieIds.get().getClientSessionId())) {
             throw new RuntimeException(
                     format(
                             "Client Session ID does not exist in Session: %s",
@@ -107,9 +113,10 @@ public class LogoutHandler
     }
 
     private boolean doesIDTokenExistInSession(String idTokenHint, Session session) {
-        return session.getClientSessions().values().stream()
-                .filter(t -> t.getIdTokenHint() != null)
-                .anyMatch(t -> t.getIdTokenHint().equals(idTokenHint));
+        return session.getClientSessions().stream()
+                .map(s -> clientSessionService.getClientSession(s))
+                .filter(Objects::nonNull)
+                .anyMatch(cs -> idTokenHint.equals(cs.getIdTokenHint()));
     }
 
     private APIGatewayProxyResponseEvent validateClientIDAgainstClientRegistry(

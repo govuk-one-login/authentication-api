@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
+import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
@@ -15,6 +16,7 @@ import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.Session;
 import uk.gov.di.helpers.TokenGenerator;
+import uk.gov.di.services.ClientSessionService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoClientService;
 import uk.gov.di.services.SessionService;
@@ -44,6 +46,8 @@ class LogoutHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
+    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
+
     private static final State STATE = new State();
     private static final String COOKIE = "Cookie";
     private static final String SESSION_ID = "a-session-id";
@@ -57,7 +61,12 @@ class LogoutHandlerTest {
 
     @BeforeEach
     public void setUp() throws JOSEException {
-        handler = new LogoutHandler(configurationService, sessionService, dynamoClientService);
+        handler =
+                new LogoutHandler(
+                        configurationService,
+                        sessionService,
+                        dynamoClientService,
+                        clientSessionService);
         when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
         RSAKey signingKey =
                 new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
@@ -77,10 +86,9 @@ class LogoutHandlerTest {
                         "id_token_hint", signedIDToken.serialize(),
                         "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString(),
                         "state", STATE.toString()));
-        session.getClientSessions()
-                .get(CLIENT_SESSION_ID)
-                .setIdTokenHint(signedIDToken.serialize());
+        session.getClientSessions().add(CLIENT_SESSION_ID);
         generateSessionFromCookie(session);
+        setupClientSessionToken(signedIDToken);
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
         verify(sessionService, times(1)).deleteSessionFromRedis(SESSION_ID);
 
@@ -102,10 +110,9 @@ class LogoutHandlerTest {
                         signedIDToken.serialize(),
                         "post_logout_redirect_uri",
                         CLIENT_LOGOUT_URI.toString()));
-        session.getClientSessions()
-                .get(CLIENT_SESSION_ID)
-                .setIdTokenHint(signedIDToken.serialize());
+        session.getClientSessions().add(CLIENT_SESSION_ID);
         generateSessionFromCookie(session);
+        setupClientSessionToken(signedIDToken);
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
         verify(sessionService, times(1)).deleteSessionFromRedis(SESSION_ID);
@@ -194,8 +201,10 @@ class LogoutHandlerTest {
                         "id_token_hint", signedJWT.serialize(),
                         "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString(),
                         "state", STATE.toString()));
-        session.getClientSessions().get(CLIENT_SESSION_ID).setIdTokenHint(signedJWT.serialize());
+
+        session.getClientSessions().add(CLIENT_SESSION_ID);
         generateSessionFromCookie(session);
+        setupClientSessionToken(signedJWT);
 
         RuntimeException exception =
                 assertThrows(
@@ -222,9 +231,8 @@ class LogoutHandlerTest {
                         "id_token_hint", signedIDToken.serialize(),
                         "post_logout_redirect_uri", "http://localhost/invalidlogout",
                         "state", STATE.toString()));
-        session.getClientSessions()
-                .get(CLIENT_SESSION_ID)
-                .setIdTokenHint(signedIDToken.serialize());
+        session.getClientSessions().add(CLIENT_SESSION_ID);
+        setupClientSessionToken(signedIDToken);
         generateSessionFromCookie(session);
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
@@ -235,7 +243,7 @@ class LogoutHandlerTest {
         verify(sessionService, times(1)).deleteSessionFromRedis(SESSION_ID);
     }
 
-    private Session generateSession() {
+    private void setupClientSessionToken(JWT idToken) {
         ClientSession clientSession =
                 new ClientSession(
                         Map.of(
@@ -250,7 +258,12 @@ class LogoutHandlerTest {
                                 "state",
                                 List.of("some-state")),
                         LocalDateTime.now());
-        return new Session(SESSION_ID).setClientSession(CLIENT_SESSION_ID, clientSession);
+        clientSession.setIdTokenHint(idToken.serialize());
+        when(clientSessionService.getClientSession(CLIENT_SESSION_ID)).thenReturn(clientSession);
+    }
+
+    private Session generateSession() {
+        return new Session(SESSION_ID).addClientSession(CLIENT_SESSION_ID);
     }
 
     private void generateSessionFromCookie(Session session) {
