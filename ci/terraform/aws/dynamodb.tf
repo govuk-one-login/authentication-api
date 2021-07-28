@@ -51,8 +51,7 @@ resource "aws_dynamodb_table" "user_profile_table" {
     hash_key           = "SubjectID"
     write_capacity     = 5
     read_capacity      = 5
-    projection_type    = "INCLUDE"
-    non_key_attributes = ["Email"]
+    projection_type    = "ALL"
   }
 
   server_side_encryption {

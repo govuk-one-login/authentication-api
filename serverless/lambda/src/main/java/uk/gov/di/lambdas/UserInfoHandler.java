@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.openid.connect.sdk.UserInfoErrorResponse;
@@ -17,6 +18,8 @@ import uk.gov.di.services.DynamoService;
 import uk.gov.di.services.RedisConnectionService;
 import uk.gov.di.services.TokenService;
 
+import java.text.ParseException;
+import java.util.List;
 import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.INVALID_TOKEN;
@@ -83,7 +86,7 @@ public class UserInfoHandler
                 tokenService.getSubjectWithAccessToken(accessToken);
 
         return subjectFromAccessToken
-                .map(this::retrieveUserInfoWithSubject)
+                .map(t -> validateScopesAndRetrieveUserInfo(t, accessToken))
                 .orElse(
                         generateApiGatewayProxyResponse(
                                 401,
@@ -93,10 +96,28 @@ public class UserInfoHandler
                                         .getHeaderMap()));
     }
 
-    private APIGatewayProxyResponseEvent retrieveUserInfoWithSubject(String subject) {
+    private APIGatewayProxyResponseEvent validateScopesAndRetrieveUserInfo(
+            String subject, AccessToken accessToken) {
         UserProfile userProfile = authenticationService.getUserProfileFromSubject(subject);
+        List<String> scopes;
+        try {
+            SignedJWT signedAccessToken = SignedJWT.parse(accessToken.getValue());
+            scopes = (List<String>) signedAccessToken.getJWTClaimsSet().getClaim("scope");
+        } catch (ParseException e) {
+            return generateApiGatewayProxyResponse(
+                    401,
+                    "",
+                    new UserInfoErrorResponse(INVALID_TOKEN).toHTTPResponse().getHeaderMap());
+        }
         UserInfo userInfo = new UserInfo(new Subject(subject));
-        userInfo.setEmailAddress(userProfile.getEmail());
+        if (scopes.contains("email")) {
+            userInfo.setEmailAddress(userProfile.getEmail());
+            userInfo.setEmailVerified(userProfile.isEmailVerified());
+        }
+        if (scopes.contains("phone")) {
+            userInfo.setPhoneNumber(userProfile.getPhoneNumber());
+            userInfo.setPhoneNumberVerified(userProfile.isPhoneNumberVerified());
+        }
         return generateApiGatewayProxyResponse(200, userInfo.toJSONString());
     }
 }
