@@ -17,7 +17,7 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
-import uk.gov.di.helpers.IDTokenGenerator;
+import uk.gov.di.helpers.TokenGenerator;
 
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
@@ -52,12 +52,17 @@ public class TokenService {
     }
 
     public SignedJWT generateIDToken(String clientId, Subject subject) {
-        return IDTokenGenerator.generateIDToken(
+        return TokenGenerator.generateIDToken(
                 clientId, subject, configService.getBaseURL().get(), signingKey);
     }
 
-    public AccessToken generateAndStoreAccessToken(Subject subject) {
-        AccessToken accessToken = new BearerAccessToken();
+    public AccessToken generateAndStoreAccessToken(
+            String clientId, Subject subject, List<String> scopes) {
+        SignedJWT signedJWT =
+                TokenGenerator.generateAccessToken(
+                        clientId, configService.getBaseURL().get(), scopes, signingKey);
+        AccessToken accessToken = new BearerAccessToken(signedJWT.serialize());
+
         redisConnectionService.saveWithExpiry(
                 accessToken.toJSONString(),
                 subject.toString(),

@@ -95,7 +95,9 @@ public class TokenHandler
             return generateApiGatewayProxyResponse(403, "");
         }
         Subject subject = authenticationService.getSubjectFromEmail(email);
-        AccessToken accessToken = tokenService.generateAndStoreAccessToken(subject);
+        AccessToken accessToken =
+                tokenService.generateAndStoreAccessToken(
+                        clientID, subject, client.get().getScopes()); //TODO the scopes need to come from the auth request params
         SignedJWT idToken = tokenService.generateIDToken(clientID, subject);
         OIDCTokens oidcTokens = new OIDCTokens(idToken, accessToken, null);
         OIDCTokenResponse tokenResponse = new OIDCTokenResponse(oidcTokens);

@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.Session;
-import uk.gov.di.helpers.IDTokenGenerator;
+import uk.gov.di.helpers.TokenGenerator;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoClientService;
 import uk.gov.di.services.SessionService;
@@ -62,7 +62,7 @@ class LogoutHandlerTest {
         RSAKey signingKey =
                 new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
         signedIDToken =
-                IDTokenGenerator.generateIDToken(
+                TokenGenerator.generateIDToken(
                         "client-id", new Subject(), "http://localhost-rp", signingKey);
     }
 
@@ -185,7 +185,7 @@ class LogoutHandlerTest {
         RSAKey signingKey =
                 new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
         SignedJWT signedJWT =
-                IDTokenGenerator.generateIDToken(
+                TokenGenerator.generateIDToken(
                         "invalid-client-id", new Subject(), "http://localhost-rp", signingKey);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
