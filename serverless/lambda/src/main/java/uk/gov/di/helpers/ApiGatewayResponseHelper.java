@@ -7,6 +7,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.entity.ErrorResponse;
 
+import java.util.List;
+import java.util.Map;
+
 public class ApiGatewayResponseHelper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiGatewayResponseHelper.class);
@@ -30,10 +33,18 @@ public class ApiGatewayResponseHelper {
 
     public static APIGatewayProxyResponseEvent generateApiGatewayProxyResponse(
             int statusCode, String body) {
+        return generateApiGatewayProxyResponse(statusCode, body, null);
+    }
+
+    public static APIGatewayProxyResponseEvent generateApiGatewayProxyResponse(
+            int statusCode, String body, Map<String, List<String>> multiValueHeaders) {
         APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent =
                 new APIGatewayProxyResponseEvent();
         apiGatewayProxyResponseEvent.setStatusCode(statusCode);
         apiGatewayProxyResponseEvent.setBody(body);
+        if (multiValueHeaders != null) {
+            apiGatewayProxyResponseEvent.setMultiValueHeaders(multiValueHeaders);
+        }
         return apiGatewayProxyResponseEvent;
     }
 }

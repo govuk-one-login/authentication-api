@@ -127,4 +127,10 @@ public class RedisHelper {
             new CodeStorageService(redis).saveCodeBlockedForSession(email, sessionId, 10);
         }
     }
+
+    public static void addAccessTokenToRedis(String accessToken, String subject, Long expiry) {
+        RedisConnectionService redis =
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD);
+        redis.saveWithExpiry(accessToken, subject, expiry);
+    }
 }

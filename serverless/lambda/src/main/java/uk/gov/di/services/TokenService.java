@@ -65,8 +65,8 @@ public class TokenService {
         return accessToken;
     }
 
-    public Optional<String> getEmailForToken(AccessToken token) {
-        return Optional.ofNullable(tokensMap.get(token));
+    public Optional<String> getSubjectWithAccessToken(AccessToken token) {
+        return Optional.ofNullable(redisConnectionService.getValue(token.toJSONString()));
     }
 
     public JWK getSigningKey() {

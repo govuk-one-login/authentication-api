@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.helpers;
 
+import com.nimbusds.oauth2.sdk.id.Subject;
 import uk.gov.di.services.DynamoClientService;
 import uk.gov.di.services.DynamoService;
 
@@ -23,7 +24,11 @@ public class DynamoHelper {
     }
 
     public static void signUp(String email, String password) {
-        DYNAMO_SERVICE.signUp(email, password);
+        signUp(email, password, new Subject());
+    }
+
+    public static void signUp(String email, String password, Subject subject) {
+        DYNAMO_SERVICE.signUp(email, password, subject);
     }
 
     public static void addPhoneNumber(String email, String phoneNumber) {

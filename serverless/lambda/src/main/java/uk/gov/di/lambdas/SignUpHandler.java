@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
@@ -69,7 +70,8 @@ public class SignUpHandler
                 if (authenticationService.userExists(signupRequest.getEmail())) {
                     return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
                 }
-                authenticationService.signUp(signupRequest.getEmail(), signupRequest.getPassword());
+                authenticationService.signUp(
+                        signupRequest.getEmail(), signupRequest.getPassword(), new Subject());
 
                 sessionService.save(
                         session.get()
