@@ -91,3 +91,11 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
     aws_api_gateway_deployment.deployment,
   ]
 }
+
+resource "aws_api_gateway_base_path_mapping" "api" {
+  count = var.use_localstack ? 0 : 1
+
+  api_id      = aws_api_gateway_rest_api.di_authentication_api.id
+  stage_name  = aws_api_gateway_stage.endpoint_stage.stage_name
+  domain_name = "api.${var.environment}.${var.service_domain_name}"
+}
