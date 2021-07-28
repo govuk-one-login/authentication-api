@@ -55,6 +55,10 @@ public class ConfigurationService {
         return Long.parseLong(System.getenv().getOrDefault("AUTH_CODE_EXPIRY", "300"));
     }
 
+    public long getAccessTokenExpiry() {
+        return Long.parseLong(System.getenv().getOrDefault("ACCESS_TOKEN_EXPIRY", "300"));
+    }
+
     public String getNotificationTemplateId(NotificationType notificationType) {
         switch (notificationType) {
             case VERIFY_EMAIL:

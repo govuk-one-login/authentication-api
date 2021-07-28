@@ -18,6 +18,7 @@ import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoClientService;
 import uk.gov.di.services.DynamoService;
+import uk.gov.di.services.RedisConnectionService;
 import uk.gov.di.services.TokenService;
 
 import java.util.Map;
@@ -53,7 +54,9 @@ public class TokenHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEnvironment(),
                         configurationService.getDynamoEndpointUri());
-        tokenService = new TokenService(configurationService);
+        tokenService =
+                new TokenService(
+                        configurationService, new RedisConnectionService(configurationService));
         this.authenticationService =
                 new DynamoService(
                         configurationService.getAwsRegion(),
@@ -91,8 +94,8 @@ public class TokenHandler
         if (email.isEmpty()) {
             return generateApiGatewayProxyResponse(403, "");
         }
-        AccessToken accessToken = tokenService.issueToken(email);
         Subject subject = authenticationService.getSubjectFromEmail(email);
+        AccessToken accessToken = tokenService.generateAndStoreAccessToken(subject);
         SignedJWT idToken = tokenService.generateIDToken(clientID, subject);
         OIDCTokens oidcTokens = new OIDCTokens(idToken, accessToken, null);
         OIDCTokenResponse tokenResponse = new OIDCTokenResponse(oidcTokens);

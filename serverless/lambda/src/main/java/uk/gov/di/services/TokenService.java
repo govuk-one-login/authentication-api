@@ -38,9 +38,12 @@ public class TokenService {
 
     private final Map<AccessToken, String> tokensMap = new HashMap<>();
     private final ConfigurationService configService;
+    private final RedisConnectionService redisConnectionService;
 
-    public TokenService(ConfigurationService configService) {
+    public TokenService(
+            ConfigurationService configService, RedisConnectionService redisConnectionService) {
         this.configService = configService;
+        this.redisConnectionService = redisConnectionService;
         try {
             signingKey = new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
         } catch (JOSEException e) {
@@ -53,15 +56,17 @@ public class TokenService {
                 clientId, subject, configService.getBaseURL().get(), signingKey);
     }
 
-    public AccessToken issueToken(String email) {
+    public AccessToken generateAndStoreAccessToken(Subject subject) {
         AccessToken accessToken = new BearerAccessToken();
-        tokensMap.put(accessToken, email);
-
+        redisConnectionService.saveWithExpiry(
+                accessToken.toJSONString(),
+                subject.toString(),
+                configService.getAccessTokenExpiry());
         return accessToken;
     }
 
-    public Optional<String> getEmailForToken(AccessToken token) {
-        return Optional.ofNullable(tokensMap.get(token));
+    public Optional<String> getSubjectWithAccessToken(AccessToken token) {
+        return Optional.ofNullable(redisConnectionService.getValue(token.toJSONString()));
     }
 
     public JWK getSigningKey() {
