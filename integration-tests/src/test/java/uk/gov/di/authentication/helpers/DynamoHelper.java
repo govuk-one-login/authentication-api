@@ -35,6 +35,10 @@ public class DynamoHelper {
         DYNAMO_SERVICE.updatePhoneNumber(email, phoneNumber);
     }
 
+    public static void setPhoneNumberVerified(String email, boolean isVerified) {
+        DYNAMO_SERVICE.updatePhoneNumberVerifiedStatus(email, isVerified);
+    }
+
     public static void registerClient(
             String clientID,
             String clientName,
