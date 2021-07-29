@@ -2,7 +2,7 @@ module "auth-code" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "auth-code"
-  endpoint_method = "POST"
+  endpoint_method = "GET"
 
   handler_environment_variables = {
     BASE_URL       = local.api_base_url

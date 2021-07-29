@@ -25,6 +25,7 @@ import uk.gov.di.services.SessionService;
 
 import java.net.URI;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -32,11 +33,9 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -45,6 +44,7 @@ class AuthCodeHandlerTest {
 
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "client-session-id";
+    private static final String COOKIE = "Cookie";
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private final AuthorizationService authorizationService = mock(AuthorizationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -69,13 +69,12 @@ class AuthCodeHandlerTest {
     @Test
     public void shouldGenerateSuccessfulAuthResponse() throws ClientNotFoundException {
         ClientID clientID = new ClientID();
-        AuthorizationRequest authRequest =
-                generateValidSessionAndAuthRequest(clientID, REDIRECT_URI);
-
+        AuthorizationCode authorizationCode = new AuthorizationCode();
+        AuthorizationRequest authRequest = generateValidSessionAndAuthRequest(clientID);
         AuthenticationSuccessResponse authSuccessResponse =
                 new AuthenticationSuccessResponse(
                         authRequest.getRedirectionURI(),
-                        new AuthorizationCode(),
+                        authorizationCode,
                         null,
                         null,
                         authRequest.getState(),
@@ -84,16 +83,16 @@ class AuthCodeHandlerTest {
 
         when(authorizationService.isClientRedirectUriValid(eq(clientID), eq(REDIRECT_URI)))
                 .thenReturn(true);
-        when(configurationService.getAuthCodeExpiry()).thenReturn(300L);
+        when(authorisationCodeService.generateAuthorisationCode(eq(CLIENT_SESSION_ID)))
+                .thenReturn(authorizationCode);
         when(authorizationService.generateSuccessfulAuthResponse(
                         any(AuthorizationRequest.class), any(AuthorizationCode.class)))
                 .thenReturn(authSuccessResponse);
+
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", SESSION_ID));
-        event.setBody(format("{ \"client_session_id\": \"%s\"}", CLIENT_SESSION_ID));
+        event.setHeaders(Map.of(COOKIE, buildCookieString()));
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
-        verify(authorisationCodeService).generateAuthorisationCode(eq(CLIENT_SESSION_ID));
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get("Location"),
@@ -103,7 +102,7 @@ class AuthCodeHandlerTest {
     @Test
     public void shouldGenerateErrorResponseWhenSessionIsNotFound() throws JsonProcessingException {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody(format("{ \"client_session_id\": \"%s\"}", CLIENT_SESSION_ID));
+        event.setHeaders(Map.of(COOKIE, buildCookieString()));
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
         assertThat(response, hasStatus(400));
@@ -115,12 +114,11 @@ class AuthCodeHandlerTest {
     public void shouldGenerateErrorResponseWhenRedirectUriIsInvalid()
             throws ClientNotFoundException, JsonProcessingException {
         ClientID clientID = new ClientID();
-        generateValidSessionAndAuthRequest(clientID, REDIRECT_URI);
+        generateValidSessionAndAuthRequest(clientID);
         when(authorizationService.isClientRedirectUriValid(eq(new ClientID()), eq(REDIRECT_URI)))
                 .thenReturn(false);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", SESSION_ID));
-        event.setBody(format("{ \"client_session_id\": \"%s\"}", CLIENT_SESSION_ID));
+        event.setHeaders(Map.of(COOKIE, buildCookieString()));
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
         assertThat(response, hasStatus(400));
@@ -132,14 +130,13 @@ class AuthCodeHandlerTest {
     public void shouldGenerateErrorResponseWhenClientIsNotFound()
             throws ClientNotFoundException, JsonProcessingException {
         ClientID clientID = new ClientID();
-        generateValidSessionAndAuthRequest(clientID, REDIRECT_URI);
+        generateValidSessionAndAuthRequest(clientID);
         doThrow(ClientNotFoundException.class)
                 .when(authorizationService)
                 .isClientRedirectUriValid(eq(clientID), eq(REDIRECT_URI));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", SESSION_ID));
-        event.setBody(format("{ \"client_session_id\": \"%s\"}", CLIENT_SESSION_ID));
+        event.setHeaders(Map.of(COOKIE, buildCookieString()));
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
         assertThat(response, hasStatus(400));
@@ -148,13 +145,11 @@ class AuthCodeHandlerTest {
     }
 
     @Test
-    public void shouldGenerateErrorResponseIfRequestParametersAreMissing()
+    public void shouldGenerateErrorResponseIfUnableToParseAuthRequest()
             throws JsonProcessingException {
-        ClientID clientID = new ClientID();
-        generateValidSessionAndAuthRequest(clientID, REDIRECT_URI);
+        generateValidSession(Map.of("rubbish", List.of("more-rubbish")));
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", SESSION_ID));
-        event.setBody("{ }");
+        event.setHeaders(Map.of(COOKIE, buildCookieString()));
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
         assertThat(response, hasStatus(400));
@@ -162,22 +157,29 @@ class AuthCodeHandlerTest {
         assertThat(response, hasBody(expectedResponse));
     }
 
-    private AuthorizationRequest generateValidSessionAndAuthRequest(
-            ClientID clientID, URI redirectURI) {
+    private AuthorizationRequest generateValidSessionAndAuthRequest(ClientID clientID) {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         State state = new State();
         AuthorizationRequest authorizationRequest =
                 new AuthorizationRequest.Builder(responseType, clientID)
-                        .redirectionURI(redirectURI)
+                        .redirectionURI(REDIRECT_URI)
                         .state(state)
                         .build();
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
+        generateValidSession(authorizationRequest.toParameters());
+        return authorizationRequest;
+    }
+
+    private void generateValidSession(Map<String, List<String>> authRequest) {
+        when(sessionService.readSessionFromRedis(SESSION_ID))
                 .thenReturn(
                         Optional.of(new Session(SESSION_ID).addClientSession(CLIENT_SESSION_ID)));
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(
-                        new ClientSession(
-                                authorizationRequest.toParameters(), LocalDateTime.now()));
-        return authorizationRequest;
+                .thenReturn(new ClientSession(authRequest, LocalDateTime.now()));
+    }
+
+    private String buildCookieString() {
+        return format(
+                "%s=%s.%s; Max-Age=%d; %s",
+                "gs", SESSION_ID, CLIENT_SESSION_ID, 1800, "Secure; HttpOnly;");
     }
 }
