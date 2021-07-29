@@ -64,7 +64,7 @@ if [[ ${RUN_INTEGRATION} -eq 1 ]]; then
   export AWS_ACCESS_KEY_ID="mock-access-key"
   export AWS_SECRET_ACCESS_KEY="mock-secret-key"
   export STUB_RELYING_PARTY_REDIRECT_URI="https://di-auth-stub-relying-party-build.london.cloudapps.digital/"
-  export LOGIN_URI="https://di-authentication-frontend.london.cloudapps.digital/"
+  export LOGIN_URI="http://localhost:3000/"
 
   startup
 
@@ -78,6 +78,7 @@ fi
 
 if [ ${build_and_test_exit_code} -ne 0 ]; then
   printf "\npre-commit failed.\n"
+  exit ${build_and_test_exit_code}
 else
   if [[ ${IN_GITHUB_ACTIONS} -eq 0 ]]; then
     funky_success

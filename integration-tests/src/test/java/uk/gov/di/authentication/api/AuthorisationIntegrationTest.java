@@ -5,6 +5,7 @@ import jakarta.ws.rs.client.ClientBuilder;
 import jakarta.ws.rs.client.Invocation;
 import jakarta.ws.rs.core.Cookie;
 import jakarta.ws.rs.core.Response;
+import org.glassfish.jersey.client.ClientProperties;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
@@ -128,6 +129,7 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
 
         Invocation.Builder builder =
                 client.target(ROOT_RESOURCE_URL + AUTHORIZE_ENDPOINT)
+                        .property(ClientProperties.FOLLOW_REDIRECTS, false)
                         .queryParam("response_type", "code")
                         .queryParam("redirect_uri", "localhost")
                         .queryParam("state", "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU")
