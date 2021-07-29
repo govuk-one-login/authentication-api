@@ -1,10 +1,17 @@
 package uk.gov.di.authentication.helpers;
 
+import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.ScanRequest;
+import com.amazonaws.services.dynamodbv2.model.ScanResult;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import uk.gov.di.services.DynamoClientService;
 import uk.gov.di.services.DynamoService;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public class DynamoHelper {
@@ -59,5 +66,26 @@ public class DynamoHelper {
 
     public static boolean clientExists(String clientID) {
         return DYNAMO_CLIENT_SERVICE.isValidClient(clientID);
+    }
+
+    public static void flushData() {
+        AmazonDynamoDB dynamoDB =
+                AmazonDynamoDBClientBuilder.standard()
+                        .withEndpointConfiguration(
+                                new AwsClientBuilder.EndpointConfiguration(DYNAMO_ENDPOINT, REGION))
+                        .build();
+
+        clearDynamoTable(dynamoDB, "local-user-credentials", "Email");
+        clearDynamoTable(dynamoDB, "local-user-profile", "Email");
+        clearDynamoTable(dynamoDB, "local-client-registry", "ClientID");
+    }
+
+    private static void clearDynamoTable(AmazonDynamoDB dynamoDB, String tableName, String key) {
+        ScanRequest scanRequest = new ScanRequest().withTableName(tableName);
+        ScanResult result = dynamoDB.scan(scanRequest);
+
+        for (Map<String, AttributeValue> item : result.getItems()) {
+            dynamoDB.deleteItem(tableName, Map.of(key, item.get(key)));
+        }
     }
 }

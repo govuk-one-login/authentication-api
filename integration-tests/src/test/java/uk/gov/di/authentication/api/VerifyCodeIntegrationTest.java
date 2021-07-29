@@ -3,6 +3,7 @@ package uk.gov.di.authentication.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.helpers.RequestHelper;
 import uk.gov.di.entity.BaseAPIResponse;
@@ -86,6 +87,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         String code = RedisHelper.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest =
                 new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
+        DynamoHelper.signUp(EMAIL_ADDRESS, "password");
 
         Response response =
                 RequestHelper.requestWithSession(VERIFY_CODE_ENDPOINT, codeRequest, sessionId);
