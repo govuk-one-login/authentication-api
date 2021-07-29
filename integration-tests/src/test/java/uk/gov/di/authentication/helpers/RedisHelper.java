@@ -19,6 +19,7 @@ import java.util.Optional;
 
 import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.entity.NotificationType.VERIFY_PHONE_NUMBER;
+import static uk.gov.di.services.ClientSessionService.CLIENT_SESSION_PREFIX;
 
 public class RedisHelper {
 
@@ -48,24 +49,33 @@ public class RedisHelper {
         try (RedisConnectionService redis =
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
             Session session = OBJECT_MAPPER.readValue(redis.getValue(sessionId), Session.class);
-            session.setClientSession(
-                    clientSessionId, new ClientSession(authRequest, LocalDateTime.now()));
+            session.addClientSession(clientSessionId);
             redis.saveWithExpiry(
                     session.getSessionId(), OBJECT_MAPPER.writeValueAsString(session), 1800);
+            redis.saveWithExpiry(
+                    CLIENT_SESSION_PREFIX.concat(clientSessionId),
+                    OBJECT_MAPPER.writeValueAsString(
+                            new ClientSession(authRequest, LocalDateTime.now())),
+                    1800);
 
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static void addIDTokenToSession(
-            String sessionId, String clientSessionId, String idTokenHint) {
+    public static void addIDTokenToSession(String clientSessionId, String idTokenHint) {
         try (RedisConnectionService redis =
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
-            Session session = OBJECT_MAPPER.readValue(redis.getValue(sessionId), Session.class);
-            session.getClientSessions().get(clientSessionId).setIdTokenHint(idTokenHint);
+
+            ClientSession clientSession =
+                    OBJECT_MAPPER.readValue(
+                            redis.getValue(CLIENT_SESSION_PREFIX.concat(clientSessionId)),
+                            ClientSession.class);
+            clientSession.setIdTokenHint(idTokenHint);
             redis.saveWithExpiry(
-                    session.getSessionId(), OBJECT_MAPPER.writeValueAsString(session), 1800);
+                    CLIENT_SESSION_PREFIX.concat(clientSessionId),
+                    OBJECT_MAPPER.writeValueAsString(clientSession),
+                    1800);
 
         } catch (IOException e) {
             throw new RuntimeException(e);

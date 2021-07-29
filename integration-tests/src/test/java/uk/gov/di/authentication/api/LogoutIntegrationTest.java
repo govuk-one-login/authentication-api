@@ -45,7 +45,7 @@ public class LogoutIntegrationTest extends IntegrationTestEndpoints {
         RedisHelper.createSession(sessionId);
         RedisHelper.addAuthRequestToSession(
                 clientSessionId, sessionId, generateAuthRequest().toParameters());
-        RedisHelper.addIDTokenToSession(sessionId, clientSessionId, signedJWT.serialize());
+        RedisHelper.addIDTokenToSession(clientSessionId, signedJWT.serialize());
         DynamoHelper.registerClient(
                 "client-id",
                 "client-name",

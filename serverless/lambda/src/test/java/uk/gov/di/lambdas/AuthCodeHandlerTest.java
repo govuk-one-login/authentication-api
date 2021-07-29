@@ -18,6 +18,7 @@ import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.exceptions.ClientNotFoundException;
 import uk.gov.di.services.AuthorizationService;
+import uk.gov.di.services.ClientSessionService;
 import uk.gov.di.services.CodeStorageService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.SessionService;
@@ -51,6 +52,7 @@ class AuthCodeHandlerTest {
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final Context context = mock(Context.class);
+    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private AuthCodeHandler handler;
 
     @BeforeEach
@@ -60,7 +62,8 @@ class AuthCodeHandlerTest {
                         sessionService,
                         codeStorageService,
                         configurationService,
-                        authorizationService);
+                        authorizationService,
+                        clientSessionService);
     }
 
     @Test
@@ -171,13 +174,11 @@ class AuthCodeHandlerTest {
                         .build();
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(
-                        Optional.of(
-                                new Session(SESSION_ID)
-                                        .setClientSession(
-                                                CLIENT_SESSION_ID,
-                                                new ClientSession(
-                                                        authorizationRequest.toParameters(),
-                                                        LocalDateTime.now()))));
+                        Optional.of(new Session(SESSION_ID).addClientSession(CLIENT_SESSION_ID)));
+        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
+                .thenReturn(
+                        new ClientSession(
+                                authorizationRequest.toParameters(), LocalDateTime.now()));
         return authorizationRequest;
     }
 }

@@ -7,9 +7,11 @@ import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.Session;
 import uk.gov.di.helpers.RequestBodyHelper;
 import uk.gov.di.services.ClientService;
+import uk.gov.di.services.ClientSessionService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.SessionService;
 
@@ -34,12 +36,15 @@ class AuthorisationHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
 
     private AuthorisationHandler handler;
 
     @BeforeEach
     public void setUp() {
-        handler = new AuthorisationHandler(clientService, configService, sessionService);
+        handler =
+                new AuthorisationHandler(
+                        clientService, configService, sessionService, clientSessionService);
     }
 
     @Test
@@ -53,7 +58,8 @@ class AuthorisationHandlerTest {
         when(sessionService.createSession()).thenReturn(session);
         when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
         when(configService.getSessionCookieMaxAge()).thenReturn(1800);
-        when(sessionService.generateClientSessionID()).thenReturn("client-session-id");
+        when(clientSessionService.generateClientSession(any(ClientSession.class)))
+                .thenReturn("client-session-id");
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(

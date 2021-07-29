@@ -3,8 +3,8 @@ package uk.gov.di.entity;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 import static uk.gov.di.entity.SessionState.NEW;
 
@@ -14,7 +14,7 @@ public class Session {
     private String sessionId;
 
     @JsonProperty("client_sessions")
-    private Map<String, ClientSession> clientSessions;
+    private List<String> clientSessions;
 
     @JsonProperty("state")
     private SessionState state;
@@ -28,13 +28,13 @@ public class Session {
     public Session(String sessionId) {
         this.sessionId = sessionId;
         this.state = NEW;
-        this.clientSessions = new HashMap<>();
+        this.clientSessions = new ArrayList<>();
     }
 
     @JsonCreator
     public Session(
             @JsonProperty("session_id") String sessionId,
-            @JsonProperty("client_sessions") Map<String, ClientSession> clientSessions,
+            @JsonProperty("client_sessions") List<String> clientSessions,
             @JsonProperty("state") SessionState state,
             @JsonProperty("email_address") String emailAddress) {
         this.sessionId = sessionId;
@@ -51,12 +51,12 @@ public class Session {
         this.sessionId = sessionId;
     }
 
-    public Map<String, ClientSession> getClientSessions() {
+    public List<String> getClientSessions() {
         return clientSessions;
     }
 
-    public Session setClientSession(String clientSessionId, ClientSession clientSessions) {
-        this.clientSessions.put(clientSessionId, clientSessions);
+    public Session addClientSession(String clientSessionId) {
+        this.clientSessions.add(clientSessionId);
         return this;
     }
 

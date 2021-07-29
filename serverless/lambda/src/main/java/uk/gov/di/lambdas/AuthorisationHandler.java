@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.Session;
 import uk.gov.di.services.ClientService;
+import uk.gov.di.services.ClientSessionService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoClientService;
 import uk.gov.di.services.SessionService;
@@ -37,6 +38,7 @@ public class AuthorisationHandler
     private final ClientService clientService;
     private final SessionService sessionService;
     private final ConfigurationService configurationService;
+    private final ClientSessionService clientSessionService;
 
     private interface ResponseParameters {
         String SESSION_ID = "id";
@@ -51,10 +53,12 @@ public class AuthorisationHandler
     public AuthorisationHandler(
             ClientService clientService,
             ConfigurationService configurationService,
-            SessionService sessionService) {
+            SessionService sessionService,
+            ClientSessionService clientSessionService) {
         this.clientService = clientService;
         this.configurationService = configurationService;
         this.sessionService = sessionService;
+        this.clientSessionService = clientSessionService;
     }
 
     public AuthorisationHandler() {
@@ -65,6 +69,7 @@ public class AuthorisationHandler
                         configurationService.getEnvironment(),
                         configurationService.getDynamoEndpointUri());
         this.sessionService = new SessionService(configurationService);
+        this.clientSessionService = new ClientSessionService(configurationService);
     }
 
     @Override
@@ -119,7 +124,9 @@ public class AuthorisationHandler
            For a user with an existing Session = SSO scenario
         */
         Session session = existingSession.get();
-        String clientSessionID = sessionService.generateClientSessionID();
+        String clientSessionID =
+                clientSessionService.generateClientSession(
+                        new ClientSession(authRequest, LocalDateTime.now()));
         updateSessionId(authRequest, session, clientId, clientSessionID);
         return redirect(session, scope, clientSessionID);
     }
@@ -131,8 +138,7 @@ public class AuthorisationHandler
             String clientSessionID) {
         String oldSessionId = session.getSessionId();
         sessionService.updateSessionId(session);
-        session.setClientSession(
-                clientSessionID, new ClientSession(authRequest, LocalDateTime.now()));
+        session.addClientSession(clientSessionID);
         LOGGER.info(
                 "Updated session id from {} to {} for client {} - client session id = {}",
                 oldSessionId,
@@ -148,9 +154,10 @@ public class AuthorisationHandler
             Map<String, List<String>> authRequest, Scope scope, ClientID clientId) {
         Session session = sessionService.createSession();
 
-        String clientSessionID = sessionService.generateClientSessionID();
-        session.setClientSession(
-                clientSessionID, new ClientSession(authRequest, LocalDateTime.now()));
+        String clientSessionID =
+                clientSessionService.generateClientSession(
+                        new ClientSession(authRequest, LocalDateTime.now()));
+        session.addClientSession(clientSessionID);
         LOGGER.info(
                 "Created session {} for client {} - client session id = {}",
                 session.getSessionId(),

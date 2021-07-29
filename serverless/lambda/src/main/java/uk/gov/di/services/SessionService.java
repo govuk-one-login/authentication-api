@@ -1,13 +1,12 @@
 package uk.gov.di.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.entity.Session;
 import uk.gov.di.helpers.CookieHelper;
 import uk.gov.di.helpers.IdGenerator;
+import uk.gov.di.helpers.ObjectMapperFactory;
 
 import java.util.Map;
 import java.util.Optional;
@@ -18,8 +17,7 @@ public class SessionService {
 
     private static final String SESSION_ID_HEADER = "Session-Id";
 
-    private static final ObjectMapper OBJECT_MAPPER =
-            JsonMapper.builder().addModule(new JavaTimeModule()).build();
+    private static final ObjectMapper OBJECT_MAPPER = ObjectMapperFactory.getInstance();
 
     private final ConfigurationService configurationService;
     private final RedisConnectionService redisConnectionService;
@@ -43,10 +41,6 @@ public class SessionService {
 
     public Session createSession() {
         return new Session(IdGenerator.generate());
-    }
-
-    public String generateClientSessionID() {
-        return IdGenerator.generate();
     }
 
     public void save(Session session) {
