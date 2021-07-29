@@ -53,7 +53,7 @@ public class RedisHelper {
             redis.saveWithExpiry(
                     session.getSessionId(), OBJECT_MAPPER.writeValueAsString(session), 1800);
             redis.saveWithExpiry(
-                    clientSessionId,
+                    CLIENT_SESSION_PREFIX.concat(clientSessionId),
                     OBJECT_MAPPER.writeValueAsString(
                             new ClientSession(authRequest, LocalDateTime.now())),
                     1800);
