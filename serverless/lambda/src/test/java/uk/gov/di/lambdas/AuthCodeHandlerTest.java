@@ -17,9 +17,9 @@ import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.exceptions.ClientNotFoundException;
+import uk.gov.di.services.AuthorisationCodeService;
 import uk.gov.di.services.AuthorizationService;
 import uk.gov.di.services.ClientSessionService;
-import uk.gov.di.services.CodeStorageService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.SessionService;
 
@@ -33,7 +33,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -49,7 +48,8 @@ class AuthCodeHandlerTest {
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private final AuthorizationService authorizationService = mock(AuthorizationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
+    private final AuthorisationCodeService authorisationCodeService =
+            mock(AuthorisationCodeService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final Context context = mock(Context.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
@@ -60,7 +60,7 @@ class AuthCodeHandlerTest {
         handler =
                 new AuthCodeHandler(
                         sessionService,
-                        codeStorageService,
+                        authorisationCodeService,
                         configurationService,
                         authorizationService,
                         clientSessionService);
@@ -93,8 +93,7 @@ class AuthCodeHandlerTest {
         event.setBody(format("{ \"client_session_id\": \"%s\"}", CLIENT_SESSION_ID));
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
-        verify(codeStorageService)
-                .saveAuthorizationCode(anyString(), eq(CLIENT_SESSION_ID), eq(300L));
+        verify(authorisationCodeService).generateAuthorisationCode(eq(CLIENT_SESSION_ID));
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get("Location"),

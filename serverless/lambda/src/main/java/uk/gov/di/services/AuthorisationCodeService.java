@@ -9,9 +9,10 @@ import java.util.Optional;
 public class AuthorisationCodeService {
 
     private static final Logger LOG = LoggerFactory.getLogger(AuthorisationCodeService.class);
-    private static final String AUTH_CODE_PREFIX = "auth-code-";
+    public static final String AUTH_CODE_PREFIX = "auth-code-";
 
     private final RedisConnectionService redisConnectionService;
+    private final long authorisationCodeExpiry;
 
     public AuthorisationCodeService(ConfigurationService configurationService) {
         this.redisConnectionService =
@@ -20,16 +21,19 @@ public class AuthorisationCodeService {
                         configurationService.getRedisPort(),
                         configurationService.getUseRedisTLS(),
                         configurationService.getRedisPassword());
+        this.authorisationCodeExpiry = configurationService.getAuthCodeExpiry();
     }
 
-    public AuthorizationCode generateAuthorisationCode(String sessionId) {
+    public AuthorizationCode generateAuthorisationCode(String clientSessionId) {
         AuthorizationCode authorizationCode = new AuthorizationCode();
         redisConnectionService.saveWithExpiry(
-                AUTH_CODE_PREFIX.concat(authorizationCode.getValue()), sessionId, 60);
+                AUTH_CODE_PREFIX.concat(authorizationCode.getValue()),
+                clientSessionId,
+                authorisationCodeExpiry);
         return authorizationCode;
     }
 
-    public Optional<String> getSessionIdForCode(String code) {
+    public Optional<String> getClientSessionIdForCode(String code) {
         return Optional.ofNullable(redisConnectionService.popValue(AUTH_CODE_PREFIX.concat(code)));
     }
 }

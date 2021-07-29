@@ -100,7 +100,7 @@ public class TokenHandler
             return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1015);
         }
         String code = requestBody.get("code");
-        Optional<String> clientSessionId = authorisationCodeService.getSessionIdForCode(code);
+        Optional<String> clientSessionId = authorisationCodeService.getClientSessionIdForCode(code);
         if (clientSessionId.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1018);
         }

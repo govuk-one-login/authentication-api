@@ -22,6 +22,7 @@ import java.util.Optional;
 
 import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.entity.NotificationType.VERIFY_PHONE_NUMBER;
+import static uk.gov.di.services.AuthorisationCodeService.AUTH_CODE_PREFIX;
 import static uk.gov.di.services.ClientSessionService.CLIENT_SESSION_PREFIX;
 
 public class RedisHelper {
@@ -157,5 +158,19 @@ public class RedisHelper {
             connection.sync().flushall();
         }
         client.shutdown();
+    }
+
+    public static void addAuthCode(String authCode, String clientSessionId) {
+        try (RedisConnectionService redis =
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
+            redis.saveWithExpiry(AUTH_CODE_PREFIX.concat(authCode), clientSessionId, 300);
+            redis.saveWithExpiry(
+                    CLIENT_SESSION_PREFIX.concat(clientSessionId),
+                    OBJECT_MAPPER.writeValueAsString(
+                            new ClientSession(Map.of(), LocalDateTime.now())),
+                    300);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

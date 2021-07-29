@@ -15,6 +15,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
+import uk.gov.di.authentication.helpers.RedisHelper;
 
 import java.net.URI;
 import java.security.KeyPair;
@@ -49,10 +50,12 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
                         (RSAPrivateKey) privateKey,
                         null,
                         null);
+        String code = new AuthorizationCode().toString();
+        RedisHelper.addAuthCode(code, "a-client-session-id");
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put("grant_type", Collections.singletonList("authorization_code"));
         customParams.put("client_id", Collections.singletonList(clientID));
-        customParams.put("code", Collections.singletonList(new AuthorizationCode().toString()));
+        customParams.put("code", Collections.singletonList(code));
         customParams.put("redirect_uri", Collections.singletonList("http://localhost/redirect"));
         Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
         privateKeyParams.putAll(customParams);

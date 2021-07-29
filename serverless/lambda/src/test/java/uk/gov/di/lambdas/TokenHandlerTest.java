@@ -110,7 +110,7 @@ public class TokenHandlerTest {
                 .thenReturn(accessToken);
         when(tokenService.generateIDToken(eq(CLIENT_ID), any(Subject.class))).thenReturn(signedJWT);
         String authCode = new AuthorizationCode().toString();
-        when(authorisationCodeService.getSessionIdForCode(authCode))
+        when(authorisationCodeService.getClientSessionIdForCode(authCode))
                 .thenReturn(Optional.of(CLIENT_SESSION_ID));
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(new ClientSession(Map.of(), LocalDateTime.now()));

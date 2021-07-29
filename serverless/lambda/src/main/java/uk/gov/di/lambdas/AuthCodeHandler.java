@@ -14,11 +14,10 @@ import uk.gov.di.entity.AuthCodeRequest;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.exceptions.ClientNotFoundException;
+import uk.gov.di.services.AuthorisationCodeService;
 import uk.gov.di.services.AuthorizationService;
 import uk.gov.di.services.ClientSessionService;
-import uk.gov.di.services.CodeStorageService;
 import uk.gov.di.services.ConfigurationService;
-import uk.gov.di.services.RedisConnectionService;
 import uk.gov.di.services.SessionService;
 
 import java.util.List;
@@ -32,7 +31,7 @@ public class AuthCodeHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final SessionService sessionService;
-    private final CodeStorageService codeStorageService;
+    private final AuthorisationCodeService authorisationCodeService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ConfigurationService configurationService;
     private final AuthorizationService authorizationService;
@@ -40,12 +39,12 @@ public class AuthCodeHandler
 
     public AuthCodeHandler(
             SessionService sessionService,
-            CodeStorageService codeStorageService,
+            AuthorisationCodeService authorisationCodeService,
             ConfigurationService configurationService,
             AuthorizationService authorizationService,
             ClientSessionService clientSessionService) {
         this.sessionService = sessionService;
-        this.codeStorageService = codeStorageService;
+        this.authorisationCodeService = authorisationCodeService;
         this.configurationService = configurationService;
         this.authorizationService = authorizationService;
         this.clientSessionService = clientSessionService;
@@ -54,8 +53,7 @@ public class AuthCodeHandler
     public AuthCodeHandler() {
         configurationService = new ConfigurationService();
         sessionService = new SessionService(configurationService);
-        codeStorageService =
-                new CodeStorageService(new RedisConnectionService(configurationService));
+        authorisationCodeService = new AuthorisationCodeService(configurationService);
         authorizationService = new AuthorizationService(configurationService);
         clientSessionService = new ClientSessionService(configurationService);
     }
@@ -87,10 +85,7 @@ public class AuthCodeHandler
         }
 
         AuthorizationCode authCode = new AuthorizationCode();
-        codeStorageService.saveAuthorizationCode(
-                new AuthorizationCode().getValue(),
-                authCodeRequest.getClientSessionId(),
-                configurationService.getAuthCodeExpiry());
+        authorisationCodeService.generateAuthorisationCode(authCodeRequest.getClientSessionId());
         AuthenticationSuccessResponse authenticationResponse =
                 authorizationService.generateSuccessfulAuthResponse(authorizationRequest, authCode);
         sessionService.save(session.get().setState(AUTHENTICATED));
