@@ -15,13 +15,13 @@ import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.entity.SessionState;
 import uk.gov.di.services.ConfigurationService;
 
-import java.io.IOException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.Optional;
 
+import static com.nimbusds.openid.connect.sdk.Prompt.Type.LOGIN;
 import static com.nimbusds.openid.connect.sdk.Prompt.Type.NONE;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -106,9 +106,8 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
     }
 
     @Test
-    public void shouldRedirectToLoginWhenSessionFromCookieIsNotAuthenticated() throws IOException {
-        String sessionId = RedisHelper.createSession();
-        RedisHelper.setSessionState(sessionId, SessionState.AUTHENTICATION_REQUIRED);
+    public void shouldRedirectToLoginWhenSessionFromCookieIsNotAuthenticated() throws Exception {
+        String sessionId = givenAnExistingSession(SessionState.AUTHENTICATION_REQUIRED);
 
         Response response =
                 doAuthorisationRequest(
@@ -126,9 +125,8 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
 
     @Test
     public void shouldIssueAuthorisationCodeWhenSessionFromCookieIsAuthenticated()
-            throws IOException {
-        String sessionId = RedisHelper.createSession();
-        RedisHelper.setSessionState(sessionId, SessionState.AUTHENTICATED);
+            throws Exception {
+        String sessionId = givenAnExistingSession(SessionState.AUTHENTICATED);
 
         Response response =
                 doAuthorisationRequest(
@@ -155,8 +153,7 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
 
     @Test
     public void shouldNotPromptForLoginWhenPromptNoneAndUserAuthenticated() throws Exception {
-        String sessionId = RedisHelper.createSession();
-        RedisHelper.setSessionState(sessionId, SessionState.AUTHENTICATED);
+        String sessionId = givenAnExistingSession(SessionState.AUTHENTICATED);
 
         Response response =
                 doAuthorisationRequest(
@@ -170,6 +167,36 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
         assertThat(
                 getHeaderValueByParamName(response, "Location"),
                 startsWith(configurationService.getLoginURI().toString()));
+    }
+
+    @Test
+    public void shouldPromptForLoginWhenPromptLoginAndUserAuthenticated() throws Exception {
+        String sessionId = givenAnExistingSession(SessionState.AUTHENTICATED);
+
+        Response response =
+                doAuthorisationRequest(
+                        Optional.of(CLIENT_ID),
+                        Optional.of(new Cookie("gs", format("%s.456", sessionId))),
+                        Optional.of(LOGIN.toString()));
+
+        assertEquals(302, response.getStatus());
+        assertNotNull(response.getCookies().get("gs"));
+        assertThat(response.getCookies().get("gs").getValue(), not(startsWith(sessionId)));
+        assertThat(
+                getHeaderValueByParamName(response, "Location"),
+                startsWith(configurationService.getLoginURI().toString()));
+        /*
+            TODO:
+                In this scenario the session state would be set to AUTHENTICATION_REQUIRED.
+                At present there is no way to retrieve the state in an integration test.
+                A further assertion should be added when possible.
+         */
+    }
+
+    private String givenAnExistingSession(SessionState initialState) throws Exception {
+        String sessionId = RedisHelper.createSession();
+        RedisHelper.setSessionState(sessionId, initialState);
+        return sessionId;
     }
 
     private static KeyPair generateRsaKeyPair() {
