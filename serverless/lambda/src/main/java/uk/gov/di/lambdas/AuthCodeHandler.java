@@ -68,6 +68,7 @@ public class AuthCodeHandler
                             .readSessionFromRedis(sessionCookieIds.getSessionId())
                             .orElseThrow();
         } catch (NoSuchElementException e) {
+            System.out.println("SessionID not there for INPUT: " + input.getHeaders());
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         }
         AuthorizationRequest authorizationRequest;
