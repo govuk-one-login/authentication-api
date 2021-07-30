@@ -69,13 +69,20 @@ function funky_started() {
 }
 
 startup() {
+  export TF_VAR_notify_url="http://notify.internal:8888"
+  export TF_VAR_notify_api_key="my_test_key-$(uuidgen)-$(uuidgen)"
+  export AWS_ACCESS_KEY_ID="mock-access-key"
+  export AWS_SECRET_ACCESS_KEY="mock-secret-key"
+  export STUB_RELYING_PARTY_REDIRECT_URI="https://di-auth-stub-relying-party-build.london.cloudapps.digital/"
+  export LOGIN_URI="http://localhost:3000/"
+
   stop_docker_services aws redis dynamodb
   printf "\nStarting di-authentication-api...\n"
   ./gradlew clean build -x test
   printf "\nStarting Docker services...\n"
   startup_docker aws redis dynamodb
   run_terraform ci/terraform/aws
-  if [[ ${IN_GITHUB_ACTIONS} -eq 0 ]]; then
+  if [[ -z ${IN_GITHUB_ACTIONS+x} ||  ${IN_GITHUB_ACTIONS} -eq 0 ]]; then
     funky_started
   else
     printf "\nServices Started!\n"

@@ -59,12 +59,6 @@ if [[ ${RUN_UNIT} -eq 1 ]]; then
 fi
 
 if [[ ${RUN_INTEGRATION} -eq 1 ]]; then
-  export TF_VAR_notify_url="http://notify.internal:8888"
-  export TF_VAR_notify_api_key="my_test_key-$(uuidgen)-$(uuidgen)"
-  export AWS_ACCESS_KEY_ID="mock-access-key"
-  export AWS_SECRET_ACCESS_KEY="mock-secret-key"
-  export STUB_RELYING_PARTY_REDIRECT_URI="https://di-auth-stub-relying-party-build.london.cloudapps.digital/"
-  export LOGIN_URI="http://localhost:3000/"
 
   startup
 
