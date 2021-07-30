@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class LogoutIntegrationTest extends IntegrationTestEndpoints {
 
     private static final String LOGOUT_ENDPOINT = "/logout";
-    private static final String COOKIE = "Cookie";
+    private static final String COOKIE = "cookie";
 
     @Test
     public void shouldReturn302AndRedirectToClientLogoutUri() throws JOSEException, IOException {

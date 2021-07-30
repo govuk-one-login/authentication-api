@@ -31,7 +31,7 @@ public class AuthCodeIntegrationTest extends IntegrationTestEndpoints {
     private static final URI REDIRECT_URI =
             URI.create(System.getenv("STUB_RELYING_PARTY_REDIRECT_URI"));
     private static final ClientID CLIENT_ID = new ClientID("test-client");
-    private static final String COOKIE = "Cookie";
+    private static final String COOKIE = "cookie";
 
     @Test
     public void shouldReturn302WithSuccessfullAuthorisationResponse() throws IOException {

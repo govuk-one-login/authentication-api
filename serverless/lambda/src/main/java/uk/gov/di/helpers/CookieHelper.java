@@ -12,7 +12,7 @@ public class CookieHelper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CookieHelper.class);
 
-    public static final String REQUEST_COOKIE_HEADER = "Cookie";
+    public static final String REQUEST_COOKIE_HEADER = "cookie";
 
     public static Optional<SessionCookieIds> parseSessionCookie(Map<String, String> headers) {
         if (headers == null

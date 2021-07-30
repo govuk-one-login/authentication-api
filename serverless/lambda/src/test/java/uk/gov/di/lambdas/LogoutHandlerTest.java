@@ -49,7 +49,7 @@ class LogoutHandlerTest {
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
 
     private static final State STATE = new State();
-    private static final String COOKIE = "Cookie";
+    private static final String COOKIE = "cookie";
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "client-session-id";
     private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
