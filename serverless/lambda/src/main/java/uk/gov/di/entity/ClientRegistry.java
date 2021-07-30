@@ -26,7 +26,9 @@ public class ClientRegistry {
         return this;
     }
 
-    @DynamoDBIndexHashKey(globalSecondaryIndexName = "ClientNameIndex", attributeName = "ClientName")
+    @DynamoDBIndexHashKey(
+            globalSecondaryIndexName = "ClientNameIndex",
+            attributeName = "ClientName")
     public String getClientName() {
         return clientName;
     }
