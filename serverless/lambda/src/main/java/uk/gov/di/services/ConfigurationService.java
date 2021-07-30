@@ -15,6 +15,10 @@ public class ConfigurationService {
         return URI.create(System.getenv("LOGIN_URI"));
     }
 
+    public URI getSkipLoginURI() {
+        return URI.create(System.getenv().getOrDefault("SKIP_LOGIN_URI", "http://skip-login"));
+    }
+
     public URI getDefaultLogoutURI() {
         return URI.create(System.getenv("DEFAULT_LOGOUT_URI"));
     }
