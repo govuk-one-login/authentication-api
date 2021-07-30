@@ -49,7 +49,10 @@ public class RedisHelper {
     }
 
     public static void addAuthRequestToSession(
-            String clientSessionId, String sessionId, Map<String, List<String>> authRequest) {
+            String clientSessionId,
+            String sessionId,
+            Map<String, List<String>> authRequest,
+            String email) {
         try (RedisConnectionService redis =
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
             Session session = OBJECT_MAPPER.readValue(redis.getValue(sessionId), Session.class);
@@ -59,7 +62,7 @@ public class RedisHelper {
             redis.saveWithExpiry(
                     CLIENT_SESSION_PREFIX.concat(clientSessionId),
                     OBJECT_MAPPER.writeValueAsString(
-                            new ClientSession(authRequest, LocalDateTime.now())),
+                            new ClientSession(authRequest, LocalDateTime.now(), email)),
                     1800);
 
         } catch (IOException e) {
@@ -160,14 +163,18 @@ public class RedisHelper {
         client.shutdown();
     }
 
-    public static void addAuthCode(String authCode, String clientSessionId) {
+    public static void addAuthCodeAndCreateClientSession(
+            String authCode,
+            String clientSessionId,
+            String email,
+            Map<String, List<String>> authRequest) {
         try (RedisConnectionService redis =
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
             redis.saveWithExpiry(AUTH_CODE_PREFIX.concat(authCode), clientSessionId, 300);
             redis.saveWithExpiry(
                     CLIENT_SESSION_PREFIX.concat(clientSessionId),
                     OBJECT_MAPPER.writeValueAsString(
-                            new ClientSession(Map.of(), LocalDateTime.now())),
+                            new ClientSession(authRequest, LocalDateTime.now(), email)),
                     300);
         } catch (IOException e) {
             throw new RuntimeException(e);

@@ -5,12 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.Session;
 
-import java.time.LocalDateTime;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -145,8 +142,6 @@ class SessionServiceTest {
     }
 
     private String generateSearlizedSession() throws JsonProcessingException {
-        ClientSession clientSession =
-                new ClientSession(Map.of("client_id", List.of("a-client-id")), LocalDateTime.now());
         var session = new Session("session-id").addClientSession("client-session-id");
 
         return objectMapper.writeValueAsString(session);

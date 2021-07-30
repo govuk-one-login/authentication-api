@@ -145,7 +145,10 @@ public class AuthorisationHandler
             URI redirectURI) {
         String clientSessionID =
                 clientSessionService.generateClientSession(
-                        new ClientSession(authRequestParameters, LocalDateTime.now()));
+                        new ClientSession(
+                                authRequestParameters,
+                                LocalDateTime.now(),
+                                session.getEmailAddress()));
         updateSessionId(session, authenticationRequest.getClientID(), clientSessionID);
         return redirect(session, clientSessionID, redirectURI);
     }
@@ -180,7 +183,8 @@ public class AuthorisationHandler
 
         String clientSessionID =
                 clientSessionService.generateClientSession(
-                        new ClientSession(authRequest, LocalDateTime.now()));
+                        new ClientSession(
+                                authRequest, LocalDateTime.now(), session.getEmailAddress()));
         session.addClientSession(clientSessionID);
         LOGGER.info(
                 "Created session {} for client {} - client session id = {}",

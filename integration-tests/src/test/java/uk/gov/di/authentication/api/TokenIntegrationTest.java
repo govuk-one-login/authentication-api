@@ -3,8 +3,12 @@ package uk.gov.di.authentication.api;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
+import com.nimbusds.oauth2.sdk.AuthorizationRequest;
+import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.ClientBuilder;
@@ -35,26 +39,28 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class TokenIntegrationTest extends IntegrationTestEndpoints {
 
     private static final String TOKEN_ENDPOINT = "/token";
+    private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
+    private static final String CLIENT_ID = "test-id";
 
     @Test
     public void shouldCallTokenResourceAndReturn200() throws JOSEException {
-        String clientID = "test-id";
         KeyPair keyPair = generateRsaKeyPair();
-        setUpDynamo(keyPair, clientID);
+        setUpDynamo(keyPair, CLIENT_ID);
         PrivateKey privateKey = keyPair.getPrivate();
         PrivateKeyJWT privateKeyJWT =
                 new PrivateKeyJWT(
-                        new ClientID(clientID),
+                        new ClientID(CLIENT_ID),
                         URI.create(ROOT_RESOURCE_URL + TOKEN_ENDPOINT),
                         JWSAlgorithm.RS256,
                         (RSAPrivateKey) privateKey,
                         null,
                         null);
         String code = new AuthorizationCode().toString();
-        RedisHelper.addAuthCode(code, "a-client-session-id");
+        RedisHelper.addAuthCodeAndCreateClientSession(
+                code, "a-client-session-id", TEST_EMAIL, generateAuthRequest().toParameters());
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put("grant_type", Collections.singletonList("authorization_code"));
-        customParams.put("client_id", Collections.singletonList(clientID));
+        customParams.put("client_id", Collections.singletonList(CLIENT_ID));
         customParams.put("code", Collections.singletonList(code));
         customParams.put("redirect_uri", Collections.singletonList("http://localhost/redirect"));
         Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
@@ -74,11 +80,11 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
                 clientID,
                 "test-client",
                 singletonList("http://localhost/redirect"),
-                singletonList("joe.bloggs@digital.cabinet-office.gov.uk"),
+                singletonList(TEST_EMAIL),
                 singletonList("openid"),
                 Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
                 singletonList("http://localhost/post-logout-redirect"));
-        DynamoHelper.signUp("joe.bloggs@digital.cabinet-office.gov.uk", "password-1");
+        DynamoHelper.signUp(TEST_EMAIL, "password-1");
     }
 
     private KeyPair generateRsaKeyPair() {
@@ -90,5 +96,17 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
         }
         kpg.initialize(2048);
         return kpg.generateKeyPair();
+    }
+
+    private AuthorizationRequest generateAuthRequest() {
+        Scope scopeValues = new Scope();
+        scopeValues.add("openid");
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        State state = new State();
+        return new AuthorizationRequest.Builder(responseType, new ClientID(CLIENT_ID))
+                .redirectionURI(URI.create("http://localhost/redirect"))
+                .state(state)
+                .scope(scopeValues)
+                .build();
     }
 }
