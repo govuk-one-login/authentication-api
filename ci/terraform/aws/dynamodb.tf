@@ -20,8 +20,7 @@ resource "aws_dynamodb_table" "user_credentials_table" {
     hash_key           = "SubjectID"
     write_capacity     = 5
     read_capacity      = 5
-    projection_type    = "INCLUDE"
-    non_key_attributes = ["Email"]
+    projection_type    = "ALL"
   }
 
   server_side_encryption {
@@ -81,8 +80,7 @@ resource "aws_dynamodb_table" "client_registry_table" {
     hash_key           = "ClientName"
     write_capacity     = 5
     read_capacity      = 5
-    projection_type    = "INCLUDE"
-    non_key_attributes = ["ClientID"]
+    projection_type    = "ALL"
   }
 }
 

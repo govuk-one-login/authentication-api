@@ -2,6 +2,7 @@ package uk.gov.di.entity;
 
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBIndexHashKey;
 
 import java.util.List;
 
@@ -25,7 +26,9 @@ public class ClientRegistry {
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "ClientName")
+    @DynamoDBIndexHashKey(
+            globalSecondaryIndexName = "ClientNameIndex",
+            attributeName = "ClientName")
     public String getClientName() {
         return clientName;
     }

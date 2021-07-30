@@ -14,6 +14,7 @@ import jakarta.ws.rs.client.ClientBuilder;
 import jakarta.ws.rs.core.MultivaluedHashMap;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
+import org.glassfish.jersey.client.ClientProperties;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
@@ -68,6 +69,7 @@ public class LogoutIntegrationTest extends IntegrationTestEndpoints {
                                 "post_logout_redirect_uri",
                                 "https://di-auth-stub-relying-party-build.london.cloudapps.digital/")
                         .queryParam("state", "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU")
+                        .property(ClientProperties.FOLLOW_REDIRECTS, Boolean.FALSE)
                         .request()
                         .headers(headers)
                         .get();
