@@ -3,6 +3,9 @@ package uk.gov.di.authentication.helpers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.lettuce.core.RedisClient;
+import io.lettuce.core.RedisURI;
+import io.lettuce.core.api.StatefulRedisConnection;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.SessionState;
@@ -142,5 +145,17 @@ public class RedisHelper {
         RedisConnectionService redis =
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD);
         redis.saveWithExpiry(accessToken, subject, expiry);
+    }
+
+    public static void flushData() {
+        RedisURI.Builder builder =
+                RedisURI.builder().withHost(REDIS_HOST).withPort(6379).withSsl(false);
+        if (REDIS_PASSWORD.isPresent()) builder.withPassword(REDIS_PASSWORD.get().toCharArray());
+        RedisURI redisURI = builder.build();
+        RedisClient client = RedisClient.create(redisURI);
+        try (StatefulRedisConnection<String, String> connection = client.connect()) {
+            connection.sync().flushall();
+        }
+        client.shutdown();
     }
 }

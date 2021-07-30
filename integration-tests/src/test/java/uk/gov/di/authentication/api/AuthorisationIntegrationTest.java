@@ -5,7 +5,8 @@ import jakarta.ws.rs.client.ClientBuilder;
 import jakarta.ws.rs.client.Invocation;
 import jakarta.ws.rs.core.Cookie;
 import jakarta.ws.rs.core.Response;
-import org.junit.jupiter.api.BeforeAll;
+import org.glassfish.jersey.client.ClientProperties;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
@@ -36,8 +37,8 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
 
     private static final ConfigurationService configurationService = new ConfigurationService();
 
-    @BeforeAll
-    public static void setup() {
+    @BeforeEach
+    public void setup() {
         DynamoHelper.registerClient(
                 CLIENT_ID,
                 "test-client",
@@ -128,6 +129,7 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
 
         Invocation.Builder builder =
                 client.target(ROOT_RESOURCE_URL + AUTHORIZE_ENDPOINT)
+                        .property(ClientProperties.FOLLOW_REDIRECTS, false)
                         .queryParam("response_type", "code")
                         .queryParam("redirect_uri", "localhost")
                         .queryParam("state", "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU")

@@ -1,5 +1,9 @@
 package uk.gov.di.authentication.api;
 
+import org.junit.jupiter.api.BeforeEach;
+import uk.gov.di.authentication.helpers.DynamoHelper;
+import uk.gov.di.authentication.helpers.RedisHelper;
+
 import java.util.Optional;
 
 public class IntegrationTestEndpoints {
@@ -10,4 +14,10 @@ public class IntegrationTestEndpoints {
     public static final String ROOT_RESOURCE_URL =
             Optional.ofNullable(System.getenv().get("ROOT_RESOURCE_URL"))
                     .orElse(String.format(LOCAL_ENDPOINT_FORMAT, LOCAL_API_GATEWAY_ID));
+
+    @BeforeEach
+    public void flushData() {
+        RedisHelper.flushData();
+        DynamoHelper.flushData();
+    }
 }
