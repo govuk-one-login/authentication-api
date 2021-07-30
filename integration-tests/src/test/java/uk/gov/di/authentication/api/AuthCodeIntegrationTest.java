@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class AuthCodeIntegrationTest extends IntegrationTestEndpoints {
 
     private static final String AUTH_CODE_ENDPOINT = "/auth-code";
+    private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final URI REDIRECT_URI =
             URI.create(System.getenv("STUB_RELYING_PARTY_REDIRECT_URI"));
     private static final ClientID CLIENT_ID = new ClientID("test-client");
@@ -39,7 +40,7 @@ public class AuthCodeIntegrationTest extends IntegrationTestEndpoints {
         KeyPair keyPair = generateRsaKeyPair();
         RedisHelper.createSession(sessionId);
         RedisHelper.addAuthRequestToSession(
-                clientSessionId, sessionId, generateAuthRequest().toParameters());
+                clientSessionId, sessionId, generateAuthRequest().toParameters(), EMAIL);
         setUpDynamo(keyPair);
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add(COOKIE, buildCookieString(sessionId, clientSessionId));
@@ -66,7 +67,7 @@ public class AuthCodeIntegrationTest extends IntegrationTestEndpoints {
                 CLIENT_ID.getValue(),
                 "test-client",
                 singletonList(REDIRECT_URI.toString()),
-                singletonList("joe.bloggs@digital.cabinet-office.gov.uk"),
+                singletonList(EMAIL),
                 singletonList("openid"),
                 Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
                 singletonList("http://localhost/post-redirect-logout"));

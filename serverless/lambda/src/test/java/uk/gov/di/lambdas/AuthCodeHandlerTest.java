@@ -45,6 +45,7 @@ class AuthCodeHandlerTest {
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "client-session-id";
     private static final String COOKIE = "Cookie";
+    private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private final AuthorizationService authorizationService = mock(AuthorizationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -174,7 +175,7 @@ class AuthCodeHandlerTest {
                 .thenReturn(
                         Optional.of(new Session(SESSION_ID).addClientSession(CLIENT_SESSION_ID)));
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(new ClientSession(authRequest, LocalDateTime.now()));
+                .thenReturn(new ClientSession(authRequest, LocalDateTime.now(), EMAIL));
     }
 
     private String buildCookieString() {

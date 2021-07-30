@@ -8,8 +8,12 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
+import com.nimbusds.oauth2.sdk.AuthorizationRequest;
+import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
@@ -96,7 +100,6 @@ public class TokenHandlerTest {
                         .setPublicKey(
                                 Base64.getMimeEncoder()
                                         .encodeToString(keyPair.getPublic().getEncoded()));
-
         BearerAccessToken accessToken = new BearerAccessToken();
         when(configurationService.getBaseURL()).thenReturn(Optional.of(ENDPOINT_URI));
         when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
@@ -113,7 +116,11 @@ public class TokenHandlerTest {
         when(authorisationCodeService.getClientSessionIdForCode(authCode))
                 .thenReturn(Optional.of(CLIENT_SESSION_ID));
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(new ClientSession(Map.of(), LocalDateTime.now()));
+                .thenReturn(
+                        new ClientSession(
+                                generateAuthRequest().toParameters(),
+                                LocalDateTime.now(),
+                                TEST_EMAIL));
 
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(privateKeyJWT, CLIENT_ID, authCode);
@@ -213,6 +220,18 @@ public class TokenHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(requestParams);
         return handler.handleRequest(event, context);
+    }
+
+    private AuthorizationRequest generateAuthRequest() {
+        Scope scopeValues = new Scope();
+        scopeValues.add("openid");
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        State state = new State();
+        return new AuthorizationRequest.Builder(responseType, new ClientID(CLIENT_ID))
+                .redirectionURI(URI.create("http://localhost:8080/redirect"))
+                .state(state)
+                .scope(scopeValues)
+                .build();
     }
 
     private KeyPair generateRsaKeyPair() {

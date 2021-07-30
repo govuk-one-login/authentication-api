@@ -9,9 +9,11 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import uk.gov.di.entity.ClientRegistry;
+import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.AuthorisationCodeService;
@@ -24,8 +26,10 @@ import uk.gov.di.services.RedisConnectionService;
 import uk.gov.di.services.TokenService;
 
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
+import static java.lang.String.format;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.helpers.RequestBodyHelper.parseRequestBody;
@@ -99,35 +103,35 @@ public class TokenHandler
         if (!privateKeyJWTIsValid) {
             return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1015);
         }
-        String code = requestBody.get("code");
-        Optional<String> clientSessionId = authorisationCodeService.getClientSessionIdForCode(code);
-        if (clientSessionId.isEmpty()) {
+        String clientSessionId;
+        try {
+            clientSessionId =
+                    authorisationCodeService
+                            .getClientSessionIdForCode(requestBody.get("code"))
+                            .orElseThrow();
+        } catch (NoSuchElementException e) {
             return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1018);
         }
-
-        //        TODO: String email = authorizationCodeService.getEmailForCode(code);
-        String email = "joe.bloggs@digital.cabinet-office.gov.uk";
-
-        if (email.isEmpty()) {
-            return generateApiGatewayProxyResponse(403, "");
+        ClientSession clientSession = clientSessionService.getClientSession(clientSessionId);
+        AuthenticationRequest authRequest;
+        try {
+            authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
+        } catch (ParseException e) {
+            throw new RuntimeException(
+                    format(
+                            "Unable to parse Auth Request\n Auth Request Params: %s \n Exception: %s",
+                            clientSession.getAuthRequestParams(), e));
         }
-        Subject subject = authenticationService.getSubjectFromEmail(email);
+        Subject subject = authenticationService.getSubjectFromEmail(clientSession.getEmail());
+
         AccessToken accessToken =
                 tokenService.generateAndStoreAccessToken(
-                        clientID,
-                        subject,
-                        client.get()
-                                .getScopes()); // TODO the scopes need to come from the auth request
-        // params
+                        clientID, subject, authRequest.getScope().toStringList());
         SignedJWT idToken = tokenService.generateIDToken(clientID, subject);
-        OIDCTokens oidcTokens = new OIDCTokens(idToken, accessToken, null);
-        OIDCTokenResponse tokenResponse = new OIDCTokenResponse(oidcTokens);
-
+        OIDCTokenResponse tokenResponse =
+                new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, null));
         clientSessionService.saveClientSession(
-                clientSessionId.get(),
-                clientSessionService
-                        .getClientSession(clientSessionId.get())
-                        .setIdTokenHint(idToken.serialize()));
+                clientSessionId, clientSession.setIdTokenHint(idToken.serialize()));
         return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
     }
 

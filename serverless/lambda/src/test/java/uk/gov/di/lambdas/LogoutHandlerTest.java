@@ -52,6 +52,7 @@ class LogoutHandlerTest {
     private static final String COOKIE = "Cookie";
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "client-session-id";
+    private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final URI DEFAULT_LOGOUT_URI =
             URI.create("https://di-authentication-frontend.london.cloudapps.digital/signed-out");
     private static final URI CLIENT_LOGOUT_URI = URI.create("http://localhost/logout");
@@ -257,7 +258,8 @@ class LogoutHandlerTest {
                                 List.of("code"),
                                 "state",
                                 List.of("some-state")),
-                        LocalDateTime.now());
+                        LocalDateTime.now(),
+                        TEST_EMAIL);
         clientSession.setIdTokenHint(idToken.serialize());
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID)).thenReturn(clientSession);
     }
