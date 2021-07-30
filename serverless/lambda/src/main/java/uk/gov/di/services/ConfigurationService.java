@@ -92,6 +92,10 @@ public class ConfigurationService {
         return Optional.ofNullable(System.getenv("DYNAMO_ENDPOINT"));
     }
 
+    public String getDomainName() {
+        return System.getenv("DOMAIN_NAME");
+    }
+
     public int getCodeMaxRetries() {
         return Integer.parseInt(System.getenv().getOrDefault("CODE_MAX_RETRIES", "5"));
     }
