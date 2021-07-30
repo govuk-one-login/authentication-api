@@ -23,7 +23,8 @@ public enum ErrorResponse {
     ERROR_1015(1015, "Unable to Verify Signature of Private Key JWT"),
     ERROR_1016(1016, "Client not found"),
     ERROR_1017(1017, "Invalid Redirect URI"),
-    ERROR_1018(1018, "Invalid authorization code parameter");
+    ERROR_1018(1018, "Invalid authorization code parameter"),
+    ERROR_1019(1019, "Invalid transition in user journey");
 
     @JsonProperty("code")
     private int code;
