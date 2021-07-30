@@ -14,7 +14,9 @@ import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.services.AuthenticationService;
+import uk.gov.di.services.AuthorisationCodeService;
 import uk.gov.di.services.ClientService;
+import uk.gov.di.services.ClientSessionService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoClientService;
 import uk.gov.di.services.DynamoService;
@@ -35,16 +37,22 @@ public class TokenHandler
     private final TokenService tokenService;
     private final AuthenticationService authenticationService;
     private final ConfigurationService configurationService;
+    private final AuthorisationCodeService authorisationCodeService;
+    private final ClientSessionService clientSessionService;
 
     public TokenHandler(
             ClientService clientService,
             TokenService tokenService,
             AuthenticationService authenticationService,
-            ConfigurationService configurationService) {
+            ConfigurationService configurationService,
+            AuthorisationCodeService authorisationCodeService,
+            ClientSessionService clientSessionService) {
         this.clientService = clientService;
         this.tokenService = tokenService;
         this.authenticationService = authenticationService;
         this.configurationService = configurationService;
+        this.authorisationCodeService = authorisationCodeService;
+        this.clientSessionService = clientSessionService;
     }
 
     public TokenHandler() {
@@ -62,6 +70,8 @@ public class TokenHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEnvironment(),
                         configurationService.getDynamoEndpointUri());
+        this.authorisationCodeService = new AuthorisationCodeService(configurationService);
+        this.clientSessionService = new ClientSessionService(configurationService);
     }
 
     @Override
@@ -80,6 +90,7 @@ public class TokenHandler
         if (client.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1016);
         }
+
         boolean privateKeyJWTIsValid =
                 tokenService.validatePrivateKeyJWTSignature(
                         client.get().getPublicKey(),
@@ -88,6 +99,12 @@ public class TokenHandler
         if (!privateKeyJWTIsValid) {
             return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1015);
         }
+        String code = requestBody.get("code");
+        Optional<String> clientSessionId = authorisationCodeService.getClientSessionIdForCode(code);
+        if (clientSessionId.isEmpty()) {
+            return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1018);
+        }
+
         //        TODO: String email = authorizationCodeService.getEmailForCode(code);
         String email = "joe.bloggs@digital.cabinet-office.gov.uk";
 
@@ -106,6 +123,11 @@ public class TokenHandler
         OIDCTokens oidcTokens = new OIDCTokens(idToken, accessToken, null);
         OIDCTokenResponse tokenResponse = new OIDCTokenResponse(oidcTokens);
 
+        clientSessionService.saveClientSession(
+                clientSessionId.get(),
+                clientSessionService
+                        .getClientSession(clientSessionId.get())
+                        .setIdTokenHint(idToken.serialize()));
         return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
     }
 
