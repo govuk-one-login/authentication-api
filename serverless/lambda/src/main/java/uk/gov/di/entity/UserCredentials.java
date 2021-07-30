@@ -2,6 +2,7 @@ package uk.gov.di.entity;
 
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBIndexHashKey;
 
 public class UserCredentials {
 
@@ -23,7 +24,7 @@ public class UserCredentials {
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "SubjectID")
+    @DynamoDBIndexHashKey(globalSecondaryIndexName = "SubjectIDIndex", attributeName = "SubjectID")
     public String getSubjectID() {
         return subjectID;
     }
