@@ -22,6 +22,7 @@ import java.util.Optional;
 import static uk.gov.di.entity.SessionState.TWO_FACTOR_REQUIRED;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.helpers.StateMachine.userJourneyStateMachine;
 
 public class SignUpHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -57,6 +58,11 @@ public class SignUpHandler
         Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
         if (session.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        }
+
+        if (!userJourneyStateMachine()
+                .isValidTransition(session.get().getState(), TWO_FACTOR_REQUIRED)) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1019);
         }
 
         try {
