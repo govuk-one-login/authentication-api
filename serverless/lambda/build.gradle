@@ -16,7 +16,7 @@ def dependencyVersions = [
 dependencies {
     implementation "com.amazonaws:aws-lambda-java-core:1.2.1",
             "com.amazonaws:aws-lambda-java-events:3.9.0",
-            "com.amazonaws:aws-java-sdk-dynamodb:1.12.35",
+            "com.amazonaws:aws-java-sdk-dynamodb:1.12.36",
             "software.amazon.awssdk:sqs:2.16.88",
             "com.nimbusds:oauth2-oidc-sdk:9.10.2",
             "com.nimbusds:nimbus-jose-jwt:9.11.2",
