@@ -9,7 +9,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.Session;
-import uk.gov.di.helpers.RequestBodyHelper;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ClientSessionService;
 import uk.gov.di.services.ConfigurationService;
@@ -20,7 +19,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasEntry;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -50,11 +48,13 @@ class AuthorisationHandlerTest {
     @Test
     void shouldSetCookieAndRedirectToLoginOnSuccess() {
         final URI loginUrl = URI.create("http://example.com");
+        final String domainName = "auth.ida.digital.cabinet-office.gov.uk";
         final Session session = new Session("a-session-id");
 
         when(clientService.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
                 .thenReturn(Optional.empty());
         when(configService.getLoginURI()).thenReturn(loginUrl);
+        when(configService.getDomainName()).thenReturn(domainName);
         when(sessionService.createSession()).thenReturn(session);
         when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
         when(configService.getSessionCookieMaxAge()).thenReturn(1800);
@@ -71,16 +71,12 @@ class AuthorisationHandlerTest {
                         "state", "some-state"));
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
         URI uri = URI.create(response.getHeaders().get("Location"));
-        Map<String, String> requestParams = RequestBodyHelper.parseRequestBody(uri.getQuery());
         final String expectedCookieString =
-                "gs=a-session-id.client-session-id; Max-Age=1800; Secure; HttpOnly;";
+                "gs=a-session-id.client-session-id; Max-Age=1800; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
 
         assertThat(response, hasStatus(302));
         assertEquals(loginUrl.getAuthority(), uri.getAuthority());
-
-        assertThat(requestParams, hasEntry("id", session.getSessionId()));
         assertEquals(expectedCookieString, response.getHeaders().get("Set-Cookie"));
-
         verify(sessionService).save(eq(session));
     }
 

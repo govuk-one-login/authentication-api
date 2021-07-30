@@ -7,7 +7,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.ParseException;
-import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
@@ -21,7 +20,6 @@ import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoClientService;
 import uk.gov.di.services.SessionService;
 
-import java.net.URLEncoder;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -39,11 +37,6 @@ public class AuthorisationHandler
     private final SessionService sessionService;
     private final ConfigurationService configurationService;
     private final ClientSessionService clientSessionService;
-
-    private interface ResponseParameters {
-        String SESSION_ID = "id";
-        String SCOPE = "scope";
-    }
 
     private interface ResponseHeaders {
         String LOCATION = "Location";
@@ -95,7 +88,6 @@ public class AuthorisationHandler
                                             queryStringMultiValuedMap,
                                             sessionService.getSessionFromSessionCookie(
                                                     input.getHeaders()),
-                                            authRequest.getScope(),
                                             authRequest.getClientID()));
         } catch (ParseException e) {
             LOGGER.error("Authentication request could not be parsed", e);
@@ -110,14 +102,13 @@ public class AuthorisationHandler
     private APIGatewayProxyResponseEvent getOrCreateSessionAndRedirect(
             Map<String, List<String>> authRequest,
             Optional<Session> existingSession,
-            Scope scope,
             ClientID clientId) {
 
         /*
            For a user without an existing Session proceed to login
         */
         if (existingSession.isEmpty()) {
-            return createSessionAndRedirect(authRequest, scope, clientId);
+            return createSessionAndRedirect(authRequest, clientId);
         }
 
         /*
@@ -127,15 +118,11 @@ public class AuthorisationHandler
         String clientSessionID =
                 clientSessionService.generateClientSession(
                         new ClientSession(authRequest, LocalDateTime.now()));
-        updateSessionId(authRequest, session, clientId, clientSessionID);
-        return redirect(session, scope, clientSessionID);
+        updateSessionId(session, clientId, clientSessionID);
+        return redirect(session, clientSessionID);
     }
 
-    private void updateSessionId(
-            Map<String, List<String>> authRequest,
-            Session session,
-            ClientID clientId,
-            String clientSessionID) {
+    private void updateSessionId(Session session, ClientID clientId, String clientSessionID) {
         String oldSessionId = session.getSessionId();
         sessionService.updateSessionId(session);
         session.addClientSession(clientSessionID);
@@ -151,7 +138,7 @@ public class AuthorisationHandler
     }
 
     private APIGatewayProxyResponseEvent createSessionAndRedirect(
-            Map<String, List<String>> authRequest, Scope scope, ClientID clientId) {
+            Map<String, List<String>> authRequest, ClientID clientId) {
         Session session = sessionService.createSession();
 
         String clientSessionID =
@@ -165,23 +152,23 @@ public class AuthorisationHandler
                 clientSessionID);
         sessionService.save(session);
         LOGGER.info("Session saved successfully {}", session.getSessionId());
-        return redirect(session, scope, clientSessionID);
+        return redirect(session, clientSessionID);
     }
 
-    private APIGatewayProxyResponseEvent redirect(
-            Session session, Scope scope, String clientSessionID) {
+    private APIGatewayProxyResponseEvent redirect(Session session, String clientSessionID) {
         return new APIGatewayProxyResponseEvent()
                 .withStatusCode(302)
                 .withHeaders(
                         Map.of(
                                 ResponseHeaders.LOCATION,
-                                buildLocationString(scope, session),
+                                configurationService.getLoginURI().toString(),
                                 ResponseHeaders.SET_COOKIE,
                                 buildCookieString(
                                         session,
                                         configurationService.getSessionCookieMaxAge(),
                                         configurationService.getSessionCookieAttributes(),
-                                        clientSessionID)));
+                                        clientSessionID,
+                                        configurationService.getDomainName())));
     }
 
     private APIGatewayProxyResponseEvent errorResponse(
@@ -198,22 +185,14 @@ public class AuthorisationHandler
                 .withHeaders(Map.of("Location", error.toURI().toString()));
     }
 
-    private String buildEncodedParam(String name, String value) {
-        return format("%s=%s", name, URLEncoder.encode(value));
-    }
-
-    private String buildLocationString(Scope scope, Session session) {
-        return format(
-                "%s?%s&%s",
-                configurationService.getLoginURI(),
-                buildEncodedParam(ResponseParameters.SESSION_ID, session.getSessionId()),
-                buildEncodedParam(ResponseParameters.SCOPE, scope.toString()));
-    }
-
     private String buildCookieString(
-            Session session, Integer maxAge, String attributes, String clientSessionID) {
+            Session session,
+            Integer maxAge,
+            String attributes,
+            String clientSessionID,
+            String domain) {
         return format(
-                "%s=%s.%s; Max-Age=%d; %s",
-                "gs", session.getSessionId(), clientSessionID, maxAge, attributes);
+                "%s=%s.%s; Max-Age=%d; Domain=%s; %s",
+                "gs", session.getSessionId(), clientSessionID, maxAge, domain, attributes);
     }
 }
