@@ -23,10 +23,12 @@ public class APIGatewayProxyResponseEventMatcher<T>
     @Override
     protected boolean matchesSafely(
             APIGatewayProxyResponseEvent item, Description mismatchDescription) {
-        boolean matched = mapper.apply(item).equals(expected);
+        var actual = mapper.apply(item);
+
+        boolean matched = actual.equals(expected);
 
         if (!matched) {
-            mismatchDescription.appendText(description());
+            mismatchDescription.appendText(description(actual));
         }
 
         return matched;
@@ -34,11 +36,11 @@ public class APIGatewayProxyResponseEventMatcher<T>
 
     @Override
     public void describeTo(Description description) {
-        description.appendText(description());
+        description.appendText(description(expected));
     }
 
-    private String description() {
-        return "an APIGatewayProxyResponseEvent with " + name + ": " + expected;
+    private String description(T value) {
+        return "an APIGatewayProxyResponseEvent with " + name + ": " + value;
     }
 
     public static APIGatewayProxyResponseEventMatcher<Integer> hasStatus(int statusCode) {
