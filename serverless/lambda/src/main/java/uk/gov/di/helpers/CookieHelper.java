@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import java.net.HttpCookie;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -15,12 +16,12 @@ public class CookieHelper {
     public static final String REQUEST_COOKIE_HEADER = "Cookie";
 
     public static Optional<SessionCookieIds> parseSessionCookie(Map<String, String> headers) {
-        if (headers == null
-                || !headers.containsKey(REQUEST_COOKIE_HEADER)
-                || headers.get(REQUEST_COOKIE_HEADER).isEmpty()) {
+        var cookieHeader = cookieHeader(headers);
+
+        if (cookieHeader.isEmpty()) {
             return Optional.empty();
         }
-        String cookies = headers.get(REQUEST_COOKIE_HEADER);
+        String cookies = headers.get(cookieHeader.get());
 
         LOGGER.debug("Session Cookie: {}", cookies);
 
@@ -62,6 +63,16 @@ public class CookieHelper {
                         return csid;
                     }
                 });
+    }
+
+    private static Optional<String> cookieHeader(Map<String, String> headers) {
+        if (headers == null) {
+            return Optional.empty();
+        }
+
+        return List.of(REQUEST_COOKIE_HEADER, REQUEST_COOKIE_HEADER.toLowerCase()).stream()
+                .filter(headers.keySet()::contains)
+                .findFirst();
     }
 
     public interface SessionCookieIds {

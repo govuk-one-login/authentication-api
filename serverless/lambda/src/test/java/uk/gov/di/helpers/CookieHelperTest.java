@@ -1,76 +1,68 @@
 package uk.gov.di.helpers;
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.net.HttpCookie;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.helpers.CookieHelper.REQUEST_COOKIE_HEADER;
 import static uk.gov.di.helpers.CookieHelper.SessionCookieIds;
+import static uk.gov.di.helpers.CookieHelper.parseSessionCookie;
 
 public class CookieHelperTest {
 
-    @Test
-    void shouldReturnIdsFromValidCookieStringWithMultipleCookeies() {
+    static Stream<String> inputs() {
+        return Stream.of(REQUEST_COOKIE_HEADER, REQUEST_COOKIE_HEADER.toLowerCase());
+    }
+
+    @ParameterizedTest(name = "with header {0}")
+    @MethodSource("inputs")
+    void shouldReturnIdsFromValidCookieStringWithMultipleCookeies(String header) {
         String cookieString = "Version=1; gs=session-id.456;name=ts";
-        Map<String, String> headers =
-                Map.ofEntries(Map.entry(REQUEST_COOKIE_HEADER, cookieString.toString()));
+        Map<String, String> headers = Map.ofEntries(Map.entry(header, cookieString.toString()));
 
-        Optional<SessionCookieIds> ids = CookieHelper.parseSessionCookie(headers);
+        SessionCookieIds ids = parseSessionCookie(headers).orElseThrow();
 
-        assertEquals("session-id", ids.get().getSessionId());
-        assertEquals("456", ids.get().getClientSessionId());
+        assertEquals("session-id", ids.getSessionId());
+        assertEquals("456", ids.getClientSessionId());
     }
 
-    @Test
-    void shouldReturnIdsFromValidCookie() {
+    @ParameterizedTest(name = "with header {0}")
+    @MethodSource("inputs")
+    void shouldReturnIdsFromValidCookie(String header) {
         HttpCookie cookie = new HttpCookie("gs", "session-id.456");
-        Map<String, String> headers =
-                Map.ofEntries(Map.entry(REQUEST_COOKIE_HEADER, cookie.toString()));
+        Map<String, String> headers = Map.ofEntries(Map.entry(header, cookie.toString()));
 
-        Optional<SessionCookieIds> ids = CookieHelper.parseSessionCookie(headers);
+        SessionCookieIds ids = parseSessionCookie(headers).orElseThrow();
 
-        assertEquals("session-id", ids.get().getSessionId());
-        assertEquals("456", ids.get().getClientSessionId());
+        assertEquals("session-id", ids.getSessionId());
+        assertEquals("456", ids.getClientSessionId());
     }
 
-    @Test
-    void shouldReturnEmptyIfCookieMalformatted() {
-        assertEquals(
-                Optional.empty(),
-                CookieHelper.parseSessionCookie(
-                        Map.ofEntries(Map.entry(REQUEST_COOKIE_HEADER, "someinvalidvalue"))));
+    @ParameterizedTest(name = "with header {0}")
+    @MethodSource("inputs")
+    void shouldReturnEmptyIfCookieNotPresent(String header) {
+        assertEmpty(parseSessionCookie(null));
+        assertEmpty(parseSessionCookie(Map.of()));
+        assertEmpty(parseSessionCookie(Map.of("header", "value")));
+    }
 
-        assertEquals(Optional.empty(), CookieHelper.parseSessionCookie(Map.of()));
+    @ParameterizedTest(name = "with header {0}")
+    @MethodSource("inputs")
+    void shouldReturnEmptyIfCookieMalformatted(String header) {
+        assertEmpty(parseSessionCookie(Map.of(header, "")));
+        assertEmpty(parseSessionCookie(Map.of(header, "someinvalidvalue")));
+        assertEmpty(parseSessionCookie(Map.of(header, "gs=this is bad")));
+        assertEmpty(parseSessionCookie(Map.of(header, "gs=no-dot;")));
+        assertEmpty(parseSessionCookie(Map.of(header, "gs=one-value.two-value.three-value;")));
+        assertEmpty(parseSessionCookie(Map.of(header, "gsdsds=one-value.two-value")));
+    }
 
-        assertEquals(
-                Optional.empty(),
-                CookieHelper.parseSessionCookie(Map.ofEntries(Map.entry("header", "value"))));
-        assertEquals(
-                Optional.empty(),
-                CookieHelper.parseSessionCookie(
-                        Map.ofEntries(Map.entry(REQUEST_COOKIE_HEADER, ""))));
-        assertEquals(
-                Optional.empty(),
-                CookieHelper.parseSessionCookie(
-                        Map.ofEntries(Map.entry(REQUEST_COOKIE_HEADER, "gs=this is bad"))));
-        assertEquals(
-                Optional.empty(),
-                CookieHelper.parseSessionCookie(
-                        Map.ofEntries(Map.entry(REQUEST_COOKIE_HEADER, "gs=no-dot;"))));
-        assertEquals(
-                Optional.empty(),
-                CookieHelper.parseSessionCookie(
-                        Map.ofEntries(
-                                Map.entry(
-                                        REQUEST_COOKIE_HEADER,
-                                        "gs=one-value.two-value.three-value;"))));
-        assertEquals(
-                Optional.empty(),
-                CookieHelper.parseSessionCookie(
-                        Map.ofEntries(
-                                Map.entry(REQUEST_COOKIE_HEADER, "gsdsds=one-value.two-value"))));
+    private static void assertEmpty(Object input) {
+        assertEquals(Optional.empty(), input);
     }
 }
