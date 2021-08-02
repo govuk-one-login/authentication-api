@@ -34,8 +34,11 @@ resource "aws_iam_policy" "api_gateway_logging_policy" {
       "Action": [
         "logs:CreateLogGroup",
         "logs:CreateLogStream",
+        "logs:DescribeLogGroups",
+        "logs:DescribeLogStreams",
         "logs:PutLogEvents",
-        "logs:CreateLogGroup"
+        "logs:GetLogEvents",
+        "logs:FilterLogEvents"
       ],
       "Resource": "arn:aws:logs:*:*:*",
       "Effect": "Allow"
