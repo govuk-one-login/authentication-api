@@ -1,3 +1,55 @@
+resource "aws_iam_role" "api_gateway_logging_iam_role" {
+  name = "${var.environment}-api-gateway-logging-lambda-role"
+
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "apigateway.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+  tags = {
+    environment = var.environment
+  }
+}
+
+resource "aws_iam_policy" "api_gateway_logging_policy" {
+  name        = "${var.environment}-api-gateway-logging"
+  path        = "/"
+  description = "IAM policy for logging for API Gateway"
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents",
+        "logs:CreateLogGroup"
+      ],
+      "Resource": "arn:aws:logs:*:*:*",
+      "Effect": "Allow"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy_attachment" "api_gateway_logging_logs" {
+  role       = aws_iam_role.api_gateway_logging_iam_role.name
+  policy_arn = aws_iam_policy.api_gateway_logging_policy.arn
+}
+
 resource "aws_api_gateway_rest_api" "di_authentication_api" {
   name = "${var.environment}-di-authentication-api"
 
@@ -89,6 +141,25 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
     module.auth-code,
     module.logout,
     aws_api_gateway_deployment.deployment,
+  ]
+}
+
+resource "aws_api_gateway_account" "api_gateway_logging_role" {
+  cloudwatch_role_arn = aws_iam_role.api_gateway_logging_iam_role.arn
+}
+
+resource "aws_api_gateway_method_settings" "api_gateway_logging_settings" {
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  stage_name  = var.api_deployment_stage_name
+  method_path = "*/*"
+
+  settings {
+    metrics_enabled        = false
+    data_trace_enabled     = true
+    logging_level          = "INFO"
+  }
+  depends_on = [
+    aws_api_gateway_stage.endpoint_stage
   ]
 }
 
