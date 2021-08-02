@@ -15,7 +15,7 @@ import static uk.gov.di.helpers.CookieHelper.SessionCookieIds;
 public class CookieHelperTest {
 
     static Stream<String> inputs() {
-        return Stream.of(REQUEST_COOKIE_HEADER);
+        return Stream.of(REQUEST_COOKIE_HEADER, REQUEST_COOKIE_HEADER.toLowerCase());
     }
 
     @ParameterizedTest(name = "with header {0}")
