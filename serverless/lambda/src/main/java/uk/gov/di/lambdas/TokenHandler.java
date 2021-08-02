@@ -12,6 +12,8 @@ import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.ErrorResponse;
@@ -36,6 +38,8 @@ import static uk.gov.di.helpers.RequestBodyHelper.parseRequestBody;
 
 public class TokenHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(TokenHandler.class);
 
     private final ClientService clientService;
     private final TokenService tokenService;
@@ -87,11 +91,13 @@ public class TokenHandler
             requestBody = parseRequestParameters(input.getBody());
             privateKeyJWT = PrivateKeyJWT.parse(input.getBody());
         } catch (ParseException e) {
+            LOG.error("Couldn't parse Private Key JWT", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
         String clientID = requestBody.get("client_id");
         Optional<ClientRegistry> client = clientService.getClient(clientID);
         if (client.isEmpty()) {
+            LOG.error("Client ID is empty");
             return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1016);
         }
 
@@ -101,6 +107,7 @@ public class TokenHandler
                         privateKeyJWT,
                         configurationService.getBaseURL().orElseThrow());
         if (!privateKeyJWTIsValid) {
+            LOG.error("Private Key KWT is not valid");
             return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1015);
         }
         String clientSessionId;
@@ -110,6 +117,7 @@ public class TokenHandler
                             .getClientSessionIdForCode(requestBody.get("code"))
                             .orElseThrow();
         } catch (NoSuchElementException e) {
+            LOG.error("Could not retrieve client session ID from code", e);
             return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1018);
         }
         ClientSession clientSession = clientSessionService.getClientSession(clientSessionId);
@@ -117,6 +125,7 @@ public class TokenHandler
         try {
             authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
         } catch (ParseException e) {
+            LOG.error("Could not parse authentication request", e);
             throw new RuntimeException(
                     format(
                             "Unable to parse Auth Request\n Auth Request Params: %s \n Exception: %s",
@@ -132,6 +141,7 @@ public class TokenHandler
                 new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, null));
         clientSessionService.saveClientSession(
                 clientSessionId, clientSession.setIdTokenHint(idToken.serialize()));
+        LOG.info("Successfully generated tokens.");
         return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
     }
 
