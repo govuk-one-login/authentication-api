@@ -22,7 +22,7 @@ data "aws_region" "current"{
 }
 
 locals {
-  api_base_url = var.use_localstack ? "${var.aws_endpoint}/restapis/${aws_api_gateway_rest_api.di_authentication_api.id}/${var.api_deployment_stage_name}/_user_request_" : "https://${aws_api_gateway_rest_api.di_authentication_api.id}.execute-api.${data.aws_region.current.name}.amazonaws.com/${var.api_deployment_stage_name}"
+  api_base_url = var.use_localstack ? "${var.aws_endpoint}/restapis/${aws_api_gateway_rest_api.di_authentication_api.id}/${var.api_deployment_stage_name}/_user_request_" : "https://api.${var.environment}.${var.service_domain_name}"
 }
 
 resource "aws_api_gateway_deployment" "deployment" {
