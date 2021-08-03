@@ -12,6 +12,7 @@ import static java.util.Map.ofEntries;
 import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.entity.SessionState.TWO_FACTOR_REQUIRED;
 import static uk.gov.di.entity.SessionState.USER_NOT_FOUND;
+import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
 
 public class StateMachine<T> {
 
@@ -28,8 +29,9 @@ public class StateMachine<T> {
     public static StateMachine<SessionState> userJourneyStateMachine() {
         var states =
                 ofEntries(
-                        entry(USER_NOT_FOUND, List.of(TWO_FACTOR_REQUIRED)),
-                        entry(AUTHENTICATION_REQUIRED, List.of(TWO_FACTOR_REQUIRED)));
+                        entry(USER_NOT_FOUND, List.of(EMAIL_CODE_VERIFIED)),
+                        entry(AUTHENTICATION_REQUIRED, List.of(TWO_FACTOR_REQUIRED)),
+                        entry(EMAIL_CODE_VERIFIED, List.of(TWO_FACTOR_REQUIRED)));
 
         return new StateMachine<>(states);
     }
