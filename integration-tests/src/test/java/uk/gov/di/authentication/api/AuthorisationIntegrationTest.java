@@ -186,11 +186,11 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
                 getHeaderValueByParamName(response, "Location"),
                 startsWith(configurationService.getLoginURI().toString()));
         /*
-            TODO:
-                In this scenario the session state would be set to AUTHENTICATION_REQUIRED.
-                At present there is no way to retrieve the state in an integration test.
-                A further assertion should be added when possible.
-         */
+           TODO:
+               In this scenario the session state would be set to AUTHENTICATION_REQUIRED.
+               At present there is no way to retrieve the state in an integration test.
+               A further assertion should be added when possible.
+        */
     }
 
     private String givenAnExistingSession(SessionState initialState) throws Exception {

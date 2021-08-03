@@ -84,7 +84,7 @@ class AuthCodeHandlerTest {
 
         when(authorizationService.isClientRedirectUriValid(eq(clientID), eq(REDIRECT_URI)))
                 .thenReturn(true);
-        when(authorisationCodeService.generateAuthorisationCode(eq(CLIENT_SESSION_ID)))
+        when(authorisationCodeService.generateAuthorisationCode(eq(CLIENT_SESSION_ID), eq(EMAIL)))
                 .thenReturn(authorizationCode);
         when(authorizationService.generateSuccessfulAuthResponse(
                         any(AuthorizationRequest.class), any(AuthorizationCode.class)))
@@ -173,9 +173,12 @@ class AuthCodeHandlerTest {
     private void generateValidSession(Map<String, List<String>> authRequest) {
         when(sessionService.readSessionFromRedis(SESSION_ID))
                 .thenReturn(
-                        Optional.of(new Session(SESSION_ID).addClientSession(CLIENT_SESSION_ID)));
+                        Optional.of(
+                                new Session(SESSION_ID)
+                                        .addClientSession(CLIENT_SESSION_ID)
+                                        .setEmailAddress(EMAIL)));
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(new ClientSession(authRequest, LocalDateTime.now(), EMAIL));
+                .thenReturn(new ClientSession(authRequest, LocalDateTime.now()));
     }
 
     private String buildCookieString() {

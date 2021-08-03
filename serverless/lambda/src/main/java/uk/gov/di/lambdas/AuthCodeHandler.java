@@ -90,7 +90,7 @@ public class AuthCodeHandler
 
         AuthorizationCode authCode =
                 authorisationCodeService.generateAuthorisationCode(
-                        sessionCookieIds.getClientSessionId());
+                        sessionCookieIds.getClientSessionId(), session.getEmailAddress());
         AuthenticationSuccessResponse authenticationResponse =
                 authorizationService.generateSuccessfulAuthResponse(authorizationRequest, authCode);
         sessionService.save(session.setState(AUTHENTICATED));

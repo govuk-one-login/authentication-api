@@ -6,6 +6,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
+import uk.gov.di.entity.AuthCodeExchangeData;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.SessionState;
@@ -62,7 +63,7 @@ public class RedisHelper {
             redis.saveWithExpiry(
                     CLIENT_SESSION_PREFIX.concat(clientSessionId),
                     OBJECT_MAPPER.writeValueAsString(
-                            new ClientSession(authRequest, LocalDateTime.now(), email)),
+                            new ClientSession(authRequest, LocalDateTime.now())),
                     1800);
 
         } catch (IOException e) {
@@ -170,11 +171,17 @@ public class RedisHelper {
             Map<String, List<String>> authRequest) {
         try (RedisConnectionService redis =
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
-            redis.saveWithExpiry(AUTH_CODE_PREFIX.concat(authCode), clientSessionId, 300);
+            redis.saveWithExpiry(
+                    AUTH_CODE_PREFIX.concat(authCode),
+                    OBJECT_MAPPER.writeValueAsString(
+                            new AuthCodeExchangeData()
+                                    .setClientSessionId(clientSessionId)
+                                    .setEmail(email)),
+                    300);
             redis.saveWithExpiry(
                     CLIENT_SESSION_PREFIX.concat(clientSessionId),
                     OBJECT_MAPPER.writeValueAsString(
-                            new ClientSession(authRequest, LocalDateTime.now(), email)),
+                            new ClientSession(authRequest, LocalDateTime.now())),
                     300);
         } catch (IOException e) {
             throw new RuntimeException(e);

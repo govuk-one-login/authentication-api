@@ -258,8 +258,7 @@ class LogoutHandlerTest {
                                 List.of("code"),
                                 "state",
                                 List.of("some-state")),
-                        LocalDateTime.now(),
-                        TEST_EMAIL);
+                        LocalDateTime.now());
         clientSession.setIdTokenHint(idToken.serialize());
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID)).thenReturn(clientSession);
     }
