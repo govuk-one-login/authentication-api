@@ -1,9 +1,46 @@
+data "aws_iam_policy_document" "lambda_can_assume_policy" {
+  version = "2012-10-17"
+
+  statement {
+    effect = "Allow"
+    principals {
+      identifiers = [
+        "lambda.amazonaws.com"
+      ]
+      type = "Service"
+    }
+
+    actions = [
+      "sts:AssumeRole"
+    ]
+  }
+}
+
 resource "aws_iam_role" "lambda_iam_role" {
   name = "${var.environment}-standard-lambda-role"
 
-  assume_role_policy = var.lambda_iam_policy
+  assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_policy.json
+
   tags = {
     environment = var.environment
+  }
+}
+
+data "aws_iam_policy_document" "endpoint_logging_policy" {
+  version = "2012-10-17"
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+      "logs:CreateLogGroup"
+    ]
+
+    resources = [
+      "arn:aws:logs:*:*:*",
+    ]
   }
 }
 
@@ -12,23 +49,7 @@ resource "aws_iam_policy" "endpoint_logging_policy" {
   path        = "/"
   description = "IAM policy for logging from a lambda"
 
-  policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": [
-        "logs:CreateLogGroup",
-        "logs:CreateLogStream",
-        "logs:PutLogEvents",
-        "logs:CreateLogGroup"
-      ],
-      "Resource": "arn:aws:logs:*:*:*",
-      "Effect": "Allow"
-    }
-  ]
-}
-EOF
+  policy = data.aws_iam_policy_document.endpoint_logging_policy.json
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_logs" {
@@ -36,29 +57,28 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
   policy_arn = aws_iam_policy.endpoint_logging_policy.arn
 }
 
+data "aws_iam_policy_document" "endpoint_networking_policy" {
+  version = "2012-10-17"
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "ec2:DescribeNetworkInterfaces",
+      "ec2:CreateNetworkInterface",
+      "ec2:DeleteNetworkInterface",
+      "ec2:DescribeInstances",
+      "ec2:AttachNetworkInterface",
+    ]
+    resources = ["*"]
+  }
+}
+
 resource "aws_iam_policy" "endpoint_networking_policy" {
   name        = "${var.environment}-standard-lambda-networking"
   path        = "/"
   description = "IAM policy for managing VPC connection for a lambda"
 
-  policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "ec2:DescribeNetworkInterfaces",
-        "ec2:CreateNetworkInterface",
-        "ec2:DeleteNetworkInterface",
-        "ec2:DescribeInstances",
-        "ec2:AttachNetworkInterface"
-      ],
-      "Resource": "*"
-    }
-  ]
-}
-EOF
+  policy = data.aws_iam_policy_document.endpoint_networking_policy.json
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_networking" {
@@ -69,7 +89,7 @@ resource "aws_iam_role_policy_attachment" "lambda_networking" {
 resource "aws_iam_role" "sqs_lambda_iam_role" {
   name = "${var.environment}-sqs-lambda-role"
 
-  assume_role_policy = var.lambda_iam_policy
+  assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_policy.json
   tags = {
     environment = var.environment
   }
@@ -88,7 +108,7 @@ resource "aws_iam_role_policy_attachment" "sqs_lambda_networking" {
 resource "aws_iam_role" "dynamo_sqs_lambda_iam_role" {
   name = "${var.environment}-dynamo-sqs-lambda-role"
 
-  assume_role_policy = var.lambda_iam_policy
+  assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_policy.json
   tags = {
     environment = var.environment
   }

@@ -1,7 +1,7 @@
 resource "aws_iam_role" "email_lambda_iam_role" {
   name = "${var.environment}-email-notification-sqs-lambda-role"
 
-  assume_role_policy = var.lambda_iam_policy
+  assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_policy.json
 
   tags = {
     environment = var.environment
@@ -18,7 +18,7 @@ resource "aws_iam_role_policy_attachment" "emaiL_lambda_logging_policy" {
   ]
 }
 
-resource "aws_iam_role_policy_attachment" "emaiL_lambda_networking_policy" {
+resource "aws_iam_role_policy_attachment" "email_lambda_networking_policy" {
   role       = aws_iam_role.email_lambda_iam_role.name
   policy_arn = aws_iam_policy.endpoint_networking_policy.arn
 

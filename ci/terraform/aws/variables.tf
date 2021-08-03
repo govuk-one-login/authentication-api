@@ -34,25 +34,6 @@ variable "api_base_url" {
   default = "http://localhost:8080"
 }
 
-variable "lambda_iam_policy" {
-  type    = string
-  default = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": "sts:AssumeRole",
-      "Principal": {
-        "Service": "lambda.amazonaws.com"
-      },
-      "Effect": "Allow",
-      "Sid": ""
-    }
-  ]
-}
-EOF
-}
-
 variable "aws_endpoint" {
   type    = string
   default = null
