@@ -159,6 +159,9 @@ resource "aws_api_gateway_account" "api_gateway_logging_role" {
 }
 
 resource "aws_api_gateway_method_settings" "api_gateway_logging_settings" {
+
+  count = var.enable_api_gateway_execution_logging ? 1 : 0
+
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   stage_name  = var.api_deployment_stage_name
   method_path = "*/*"

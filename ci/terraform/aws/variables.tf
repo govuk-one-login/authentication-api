@@ -78,3 +78,8 @@ variable "redis_use_tls" {
 variable "service_domain_name" {
   default = "auth.ida.digital.cabinet-office.gov.uk"
 }
+
+variable "enable_api_gateway_execution_logging" {
+  default     = true
+  description = "Whether to enable logging of API gateway runs (including capturing of requests/responses)"
+}
