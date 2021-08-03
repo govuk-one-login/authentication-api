@@ -1,8 +1,6 @@
 resource "aws_dynamodb_table" "user_credentials_table" {
   name           = "${var.environment}-user-credentials"
-  billing_mode   = "PROVISIONED"
-  write_capacity = 5
-  read_capacity  = 5
+  billing_mode   = "PAY_PER_REQUEST"
   hash_key       = "Email"
 
   attribute {
@@ -18,8 +16,6 @@ resource "aws_dynamodb_table" "user_credentials_table" {
   global_secondary_index {
     name               = "SubjectIDIndex"
     hash_key           = "SubjectID"
-    write_capacity     = 5
-    read_capacity      = 5
     projection_type    = "ALL"
   }
 
@@ -30,9 +26,7 @@ resource "aws_dynamodb_table" "user_credentials_table" {
 
 resource "aws_dynamodb_table" "user_profile_table" {
   name           = "${var.environment}-user-profile"
-  billing_mode   = "PROVISIONED"
-  write_capacity = 5
-  read_capacity  = 5
+  billing_mode   = "PAY_PER_REQUEST"
   hash_key       = "Email"
 
   attribute {
@@ -48,8 +42,6 @@ resource "aws_dynamodb_table" "user_profile_table" {
   global_secondary_index {
     name               = "SubjectIDIndex"
     hash_key           = "SubjectID"
-    write_capacity     = 5
-    read_capacity      = 5
     projection_type    = "ALL"
   }
 
@@ -60,9 +52,7 @@ resource "aws_dynamodb_table" "user_profile_table" {
 
 resource "aws_dynamodb_table" "client_registry_table" {
   name           = "${var.environment}-client-registry"
-  billing_mode   = "PROVISIONED"
-  write_capacity = 5
-  read_capacity  = 5
+  billing_mode   = "PAY_PER_REQUEST"
   hash_key       = "ClientID"
 
   attribute {
@@ -78,8 +68,6 @@ resource "aws_dynamodb_table" "client_registry_table" {
   global_secondary_index {
     name               = "ClientNameIndex"
     hash_key           = "ClientName"
-    write_capacity     = 5
-    read_capacity      = 5
     projection_type    = "ALL"
   }
 }
