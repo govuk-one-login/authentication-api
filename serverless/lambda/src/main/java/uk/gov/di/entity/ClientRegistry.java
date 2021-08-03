@@ -4,6 +4,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBIndexHashKey;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class ClientRegistry {
@@ -11,10 +12,10 @@ public class ClientRegistry {
     private String clientID;
     private String clientName;
     private String publicKey;
-    private List<String> postLogoutRedirectUrls;
-    private List<String> scopes;
-    private List<String> redirectUrls;
-    private List<String> contacts;
+    private List<String> postLogoutRedirectUrls = new ArrayList<>();
+    private List<String> scopes = new ArrayList<>();
+    private List<String> redirectUrls = new ArrayList<>();
+    private List<String> contacts = new ArrayList<>();
 
     @DynamoDBHashKey(attributeName = "ClientID")
     public String getClientID() {

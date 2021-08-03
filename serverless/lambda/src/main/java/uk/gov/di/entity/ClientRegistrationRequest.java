@@ -2,7 +2,9 @@ package uk.gov.di.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class ClientRegistrationRequest {
 
@@ -22,11 +24,12 @@ public class ClientRegistrationRequest {
     private List<String> scopes;
 
     @JsonProperty("post_logout_redirect_uris")
-    private List<String> postLogoutRedirectUris;
+    private List<String> postLogoutRedirectUris = new ArrayList<>();
 
     public ClientRegistrationRequest(
             @JsonProperty(required = true, value = "client_name") String clientName,
-            @JsonProperty(required = true, value = "redirect_uris") List<String> redirectUris,
+            @JsonProperty(required = true, value = "redirect_uris")
+                    List<String> redirectUris,
             @JsonProperty(required = true, value = "contacts") List<String> contacts,
             @JsonProperty(required = true, value = "public_key") String publicKey,
             @JsonProperty(required = true, value = "scopes") List<String> scopes,
@@ -37,7 +40,9 @@ public class ClientRegistrationRequest {
         this.contacts = contacts;
         this.publicKey = publicKey;
         this.scopes = scopes;
-        this.postLogoutRedirectUris = postLogoutRedirectUris;
+        if (Objects.nonNull(postLogoutRedirectUris)) {
+            this.postLogoutRedirectUris = postLogoutRedirectUris;
+        }
     }
 
     public String getClientName() {
