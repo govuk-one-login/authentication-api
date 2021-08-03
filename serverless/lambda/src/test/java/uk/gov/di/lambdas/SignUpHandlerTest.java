@@ -11,6 +11,8 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
+import uk.gov.di.entity.SessionState;
+import uk.gov.di.helpers.IdGenerator;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.SessionService;
 import uk.gov.di.services.ValidationService;
@@ -27,6 +29,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.entity.SessionState.NEW;
 import static uk.gov.di.entity.SessionState.TWO_FACTOR_REQUIRED;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -38,6 +41,9 @@ class SignUpHandlerTest {
     private final ValidationService validationService = mock(ValidationService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private SignUpHandler handler;
+
+    private final Session session =
+            new Session(IdGenerator.generate()).setState(SessionState.USER_NOT_FOUND);
 
     @BeforeEach
     public void setUp() {
@@ -51,7 +57,7 @@ class SignUpHandlerTest {
         when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(false);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", "a-session-id"));
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody("{ \"password\": \"computer-1\", \"email\": \"joe.bloggs@test.com\" }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -90,7 +96,7 @@ class SignUpHandlerTest {
     public void shouldReturn400IfAnyRequestParametersAreMissing() throws JsonProcessingException {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", "a-session-id"));
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody("{ \"email\": \"joe.bloggs@test.com\" }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -108,7 +114,7 @@ class SignUpHandlerTest {
 
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", "a-session-id"));
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody("{ \"password\": \"computer\", \"email\": \"joe.bloggs@test.com\" }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -138,8 +144,29 @@ class SignUpHandlerTest {
         assertThat(result, hasBody(expectedResponse));
     }
 
+    @Test
+    public void shouldReturn400IfUserTransitionsToHelperFromWrongState()
+            throws JsonProcessingException {
+        session.setState(NEW);
+
+        String password = "computer-1";
+        when(validationService.validatePassword(eq(password))).thenReturn(Optional.empty());
+        when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(false);
+        usingValidSession();
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody("{ \"password\": \"computer-1\", \"email\": \"joe.bloggs@test.com\" }");
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1019);
+
+        assertThat(result, hasBody(expectedResponse));
+    }
+
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(new Session("a-session-id")));
+                .thenReturn(Optional.of(session));
     }
 }

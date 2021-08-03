@@ -13,6 +13,7 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.entity.SessionState.TWO_FACTOR_REQUIRED;
 
 public class SignupIntegrationTest extends IntegrationTestEndpoints {
@@ -23,6 +24,8 @@ public class SignupIntegrationTest extends IntegrationTestEndpoints {
     @Test
     public void shouldCallSignupEndpointAndReturn200() throws IOException {
         String sessionId = RedisHelper.createSession();
+
+        RedisHelper.setSessionState(sessionId, AUTHENTICATION_REQUIRED);
 
         SignupRequest request =
                 new SignupRequest("joe.bloggs+5@digital.cabinet-office.gov.uk", "password-1");
