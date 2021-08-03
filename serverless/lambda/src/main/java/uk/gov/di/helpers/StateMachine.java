@@ -10,9 +10,9 @@ import static java.util.Collections.emptyList;
 import static java.util.Map.entry;
 import static java.util.Map.ofEntries;
 import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
+import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
 import static uk.gov.di.entity.SessionState.TWO_FACTOR_REQUIRED;
 import static uk.gov.di.entity.SessionState.USER_NOT_FOUND;
-import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
 
 public class StateMachine<T> {
 
