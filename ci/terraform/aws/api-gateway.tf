@@ -1,23 +1,49 @@
+data "aws_iam_policy_document" "api_gateway_can_assume_policy" {
+  version = "2012-10-17"
+
+  statement {
+    effect = "Allow"
+    principals {
+      identifiers = [
+        "apigateway.amazonaws.com"
+      ]
+      type = "Service"
+    }
+
+    actions = [
+      "sts:AssumeRole"
+    ]
+  }
+}
+
 resource "aws_iam_role" "api_gateway_logging_iam_role" {
   name = "${var.environment}-api-gateway-logging-lambda-role"
 
-  assume_role_policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "",
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "apigateway.amazonaws.com"
-      },
-      "Action": "sts:AssumeRole"
-    }
-  ]
-}
-EOF
+  assume_role_policy = data.aws_iam_policy_document.api_gateway_can_assume_policy.json
+
   tags = {
     environment = var.environment
+  }
+}
+
+data "aws_iam_policy_document" "api_gateway_logging_policy" {
+  version = "2012-10-17"
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:DescribeLogGroups",
+      "logs:DescribeLogStreams",
+      "logs:PutLogEvents",
+      "logs:GetLogEvents",
+      "logs:FilterLogEvents",
+    ]
+
+    resources = [
+      "arn:aws:logs:*:*:*",
+    ]
   }
 }
 
@@ -26,26 +52,7 @@ resource "aws_iam_policy" "api_gateway_logging_policy" {
   path        = "/"
   description = "IAM policy for logging for API Gateway"
 
-  policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": [
-        "logs:CreateLogGroup",
-        "logs:CreateLogStream",
-        "logs:DescribeLogGroups",
-        "logs:DescribeLogStreams",
-        "logs:PutLogEvents",
-        "logs:GetLogEvents",
-        "logs:FilterLogEvents"
-      ],
-      "Resource": "arn:aws:logs:*:*:*",
-      "Effect": "Allow"
-    }
-  ]
-}
-EOF
+  policy = data.aws_iam_policy_document.api_gateway_logging_policy.json
 }
 
 resource "aws_iam_role_policy_attachment" "api_gateway_logging_logs" {
@@ -152,6 +159,9 @@ resource "aws_api_gateway_account" "api_gateway_logging_role" {
 }
 
 resource "aws_api_gateway_method_settings" "api_gateway_logging_settings" {
+
+  count = var.enable_api_gateway_execution_logging ? 1 : 0
+
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   stage_name  = var.api_deployment_stage_name
   method_path = "*/*"

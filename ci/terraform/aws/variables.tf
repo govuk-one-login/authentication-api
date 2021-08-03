@@ -34,25 +34,6 @@ variable "api_base_url" {
   default = "http://localhost:8080"
 }
 
-variable "lambda_iam_policy" {
-  type    = string
-  default = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": "sts:AssumeRole",
-      "Principal": {
-        "Service": "lambda.amazonaws.com"
-      },
-      "Effect": "Allow",
-      "Sid": ""
-    }
-  ]
-}
-EOF
-}
-
 variable "aws_endpoint" {
   type    = string
   default = null
@@ -96,4 +77,9 @@ variable "redis_use_tls" {
 
 variable "service_domain_name" {
   default = "auth.ida.digital.cabinet-office.gov.uk"
+}
+
+variable "enable_api_gateway_execution_logging" {
+  default     = true
+  description = "Whether to enable logging of API gateway runs (including capturing of requests/responses)"
 }
