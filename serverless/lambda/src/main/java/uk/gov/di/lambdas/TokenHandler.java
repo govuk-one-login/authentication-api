@@ -14,6 +14,7 @@ import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.entity.AuthCodeExchangeData;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.ErrorResponse;
@@ -110,17 +111,18 @@ public class TokenHandler
             LOG.error("Private Key KWT is not valid");
             return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1015);
         }
-        String clientSessionId;
+        AuthCodeExchangeData authCodeExchangeData;
         try {
-            clientSessionId =
+            authCodeExchangeData =
                     authorisationCodeService
-                            .getClientSessionIdForCode(requestBody.get("code"))
+                            .getExchangeDataForCode(requestBody.get("code"))
                             .orElseThrow();
         } catch (NoSuchElementException e) {
             LOG.error("Could not retrieve client session ID from code", e);
             return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1018);
         }
-        ClientSession clientSession = clientSessionService.getClientSession(clientSessionId);
+        ClientSession clientSession =
+                clientSessionService.getClientSession(authCodeExchangeData.getClientSessionId());
         AuthenticationRequest authRequest;
         try {
             authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
@@ -131,7 +133,8 @@ public class TokenHandler
                             "Unable to parse Auth Request\n Auth Request Params: %s \n Exception: %s",
                             clientSession.getAuthRequestParams(), e));
         }
-        Subject subject = authenticationService.getSubjectFromEmail(clientSession.getEmail());
+        Subject subject =
+                authenticationService.getSubjectFromEmail(authCodeExchangeData.getEmail());
 
         AccessToken accessToken =
                 tokenService.generateAndStoreAccessToken(
@@ -140,7 +143,8 @@ public class TokenHandler
         OIDCTokenResponse tokenResponse =
                 new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, null));
         clientSessionService.saveClientSession(
-                clientSessionId, clientSession.setIdTokenHint(idToken.serialize()));
+                authCodeExchangeData.getClientSessionId(),
+                clientSession.setIdTokenHint(idToken.serialize()));
         LOG.info("Successfully generated tokens.");
         return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
     }

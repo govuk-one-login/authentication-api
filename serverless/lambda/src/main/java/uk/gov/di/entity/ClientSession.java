@@ -17,17 +17,12 @@ public class ClientSession {
     @JsonProperty("creation_date")
     private LocalDateTime creationDate;
 
-    @JsonProperty("email")
-    private String email;
-
     public ClientSession(
             @JsonProperty(required = true, value = "auth_request_params")
                     Map<String, List<String>> authRequestParams,
-            @JsonProperty(required = true, value = "creation_date") LocalDateTime creationDate,
-            @JsonProperty(required = true, value = "email") String email) {
+            @JsonProperty(required = true, value = "creation_date") LocalDateTime creationDate) {
         this.authRequestParams = authRequestParams;
         this.creationDate = creationDate;
-        this.email = email;
     }
 
     public ClientSession setIdTokenHint(String idTokenHint) {
@@ -41,10 +36,6 @@ public class ClientSession {
 
     public String getIdTokenHint() {
         return idTokenHint;
-    }
-
-    public String getEmail() {
-        return email;
     }
 
     public LocalDateTime getCreationDate() {

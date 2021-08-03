@@ -1,8 +1,12 @@
 package uk.gov.di.services;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.entity.AuthCodeExchangeData;
+import uk.gov.di.helpers.ObjectMapperFactory;
 
 import java.util.Optional;
 
@@ -13,6 +17,7 @@ public class AuthorisationCodeService {
 
     private final RedisConnectionService redisConnectionService;
     private final long authorisationCodeExpiry;
+    private final ObjectMapper objectMapper;
 
     public AuthorisationCodeService(ConfigurationService configurationService) {
         this.redisConnectionService =
@@ -22,18 +27,36 @@ public class AuthorisationCodeService {
                         configurationService.getUseRedisTLS(),
                         configurationService.getRedisPassword());
         this.authorisationCodeExpiry = configurationService.getAuthCodeExpiry();
+        this.objectMapper = ObjectMapperFactory.getInstance();
     }
 
-    public AuthorizationCode generateAuthorisationCode(String clientSessionId) {
+    public AuthorizationCode generateAuthorisationCode(String clientSessionId, String email) {
         AuthorizationCode authorizationCode = new AuthorizationCode();
-        redisConnectionService.saveWithExpiry(
-                AUTH_CODE_PREFIX.concat(authorizationCode.getValue()),
-                clientSessionId,
-                authorisationCodeExpiry);
-        return authorizationCode;
+        try {
+            redisConnectionService.saveWithExpiry(
+                    AUTH_CODE_PREFIX.concat(authorizationCode.getValue()),
+                    objectMapper.writeValueAsString(
+                            new AuthCodeExchangeData()
+                                    .setEmail(email)
+                                    .setClientSessionId(clientSessionId)),
+                    authorisationCodeExpiry);
+            return authorizationCode;
+        } catch (JsonProcessingException e) {
+            LOG.error("Error persisting auth code to cache", e);
+            throw new RuntimeException(e);
+        }
     }
 
-    public Optional<String> getClientSessionIdForCode(String code) {
-        return Optional.ofNullable(redisConnectionService.popValue(AUTH_CODE_PREFIX.concat(code)));
+    public Optional<AuthCodeExchangeData> getExchangeDataForCode(String code) {
+        return Optional.ofNullable(redisConnectionService.popValue(AUTH_CODE_PREFIX.concat(code)))
+                .map(
+                        s -> {
+                            try {
+                                return objectMapper.readValue(s, AuthCodeExchangeData.class);
+                            } catch (JsonProcessingException e) {
+                                LOG.error("Error deserialising auth code data from cache", e);
+                                throw new RuntimeException(e);
+                            }
+                        });
     }
 }

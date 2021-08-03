@@ -19,6 +19,7 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.entity.AuthCodeExchangeData;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.ErrorResponse;
@@ -113,14 +114,16 @@ public class TokenHandlerTest {
                 .thenReturn(accessToken);
         when(tokenService.generateIDToken(eq(CLIENT_ID), any(Subject.class))).thenReturn(signedJWT);
         String authCode = new AuthorizationCode().toString();
-        when(authorisationCodeService.getClientSessionIdForCode(authCode))
-                .thenReturn(Optional.of(CLIENT_SESSION_ID));
+        when(authorisationCodeService.getExchangeDataForCode(authCode))
+                .thenReturn(
+                        Optional.of(
+                                new AuthCodeExchangeData()
+                                        .setClientSessionId(CLIENT_SESSION_ID)
+                                        .setEmail(TEST_EMAIL)));
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(
                         new ClientSession(
-                                generateAuthRequest().toParameters(),
-                                LocalDateTime.now(),
-                                TEST_EMAIL));
+                                generateAuthRequest().toParameters(), LocalDateTime.now()));
 
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(privateKeyJWT, CLIENT_ID, authCode);
