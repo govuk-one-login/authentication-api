@@ -6,6 +6,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.http.client.utils.URIBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.Session;
 import uk.gov.di.helpers.CookieHelper;
@@ -25,6 +27,8 @@ import static java.lang.String.format;
 
 public class LogoutHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(LogoutHandler.class);
 
     private final ConfigurationService configurationService;
     private final SessionService sessionService;
@@ -78,15 +82,18 @@ public class LogoutHandler
         }
         if (!queryStringParameters.containsKey("id_token_hint")
                 || queryStringParameters.get("id_token_hint").isBlank()) {
+            LOG.info("Deleting session from redis as no id token");
             sessionService.deleteSessionFromRedis(session.getSessionId());
             return generateDefaultLogoutResponse(state);
         }
         if (!doesIDTokenExistInSession(queryStringParameters.get("id_token_hint"), session)) {
+            LOG.error("ID token doesn't exist in session");
             throw new RuntimeException(
                     format("ID Token does not exist for Session: %s", session.getSessionId()));
         }
         if (!isIDTokenSignatureValid(
                 queryStringParameters.get("id_token_hint"), session.getSessionId())) {
+            LOG.error("ID token sig is invalid");
             throw new RuntimeException(
                     format(
                             "Unable to validate ID token signature for Session: %s",
@@ -104,6 +111,7 @@ public class LogoutHandler
                                             queryStringParameters, a, state))
                     .orElse(generateDefaultLogoutResponse(state));
         } catch (ParseException e) {
+            LOG.error("Unable to process logout request", e);
             throw new RuntimeException();
         }
     }
@@ -150,6 +158,7 @@ public class LogoutHandler
         try {
             uri = uriBuilder.build();
         } catch (URISyntaxException e) {
+            LOG.error("Unable to generate logout response", e);
             throw new RuntimeException("Unable to build URI");
         }
         return new APIGatewayProxyResponseEvent()
