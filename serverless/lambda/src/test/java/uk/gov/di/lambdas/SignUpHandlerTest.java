@@ -29,8 +29,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.entity.SessionState.NEW;
-import static uk.gov.di.entity.SessionState.TWO_FACTOR_REQUIRED;
+import static uk.gov.di.entity.SessionState.*;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -52,6 +51,7 @@ class SignUpHandlerTest {
 
     @Test
     public void shouldReturn200IfSignUpIsSuccessful() throws JsonProcessingException {
+        session.setState(EMAIL_CODE_VERIFIED);
         String password = "computer-1";
         when(validationService.validatePassword(eq(password))).thenReturn(Optional.empty());
         when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(false);
@@ -94,6 +94,7 @@ class SignUpHandlerTest {
 
     @Test
     public void shouldReturn400IfAnyRequestParametersAreMissing() throws JsonProcessingException {
+        session.setState(EMAIL_CODE_VERIFIED);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -108,6 +109,7 @@ class SignUpHandlerTest {
 
     @Test
     public void shouldReturn400IfPasswordFailsValidation() throws JsonProcessingException {
+        session.setState(EMAIL_CODE_VERIFIED);
         String password = "computer";
         when(validationService.validatePassword(eq(password)))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1007));
@@ -127,6 +129,7 @@ class SignUpHandlerTest {
 
     @Test
     public void shouldReturn400IfUserAlreadyExists() throws JsonProcessingException {
+        session.setState(EMAIL_CODE_VERIFIED);
         String password = "computer-1";
         when(validationService.validatePassword(eq(password))).thenReturn(Optional.empty());
         when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(true);
