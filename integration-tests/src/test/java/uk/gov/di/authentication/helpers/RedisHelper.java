@@ -187,4 +187,18 @@ public class RedisHelper {
             throw new RuntimeException(e);
         }
     }
+
+    public static void createClientSession(
+            String clientSessionId, Map<String, List<String>> authRequest) {
+        try (RedisConnectionService redis =
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
+            redis.saveWithExpiry(
+                    CLIENT_SESSION_PREFIX.concat(clientSessionId),
+                    OBJECT_MAPPER.writeValueAsString(
+                            new ClientSession(authRequest, LocalDateTime.now())),
+                    300);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

@@ -16,6 +16,7 @@ import uk.gov.di.helpers.Argon2Helper;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -103,6 +104,18 @@ public class DynamoService implements AuthenticationService {
     public void updatePhoneNumber(String email, String phoneNumber) {
         userProfileMapper.save(
                 userProfileMapper.load(UserProfile.class, email).setPhoneNumber(phoneNumber));
+    }
+
+    @Override
+    public void updateConsent(String email, Map<String, List<String>> clientConsents) {
+        userProfileMapper.save(
+                userProfileMapper.load(UserProfile.class, email).setClientConsents(clientConsents));
+    }
+
+    @Override
+    public Optional<Map<String, List<String>>> getUserConsents(String email) {
+        return Optional.ofNullable(
+                userProfileMapper.load(UserProfile.class, email).getClientConsents());
     }
 
     @Override

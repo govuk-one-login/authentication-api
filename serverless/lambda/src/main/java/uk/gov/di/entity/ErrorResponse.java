@@ -24,7 +24,8 @@ public enum ErrorResponse {
     ERROR_1016(1016, "Client not found"),
     ERROR_1017(1017, "Invalid Redirect URI"),
     ERROR_1018(1018, "Invalid authorization code parameter"),
-    ERROR_1019(1019, "Invalid transition in user journey");
+    ERROR_1019(1019, "Invalid transition in user journey"),
+    ERROR_1020(1020, "Client-Session-Id is missing or invalid");
 
     @JsonProperty("code")
     private int code;
