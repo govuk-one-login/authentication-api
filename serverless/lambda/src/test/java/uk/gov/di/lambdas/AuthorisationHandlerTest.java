@@ -153,16 +153,18 @@ class AuthorisationHandlerTest {
     @Test
     void shouldSkipLoginWhenPromptParamAbsentAndLoggedIn() {
         final URI loginUrl = URI.create("http://example.com");
+        final URI authCodeUri = URI.create("/auth-code");
         final Session session = new Session("a-session-id");
         session.addClientSession("old-client-session-id");
 
         whenLoggedIn(session, loginUrl);
+        when(configService.getAuthCodeURI()).thenReturn(authCodeUri);
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(withRequestEvent(), context);
         URI uri = URI.create(response.getHeaders().get("Location"));
 
         assertThat(response, hasStatus(302));
-        assertEquals(loginUrl.getAuthority(), uri.getAuthority());
+        assertEquals(authCodeUri, uri);
         assertEquals(EXPECTED_COOKIE_STRING, response.getHeaders().get("Set-Cookie"));
         verify(sessionService).save(eq(session));
         assertEquals(SessionState.AUTHENTICATED, session.getState());
@@ -185,17 +187,20 @@ class AuthorisationHandlerTest {
     @Test
     void shouldSkipLoginWhenPromptParamNoneAndLoggedIn() {
         final URI loginUrl = URI.create("http://example.com");
+        final URI authCodeUri = URI.create("/auth-code");
+
         final Session session = new Session("a-session-id");
         session.addClientSession("old-client-session-id");
 
         whenLoggedIn(session, loginUrl);
+        when(configService.getAuthCodeURI()).thenReturn(authCodeUri);
 
         APIGatewayProxyResponseEvent response =
                 handler.handleRequest(withPromptRequestEvent("none"), context);
         URI uri = URI.create(response.getHeaders().get("Location"));
 
         assertThat(response, hasStatus(302));
-        assertEquals(loginUrl.getAuthority(), uri.getAuthority());
+        assertEquals(authCodeUri, uri);
         assertEquals(EXPECTED_COOKIE_STRING, response.getHeaders().get("Set-Cookie"));
         verify(sessionService).save(eq(session));
         assertEquals(SessionState.AUTHENTICATED, session.getState());

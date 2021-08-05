@@ -31,6 +31,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static uk.gov.di.entity.SessionState.AUTHENTICATED;
+import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
 
 public class AuthorisationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -115,19 +117,22 @@ public class AuthorisationHandler
             }
             if (authenticationRequest.getPrompt().contains(Prompt.Type.LOGIN)
                     && isUserAuthenticated(existingSession)) {
-                existingSession.ifPresent(
-                        session -> session.setState(SessionState.AUTHENTICATION_REQUIRED));
+                existingSession.ifPresent(session -> session.setState(AUTHENTICATION_REQUIRED));
             }
         }
 
         return existingSession
                 .map(
                         session -> {
+                            URI redirectUri = configurationService.getAuthCodeURI();
+                            if (!session.getState().equals(AUTHENTICATED)) {
+                                redirectUri = configurationService.getLoginURI();
+                            }
                             return updateSessionAndRedirect(
                                     authRequestParameters,
                                     authenticationRequest,
                                     session,
-                                    configurationService.getLoginURI());
+                                    redirectUri);
                         })
                 .orElseGet(
                         () -> {
@@ -199,7 +204,7 @@ public class AuthorisationHandler
                 .withHeaders(
                         Map.of(
                                 ResponseHeaders.LOCATION,
-                                configurationService.getLoginURI().toString(),
+                                redirectURI.toString(),
                                 ResponseHeaders.SET_COOKIE,
                                 buildCookieString(
                                         session,
