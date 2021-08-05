@@ -10,13 +10,14 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.CheckUserExistsResponse;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
+import uk.gov.di.entity.SessionState;
+import uk.gov.di.helpers.IdGenerator;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.SessionService;
 import uk.gov.di.services.ValidationService;
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,15 +36,15 @@ class CheckUserExistsHandlerTest {
     private final ValidationService validationService = mock(ValidationService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private CheckUserExistsHandler handler;
-    private String sessionId;
     private ObjectMapper objectMapper = new ObjectMapper();
+
+    private final Session session = new Session(IdGenerator.generate()).setState(SessionState.NEW);
 
     @BeforeEach
     public void setup() {
         handler =
                 new CheckUserExistsHandler(
                         validationService, authenticationService, sessionService);
-        sessionId = UUID.randomUUID().toString();
     }
 
     @Test
@@ -53,7 +54,7 @@ class CheckUserExistsHandlerTest {
                 .thenReturn(true);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"email\": \"joe.bloggs@digital.cabinet-office.gov.uk\" }");
-        event.setHeaders(Map.of("Session-Id", sessionId));
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(200, result.getStatusCode());
@@ -73,7 +74,7 @@ class CheckUserExistsHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"email\": \"joe.bloggs@digital.cabinet-office.gov.uk\" }");
-        event.setHeaders(Map.of("Session-Id", sessionId));
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(200, result.getStatusCode());
@@ -91,7 +92,7 @@ class CheckUserExistsHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ }");
-        event.setHeaders(Map.of("Session-Id", sessionId));
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
@@ -121,7 +122,7 @@ class CheckUserExistsHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"email\": \"joe.bloggs\" }");
-        event.setHeaders(Map.of("Session-Id", sessionId));
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
@@ -130,8 +131,26 @@ class CheckUserExistsHandlerTest {
         assertThat(result, hasBody(expectedResponse));
     }
 
+    @Test
+    public void shouldReturn400IfUserTransitionsFromWrongState() throws JsonProcessingException {
+        usingValidSession();
+
+        session.setState(SessionState.AUTHENTICATED);
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setBody("{ \"email\": \"joe.bloggs\" }");
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(400, result.getStatusCode());
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1019);
+
+        // TODO: implement `hasJsonBody` matcher to remove duplication across tests
+        assertThat(result, hasBody(expectedResponse));
+    }
+
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(new Session("a-session-id")));
+                .thenReturn(Optional.of(session));
     }
 }

@@ -11,8 +11,10 @@ import static java.util.Map.entry;
 import static java.util.Map.ofEntries;
 import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
+import static uk.gov.di.entity.SessionState.NEW;
 import static uk.gov.di.entity.SessionState.TWO_FACTOR_REQUIRED;
 import static uk.gov.di.entity.SessionState.USER_NOT_FOUND;
+import static uk.gov.di.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
 
 public class StateMachine<T> {
 
@@ -31,10 +33,12 @@ public class StateMachine<T> {
     }
 
     public static StateMachine<SessionState> userJourneyStateMachine() {
-        var states =
+        Map<SessionState, List<SessionState>> states =
                 ofEntries(
-                        entry(USER_NOT_FOUND, List.of(EMAIL_CODE_VERIFIED)),
-                        entry(AUTHENTICATION_REQUIRED, List.of(TWO_FACTOR_REQUIRED)),
+                        entry(NEW, List.of(USER_NOT_FOUND)),
+                        entry(
+                                USER_NOT_FOUND,
+                                List.of(AUTHENTICATION_REQUIRED, VERIFY_EMAIL_CODE_SENT)),
                         entry(EMAIL_CODE_VERIFIED, List.of(TWO_FACTOR_REQUIRED)));
 
         return new StateMachine<>(states);

@@ -22,6 +22,7 @@ import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.entity.SessionState.USER_NOT_FOUND;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.helpers.StateMachine.isInvalidUserJourneyTransition;
 
 public class CheckUserExistsHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -58,7 +59,12 @@ public class CheckUserExistsHandler
             Optional<Session> session =
                     sessionService.getSessionFromRequestHeaders(input.getHeaders());
             if (session.isPresent()) {
+
+                if (isInvalidUserJourneyTransition(session.get().getState(), USER_NOT_FOUND)) {
+                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1019);
+                }
                 session.get().setState(USER_NOT_FOUND);
+
                 UserWithEmailRequest userExistsRequest =
                         objectMapper.readValue(input.getBody(), UserWithEmailRequest.class);
                 String emailAddress = userExistsRequest.getEmail();
@@ -70,6 +76,12 @@ public class CheckUserExistsHandler
                 boolean userExists = authenticationService.userExists(emailAddress);
                 session.get().setEmailAddress(emailAddress);
                 if (userExists) {
+
+                    if (isInvalidUserJourneyTransition(
+                            session.get().getState(), AUTHENTICATION_REQUIRED)) {
+                        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1019);
+                    }
+
                     session.get().setState(AUTHENTICATION_REQUIRED);
                 }
                 CheckUserExistsResponse checkUserExistsResponse =
