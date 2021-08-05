@@ -28,8 +28,7 @@ public class ClientRegistrationRequest {
 
     public ClientRegistrationRequest(
             @JsonProperty(required = true, value = "client_name") String clientName,
-            @JsonProperty(required = true, value = "redirect_uris")
-                    List<String> redirectUris,
+            @JsonProperty(required = true, value = "redirect_uris") List<String> redirectUris,
             @JsonProperty(required = true, value = "contacts") List<String> contacts,
             @JsonProperty(required = true, value = "public_key") String publicKey,
             @JsonProperty(required = true, value = "scopes") List<String> scopes,

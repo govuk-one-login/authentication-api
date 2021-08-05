@@ -15,6 +15,10 @@ public class ConfigurationService {
         return URI.create(System.getenv("LOGIN_URI"));
     }
 
+    public URI getAuthCodeURI() {
+        return URI.create(System.getenv().getOrDefault("AUTH_CODE_URI", "/auth-code"));
+    }
+
     public URI getSkipLoginURI() {
         return URI.create(System.getenv().getOrDefault("SKIP_LOGIN_URI", "http://skip-login"));
     }
