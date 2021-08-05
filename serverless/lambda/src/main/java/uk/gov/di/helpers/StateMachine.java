@@ -26,6 +26,10 @@ public class StateMachine<T> {
         return states.getOrDefault(from, emptyList()).contains(to);
     }
 
+    public static boolean isInvalidUserJourneyTransition(SessionState from, SessionState to) {
+        return !userJourneyStateMachine().isValidTransition(from, to);
+    }
+
     public static StateMachine<SessionState> userJourneyStateMachine() {
         var states =
                 ofEntries(
