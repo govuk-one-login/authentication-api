@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
+import uk.gov.di.entity.SessionState;
 import uk.gov.di.services.CodeStorageService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoService;
@@ -40,6 +41,7 @@ import static uk.gov.di.entity.SessionState.MFA_CODE_VERIFIED;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_NOT_VALID;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
+import static uk.gov.di.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -53,7 +55,10 @@ class VerifyCodeRequestHandlerTest {
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final ValidationService validationService = mock(ValidationService.class);
-    private final Session session = new Session("session-id").setEmailAddress(TEST_EMAIL_ADDRESS);
+    private final Session session =
+            new Session("session-id")
+                    .setEmailAddress(TEST_EMAIL_ADDRESS)
+                    .setState(VERIFY_EMAIL_CODE_SENT);
     private VerifyCodeHandler handler;
 
     @BeforeEach
@@ -223,6 +228,8 @@ class VerifyCodeRequestHandlerTest {
     @Test
     public void shouldUpdateRedisWhenUserHasReachedMaxEmailCodeAttempts()
             throws JsonProcessingException {
+        session.setState(EMAIL_CODE_NOT_VALID);
+
         final String USER_INPUT = "123456";
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(configurationService.getCodeExpiry()).thenReturn(900L);
@@ -245,6 +252,8 @@ class VerifyCodeRequestHandlerTest {
 
     @Test
     public void shouldReturnMaxReachedWhenEmailCodeIsBlocked() throws JsonProcessingException {
+        session.setState(EMAIL_CODE_NOT_VALID);
+
         final String USER_INPUT = "123456";
         when(codeStorageService.isCodeBlockedForSession(TEST_EMAIL_ADDRESS, session.getSessionId()))
                 .thenReturn(true);
@@ -328,6 +337,25 @@ class VerifyCodeRequestHandlerTest {
         assertThat(result, hasStatus(200));
         assertThat(codeResponse.getSessionState(), equalTo(MFA_CODE_MAX_RETRIES_REACHED));
         verify(codeStorageService, never()).getOtpCode(session.getEmailAddress(), MFA_SMS);
+    }
+
+    @Test
+    public void shouldReturn400IfUserTransitionsFromWrongStateForEmailCode()
+            throws JsonProcessingException {
+        session.setState(SessionState.NEW);
+
+        when(configurationService.getCodeMaxRetries()).thenReturn(5);
+        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
+                .thenReturn(Optional.of(CODE));
+        when(validationService.validateEmailVerificationCode(
+                        eq(Optional.of(CODE)), eq(CODE), any(Session.class), eq(5)))
+                .thenReturn(EMAIL_CODE_VERIFIED);
+        APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, VERIFY_EMAIL.toString());
+
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1019);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasBody(expectedResponse));
     }
 
     private APIGatewayProxyResponseEvent makeCallWithCode(String code, String notificationType) {

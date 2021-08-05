@@ -10,6 +10,8 @@ import static java.util.Collections.emptyList;
 import static java.util.Map.entry;
 import static java.util.Map.ofEntries;
 import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
+import static uk.gov.di.entity.SessionState.EMAIL_CODE_MAX_RETRIES_REACHED;
+import static uk.gov.di.entity.SessionState.EMAIL_CODE_NOT_VALID;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
 import static uk.gov.di.entity.SessionState.NEW;
 import static uk.gov.di.entity.SessionState.TWO_FACTOR_REQUIRED;
@@ -39,7 +41,19 @@ public class StateMachine<T> {
                         entry(
                                 USER_NOT_FOUND,
                                 List.of(AUTHENTICATION_REQUIRED, VERIFY_EMAIL_CODE_SENT)),
-                        entry(EMAIL_CODE_VERIFIED, List.of(TWO_FACTOR_REQUIRED)));
+                        entry(
+                                VERIFY_EMAIL_CODE_SENT,
+                                List.of(EMAIL_CODE_VERIFIED, EMAIL_CODE_NOT_VALID)),
+                        entry(
+                                EMAIL_CODE_NOT_VALID,
+                                List.of(
+                                        EMAIL_CODE_VERIFIED,
+                                        EMAIL_CODE_NOT_VALID,
+                                        EMAIL_CODE_MAX_RETRIES_REACHED)),
+                        entry(EMAIL_CODE_MAX_RETRIES_REACHED, Collections.emptyList()),
+                        entry(
+                                EMAIL_CODE_VERIFIED,
+                                List.of(EMAIL_CODE_NOT_VALID, TWO_FACTOR_REQUIRED)));
 
         return new StateMachine<>(states);
     }

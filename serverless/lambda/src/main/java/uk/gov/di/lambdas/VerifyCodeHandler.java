@@ -28,6 +28,7 @@ import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHE
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.helpers.StateMachine.isInvalidUserJourneyTransition;
 
 public class VerifyCodeHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -81,20 +82,32 @@ public class VerifyCodeHandler
                 case VERIFY_EMAIL:
                     if (codeStorageService.isCodeBlockedForSession(
                             session.get().getEmailAddress(), session.get().getSessionId())) {
+
+                        if (isInvalidUserJourneyTransition(
+                                session.get().getState(), EMAIL_CODE_MAX_RETRIES_REACHED)) {
+                            return generateApiGatewayProxyErrorResponse(
+                                    400, ErrorResponse.ERROR_1019);
+                        }
+
                         sessionService.save(session.get().setState(EMAIL_CODE_MAX_RETRIES_REACHED));
                     } else {
                         Optional<String> emailCode =
                                 codeStorageService.getOtpCode(
                                         session.get().getEmailAddress(),
                                         codeRequest.getNotificationType());
-                        sessionService.save(
-                                session.get()
-                                        .setState(
-                                                validationService.validateEmailVerificationCode(
-                                                        emailCode,
-                                                        codeRequest.getCode(),
-                                                        session.get(),
-                                                        configurationService.getCodeMaxRetries())));
+                        var newState =
+                                validationService.validateEmailVerificationCode(
+                                        emailCode,
+                                        codeRequest.getCode(),
+                                        session.get(),
+                                        configurationService.getCodeMaxRetries());
+
+                        if (isInvalidUserJourneyTransition(session.get().getState(), newState)) {
+                            return generateApiGatewayProxyErrorResponse(
+                                    400, ErrorResponse.ERROR_1019);
+                        }
+
+                        sessionService.save(session.get().setState(newState));
                         processCodeSessionState(session.get(), codeRequest.getNotificationType());
                     }
                     return generateApiGatewayProxyResponse(
