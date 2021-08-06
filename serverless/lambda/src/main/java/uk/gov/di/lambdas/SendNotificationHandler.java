@@ -15,6 +15,7 @@ import uk.gov.di.entity.NotificationType;
 import uk.gov.di.entity.NotifyRequest;
 import uk.gov.di.entity.SendNotificationRequest;
 import uk.gov.di.entity.Session;
+import uk.gov.di.helpers.StateMachine.InvalidStateTransitionException;
 import uk.gov.di.services.AwsSqsClient;
 import uk.gov.di.services.CodeGeneratorService;
 import uk.gov.di.services.CodeStorageService;
@@ -31,6 +32,7 @@ import static uk.gov.di.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
 import static uk.gov.di.entity.SessionState.VERIFY_PHONE_NUMBER_CODE_SENT;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.helpers.StateMachine.validateStateTransition;
 
 public class SendNotificationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -89,6 +91,8 @@ public class SendNotificationHandler
             }
             switch (sendNotificationRequest.getNotificationType()) {
                 case VERIFY_EMAIL:
+                    validateStateTransition(session.get(), VERIFY_EMAIL_CODE_SENT);
+
                     Optional<ErrorResponse> emailErrorResponse =
                             validationService.validateEmailAddress(
                                     sendNotificationRequest.getEmail());
@@ -123,6 +127,8 @@ public class SendNotificationHandler
         } catch (JsonProcessingException e) {
             LOGGER.error("Error parsing request", e.getMessage());
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        } catch (InvalidStateTransitionException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1019);
         }
     }
 
