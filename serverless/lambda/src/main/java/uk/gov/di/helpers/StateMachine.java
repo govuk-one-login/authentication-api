@@ -35,10 +35,6 @@ public class StateMachine<T> {
         return states.getOrDefault(from, emptyList()).contains(to);
     }
 
-    public static boolean isInvalidUserJourneyTransition(SessionState from, SessionState to) {
-        return !userJourneyStateMachine().isValidTransition(from, to);
-    }
-
     public static void validateStateTransition(Session session, SessionState to) {
         if (!userJourneyStateMachine().isValidTransition(session.getState(), to)) {
             LOGGER.info(

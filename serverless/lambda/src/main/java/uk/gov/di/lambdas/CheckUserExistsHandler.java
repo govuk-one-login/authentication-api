@@ -10,6 +10,7 @@ import uk.gov.di.entity.CheckUserExistsResponse;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.UserWithEmailRequest;
+import uk.gov.di.helpers.StateMachine.InvalidStateTransitionException;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoService;
@@ -22,7 +23,7 @@ import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.entity.SessionState.USER_NOT_FOUND;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.helpers.StateMachine.isInvalidUserJourneyTransition;
+import static uk.gov.di.helpers.StateMachine.validateStateTransition;
 
 public class CheckUserExistsHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -60,9 +61,7 @@ public class CheckUserExistsHandler
                     sessionService.getSessionFromRequestHeaders(input.getHeaders());
             if (session.isPresent()) {
 
-                if (isInvalidUserJourneyTransition(session.get().getState(), USER_NOT_FOUND)) {
-                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1019);
-                }
+                validateStateTransition(session.get(), USER_NOT_FOUND);
                 session.get().setState(USER_NOT_FOUND);
 
                 UserWithEmailRequest userExistsRequest =
@@ -76,12 +75,7 @@ public class CheckUserExistsHandler
                 boolean userExists = authenticationService.userExists(emailAddress);
                 session.get().setEmailAddress(emailAddress);
                 if (userExists) {
-
-                    if (isInvalidUserJourneyTransition(
-                            session.get().getState(), AUTHENTICATION_REQUIRED)) {
-                        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1019);
-                    }
-
+                    validateStateTransition(session.get(), AUTHENTICATION_REQUIRED);
                     session.get().setState(AUTHENTICATION_REQUIRED);
                 }
                 CheckUserExistsResponse checkUserExistsResponse =
@@ -94,6 +88,8 @@ public class CheckUserExistsHandler
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        } catch (InvalidStateTransitionException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1019);
         }
     }
 }

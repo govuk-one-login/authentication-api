@@ -11,6 +11,7 @@ import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.SignupRequest;
+import uk.gov.di.helpers.StateMachine.InvalidStateTransitionException;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoService;
@@ -22,7 +23,7 @@ import java.util.Optional;
 import static uk.gov.di.entity.SessionState.TWO_FACTOR_REQUIRED;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.helpers.StateMachine.userJourneyStateMachine;
+import static uk.gov.di.helpers.StateMachine.validateStateTransition;
 
 public class SignUpHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -60,12 +61,9 @@ public class SignUpHandler
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         }
 
-        if (!userJourneyStateMachine()
-                .isValidTransition(session.get().getState(), TWO_FACTOR_REQUIRED)) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1019);
-        }
-
         try {
+            validateStateTransition(session.get(), TWO_FACTOR_REQUIRED);
+
             SignupRequest signupRequest =
                     objectMapper.readValue(input.getBody(), SignupRequest.class);
 
@@ -90,6 +88,8 @@ public class SignUpHandler
             }
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        } catch (InvalidStateTransitionException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1019);
         }
     }
 }
