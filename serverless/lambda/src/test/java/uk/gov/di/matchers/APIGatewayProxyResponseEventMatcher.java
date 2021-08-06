@@ -1,6 +1,8 @@
 package uk.gov.di.matchers;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
@@ -51,5 +53,15 @@ public class APIGatewayProxyResponseEventMatcher<T>
     public static APIGatewayProxyResponseEventMatcher<String> hasBody(String body) {
         return new APIGatewayProxyResponseEventMatcher<>(
                 "body", APIGatewayProxyResponseEvent::getBody, body);
+    }
+
+    public static APIGatewayProxyResponseEventMatcher<String> hasJsonBody(Object body) {
+        try {
+            var expectedValue = new ObjectMapper().writeValueAsString(body);
+            return new APIGatewayProxyResponseEventMatcher<>(
+                    "body", APIGatewayProxyResponseEvent::getBody, expectedValue);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
