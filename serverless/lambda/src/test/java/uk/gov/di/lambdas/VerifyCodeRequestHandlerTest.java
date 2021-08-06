@@ -42,7 +42,7 @@ import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHE
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_NOT_VALID;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
 import static uk.gov.di.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class VerifyCodeRequestHandlerTest {
@@ -148,7 +148,7 @@ class VerifyCodeRequestHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfRequestIsMissingNotificationType() throws JsonProcessingException {
+    public void shouldReturn400IfRequestIsMissingNotificationType() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
         event.setBody(format("{ \"code\": \"%s\"}", CODE));
@@ -157,29 +157,24 @@ class VerifyCodeRequestHandlerTest {
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
-
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1001);
-        assertThat(result, hasBody(expectedResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
     }
 
     @Test
-    public void shouldReturn400IfSessionIdIsInvalid() throws JsonProcessingException {
+    public void shouldReturn400IfSessionIdIsInvalid() {
         APIGatewayProxyResponseEvent result =
                 makeCallWithCode("123456", VERIFY_EMAIL.toString(), Optional.empty());
 
         assertThat(result, hasStatus(400));
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1000);
-        assertThat(result, hasBody(expectedResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
     }
 
     @Test
-    public void shouldReturn400IfNotificationTypeIsNotValid() throws JsonProcessingException {
+    public void shouldReturn400IfNotificationTypeIsNotValid() {
         APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, "VERIFY_TEXT");
 
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1001);
-
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(expectedResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
     }
 
     @Test
@@ -340,8 +335,7 @@ class VerifyCodeRequestHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserTransitionsFromWrongStateForEmailCode()
-            throws JsonProcessingException {
+    public void shouldReturn400IfUserTransitionsFromWrongStateForEmailCode() {
         session.setState(SessionState.NEW);
 
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
@@ -352,10 +346,8 @@ class VerifyCodeRequestHandlerTest {
                 .thenReturn(EMAIL_CODE_VERIFIED);
         APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, VERIFY_EMAIL.toString());
 
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1019);
-
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(expectedResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1019));
     }
 
     private APIGatewayProxyResponseEvent makeCallWithCode(String code, String notificationType) {

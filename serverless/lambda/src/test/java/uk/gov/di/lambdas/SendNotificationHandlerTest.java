@@ -43,7 +43,7 @@ import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
 import static uk.gov.di.entity.SessionState.VERIFY_PHONE_NUMBER_CODE_SENT;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
 class SendNotificationHandlerTest {
 
@@ -124,7 +124,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfRequestIsMissingEmail() throws JsonProcessingException {
+    public void shouldReturn400IfRequestIsMissingEmail() {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
@@ -132,12 +132,11 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1001);
-        assertThat(result, hasBody(expectedResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
     }
 
     @Test
-    public void shouldReturn400IfEmailAddressIsInvalid() throws JsonProcessingException {
+    public void shouldReturn400IfEmailAddressIsInvalid() {
         when(validationService.validateEmailAddress(eq("joe.bloggs")))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1004));
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
@@ -152,9 +151,7 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1004);
-
-        assertThat(result, hasBody(expectedResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1004));
     }
 
     @Test
@@ -181,7 +178,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenInvalidNotificationType() throws JsonProcessingException {
+    public void shouldReturn400WhenInvalidNotificationType() {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
 
@@ -195,9 +192,7 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1001);
-        assertThat(result, hasBody(expectedResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
 
         verify(awsSqsClient, never()).send(anyString());
         verify(codeStorageService, never())
@@ -222,8 +217,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenVerifyTypeIsVerifyPhoneNumberButRequestIsMissingNumber()
-            throws JsonProcessingException {
+    public void shouldReturn400WhenVerifyTypeIsVerifyPhoneNumberButRequestIsMissingNumber() {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
@@ -234,12 +228,11 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1011);
-        assertThat(result, hasBody(expectedResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1011));
     }
 
     @Test
-    public void shouldReturn400WhenPhoneNumberIsInvalid() throws JsonProcessingException {
+    public void shouldReturn400WhenPhoneNumberIsInvalid() {
         when(validationService.validatePhoneNumber(eq("123456789")))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1012));
         usingValidSession();
@@ -252,9 +245,7 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1012);
-
-        assertThat(result, hasBody(expectedResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1012));
     }
 
     private void usingValidSession() {

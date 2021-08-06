@@ -24,7 +24,7 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.entity.SessionState.LOGGED_IN;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class LoginHandlerTest {
@@ -64,7 +64,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    public void shouldReturn401IfUserHasInvalidCredentials() throws JsonProcessingException {
+    public void shouldReturn401IfUserHasInvalidCredentials() {
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
@@ -75,12 +75,11 @@ class LoginHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(401));
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1008);
-        assertThat(result, hasBody(expectedResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
     }
 
     @Test
-    public void shouldReturn400IfAnyRequestParametersAreMissing() throws JsonProcessingException {
+    public void shouldReturn400IfAnyRequestParametersAreMissing() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
         event.setBody(format("{ \"password\": \"%s\"}", PASSWORD));
@@ -90,12 +89,11 @@ class LoginHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1001);
-        assertThat(result, hasBody(expectedResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
     }
 
     @Test
-    public void shouldReturn400IfSessionIdIsInvalid() throws JsonProcessingException {
+    public void shouldReturn400IfSessionIdIsInvalid() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
         event.setBody(format("{ \"password\": \"%s\"}", PASSWORD));
@@ -107,12 +105,11 @@ class LoginHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1000);
-        assertThat(result, hasBody(expectedResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
     }
 
     @Test
-    public void shouldReturn400IfUserDoesNotHaveAnAccount() throws JsonProcessingException {
+    public void shouldReturn400IfUserDoesNotHaveAnAccount() {
         when(authenticationService.userExists(EMAIL)).thenReturn(false);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
@@ -123,8 +120,7 @@ class LoginHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1010);
-        assertThat(result, hasBody(expectedResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
     }
 
     private void usingValidSession() {

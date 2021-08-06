@@ -3,8 +3,6 @@ package uk.gov.di.lambdas;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ResponseType;
@@ -37,7 +35,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthCodeHandlerTest {
@@ -101,19 +99,18 @@ class AuthCodeHandlerTest {
     }
 
     @Test
-    public void shouldGenerateErrorResponseWhenSessionIsNotFound() throws JsonProcessingException {
+    public void shouldGenerateErrorResponseWhenSessionIsNotFound() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
         assertThat(response, hasStatus(400));
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1000);
-        assertThat(response, hasBody(expectedResponse));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1000));
     }
 
     @Test
     public void shouldGenerateErrorResponseWhenRedirectUriIsInvalid()
-            throws ClientNotFoundException, JsonProcessingException {
+            throws ClientNotFoundException {
         ClientID clientID = new ClientID();
         generateValidSessionAndAuthRequest(clientID);
         when(authorizationService.isClientRedirectUriValid(eq(new ClientID()), eq(REDIRECT_URI)))
@@ -123,13 +120,11 @@ class AuthCodeHandlerTest {
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
         assertThat(response, hasStatus(400));
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1017);
-        assertThat(response, hasBody(expectedResponse));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1017));
     }
 
     @Test
-    public void shouldGenerateErrorResponseWhenClientIsNotFound()
-            throws ClientNotFoundException, JsonProcessingException {
+    public void shouldGenerateErrorResponseWhenClientIsNotFound() throws ClientNotFoundException {
         ClientID clientID = new ClientID();
         generateValidSessionAndAuthRequest(clientID);
         doThrow(ClientNotFoundException.class)
@@ -141,21 +136,18 @@ class AuthCodeHandlerTest {
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
         assertThat(response, hasStatus(400));
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1016);
-        assertThat(response, hasBody(expectedResponse));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1016));
     }
 
     @Test
-    public void shouldGenerateErrorResponseIfUnableToParseAuthRequest()
-            throws JsonProcessingException {
+    public void shouldGenerateErrorResponseIfUnableToParseAuthRequest() {
         generateValidSession(Map.of("rubbish", List.of("more-rubbish")));
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
         assertThat(response, hasStatus(400));
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1001);
-        assertThat(response, hasBody(expectedResponse));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1001));
     }
 
     private AuthorizationRequest generateValidSessionAndAuthRequest(ClientID clientID) {
