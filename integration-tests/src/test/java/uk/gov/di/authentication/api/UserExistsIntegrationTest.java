@@ -7,6 +7,8 @@ import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.helpers.RequestHelper;
 import uk.gov.di.entity.CheckUserExistsResponse;
+import uk.gov.di.entity.ErrorResponse;
+import uk.gov.di.entity.SessionState;
 import uk.gov.di.entity.UserWithEmailRequest;
 
 import java.io.IOException;
@@ -28,6 +30,7 @@ public class UserExistsIntegrationTest extends IntegrationTestEndpoints {
         String emailAddress = "joe.bloggs+1@digital.cabinet-office.gov.uk";
         String sessionId = RedisHelper.createSession();
         DynamoHelper.signUp(emailAddress, "password-1");
+        RedisHelper.setSessionState(sessionId, SessionState.NEW);
 
         UserWithEmailRequest request = new UserWithEmailRequest(emailAddress);
 
@@ -48,6 +51,7 @@ public class UserExistsIntegrationTest extends IntegrationTestEndpoints {
             throws IOException {
         String emailAddress = "joe.bloggs+2@digital.cabinet-office.gov.uk";
         String sessionId = RedisHelper.createSession();
+        RedisHelper.setSessionState(sessionId, SessionState.NEW);
         UserWithEmailRequest request = new UserWithEmailRequest(emailAddress);
         Response response =
                 RequestHelper.requestWithSession(USEREXISTS_ENDPOINT, request, sessionId);
@@ -59,5 +63,21 @@ public class UserExistsIntegrationTest extends IntegrationTestEndpoints {
         assertEquals(request.getEmail(), checkUserExistsResponse.getEmail());
         assertEquals(USER_NOT_FOUND, checkUserExistsResponse.getSessionState());
         assertFalse(checkUserExistsResponse.doesUserExist());
+    }
+
+    @Test
+    public void shouldReturn400IfStateTransitionIsInvalid() throws IOException {
+        String emailAddress = "joe.bloggs+2@digital.cabinet-office.gov.uk";
+        String sessionId = RedisHelper.createSession();
+        RedisHelper.setSessionState(sessionId, SessionState.AUTHENTICATED);
+        UserWithEmailRequest request = new UserWithEmailRequest(emailAddress);
+        Response response =
+                RequestHelper.requestWithSession(USEREXISTS_ENDPOINT, request, sessionId);
+
+        assertEquals(400, response.getStatus());
+
+        String responseString = response.readEntity(String.class);
+
+        assertEquals(responseString, objectMapper.writeValueAsString(ErrorResponse.ERROR_1019));
     }
 }
