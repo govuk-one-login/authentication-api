@@ -1,5 +1,8 @@
 package uk.gov.di.helpers;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import uk.gov.di.entity.Session;
 import uk.gov.di.entity.SessionState;
 
 import java.util.Collections;
@@ -22,6 +25,8 @@ public class StateMachine<T> {
 
     private final Map<T, List<T>> states;
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(StateMachine.class);
+
     public StateMachine(Map<T, List<T>> states) {
         this.states = Collections.unmodifiableMap(states);
     }
@@ -32,6 +37,14 @@ public class StateMachine<T> {
 
     public static boolean isInvalidUserJourneyTransition(SessionState from, SessionState to) {
         return !userJourneyStateMachine().isValidTransition(from, to);
+    }
+
+    public static void validateStateTransition(Session session, SessionState to) {
+        if (!userJourneyStateMachine().isValidTransition(session.getState(), to)) {
+            LOGGER.info(
+                    "Session attempted invalid transition from {} to {}", session.getState(), to);
+            throw new InvalidStateTransitionException();
+        }
     }
 
     public static StateMachine<SessionState> userJourneyStateMachine() {
@@ -57,4 +70,6 @@ public class StateMachine<T> {
 
         return new StateMachine<>(states);
     }
+
+    public static class InvalidStateTransitionException extends RuntimeException {}
 }
