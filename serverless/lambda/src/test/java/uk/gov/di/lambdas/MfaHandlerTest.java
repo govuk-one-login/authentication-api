@@ -27,7 +27,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.entity.NotificationType.MFA_SMS;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class MfaHandlerTest {
@@ -88,8 +88,7 @@ public class MfaHandlerTest {
     }
 
     @Test
-    public void shouldReturnErrorResponseWhenUsersPhoneNumberIsNotStored()
-            throws JsonProcessingException {
+    public void shouldReturnErrorResponseWhenUsersPhoneNumberIsNotStored() {
         usingValidSession(TEST_EMAIL_ADDRESS);
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS)).thenReturn(Optional.empty());
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -99,8 +98,7 @@ public class MfaHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1014);
-        assertThat(result, hasBody(expectedResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1014));
     }
 
     private void usingValidSession(String email) {

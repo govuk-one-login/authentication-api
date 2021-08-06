@@ -29,8 +29,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.entity.SessionState.*;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
+import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
+import static uk.gov.di.entity.SessionState.NEW;
+import static uk.gov.di.entity.SessionState.TWO_FACTOR_REQUIRED;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class SignUpHandlerTest {
@@ -78,7 +80,7 @@ class SignUpHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfSessionIdMissing() throws JsonProcessingException {
+    public void shouldReturn400IfSessionIdMissing() {
         String password = "computer-1";
         when(validationService.validatePassword(eq(password))).thenReturn(Optional.empty());
 
@@ -87,13 +89,11 @@ class SignUpHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1000);
-        assertThat(result, hasBody(expectedResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
     }
 
     @Test
-    public void shouldReturn400IfAnyRequestParametersAreMissing() throws JsonProcessingException {
+    public void shouldReturn400IfAnyRequestParametersAreMissing() {
         session.setState(EMAIL_CODE_VERIFIED);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -102,13 +102,11 @@ class SignUpHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1001);
-        assertThat(result, hasBody(expectedResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
     }
 
     @Test
-    public void shouldReturn400IfPasswordFailsValidation() throws JsonProcessingException {
+    public void shouldReturn400IfPasswordFailsValidation() {
         session.setState(EMAIL_CODE_VERIFIED);
         String password = "computer";
         when(validationService.validatePassword(eq(password)))
@@ -121,14 +119,11 @@ class SignUpHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1007);
-
-        assertThat(result, hasBody(expectedResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1007));
     }
 
     @Test
-    public void shouldReturn400IfUserAlreadyExists() throws JsonProcessingException {
+    public void shouldReturn400IfUserAlreadyExists() {
         session.setState(EMAIL_CODE_VERIFIED);
         String password = "computer-1";
         when(validationService.validatePassword(eq(password))).thenReturn(Optional.empty());
@@ -141,15 +136,11 @@ class SignUpHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1009);
-
-        assertThat(result, hasBody(expectedResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1009));
     }
 
     @Test
-    public void shouldReturn400IfUserTransitionsToHelperFromWrongState()
-            throws JsonProcessingException {
+    public void shouldReturn400IfUserTransitionsToHelperFromWrongState() {
         session.setState(NEW);
 
         String password = "computer-1";
@@ -162,10 +153,7 @@ class SignUpHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1019);
-
-        assertThat(result, hasBody(expectedResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1019));
     }
 
     private void usingValidSession() {

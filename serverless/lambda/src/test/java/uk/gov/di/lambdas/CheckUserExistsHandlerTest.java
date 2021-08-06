@@ -27,7 +27,7 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
 class CheckUserExistsHandlerTest {
 
@@ -87,7 +87,7 @@ class CheckUserExistsHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfRequestIsMissingEmail() throws JsonProcessingException {
+    public void shouldReturn400IfRequestIsMissingEmail() {
         usingValidSession();
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -96,26 +96,22 @@ class CheckUserExistsHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1001);
-        assertThat(result, hasBody(expectedResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
     }
 
     @Test
-    public void shouldReturn400IfRequestIsMissingSessionId() throws JsonProcessingException {
+    public void shouldReturn400IfRequestIsMissingSessionId() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"email\": \"joe.bloggs@digital.cabinet-office.gov.uk\" }");
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1000);
-        assertThat(result, hasBody(expectedResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
     }
 
     @Test
-    public void shouldReturn400IfEmailAddressIsInvalid() throws JsonProcessingException {
+    public void shouldReturn400IfEmailAddressIsInvalid() {
         usingValidSession();
         when(validationService.validateEmailAddress(eq("joe.bloggs")))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1004));
@@ -126,13 +122,11 @@ class CheckUserExistsHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1004);
-
-        assertThat(result, hasBody(expectedResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1004));
     }
 
     @Test
-    public void shouldReturn400IfUserTransitionsFromWrongState() throws JsonProcessingException {
+    public void shouldReturn400IfUserTransitionsFromWrongState() {
         usingValidSession();
 
         session.setState(SessionState.AUTHENTICATED);
@@ -143,10 +137,7 @@ class CheckUserExistsHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1019);
-
-        // TODO: implement `hasJsonBody` matcher to remove duplication across tests
-        assertThat(result, hasBody(expectedResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1019));
     }
 
     private void usingValidSession() {

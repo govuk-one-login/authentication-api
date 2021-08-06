@@ -3,8 +3,6 @@ package uk.gov.di.lambdas;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.ErrorResponse;
@@ -24,7 +22,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.entity.UpdateProfileType.ADD_PHONE_NUMBER;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class UpdateProfileHandlerTest {
@@ -42,7 +40,7 @@ class UpdateProfileHandlerTest {
     }
 
     @Test
-    public void shouldReturn200WhenUpdatingPhoneNumber() throws JsonProcessingException {
+    public void shouldReturn200WhenUpdatingPhoneNumber() {
         when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(false);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -59,7 +57,7 @@ class UpdateProfileHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenRequestIsMissingParameters() throws JsonProcessingException {
+    public void shouldReturn400WhenRequestIsMissingParameters() {
         when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(false);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -74,8 +72,7 @@ class UpdateProfileHandlerTest {
                 .updatePhoneNumber(eq(TEST_EMAIL_ADDRESS), eq(PHONE_NUMBER));
 
         assertThat(result, hasStatus(400));
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1001);
-        assertThat(result, hasBody(expectedResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
     }
 
     private void usingValidSession() {
