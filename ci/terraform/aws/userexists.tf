@@ -2,6 +2,7 @@ module "userexists" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "user-exists"
+  path_part       = "user-exists"
   endpoint_method = "POST"
   environment     = var.environment
 

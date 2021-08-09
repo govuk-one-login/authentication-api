@@ -49,13 +49,16 @@ public class ClientInfoHandlerTest {
 
     @BeforeEach
     public void beforEach() {
-        handler = new ClientInfoHandler(configurationService, clientSessionService, clientService, sessionService);
+        handler =
+                new ClientInfoHandler(
+                        configurationService, clientSessionService, clientService, sessionService);
         clientRegistry = new ClientRegistry();
         clientRegistry.setClientID(TEST_CLIENT_ID);
         clientRegistry.setClientName(TEST_CLIENT_NAME);
         when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
         when(clientService.getClient(UNKNOWN_TEST_CLIENT_ID)).thenReturn(Optional.empty());
-        when(sessionService.getSessionFromRequestHeaders(any())).thenReturn(Optional.of(new Session("session-id")));
+        when(sessionService.getSessionFromRequestHeaders(any()))
+                .thenReturn(Optional.of(new Session("session-id")));
     }
 
     @Test

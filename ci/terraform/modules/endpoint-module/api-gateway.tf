@@ -1,7 +1,7 @@
 resource "aws_api_gateway_resource" "endpoint_resource" {
   rest_api_id = var.rest_api_id
   parent_id   = var.root_resource_id
-  path_part   = var.endpoint_name
+  path_part   = var.path_part
 }
 
 resource "aws_api_gateway_method" "endpoint_method" {
@@ -9,7 +9,9 @@ resource "aws_api_gateway_method" "endpoint_method" {
   resource_id   = aws_api_gateway_resource.endpoint_resource.id
   http_method   = var.endpoint_method
   authorization = "NONE"
-  request_parameters   = {}
+  request_parameters   = {
+    "method.request.path.clientId" = true
+  }
 
   depends_on = [
     aws_api_gateway_resource.endpoint_resource

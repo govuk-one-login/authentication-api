@@ -2,6 +2,7 @@ module "token" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "token"
+  path_part       = "token"
   endpoint_method = "POST"
   environment     = var.environment
 

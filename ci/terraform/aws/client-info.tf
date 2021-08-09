@@ -2,6 +2,7 @@ module "client-info" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "client-info"
+  path_part       = "client-info"
   endpoint_method = "GET"
   environment     = var.environment
 

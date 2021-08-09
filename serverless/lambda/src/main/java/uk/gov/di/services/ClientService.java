@@ -27,5 +27,5 @@ public interface ClientService {
 
     ClientID generateClientID();
 
-    ClientRegistry updateClient(UpdateClientConfigRequest updateRequest);
+    ClientRegistry updateClient(String clientId, UpdateClientConfigRequest updateRequest);
 }

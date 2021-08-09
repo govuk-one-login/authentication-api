@@ -2,6 +2,7 @@ module "login" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "login"
+  path_part       = "login"
   endpoint_method = "POST"
   handler_environment_variables = {
     ENVIRONMENT = var.environment

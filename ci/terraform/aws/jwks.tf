@@ -2,6 +2,7 @@ module "jwks" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "jwks.json"
+  path_part       = "jwks.json"
   endpoint_method = "GET"
   environment     = var.environment
 

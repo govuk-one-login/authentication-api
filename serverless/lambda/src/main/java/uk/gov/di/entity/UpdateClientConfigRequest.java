@@ -28,10 +28,7 @@ public class UpdateClientConfigRequest {
     @JsonProperty("post_logout_redirect_uris")
     private List<String> postLogoutRedirectUris = new ArrayList<>();
 
-    public UpdateClientConfigRequest(
-            @JsonProperty(required = true, value = "client_id") String clientId) {
-        this.clientId = clientId;
-    }
+    public UpdateClientConfigRequest() {}
 
     public String getClientId() {
         return clientId;

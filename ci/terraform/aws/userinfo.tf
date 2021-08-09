@@ -2,6 +2,7 @@ module "userinfo" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "userinfo"
+  path_part       = "userinfo"
   endpoint_method = "GET"
   environment     = var.environment
 

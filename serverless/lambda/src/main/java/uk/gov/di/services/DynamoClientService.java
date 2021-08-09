@@ -83,9 +83,8 @@ public class DynamoClientService implements ClientService {
     }
 
     @Override
-    public ClientRegistry updateClient(UpdateClientConfigRequest updateRequest) {
-        ClientRegistry clientRegistry =
-                clientRegistryMapper.load(ClientRegistry.class, updateRequest.getClientId());
+    public ClientRegistry updateClient(String clientId, UpdateClientConfigRequest updateRequest) {
+        ClientRegistry clientRegistry = clientRegistryMapper.load(ClientRegistry.class, clientId);
         Optional.ofNullable(updateRequest.getRedirectUris())
                 .ifPresent(clientRegistry::setRedirectUrls);
         Optional.ofNullable(updateRequest.getClientName()).ifPresent(clientRegistry::setClientName);

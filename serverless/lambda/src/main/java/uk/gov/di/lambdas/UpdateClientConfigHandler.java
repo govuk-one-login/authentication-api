@@ -6,6 +6,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.gov.di.entity.ClientRegistrationResponse;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ErrorResponse;
@@ -22,6 +24,7 @@ public class UpdateClientConfigHandler
 
     private final ClientService clientService;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private static final Logger LOGGER = LoggerFactory.getLogger(UpdateClientConfigHandler.class);
 
     public UpdateClientConfigHandler(ClientService clientService) {
         this.clientService = clientService;
@@ -40,12 +43,16 @@ public class UpdateClientConfigHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         try {
+            String clientId = input.getPathParameters().get("clientId");
+            LOGGER.info("Request received with ClientId {}", clientId);
             UpdateClientConfigRequest updateClientConfigRequest =
                     objectMapper.readValue(input.getBody(), UpdateClientConfigRequest.class);
-            if (!clientService.isValidClient(updateClientConfigRequest.getClientId())) {
+            if (!clientService.isValidClient(clientId)) {
+                LOGGER.error("Client with ClientId {} is not valid", clientId);
                 return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1016);
             }
-            ClientRegistry clientRegistry = clientService.updateClient(updateClientConfigRequest);
+            ClientRegistry clientRegistry =
+                    clientService.updateClient(clientId, updateClientConfigRequest);
             ClientRegistrationResponse clientRegistrationResponse =
                     new ClientRegistrationResponse(
                             clientRegistry.getClientName(),
@@ -54,8 +61,12 @@ public class UpdateClientConfigHandler
                             clientRegistry.getContacts(),
                             clientRegistry.getScopes(),
                             clientRegistry.getPostLogoutRedirectUrls());
+            LOGGER.info("Client with ClientId {} has been updated", clientId);
             return generateApiGatewayProxyResponse(200, clientRegistrationResponse);
-        } catch (JsonProcessingException e) {
+        } catch (JsonProcessingException | NullPointerException e) {
+            LOGGER.error(
+                    "Request with path parameters {} is missing request parameters",
+                    input.getPathParameters());
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
     }

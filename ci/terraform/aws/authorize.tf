@@ -2,6 +2,7 @@ module "authorize" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "authorize"
+  path_part       = "authorize"
   endpoint_method = "GET"
   environment     = var.environment
 

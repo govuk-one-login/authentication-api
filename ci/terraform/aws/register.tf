@@ -2,6 +2,7 @@ module "register" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "register"
+  path_part       = "register"
   endpoint_method = "POST"
 
   handler_environment_variables = {

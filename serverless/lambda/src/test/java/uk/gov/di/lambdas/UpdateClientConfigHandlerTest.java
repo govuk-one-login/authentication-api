@@ -13,12 +13,14 @@ import uk.gov.di.entity.UpdateClientConfigRequest;
 import uk.gov.di.services.ClientService;
 
 import java.util.List;
+import java.util.Map;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -40,14 +42,12 @@ class UpdateClientConfigHandlerTest {
     @Test
     public void shouldReturn200ForAValidRequest() throws JsonProcessingException {
         when(clientService.isValidClient(CLIENT_ID)).thenReturn(true);
-        when(clientService.updateClient(any(UpdateClientConfigRequest.class)))
+        when(clientService.updateClient(eq(CLIENT_ID), any(UpdateClientConfigRequest.class)))
                 .thenReturn(createClientRegistry());
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody(
-                format(
-                        "{ \"client_id\": \"%s\", \"client_name\": \"%s\"}",
-                        CLIENT_ID, CLIENT_NAME));
+        event.setBody(format("{\"client_name\": \"%s\"}", CLIENT_NAME));
+        event.setPathParameters(Map.of("clientId", CLIENT_ID));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -69,14 +69,21 @@ class UpdateClientConfigHandlerTest {
     }
 
     @Test
+    public void shouldReturn400WhenRequestContainsNoParameters() {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setBody("");
+        event.setPathParameters(Map.of("clientId", CLIENT_ID));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        assertThat(result, hasStatus(400));
+    }
+
+    @Test
     public void shouldReturn401WhenClientIdIsInvalid() {
         when(clientService.isValidClient(CLIENT_ID)).thenReturn(false);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody(
-                format(
-                        "{ \"client_id\": \"%s\", \"client_name\": \"%s\"}",
-                        CLIENT_ID, CLIENT_NAME));
+        event.setPathParameters(Map.of("clientId", CLIENT_ID));
+        event.setBody(format("{\"client_name\": \"%s\"}", CLIENT_NAME));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(401));
     }
