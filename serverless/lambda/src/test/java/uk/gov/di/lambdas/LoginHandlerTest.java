@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.LoginResponse;
 import uk.gov.di.entity.Session;
+import uk.gov.di.helpers.IdGenerator;
 import uk.gov.di.helpers.RedactPhoneNumberHelper;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.SessionService;
@@ -23,7 +24,9 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.entity.SessionState.LOGGED_IN;
+import static uk.gov.di.entity.SessionState.NEW;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -36,6 +39,8 @@ class LoginHandlerTest {
     private final Context context = mock(Context.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final Session session =
+            new Session(IdGenerator.generate()).setState(AUTHENTICATION_REQUIRED);
 
     @BeforeEach
     public void setUp() {
@@ -49,7 +54,7 @@ class LoginHandlerTest {
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", "a-session-id"));
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -67,7 +72,7 @@ class LoginHandlerTest {
     public void shouldReturn401IfUserHasInvalidCredentials() {
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", "a-session-id"));
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
         usingValidSession();
@@ -81,7 +86,7 @@ class LoginHandlerTest {
     @Test
     public void shouldReturn400IfAnyRequestParametersAreMissing() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", "a-session-id"));
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\"}", PASSWORD));
 
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
@@ -95,7 +100,7 @@ class LoginHandlerTest {
     @Test
     public void shouldReturn400IfSessionIdIsInvalid() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", "a-session-id"));
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\"}", PASSWORD));
 
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
@@ -112,7 +117,7 @@ class LoginHandlerTest {
     public void shouldReturn400IfUserDoesNotHaveAnAccount() {
         when(authenticationService.userExists(EMAIL)).thenReturn(false);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", "a-session-id"));
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
         usingValidSession();
@@ -123,8 +128,27 @@ class LoginHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
     }
 
+    @Test
+    public void shouldReturn400IfUserTransitionsFromWrongState() throws JsonProcessingException {
+        when(authenticationService.userExists(EMAIL)).thenReturn(true);
+        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
+        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
+
+        session.setState(NEW);
+
+        usingValidSession();
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1019));
+    }
+
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(new Session("a-session-id")));
+                .thenReturn(Optional.of(session));
     }
 }

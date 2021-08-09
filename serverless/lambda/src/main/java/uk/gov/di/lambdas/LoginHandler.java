@@ -10,6 +10,7 @@ import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.LoginRequest;
 import uk.gov.di.entity.LoginResponse;
 import uk.gov.di.entity.Session;
+import uk.gov.di.helpers.StateMachine.InvalidStateTransitionException;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoService;
@@ -21,6 +22,7 @@ import static uk.gov.di.entity.SessionState.LOGGED_IN;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.helpers.RedactPhoneNumberHelper.redactPhoneNumber;
+import static uk.gov.di.helpers.StateMachine.validateStateTransition;
 
 public class LoginHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -54,6 +56,8 @@ public class LoginHandler
         }
 
         try {
+            validateStateTransition(session.get(), LOGGED_IN);
+
             LoginRequest loginRequest = objectMapper.readValue(input.getBody(), LoginRequest.class);
             boolean userHasAccount = authenticationService.userExists(loginRequest.getEmail());
             if (!userHasAccount) {
@@ -77,6 +81,8 @@ public class LoginHandler
                     200, new LoginResponse(concatPhoneNumber, session.get().getState()));
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        } catch (InvalidStateTransitionException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1019);
         }
     }
 }
