@@ -13,6 +13,7 @@ import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.NotificationType;
 import uk.gov.di.entity.NotifyRequest;
 import uk.gov.di.entity.Session;
+import uk.gov.di.entity.SessionState;
 import uk.gov.di.helpers.IdGenerator;
 import uk.gov.di.services.AwsSqsClient;
 import uk.gov.di.services.CodeGeneratorService;
@@ -214,6 +215,7 @@ class SendNotificationHandlerTest {
 
     @Test
     public void shouldReturn200WhenVerifyTypeIsVerifyPhoneNumber() throws JsonProcessingException {
+        session.setState(SessionState.ADDED_UNVERIFIED_PHONE_NUMBER);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -231,6 +233,7 @@ class SendNotificationHandlerTest {
 
     @Test
     public void shouldReturn400WhenVerifyTypeIsVerifyPhoneNumberButRequestIsMissingNumber() {
+        session.setState(SessionState.ADDED_UNVERIFIED_PHONE_NUMBER);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -246,6 +249,7 @@ class SendNotificationHandlerTest {
 
     @Test
     public void shouldReturn400WhenPhoneNumberIsInvalid() {
+        session.setState(SessionState.ADDED_UNVERIFIED_PHONE_NUMBER);
         when(validationService.validatePhoneNumber(eq("123456789")))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1012));
         usingValidSession();
@@ -277,6 +281,25 @@ class SendNotificationHandlerTest {
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
                         TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1019));
+    }
+
+    @Test
+    public void shouldReturn400IfUserTransitionsToHelperFromWrongState_PhoneCode() {
+        session.setState(NEW);
+
+        usingValidSession();
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
+                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
+
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));

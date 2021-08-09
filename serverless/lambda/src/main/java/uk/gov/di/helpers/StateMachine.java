@@ -12,6 +12,7 @@ import java.util.Map;
 import static java.util.Collections.emptyList;
 import static java.util.Map.entry;
 import static java.util.Map.ofEntries;
+import static uk.gov.di.entity.SessionState.ADDED_UNVERIFIED_PHONE_NUMBER;
 import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_NOT_VALID;
@@ -20,6 +21,7 @@ import static uk.gov.di.entity.SessionState.NEW;
 import static uk.gov.di.entity.SessionState.TWO_FACTOR_REQUIRED;
 import static uk.gov.di.entity.SessionState.USER_NOT_FOUND;
 import static uk.gov.di.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
+import static uk.gov.di.entity.SessionState.VERIFY_PHONE_NUMBER_CODE_SENT;
 
 public class StateMachine<T> {
 
@@ -65,7 +67,10 @@ public class StateMachine<T> {
                                 List.of(EMAIL_CODE_NOT_VALID, TWO_FACTOR_REQUIRED)),
                         entry(
                                 TWO_FACTOR_REQUIRED,
-                                List.of(SessionState.ADDED_UNVERIFIED_PHONE_NUMBER)));
+                                List.of(SessionState.ADDED_UNVERIFIED_PHONE_NUMBER)),
+                        entry(
+                                ADDED_UNVERIFIED_PHONE_NUMBER,
+                                List.of(VERIFY_PHONE_NUMBER_CODE_SENT)));
 
         return new StateMachine<>(states);
     }
