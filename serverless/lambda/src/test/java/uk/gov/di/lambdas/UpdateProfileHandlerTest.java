@@ -16,6 +16,7 @@ import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.exceptions.ClientNotFoundException;
+import uk.gov.di.helpers.CookieHelper;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.AuthorisationCodeService;
 import uk.gov.di.services.AuthorizationService;
@@ -41,6 +42,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.entity.UpdateProfileType.ADD_PHONE_NUMBER;
 import static uk.gov.di.entity.UpdateProfileType.CAPTURE_CONSENT;
+import static uk.gov.di.helpers.CookieHelper.buildCookieString;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -96,13 +98,7 @@ class UpdateProfileHandlerTest {
         AuthorizationCode authorizationCode = new AuthorizationCode();
         AuthorizationRequest authRequest = generateValidSessionAndAuthRequest(clientID);
 
-        Map<String, List<String>> consentMap = new HashMap<>();
-        List<String> clientConsents = new ArrayList<>();
-        String consent = String.valueOf(true);
-        clientConsents.add(consent);
-
-        String clientId = authRequest.getClientID().getValue();
-        consentMap.put(clientId, clientConsents);
+        var consentMap = Map.of(authRequest.getClientID().getValue(), List.of(String.valueOf(true)));
 
         AuthenticationSuccessResponse authSuccessResponse =
                 new AuthenticationSuccessResponse(
@@ -123,7 +119,7 @@ class UpdateProfileHandlerTest {
                         any(AuthorizationRequest.class), any(AuthorizationCode.class)))
                 .thenReturn(authSuccessResponse);
 
-        event.setHeaders(Map.of(COOKIE, buildCookieString()));
+        event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
@@ -159,12 +155,6 @@ class UpdateProfileHandlerTest {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(
                         Optional.of(new Session(SESSION_ID).setEmailAddress(TEST_EMAIL_ADDRESS)));
-    }
-
-    private String buildCookieString() {
-        return format(
-                "%s=%s.%s; Max-Age=%d; %s",
-                "gs", SESSION_ID, CLIENT_SESSION_ID, 1800, "Secure; HttpOnly;");
     }
 
     private AuthorizationRequest generateValidSessionAndAuthRequest(ClientID clientID) {
