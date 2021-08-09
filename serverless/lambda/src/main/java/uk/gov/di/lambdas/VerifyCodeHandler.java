@@ -108,6 +108,8 @@ public class VerifyCodeHandler
                 case VERIFY_PHONE_NUMBER:
                     if (codeStorageService.isCodeBlockedForSession(
                             session.get().getEmailAddress(), session.get().getSessionId())) {
+                        validateStateTransition(
+                                session.get(), PHONE_NUMBER_CODE_MAX_RETRIES_REACHED);
                         sessionService.save(
                                 session.get().setState(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED));
                     } else {
@@ -115,14 +117,15 @@ public class VerifyCodeHandler
                                 codeStorageService.getOtpCode(
                                         session.get().getEmailAddress(),
                                         codeRequest.getNotificationType());
-                        sessionService.save(
-                                session.get()
-                                        .setState(
-                                                validationService.validatePhoneVerificationCode(
-                                                        phoneNumberCode,
-                                                        codeRequest.getCode(),
-                                                        session.get(),
-                                                        configurationService.getCodeMaxRetries())));
+                        var newState =
+                                validationService.validatePhoneVerificationCode(
+                                        phoneNumberCode,
+                                        codeRequest.getCode(),
+                                        session.get(),
+                                        configurationService.getCodeMaxRetries());
+
+                        validateStateTransition(session.get(), newState);
+                        sessionService.save(session.get().setState(newState));
                         processCodeSessionState(session.get(), codeRequest.getNotificationType());
                     }
                     return generateApiGatewayProxyResponse(

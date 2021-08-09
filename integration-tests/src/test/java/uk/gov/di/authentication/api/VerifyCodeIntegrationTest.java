@@ -87,6 +87,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
     public void shouldCallVerifyCodeEndpointToVerifyPhoneCodeAndReturn200() throws IOException {
         String sessionId = RedisHelper.createSession();
         RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        RedisHelper.setSessionState(sessionId, SessionState.VERIFY_PHONE_NUMBER_CODE_SENT);
 
         String code = RedisHelper.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest =
@@ -105,6 +106,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
                     throws IOException, InterruptedException {
         String sessionId = RedisHelper.createSession();
         RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        RedisHelper.setSessionState(sessionId, SessionState.VERIFY_PHONE_NUMBER_CODE_SENT);
 
         String code = RedisHelper.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 2);
         VerifyCodeRequest codeRequest =
@@ -126,6 +128,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
     public void shouldReturnMaxCodesReachedIfPhoneNumberCodeIsBlocked() throws IOException {
         String sessionId = RedisHelper.createSession();
         RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        RedisHelper.setSessionState(sessionId, SessionState.PHONE_NUMBER_CODE_NOT_VALID);
         RedisHelper.blockPhoneCode(EMAIL_ADDRESS, sessionId);
 
         VerifyCodeRequest codeRequest =
@@ -170,6 +173,26 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
 
         String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.VERIFY_EMAIL, code);
+
+        Response response =
+                RequestHelper.requestWithSession(VERIFY_CODE_ENDPOINT, codeRequest, sessionId);
+
+        assertEquals(400, response.getStatus());
+        assertEquals(
+                new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1019),
+                response.readEntity(String.class));
+    }
+
+    @Test
+    public void shouldReturn400IfStateTransitionIsInvalid_PhoneNumber() throws IOException {
+        String sessionId = RedisHelper.createSession();
+        RedisHelper.setSessionState(sessionId, SessionState.NEW);
+        RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
+
+        String code = RedisHelper.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
+        VerifyCodeRequest codeRequest =
+                new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
+        DynamoHelper.signUp(EMAIL_ADDRESS, "password");
 
         Response response =
                 RequestHelper.requestWithSession(VERIFY_CODE_ENDPOINT, codeRequest, sessionId);

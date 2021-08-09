@@ -18,6 +18,9 @@ import static uk.gov.di.entity.SessionState.EMAIL_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_NOT_VALID;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
 import static uk.gov.di.entity.SessionState.NEW;
+import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
+import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_NOT_VALID;
+import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
 import static uk.gov.di.entity.SessionState.TWO_FACTOR_REQUIRED;
 import static uk.gov.di.entity.SessionState.USER_NOT_FOUND;
 import static uk.gov.di.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
@@ -70,7 +73,17 @@ public class StateMachine<T> {
                                 List.of(SessionState.ADDED_UNVERIFIED_PHONE_NUMBER)),
                         entry(
                                 ADDED_UNVERIFIED_PHONE_NUMBER,
-                                List.of(VERIFY_PHONE_NUMBER_CODE_SENT)));
+                                List.of(VERIFY_PHONE_NUMBER_CODE_SENT)),
+                        entry(
+                                VERIFY_PHONE_NUMBER_CODE_SENT,
+                                List.of(PHONE_NUMBER_CODE_VERIFIED, PHONE_NUMBER_CODE_NOT_VALID)),
+                        entry(
+                                PHONE_NUMBER_CODE_NOT_VALID,
+                                List.of(
+                                        PHONE_NUMBER_CODE_VERIFIED,
+                                        PHONE_NUMBER_CODE_NOT_VALID,
+                                        PHONE_NUMBER_CODE_MAX_RETRIES_REACHED)),
+                        entry(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED, Collections.emptyList()));
 
         return new StateMachine<>(states);
     }
