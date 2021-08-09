@@ -52,6 +52,7 @@ public class UpdateClientConfigHandler
                             clientRegistry.getClientID(),
                             clientRegistry.getRedirectUrls(),
                             clientRegistry.getContacts(),
+                            clientRegistry.getScopes(),
                             clientRegistry.getPostLogoutRedirectUrls());
             return generateApiGatewayProxyResponse(200, clientRegistrationResponse);
         } catch (JsonProcessingException e) {

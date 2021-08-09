@@ -57,6 +57,7 @@ public class ClientRegistrationHandler
                             clientID,
                             clientRegistrationRequest.getRedirectUris(),
                             clientRegistrationRequest.getContacts(),
+                            clientRegistrationRequest.getScopes(),
                             clientRegistrationRequest.getPostLogoutRedirectUris());
 
             return generateApiGatewayProxyResponse(200, clientRegistrationResponse);

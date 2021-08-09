@@ -12,10 +12,12 @@ import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.UpdateClientConfigRequest;
 import uk.gov.di.services.ClientService;
 
+import java.util.List;
+
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.hamcrest.core.IsEqual.equalTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -25,6 +27,7 @@ class UpdateClientConfigHandlerTest {
 
     private static final String CLIENT_ID = "client-id-1";
     private static final String CLIENT_NAME = "client-name-one";
+    private static final List<String> SCOPES = singletonList("openid");
     private final Context context = mock(Context.class);
     private final ClientService clientService = mock(ClientService.class);
     private UpdateClientConfigHandler handler;
@@ -50,8 +53,11 @@ class UpdateClientConfigHandlerTest {
         assertThat(result, hasStatus(200));
         ClientRegistrationResponse clientRegistrationResponse =
                 new ObjectMapper().readValue(result.getBody(), ClientRegistrationResponse.class);
-        assertEquals(CLIENT_ID, clientRegistrationResponse.getClientId());
-        assertEquals(CLIENT_NAME, clientRegistrationResponse.getClientName());
+        assertThat(clientRegistrationResponse.getClientId(), equalTo(CLIENT_ID));
+        assertThat(clientRegistrationResponse.getClientName(), equalTo(CLIENT_NAME));
+        assertThat(clientRegistrationResponse.getSubjectType(), equalTo("Public"));
+        assertThat(clientRegistrationResponse.getTokenAuthMethod(), equalTo("private_key_jwt"));
+        assertThat(clientRegistrationResponse.getScopes(), equalTo(SCOPES));
     }
 
     @Test
@@ -80,7 +86,7 @@ class UpdateClientConfigHandlerTest {
         clientRegistry.setClientName(CLIENT_NAME);
         clientRegistry.setClientID(CLIENT_ID);
         clientRegistry.setPublicKey("public-key");
-        clientRegistry.setScopes(singletonList("openid"));
+        clientRegistry.setScopes(SCOPES);
         clientRegistry.setRedirectUrls(singletonList("http://localhost/redirect"));
         clientRegistry.setContacts(singletonList("contant-name"));
         clientRegistry.setPostLogoutRedirectUrls(singletonList("localhost/logout"));
