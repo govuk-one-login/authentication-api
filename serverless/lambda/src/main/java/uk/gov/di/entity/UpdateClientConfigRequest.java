@@ -1,0 +1,99 @@
+package uk.gov.di.entity;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class UpdateClientConfigRequest {
+
+    @JsonProperty("client_id")
+    private String clientId;
+
+    @JsonProperty("client_name")
+    private String clientName;
+
+    @JsonProperty("redirect_uris")
+    private List<String> redirectUris;
+
+    @JsonProperty("contacts")
+    private List<String> contacts;
+
+    @JsonProperty("public_key")
+    private String publicKey;
+
+    @JsonProperty("scopes")
+    private List<String> scopes;
+
+    @JsonProperty("post_logout_redirect_uris")
+    private List<String> postLogoutRedirectUris = new ArrayList<>();
+
+    public UpdateClientConfigRequest(
+            @JsonProperty(required = true, value = "client_id") String clientId) {
+        this.clientId = clientId;
+    }
+
+    public String getClientId() {
+        return clientId;
+    }
+
+    public String getClientName() {
+        return clientName;
+    }
+
+    public List<String> getRedirectUris() {
+        return redirectUris;
+    }
+
+    public List<String> getContacts() {
+        return contacts;
+    }
+
+    public String getPublicKey() {
+        return publicKey;
+    }
+
+    public List<String> getScopes() {
+        return scopes;
+    }
+
+    public List<String> getPostLogoutRedirectUris() {
+        return postLogoutRedirectUris;
+    }
+
+    public UpdateClientConfigRequest setClientId(String clientId) {
+        this.clientId = clientId;
+        return this;
+    }
+
+    public UpdateClientConfigRequest setClientName(String clientName) {
+        this.clientName = clientName;
+        return this;
+    }
+
+    public UpdateClientConfigRequest setRedirectUris(List<String> redirectUris) {
+        this.redirectUris = redirectUris;
+        return this;
+    }
+
+    public UpdateClientConfigRequest setContacts(List<String> contacts) {
+        this.contacts = contacts;
+        return this;
+    }
+
+    public UpdateClientConfigRequest setPublicKey(String publicKey) {
+        this.publicKey = publicKey;
+        return this;
+    }
+
+    public UpdateClientConfigRequest setScopes(List<String> scopes) {
+        this.scopes = scopes;
+        return this;
+    }
+
+    public UpdateClientConfigRequest setPostLogoutRedirectUris(
+            List<String> postLogoutRedirectUris) {
+        this.postLogoutRedirectUris = postLogoutRedirectUris;
+        return this;
+    }
+}
