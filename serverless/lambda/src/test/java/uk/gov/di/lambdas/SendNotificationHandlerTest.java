@@ -13,6 +13,7 @@ import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.NotificationType;
 import uk.gov.di.entity.NotifyRequest;
 import uk.gov.di.entity.Session;
+import uk.gov.di.helpers.IdGenerator;
 import uk.gov.di.services.AwsSqsClient;
 import uk.gov.di.services.CodeGeneratorService;
 import uk.gov.di.services.CodeStorageService;
@@ -41,9 +42,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.entity.NotificationType.VERIFY_PHONE_NUMBER;
+import static uk.gov.di.entity.SessionState.NEW;
+import static uk.gov.di.entity.SessionState.USER_NOT_FOUND;
 import static uk.gov.di.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
 import static uk.gov.di.entity.SessionState.VERIFY_PHONE_NUMBER_CODE_SENT;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class SendNotificationHandlerTest {
 
@@ -58,6 +62,12 @@ class SendNotificationHandlerTest {
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final Context context = mock(Context.class);
+
+    private final Session session =
+            new Session(IdGenerator.generate())
+                    .setEmailAddress(TEST_EMAIL_ADDRESS)
+                    .setState(USER_NOT_FOUND);
+
     private final SendNotificationHandler handler =
             new SendNotificationHandler(
                     configurationService,
@@ -84,7 +94,7 @@ class SendNotificationHandlerTest {
 
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", "a-session-id"));
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
@@ -127,7 +137,7 @@ class SendNotificationHandlerTest {
     public void shouldReturn400IfRequestIsMissingEmail() {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", "a-session-id"));
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody("{ }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -137,12 +147,15 @@ class SendNotificationHandlerTest {
 
     @Test
     public void shouldReturn400IfEmailAddressIsInvalid() {
+        session.setEmailAddress("joe.bloggs");
+
+        usingValidSession();
+
         when(validationService.validateEmailAddress(eq("joe.bloggs")))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1004));
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(new Session("a-session-id").setEmailAddress("joe.bloggs")));
+
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", "a-session-id"));
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
@@ -166,7 +179,7 @@ class SendNotificationHandlerTest {
 
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", "a-session-id"));
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
@@ -184,7 +197,7 @@ class SendNotificationHandlerTest {
 
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", "a-session-id"));
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
@@ -203,7 +216,7 @@ class SendNotificationHandlerTest {
     public void shouldReturn200WhenVerifyTypeIsVerifyPhoneNumber() throws JsonProcessingException {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", "a-session-id"));
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
@@ -220,7 +233,7 @@ class SendNotificationHandlerTest {
     public void shouldReturn400WhenVerifyTypeIsVerifyPhoneNumberButRequestIsMissingNumber() {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", "a-session-id"));
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
@@ -237,7 +250,7 @@ class SendNotificationHandlerTest {
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1012));
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", "a-session-id"));
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
@@ -248,11 +261,31 @@ class SendNotificationHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1012));
     }
 
+    @Test
+    public void shouldReturn400IfUserTransitionsToHelperFromWrongState() {
+        session.setState(NEW);
+
+        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
+                .thenReturn(Optional.empty());
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_SIX_DIGIT_CODE);
+
+        usingValidSession();
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                        TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1019));
+    }
+
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(
-                        Optional.of(
-                                new Session("a-session-id").setEmailAddress(TEST_EMAIL_ADDRESS)));
+                .thenReturn(Optional.of(session));
     }
 
     private boolean isSessionWithEmailSent(Session session) {

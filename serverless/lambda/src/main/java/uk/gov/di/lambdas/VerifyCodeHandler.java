@@ -11,6 +11,7 @@ import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.NotificationType;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.VerifyCodeRequest;
+import uk.gov.di.helpers.StateMachine.InvalidStateTransitionException;
 import uk.gov.di.services.CodeStorageService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoService;
@@ -28,7 +29,7 @@ import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHE
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.helpers.StateMachine.isInvalidUserJourneyTransition;
+import static uk.gov.di.helpers.StateMachine.validateStateTransition;
 
 public class VerifyCodeHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -83,11 +84,7 @@ public class VerifyCodeHandler
                     if (codeStorageService.isCodeBlockedForSession(
                             session.get().getEmailAddress(), session.get().getSessionId())) {
 
-                        if (isInvalidUserJourneyTransition(
-                                session.get().getState(), EMAIL_CODE_MAX_RETRIES_REACHED)) {
-                            return generateApiGatewayProxyErrorResponse(
-                                    400, ErrorResponse.ERROR_1019);
-                        }
+                        validateStateTransition(session.get(), EMAIL_CODE_MAX_RETRIES_REACHED);
 
                         sessionService.save(session.get().setState(EMAIL_CODE_MAX_RETRIES_REACHED));
                     } else {
@@ -102,11 +99,7 @@ public class VerifyCodeHandler
                                         session.get(),
                                         configurationService.getCodeMaxRetries());
 
-                        if (isInvalidUserJourneyTransition(session.get().getState(), newState)) {
-                            return generateApiGatewayProxyErrorResponse(
-                                    400, ErrorResponse.ERROR_1019);
-                        }
-
+                        validateStateTransition(session.get(), newState);
                         sessionService.save(session.get().setState(newState));
                         processCodeSessionState(session.get(), codeRequest.getNotificationType());
                     }
@@ -158,6 +151,8 @@ public class VerifyCodeHandler
             }
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        } catch (InvalidStateTransitionException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1019);
         }
         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
     }
