@@ -64,6 +64,7 @@ public class UpdateProfileHandler
             APIGatewayProxyRequestEvent input, Context context) {
         Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
         CookieHelper.SessionCookieIds sessionCookieIds;
+        String clientId;
 
         if (session.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
@@ -82,18 +83,11 @@ public class UpdateProfileHandler
                     return generateApiGatewayProxyResponse(
                             200, new BaseAPIResponse(session.get().getState()));
                 case CAPTURE_CONSENT:
-                    sessionCookieIds =
-                            CookieHelper.parseSessionCookie(input.getHeaders()).orElseThrow();
-                    String clientSessionId = sessionCookieIds.getClientSessionId();
-                    ClientSession clientSession =
-                            clientSessionService.getClientSession(clientSessionId);
-
-                    AuthorizationRequest authorizationRequest;
-                    String clientId;
+                    sessionCookieIds = CookieHelper.parseSessionCookie(input.getHeaders()).orElseThrow();
+                    ClientSession clientSession = clientSessionService.getClientSession(sessionCookieIds.getClientSessionId());
 
                     try {
-                        authorizationRequest =
-                                AuthorizationRequest.parse(clientSession.getAuthRequestParams());
+                        AuthorizationRequest authorizationRequest = AuthorizationRequest.parse(clientSession.getAuthRequestParams());
                         clientId = authorizationRequest.getClientID().getValue();
                     } catch (ParseException e) {
                         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
@@ -102,31 +96,17 @@ public class UpdateProfileHandler
                     Optional<Map<String, List<String>>> clientConsents =
                             authenticationService.getUserConsents(profileRequest.getEmail());
 
-                    if (clientConsents.isPresent()) {
-                        if (clientConsents.get().containsKey(clientId)) {
-                            clientConsents
-                                    .get()
-                                    .get(clientId)
-                                    .add(profileRequest.getProfileInformation());
-                        }
+                    if (clientConsents.isPresent() && clientConsents.get().containsKey(clientId)) {
+                        clientConsents.get().get(clientId).add(profileRequest.getProfileInformation());
                     } else {
-                        Map<String, List<String>> clientConsentsMap =
-                                new HashMap<String, List<String>>();
-                        List<String> clientConsentList = new ArrayList<String>();
-
-                        clientConsentList.add(profileRequest.getProfileInformation());
-                        clientConsentsMap.put(clientId, clientConsentList);
-
-                        clientConsents = Optional.of(clientConsentsMap);
+                        clientConsents = Optional.of(Map.of(clientId, List.of(profileRequest.getProfileInformation())));
                     }
 
-                    authenticationService.updateConsent(
-                            profileRequest.getEmail(), clientConsents.get());
+                    authenticationService.updateConsent(profileRequest.getEmail(), clientConsents.get());
                     sessionService.save(session.get().setState(ADDED_CONSENT));
 
                     try {
-                        return generateApiGatewayProxyResponse(
-                                200, new BaseAPIResponse(session.get().getState()));
+                        return generateApiGatewayProxyResponse(200, new BaseAPIResponse(session.get().getState()));
                     } catch (JsonProcessingException e) {
                         e.printStackTrace();
                     }
