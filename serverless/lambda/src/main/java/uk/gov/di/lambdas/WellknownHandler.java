@@ -82,6 +82,7 @@ public class WellknownHandler
                             JWSAlgorithm.HS384,
                             JWSAlgorithm.HS512));
             providerMetadata.setServiceDocsURI(new URI("http://TBA"));
+            providerMetadata.setEndSessionEndpointURI(buildURI("/logout", baseUrl));
 
             return generateApiGatewayProxyResponse(200, providerMetadata.toString());
         } catch (URISyntaxException | NoSuchElementException e) {
