@@ -106,6 +106,7 @@ resource "aws_api_gateway_deployment" "deployment" {
       module.mfa.resource_id,
       module.auth-code.resource_id,
       module.logout.resource_id,
+      module.client-info.resource_id,
     ]))
   }
 
@@ -127,6 +128,7 @@ resource "aws_api_gateway_deployment" "deployment" {
     module.mfa,
     module.auth-code,
     module.logout,
+    module.client-info,
   ]
 }
 
@@ -150,6 +152,7 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
     module.mfa,
     module.auth-code,
     module.logout,
+    module.client-info,
     aws_api_gateway_deployment.deployment,
   ]
 }

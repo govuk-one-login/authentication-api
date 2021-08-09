@@ -8,10 +8,15 @@ import uk.gov.di.entity.ClientSession;
 import uk.gov.di.helpers.IdGenerator;
 import uk.gov.di.helpers.ObjectMapperFactory;
 
+import java.util.Map;
+import java.util.Optional;
+
 public class ClientSessionService {
 
     private static final Logger LOG = LoggerFactory.getLogger(ClientSessionService.class);
     public static final String CLIENT_SESSION_PREFIX = "client-session-";
+
+    private static final String CLIENT_SESSION_ID_HEADER = "Client-Session-Id";
 
     private final RedisConnectionService redisConnectionService;
     private final ConfigurationService configurationService;
@@ -62,6 +67,20 @@ public class ClientSessionService {
             return clientSession;
         } catch (JsonProcessingException e) {
             LOG.error("Error saving client session to Redis", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Optional<ClientSession> getClientSessionFromRequestHeaders(Map<String, String> headers) {
+        if (headers == null
+                || headers.isEmpty()
+                || !headers.containsKey(CLIENT_SESSION_ID_HEADER)) {
+            return Optional.empty();
+        }
+        try {
+            String clientSessionId = headers.get(CLIENT_SESSION_ID_HEADER);
+            return Optional.of(getClientSession(clientSessionId));
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }

@@ -38,6 +38,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.helpers.CookieHelper.buildCookieString;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class LogoutHandlerTest {
@@ -269,12 +270,6 @@ class LogoutHandlerTest {
 
     private void generateSessionFromCookie(Session session) {
         when(sessionService.getSessionFromSessionCookie(anyMap())).thenReturn(Optional.of(session));
-    }
-
-    private String buildCookieString(String clientSessionID) {
-        return format(
-                "%s=%s.%s; Max-Age=%d; %s",
-                "gs", SESSION_ID, clientSessionID, 1800, "Secure; HttpOnly;");
     }
 
     private ClientRegistry createClientRegistry() {

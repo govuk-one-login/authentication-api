@@ -9,11 +9,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static java.lang.String.format;
+
 public class CookieHelper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CookieHelper.class);
 
     public static final String REQUEST_COOKIE_HEADER = "Cookie";
+    private static final String SESSION_ID = "a-session-id";
 
     public static Optional<SessionCookieIds> parseSessionCookie(Map<String, String> headers) {
         var cookieHeader = cookieHeader(headers);
@@ -79,5 +82,11 @@ public class CookieHelper {
         String getSessionId();
 
         String getClientSessionId();
+    }
+
+    public static String buildCookieString(String clientSessionId) {
+        return format(
+                "%s=%s.%s; Max-Age=%d; %s",
+                "gs", SESSION_ID, clientSessionId, 1800, "Secure; HttpOnly;");
     }
 }
