@@ -15,7 +15,9 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
+import uk.gov.di.entity.SessionState;
 import uk.gov.di.exceptions.ClientNotFoundException;
+import uk.gov.di.helpers.IdGenerator;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.AuthorisationCodeService;
 import uk.gov.di.services.AuthorizationService;
@@ -62,6 +64,11 @@ class UpdateProfileHandlerTest {
     private final AuthorisationCodeService authorisationCodeService =
             mock(AuthorisationCodeService.class);
 
+    private final Session session =
+            new Session(SESSION_ID)
+                    .setEmailAddress(TEST_EMAIL_ADDRESS)
+                    .setState(SessionState.TWO_FACTOR_REQUIRED);
+
     @BeforeEach
     public void setUp() {
         handler =
@@ -74,7 +81,7 @@ class UpdateProfileHandlerTest {
         when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(false);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", SESSION_ID));
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
@@ -137,7 +144,7 @@ class UpdateProfileHandlerTest {
         when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(false);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", SESSION_ID));
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\"}",
@@ -151,10 +158,27 @@ class UpdateProfileHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
     }
 
+    @Test
+    public void shouldReturn400IfUserTransitionsFromWrongState() {
+        session.setState(SessionState.NEW);
+
+        when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(false);
+        usingValidSession();
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
+                        TEST_EMAIL_ADDRESS, ADD_PHONE_NUMBER, PHONE_NUMBER));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1019));
+    }
+
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(
-                        Optional.of(new Session(SESSION_ID).setEmailAddress(TEST_EMAIL_ADDRESS)));
+                .thenReturn(Optional.of(session));
     }
 
     private AuthorizationRequest generateValidSessionAndAuthRequest(ClientID clientID) {

@@ -4,6 +4,7 @@ import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
+import uk.gov.di.entity.SessionState;
 import uk.gov.di.entity.UpdateProfileRequest;
 
 import java.io.IOException;
@@ -21,6 +22,7 @@ public class UpdateProfileIntegrationTest extends IntegrationTestEndpoints {
     public void shouldCallUpdateProfileEndpointAndReturn200() throws IOException {
         String sessionId = RedisHelper.createSession();
         RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        RedisHelper.setSessionState(sessionId, SessionState.TWO_FACTOR_REQUIRED);
         DynamoHelper.signUp(EMAIL_ADDRESS, "password-1");
 
         UpdateProfileRequest request =

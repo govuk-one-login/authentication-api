@@ -62,7 +62,10 @@ public class StateMachine<T> {
                         entry(EMAIL_CODE_MAX_RETRIES_REACHED, Collections.emptyList()),
                         entry(
                                 EMAIL_CODE_VERIFIED,
-                                List.of(EMAIL_CODE_NOT_VALID, TWO_FACTOR_REQUIRED)));
+                                List.of(EMAIL_CODE_NOT_VALID, TWO_FACTOR_REQUIRED)),
+                        entry(
+                                TWO_FACTOR_REQUIRED,
+                                List.of(SessionState.ADDED_UNVERIFIED_PHONE_NUMBER)));
 
         return new StateMachine<>(states);
     }
