@@ -26,14 +26,17 @@ public class ClientInfoHandler
     private final ConfigurationService configurationService;
     private final ClientSessionService clientSessionService;
     private final ClientService clientService;
+    private final SessionService sessionService;
 
     public ClientInfoHandler(
             ConfigurationService configurationService,
             ClientSessionService clientSessionService,
-            ClientService clientService) {
+            ClientService clientService,
+            SessionService sessionService) {
         this.configurationService = configurationService;
         this.clientSessionService = clientSessionService;
         this.clientService = clientService;
+        this.sessionService = sessionService;
     }
 
     public ClientInfoHandler() {
@@ -44,11 +47,17 @@ public class ClientInfoHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEnvironment(),
                         configurationService.getDynamoEndpointUri());
+        this.sessionService = new SessionService(configurationService);
     }
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+
+        Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
+        if (session.isEmpty()) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        }
 
         Optional<ClientSession> clientSession =
                 clientSessionService.getClientSessionFromRequestHeaders(input.getHeaders());

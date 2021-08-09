@@ -11,9 +11,11 @@ import uk.gov.di.entity.ClientInfoResponse;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.ErrorResponse;
+import uk.gov.di.entity.Session;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ClientSessionService;
 import uk.gov.di.services.ConfigurationService;
+import uk.gov.di.services.SessionService;
 
 import java.util.Collections;
 import java.util.Map;
@@ -21,6 +23,7 @@ import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -42,15 +45,17 @@ public class ClientInfoHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
+    private final SessionService sessionService = mock(SessionService.class);
 
     @BeforeEach
     public void beforEach() {
-        handler = new ClientInfoHandler(configurationService, clientSessionService, clientService);
+        handler = new ClientInfoHandler(configurationService, clientSessionService, clientService, sessionService);
         clientRegistry = new ClientRegistry();
         clientRegistry.setClientID(TEST_CLIENT_ID);
         clientRegistry.setClientName(TEST_CLIENT_NAME);
         when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
         when(clientService.getClient(UNKNOWN_TEST_CLIENT_ID)).thenReturn(Optional.empty());
+        when(sessionService.getSessionFromRequestHeaders(any())).thenReturn(Optional.of(new Session("session-id")));
     }
 
     @Test
