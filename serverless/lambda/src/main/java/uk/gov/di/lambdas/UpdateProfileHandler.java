@@ -34,7 +34,7 @@ import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxy
 public class UpdateProfileHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ClientInfoHandler.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(UpdateProfileHandler.class);
 
     private final AuthenticationService authenticationService;
     private final SessionService sessionService;
@@ -113,6 +113,7 @@ public class UpdateProfileHandler
                             authenticationService.getUserConsents(profileRequest.getEmail());
 
                     if (clientConsents.isPresent() && clientConsents.get().containsKey(clientId)) {
+                        clientConsents.get().get(clientId).clear();
                         clientConsents
                                 .get()
                                 .get(clientId)
