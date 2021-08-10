@@ -4,6 +4,8 @@ module "update" {
   path_part       = "{clientId}"
   endpoint_name   = "update-client-info"
   endpoint_method = "POST"
+  method_request_parameters =  {"method.request.path.clientId" = true}
+  integration_request_parameters = {"integration.request.path.clientId" = "method.request.path.clientId"}
 
   handler_environment_variables = {
     ENVIRONMENT = var.environment
