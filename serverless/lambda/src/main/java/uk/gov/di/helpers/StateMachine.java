@@ -13,6 +13,7 @@ import static java.util.Collections.emptyList;
 import static java.util.Map.entry;
 import static java.util.Map.ofEntries;
 import static uk.gov.di.entity.SessionState.ADDED_UNVERIFIED_PHONE_NUMBER;
+import static uk.gov.di.entity.SessionState.AUTHENTICATED;
 import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_NOT_VALID;
@@ -98,7 +99,8 @@ public class StateMachine<T> {
                                         MFA_CODE_VERIFIED,
                                         MFA_CODE_NOT_VALID,
                                         MFA_CODE_MAX_RETRIES_REACHED)),
-                        entry(MFA_CODE_MAX_RETRIES_REACHED, Collections.emptyList()));
+                        entry(MFA_CODE_MAX_RETRIES_REACHED, Collections.emptyList()),
+                        entry(MFA_CODE_VERIFIED, List.of(AUTHENTICATED)));
 
         return new StateMachine<>(states);
     }

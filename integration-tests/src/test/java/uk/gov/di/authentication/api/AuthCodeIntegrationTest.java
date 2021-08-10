@@ -12,6 +12,7 @@ import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
+import uk.gov.di.entity.SessionState;
 
 import java.io.IOException;
 import java.net.HttpCookie;
@@ -39,6 +40,7 @@ public class AuthCodeIntegrationTest extends IntegrationTestEndpoints {
         String clientSessionId = "some-client-session-id";
         KeyPair keyPair = generateRsaKeyPair();
         RedisHelper.createSession(sessionId);
+        RedisHelper.setSessionState(sessionId, SessionState.MFA_CODE_VERIFIED);
         RedisHelper.addAuthRequestToSession(
                 clientSessionId, sessionId, generateAuthRequest().toParameters(), EMAIL);
         setUpDynamo(keyPair);
