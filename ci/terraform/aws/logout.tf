@@ -2,6 +2,7 @@ module "logout" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "logout"
+  path_part       = "logout"
   endpoint_method = "GET"
   environment     = var.environment
 

@@ -2,6 +2,10 @@ variable "endpoint_name" {
   type = string
 }
 
+variable "path_part" {
+  type = string
+}
+
 variable "endpoint_method" {
   type = string
 }

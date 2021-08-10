@@ -17,7 +17,7 @@ import java.util.UUID;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -54,7 +54,11 @@ class ClientRegistrationHandlerTest {
         assertThat(result, hasStatus(200));
         ClientRegistrationResponse clientRegistrationResponseResult =
                 objectMapper.readValue(result.getBody(), ClientRegistrationResponse.class);
-        assertEquals(clientId, clientRegistrationResponseResult.getClientId());
+        assertThat(clientRegistrationResponseResult.getClientId(), equalTo(clientId));
+        assertThat(
+                clientRegistrationResponseResult.getTokenAuthMethod(), equalTo("private_key_jwt"));
+        assertThat(clientRegistrationResponseResult.getSubjectType(), equalTo("Public"));
+        assertThat(clientRegistrationResponseResult.getScopes(), equalTo(singletonList("openid")));
         verify(clientService)
                 .addClient(
                         clientId,

@@ -2,6 +2,7 @@ module "send_notification" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "send-notification"
+  path_part       = "send-notification"
   endpoint_method = "POST"
   environment     = var.environment
 

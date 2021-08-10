@@ -2,6 +2,7 @@ module "signup" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "signup"
+  path_part       = "signup"
   endpoint_method = "POST"
   environment     = var.environment
 

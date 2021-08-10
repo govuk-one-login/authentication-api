@@ -2,6 +2,7 @@ module "update_profile" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "update-profile"
+  path_part       = "update-profile"
   endpoint_method = "POST"
   environment     = var.environment
 

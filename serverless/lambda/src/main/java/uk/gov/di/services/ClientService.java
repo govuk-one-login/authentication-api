@@ -4,6 +4,7 @@ import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import uk.gov.di.entity.ClientRegistry;
+import uk.gov.di.entity.UpdateClientConfigRequest;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,4 +26,6 @@ public interface ClientService {
     Optional<ClientRegistry> getClient(String clientId);
 
     ClientID generateClientID();
+
+    ClientRegistry updateClient(String clientId, UpdateClientConfigRequest updateRequest);
 }

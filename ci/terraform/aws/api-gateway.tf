@@ -80,6 +80,18 @@ resource "aws_api_gateway_resource" "connect_resource" {
   path_part   = "connect"
 }
 
+resource "aws_api_gateway_resource" "oidc_resource" {
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
+  path_part   = "oidc"
+}
+
+resource "aws_api_gateway_resource" "clients_resource" {
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  parent_id   = aws_api_gateway_resource.oidc_resource.id
+  path_part   = "clients"
+}
+
 data "aws_region" "current"{
 }
 
@@ -106,6 +118,7 @@ resource "aws_api_gateway_deployment" "deployment" {
       module.mfa.resource_id,
       module.auth-code.resource_id,
       module.logout.resource_id,
+      module.update.resource_id,
       module.client-info.resource_id,
     ]))
   }
@@ -127,6 +140,7 @@ resource "aws_api_gateway_deployment" "deployment" {
     module.verify_code,
     module.mfa,
     module.auth-code,
+    module.update,
     module.logout,
     module.client-info,
   ]
@@ -152,6 +166,7 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
     module.mfa,
     module.auth-code,
     module.logout,
+    module.update,
     module.client-info,
     aws_api_gateway_deployment.deployment,
   ]

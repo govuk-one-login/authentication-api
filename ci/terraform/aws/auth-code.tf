@@ -2,6 +2,7 @@ module "auth-code" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "auth-code"
+  path_part       = "auth-code"
   endpoint_method = "GET"
 
   handler_environment_variables = {

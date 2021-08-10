@@ -2,6 +2,7 @@ module "verify_code" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "verify-code"
+  path_part       = "verify-code"
   endpoint_method = "POST"
   environment     = var.environment
 

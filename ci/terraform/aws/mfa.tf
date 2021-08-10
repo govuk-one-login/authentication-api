@@ -2,6 +2,7 @@ module "mfa" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "mfa"
+  path_part       = "mfa"
   endpoint_method = "POST"
   environment     = var.environment
 

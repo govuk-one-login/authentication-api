@@ -12,6 +12,7 @@ import com.nimbusds.openid.connect.sdk.OIDCError;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.entity.ClientRegistry;
+import uk.gov.di.entity.UpdateClientConfigRequest;
 import uk.gov.di.helpers.IdGenerator;
 
 import java.util.List;
@@ -79,6 +80,21 @@ public class DynamoClientService implements ClientService {
                         .setPublicKey(publicKey)
                         .setPostLogoutRedirectUrls(postLogoutRedirectUris);
         clientRegistryMapper.save(clientRegistry);
+    }
+
+    @Override
+    public ClientRegistry updateClient(String clientId, UpdateClientConfigRequest updateRequest) {
+        ClientRegistry clientRegistry = clientRegistryMapper.load(ClientRegistry.class, clientId);
+        Optional.ofNullable(updateRequest.getRedirectUris())
+                .ifPresent(clientRegistry::setRedirectUrls);
+        Optional.ofNullable(updateRequest.getClientName()).ifPresent(clientRegistry::setClientName);
+        Optional.ofNullable(updateRequest.getContacts()).ifPresent(clientRegistry::setContacts);
+        Optional.ofNullable(updateRequest.getScopes()).ifPresent(clientRegistry::setScopes);
+        Optional.ofNullable(updateRequest.getPostLogoutRedirectUris())
+                .ifPresent(clientRegistry::setPostLogoutRedirectUrls);
+        Optional.ofNullable(updateRequest.getPublicKey()).ifPresent(clientRegistry::setPublicKey);
+        clientRegistryMapper.save(clientRegistry);
+        return clientRegistry;
     }
 
     @Override
