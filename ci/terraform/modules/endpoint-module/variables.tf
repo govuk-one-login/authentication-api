@@ -6,6 +6,16 @@ variable "path_part" {
   type = string
 }
 
+variable "method_request_parameters" {
+  type = map(bool)
+  default = {}
+}
+
+variable "integration_request_parameters" {
+  type = map(string)
+  default = {}
+}
+
 variable "endpoint_method" {
   type = string
 }

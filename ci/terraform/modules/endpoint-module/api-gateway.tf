@@ -9,10 +9,7 @@ resource "aws_api_gateway_method" "endpoint_method" {
   resource_id   = aws_api_gateway_resource.endpoint_resource.id
   http_method   = var.endpoint_method
   authorization = "NONE"
-  request_parameters   = {
-    "method.request.path.clientId" = true
-  }
-
+  request_parameters   = var.method_request_parameters
   depends_on = [
     aws_api_gateway_resource.endpoint_resource
   ]
@@ -22,7 +19,7 @@ resource "aws_api_gateway_integration" "endpoint_integration" {
   rest_api_id          = var.rest_api_id
   resource_id          = aws_api_gateway_resource.endpoint_resource.id
   http_method          = aws_api_gateway_method.endpoint_method.http_method
-  request_parameters   = aws_api_gateway_method.endpoint_method.request_parameters
+  request_parameters   = var.integration_request_parameters
 
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
