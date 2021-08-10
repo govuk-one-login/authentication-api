@@ -13,6 +13,7 @@ import uk.gov.di.entity.Session;
 import uk.gov.di.exceptions.ClientNotFoundException;
 import uk.gov.di.helpers.CookieHelper;
 import uk.gov.di.helpers.CookieHelper.SessionCookieIds;
+import uk.gov.di.helpers.StateMachine;
 import uk.gov.di.services.AuthorisationCodeService;
 import uk.gov.di.services.AuthorizationService;
 import uk.gov.di.services.ClientSessionService;
@@ -25,6 +26,7 @@ import java.util.NoSuchElementException;
 
 import static uk.gov.di.entity.SessionState.AUTHENTICATED;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
+import static uk.gov.di.helpers.StateMachine.validateStateTransition;
 
 public class AuthCodeHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -71,6 +73,13 @@ public class AuthCodeHandler
             System.out.println("SessionID not there for INPUT: " + input.getHeaders());
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         }
+
+        try {
+            validateStateTransition(session, AUTHENTICATED);
+        } catch (StateMachine.InvalidStateTransitionException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1019);
+        }
+
         AuthorizationRequest authorizationRequest;
         try {
             Map<String, List<String>> authRequest =

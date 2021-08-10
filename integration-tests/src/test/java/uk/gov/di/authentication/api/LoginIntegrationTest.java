@@ -12,6 +12,7 @@ import uk.gov.di.entity.LoginResponse;
 import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.entity.SessionState.LOGGED_IN;
 
 public class LoginIntegrationTest extends IntegrationTestEndpoints {
@@ -27,6 +28,7 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
         DynamoHelper.signUp(email, password);
         DynamoHelper.addPhoneNumber(email, phoneNumber);
         String sessionId = RedisHelper.createSession();
+        RedisHelper.setSessionState(sessionId, AUTHENTICATION_REQUIRED);
 
         Response response =
                 RequestHelper.requestWithSession(
@@ -46,6 +48,7 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
         String password = "password-1";
         DynamoHelper.signUp(email, "wrong-password");
         String sessionId = RedisHelper.createSession();
+        RedisHelper.setSessionState(sessionId, AUTHENTICATION_REQUIRED);
 
         Response response =
                 RequestHelper.requestWithSession(

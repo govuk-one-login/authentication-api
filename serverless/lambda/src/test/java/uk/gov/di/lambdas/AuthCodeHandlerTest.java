@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
+import uk.gov.di.entity.SessionState;
 import uk.gov.di.exceptions.ClientNotFoundException;
 import uk.gov.di.services.AuthorisationCodeService;
 import uk.gov.di.services.AuthorizationService;
@@ -53,6 +54,12 @@ class AuthCodeHandlerTest {
     private final Context context = mock(Context.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private AuthCodeHandler handler;
+
+    private final Session session =
+            new Session(SESSION_ID)
+                    .addClientSession(CLIENT_SESSION_ID)
+                    .setEmailAddress(EMAIL)
+                    .setState(SessionState.MFA_CODE_VERIFIED);
 
     @BeforeEach
     public void setUp() {
@@ -150,6 +157,39 @@ class AuthCodeHandlerTest {
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1001));
     }
 
+    @Test
+    public void shouldReturn400IfUserTransitionsFromWrongState() throws ClientNotFoundException {
+        session.setState(SessionState.NEW);
+
+        ClientID clientID = new ClientID();
+        AuthorizationCode authorizationCode = new AuthorizationCode();
+        AuthorizationRequest authRequest = generateValidSessionAndAuthRequest(clientID);
+        AuthenticationSuccessResponse authSuccessResponse =
+                new AuthenticationSuccessResponse(
+                        authRequest.getRedirectionURI(),
+                        authorizationCode,
+                        null,
+                        null,
+                        authRequest.getState(),
+                        null,
+                        null);
+
+        when(authorizationService.isClientRedirectUriValid(eq(clientID), eq(REDIRECT_URI)))
+                .thenReturn(true);
+        when(authorisationCodeService.generateAuthorisationCode(eq(CLIENT_SESSION_ID), eq(EMAIL)))
+                .thenReturn(authorizationCode);
+        when(authorizationService.generateSuccessfulAuthResponse(
+                        any(AuthorizationRequest.class), any(AuthorizationCode.class)))
+                .thenReturn(authSuccessResponse);
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of(COOKIE, buildCookieString()));
+        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1019));
+    }
+
     private AuthorizationRequest generateValidSessionAndAuthRequest(ClientID clientID) {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         State state = new State();
@@ -163,12 +203,7 @@ class AuthCodeHandlerTest {
     }
 
     private void generateValidSession(Map<String, List<String>> authRequest) {
-        when(sessionService.readSessionFromRedis(SESSION_ID))
-                .thenReturn(
-                        Optional.of(
-                                new Session(SESSION_ID)
-                                        .addClientSession(CLIENT_SESSION_ID)
-                                        .setEmailAddress(EMAIL)));
+        when(sessionService.readSessionFromRedis(SESSION_ID)).thenReturn(Optional.of(session));
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(new ClientSession(authRequest, LocalDateTime.now()));
     }

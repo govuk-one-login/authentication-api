@@ -104,6 +104,8 @@ public class SendNotificationHandler
                             sendNotificationRequest.getNotificationType(),
                             session.get());
                 case VERIFY_PHONE_NUMBER:
+                    validateStateTransition(session.get(), VERIFY_PHONE_NUMBER_CODE_SENT);
+
                     if (sendNotificationRequest.getPhoneNumber() == null) {
                         return generateApiGatewayProxyResponse(400, ErrorResponse.ERROR_1011);
                     }

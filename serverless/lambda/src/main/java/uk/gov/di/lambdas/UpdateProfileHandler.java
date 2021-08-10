@@ -16,6 +16,7 @@ import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.UpdateProfileRequest;
 import uk.gov.di.helpers.CookieHelper;
+import uk.gov.di.helpers.StateMachine.InvalidStateTransitionException;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.ClientSessionService;
 import uk.gov.di.services.ConfigurationService;
@@ -30,6 +31,7 @@ import static uk.gov.di.entity.SessionState.ADDED_CONSENT;
 import static uk.gov.di.entity.SessionState.ADDED_UNVERIFIED_PHONE_NUMBER;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.helpers.StateMachine.validateStateTransition;
 
 public class UpdateProfileHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -81,6 +83,7 @@ public class UpdateProfileHandler
             }
             switch (profileRequest.getUpdateProfileType()) {
                 case ADD_PHONE_NUMBER:
+                    validateStateTransition(session.get(), ADDED_UNVERIFIED_PHONE_NUMBER);
                     authenticationService.updatePhoneNumber(
                             profileRequest.getEmail(), profileRequest.getProfileInformation());
                     sessionService.save(session.get().setState(ADDED_UNVERIFIED_PHONE_NUMBER));
@@ -151,7 +154,10 @@ public class UpdateProfileHandler
         } catch (JsonProcessingException e) {
             LOGGER.info("JsonProcessingException : {}", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        } catch (InvalidStateTransitionException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1019);
         }
+
         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1013);
     }
 }

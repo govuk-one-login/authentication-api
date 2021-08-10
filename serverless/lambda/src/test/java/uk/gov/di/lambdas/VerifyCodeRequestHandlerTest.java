@@ -38,10 +38,12 @@ import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
 import static uk.gov.di.entity.SessionState.MFA_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.MFA_CODE_NOT_VALID;
 import static uk.gov.di.entity.SessionState.MFA_CODE_VERIFIED;
+import static uk.gov.di.entity.SessionState.MFA_SMS_CODE_SENT;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_NOT_VALID;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
 import static uk.gov.di.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
+import static uk.gov.di.entity.SessionState.VERIFY_PHONE_NUMBER_CODE_SENT;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -91,6 +93,7 @@ class VerifyCodeRequestHandlerTest {
 
     @Test
     public void shouldReturn200ForValidVerifyPhoneNumberRequest() throws JsonProcessingException {
+        session.setState(VERIFY_PHONE_NUMBER_CODE_SENT);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(validationService.validatePhoneVerificationCode(
                         eq(Optional.of(CODE)), eq(CODE), any(Session.class), eq(5)))
@@ -130,6 +133,7 @@ class VerifyCodeRequestHandlerTest {
     @Test
     public void shouldReturnPhoneNumberCodeNotValidStateIfRequestCodeDoesNotMatchStoredCode()
             throws JsonProcessingException {
+        session.setState(VERIFY_PHONE_NUMBER_CODE_SENT);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(validationService.validatePhoneVerificationCode(
                         eq(Optional.of(CODE)), eq(CODE), any(Session.class), eq(5)))
@@ -181,6 +185,7 @@ class VerifyCodeRequestHandlerTest {
     public void shouldUpdateRedisWhenUserHasReachedMaxPhoneNumberCodeAttempts()
             throws JsonProcessingException {
         final String USER_INPUT = "123456";
+        session.setState(PHONE_NUMBER_CODE_NOT_VALID);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(configurationService.getCodeExpiry()).thenReturn(900L);
         when(validationService.validatePhoneVerificationCode(
@@ -206,6 +211,7 @@ class VerifyCodeRequestHandlerTest {
     public void shouldReturnMaxReachedWhenPhoneNumberCodeIsBlocked()
             throws JsonProcessingException {
         final String USER_INPUT = "123456";
+        session.setState(PHONE_NUMBER_CODE_NOT_VALID);
         when(codeStorageService.isCodeBlockedForSession(TEST_EMAIL_ADDRESS, session.getSessionId()))
                 .thenReturn(true);
 
@@ -263,6 +269,8 @@ class VerifyCodeRequestHandlerTest {
 
     @Test
     public void shouldReturn200ForValiMfaSmsRequest() throws JsonProcessingException {
+        session.setState(SessionState.MFA_SMS_CODE_SENT);
+
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
                 .thenReturn(Optional.of(CODE));
@@ -281,6 +289,7 @@ class VerifyCodeRequestHandlerTest {
     @Test
     public void shouldReturnMfaCodeNotValidStateIfRequestCodeDoesNotMatchStoredCode()
             throws JsonProcessingException {
+        session.setState(MFA_SMS_CODE_SENT);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
                 .thenReturn(Optional.of(CODE));
@@ -299,6 +308,7 @@ class VerifyCodeRequestHandlerTest {
     @Test
     public void shouldUpdateRedisWhenUserHasReachedMaxMfaCodeAttempts()
             throws JsonProcessingException {
+        session.setState(MFA_CODE_NOT_VALID);
         final String USER_INPUT = "123456";
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(configurationService.getCodeExpiry()).thenReturn(900L);
@@ -322,6 +332,7 @@ class VerifyCodeRequestHandlerTest {
     @Test
     public void shouldReturnMaxReachedWhenMfaCodeIsBlocked() throws JsonProcessingException {
         final String USER_INPUT = "123456";
+        session.setState(MFA_CODE_NOT_VALID);
         when(codeStorageService.isCodeBlockedForSession(TEST_EMAIL_ADDRESS, session.getSessionId()))
                 .thenReturn(true);
 

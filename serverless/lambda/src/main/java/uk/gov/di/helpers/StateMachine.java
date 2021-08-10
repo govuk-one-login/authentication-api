@@ -12,14 +12,25 @@ import java.util.Map;
 import static java.util.Collections.emptyList;
 import static java.util.Map.entry;
 import static java.util.Map.ofEntries;
+import static uk.gov.di.entity.SessionState.ADDED_UNVERIFIED_PHONE_NUMBER;
+import static uk.gov.di.entity.SessionState.AUTHENTICATED;
 import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_NOT_VALID;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
+import static uk.gov.di.entity.SessionState.LOGGED_IN;
+import static uk.gov.di.entity.SessionState.MFA_CODE_MAX_RETRIES_REACHED;
+import static uk.gov.di.entity.SessionState.MFA_CODE_NOT_VALID;
+import static uk.gov.di.entity.SessionState.MFA_CODE_VERIFIED;
+import static uk.gov.di.entity.SessionState.MFA_SMS_CODE_SENT;
 import static uk.gov.di.entity.SessionState.NEW;
+import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
+import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_NOT_VALID;
+import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
 import static uk.gov.di.entity.SessionState.TWO_FACTOR_REQUIRED;
 import static uk.gov.di.entity.SessionState.USER_NOT_FOUND;
 import static uk.gov.di.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
+import static uk.gov.di.entity.SessionState.VERIFY_PHONE_NUMBER_CODE_SENT;
 
 public class StateMachine<T> {
 
@@ -62,7 +73,34 @@ public class StateMachine<T> {
                         entry(EMAIL_CODE_MAX_RETRIES_REACHED, Collections.emptyList()),
                         entry(
                                 EMAIL_CODE_VERIFIED,
-                                List.of(EMAIL_CODE_NOT_VALID, TWO_FACTOR_REQUIRED)));
+                                List.of(EMAIL_CODE_NOT_VALID, TWO_FACTOR_REQUIRED)),
+                        entry(
+                                TWO_FACTOR_REQUIRED,
+                                List.of(SessionState.ADDED_UNVERIFIED_PHONE_NUMBER)),
+                        entry(
+                                ADDED_UNVERIFIED_PHONE_NUMBER,
+                                List.of(VERIFY_PHONE_NUMBER_CODE_SENT)),
+                        entry(
+                                VERIFY_PHONE_NUMBER_CODE_SENT,
+                                List.of(PHONE_NUMBER_CODE_VERIFIED, PHONE_NUMBER_CODE_NOT_VALID)),
+                        entry(
+                                PHONE_NUMBER_CODE_NOT_VALID,
+                                List.of(
+                                        PHONE_NUMBER_CODE_VERIFIED,
+                                        PHONE_NUMBER_CODE_NOT_VALID,
+                                        PHONE_NUMBER_CODE_MAX_RETRIES_REACHED)),
+                        entry(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED, Collections.emptyList()),
+                        entry(AUTHENTICATION_REQUIRED, List.of(LOGGED_IN)),
+                        entry(LOGGED_IN, List.of(MFA_SMS_CODE_SENT)),
+                        entry(MFA_SMS_CODE_SENT, List.of(MFA_CODE_VERIFIED, MFA_CODE_NOT_VALID)),
+                        entry(
+                                MFA_CODE_NOT_VALID,
+                                List.of(
+                                        MFA_CODE_VERIFIED,
+                                        MFA_CODE_NOT_VALID,
+                                        MFA_CODE_MAX_RETRIES_REACHED)),
+                        entry(MFA_CODE_MAX_RETRIES_REACHED, Collections.emptyList()),
+                        entry(MFA_CODE_VERIFIED, List.of(AUTHENTICATED)));
 
         return new StateMachine<>(states);
     }
