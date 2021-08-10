@@ -207,6 +207,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
     public void shouldCallVerifyCodeEndpointToVerifyMfaCodeAndReturn200() throws IOException {
         String sessionId = RedisHelper.createSession();
         RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        RedisHelper.setSessionState(sessionId, SessionState.MFA_SMS_CODE_SENT);
 
         String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code);
@@ -215,5 +216,23 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
                 RequestHelper.requestWithSession(VERIFY_CODE_ENDPOINT, codeRequest, sessionId);
 
         assertEquals(200, response.getStatus());
+    }
+
+    @Test
+    public void shouldReturn400IfStateTransitionIsInvalid_SMS() throws IOException {
+        String sessionId = RedisHelper.createSession();
+        RedisHelper.setSessionState(sessionId, SessionState.NEW);
+        RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
+
+        String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
+        VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code);
+
+        Response response =
+                RequestHelper.requestWithSession(VERIFY_CODE_ENDPOINT, codeRequest, sessionId);
+
+        assertEquals(400, response.getStatus());
+        assertEquals(
+                new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1019),
+                response.readEntity(String.class));
     }
 }

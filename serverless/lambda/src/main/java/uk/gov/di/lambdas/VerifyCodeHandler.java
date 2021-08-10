@@ -133,20 +133,22 @@ public class VerifyCodeHandler
                 case MFA_SMS:
                     if (codeStorageService.isCodeBlockedForSession(
                             session.get().getEmailAddress(), session.get().getSessionId())) {
+                        validateStateTransition(session.get(), MFA_CODE_MAX_RETRIES_REACHED);
                         sessionService.save(session.get().setState(MFA_CODE_MAX_RETRIES_REACHED));
                     } else {
                         Optional<String> mfaCode =
                                 codeStorageService.getOtpCode(
                                         session.get().getEmailAddress(),
                                         codeRequest.getNotificationType());
-                        sessionService.save(
-                                session.get()
-                                        .setState(
-                                                validationService.validateMfaVerificationCode(
-                                                        mfaCode,
-                                                        codeRequest.getCode(),
-                                                        session.get(),
-                                                        configurationService.getCodeMaxRetries())));
+                        var newState =
+                                validationService.validateMfaVerificationCode(
+                                        mfaCode,
+                                        codeRequest.getCode(),
+                                        session.get(),
+                                        configurationService.getCodeMaxRetries());
+
+                        validateStateTransition(session.get(), newState);
+                        sessionService.save(session.get().setState(newState));
                         processCodeSessionState(session.get(), codeRequest.getNotificationType());
                     }
                     return generateApiGatewayProxyResponse(
