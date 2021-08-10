@@ -8,6 +8,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ParseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.ErrorResponse;
@@ -20,8 +22,6 @@ import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoService;
 import uk.gov.di.services.SessionService;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -33,6 +33,8 @@ import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxy
 
 public class UpdateProfileHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ClientInfoHandler.class);
 
     private final AuthenticationService authenticationService;
     private final SessionService sessionService;
@@ -67,12 +69,14 @@ public class UpdateProfileHandler
         String clientId;
 
         if (session.isEmpty()) {
+            LOGGER.info("Session is empty.");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         }
         try {
             UpdateProfileRequest profileRequest =
                     objectMapper.readValue(input.getBody(), UpdateProfileRequest.class);
             if (!session.get().validateSession(profileRequest.getEmail())) {
+                LOGGER.info("Invalid session. Email {}", profileRequest.getEmail());
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
             switch (profileRequest.getUpdateProfileType()) {
@@ -80,16 +84,28 @@ public class UpdateProfileHandler
                     authenticationService.updatePhoneNumber(
                             profileRequest.getEmail(), profileRequest.getProfileInformation());
                     sessionService.save(session.get().setState(ADDED_UNVERIFIED_PHONE_NUMBER));
+                    LOGGER.info(
+                            "Phone number updated and session state changed. Session state {}",
+                            ADDED_UNVERIFIED_PHONE_NUMBER);
                     return generateApiGatewayProxyResponse(
                             200, new BaseAPIResponse(session.get().getState()));
                 case CAPTURE_CONSENT:
-                    sessionCookieIds = CookieHelper.parseSessionCookie(input.getHeaders()).orElseThrow();
-                    ClientSession clientSession = clientSessionService.getClientSession(sessionCookieIds.getClientSessionId());
+                    Optional<ClientSession> clientSession =
+                            clientSessionService.getClientSessionFromRequestHeaders(
+                                    input.getHeaders());
+
+                    if (!clientSession.isPresent()) {
+                        LOGGER.info("ClientSession not found.");
+                        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
+                    }
 
                     try {
-                        AuthorizationRequest authorizationRequest = AuthorizationRequest.parse(clientSession.getAuthRequestParams());
+                        AuthorizationRequest authorizationRequest =
+                                AuthorizationRequest.parse(
+                                        clientSession.get().getAuthRequestParams());
                         clientId = authorizationRequest.getClientID().getValue();
                     } catch (ParseException e) {
+                        LOGGER.info("Cannot retreive auth request params from client session id.");
                         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
                     }
 
@@ -97,21 +113,42 @@ public class UpdateProfileHandler
                             authenticationService.getUserConsents(profileRequest.getEmail());
 
                     if (clientConsents.isPresent() && clientConsents.get().containsKey(clientId)) {
-                        clientConsents.get().get(clientId).add(profileRequest.getProfileInformation());
+                        clientConsents
+                                .get()
+                                .get(clientId)
+                                .add(profileRequest.getProfileInformation());
+                        LOGGER.info(
+                                "Consent value successfully added to clientConsent map. Client ID {} - Consent Value {}",
+                                clientId,
+                                profileRequest.getProfileInformation());
                     } else {
-                        clientConsents = Optional.of(Map.of(clientId, List.of(profileRequest.getProfileInformation())));
+                        clientConsents =
+                                Optional.of(
+                                        Map.of(
+                                                clientId,
+                                                List.of(profileRequest.getProfileInformation())));
+                        LOGGER.info(
+                                "New consent map created. Client ID {} - Consent Value {}",
+                                clientId,
+                                profileRequest.getProfileInformation());
                     }
 
-                    authenticationService.updateConsent(profileRequest.getEmail(), clientConsents.get());
+                    authenticationService.updateConsent(
+                            profileRequest.getEmail(), clientConsents.get());
                     sessionService.save(session.get().setState(ADDED_CONSENT));
 
+                    LOGGER.info(
+                            "Consent updated and session state changed. Session state {}",
+                            ADDED_CONSENT);
                     try {
-                        return generateApiGatewayProxyResponse(200, new BaseAPIResponse(session.get().getState()));
+                        return generateApiGatewayProxyResponse(
+                                200, new BaseAPIResponse(session.get().getState()));
                     } catch (JsonProcessingException e) {
-                        e.printStackTrace();
+                        LOGGER.info("JsonProcessingException : {}", e);
                     }
             }
         } catch (JsonProcessingException e) {
+            LOGGER.info("JsonProcessingException : {}", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1013);

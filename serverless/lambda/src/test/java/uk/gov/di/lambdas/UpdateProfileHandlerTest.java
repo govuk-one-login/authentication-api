@@ -16,7 +16,6 @@ import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.exceptions.ClientNotFoundException;
-import uk.gov.di.helpers.CookieHelper;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.AuthorisationCodeService;
 import uk.gov.di.services.AuthorizationService;
@@ -25,8 +24,7 @@ import uk.gov.di.services.SessionService;
 
 import java.net.URI;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -97,8 +95,10 @@ class UpdateProfileHandlerTest {
         ClientID clientID = new ClientID();
         AuthorizationCode authorizationCode = new AuthorizationCode();
         AuthorizationRequest authRequest = generateValidSessionAndAuthRequest(clientID);
+        usingValidClientSession(clientID.getValue());
 
-        var consentMap = Map.of(authRequest.getClientID().getValue(), List.of(String.valueOf(true)));
+        var consentMap =
+                Map.of(authRequest.getClientID().getValue(), List.of(String.valueOf(true)));
 
         AuthenticationSuccessResponse authSuccessResponse =
                 new AuthenticationSuccessResponse(
@@ -178,5 +178,19 @@ class UpdateProfileHandlerTest {
                                         .setEmailAddress(TEST_EMAIL_ADDRESS)));
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(new ClientSession(authRequest, LocalDateTime.now()));
+    }
+
+    private void usingValidClientSession(String clientId) {
+        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
+                .thenReturn(getClientSession(clientId));
+    }
+
+    private Optional<ClientSession> getClientSession(String clientId) {
+        return Optional.of(
+                new ClientSession(
+                        Map.ofEntries(
+                                Map.entry("client_id", Collections.singletonList(clientId)),
+                                Map.entry("response_type", Collections.singletonList("code"))),
+                        null));
     }
 }
