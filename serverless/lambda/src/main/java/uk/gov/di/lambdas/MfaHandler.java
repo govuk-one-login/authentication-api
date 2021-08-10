@@ -11,6 +11,7 @@ import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.NotifyRequest;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.UserWithEmailRequest;
+import uk.gov.di.helpers.StateMachine.InvalidStateTransitionException;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.AwsSqsClient;
 import uk.gov.di.services.CodeGeneratorService;
@@ -24,6 +25,7 @@ import static uk.gov.di.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.entity.SessionState.MFA_SMS_CODE_SENT;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.helpers.StateMachine.validateStateTransition;
 
 public class MfaHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -77,7 +79,10 @@ public class MfaHandler
         if (session == null) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         }
+
         try {
+            validateStateTransition(session, MFA_SMS_CODE_SENT);
+
             UserWithEmailRequest userWithEmailRequest =
                     objectMapper.readValue(input.getBody(), UserWithEmailRequest.class);
             if (!session.validateSession(userWithEmailRequest.getEmail())) {
@@ -103,6 +108,8 @@ public class MfaHandler
             return generateApiGatewayProxyResponse(200, new BaseAPIResponse(session.getState()));
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        } catch (InvalidStateTransitionException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1019);
         }
     }
 }

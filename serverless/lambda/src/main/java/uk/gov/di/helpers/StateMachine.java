@@ -18,6 +18,7 @@ import static uk.gov.di.entity.SessionState.EMAIL_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_NOT_VALID;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
 import static uk.gov.di.entity.SessionState.LOGGED_IN;
+import static uk.gov.di.entity.SessionState.MFA_SMS_CODE_SENT;
 import static uk.gov.di.entity.SessionState.NEW;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_NOT_VALID;
@@ -85,7 +86,8 @@ public class StateMachine<T> {
                                         PHONE_NUMBER_CODE_NOT_VALID,
                                         PHONE_NUMBER_CODE_MAX_RETRIES_REACHED)),
                         entry(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED, Collections.emptyList()),
-                        entry(AUTHENTICATION_REQUIRED, List.of(LOGGED_IN)));
+                        entry(AUTHENTICATION_REQUIRED, List.of(LOGGED_IN)),
+                        entry(LOGGED_IN, List.of(MFA_SMS_CODE_SENT)));
 
         return new StateMachine<>(states);
     }
