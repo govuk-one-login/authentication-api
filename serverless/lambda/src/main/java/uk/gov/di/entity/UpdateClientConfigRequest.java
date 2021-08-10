@@ -26,7 +26,7 @@ public class UpdateClientConfigRequest {
     private List<String> scopes;
 
     @JsonProperty("post_logout_redirect_uris")
-    private List<String> postLogoutRedirectUris = new ArrayList<>();
+    private List<String> postLogoutRedirectUris;
 
     public UpdateClientConfigRequest() {}
 
