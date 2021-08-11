@@ -9,9 +9,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import uk.gov.di.entity.ClientRegistrationRequest;
 import uk.gov.di.entity.ClientRegistrationResponse;
 import uk.gov.di.entity.ErrorResponse;
+import uk.gov.di.services.ClientConfigValidationService;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoClientService;
+
+import java.util.Optional;
 
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -21,9 +24,12 @@ public class ClientRegistrationHandler
 
     private final ClientService clientService;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ClientConfigValidationService validationService;
 
-    public ClientRegistrationHandler(ClientService clientService) {
+    public ClientRegistrationHandler(
+            ClientService clientService, ClientConfigValidationService validationService) {
         this.clientService = clientService;
+        this.validationService = validationService;
     }
 
     public ClientRegistrationHandler() {
@@ -33,6 +39,7 @@ public class ClientRegistrationHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEnvironment(),
                         configurationService.getDynamoEndpointUri());
+        this.validationService = new ClientConfigValidationService();
     }
 
     @Override
@@ -41,6 +48,11 @@ public class ClientRegistrationHandler
         try {
             ClientRegistrationRequest clientRegistrationRequest =
                     objectMapper.readValue(input.getBody(), ClientRegistrationRequest.class);
+            Optional<ErrorResponse> errorResponse =
+                    validationService.validateClientRegistrationConfig(clientRegistrationRequest);
+            if (errorResponse.isPresent()) {
+                return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
+            }
             String clientID = clientService.generateClientID().toString();
             clientService.addClient(
                     clientID,

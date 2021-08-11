@@ -94,8 +94,7 @@ class ClientConfigValidationServiceTest {
     @Test
     public void shouldReturnOptionalEmptyForEmptyUpdateRequest() {
         Optional<ErrorResponse> errorResponse =
-                validationService.validateClientUpdateConfig(
-                        new UpdateClientConfigRequest());
+                validationService.validateClientUpdateConfig(new UpdateClientConfigRequest());
         assertThat(errorResponse, equalTo(Optional.empty()));
     }
 

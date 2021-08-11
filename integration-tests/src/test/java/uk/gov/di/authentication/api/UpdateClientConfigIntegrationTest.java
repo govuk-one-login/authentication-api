@@ -21,16 +21,18 @@ public class UpdateClientConfigIntegrationTest extends IntegrationTestEndpoints 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final String CLIENT_ID = "client-id-1";
     private static final String BASE_UPDATE_ENDPOINT = "/oidc/clients";
+    private static final String VALID_PUBLIC_CERT =
+            "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxt91w8GsMDdklOpS8ZXAsIM1ztQZd5QT/bRCQahZJeS1a6Os4hbuKwzHlz52zfTNp7BL4RB/KOcRIPhOQLgqeyM+bVngRa1EIfTkugJHS2/gu2Xv0aelwvXj8FZgAPRPD+ps2wiV4tUehrFIsRyHZM3yOp9g6qapCcxF7l0E1PlVkKPcPNmxn2oFiqnP6ZThGbE+N2avdXHcySIqt/v6Hbmk8cDHzSExazW7j/XvA+xnp0nQ5m2GisCZul5If5edCTXD0tKzx/I/gtEG4gkv9kENWOt4grP8/0zjNAl2ac6kpRny3tY5RkKBKCOB1VHwq2lUTSNKs32O1BsA5ByyYQIDAQAB";
 
     @Test
-    public void shouldCallRegisterAndUpdateClientNameSuccessfully() throws JsonProcessingException {
+    public void shouldUpdateClientNameSuccessfully() throws JsonProcessingException {
         DynamoHelper.registerClient(
                 CLIENT_ID,
                 "The test client",
                 singletonList("http://localhost:1000/redirect"),
                 singletonList("test-client@test.com"),
                 singletonList("openid"),
-                "public-key",
+                VALID_PUBLIC_CERT,
                 singletonList("http://localhost/post-redirect-logout"));
 
         UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
