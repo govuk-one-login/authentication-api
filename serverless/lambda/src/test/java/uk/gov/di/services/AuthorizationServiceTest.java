@@ -2,10 +2,14 @@ package uk.gov.di.services;
 
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
+import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.ClientRegistry;
@@ -90,6 +94,108 @@ class AuthorizationServiceTest {
         assertThat(authSuccessResponse.getRedirectionURI(), equalTo(REDIRECT_URI));
     }
 
+    @Test
+    void shouldSuccessfullyValidAuthRequest() {
+        ClientID clientID = new ClientID();
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        when(dynamoClientService.getClient(clientID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), clientID.toString())));
+        Optional<ErrorObject> errorObject =
+                authorizationService.validateAuthRequest(
+                        generateAuthRequest(
+                                clientID, REDIRECT_URI.toString(), responseType, scope));
+
+        assertThat(errorObject, equalTo(Optional.empty()));
+    }
+
+    @Test
+    void shouldReturnErrorWhenClientIdIsNotValidInAuthRequest() {
+        ClientID clientID = new ClientID();
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        when(dynamoClientService.getClient(clientID.toString())).thenReturn(Optional.empty());
+        Optional<ErrorObject> errorObject =
+                authorizationService.validateAuthRequest(
+                        generateAuthRequest(
+                                clientID, REDIRECT_URI.toString(), responseType, scope));
+
+        assertThat(errorObject, equalTo(Optional.of(OAuth2Error.UNAUTHORIZED_CLIENT)));
+    }
+
+    @Test
+    void shouldReturnErrorWhenResponseCodeIsNotValidInAuthRequest() {
+        ClientID clientID = new ClientID();
+        ResponseType responseType = new ResponseType(ResponseType.Value.TOKEN);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        when(dynamoClientService.getClient(clientID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), clientID.toString())));
+        Optional<ErrorObject> errorObject =
+                authorizationService.validateAuthRequest(
+                        generateAuthRequest(
+                                clientID, REDIRECT_URI.toString(), responseType, scope));
+
+        assertThat(errorObject, equalTo(Optional.of(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE)));
+    }
+
+    @Test
+    void shouldReturnErrorWhenScopeIsNotValidInAuthRequest() {
+        ClientID clientID = new ClientID();
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        scope.add(OIDCScopeValue.EMAIL);
+        when(dynamoClientService.getClient(clientID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), clientID.toString())));
+        Optional<ErrorObject> errorObject =
+                authorizationService.validateAuthRequest(
+                        generateAuthRequest(
+                                clientID, REDIRECT_URI.toString(), responseType, scope));
+
+        assertThat(errorObject, equalTo(Optional.of(OAuth2Error.INVALID_SCOPE)));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenRedirectUriIsInvalidInAuthRequest() {
+        ClientID clientID = new ClientID();
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        String redirectURi = "http://localhost/redirect";
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        when(dynamoClientService.getClient(clientID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        "http://localhost/wrong-redirect", clientID.toString())));
+
+        RuntimeException exception =
+                assertThrows(
+                        RuntimeException.class,
+                        () ->
+                                authorizationService.validateAuthRequest(
+                                        generateAuthRequest(
+                                                clientID, redirectURi, responseType, scope)),
+                        "Expected to throw exception");
+        assertThat(
+                exception.getMessage(),
+                equalTo(
+                        format(
+                                "Invalid Redirect in request %s",
+                                redirectURi)));
+    }
+
     private ClientRegistry generateClientRegistry(String redirectURI, String clientID) {
         return new ClientRegistry()
                 .setRedirectUrls(singletonList(redirectURI))
@@ -97,5 +203,15 @@ class AuthorizationServiceTest {
                 .setContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
                 .setPublicKey(null)
                 .setScopes(singletonList("openid"));
+    }
+
+    private AuthorizationRequest generateAuthRequest(
+            ClientID clientID, String redirectUri, ResponseType responseType, Scope scope) {
+        State state = new State();
+        return new AuthorizationRequest.Builder(responseType, new ClientID(clientID))
+                .redirectionURI(URI.create(redirectUri))
+                .scope(scope)
+                .state(state)
+                .build();
     }
 }

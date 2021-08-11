@@ -17,10 +17,9 @@ import org.slf4j.LoggerFactory;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.SessionState;
-import uk.gov.di.services.ClientService;
+import uk.gov.di.services.AuthorizationService;
 import uk.gov.di.services.ClientSessionService;
 import uk.gov.di.services.ConfigurationService;
-import uk.gov.di.services.DynamoClientService;
 import uk.gov.di.services.SessionService;
 
 import java.net.URI;
@@ -39,10 +38,10 @@ public class AuthorisationHandler
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthorisationHandler.class);
 
-    private final ClientService clientService;
     private final SessionService sessionService;
     private final ConfigurationService configurationService;
     private final ClientSessionService clientSessionService;
+    private final AuthorizationService authorizationService;
 
     private interface ResponseHeaders {
         String LOCATION = "Location";
@@ -50,25 +49,21 @@ public class AuthorisationHandler
     }
 
     public AuthorisationHandler(
-            ClientService clientService,
             ConfigurationService configurationService,
             SessionService sessionService,
-            ClientSessionService clientSessionService) {
-        this.clientService = clientService;
+            ClientSessionService clientSessionService,
+            AuthorizationService authorizationService) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
+        this.authorizationService = authorizationService;
     }
 
     public AuthorisationHandler() {
         configurationService = new ConfigurationService();
-        this.clientService =
-                new DynamoClientService(
-                        configurationService.getAwsRegion(),
-                        configurationService.getEnvironment(),
-                        configurationService.getDynamoEndpointUri());
         this.sessionService = new SessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
+        this.authorizationService = new AuthorizationService(configurationService);
     }
 
     @Override
@@ -79,8 +74,7 @@ public class AuthorisationHandler
             Map<String, List<String>> queryStringParameters = getQueryStringParametersAsMap(input);
             var authRequest = AuthenticationRequest.parse(queryStringParameters);
 
-            Optional<ErrorObject> error =
-                    clientService.getErrorForAuthorizationRequest(authRequest);
+            Optional<ErrorObject> error = authorizationService.validateAuthRequest(authRequest);
 
             return error.map(e -> errorResponse(authRequest, e))
                     .orElseGet(
@@ -135,12 +129,11 @@ public class AuthorisationHandler
                                     redirectUri);
                         })
                 .orElseGet(
-                        () -> {
-                            return createSessionAndRedirect(
-                                    authRequestParameters,
-                                    authenticationRequest.getClientID(),
-                                    configurationService.getLoginURI());
-                        });
+                        () ->
+                                createSessionAndRedirect(
+                                        authRequestParameters,
+                                        authenticationRequest.getClientID(),
+                                        configurationService.getLoginURI()));
     }
 
     private APIGatewayProxyResponseEvent updateSessionAndRedirect(
@@ -157,10 +150,7 @@ public class AuthorisationHandler
 
     private boolean isUserAuthenticated(Optional<Session> existingSession) {
         return existingSession
-                .map(
-                        session -> {
-                            return session.getState().equals(SessionState.AUTHENTICATED);
-                        })
+                .map(session -> session.getState().equals(SessionState.AUTHENTICATED))
                 .orElse(Boolean.FALSE);
     }
 

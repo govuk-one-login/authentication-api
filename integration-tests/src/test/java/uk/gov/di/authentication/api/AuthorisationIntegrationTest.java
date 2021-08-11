@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.api;
 
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.openid.connect.sdk.OIDCError;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.ClientBuilder;
@@ -60,7 +61,7 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
         assertEquals(302, response.getStatus());
         assertThat(
                 getHeaderValueByParamName(response, "Location"),
-                containsString(OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS_CODE));
+                containsString(OAuth2Error.UNAUTHORIZED_CLIENT.getCode()));
     }
 
     @Test
