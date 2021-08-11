@@ -6,15 +6,19 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.oauth2.sdk.ErrorObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.entity.ClientRegistrationResponse;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.UpdateClientConfigRequest;
+import uk.gov.di.services.ClientConfigValidationService;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoClientService;
+
+import java.util.Optional;
 
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -23,11 +27,14 @@ public class UpdateClientConfigHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final ClientService clientService;
+    private final ClientConfigValidationService validationService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final Logger LOGGER = LoggerFactory.getLogger(UpdateClientConfigHandler.class);
 
-    public UpdateClientConfigHandler(ClientService clientService) {
+    public UpdateClientConfigHandler(
+            ClientService clientService, ClientConfigValidationService validationService) {
         this.clientService = clientService;
+        this.validationService = validationService;
     }
 
     public UpdateClientConfigHandler() {
@@ -37,6 +44,7 @@ public class UpdateClientConfigHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEnvironment(),
                         configurationService.getDynamoEndpointUri());
+        this.validationService = new ClientConfigValidationService();
     }
 
     @Override
@@ -50,6 +58,11 @@ public class UpdateClientConfigHandler
             if (!clientService.isValidClient(clientId)) {
                 LOGGER.error("Client with ClientId {} is not valid", clientId);
                 return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1016);
+            }
+            Optional<ErrorObject> errorResponse =
+                    validationService.validateClientUpdateConfig(updateClientConfigRequest);
+            if (errorResponse.isPresent()) {
+                return generateApiGatewayProxyResponse(400, errorResponse.get());
             }
             ClientRegistry clientRegistry =
                     clientService.updateClient(clientId, updateClientConfigRequest);

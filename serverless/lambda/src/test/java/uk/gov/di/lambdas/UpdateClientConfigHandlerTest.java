@@ -10,10 +10,12 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.ClientRegistrationResponse;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.UpdateClientConfigRequest;
+import uk.gov.di.services.ClientConfigValidationService;
 import uk.gov.di.services.ClientService;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -23,7 +25,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
 
 class UpdateClientConfigHandlerTest {
 
@@ -32,16 +36,21 @@ class UpdateClientConfigHandlerTest {
     private static final List<String> SCOPES = singletonList("openid");
     private final Context context = mock(Context.class);
     private final ClientService clientService = mock(ClientService.class);
+    private final ClientConfigValidationService clientValidationService =
+            mock(ClientConfigValidationService.class);
     private UpdateClientConfigHandler handler;
 
     @BeforeEach
     public void setUp() {
-        handler = new UpdateClientConfigHandler(clientService);
+        handler = new UpdateClientConfigHandler(clientService, clientValidationService);
     }
 
     @Test
     public void shouldReturn200ForAValidRequest() throws JsonProcessingException {
         when(clientService.isValidClient(CLIENT_ID)).thenReturn(true);
+        when(clientValidationService.validateClientUpdateConfig(
+                        any(UpdateClientConfigRequest.class)))
+                .thenReturn(Optional.empty());
         when(clientService.updateClient(eq(CLIENT_ID), any(UpdateClientConfigRequest.class)))
                 .thenReturn(createClientRegistry());
 
@@ -86,6 +95,25 @@ class UpdateClientConfigHandlerTest {
         event.setBody(format("{\"client_name\": \"%s\"}", CLIENT_NAME));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(401));
+    }
+
+    @Test
+    public void shouldReturn400WhenRequestFailsValidation() {
+        when(clientService.isValidClient(CLIENT_ID)).thenReturn(true);
+        when(clientValidationService.validateClientUpdateConfig(
+                        any(UpdateClientConfigRequest.class)))
+                .thenReturn(Optional.of(INVALID_PUBLIC_KEY));
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setBody(
+                format(
+                        "{\"client_name\": \"%s\", \"public_key\": \"%s\"}",
+                        CLIENT_NAME, "rubbush-public-keu"));
+        event.setPathParameters(Map.of("clientId", CLIENT_ID));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(INVALID_PUBLIC_KEY));
     }
 
     private ClientRegistry createClientRegistry() {

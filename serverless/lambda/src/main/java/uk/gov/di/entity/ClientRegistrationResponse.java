@@ -30,6 +30,9 @@ public class ClientRegistrationResponse {
     @JsonProperty("token_endpoint_auth_method")
     private final String tokenAuthMethod = "private_key_jwt";
 
+    @JsonProperty("response_type")
+    private final String responseType = "code";
+
     public ClientRegistrationResponse(
             @JsonProperty(required = true, value = "client_name") String clientName,
             @JsonProperty(required = true, value = "client_id") String clientId,
@@ -76,5 +79,9 @@ public class ClientRegistrationResponse {
 
     public String getTokenAuthMethod() {
         return tokenAuthMethod;
+    }
+
+    public String getResponseType() {
+        return responseType;
     }
 }
