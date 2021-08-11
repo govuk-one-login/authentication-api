@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
+import com.nimbusds.oauth2.sdk.token.AccessTokenType;
 import com.nimbusds.openid.connect.sdk.UserInfoErrorResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.slf4j.Logger;
@@ -71,7 +72,9 @@ public class UserInfoHandler
         }
         AccessToken accessToken;
         try {
-            accessToken = AccessToken.parse(input.getHeaders().get("Authorization"));
+            accessToken =
+                    AccessToken.parse(
+                            input.getHeaders().get("Authorization"), AccessTokenType.BEARER);
         } catch (Exception e) {
             LOGGER.error(
                     format(

@@ -127,7 +127,7 @@ public class SendNotificationHandler
             LOGGER.error("Error sending message to queue", ex);
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
         } catch (JsonProcessingException e) {
-            LOGGER.error("Error parsing request", e.getMessage());
+            LOGGER.error("Error parsing request", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (InvalidStateTransitionException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1019);

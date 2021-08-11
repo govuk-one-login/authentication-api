@@ -122,7 +122,7 @@ public class LogoutHandler
 
     private boolean doesIDTokenExistInSession(String idTokenHint, Session session) {
         return session.getClientSessions().stream()
-                .map(s -> clientSessionService.getClientSession(s))
+                .map(clientSessionService::getClientSession)
                 .filter(Objects::nonNull)
                 .anyMatch(cs -> idTokenHint.equals(cs.getIdTokenHint()));
     }

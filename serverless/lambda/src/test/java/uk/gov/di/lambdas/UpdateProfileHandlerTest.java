@@ -17,7 +17,6 @@ import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.SessionState;
 import uk.gov.di.exceptions.ClientNotFoundException;
-import uk.gov.di.helpers.IdGenerator;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.AuthorisationCodeService;
 import uk.gov.di.services.AuthorizationService;

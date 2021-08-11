@@ -58,13 +58,12 @@ public class ClientSessionService {
         }
     }
 
-    public ClientSession saveClientSession(String clientSessionId, ClientSession clientSession) {
+    public void saveClientSession(String clientSessionId, ClientSession clientSession) {
         try {
             redisConnectionService.saveWithExpiry(
                     CLIENT_SESSION_PREFIX.concat(clientSessionId),
                     objectMapper.writeValueAsString(clientSession),
                     configurationService.getSessionExpiry());
-            return clientSession;
         } catch (JsonProcessingException e) {
             LOG.error("Error saving client session to Redis", e);
             throw new RuntimeException(e);

@@ -70,7 +70,7 @@ public class ClientInfoHandler
         Optional<ClientSession> clientSession =
                 clientSessionService.getClientSessionFromRequestHeaders(input.getHeaders());
 
-        if (!clientSession.isPresent()) {
+        if (clientSession.isEmpty()) {
             LOGGER.info("ClientSession not found.");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
         }
@@ -82,8 +82,8 @@ public class ClientInfoHandler
 
             Optional<ClientRegistry> optionalClientRegistry = clientService.getClient(clientID);
 
-            if (!optionalClientRegistry.isPresent()) {
-                LOGGER.info("Client not found in ClientRegistry for ClientID: %s", clientID);
+            if (optionalClientRegistry.isEmpty()) {
+                LOGGER.info("Client not found in ClientRegistry for ClientID: {}", clientID);
                 return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1016);
             }
 
@@ -95,14 +95,13 @@ public class ClientInfoHandler
                             clientRegistry.getScopes());
 
             LOGGER.info(
-                    "Found Client Info for ClientID: %s ClientName %s",
-                    clientRegistry.getClientID(), clientRegistry.getClientName());
+                    "Found Client Info for ClientID: {} ClientName {}",
+                    clientRegistry.getClientID(),
+                    clientRegistry.getClientName());
 
             return generateApiGatewayProxyResponse(200, clientInfoResponse);
 
-        } catch (ParseException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
-        } catch (JsonProcessingException e) {
+        } catch (ParseException | JsonProcessingException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
     }

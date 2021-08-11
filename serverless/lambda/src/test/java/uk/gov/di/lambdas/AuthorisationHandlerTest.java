@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.SessionState;
-import uk.gov.di.services.ClientService;
+import uk.gov.di.services.AuthorizationService;
 import uk.gov.di.services.ClientSessionService;
 import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.SessionService;
@@ -21,7 +21,9 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -34,10 +36,10 @@ import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 class AuthorisationHandlerTest {
 
     private final Context context = mock(Context.class);
-    private final ClientService clientService = mock(ClientService.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
+    private final AuthorizationService authorizationService = mock(AuthorizationService.class);
 
     private static final String EXPECTED_COOKIE_STRING =
             "gs=a-session-id.client-session-id; Max-Age=1800; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
@@ -50,7 +52,7 @@ class AuthorisationHandlerTest {
     public void setUp() {
         handler =
                 new AuthorisationHandler(
-                        clientService, configService, sessionService, clientSessionService);
+                        configService, sessionService, clientSessionService, authorizationService);
     }
 
     @Test
@@ -58,7 +60,7 @@ class AuthorisationHandlerTest {
         final URI loginUrl = URI.create("http://example.com");
         final Session session = new Session("a-session-id");
 
-        when(clientService.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
                 .thenReturn(Optional.empty());
         when(configService.getLoginURI()).thenReturn(loginUrl);
         when(configService.getDomainName()).thenReturn(domainName);
@@ -89,7 +91,7 @@ class AuthorisationHandlerTest {
 
     @Test
     void shouldReturn400WhenAuthorisationRequestCannotBeParsed() {
-        when(clientService.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
                 .thenReturn(Optional.empty());
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
@@ -107,7 +109,7 @@ class AuthorisationHandlerTest {
 
     @Test
     void shouldReturn400WhenAuthorisationRequestContainsInvalidData() {
-        when(clientService.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
                 .thenReturn(Optional.of(OAuth2Error.INVALID_SCOPE));
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
@@ -130,7 +132,7 @@ class AuthorisationHandlerTest {
         final URI loginUrl = URI.create("http://example.com");
         final Session session = new Session("a-session-id");
 
-        when(clientService.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
                 .thenReturn(Optional.empty());
         when(configService.getLoginURI()).thenReturn(loginUrl);
         when(sessionService.createSession()).thenReturn(session);
@@ -174,7 +176,7 @@ class AuthorisationHandlerTest {
 
     @Test
     void shouldReturnErrorWhenPromptParamNoneAndNotLoggedIn() {
-        when(clientService.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
                 .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent response =
                 handler.handleRequest(withPromptRequestEvent("none"), context);
@@ -213,7 +215,7 @@ class AuthorisationHandlerTest {
         final URI loginUrl = URI.create("http://example.com");
         final Session session = new Session("a-session-id");
 
-        when(clientService.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
                 .thenReturn(Optional.empty());
         when(configService.getLoginURI()).thenReturn(loginUrl);
         when(sessionService.createSession()).thenReturn(session);
@@ -256,7 +258,7 @@ class AuthorisationHandlerTest {
 
     @Test
     void shouldReturnErrorWhenUnrecognisedPromptValue() {
-        when(clientService.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
                 .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent response =
                 handler.handleRequest(withPromptRequestEvent("unrecognised"), context);
@@ -266,7 +268,7 @@ class AuthorisationHandlerTest {
 
     @Test
     void shouldReturnErrorWhenPromptParamWithMultipleValuesNoneAndLogin() {
-        when(clientService.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
                 .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent response =
                 handler.handleRequest(withPromptRequestEvent("none login"), context);
@@ -276,7 +278,7 @@ class AuthorisationHandlerTest {
 
     @Test
     void shouldReturnErrorWhenPromptParamWithUnsupportedMultipleValues() {
-        when(clientService.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
                 .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent response =
                 handler.handleRequest(withPromptRequestEvent("login consent"), context);
@@ -288,7 +290,7 @@ class AuthorisationHandlerTest {
 
     @Test
     void shouldReturnErrorWhenPromptParamConsent() {
-        when(clientService.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
                 .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent response =
                 handler.handleRequest(withPromptRequestEvent("consent"), context);
@@ -300,7 +302,7 @@ class AuthorisationHandlerTest {
 
     @Test
     void shouldReturnErrorWhenPromptParamSelectAccount() {
-        when(clientService.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
                 .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent response =
                 handler.handleRequest(withPromptRequestEvent("select_account"), context);
@@ -315,7 +317,7 @@ class AuthorisationHandlerTest {
         final URI loginUrl = URI.create("http://example.com");
         final Session session = new Session("a-session-id");
 
-        when(clientService.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
                 .thenReturn(Optional.empty());
         when(configService.getLoginURI()).thenReturn(loginUrl);
         when(sessionService.getSessionFromSessionCookie(any())).thenReturn(Optional.empty());
@@ -381,7 +383,7 @@ class AuthorisationHandlerTest {
 
     private void whenLoggedIn(Session session, URI loginUrl) {
         session.setState(SessionState.AUTHENTICATED);
-        when(clientService.getErrorForAuthorizationRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
                 .thenReturn(Optional.empty());
         when(configService.getLoginURI()).thenReturn(loginUrl);
         when(sessionService.getSessionFromSessionCookie(any())).thenReturn(Optional.of(session));

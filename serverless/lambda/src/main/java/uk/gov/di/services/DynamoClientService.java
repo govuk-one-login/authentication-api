@@ -5,12 +5,7 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
-import com.nimbusds.oauth2.sdk.AuthorizationRequest;
-import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.openid.connect.sdk.OIDCError;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.UpdateClientConfigRequest;
 import uk.gov.di.helpers.IdGenerator;
@@ -19,8 +14,6 @@ import java.util.List;
 import java.util.Optional;
 
 public class DynamoClientService implements ClientService {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(DynamoClientService.class);
 
     private static final String CLIENT_REGISTRY_TABLE = "client-registry";
     private final DynamoDBMapper clientRegistryMapper;
@@ -45,15 +38,6 @@ public class DynamoClientService implements ClientService {
                         .build();
 
         this.clientRegistryMapper = new DynamoDBMapper(dynamoDB, clientRegistryConfig);
-    }
-
-    @Override
-    public Optional<ErrorObject> getErrorForAuthorizationRequest(AuthorizationRequest authRequest) {
-        if (!isValidClient(authRequest.getClientID().toString())) {
-            LOGGER.error("Invalid client: {}", authRequest.getClientID());
-            return Optional.of(OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS);
-        }
-        return Optional.empty();
     }
 
     @Override

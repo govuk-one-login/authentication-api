@@ -7,7 +7,7 @@ import java.util.Map;
 
 public class NotificationService {
 
-    private NotificationClient notifyClient;
+    private final NotificationClient notifyClient;
 
     public NotificationService(NotificationClient notifyClient) {
         this.notifyClient = notifyClient;
