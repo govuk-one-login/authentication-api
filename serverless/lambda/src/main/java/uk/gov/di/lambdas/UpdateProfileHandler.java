@@ -15,7 +15,6 @@ import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.UpdateProfileRequest;
-import uk.gov.di.helpers.CookieHelper;
 import uk.gov.di.helpers.StateMachine.InvalidStateTransitionException;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.ClientSessionService;
@@ -67,7 +66,6 @@ public class UpdateProfileHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
-        CookieHelper.SessionCookieIds sessionCookieIds;
         String clientId;
 
         if (session.isEmpty()) {
@@ -97,7 +95,7 @@ public class UpdateProfileHandler
                             clientSessionService.getClientSessionFromRequestHeaders(
                                     input.getHeaders());
 
-                    if (!clientSession.isPresent()) {
+                    if (clientSession.isEmpty()) {
                         LOGGER.info("ClientSession not found.");
                         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
                     }
@@ -148,11 +146,11 @@ public class UpdateProfileHandler
                         return generateApiGatewayProxyResponse(
                                 200, new BaseAPIResponse(session.get().getState()));
                     } catch (JsonProcessingException e) {
-                        LOGGER.info("JsonProcessingException : {}", e);
+                        LOGGER.info("JsonProcessingException", e);
                     }
             }
         } catch (JsonProcessingException e) {
-            LOGGER.info("JsonProcessingException : {}", e);
+            LOGGER.info("JsonProcessingException", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (InvalidStateTransitionException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1019);

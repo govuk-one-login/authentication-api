@@ -28,9 +28,9 @@ import static uk.gov.di.helpers.StateMachine.validateStateTransition;
 public class CheckUserExistsHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private ValidationService validationService;
-    private ObjectMapper objectMapper = new ObjectMapper();
-    private AuthenticationService authenticationService;
+    private final ValidationService validationService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final AuthenticationService authenticationService;
     private final SessionService sessionService;
 
     public CheckUserExistsHandler(
@@ -69,7 +69,7 @@ public class CheckUserExistsHandler
                 String emailAddress = userExistsRequest.getEmail();
                 Optional<ErrorResponse> errorResponse =
                         validationService.validateEmailAddress(emailAddress);
-                if (!errorResponse.isEmpty()) {
+                if (errorResponse.isPresent()) {
                     return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
                 }
                 boolean userExists = authenticationService.userExists(emailAddress);

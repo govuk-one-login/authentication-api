@@ -190,10 +190,7 @@ class AuthorizationServiceTest {
                         "Expected to throw exception");
         assertThat(
                 exception.getMessage(),
-                equalTo(
-                        format(
-                                "Invalid Redirect in request %s",
-                                redirectURi)));
+                equalTo(format("Invalid Redirect in request %s", redirectURi)));
     }
 
     private ClientRegistry generateClientRegistry(String redirectURI, String clientID) {

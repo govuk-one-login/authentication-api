@@ -5,9 +5,9 @@ import org.slf4j.LoggerFactory;
 
 import java.net.HttpCookie;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 
@@ -73,7 +73,7 @@ public class CookieHelper {
             return Optional.empty();
         }
 
-        return List.of(REQUEST_COOKIE_HEADER, REQUEST_COOKIE_HEADER.toLowerCase()).stream()
+        return Stream.of(REQUEST_COOKIE_HEADER, REQUEST_COOKIE_HEADER.toLowerCase())
                 .filter(headers.keySet()::contains)
                 .findFirst();
     }

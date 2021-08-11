@@ -26,7 +26,7 @@ import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxy
 public class WellknownHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private ConfigurationService configService;
+    private final ConfigurationService configService;
 
     public WellknownHandler(ConfigurationService configService) {
         this.configService = configService;
