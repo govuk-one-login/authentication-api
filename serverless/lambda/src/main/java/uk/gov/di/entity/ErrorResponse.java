@@ -25,11 +25,7 @@ public enum ErrorResponse {
     ERROR_1017(1017, "Invalid Redirect URI"),
     ERROR_1018(1018, "Invalid authorization code parameter"),
     ERROR_1019(1019, "Invalid transition in user journey"),
-    ERROR_1020(1020, "Client-Session-Id is missing or invalid"),
-    ERROR_1021(1021, "Invalid Post logout redirect URIs"),
-    ERROR_1022(1022, "Invalid Redirect URIs"),
-    ERROR_1023(1023, "Invalid Public Key"),
-    ERROR_1024(1023, "Insufficient Scope");
+    ERROR_1020(1020, "Client-Session-Id is missing or invalid");
 
     @JsonProperty("code")
     private int code;

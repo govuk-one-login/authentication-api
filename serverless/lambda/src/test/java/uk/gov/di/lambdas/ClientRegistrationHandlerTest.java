@@ -27,6 +27,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
 
 class ClientRegistrationHandlerTest {
 
@@ -94,13 +95,13 @@ class ClientRegistrationHandlerTest {
     public void shouldReturn400ResponseIfRequestFailsValidation() {
         when(configValidationService.validateClientRegistrationConfig(
                         any(ClientRegistrationRequest.class)))
-                .thenReturn(Optional.of(ErrorResponse.ERROR_1023));
+                .thenReturn(Optional.of(INVALID_PUBLIC_KEY));
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
                 "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"],  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"]}");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1023));
+        assertThat(result, hasJsonBody(INVALID_PUBLIC_KEY));
     }
 }

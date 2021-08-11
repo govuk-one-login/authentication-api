@@ -1,7 +1,8 @@
 package uk.gov.di.services;
 
+import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.client.RegistrationError;
 import uk.gov.di.entity.ClientRegistrationRequest;
-import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.UpdateClientConfigRequest;
 import uk.gov.di.entity.ValidScopes;
 
@@ -16,46 +17,53 @@ import java.util.Optional;
 
 public class ClientConfigValidationService {
 
-    public Optional<ErrorResponse> validateClientRegistrationConfig(
+    public static final ErrorObject INVALID_POST_LOGOUT_URI =
+            new ErrorObject("invalid_client_metadata", "Invalid Post logout redirect URIs");
+    public static final ErrorObject INVALID_SCOPE =
+            new ErrorObject("invalid_client_metadata", "Insufficient Scope");
+    public static final ErrorObject INVALID_PUBLIC_KEY =
+            new ErrorObject("invalid_client_metadata", "Invalid Public Key");
+
+    public Optional<ErrorObject> validateClientRegistrationConfig(
             ClientRegistrationRequest registrationRequest) {
         if (!Optional.ofNullable(registrationRequest.getPostLogoutRedirectUris())
                 .map(this::areUrisValid)
                 .orElse(true)) {
-            return Optional.of(ErrorResponse.ERROR_1021);
+            return Optional.of(INVALID_POST_LOGOUT_URI);
         }
         if (!areUrisValid(registrationRequest.getRedirectUris())) {
-            return Optional.of(ErrorResponse.ERROR_1022);
+            return Optional.of(RegistrationError.INVALID_REDIRECT_URI);
         }
         if (!isPublicKeyValid(registrationRequest.getPublicKey())) {
-            return Optional.of(ErrorResponse.ERROR_1023);
+            return Optional.of(INVALID_PUBLIC_KEY);
         }
         if (!areScopesValid(registrationRequest.getScopes())) {
-            return Optional.of(ErrorResponse.ERROR_1024);
+            return Optional.of(INVALID_SCOPE);
         }
         return Optional.empty();
     }
 
-    public Optional<ErrorResponse> validateClientUpdateConfig(
+    public Optional<ErrorObject> validateClientUpdateConfig(
             UpdateClientConfigRequest registrationRequest) {
         if (!Optional.ofNullable(registrationRequest.getPostLogoutRedirectUris())
                 .map(this::areUrisValid)
                 .orElse(true)) {
-            return Optional.of(ErrorResponse.ERROR_1021);
+            return Optional.of(INVALID_POST_LOGOUT_URI);
         }
         if (!Optional.ofNullable(registrationRequest.getRedirectUris())
                 .map(this::areUrisValid)
                 .orElse(true)) {
-            return Optional.of(ErrorResponse.ERROR_1022);
+            return Optional.of(RegistrationError.INVALID_REDIRECT_URI);
         }
         if (!Optional.ofNullable(registrationRequest.getPublicKey())
                 .map(this::isPublicKeyValid)
                 .orElse(true)) {
-            return Optional.of(ErrorResponse.ERROR_1023);
+            return Optional.of(INVALID_PUBLIC_KEY);
         }
         if (!Optional.ofNullable(registrationRequest.getScopes())
                 .map(this::areScopesValid)
                 .orElse(true)) {
-            return Optional.of(ErrorResponse.ERROR_1024);
+            return Optional.of(INVALID_SCOPE);
         }
         return Optional.empty();
     }

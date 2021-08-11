@@ -1,8 +1,9 @@
 package uk.gov.di.services;
 
+import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.client.RegistrationError;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.ClientRegistrationRequest;
-import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.UpdateClientConfigRequest;
 
 import java.util.List;
@@ -11,6 +12,9 @@ import java.util.Optional;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static uk.gov.di.services.ClientConfigValidationService.INVALID_POST_LOGOUT_URI;
+import static uk.gov.di.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
+import static uk.gov.di.services.ClientConfigValidationService.INVALID_SCOPE;
 
 class ClientConfigValidationServiceTest {
 
@@ -21,7 +25,7 @@ class ClientConfigValidationServiceTest {
 
     @Test
     public void shouldPassValidationForValidRegistrationRequest() {
-        Optional<ErrorResponse> errorResponse =
+        Optional<ErrorObject> errorResponse =
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
@@ -33,55 +37,55 @@ class ClientConfigValidationServiceTest {
 
     @Test
     public void shouldReturnErrorForInvalidPostLogoutUriInRegistrationRequest() {
-        Optional<ErrorResponse> errorResponse =
+        Optional<ErrorObject> errorResponse =
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
                                 VALID_PUBLIC_CERT,
                                 singletonList("openid"),
                                 singletonList("invalid-logout-uri")));
-        assertThat(errorResponse, equalTo(Optional.of(ErrorResponse.ERROR_1021)));
+        assertThat(errorResponse, equalTo(Optional.of(INVALID_POST_LOGOUT_URI)));
     }
 
     @Test
     public void shouldReturnErrorForInvalidRedirectUriInRegistrationequest() {
-        Optional<ErrorResponse> errorResponse =
+        Optional<ErrorObject> errorResponse =
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
                                 singletonList("invalid-redirect-uri"),
                                 VALID_PUBLIC_CERT,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout")));
-        assertThat(errorResponse, equalTo(Optional.of(ErrorResponse.ERROR_1022)));
+        assertThat(errorResponse, equalTo(Optional.of(RegistrationError.INVALID_REDIRECT_URI)));
     }
 
     @Test
     public void shouldReturnErrorForInvalidPublicKeyInRegistrationRequest() {
-        Optional<ErrorResponse> errorResponse =
+        Optional<ErrorObject> errorResponse =
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
                                 "invalid-public-cert",
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout")));
-        assertThat(errorResponse, equalTo(Optional.of(ErrorResponse.ERROR_1023)));
+        assertThat(errorResponse, equalTo(Optional.of(INVALID_PUBLIC_KEY)));
     }
 
     @Test
     public void shouldReturnErrorForInvalidScopesInRegistrationRequest() {
-        Optional<ErrorResponse> errorResponse =
+        Optional<ErrorObject> errorResponse =
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
                                 VALID_PUBLIC_CERT,
                                 List.of("openid", "email", "fax"),
                                 singletonList("http://localhost/post-redirect-logout")));
-        assertThat(errorResponse, equalTo(Optional.of(ErrorResponse.ERROR_1024)));
+        assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
     }
 
     @Test
     public void shouldPassValidationForValidUpdateRequest() {
-        Optional<ErrorResponse> errorResponse =
+        Optional<ErrorObject> errorResponse =
                 validationService.validateClientUpdateConfig(
                         generateClientUpdateRequest(
                                 singletonList("http://localhost:1000/redirect"),
@@ -93,57 +97,57 @@ class ClientConfigValidationServiceTest {
 
     @Test
     public void shouldReturnOptionalEmptyForEmptyUpdateRequest() {
-        Optional<ErrorResponse> errorResponse =
+        Optional<ErrorObject> errorResponse =
                 validationService.validateClientUpdateConfig(new UpdateClientConfigRequest());
         assertThat(errorResponse, equalTo(Optional.empty()));
     }
 
     @Test
     public void shouldReturnErrorForInvalidPostLogoutUriInUpdateRequest() {
-        Optional<ErrorResponse> errorResponse =
+        Optional<ErrorObject> errorResponse =
                 validationService.validateClientUpdateConfig(
                         generateClientUpdateRequest(
                                 singletonList("http://localhost:1000/redirect"),
                                 VALID_PUBLIC_CERT,
                                 singletonList("openid"),
                                 singletonList("invalid-logout-uri")));
-        assertThat(errorResponse, equalTo(Optional.of(ErrorResponse.ERROR_1021)));
+        assertThat(errorResponse, equalTo(Optional.of(INVALID_POST_LOGOUT_URI)));
     }
 
     @Test
     public void shouldReturnErrorForInvalidRedirectUriInUpdateRequest() {
-        Optional<ErrorResponse> errorResponse =
+        Optional<ErrorObject> errorResponse =
                 validationService.validateClientUpdateConfig(
                         generateClientUpdateRequest(
                                 singletonList("invalid-redirect-uri"),
                                 VALID_PUBLIC_CERT,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout")));
-        assertThat(errorResponse, equalTo(Optional.of(ErrorResponse.ERROR_1022)));
+        assertThat(errorResponse, equalTo(Optional.of(RegistrationError.INVALID_REDIRECT_URI)));
     }
 
     @Test
     public void shouldReturnErrorForInvalidPublicKeyInUpdateRequest() {
-        Optional<ErrorResponse> errorResponse =
+        Optional<ErrorObject> errorResponse =
                 validationService.validateClientUpdateConfig(
                         generateClientUpdateRequest(
                                 singletonList("http://localhost:1000/redirect"),
                                 "invalid-public-cert",
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout")));
-        assertThat(errorResponse, equalTo(Optional.of(ErrorResponse.ERROR_1023)));
+        assertThat(errorResponse, equalTo(Optional.of(INVALID_PUBLIC_KEY)));
     }
 
     @Test
     public void shouldReturnErrorForInvalidScopesInUpdateRequest() {
-        Optional<ErrorResponse> errorResponse =
+        Optional<ErrorObject> errorResponse =
                 validationService.validateClientUpdateConfig(
                         generateClientUpdateRequest(
                                 singletonList("http://localhost:1000/redirect"),
                                 VALID_PUBLIC_CERT,
                                 List.of("openid", "email", "fax"),
                                 singletonList("http://localhost/post-redirect-logout")));
-        assertThat(errorResponse, equalTo(Optional.of(ErrorResponse.ERROR_1024)));
+        assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
     }
 
     private ClientRegistrationRequest generateClientRegRequest(

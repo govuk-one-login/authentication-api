@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.oauth2.sdk.ErrorObject;
 import uk.gov.di.entity.ClientRegistrationRequest;
 import uk.gov.di.entity.ClientRegistrationResponse;
 import uk.gov.di.entity.ErrorResponse;
@@ -48,10 +49,10 @@ public class ClientRegistrationHandler
         try {
             ClientRegistrationRequest clientRegistrationRequest =
                     objectMapper.readValue(input.getBody(), ClientRegistrationRequest.class);
-            Optional<ErrorResponse> errorResponse =
+            Optional<ErrorObject> errorResponse =
                     validationService.validateClientRegistrationConfig(clientRegistrationRequest);
             if (errorResponse.isPresent()) {
-                return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
+                return generateApiGatewayProxyResponse(400, errorResponse.get());
             }
             String clientID = clientService.generateClientID().toString();
             clientService.addClient(

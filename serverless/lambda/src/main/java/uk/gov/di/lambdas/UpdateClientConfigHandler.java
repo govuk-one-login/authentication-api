@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.oauth2.sdk.ErrorObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.entity.ClientRegistrationResponse;
@@ -58,10 +59,10 @@ public class UpdateClientConfigHandler
                 LOGGER.error("Client with ClientId {} is not valid", clientId);
                 return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1016);
             }
-            Optional<ErrorResponse> errorResponse =
+            Optional<ErrorObject> errorResponse =
                     validationService.validateClientUpdateConfig(updateClientConfigRequest);
             if (errorResponse.isPresent()) {
-                return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
+                return generateApiGatewayProxyResponse(400, errorResponse.get());
             }
             ClientRegistry clientRegistry =
                     clientService.updateClient(clientId, updateClientConfigRequest);

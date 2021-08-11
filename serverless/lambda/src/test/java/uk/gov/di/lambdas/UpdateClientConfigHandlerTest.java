@@ -9,7 +9,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.ClientRegistrationResponse;
 import uk.gov.di.entity.ClientRegistry;
-import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.UpdateClientConfigRequest;
 import uk.gov.di.services.ClientConfigValidationService;
 import uk.gov.di.services.ClientService;
@@ -28,6 +27,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
 
 class UpdateClientConfigHandlerTest {
 
@@ -102,7 +102,7 @@ class UpdateClientConfigHandlerTest {
         when(clientService.isValidClient(CLIENT_ID)).thenReturn(true);
         when(clientValidationService.validateClientUpdateConfig(
                         any(UpdateClientConfigRequest.class)))
-                .thenReturn(Optional.of(ErrorResponse.ERROR_1023));
+                .thenReturn(Optional.of(INVALID_PUBLIC_KEY));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
@@ -113,7 +113,7 @@ class UpdateClientConfigHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1023));
+        assertThat(result, hasJsonBody(INVALID_PUBLIC_KEY));
     }
 
     private ClientRegistry createClientRegistry() {
