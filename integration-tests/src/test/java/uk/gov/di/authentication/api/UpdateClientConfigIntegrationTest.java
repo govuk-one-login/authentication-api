@@ -2,6 +2,7 @@ package uk.gov.di.authentication.api;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import jakarta.ws.rs.client.ClientBuilder;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
@@ -10,7 +11,6 @@ import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.entity.ClientRegistrationResponse;
-import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.UpdateClientConfigRequest;
 
 import static java.util.Collections.singletonList;
@@ -54,7 +54,7 @@ public class UpdateClientConfigIntegrationTest extends IntegrationTestEndpoints 
     }
 
     @Test
-    public void shouldReturn401WhenClientIsUnauthorized() throws JsonProcessingException {
+    public void shouldReturn400WhenClientIsUnauthorized() {
         UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
         updateRequest.setClientName("new-client-name");
 
@@ -65,9 +65,9 @@ public class UpdateClientConfigIntegrationTest extends IntegrationTestEndpoints 
                         .headers(new MultivaluedHashMap<>())
                         .post(Entity.entity(updateRequest, MediaType.APPLICATION_JSON));
 
-        assertEquals(401, response.getStatus());
+        assertEquals(400, response.getStatus());
         assertEquals(
-                new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1015),
+                OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString(),
                 response.readEntity(String.class));
     }
 }

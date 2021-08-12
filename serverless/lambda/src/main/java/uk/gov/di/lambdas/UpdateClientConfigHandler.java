@@ -7,12 +7,12 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.ClientRegistrationResponse;
 import uk.gov.di.entity.ClientRegistry;
-import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.UpdateClientConfigRequest;
 import uk.gov.di.services.ClientConfigValidationService;
 import uk.gov.di.services.ClientService;
@@ -20,7 +20,6 @@ import uk.gov.di.services.DynamoClientService;
 
 import java.util.Optional;
 
-import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class UpdateClientConfigHandler
@@ -57,7 +56,8 @@ public class UpdateClientConfigHandler
                     objectMapper.readValue(input.getBody(), UpdateClientConfigRequest.class);
             if (!clientService.isValidClient(clientId)) {
                 LOGGER.error("Client with ClientId {} is not valid", clientId);
-                return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1015);
+                return generateApiGatewayProxyResponse(
+                        400, OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString());
             }
             Optional<ErrorObject> errorResponse =
                     validationService.validateClientUpdateConfig(updateClientConfigRequest);
@@ -81,7 +81,8 @@ public class UpdateClientConfigHandler
             LOGGER.error(
                     "Request with path parameters {} is missing request parameters",
                     input.getPathParameters());
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            return generateApiGatewayProxyResponse(
+                    400, OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString());
         }
     }
 }
