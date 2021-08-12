@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import uk.gov.di.entity.ClientRegistrationRequest;
 import uk.gov.di.entity.ClientRegistrationResponse;
 import uk.gov.di.entity.ErrorResponse;
@@ -52,7 +53,7 @@ public class ClientRegistrationHandler
             Optional<ErrorObject> errorResponse =
                     validationService.validateClientRegistrationConfig(clientRegistrationRequest);
             if (errorResponse.isPresent()) {
-                return generateApiGatewayProxyResponse(400, errorResponse.get());
+                return generateApiGatewayProxyResponse(400, errorResponse.get().toJSONObject().toJSONString());
             }
             String clientID = clientService.generateClientID().toString();
             clientService.addClient(
@@ -75,7 +76,7 @@ public class ClientRegistrationHandler
 
             return generateApiGatewayProxyResponse(200, clientRegistrationResponse);
         } catch (JsonProcessingException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            return generateApiGatewayProxyResponse(400, OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString());
         }
     }
 }
