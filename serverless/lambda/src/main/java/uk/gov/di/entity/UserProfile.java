@@ -18,6 +18,7 @@ public class UserProfile {
     private boolean phoneNumberVerified;
     private String created;
     private String updated;
+    private TermsAndConditions termsAndConditions;
 
     public UserProfile() {}
 
@@ -108,6 +109,16 @@ public class UserProfile {
 
     public UserProfile setClientConsents(Map<String, List<String>> clientConsents) {
         this.clientConsents = clientConsents;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "termsAndConditions")
+    public TermsAndConditions getTermsAndConditions() {
+        return termsAndConditions;
+    }
+
+    public UserProfile setTermsAndConditions(TermsAndConditions termsAndConditions) {
+        this.termsAndConditions = termsAndConditions;
         return this;
     }
 }

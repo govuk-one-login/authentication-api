@@ -26,8 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static uk.gov.di.entity.SessionState.ADDED_CONSENT;
-import static uk.gov.di.entity.SessionState.ADDED_UNVERIFIED_PHONE_NUMBER;
+import static uk.gov.di.entity.SessionState.*;
+import static uk.gov.di.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.helpers.StateMachine.validateStateTransition;
@@ -40,19 +40,22 @@ public class UpdateProfileHandler
     private final AuthenticationService authenticationService;
     private final SessionService sessionService;
     private final ClientSessionService clientSessionService;
+    private final ConfigurationService configurationService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public UpdateProfileHandler(
             AuthenticationService authenticationService,
             SessionService sessionService,
-            ClientSessionService clientSessionService) {
+            ClientSessionService clientSessionService,
+            ConfigurationService configurationService) {
         this.authenticationService = authenticationService;
         this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
+        this.configurationService = configurationService;
     }
 
     public UpdateProfileHandler() {
-        ConfigurationService configurationService = new ConfigurationService();
+        configurationService = new ConfigurationService();
         this.authenticationService =
                 new DynamoService(
                         configurationService.getAwsRegion(),
@@ -81,72 +84,99 @@ public class UpdateProfileHandler
             }
             switch (profileRequest.getUpdateProfileType()) {
                 case ADD_PHONE_NUMBER:
-                    validateStateTransition(session.get(), ADDED_UNVERIFIED_PHONE_NUMBER);
-                    authenticationService.updatePhoneNumber(
-                            profileRequest.getEmail(), profileRequest.getProfileInformation());
-                    sessionService.save(session.get().setState(ADDED_UNVERIFIED_PHONE_NUMBER));
-                    LOGGER.info(
-                            "Phone number updated and session state changed. Session state {}",
-                            ADDED_UNVERIFIED_PHONE_NUMBER);
-                    return generateApiGatewayProxyResponse(
-                            200, new BaseAPIResponse(session.get().getState()));
-                case CAPTURE_CONSENT:
-                    Optional<ClientSession> clientSession =
-                            clientSessionService.getClientSessionFromRequestHeaders(
-                                    input.getHeaders());
-
-                    if (clientSession.isEmpty()) {
-                        LOGGER.info("ClientSession not found.");
-                        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1018);
-                    }
-
-                    try {
-                        AuthenticationRequest authRequest =
-                                AuthenticationRequest.parse(
-                                        clientSession.get().getAuthRequestParams());
-                        clientId = authRequest.getClientID().getValue();
-                    } catch (ParseException e) {
-                        LOGGER.info("Cannot retreive auth request params from client session id.");
-                        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
-                    }
-
-                    Optional<Map<String, List<String>>> clientConsents =
-                            authenticationService.getUserConsents(profileRequest.getEmail());
-
-                    if (clientConsents.isPresent() && clientConsents.get().containsKey(clientId)) {
-                        clientConsents.get().get(clientId).clear();
-                        clientConsents
-                                .get()
-                                .get(clientId)
-                                .add(profileRequest.getProfileInformation());
+                    {
+                        validateStateTransition(session.get(), ADDED_UNVERIFIED_PHONE_NUMBER);
+                        authenticationService.updatePhoneNumber(
+                                profileRequest.getEmail(), profileRequest.getProfileInformation());
+                        sessionService.save(session.get().setState(ADDED_UNVERIFIED_PHONE_NUMBER));
                         LOGGER.info(
-                                "Consent value successfully added to clientConsent map. Client ID {} - Consent Value {}",
-                                clientId,
-                                profileRequest.getProfileInformation());
-                    } else {
-                        clientConsents =
-                                Optional.of(
-                                        Map.of(
-                                                clientId,
-                                                List.of(profileRequest.getProfileInformation())));
-                        LOGGER.info(
-                                "New consent map created. Client ID {} - Consent Value {}",
-                                clientId,
-                                profileRequest.getProfileInformation());
-                    }
-
-                    authenticationService.updateConsent(
-                            profileRequest.getEmail(), clientConsents.get());
-                    sessionService.save(session.get().setState(ADDED_CONSENT));
-
-                    LOGGER.info(
-                            "Consent updated and session state changed. Session state {}",
-                            ADDED_CONSENT);
-                    try {
+                                "Phone number updated and session state changed. Session state {}",
+                                ADDED_UNVERIFIED_PHONE_NUMBER);
                         return generateApiGatewayProxyResponse(
                                 200, new BaseAPIResponse(session.get().getState()));
-                    } catch (JsonProcessingException e) {
-                        LOGGER.info("JsonProcessingException", e);
+                    }
+                case CAPTURE_CONSENT:
+                    {
+                        Optional<ClientSession> clientSession =
+                                clientSessionService.getClientSessionFromRequestHeaders(
+                                        input.getHeaders());
+
+                        if (!clientSession.isPresent()) {
+                            LOGGER.info("ClientSession not found.");
+                            return generateApiGatewayProxyErrorResponse(
+                                    400, ErrorResponse.ERROR_1000);
+                        }
+
+                        try {
+                            AuthenticationRequest authorizationRequest =
+                                    AuthenticationRequest.parse(
+                                            clientSession.get().getAuthRequestParams());
+                            clientId = authorizationRequest.getClientID().getValue();
+                        } catch (ParseException e) {
+                            LOGGER.info(
+                                    "Cannot retreive auth request params from client session id.");
+                            return generateApiGatewayProxyErrorResponse(
+                                    400, ErrorResponse.ERROR_1001);
+                        }
+
+                        Optional<Map<String, List<String>>> clientConsents =
+                                authenticationService.getUserConsents(profileRequest.getEmail());
+
+                        if (clientConsents.isPresent()
+                                && clientConsents.get().containsKey(clientId)) {
+                            clientConsents.get().get(clientId).clear();
+                            clientConsents
+                                    .get()
+                                    .get(clientId)
+                                    .add(profileRequest.getProfileInformation());
+                            LOGGER.info(
+                                    "Consent value successfully added to clientConsent map. Client ID {} - Consent Value {}",
+                                    clientId,
+                                    profileRequest.getProfileInformation());
+                        } else {
+                            clientConsents =
+                                    Optional.of(
+                                            Map.of(
+                                                    clientId,
+                                                    List.of(
+                                                            profileRequest
+                                                                    .getProfileInformation())));
+                            LOGGER.info(
+                                    "New consent map created. Client ID {} - Consent Value {}",
+                                    clientId,
+                                    profileRequest.getProfileInformation());
+                        }
+
+                        authenticationService.updateConsent(
+                                profileRequest.getEmail(), clientConsents.get());
+                        sessionService.save(session.get().setState(ADDED_CONSENT));
+
+                        LOGGER.info(
+                                "Consent updated and session state changed. Session state {}",
+                                ADDED_CONSENT);
+
+                        return generateApiGatewayProxyResponse(
+                                200, new BaseAPIResponse(session.get().getState()));
+                    }
+                case UPDATE_TERMS_CONDS:
+                    {
+                        authenticationService.updateTermsAndConditions(
+                                profileRequest.getEmail(),
+                                configurationService.getTermsAndConditionsVersion());
+
+                        LOGGER.info(
+                                "Updated terms and conditions. Email {} for Version {}",
+                                profileRequest.getEmail(),
+                                configurationService.getTermsAndConditionsVersion());
+
+                        sessionService.save(session.get().setState(UPDATED_TERMS_AND_CONDITIONS));
+
+                        LOGGER.info(
+                                "Updated terms and conditions. Session state {}",
+                                UPDATE_TERMS_CONDS);
+
+                        return generateApiGatewayProxyResponse(
+                                200, new BaseAPIResponse(session.get().getState()));
                     }
             }
         } catch (JsonProcessingException e) {
