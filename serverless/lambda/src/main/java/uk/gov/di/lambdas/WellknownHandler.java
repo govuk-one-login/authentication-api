@@ -14,7 +14,7 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.SubjectType;
 import com.nimbusds.openid.connect.sdk.claims.ClaimType;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
-import uk.gov.di.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.net.URI;
 import java.net.URISyntaxException;

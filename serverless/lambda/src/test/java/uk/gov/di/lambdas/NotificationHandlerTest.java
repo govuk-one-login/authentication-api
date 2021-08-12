@@ -7,8 +7,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.NotifyRequest;
-import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.NotificationService;
 import uk.gov.service.notify.NotificationClientException;
 

@@ -29,6 +29,7 @@ dependencies {
             "org.bouncycastle:bcprov-jdk15on:1.69",
             "com.googlecode.libphonenumber:libphonenumber:8.12.28",
             project(":shared")
+
     runtimeOnly "org.apache.logging.log4j:log4j-slf4j18-impl:2.13.0",
             "com.amazonaws:aws-lambda-java-log4j2:1.2.0"
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.2',

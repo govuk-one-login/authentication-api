@@ -7,13 +7,13 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.SignupRequest;
 import uk.gov.di.helpers.StateMachine.InvalidStateTransitionException;
 import uk.gov.di.services.AuthenticationService;
-import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoService;
 import uk.gov.di.services.SessionService;
 import uk.gov.di.services.ValidationService;

@@ -11,6 +11,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.net.URI;
 import java.security.KeyPair;

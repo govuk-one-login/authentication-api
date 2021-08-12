@@ -23,6 +23,7 @@ import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.AuthCodeExchangeData;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ClientSession;
@@ -30,7 +31,6 @@ import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.AuthorisationCodeService;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ClientSessionService;
-import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.TokenService;
 
 import java.net.URI;

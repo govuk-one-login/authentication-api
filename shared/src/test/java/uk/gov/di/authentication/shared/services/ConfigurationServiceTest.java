@@ -1,8 +1,8 @@
-package uk.gov.di.services;
+package uk.gov.di.authentication.shared.services;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ConfigurationServiceTest {
 

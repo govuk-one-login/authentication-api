@@ -9,7 +9,7 @@ import com.nimbusds.openid.connect.sdk.claims.ClaimType;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.net.URI;
 import java.util.List;

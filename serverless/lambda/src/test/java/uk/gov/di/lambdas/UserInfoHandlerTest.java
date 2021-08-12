@@ -15,10 +15,10 @@ import com.nimbusds.openid.connect.sdk.UserInfoErrorResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.UserProfile;
 import uk.gov.di.helpers.TokenGenerator;
 import uk.gov.di.services.AuthenticationService;
-import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.TokenService;
 
 import java.time.LocalDateTime;

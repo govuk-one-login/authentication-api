@@ -16,12 +16,12 @@ import com.nimbusds.openid.connect.sdk.OIDCError;
 import com.nimbusds.openid.connect.sdk.Prompt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.SessionState;
 import uk.gov.di.services.AuthorizationService;
 import uk.gov.di.services.ClientSessionService;
-import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.SessionService;
 
 import java.net.URI;

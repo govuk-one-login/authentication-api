@@ -1,4 +1,4 @@
-package uk.gov.di.services;
+package uk.gov.di.authentication.shared.services;
 
 import java.net.URI;
 import java.util.Optional;

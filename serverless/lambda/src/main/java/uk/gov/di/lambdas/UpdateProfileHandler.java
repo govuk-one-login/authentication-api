@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.ErrorResponse;
@@ -18,7 +19,6 @@ import uk.gov.di.entity.UpdateProfileRequest;
 import uk.gov.di.helpers.StateMachine.InvalidStateTransitionException;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.ClientSessionService;
-import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoService;
 import uk.gov.di.services.SessionService;
 
