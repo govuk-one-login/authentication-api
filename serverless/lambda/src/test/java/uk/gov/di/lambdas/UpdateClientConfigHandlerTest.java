@@ -25,7 +25,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
+import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
 
@@ -113,7 +113,7 @@ class UpdateClientConfigHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(INVALID_PUBLIC_KEY));
+        assertThat(result, hasBody(INVALID_PUBLIC_KEY.toJSONObject().toJSONString()));
     }
 
     private ClientRegistry createClientRegistry() {

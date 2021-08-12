@@ -62,7 +62,8 @@ public class UpdateClientConfigHandler
             Optional<ErrorObject> errorResponse =
                     validationService.validateClientUpdateConfig(updateClientConfigRequest);
             if (errorResponse.isPresent()) {
-                return generateApiGatewayProxyResponse(400, errorResponse.get());
+                return generateApiGatewayProxyResponse(
+                        400, errorResponse.get().toJSONObject().toJSONString());
             }
             ClientRegistry clientRegistry =
                     clientService.updateClient(clientId, updateClientConfigRequest);
