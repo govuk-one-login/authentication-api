@@ -97,7 +97,7 @@ public class UpdateProfileHandler
 
                     if (clientSession.isEmpty()) {
                         LOGGER.info("ClientSession not found.");
-                        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
+                        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1018);
                     }
 
                     try {
@@ -153,7 +153,7 @@ public class UpdateProfileHandler
             LOGGER.info("JsonProcessingException", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (InvalidStateTransitionException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1019);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         }
 
         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1013);

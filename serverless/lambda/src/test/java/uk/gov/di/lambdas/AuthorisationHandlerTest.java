@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.OIDCError;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,7 +31,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthorisationHandlerTest {
@@ -93,18 +93,23 @@ class AuthorisationHandlerTest {
     void shouldReturn400WhenAuthorisationRequestCannotBeParsed() {
         when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
                 .thenReturn(Optional.empty());
+        State state = new State();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
                 Map.of(
                         "client_id", "test-id",
                         "redirect_uri", "http://localhost:8080",
                         "scope", "email,openid,profile",
-                        "invalid_parameter", "nonsense"));
+                        "invalid_parameter", "nonsense",
+                        "state", state.toString()));
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
-        assertThat(response, hasStatus(400));
-        assertThat(response, hasBody("Cannot parse authentication request"));
+        assertThat(response, hasStatus(302));
+        assertEquals(
+                "http://localhost:8080?error=invalid_request&error_description=Invalid+request%3A+Missing+response_type+parameter&state="
+                        + state,
+                response.getHeaders().get("Location"));
     }
 
     @Test
@@ -262,8 +267,10 @@ class AuthorisationHandlerTest {
                 .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent response =
                 handler.handleRequest(withPromptRequestEvent("unrecognised"), context);
-        assertThat(response, hasStatus(400));
-        assertThat(response.getBody(), containsString("Cannot parse authentication request"));
+        assertThat(response, hasStatus(302));
+        assertEquals(
+                "http://localhost:8080?error=invalid_request&error_description=Invalid+request%3A+Invalid+prompt+parameter%3A+Unknown+prompt+type%3A+unrecognised&state=some-state",
+                response.getHeaders().get("Location"));
     }
 
     @Test
@@ -272,8 +279,10 @@ class AuthorisationHandlerTest {
                 .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent response =
                 handler.handleRequest(withPromptRequestEvent("none login"), context);
-        assertThat(response, hasStatus(400));
-        assertThat(response.getBody(), containsString("Cannot parse authentication request"));
+        assertThat(response, hasStatus(302));
+        assertEquals(
+                "http://localhost:8080?error=invalid_request&error_description=Invalid+request%3A+Invalid+prompt+parameter%3A+Invalid+prompt%3A+none+login&state=some-state",
+                response.getHeaders().get("Location"));
     }
 
     @Test

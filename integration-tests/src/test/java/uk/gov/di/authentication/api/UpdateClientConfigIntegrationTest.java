@@ -67,7 +67,7 @@ public class UpdateClientConfigIntegrationTest extends IntegrationTestEndpoints 
 
         assertEquals(401, response.getStatus());
         assertEquals(
-                new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1016),
+                new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1015),
                 response.readEntity(String.class));
     }
 }

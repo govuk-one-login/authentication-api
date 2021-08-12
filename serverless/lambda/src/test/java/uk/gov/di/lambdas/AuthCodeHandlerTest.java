@@ -127,7 +127,7 @@ class AuthCodeHandlerTest {
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1017));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1016));
     }
 
     @Test
@@ -143,7 +143,7 @@ class AuthCodeHandlerTest {
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1016));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1015));
     }
 
     @Test
@@ -187,7 +187,7 @@ class AuthCodeHandlerTest {
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1019));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1017));
     }
 
     private AuthorizationRequest generateValidSessionAndAuthRequest(ClientID clientID) {

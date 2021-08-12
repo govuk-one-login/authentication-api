@@ -57,12 +57,13 @@ public class UpdateClientConfigHandler
                     objectMapper.readValue(input.getBody(), UpdateClientConfigRequest.class);
             if (!clientService.isValidClient(clientId)) {
                 LOGGER.error("Client with ClientId {} is not valid", clientId);
-                return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1016);
+                return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1015);
             }
             Optional<ErrorObject> errorResponse =
                     validationService.validateClientUpdateConfig(updateClientConfigRequest);
             if (errorResponse.isPresent()) {
-                return generateApiGatewayProxyResponse(400, errorResponse.get());
+                return generateApiGatewayProxyResponse(
+                        400, errorResponse.get().toJSONObject().toJSONString());
             }
             ClientRegistry clientRegistry =
                     clientService.updateClient(clientId, updateClientConfigRequest);

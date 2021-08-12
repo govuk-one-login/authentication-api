@@ -7,7 +7,9 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.ResponseMode;
 import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCError;
@@ -70,28 +72,30 @@ public class AuthorisationHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         LOGGER.info("Received authentication request");
+
+        Map<String, List<String>> queryStringParameters = getQueryStringParametersAsMap(input);
+        AuthenticationRequest authRequest;
         try {
-            Map<String, List<String>> queryStringParameters = getQueryStringParametersAsMap(input);
-            var authRequest = AuthenticationRequest.parse(queryStringParameters);
-
-            Optional<ErrorObject> error = authorizationService.validateAuthRequest(authRequest);
-
-            return error.map(e -> errorResponse(authRequest, e))
-                    .orElseGet(
-                            () ->
-                                    getOrCreateSessionAndRedirect(
-                                            queryStringParameters,
-                                            sessionService.getSessionFromSessionCookie(
-                                                    input.getHeaders()),
-                                            authRequest));
+            authRequest = AuthenticationRequest.parse(queryStringParameters);
         } catch (ParseException e) {
             LOGGER.error("Authentication request could not be parsed", e);
-            APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
-            response.setStatusCode(400);
-            response.setBody("Cannot parse authentication request");
-
-            return response;
+            if (e.getRedirectionURI() == null) {
+                LOGGER.error("Redirect URI is missing from request");
+                throw new RuntimeException("Redirect URI is missing");
+            }
+            return generateErrorResponse(
+                    e.getRedirectionURI(), e.getState(), e.getResponseMode(), e.getErrorObject());
         }
+        Optional<ErrorObject> error = authorizationService.validateAuthRequest(authRequest);
+
+        return error.map(e -> generateErrorResponse(authRequest, e))
+                .orElseGet(
+                        () ->
+                                getOrCreateSessionAndRedirect(
+                                        queryStringParameters,
+                                        sessionService.getSessionFromSessionCookie(
+                                                input.getHeaders()),
+                                        authRequest));
     }
 
     private APIGatewayProxyResponseEvent getOrCreateSessionAndRedirect(
@@ -102,12 +106,12 @@ public class AuthorisationHandler
         if (authenticationRequest.getPrompt() != null) {
             if (authenticationRequest.getPrompt().contains(Prompt.Type.CONSENT)
                     || authenticationRequest.getPrompt().contains(Prompt.Type.SELECT_ACCOUNT)) {
-                return errorResponse(
+                return generateErrorResponse(
                         authenticationRequest, OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS);
             }
             if (authenticationRequest.getPrompt().contains(Prompt.Type.NONE)
                     && !isUserAuthenticated(existingSession)) {
-                return errorResponse(authenticationRequest, OIDCError.LOGIN_REQUIRED);
+                return generateErrorResponse(authenticationRequest, OIDCError.LOGIN_REQUIRED);
             }
             if (authenticationRequest.getPrompt().contains(Prompt.Type.LOGIN)
                     && isUserAuthenticated(existingSession)) {
@@ -204,19 +208,24 @@ public class AuthorisationHandler
                                         configurationService.getDomainName())));
     }
 
-    private APIGatewayProxyResponseEvent errorResponse(
+    private APIGatewayProxyResponseEvent generateErrorResponse(
             AuthorizationRequest authRequest, ErrorObject errorObject) {
+
+        return generateErrorResponse(
+                authRequest.getRedirectionURI(),
+                authRequest.getState(),
+                authRequest.getResponseMode(),
+                errorObject);
+    }
+
+    private APIGatewayProxyResponseEvent generateErrorResponse(
+            URI redirectUri, State state, ResponseMode responseMode, ErrorObject errorObject) {
         LOGGER.error(
                 "Returning error response: {} {}",
                 errorObject.getCode(),
                 errorObject.getDescription());
         AuthenticationErrorResponse error =
-                new AuthenticationErrorResponse(
-                        authRequest.getRedirectionURI(),
-                        errorObject,
-                        authRequest.getState(),
-                        authRequest.getResponseMode());
-
+                new AuthenticationErrorResponse(redirectUri, errorObject, state, responseMode);
         return new APIGatewayProxyResponseEvent()
                 .withStatusCode(302)
                 .withHeaders(Map.of(ResponseHeaders.LOCATION, error.toURI().toString()));

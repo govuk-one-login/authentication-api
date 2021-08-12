@@ -72,7 +72,7 @@ public class ClientInfoHandler
 
         if (clientSession.isEmpty()) {
             LOGGER.info("ClientSession not found.");
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1018);
         }
 
         try {
@@ -84,7 +84,7 @@ public class ClientInfoHandler
 
             if (optionalClientRegistry.isEmpty()) {
                 LOGGER.info("Client not found in ClientRegistry for ClientID: {}", clientID);
-                return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1016);
+                return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1015);
             }
 
             ClientRegistry clientRegistry = optionalClientRegistry.get();

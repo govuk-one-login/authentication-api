@@ -358,7 +358,7 @@ class VerifyCodeRequestHandlerTest {
         APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, VERIFY_EMAIL.toString());
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1019));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1017));
     }
 
     private APIGatewayProxyResponseEvent makeCallWithCode(String code, String notificationType) {

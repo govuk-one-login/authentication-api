@@ -179,7 +179,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
 
         assertEquals(400, response.getStatus());
         assertEquals(
-                new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1019),
+                new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1017),
                 response.readEntity(String.class));
     }
 
@@ -199,7 +199,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
 
         assertEquals(400, response.getStatus());
         assertEquals(
-                new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1019),
+                new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1017),
                 response.readEntity(String.class));
     }
 
@@ -232,7 +232,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
 
         assertEquals(400, response.getStatus());
         assertEquals(
-                new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1019),
+                new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1017),
                 response.readEntity(String.class));
     }
 }

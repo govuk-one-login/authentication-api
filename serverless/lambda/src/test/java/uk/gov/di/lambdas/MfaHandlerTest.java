@@ -127,7 +127,7 @@ public class MfaHandlerTest {
         verifyNoInteractions(sqsClient, codeStorageService);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1019));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1017));
     }
 
     private void usingValidSession() {

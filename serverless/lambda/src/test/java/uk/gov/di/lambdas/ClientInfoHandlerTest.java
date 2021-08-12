@@ -87,7 +87,7 @@ public class ClientInfoHandlerTest {
 
         assertThat(result, hasStatus(400));
 
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1020);
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1018);
         assertThat(result, hasBody(expectedResponse));
     }
 
@@ -100,7 +100,7 @@ public class ClientInfoHandlerTest {
 
         assertThat(result, hasStatus(403));
 
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1016);
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1015);
         assertThat(result, hasBody(expectedResponse));
     }
 

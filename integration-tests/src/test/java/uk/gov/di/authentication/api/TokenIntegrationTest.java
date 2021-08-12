@@ -41,11 +41,12 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
     private static final String TOKEN_ENDPOINT = "/token";
     private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String CLIENT_ID = "test-id";
+    private static final String REDIRECT_URI = "http://localhost/redirect";
 
     @Test
     public void shouldCallTokenResourceAndReturn200() throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
-        setUpDynamo(keyPair, CLIENT_ID);
+        setUpDynamo(keyPair);
         PrivateKey privateKey = keyPair.getPrivate();
         PrivateKeyJWT privateKeyJWT =
                 new PrivateKeyJWT(
@@ -62,7 +63,7 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
         customParams.put("grant_type", Collections.singletonList("authorization_code"));
         customParams.put("client_id", Collections.singletonList(CLIENT_ID));
         customParams.put("code", Collections.singletonList(code));
-        customParams.put("redirect_uri", Collections.singletonList("http://localhost/redirect"));
+        customParams.put("redirect_uri", Collections.singletonList(REDIRECT_URI));
         Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
         privateKeyParams.putAll(customParams);
         Client client = ClientBuilder.newClient();
@@ -75,11 +76,11 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
         assertEquals(200, response.getStatus());
     }
 
-    private void setUpDynamo(KeyPair keyPair, String clientID) {
+    private void setUpDynamo(KeyPair keyPair) {
         DynamoHelper.registerClient(
-                clientID,
+                CLIENT_ID,
                 "test-client",
-                singletonList("http://localhost/redirect"),
+                singletonList(REDIRECT_URI),
                 singletonList(TEST_EMAIL),
                 singletonList("openid"),
                 Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),

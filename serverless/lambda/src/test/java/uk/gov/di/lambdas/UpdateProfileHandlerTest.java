@@ -172,7 +172,7 @@ class UpdateProfileHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1019));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1017));
     }
 
     private void usingValidSession() {
