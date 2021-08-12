@@ -109,7 +109,7 @@ public class MfaHandler
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (InvalidStateTransitionException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1019);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         }
     }
 }

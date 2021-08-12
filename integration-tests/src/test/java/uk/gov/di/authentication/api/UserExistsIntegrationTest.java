@@ -78,6 +78,6 @@ public class UserExistsIntegrationTest extends IntegrationTestEndpoints {
 
         String responseString = response.readEntity(String.class);
 
-        assertEquals(responseString, objectMapper.writeValueAsString(ErrorResponse.ERROR_1019));
+        assertEquals(responseString, objectMapper.writeValueAsString(ErrorResponse.ERROR_1017));
     }
 }

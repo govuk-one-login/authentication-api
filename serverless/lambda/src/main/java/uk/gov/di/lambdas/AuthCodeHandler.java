@@ -77,7 +77,7 @@ public class AuthCodeHandler
         try {
             validateStateTransition(session, AUTHENTICATED);
         } catch (StateMachine.InvalidStateTransitionException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1019);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         }
 
         AuthorizationRequest authorizationRequest;
@@ -89,12 +89,12 @@ public class AuthCodeHandler
             authorizationRequest = AuthorizationRequest.parse(authRequest);
             if (!authorizationService.isClientRedirectUriValid(
                     authorizationRequest.getClientID(), authorizationRequest.getRedirectionURI())) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1016);
             }
         } catch (ParseException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (ClientNotFoundException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1016);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
 
         AuthorizationCode authCode =

@@ -137,7 +137,7 @@ class CheckUserExistsHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1019));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1017));
     }
 
     private void usingValidSession() {

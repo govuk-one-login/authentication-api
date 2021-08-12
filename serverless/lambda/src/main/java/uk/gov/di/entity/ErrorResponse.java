@@ -20,12 +20,10 @@ public enum ErrorResponse {
     ERROR_1012(1012, "Phone number is invalid"),
     ERROR_1013(1013, "Update profile type is invalid"),
     ERROR_1014(1014, "Phone number is not registered"),
-    ERROR_1015(1015, "Unable to Verify Signature of Private Key JWT"),
-    ERROR_1016(1016, "Client not found"),
-    ERROR_1017(1017, "Invalid Redirect URI"),
-    ERROR_1018(1018, "Invalid authorization code parameter"),
-    ERROR_1019(1019, "Invalid transition in user journey"),
-    ERROR_1020(1020, "Client-Session-Id is missing or invalid");
+    ERROR_1015(1015, "Client not found"),
+    ERROR_1016(1016, "Invalid Redirect URI"),
+    ERROR_1017(1017, "Invalid transition in user journey"),
+    ERROR_1018(1018, "Client-Session-Id is missing or invalid");
 
     @JsonProperty("code")
     private int code;
