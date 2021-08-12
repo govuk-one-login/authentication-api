@@ -1,7 +1,5 @@
 package uk.gov.di.services;
 
-import uk.gov.di.entity.NotificationType;
-
 import java.net.URI;
 import java.util.Optional;
 
@@ -65,19 +63,6 @@ public class ConfigurationService {
 
     public long getAccessTokenExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("ACCESS_TOKEN_EXPIRY", "300"));
-    }
-
-    public String getNotificationTemplateId(NotificationType notificationType) {
-        switch (notificationType) {
-            case VERIFY_EMAIL:
-                return System.getenv("VERIFY_EMAIL_TEMPLATE_ID");
-            case VERIFY_PHONE_NUMBER:
-                return System.getenv("VERIFY_PHONE_NUMBER_TEMPLATE_ID");
-            case MFA_SMS:
-                return System.getenv("MFA_SMS_TEMPLATE_ID");
-            default:
-                throw new RuntimeException("NotificationType template ID does not exist");
-        }
     }
 
     public Optional<String> getNotifyApiUrl() {

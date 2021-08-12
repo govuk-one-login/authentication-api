@@ -45,7 +45,7 @@ public class NotificationHandlerTest {
     @Test
     public void shouldSuccessfullyProcessEmailMessageFromSQSQueue()
             throws JsonProcessingException, NotificationClientException {
-        when(configService.getNotificationTemplateId(VERIFY_EMAIL)).thenReturn(TEMPLATE_ID);
+        when(notificationService.getNotificationTemplateId(VERIFY_EMAIL)).thenReturn(TEMPLATE_ID);
 
         NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -63,7 +63,8 @@ public class NotificationHandlerTest {
     @Test
     public void shouldSuccessfullyProcessPhoneMessageFromSQSQueue()
             throws JsonProcessingException, NotificationClientException {
-        when(configService.getNotificationTemplateId(VERIFY_PHONE_NUMBER)).thenReturn(TEMPLATE_ID);
+        when(notificationService.getNotificationTemplateId(VERIFY_PHONE_NUMBER))
+                .thenReturn(TEMPLATE_ID);
 
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321");
@@ -96,7 +97,7 @@ public class NotificationHandlerTest {
     @Test
     public void shouldThrowExceptionIfNotifyIsUnableToSendEmail()
             throws JsonProcessingException, NotificationClientException {
-        when(configService.getNotificationTemplateId(VERIFY_EMAIL)).thenReturn(TEMPLATE_ID);
+        when(notificationService.getNotificationTemplateId(VERIFY_EMAIL)).thenReturn(TEMPLATE_ID);
 
         NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -123,7 +124,8 @@ public class NotificationHandlerTest {
     @Test
     public void shouldThrowExceptionIfNotifyIsUnableToSendText()
             throws JsonProcessingException, NotificationClientException {
-        when(configService.getNotificationTemplateId(VERIFY_PHONE_NUMBER)).thenReturn(TEMPLATE_ID);
+        when(notificationService.getNotificationTemplateId(VERIFY_PHONE_NUMBER))
+                .thenReturn(TEMPLATE_ID);
 
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321");

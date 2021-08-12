@@ -59,7 +59,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     emailPersonalisation,
-                                    configService.getNotificationTemplateId(VERIFY_EMAIL));
+                                    notificationService.getNotificationTemplateId(VERIFY_EMAIL));
                             break;
                         case VERIFY_PHONE_NUMBER:
                             Map<String, Object> textPersonalisation = new HashMap<>();
@@ -67,7 +67,8 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notificationService.sendText(
                                     notifyRequest.getDestination(),
                                     textPersonalisation,
-                                    configService.getNotificationTemplateId(VERIFY_PHONE_NUMBER));
+                                    notificationService.getNotificationTemplateId(
+                                            VERIFY_PHONE_NUMBER));
                             break;
                         case MFA_SMS:
                             Map<String, Object> mfaPersonalisation = new HashMap<>();
@@ -75,7 +76,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notificationService.sendText(
                                     notifyRequest.getDestination(),
                                     mfaPersonalisation,
-                                    configService.getNotificationTemplateId(MFA_SMS));
+                                    notificationService.getNotificationTemplateId(MFA_SMS));
                             break;
                     }
                 } catch (NotificationClientException e) {
