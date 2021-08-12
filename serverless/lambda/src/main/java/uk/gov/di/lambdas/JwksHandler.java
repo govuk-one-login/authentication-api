@@ -5,7 +5,7 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.jwk.JWKSet;
-import uk.gov.di.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.services.RedisConnectionService;
 import uk.gov.di.services.TokenService;
 

@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.NotificationType;
@@ -18,7 +19,6 @@ import uk.gov.di.helpers.IdGenerator;
 import uk.gov.di.services.AwsSqsClient;
 import uk.gov.di.services.CodeGeneratorService;
 import uk.gov.di.services.CodeStorageService;
-import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.SessionService;
 import uk.gov.di.services.ValidationService;
 

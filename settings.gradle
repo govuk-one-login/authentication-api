@@ -1,6 +1,8 @@
+include 'integration-tests'
+include 'shared'
 include 'serverless'
 include 'serverless:lambda'
+
 findProject(':serverless:lambda')?.name = 'lambda'
 rootProject.name = 'di-authentication-api'
-include 'integration-tests'
 

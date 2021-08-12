@@ -1,5 +1,6 @@
 package uk.gov.di.services;
 
+import uk.gov.di.entity.NotificationType;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
@@ -21,5 +22,18 @@ public class NotificationService {
     public void sendText(String phoneNumber, Map<String, Object> personalisation, String templateId)
             throws NotificationClientException {
         notifyClient.sendSms(templateId, phoneNumber, personalisation, "");
+    }
+
+    public String getNotificationTemplateId(NotificationType notificationType) {
+        switch (notificationType) {
+            case VERIFY_EMAIL:
+                return System.getenv("VERIFY_EMAIL_TEMPLATE_ID");
+            case VERIFY_PHONE_NUMBER:
+                return System.getenv("VERIFY_PHONE_NUMBER_TEMPLATE_ID");
+            case MFA_SMS:
+                return System.getenv("MFA_SMS_TEMPLATE_ID");
+            default:
+                throw new RuntimeException("NotificationType template ID does not exist");
+        }
     }
 }

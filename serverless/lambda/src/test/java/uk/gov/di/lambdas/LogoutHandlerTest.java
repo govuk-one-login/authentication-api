@@ -12,12 +12,12 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.Session;
 import uk.gov.di.helpers.TokenGenerator;
 import uk.gov.di.services.ClientSessionService;
-import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoClientService;
 import uk.gov.di.services.SessionService;
 

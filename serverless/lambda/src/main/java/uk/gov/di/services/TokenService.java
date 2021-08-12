@@ -25,6 +25,7 @@ import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.helpers.TokenGenerator;
 
 import java.security.KeyFactory;

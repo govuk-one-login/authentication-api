@@ -8,6 +8,7 @@ import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.exceptions.ClientNotFoundException;
@@ -17,7 +18,6 @@ import uk.gov.di.helpers.StateMachine;
 import uk.gov.di.services.AuthorisationCodeService;
 import uk.gov.di.services.AuthorizationService;
 import uk.gov.di.services.ClientSessionService;
-import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.SessionService;
 
 import java.util.List;

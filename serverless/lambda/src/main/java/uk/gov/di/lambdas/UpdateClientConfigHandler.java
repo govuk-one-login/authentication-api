@@ -9,13 +9,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.ClientRegistrationResponse;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.UpdateClientConfigRequest;
 import uk.gov.di.services.ClientConfigValidationService;
 import uk.gov.di.services.ClientService;
-import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoClientService;
 
 import java.util.Optional;

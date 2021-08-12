@@ -8,6 +8,7 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ValidScopes;
 import uk.gov.di.exceptions.ClientNotFoundException;

@@ -8,11 +8,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.ClientRegistrationRequest;
 import uk.gov.di.entity.ClientRegistrationResponse;
 import uk.gov.di.services.ClientConfigValidationService;
 import uk.gov.di.services.ClientService;
-import uk.gov.di.services.ConfigurationService;
 import uk.gov.di.services.DynamoClientService;
 
 import java.util.Optional;

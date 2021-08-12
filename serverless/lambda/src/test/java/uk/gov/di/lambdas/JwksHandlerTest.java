@@ -9,7 +9,7 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.services.TokenService;
 
 import java.util.UUID;
