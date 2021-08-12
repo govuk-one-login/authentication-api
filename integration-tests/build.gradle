@@ -26,7 +26,8 @@ dependencies {
             "org.awaitility:awaitility:4.1.0",
             "com.amazonaws:aws-java-sdk-dynamodb:1.12.43",
             "io.lettuce:lettuce-core:6.1.4.RELEASE",
-            project(":serverless:lambda")
+            project(":serverless:lambda"),
+            project(":shared")
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.2'
 }
 
