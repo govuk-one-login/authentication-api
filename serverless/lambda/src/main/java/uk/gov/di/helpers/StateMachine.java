@@ -84,6 +84,9 @@ public class StateMachine<T> {
                                 VERIFY_PHONE_NUMBER_CODE_SENT,
                                 List.of(PHONE_NUMBER_CODE_VERIFIED, PHONE_NUMBER_CODE_NOT_VALID)),
                         entry(
+                                PHONE_NUMBER_CODE_VERIFIED,
+                                List.of(AUTHENTICATED)),
+                        entry(
                                 PHONE_NUMBER_CODE_NOT_VALID,
                                 List.of(
                                         PHONE_NUMBER_CODE_VERIFIED,
