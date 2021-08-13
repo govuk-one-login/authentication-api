@@ -4,11 +4,13 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
-import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -76,7 +78,7 @@ class AuthCodeHandlerTest {
     public void shouldGenerateSuccessfulAuthResponse() throws ClientNotFoundException {
         ClientID clientID = new ClientID();
         AuthorizationCode authorizationCode = new AuthorizationCode();
-        AuthorizationRequest authRequest = generateValidSessionAndAuthRequest(clientID);
+        AuthenticationRequest authRequest = generateValidSessionAndAuthRequest(clientID);
         AuthenticationSuccessResponse authSuccessResponse =
                 new AuthenticationSuccessResponse(
                         authRequest.getRedirectionURI(),
@@ -92,7 +94,7 @@ class AuthCodeHandlerTest {
         when(authorisationCodeService.generateAuthorisationCode(eq(CLIENT_SESSION_ID), eq(EMAIL)))
                 .thenReturn(authorizationCode);
         when(authorizationService.generateSuccessfulAuthResponse(
-                        any(AuthorizationRequest.class), any(AuthorizationCode.class)))
+                        any(AuthenticationRequest.class), any(AuthorizationCode.class)))
                 .thenReturn(authSuccessResponse);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -163,7 +165,7 @@ class AuthCodeHandlerTest {
 
         ClientID clientID = new ClientID();
         AuthorizationCode authorizationCode = new AuthorizationCode();
-        AuthorizationRequest authRequest = generateValidSessionAndAuthRequest(clientID);
+        AuthenticationRequest authRequest = generateValidSessionAndAuthRequest(clientID);
         AuthenticationSuccessResponse authSuccessResponse =
                 new AuthenticationSuccessResponse(
                         authRequest.getRedirectionURI(),
@@ -179,7 +181,7 @@ class AuthCodeHandlerTest {
         when(authorisationCodeService.generateAuthorisationCode(eq(CLIENT_SESSION_ID), eq(EMAIL)))
                 .thenReturn(authorizationCode);
         when(authorizationService.generateSuccessfulAuthResponse(
-                        any(AuthorizationRequest.class), any(AuthorizationCode.class)))
+                        any(AuthenticationRequest.class), any(AuthorizationCode.class)))
                 .thenReturn(authSuccessResponse);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -190,16 +192,17 @@ class AuthCodeHandlerTest {
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1017));
     }
 
-    private AuthorizationRequest generateValidSessionAndAuthRequest(ClientID clientID) {
+    private AuthenticationRequest generateValidSessionAndAuthRequest(ClientID clientID) {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         State state = new State();
-        AuthorizationRequest authorizationRequest =
-                new AuthorizationRequest.Builder(responseType, clientID)
-                        .redirectionURI(REDIRECT_URI)
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        AuthenticationRequest authRequest =
+                new AuthenticationRequest.Builder(responseType, scope, clientID, REDIRECT_URI)
                         .state(state)
                         .build();
-        generateValidSession(authorizationRequest.toParameters());
-        return authorizationRequest;
+        generateValidSession(authRequest.toParameters());
+        return authRequest;
     }
 
     private void generateValidSession(Map<String, List<String>> authRequest) {

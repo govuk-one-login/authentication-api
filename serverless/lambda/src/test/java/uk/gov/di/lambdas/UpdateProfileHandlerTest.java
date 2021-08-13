@@ -3,13 +3,14 @@ package uk.gov.di.lambdas;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
-import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.ClientSession;
@@ -25,7 +26,6 @@ import uk.gov.di.services.SessionService;
 
 import java.net.URI;
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -76,7 +76,7 @@ class UpdateProfileHandlerTest {
     }
 
     @Test
-    public void shouldReturn200WhenUpdatingPhoneNumber() throws JsonProcessingException {
+    public void shouldReturn200WhenUpdatingPhoneNumber() {
         when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(false);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -93,16 +93,13 @@ class UpdateProfileHandlerTest {
     }
 
     @Test
-    public void shouldReturn200WhenUpdatingProfileWithConsent()
-            throws JsonProcessingException, ClientNotFoundException {
-        when(authenticationService.userExists(eq(TEST_EMAIL_ADDRESS))).thenReturn(false);
+    public void shouldReturn200WhenUpdatingProfileWithConsent() throws ClientNotFoundException {
         usingValidSession();
+        when(authenticationService.userExists(eq(TEST_EMAIL_ADDRESS))).thenReturn(false);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         ClientID clientID = new ClientID();
         AuthorizationCode authorizationCode = new AuthorizationCode();
-        AuthorizationRequest authRequest = generateValidSessionAndAuthRequest(clientID);
-        usingValidClientSession(clientID.getValue());
-
+        AuthenticationRequest authRequest = generateValidClientSessionAndAuthRequest(clientID);
         var consentMap =
                 Map.of(authRequest.getClientID().getValue(), List.of(String.valueOf(true)));
 
@@ -122,7 +119,7 @@ class UpdateProfileHandlerTest {
                         eq(CLIENT_SESSION_ID), eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(authorizationCode);
         when(authorizationService.generateSuccessfulAuthResponse(
-                        any(AuthorizationRequest.class), any(AuthorizationCode.class)))
+                        any(AuthenticationRequest.class), any(AuthorizationCode.class)))
                 .thenReturn(authSuccessResponse);
 
         event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
@@ -139,7 +136,7 @@ class UpdateProfileHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenRequestIsMissingParameters() throws JsonProcessingException {
+    public void shouldReturn400WhenRequestIsMissingParameters() {
         when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(false);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -180,40 +177,19 @@ class UpdateProfileHandlerTest {
                 .thenReturn(Optional.of(session));
     }
 
-    private AuthorizationRequest generateValidSessionAndAuthRequest(ClientID clientID) {
+    private AuthenticationRequest generateValidClientSessionAndAuthRequest(ClientID clientID) {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
         State state = new State();
-        AuthorizationRequest authorizationRequest =
-                new AuthorizationRequest.Builder(responseType, clientID)
-                        .redirectionURI(REDIRECT_URI)
+        AuthenticationRequest authRequest =
+                new AuthenticationRequest.Builder(responseType, scope, clientID, REDIRECT_URI)
                         .state(state)
                         .build();
-        generateValidSession(authorizationRequest.toParameters());
-        return authorizationRequest;
-    }
-
-    private void generateValidSession(Map<String, List<String>> authRequest) {
-        when(sessionService.readSessionFromRedis(SESSION_ID))
-                .thenReturn(
-                        Optional.of(
-                                new Session(SESSION_ID)
-                                        .addClientSession(CLIENT_SESSION_ID)
-                                        .setEmailAddress(TEST_EMAIL_ADDRESS)));
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(new ClientSession(authRequest, LocalDateTime.now()));
-    }
-
-    private void usingValidClientSession(String clientId) {
+        ClientSession clientSession =
+                new ClientSession(authRequest.toParameters(), LocalDateTime.now());
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(getClientSession(clientId));
-    }
-
-    private Optional<ClientSession> getClientSession(String clientId) {
-        return Optional.of(
-                new ClientSession(
-                        Map.ofEntries(
-                                Map.entry("client_id", Collections.singletonList(clientId)),
-                                Map.entry("response_type", Collections.singletonList("code"))),
-                        null));
+                .thenReturn(Optional.of(clientSession));
+        return authRequest;
     }
 }

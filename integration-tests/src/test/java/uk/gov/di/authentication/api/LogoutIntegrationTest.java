@@ -4,11 +4,13 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.jwt.SignedJWT;
-import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.ClientBuilder;
 import jakarta.ws.rs.core.MultivaluedHashMap;
@@ -83,11 +85,16 @@ public class LogoutIntegrationTest extends IntegrationTestEndpoints {
                                         + "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU"));
     }
 
-    private AuthorizationRequest generateAuthRequest() {
+    private AuthenticationRequest generateAuthRequest() {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         State state = new State();
-        return new AuthorizationRequest.Builder(responseType, new ClientID("test-client"))
-                .redirectionURI(URI.create("http://localhost:8080/redirect"))
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        return new AuthenticationRequest.Builder(
+                        responseType,
+                        scope,
+                        new ClientID("test-client"),
+                        URI.create("http://localhost:8080/redirect"))
                 .state(state)
                 .build();
     }

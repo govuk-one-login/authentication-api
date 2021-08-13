@@ -5,6 +5,12 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -17,7 +23,7 @@ import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ClientSessionService;
 import uk.gov.di.services.SessionService;
 
-import java.util.Collections;
+import java.net.URI;
 import java.util.Map;
 import java.util.Optional;
 
@@ -120,11 +126,18 @@ public class ClientInfoHandlerTest {
     }
 
     private Optional<ClientSession> getClientSession(String clientId) {
-        return Optional.of(
-                new ClientSession(
-                        Map.ofEntries(
-                                Map.entry("client_id", Collections.singletonList(clientId)),
-                                Map.entry("response_type", Collections.singletonList("code"))),
-                        null));
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        State state = new State();
+        AuthenticationRequest authRequest =
+                new AuthenticationRequest.Builder(
+                                responseType,
+                                scope,
+                                new ClientID(clientId),
+                                URI.create("http://localhost/redirect"))
+                        .state(state)
+                        .build();
+        return Optional.of(new ClientSession(authRequest.toParameters(), null));
     }
 }

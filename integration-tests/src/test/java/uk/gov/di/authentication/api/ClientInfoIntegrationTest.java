@@ -1,6 +1,11 @@
 package uk.gov.di.authentication.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.ClientBuilder;
 import jakarta.ws.rs.core.MultivaluedHashMap;
@@ -12,13 +17,12 @@ import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.entity.ClientInfoResponse;
 
 import java.io.IOException;
+import java.net.URI;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -39,7 +43,7 @@ public class ClientInfoIntegrationTest extends IntegrationTestEndpoints {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
-    public void shouldReturn400WhenClientSessionIdMissing() throws IOException {
+    public void shouldReturn400WhenClientSessionIdMissing() {
 
         Client client = ClientBuilder.newClient();
         Response response = client.target(ROOT_RESOURCE_URL + CLIENTINFO_ENDPOINT).request().get();
@@ -49,11 +53,16 @@ public class ClientInfoIntegrationTest extends IntegrationTestEndpoints {
     @Test
     public void shouldReturn200AndClientInfoResponseForValidClient() throws IOException {
         String sessionId = RedisHelper.createSession();
-        RedisHelper.createClientSession(
-                CLIENT_SESSION_ID,
-                Map.ofEntries(
-                        Map.entry("client_id", Collections.singletonList(CLIENT_ID)),
-                        Map.entry("response_type", Collections.singletonList("code"))));
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        AuthenticationRequest authRequest =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                scope,
+                                new ClientID(CLIENT_ID),
+                                URI.create("http://localhost/redirect"))
+                        .build();
+        RedisHelper.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
 
         registerClient(generateRsaKeyPair());
 

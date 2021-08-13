@@ -3,9 +3,9 @@ package uk.gov.di.lambdas;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCError;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -60,7 +60,7 @@ class AuthorisationHandlerTest {
         final URI loginUrl = URI.create("http://example.com");
         final Session session = new Session("a-session-id");
 
-        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         when(configService.getLoginURI()).thenReturn(loginUrl);
         when(configService.getDomainName()).thenReturn(domainName);
@@ -91,7 +91,7 @@ class AuthorisationHandlerTest {
 
     @Test
     void shouldReturn400WhenAuthorisationRequestCannotBeParsed() {
-        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         State state = new State();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -114,7 +114,7 @@ class AuthorisationHandlerTest {
 
     @Test
     void shouldReturn400WhenAuthorisationRequestContainsInvalidData() {
-        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.of(OAuth2Error.INVALID_SCOPE));
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
@@ -137,7 +137,7 @@ class AuthorisationHandlerTest {
         final URI loginUrl = URI.create("http://example.com");
         final Session session = new Session("a-session-id");
 
-        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         when(configService.getLoginURI()).thenReturn(loginUrl);
         when(sessionService.createSession()).thenReturn(session);
@@ -181,7 +181,7 @@ class AuthorisationHandlerTest {
 
     @Test
     void shouldReturnErrorWhenPromptParamNoneAndNotLoggedIn() {
-        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent response =
                 handler.handleRequest(withPromptRequestEvent("none"), context);
@@ -220,7 +220,7 @@ class AuthorisationHandlerTest {
         final URI loginUrl = URI.create("http://example.com");
         final Session session = new Session("a-session-id");
 
-        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         when(configService.getLoginURI()).thenReturn(loginUrl);
         when(sessionService.createSession()).thenReturn(session);
@@ -263,7 +263,7 @@ class AuthorisationHandlerTest {
 
     @Test
     void shouldReturnErrorWhenUnrecognisedPromptValue() {
-        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent response =
                 handler.handleRequest(withPromptRequestEvent("unrecognised"), context);
@@ -275,7 +275,7 @@ class AuthorisationHandlerTest {
 
     @Test
     void shouldReturnErrorWhenPromptParamWithMultipleValuesNoneAndLogin() {
-        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent response =
                 handler.handleRequest(withPromptRequestEvent("none login"), context);
@@ -287,7 +287,7 @@ class AuthorisationHandlerTest {
 
     @Test
     void shouldReturnErrorWhenPromptParamWithUnsupportedMultipleValues() {
-        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent response =
                 handler.handleRequest(withPromptRequestEvent("login consent"), context);
@@ -299,7 +299,7 @@ class AuthorisationHandlerTest {
 
     @Test
     void shouldReturnErrorWhenPromptParamConsent() {
-        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent response =
                 handler.handleRequest(withPromptRequestEvent("consent"), context);
@@ -311,7 +311,7 @@ class AuthorisationHandlerTest {
 
     @Test
     void shouldReturnErrorWhenPromptParamSelectAccount() {
-        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent response =
                 handler.handleRequest(withPromptRequestEvent("select_account"), context);
@@ -326,7 +326,7 @@ class AuthorisationHandlerTest {
         final URI loginUrl = URI.create("http://example.com");
         final Session session = new Session("a-session-id");
 
-        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         when(configService.getLoginURI()).thenReturn(loginUrl);
         when(sessionService.getSessionFromSessionCookie(any())).thenReturn(Optional.empty());
@@ -392,7 +392,7 @@ class AuthorisationHandlerTest {
 
     private void whenLoggedIn(Session session, URI loginUrl) {
         session.setState(SessionState.AUTHENTICATED);
-        when(authorizationService.validateAuthRequest(any(AuthorizationRequest.class)))
+        when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         when(configService.getLoginURI()).thenReturn(loginUrl);
         when(sessionService.getSessionFromSessionCookie(any())).thenReturn(Optional.of(session));

@@ -5,8 +5,8 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -78,7 +78,7 @@ public class ClientInfoHandler
         try {
             Map<String, List<String>> authRequest = clientSession.get().getAuthRequestParams();
 
-            String clientID = AuthorizationRequest.parse(authRequest).getClientID().getValue();
+            String clientID = AuthenticationRequest.parse(authRequest).getClientID().getValue();
 
             Optional<ClientRegistry> optionalClientRegistry = clientService.getClient(clientID);
 
