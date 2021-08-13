@@ -4,7 +4,11 @@ resource "aws_lambda_function" "endpoint_lambda" {
   role          = var.lambda_role_arn
   handler       = var.handler_function_name
   timeout       = 30
-  memory_size = 512
+  memory_size   = 512
+
+  tracing_config {
+    mode = "Active"
+  }
 
   source_code_hash = filebase64sha256(var.lambda_zip_file)
   vpc_config {

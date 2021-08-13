@@ -57,6 +57,34 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
   policy_arn = aws_iam_policy.endpoint_logging_policy.arn
 }
 
+data "aws_iam_policy_document" "endpoint_xray_policy" {
+  version = "2012-10-17"
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "xray:*"
+    ]
+
+    resources = [
+      "*",
+    ]
+  }
+}
+
+resource "aws_iam_policy" "endpoint_xray_policy" {
+  name        = "${var.environment}-standard-lambda-xray"
+  path        = "/"
+  description = "IAM policy for xray with a lambda"
+
+  policy = data.aws_iam_policy_document.endpoint_xray_policy.json
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_xray" {
+  role       = aws_iam_role.lambda_iam_role.name
+  policy_arn = aws_iam_policy.endpoint_xray_policy.arn
+}
+
 data "aws_iam_policy_document" "endpoint_networking_policy" {
   version = "2012-10-17"
 
