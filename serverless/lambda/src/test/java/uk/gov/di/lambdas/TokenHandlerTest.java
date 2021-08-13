@@ -8,7 +8,6 @@ import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
-import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
@@ -19,6 +18,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import org.junit.jupiter.api.BeforeEach;
@@ -272,13 +272,15 @@ public class TokenHandlerTest {
         return generateApiGatewayRequest(privateKeyJWT, authorisationCode, REDIRECT_URI);
     }
 
-    private AuthorizationRequest generateAuthRequest() {
+    private AuthenticationRequest generateAuthRequest() {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         State state = new State();
-        return new AuthorizationRequest.Builder(responseType, new ClientID(CLIENT_ID))
-                .redirectionURI(URI.create(REDIRECT_URI))
+        return new AuthenticationRequest.Builder(
+                        responseType,
+                        Scope.parse(SCOPES),
+                        new ClientID(CLIENT_ID),
+                        URI.create(REDIRECT_URI))
                 .state(state)
-                .scope(Scope.parse(SCOPES))
                 .build();
     }
 

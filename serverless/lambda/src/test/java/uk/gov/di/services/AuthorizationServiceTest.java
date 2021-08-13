@@ -1,13 +1,13 @@
 package uk.gov.di.services;
 
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
-import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
@@ -80,15 +80,16 @@ class AuthorizationServiceTest {
         ClientID clientID = new ClientID();
         AuthorizationCode authCode = new AuthorizationCode();
         State state = new State();
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        AuthorizationRequest authorizationRequest =
-                new AuthorizationRequest.Builder(responseType, clientID)
-                        .redirectionURI(REDIRECT_URI)
+        AuthenticationRequest authRequest =
+                new AuthenticationRequest.Builder(responseType, scope, clientID, REDIRECT_URI)
                         .state(state)
                         .build();
 
         AuthenticationSuccessResponse authSuccessResponse =
-                authorizationService.generateSuccessfulAuthResponse(authorizationRequest, authCode);
+                authorizationService.generateSuccessfulAuthResponse(authRequest, authCode);
         assertThat(authSuccessResponse.getState(), equalTo(state));
         assertThat(authSuccessResponse.getAuthorizationCode(), equalTo(authCode));
         assertThat(authSuccessResponse.getRedirectionURI(), equalTo(REDIRECT_URI));
@@ -131,7 +132,8 @@ class AuthorizationServiceTest {
     @Test
     void shouldReturnErrorWhenResponseCodeIsNotValidInAuthRequest() {
         ClientID clientID = new ClientID();
-        ResponseType responseType = new ResponseType(ResponseType.Value.TOKEN);
+        ResponseType responseType =
+                new ResponseType(ResponseType.Value.TOKEN, ResponseType.Value.CODE);
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         when(dynamoClientService.getClient(clientID.toString()))
@@ -202,12 +204,11 @@ class AuthorizationServiceTest {
                 .setScopes(singletonList("openid"));
     }
 
-    private AuthorizationRequest generateAuthRequest(
+    private AuthenticationRequest generateAuthRequest(
             ClientID clientID, String redirectUri, ResponseType responseType, Scope scope) {
         State state = new State();
-        return new AuthorizationRequest.Builder(responseType, new ClientID(clientID))
-                .redirectionURI(URI.create(redirectUri))
-                .scope(scope)
+        return new AuthenticationRequest.Builder(
+                        responseType, scope, new ClientID(clientID), URI.create(redirectUri))
                 .state(state)
                 .build();
     }

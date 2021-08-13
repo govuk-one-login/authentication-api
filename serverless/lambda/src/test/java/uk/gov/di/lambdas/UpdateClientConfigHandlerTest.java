@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.ClientRegistrationResponse;
@@ -75,6 +76,7 @@ class UpdateClientConfigHandlerTest {
         event.setBody(format("{\"client_name\": \"%s\"}", CLIENT_NAME));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
+        assertThat(result, hasBody(OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString()));
     }
 
     @Test
@@ -84,6 +86,7 @@ class UpdateClientConfigHandlerTest {
         event.setPathParameters(Map.of("clientId", CLIENT_ID));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
+        assertThat(result, hasBody(OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString()));
     }
 
     @Test
@@ -94,7 +97,8 @@ class UpdateClientConfigHandlerTest {
         event.setPathParameters(Map.of("clientId", CLIENT_ID));
         event.setBody(format("{\"client_name\": \"%s\"}", CLIENT_NAME));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-        assertThat(result, hasStatus(401));
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasBody(OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString()));
     }
 
     @Test

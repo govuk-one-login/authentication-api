@@ -5,8 +5,8 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
-import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.ErrorResponse;
@@ -80,15 +80,16 @@ public class AuthCodeHandler
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         }
 
-        AuthorizationRequest authorizationRequest;
+        AuthenticationRequest authenticationRequest;
         try {
             Map<String, List<String>> authRequest =
                     clientSessionService
                             .getClientSession(sessionCookieIds.getClientSessionId())
                             .getAuthRequestParams();
-            authorizationRequest = AuthorizationRequest.parse(authRequest);
+            authenticationRequest = AuthenticationRequest.parse(authRequest);
             if (!authorizationService.isClientRedirectUriValid(
-                    authorizationRequest.getClientID(), authorizationRequest.getRedirectionURI())) {
+                    authenticationRequest.getClientID(),
+                    authenticationRequest.getRedirectionURI())) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1016);
             }
         } catch (ParseException e) {
@@ -101,7 +102,8 @@ public class AuthCodeHandler
                 authorisationCodeService.generateAuthorisationCode(
                         sessionCookieIds.getClientSessionId(), session.getEmailAddress());
         AuthenticationSuccessResponse authenticationResponse =
-                authorizationService.generateSuccessfulAuthResponse(authorizationRequest, authCode);
+                authorizationService.generateSuccessfulAuthResponse(
+                        authenticationRequest, authCode);
         sessionService.save(session.setState(AUTHENTICATED));
         return new APIGatewayProxyResponseEvent()
                 .withStatusCode(302)

@@ -1,10 +1,10 @@
 package uk.gov.di.services;
 
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
-import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +47,7 @@ public class AuthorizationService {
     }
 
     public AuthenticationSuccessResponse generateSuccessfulAuthResponse(
-            AuthorizationRequest authRequest, AuthorizationCode authorizationCode) {
+            AuthenticationRequest authRequest, AuthorizationCode authorizationCode) {
         return new AuthenticationSuccessResponse(
                 authRequest.getRedirectionURI(),
                 authorizationCode,
@@ -58,7 +58,7 @@ public class AuthorizationService {
                 authRequest.getResponseMode());
     }
 
-    public Optional<ErrorObject> validateAuthRequest(AuthorizationRequest authRequest) {
+    public Optional<ErrorObject> validateAuthRequest(AuthenticationRequest authRequest) {
         Optional<ClientRegistry> client =
                 dynamoClientService.getClient(authRequest.getClientID().toString());
         if (client.isEmpty()) {

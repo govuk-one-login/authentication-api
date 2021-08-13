@@ -6,8 +6,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -101,10 +101,10 @@ public class UpdateProfileHandler
                     }
 
                     try {
-                        AuthorizationRequest authorizationRequest =
-                                AuthorizationRequest.parse(
+                        AuthenticationRequest authRequest =
+                                AuthenticationRequest.parse(
                                         clientSession.get().getAuthRequestParams());
-                        clientId = authorizationRequest.getClientID().getValue();
+                        clientId = authRequest.getClientID().getValue();
                     } catch (ParseException e) {
                         LOGGER.info("Cannot retreive auth request params from client session id.");
                         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);

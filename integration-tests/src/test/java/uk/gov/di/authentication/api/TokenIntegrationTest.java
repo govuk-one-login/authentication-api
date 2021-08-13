@@ -3,13 +3,13 @@ package uk.gov.di.authentication.api;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
-import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.ClientBuilder;
 import jakarta.ws.rs.client.Entity;
@@ -99,15 +99,17 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
         return kpg.generateKeyPair();
     }
 
-    private AuthorizationRequest generateAuthRequest() {
+    private AuthenticationRequest generateAuthRequest() {
         Scope scopeValues = new Scope();
         scopeValues.add("openid");
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         State state = new State();
-        return new AuthorizationRequest.Builder(responseType, new ClientID(CLIENT_ID))
-                .redirectionURI(URI.create("http://localhost/redirect"))
+        return new AuthenticationRequest.Builder(
+                        responseType,
+                        scopeValues,
+                        new ClientID(CLIENT_ID),
+                        URI.create("http://localhost/redirect"))
                 .state(state)
-                .scope(scopeValues)
                 .build();
     }
 }

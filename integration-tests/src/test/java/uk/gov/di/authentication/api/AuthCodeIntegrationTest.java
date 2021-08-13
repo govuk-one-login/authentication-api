@@ -1,9 +1,11 @@
 package uk.gov.di.authentication.api;
 
-import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.ClientBuilder;
 import jakarta.ws.rs.core.MultivaluedHashMap;
@@ -55,11 +57,12 @@ public class AuthCodeIntegrationTest extends IntegrationTestEndpoints {
         assertEquals(302, response.getStatus());
     }
 
-    private AuthorizationRequest generateAuthRequest() {
+    private AuthenticationRequest generateAuthRequest() {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         State state = new State();
-        return new AuthorizationRequest.Builder(responseType, CLIENT_ID)
-                .redirectionURI(REDIRECT_URI)
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        return new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
                 .state(state)
                 .build();
     }
