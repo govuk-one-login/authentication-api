@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.entity.ResponseHeaders;
 import uk.gov.di.entity.SessionState;
 
 import java.security.KeyPair;
@@ -62,7 +63,7 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
                         Optional.of(INVALID_CLIENT_ID), Optional.empty(), Optional.empty());
         assertEquals(302, response.getStatus());
         assertThat(
-                getHeaderValueByParamName(response, "Location"),
+                getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 containsString(OAuth2Error.UNAUTHORIZED_CLIENT.getCode()));
     }
 
@@ -73,7 +74,7 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
 
         assertEquals(302, response.getStatus());
         assertThat(
-                getHeaderValueByParamName(response, "Location"),
+                getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(configurationService.getLoginURI().toString()));
         assertNotNull(response.getCookies().get("gs"));
     }
@@ -88,7 +89,7 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
 
         assertEquals(302, response.getStatus());
         assertThat(
-                getHeaderValueByParamName(response, "Location"),
+                getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(configurationService.getLoginURI().toString()));
         assertNotNull(response.getCookies().get("gs"));
     }
@@ -103,7 +104,7 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
 
         assertEquals(302, response.getStatus());
         assertThat(
-                getHeaderValueByParamName(response, "Location"),
+                getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(configurationService.getLoginURI().toString()));
         assertNotNull(response.getCookies().get("gs"));
     }
@@ -120,7 +121,7 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
 
         assertEquals(302, response.getStatus());
         assertThat(
-                getHeaderValueByParamName(response, "Location"),
+                getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(configurationService.getLoginURI().toString()));
         assertNotNull(response.getCookies().get("gs"));
         assertThat(response.getCookies().get("gs").getValue(), not(startsWith(sessionId)));
@@ -150,7 +151,7 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
                         Optional.of(CLIENT_ID), Optional.empty(), Optional.of(NONE.toString()));
         assertEquals(302, response.getStatus());
         assertThat(
-                getHeaderValueByParamName(response, "Location"),
+                getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 containsString(OIDCError.LOGIN_REQUIRED_CODE));
     }
 
@@ -168,7 +169,7 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
         assertNotNull(response.getCookies().get("gs"));
         assertThat(response.getCookies().get("gs").getValue(), not(startsWith(sessionId)));
         assertThat(
-                getHeaderValueByParamName(response, "Location"),
+                getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(configurationService.getAuthCodeURI().toString()));
     }
 
@@ -186,7 +187,7 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
         assertNotNull(response.getCookies().get("gs"));
         assertThat(response.getCookies().get("gs").getValue(), not(startsWith(sessionId)));
         assertThat(
-                getHeaderValueByParamName(response, "Location"),
+                getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(configurationService.getLoginURI().toString()));
         /*
            TODO:

@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.ErrorResponse;
+import uk.gov.di.entity.ResponseHeaders;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.SessionState;
 import uk.gov.di.exceptions.ClientNotFoundException;
@@ -107,7 +108,7 @@ class AuthCodeHandlerTest {
 
         assertThat(response, hasStatus(302));
         assertThat(
-                response.getHeaders().get("Location"),
+                response.getHeaders().get(ResponseHeaders.LOCATION),
                 equalTo(authSuccessResponse.toURI().toString()));
     }
 
@@ -153,7 +154,7 @@ class AuthCodeHandlerTest {
         assertEquals(
                 "http://localhost/redirect?error=invalid_client&error_description=Client+authentication+failed&state="
                         + state,
-                response.getHeaders().get("Location"));
+                response.getHeaders().get(ResponseHeaders.LOCATION));
     }
 
     @Test
@@ -169,7 +170,7 @@ class AuthCodeHandlerTest {
         assertThat(response, hasStatus(302));
         assertEquals(
                 "http://localhost/redirect?error=invalid_request&error_description=Invalid+request%3A+Missing+response_type+parameter",
-                response.getHeaders().get("Location"));
+                response.getHeaders().get(ResponseHeaders.LOCATION));
     }
 
     @Test

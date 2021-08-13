@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ClientSession;
+import uk.gov.di.entity.ResponseHeaders;
 import uk.gov.di.entity.Session;
 import uk.gov.di.helpers.TokenGenerator;
 import uk.gov.di.services.ClientSessionService;
@@ -53,7 +54,6 @@ class LogoutHandlerTest {
     private static final String COOKIE = "Cookie";
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "client-session-id";
-    private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final URI DEFAULT_LOGOUT_URI =
             URI.create("https://di-authentication-frontend.london.cloudapps.digital/signed-out");
     private static final URI CLIENT_LOGOUT_URI = URI.create("http://localhost/logout");
@@ -96,7 +96,7 @@ class LogoutHandlerTest {
 
         assertThat(response, hasStatus(302));
         assertThat(
-                response.getHeaders().get("Location"),
+                response.getHeaders().get(ResponseHeaders.LOCATION),
                 equalTo(CLIENT_LOGOUT_URI + "?state=" + STATE));
     }
 
@@ -119,7 +119,9 @@ class LogoutHandlerTest {
 
         verify(sessionService, times(1)).deleteSessionFromRedis(SESSION_ID);
         assertThat(response, hasStatus(302));
-        assertThat(response.getHeaders().get("Location"), equalTo(CLIENT_LOGOUT_URI.toString()));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                equalTo(CLIENT_LOGOUT_URI.toString()));
     }
 
     @Test
@@ -135,7 +137,7 @@ class LogoutHandlerTest {
 
         assertThat(response, hasStatus(302));
         assertThat(
-                response.getHeaders().get("Location"),
+                response.getHeaders().get(ResponseHeaders.LOCATION),
                 equalTo(DEFAULT_LOGOUT_URI + "?state=" + STATE));
         verify(sessionService, times(0)).deleteSessionFromRedis(SESSION_ID);
     }
@@ -240,7 +242,7 @@ class LogoutHandlerTest {
 
         assertThat(response, hasStatus(302));
         assertThat(
-                response.getHeaders().get("Location"),
+                response.getHeaders().get(ResponseHeaders.LOCATION),
                 equalTo(DEFAULT_LOGOUT_URI + "?state=" + STATE));
         verify(sessionService, times(1)).deleteSessionFromRedis(SESSION_ID);
     }

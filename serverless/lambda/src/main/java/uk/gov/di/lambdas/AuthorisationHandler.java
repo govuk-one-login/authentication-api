@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.ClientSession;
+import uk.gov.di.entity.ResponseHeaders;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.SessionState;
 import uk.gov.di.services.AuthorizationService;
@@ -43,11 +44,6 @@ public class AuthorisationHandler
     private final ConfigurationService configurationService;
     private final ClientSessionService clientSessionService;
     private final AuthorizationService authorizationService;
-
-    private interface ResponseHeaders {
-        String LOCATION = "Location";
-        String SET_COOKIE = "Set-Cookie";
-    }
 
     public AuthorisationHandler(
             ConfigurationService configurationService,

@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.ClientSession;
+import uk.gov.di.entity.ResponseHeaders;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.SessionState;
 import uk.gov.di.services.AuthorizationService;
@@ -79,7 +80,7 @@ class AuthorisationHandlerTest {
                         "response_type", "code",
                         "state", "some-state"));
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
-        URI uri = URI.create(response.getHeaders().get("Location"));
+        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
         final String expectedCookieString =
                 "gs=a-session-id.client-session-id; Max-Age=1800; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
 
@@ -109,7 +110,7 @@ class AuthorisationHandlerTest {
         assertEquals(
                 "http://localhost:8080?error=invalid_request&error_description=Invalid+request%3A+Missing+response_type+parameter&state="
                         + state,
-                response.getHeaders().get("Location"));
+                response.getHeaders().get(ResponseHeaders.LOCATION));
     }
 
     @Test
@@ -129,7 +130,7 @@ class AuthorisationHandlerTest {
         assertThat(response, hasStatus(302));
         assertEquals(
                 "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope",
-                response.getHeaders().get("Location"));
+                response.getHeaders().get(ResponseHeaders.LOCATION));
     }
 
     @Test
@@ -148,7 +149,7 @@ class AuthorisationHandlerTest {
         when(configService.getDomainName()).thenReturn(domainName);
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(withRequestEvent(), context);
-        URI uri = URI.create(response.getHeaders().get("Location"));
+        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
         assertThat(response, hasStatus(302));
         assertEquals(loginUrl.getAuthority(), uri.getAuthority());
@@ -168,7 +169,7 @@ class AuthorisationHandlerTest {
         when(configService.getAuthCodeURI()).thenReturn(authCodeUri);
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(withRequestEvent(), context);
-        URI uri = URI.create(response.getHeaders().get("Location"));
+        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
         assertThat(response, hasStatus(302));
         assertEquals(authCodeUri, uri);
@@ -187,7 +188,7 @@ class AuthorisationHandlerTest {
                 handler.handleRequest(withPromptRequestEvent("none"), context);
         assertThat(response, hasStatus(302));
         assertThat(
-                getHeaderValueByParamName(response, "Location"),
+                getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 containsString("error=login_required"));
     }
 
@@ -204,7 +205,7 @@ class AuthorisationHandlerTest {
 
         APIGatewayProxyResponseEvent response =
                 handler.handleRequest(withPromptRequestEvent("none"), context);
-        URI uri = URI.create(response.getHeaders().get("Location"));
+        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
         assertThat(response, hasStatus(302));
         assertEquals(authCodeUri, uri);
@@ -232,7 +233,7 @@ class AuthorisationHandlerTest {
 
         APIGatewayProxyResponseEvent response =
                 handler.handleRequest(withPromptRequestEvent("login"), context);
-        URI uri = URI.create(response.getHeaders().get("Location"));
+        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
         assertThat(response, hasStatus(302));
         assertEquals(loginUrl.getAuthority(), uri.getAuthority());
@@ -252,7 +253,7 @@ class AuthorisationHandlerTest {
 
         APIGatewayProxyResponseEvent response =
                 handler.handleRequest(withPromptRequestEvent("login"), context);
-        URI uri = URI.create(response.getHeaders().get("Location"));
+        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
         assertThat(response, hasStatus(302));
         assertEquals(loginUrl.getAuthority(), uri.getAuthority());
@@ -270,7 +271,7 @@ class AuthorisationHandlerTest {
         assertThat(response, hasStatus(302));
         assertEquals(
                 "http://localhost:8080?error=invalid_request&error_description=Invalid+request%3A+Invalid+prompt+parameter%3A+Unknown+prompt+type%3A+unrecognised&state=some-state",
-                response.getHeaders().get("Location"));
+                response.getHeaders().get(ResponseHeaders.LOCATION));
     }
 
     @Test
@@ -282,7 +283,7 @@ class AuthorisationHandlerTest {
         assertThat(response, hasStatus(302));
         assertEquals(
                 "http://localhost:8080?error=invalid_request&error_description=Invalid+request%3A+Invalid+prompt+parameter%3A+Invalid+prompt%3A+none+login&state=some-state",
-                response.getHeaders().get("Location"));
+                response.getHeaders().get(ResponseHeaders.LOCATION));
     }
 
     @Test
@@ -293,7 +294,7 @@ class AuthorisationHandlerTest {
                 handler.handleRequest(withPromptRequestEvent("login consent"), context);
         assertThat(response, hasStatus(302));
         assertThat(
-                getHeaderValueByParamName(response, "Location"),
+                getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 containsString(OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS_CODE));
     }
 
@@ -305,7 +306,7 @@ class AuthorisationHandlerTest {
                 handler.handleRequest(withPromptRequestEvent("consent"), context);
         assertThat(response, hasStatus(302));
         assertThat(
-                getHeaderValueByParamName(response, "Location"),
+                getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 containsString(OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS_CODE));
     }
 
@@ -317,7 +318,7 @@ class AuthorisationHandlerTest {
                 handler.handleRequest(withPromptRequestEvent("select_account"), context);
         assertThat(response, hasStatus(302));
         assertThat(
-                getHeaderValueByParamName(response, "Location"),
+                getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 containsString(OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS_CODE));
     }
 
@@ -338,7 +339,7 @@ class AuthorisationHandlerTest {
         when(configService.getDomainName()).thenReturn(domainName);
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(withRequestEvent(), context);
-        URI uri = URI.create(response.getHeaders().get("Location"));
+        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
         assertThat(response, hasStatus(302));
         assertEquals(loginUrl.getAuthority(), uri.getAuthority());
@@ -356,7 +357,7 @@ class AuthorisationHandlerTest {
         session.setState(SessionState.AUTHENTICATION_REQUIRED);
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(withRequestEvent(), context);
-        URI uri = URI.create(response.getHeaders().get("Location"));
+        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
         assertThat(response, hasStatus(302));
         assertEquals(loginUrl.getAuthority(), uri.getAuthority());

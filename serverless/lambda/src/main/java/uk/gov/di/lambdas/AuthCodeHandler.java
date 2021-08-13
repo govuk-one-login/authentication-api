@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.ErrorResponse;
+import uk.gov.di.entity.ResponseHeaders;
 import uk.gov.di.entity.Session;
 import uk.gov.di.exceptions.ClientNotFoundException;
 import uk.gov.di.helpers.CookieHelper;
@@ -45,10 +46,6 @@ public class AuthCodeHandler
     private final AuthorizationService authorizationService;
     private final ClientSessionService clientSessionService;
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthCodeHandler.class);
-
-    private interface ResponseHeaders {
-        String LOCATION = "Location";
-    }
 
     public AuthCodeHandler(
             SessionService sessionService,
@@ -128,7 +125,10 @@ public class AuthCodeHandler
         sessionService.save(session.setState(AUTHENTICATED));
         return new APIGatewayProxyResponseEvent()
                 .withStatusCode(302)
-                .withHeaders(Map.of("Location", authenticationResponse.toURI().toString()));
+                .withHeaders(
+                        Map.of(
+                                ResponseHeaders.LOCATION,
+                                authenticationResponse.toURI().toString()));
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(
