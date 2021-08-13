@@ -3,7 +3,10 @@ package uk.gov.di.services;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.ResponseMode;
 import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import org.slf4j.Logger;
@@ -83,6 +86,21 @@ public class AuthorizationService {
             return Optional.of(OAuth2Error.INVALID_SCOPE);
         }
         return Optional.empty();
+    }
+
+    public AuthenticationErrorResponse generateAuthenticationErrorResponse(
+            AuthenticationRequest authRequest, ErrorObject errorObject) {
+
+        return generateAuthenticationErrorResponse(
+                authRequest.getRedirectionURI(),
+                authRequest.getState(),
+                authRequest.getResponseMode(),
+                errorObject);
+    }
+
+    public AuthenticationErrorResponse generateAuthenticationErrorResponse(
+            URI redirectUri, State state, ResponseMode responseMode, ErrorObject errorObject) {
+        return new AuthenticationErrorResponse(redirectUri, errorObject, state, responseMode);
     }
 
     private boolean areScopesValid(List<String> scopes) {

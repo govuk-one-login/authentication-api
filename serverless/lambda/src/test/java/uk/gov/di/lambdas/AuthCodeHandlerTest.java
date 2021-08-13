@@ -4,10 +4,13 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.ResponseMode;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -39,6 +42,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -139,8 +143,14 @@ class AuthCodeHandlerTest {
 
     @Test
     public void shouldGenerateErrorResponseWhenClientIsNotFound() throws ClientNotFoundException {
-        ClientID clientID = new ClientID();
         State state = new State();
+        AuthenticationErrorResponse authenticationErrorResponse =
+                new AuthenticationErrorResponse(
+                        REDIRECT_URI, OAuth2Error.INVALID_CLIENT, null, null);
+        when(authorizationService.generateAuthenticationErrorResponse(
+                        any(AuthenticationRequest.class), eq(OAuth2Error.INVALID_CLIENT)))
+                .thenReturn(authenticationErrorResponse);
+        ClientID clientID = new ClientID();
         generateValidSessionAndAuthRequest(clientID, state);
         doThrow(ClientNotFoundException.class)
                 .when(authorizationService)
@@ -152,13 +162,21 @@ class AuthCodeHandlerTest {
 
         assertThat(response, hasStatus(302));
         assertEquals(
-                "http://localhost/redirect?error=invalid_client&error_description=Client+authentication+failed&state="
-                        + state,
+                "http://localhost/redirect?error=invalid_client&error_description=Client+authentication+failed",
                 response.getHeaders().get(ResponseHeaders.LOCATION));
     }
 
     @Test
     public void shouldGenerateErrorResponseIfUnableToParseAuthRequest() {
+        AuthenticationErrorResponse authenticationErrorResponse =
+                new AuthenticationErrorResponse(
+                        REDIRECT_URI, OAuth2Error.INVALID_REQUEST, null, null);
+        when(authorizationService.generateAuthenticationErrorResponse(
+                        eq(REDIRECT_URI),
+                        isNull(),
+                        any(ResponseMode.class),
+                        eq(OAuth2Error.INVALID_REQUEST)))
+                .thenReturn(authenticationErrorResponse);
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put("redirect_uri", singletonList("http://localhost/redirect"));
         customParams.put("client_id", singletonList(new ClientID().toString()));
@@ -169,7 +187,7 @@ class AuthCodeHandlerTest {
 
         assertThat(response, hasStatus(302));
         assertEquals(
-                "http://localhost/redirect?error=invalid_request&error_description=Invalid+request%3A+Missing+response_type+parameter",
+                "http://localhost/redirect?error=invalid_request&error_description=Invalid+request",
                 response.getHeaders().get(ResponseHeaders.LOCATION));
     }
 

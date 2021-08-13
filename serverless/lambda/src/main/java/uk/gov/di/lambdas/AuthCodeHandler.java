@@ -5,11 +5,8 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
-import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
-import com.nimbusds.oauth2.sdk.ResponseMode;
-import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
@@ -28,7 +25,6 @@ import uk.gov.di.services.AuthorizationService;
 import uk.gov.di.services.ClientSessionService;
 import uk.gov.di.services.SessionService;
 
-import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -103,8 +99,16 @@ public class AuthCodeHandler
                 throw new RuntimeException(
                         "Redirect URI or Client ID is missing from auth request", e);
             }
-            return generateErrorResponse(
-                    e.getRedirectionURI(), e.getState(), e.getResponseMode(), e.getErrorObject());
+            AuthenticationErrorResponse errorResponse =
+                    authorizationService.generateAuthenticationErrorResponse(
+                            e.getRedirectionURI(),
+                            e.getState(),
+                            e.getResponseMode(),
+                            e.getErrorObject());
+            return new APIGatewayProxyResponseEvent()
+                    .withStatusCode(302)
+                    .withHeaders(
+                            Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()));
         }
         try {
             if (!authorizationService.isClientRedirectUriValid(
@@ -113,7 +117,13 @@ public class AuthCodeHandler
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1016);
             }
         } catch (ClientNotFoundException e) {
-            return generateErrorResponse(authenticationRequest, OAuth2Error.INVALID_CLIENT);
+            AuthenticationErrorResponse errorResponse =
+                    authorizationService.generateAuthenticationErrorResponse(
+                            authenticationRequest, OAuth2Error.INVALID_CLIENT);
+            return new APIGatewayProxyResponseEvent()
+                    .withStatusCode(302)
+                    .withHeaders(
+                            Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()));
         }
 
         AuthorizationCode authCode =
@@ -129,28 +139,5 @@ public class AuthCodeHandler
                         Map.of(
                                 ResponseHeaders.LOCATION,
                                 authenticationResponse.toURI().toString()));
-    }
-
-    private APIGatewayProxyResponseEvent generateErrorResponse(
-            AuthenticationRequest authRequest, ErrorObject errorObject) {
-
-        return generateErrorResponse(
-                authRequest.getRedirectionURI(),
-                authRequest.getState(),
-                authRequest.getResponseMode(),
-                errorObject);
-    }
-
-    private APIGatewayProxyResponseEvent generateErrorResponse(
-            URI redirectUri, State state, ResponseMode responseMode, ErrorObject errorObject) {
-        LOGGER.error(
-                "Returning error response: {} {}",
-                errorObject.getCode(),
-                errorObject.getDescription());
-        AuthenticationErrorResponse error =
-                new AuthenticationErrorResponse(redirectUri, errorObject, state, responseMode);
-        return new APIGatewayProxyResponseEvent()
-                .withStatusCode(302)
-                .withHeaders(Map.of(ResponseHeaders.LOCATION, error.toURI().toString()));
     }
 }
