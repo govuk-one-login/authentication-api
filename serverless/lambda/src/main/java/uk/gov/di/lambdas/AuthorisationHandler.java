@@ -79,8 +79,9 @@ public class AuthorisationHandler
         } catch (ParseException e) {
             LOGGER.error("Authentication request could not be parsed", e);
             if (e.getRedirectionURI() == null) {
-                LOGGER.error("Redirect URI is missing from request");
-                throw new RuntimeException("Redirect URI is missing");
+                LOGGER.error("Redirect URI or Client ID is missing from auth request");
+                throw new RuntimeException(
+                        "Redirect URI or ClientID is missing from auth request", e);
             }
             return generateErrorResponse(
                     e.getRedirectionURI(), e.getState(), e.getResponseMode(), e.getErrorObject());
