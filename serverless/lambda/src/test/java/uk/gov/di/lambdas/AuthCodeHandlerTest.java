@@ -4,10 +4,13 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.ResponseMode;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -16,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.ErrorResponse;
+import uk.gov.di.entity.ResponseHeaders;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.SessionState;
 import uk.gov.di.exceptions.ClientNotFoundException;
@@ -26,15 +30,19 @@ import uk.gov.di.services.SessionService;
 
 import java.net.URI;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
+import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -78,7 +86,8 @@ class AuthCodeHandlerTest {
     public void shouldGenerateSuccessfulAuthResponse() throws ClientNotFoundException {
         ClientID clientID = new ClientID();
         AuthorizationCode authorizationCode = new AuthorizationCode();
-        AuthenticationRequest authRequest = generateValidSessionAndAuthRequest(clientID);
+        AuthenticationRequest authRequest =
+                generateValidSessionAndAuthRequest(clientID, new State());
         AuthenticationSuccessResponse authSuccessResponse =
                 new AuthenticationSuccessResponse(
                         authRequest.getRedirectionURI(),
@@ -103,7 +112,7 @@ class AuthCodeHandlerTest {
 
         assertThat(response, hasStatus(302));
         assertThat(
-                response.getHeaders().get("Location"),
+                response.getHeaders().get(ResponseHeaders.LOCATION),
                 equalTo(authSuccessResponse.toURI().toString()));
     }
 
@@ -121,7 +130,7 @@ class AuthCodeHandlerTest {
     public void shouldGenerateErrorResponseWhenRedirectUriIsInvalid()
             throws ClientNotFoundException {
         ClientID clientID = new ClientID();
-        generateValidSessionAndAuthRequest(clientID);
+        generateValidSessionAndAuthRequest(clientID, new State());
         when(authorizationService.isClientRedirectUriValid(eq(new ClientID()), eq(REDIRECT_URI)))
                 .thenReturn(false);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -134,8 +143,15 @@ class AuthCodeHandlerTest {
 
     @Test
     public void shouldGenerateErrorResponseWhenClientIsNotFound() throws ClientNotFoundException {
+        State state = new State();
+        AuthenticationErrorResponse authenticationErrorResponse =
+                new AuthenticationErrorResponse(
+                        REDIRECT_URI, OAuth2Error.INVALID_CLIENT, null, null);
+        when(authorizationService.generateAuthenticationErrorResponse(
+                        any(AuthenticationRequest.class), eq(OAuth2Error.INVALID_CLIENT)))
+                .thenReturn(authenticationErrorResponse);
         ClientID clientID = new ClientID();
-        generateValidSessionAndAuthRequest(clientID);
+        generateValidSessionAndAuthRequest(clientID, state);
         doThrow(ClientNotFoundException.class)
                 .when(authorizationService)
                 .isClientRedirectUriValid(eq(clientID), eq(REDIRECT_URI));
@@ -144,19 +160,35 @@ class AuthCodeHandlerTest {
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
-        assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1015));
+        assertThat(response, hasStatus(302));
+        assertEquals(
+                "http://localhost/redirect?error=invalid_client&error_description=Client+authentication+failed",
+                response.getHeaders().get(ResponseHeaders.LOCATION));
     }
 
     @Test
     public void shouldGenerateErrorResponseIfUnableToParseAuthRequest() {
-        generateValidSession(Map.of("rubbish", List.of("more-rubbish")));
+        AuthenticationErrorResponse authenticationErrorResponse =
+                new AuthenticationErrorResponse(
+                        REDIRECT_URI, OAuth2Error.INVALID_REQUEST, null, null);
+        when(authorizationService.generateAuthenticationErrorResponse(
+                        eq(REDIRECT_URI),
+                        isNull(),
+                        any(ResponseMode.class),
+                        eq(OAuth2Error.INVALID_REQUEST)))
+                .thenReturn(authenticationErrorResponse);
+        Map<String, List<String>> customParams = new HashMap<>();
+        customParams.put("redirect_uri", singletonList("http://localhost/redirect"));
+        customParams.put("client_id", singletonList(new ClientID().toString()));
+        generateValidSession(customParams);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
-        assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1001));
+        assertThat(response, hasStatus(302));
+        assertEquals(
+                "http://localhost/redirect?error=invalid_request&error_description=Invalid+request",
+                response.getHeaders().get(ResponseHeaders.LOCATION));
     }
 
     @Test
@@ -165,7 +197,8 @@ class AuthCodeHandlerTest {
 
         ClientID clientID = new ClientID();
         AuthorizationCode authorizationCode = new AuthorizationCode();
-        AuthenticationRequest authRequest = generateValidSessionAndAuthRequest(clientID);
+        AuthenticationRequest authRequest =
+                generateValidSessionAndAuthRequest(clientID, new State());
         AuthenticationSuccessResponse authSuccessResponse =
                 new AuthenticationSuccessResponse(
                         authRequest.getRedirectionURI(),
@@ -192,9 +225,9 @@ class AuthCodeHandlerTest {
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1017));
     }
 
-    private AuthenticationRequest generateValidSessionAndAuthRequest(ClientID clientID) {
+    private AuthenticationRequest generateValidSessionAndAuthRequest(
+            ClientID clientID, State state) {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        State state = new State();
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         AuthenticationRequest authRequest =

@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.ClientSession;
+import uk.gov.di.entity.ResponseHeaders;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.SessionState;
 import uk.gov.di.services.AuthorizationService;
@@ -43,11 +44,6 @@ public class AuthorisationHandler
     private final ConfigurationService configurationService;
     private final ClientSessionService clientSessionService;
     private final AuthorizationService authorizationService;
-
-    private interface ResponseHeaders {
-        String LOCATION = "Location";
-        String SET_COOKIE = "Set-Cookie";
-    }
 
     public AuthorisationHandler(
             ConfigurationService configurationService,
@@ -79,8 +75,9 @@ public class AuthorisationHandler
         } catch (ParseException e) {
             LOGGER.error("Authentication request could not be parsed", e);
             if (e.getRedirectionURI() == null) {
-                LOGGER.error("Redirect URI is missing from request");
-                throw new RuntimeException("Redirect URI is missing");
+                LOGGER.error("Redirect URI or Client ID is missing from auth request");
+                throw new RuntimeException(
+                        "Redirect URI or ClientID is missing from auth request", e);
             }
             return generateErrorResponse(
                     e.getRedirectionURI(), e.getState(), e.getResponseMode(), e.getErrorObject());
