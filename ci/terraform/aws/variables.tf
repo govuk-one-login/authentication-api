@@ -70,6 +70,12 @@ variable "external_redis_password" {
   default = null
 }
 
+variable "localstack_endpoint" {
+  type    = string
+  default = "http://localhost:45678/"
+}
+
+
 variable "redis_use_tls" {
   type    = string
   default = "true"

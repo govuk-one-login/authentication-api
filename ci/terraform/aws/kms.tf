@@ -17,10 +17,7 @@ data "aws_iam_policy_document" "kms_policy_document" {
     effect = "Allow"
 
     actions = [
-      "kms:ListKeys",
-      "kms:ListAliases",
       "kms:Sign",
-      "kms:Verify",
       "kms:GetPublicKey",
     ]
     resources = [

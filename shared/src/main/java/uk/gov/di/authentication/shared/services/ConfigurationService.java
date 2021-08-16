@@ -81,12 +81,20 @@ public class ConfigurationService {
         return Optional.ofNullable(System.getenv("SQS_ENDPOINT"));
     }
 
+    public Optional<String> getLocalstackEndpointUri() {
+        return Optional.ofNullable(System.getenv("LOCALSTACK_ENDPOINT"));
+    }
+
     public Optional<String> getDynamoEndpointUri() {
         return Optional.ofNullable(System.getenv("DYNAMO_ENDPOINT"));
     }
 
     public String getDomainName() {
         return System.getenv("DOMAIN_NAME");
+    }
+
+    public String getTokenSigningKeyId() {
+        return System.getenv("TOKEN_SIGNING_KEY_ID");
     }
 
     public int getCodeMaxRetries() {

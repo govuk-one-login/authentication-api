@@ -2,6 +2,9 @@ package uk.gov.di.services;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
+import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
@@ -12,6 +15,7 @@ import com.nimbusds.oauth2.sdk.util.URLUtils;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.helpers.TokenGeneratorHelper;
 
 import java.net.URI;
 import java.security.KeyPair;
@@ -25,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -36,10 +41,11 @@ import static org.mockito.Mockito.when;
 public class TokenServiceTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private TokenGeneratorService tokenGeneratorService = mock(TokenGeneratorService.class);
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
     private final TokenService tokenService =
-            new TokenService(configurationService, redisConnectionService);
+            new TokenService(configurationService, redisConnectionService, tokenGeneratorService);
     private static final Subject SUBJECT = new Subject("some-subject");
     private static final List<String> SCOPES = List.of("openid", "email", "phone");
     private static final String CLIENT_ID = "client-id";
@@ -49,11 +55,14 @@ public class TokenServiceTest {
     private static final String BASE_URL = "http://example.com";
 
     @Test
-    public void shouldSuccessfullyGenerateTokenResponse() throws ParseException {
+    public void shouldSuccessfullyGenerateTokenResponse() throws ParseException, JOSEException {
         Optional<String> baseUrl = Optional.of(BASE_URL);
         when(configurationService.getBaseURL()).thenReturn(baseUrl);
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
-
+        when(tokenGeneratorService.generateSignedIdToken(CLIENT_ID, SUBJECT, BASE_URL))
+                .thenReturn(createSignedIdToken());
+        when(tokenGeneratorService.generateSignedAccessToken(CLIENT_ID, BASE_URL, SCOPES))
+                .thenReturn(createSignedAccessToken());
         OIDCTokenResponse tokenResponse =
                 tokenService.generateTokenResponse(CLIENT_ID, SUBJECT, SCOPES);
 
@@ -203,6 +212,18 @@ public class TokenServiceTest {
         Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
         privateKeyParams.putAll(privateKeyParams);
         return URLUtils.serializeParameters(privateKeyParams);
+    }
+
+    private SignedJWT createSignedIdToken() throws JOSEException {
+        RSAKey signingKey =
+                new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
+        return TokenGeneratorHelper.generateIDToken(CLIENT_ID, SUBJECT, BASE_URL, signingKey);
+    }
+
+    private SignedJWT createSignedAccessToken() throws JOSEException {
+        RSAKey signingKey =
+                new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
+        return TokenGeneratorHelper.generateAccessToken(CLIENT_ID, BASE_URL, SCOPES, signingKey);
     }
 
     private KeyPair generateRsaKeyPair() {

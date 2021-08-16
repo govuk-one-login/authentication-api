@@ -17,7 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.UserProfile;
-import uk.gov.di.helpers.TokenGenerator;
+import uk.gov.di.helpers.TokenGeneratorHelper;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.TokenService;
 
@@ -66,7 +66,8 @@ public class UserInfoHandlerTest {
         scopes.add("email");
         scopes.add("phone");
         SignedJWT signedAccessToken =
-                TokenGenerator.generateAccessToken("client-id", "issuer-url", scopes, signingKey);
+                TokenGeneratorHelper.generateAccessToken(
+                        "client-id", "issuer-url", scopes, signingKey);
         AccessToken accessToken = new BearerAccessToken(signedAccessToken.serialize());
         UserProfile userProfile =
                 new UserProfile()
