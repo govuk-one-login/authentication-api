@@ -25,3 +25,11 @@ resource "aws_lambda_function" "endpoint_lambda" {
     environment = var.environment
   }
 }
+
+resource "aws_cloudwatch_log_subscription_filter" "log_subscription" {
+  count           = var.logging_endpoint_enabled ? 1 : 0
+  name            = "${var.endpoint_name}-log-subscription"
+  log_group_name  = "/aws/lambda/${aws_lambda_function.endpoint_lambda.function_name}"
+  filter_pattern  = ""
+  destination_arn = var.logging_endpoint_arn
+}

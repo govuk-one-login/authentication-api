@@ -23,6 +23,8 @@ module "send_notification" {
   security_group_id         = aws_vpc.authentication.default_security_group_id
   subnet_id                 = aws_subnet.authentication.*.id
   lambda_role_arn           = aws_iam_role.sqs_lambda_iam_role.arn
+  logging_endpoint_enabled  = var.logging_endpoint_enabled
+  logging_endpoint_arn      = var.logging_endpoint_arn
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_api,

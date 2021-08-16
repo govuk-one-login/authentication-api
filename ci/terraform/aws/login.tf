@@ -24,4 +24,6 @@ module "login" {
   subnet_id                 = aws_subnet.authentication.*.id
   environment               = var.environment
   lambda_role_arn           = aws_iam_role.lambda_iam_role.arn
+  logging_endpoint_enabled  = var.logging_endpoint_enabled
+  logging_endpoint_arn      = var.logging_endpoint_arn
 }
