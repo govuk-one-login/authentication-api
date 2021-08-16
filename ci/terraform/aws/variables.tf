@@ -60,6 +60,11 @@ variable "external_redis_host" {
   default = "redis"
 }
 
+variable "terms_and_conditions" {
+  type    = string
+  default = "1.0"
+}
+
 variable "external_redis_port" {
   type    = number
   default = 6379
