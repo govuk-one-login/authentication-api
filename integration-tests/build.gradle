@@ -15,7 +15,7 @@ def dependencyVersions = [
 
 dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.2',
-            'com.nimbusds:nimbus-jose-jwt:9.11.2',
+            'com.nimbusds:nimbus-jose-jwt:9.12.1',
             'com.nimbusds:oauth2-oidc-sdk:9.10.2',
             "org.glassfish.jersey.core:jersey-client:${dependencyVersions.glassfish_version}",
             "org.glassfish.jersey.inject:jersey-hk2:${dependencyVersions.glassfish_version}",
