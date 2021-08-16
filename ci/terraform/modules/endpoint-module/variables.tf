@@ -71,3 +71,15 @@ variable "subnet_id" {
 variable "lambda_role_arn" {
   type = string
 }
+
+variable "logging_endpoint_enabled" {
+  type        = bool
+  default     = false
+  description = "Whether the Lambda should ship its logs to the `logging_endpoint_arn`"
+}
+
+variable "logging_endpoint_arn" {
+  type        = string
+  default     = ""
+  description = "Amazon Resource Name (ARN) for the endpoint to ship logs to"
+}
