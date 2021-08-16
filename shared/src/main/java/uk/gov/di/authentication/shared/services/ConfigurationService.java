@@ -101,4 +101,8 @@ public class ConfigurationService {
         return Optional.ofNullable(System.getenv("SESSION_COOKIE_ATTRIBUTES"))
                 .orElse("Secure; HttpOnly;");
     }
+
+    public String getTermsAndConditionsVersion() {
+        return System.getenv("TERMS_CONDITIONS_VERSION");
+    }
 }

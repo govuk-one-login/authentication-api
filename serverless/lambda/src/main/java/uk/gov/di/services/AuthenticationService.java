@@ -29,4 +29,6 @@ public interface AuthenticationService {
     Optional<String> getPhoneNumber(String email);
 
     UserProfile getUserProfileFromSubject(String subject);
+
+    void updateTermsAndConditions(String email, String version);
 }

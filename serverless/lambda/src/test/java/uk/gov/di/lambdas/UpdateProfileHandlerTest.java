@@ -13,6 +13,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
@@ -39,8 +40,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.entity.UpdateProfileType.ADD_PHONE_NUMBER;
-import static uk.gov.di.entity.UpdateProfileType.CAPTURE_CONSENT;
+import static uk.gov.di.entity.UpdateProfileType.*;
 import static uk.gov.di.helpers.CookieHelper.buildCookieString;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -49,6 +49,7 @@ class UpdateProfileHandlerTest {
 
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String PHONE_NUMBER = "01234567891";
+    private static final boolean UPDATED_TERMS_AND_CONDITIONS_VALUE = true;
     private static final boolean CONSENT_VALUE = true;
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "client-session-id";
@@ -60,9 +61,12 @@ class UpdateProfileHandlerTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuthorizationService authorizationService = mock(AuthorizationService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuthorisationCodeService authorisationCodeService =
             mock(AuthorisationCodeService.class);
 
+    private final String TERMS_AND_CONDITIONS_VERSION =
+            configurationService.getTermsAndConditionsVersion();
     private final Session session =
             new Session(SESSION_ID)
                     .setEmailAddress(TEST_EMAIL_ADDRESS)
@@ -72,7 +76,10 @@ class UpdateProfileHandlerTest {
     public void setUp() {
         handler =
                 new UpdateProfileHandler(
-                        authenticationService, sessionService, clientSessionService);
+                        authenticationService,
+                        sessionService,
+                        clientSessionService,
+                        configurationService);
     }
 
     @Test
@@ -93,9 +100,29 @@ class UpdateProfileHandlerTest {
     }
 
     @Test
-    public void shouldReturn200WhenUpdatingProfileWithConsent() throws ClientNotFoundException {
-        usingValidSession();
+    public void shouldReturn200WhenUpdatingTermsAndConditions() {
         when(authenticationService.userExists(eq(TEST_EMAIL_ADDRESS))).thenReturn(false);
+        usingValidSession();
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
+                        TEST_EMAIL_ADDRESS,
+                        UPDATE_TERMS_CONDS,
+                        UPDATED_TERMS_AND_CONDITIONS_VALUE));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        verify(authenticationService)
+                .updateTermsAndConditions(eq(TEST_EMAIL_ADDRESS), eq(TERMS_AND_CONDITIONS_VERSION));
+
+        assertThat(result, hasStatus(200));
+    }
+
+    @Test
+    public void shouldReturn200WhenUpdatingProfileWithConsent() throws ClientNotFoundException {
+        when(authenticationService.userExists(eq(TEST_EMAIL_ADDRESS))).thenReturn(false);
+        usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         ClientID clientID = new ClientID();
         AuthorizationCode authorizationCode = new AuthorizationCode();

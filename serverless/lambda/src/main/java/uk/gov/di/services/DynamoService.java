@@ -10,10 +10,12 @@ import com.amazonaws.services.dynamodbv2.datamodeling.QueryResultPage;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.util.Base64;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import uk.gov.di.entity.TermsAndConditions;
 import uk.gov.di.entity.UserCredentials;
 import uk.gov.di.entity.UserProfile;
 import uk.gov.di.helpers.Argon2Helper;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -110,6 +112,17 @@ public class DynamoService implements AuthenticationService {
     public void updateConsent(String email, Map<String, List<String>> clientConsents) {
         userProfileMapper.save(
                 userProfileMapper.load(UserProfile.class, email).setClientConsents(clientConsents));
+    }
+
+    @Override
+    public void updateTermsAndConditions(String email, String version) {
+        String epochTime = String.valueOf(Instant.now().getEpochSecond());
+        TermsAndConditions termsAndConditions = new TermsAndConditions(version, epochTime);
+
+        userProfileMapper.save(
+                userProfileMapper
+                        .load(UserProfile.class, email)
+                        .setTermsAndConditions(termsAndConditions));
     }
 
     @Override

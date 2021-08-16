@@ -16,13 +16,18 @@ public class ClientInfoResponse {
     @JsonProperty("scopes")
     private List<String> scopes = new ArrayList<>();
 
+    @JsonProperty("redirectUri")
+    private String redirectUri;
+
     public ClientInfoResponse(
             @JsonProperty(required = true, value = "client_id") String clientId,
             @JsonProperty(required = true, value = "client_name") String clientName,
-            @JsonProperty(required = true, value = "scopes") List<String> scopes) {
+            @JsonProperty(required = true, value = "scopes") List<String> scopes,
+            @JsonProperty(required = false, value = "redirectUri") String redirectUri) {
         this.clientId = clientId;
         this.clientName = clientName;
         this.scopes = scopes;
+        this.redirectUri = redirectUri;
     }
 
     public String getClientId() {
@@ -35,5 +40,9 @@ public class ClientInfoResponse {
 
     public List<String> getScopes() {
         return scopes;
+    }
+
+    public String getRedirectUri() {
+        return redirectUri;
     }
 }
