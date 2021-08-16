@@ -95,3 +95,9 @@ variable "logging_endpoint_arn" {
   default     = ""
   description = "Amazon Resource Name (ARN) for the endpoint to ship logs to"
 }
+
+variable "stub_rp_clients" {
+  default     = []
+  type        = list(object({client_name: string, callback_urls: list(string), logout_urls: list(string)}))
+  description = "The details of RP clients to provision in the Client table"
+}
