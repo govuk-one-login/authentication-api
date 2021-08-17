@@ -66,7 +66,7 @@ public class WellknownHandler
                             "email_verified",
                             "phone_number",
                             "phone_number_verified"));
-            providerMetadata.setIDTokenJWSAlgs(List.of(JWSAlgorithm.RS256));
+            providerMetadata.setIDTokenJWSAlgs(List.of(JWSAlgorithm.ES256));
             providerMetadata.setTokenEndpointJWSAlgs(
                     List.of(
                             JWSAlgorithm.RS256,
