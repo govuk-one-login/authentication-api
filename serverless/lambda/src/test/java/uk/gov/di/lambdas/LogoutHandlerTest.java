@@ -17,7 +17,7 @@ import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.ResponseHeaders;
 import uk.gov.di.entity.Session;
-import uk.gov.di.helpers.TokenGenerator;
+import uk.gov.di.helpers.TokenGeneratorHelper;
 import uk.gov.di.services.ClientSessionService;
 import uk.gov.di.services.DynamoClientService;
 import uk.gov.di.services.SessionService;
@@ -73,7 +73,7 @@ class LogoutHandlerTest {
         RSAKey signingKey =
                 new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
         signedIDToken =
-                TokenGenerator.generateIDToken(
+                TokenGeneratorHelper.generateIDToken(
                         "client-id", new Subject(), "http://localhost-rp", signingKey);
     }
 
@@ -196,7 +196,7 @@ class LogoutHandlerTest {
         RSAKey signingKey =
                 new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
         SignedJWT signedJWT =
-                TokenGenerator.generateIDToken(
+                TokenGeneratorHelper.generateIDToken(
                         "invalid-client-id", new Subject(), "http://localhost-rp", signingKey);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));

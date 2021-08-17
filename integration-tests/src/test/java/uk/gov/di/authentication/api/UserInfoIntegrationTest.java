@@ -15,7 +15,7 @@ import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
-import uk.gov.di.helpers.TokenGenerator;
+import uk.gov.di.authentication.helpers.TokenGeneratorHelper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,7 +43,7 @@ public class UserInfoIntegrationTest extends IntegrationTestEndpoints {
         scopes.add("phone");
         scopes.add("oidc");
         SignedJWT signedAccessToken =
-                TokenGenerator.generateAccessToken(
+                TokenGeneratorHelper.generateAccessToken(
                         "client-id-one", "issuer-id", scopes, signingKey);
         AccessToken accessToken = new BearerAccessToken(signedAccessToken.serialize());
         Subject subject = new Subject();

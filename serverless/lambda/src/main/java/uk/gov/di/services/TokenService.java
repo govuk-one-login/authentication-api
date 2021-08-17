@@ -26,7 +26,6 @@ import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.helpers.TokenGenerator;
 
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
@@ -47,10 +46,13 @@ public class TokenService {
     private final RSAKey signingKey;
     private final ConfigurationService configService;
     private final RedisConnectionService redisConnectionService;
+    private final TokenGeneratorService tokenGeneratorService;
     private static final Logger LOG = LoggerFactory.getLogger(TokenService.class);
 
     public TokenService(
-            ConfigurationService configService, RedisConnectionService redisConnectionService) {
+            ConfigurationService configService,
+            RedisConnectionService redisConnectionService,
+            TokenGeneratorService tokenGeneratorService) {
         this.configService = configService;
         this.redisConnectionService = redisConnectionService;
         try {
@@ -58,6 +60,7 @@ public class TokenService {
         } catch (JOSEException e) {
             throw new RuntimeException(e);
         }
+        this.tokenGeneratorService = tokenGeneratorService;
     }
 
     public OIDCTokenResponse generateTokenResponse(
@@ -68,15 +71,15 @@ public class TokenService {
     }
 
     private SignedJWT generateIDToken(String clientId, Subject subject) {
-        return TokenGenerator.generateIDToken(
-                clientId, subject, configService.getBaseURL().get(), signingKey);
+        return tokenGeneratorService.generateSignedIdToken(
+                clientId, subject, configService.getBaseURL().get());
     }
 
     private AccessToken generateAndStoreAccessToken(
             String clientId, Subject subject, List<String> scopes) {
         SignedJWT signedJWT =
-                TokenGenerator.generateAccessToken(
-                        clientId, configService.getBaseURL().get(), scopes, signingKey);
+                tokenGeneratorService.generateSignedAccessToken(
+                        clientId, configService.getBaseURL().get(), scopes);
         AccessToken accessToken = new BearerAccessToken(signedJWT.serialize());
 
         redisConnectionService.saveWithExpiry(
@@ -91,7 +94,7 @@ public class TokenService {
     }
 
     public JWK getSigningKey() {
-        return signingKey;
+        return tokenGeneratorService.getPublicKey();
     }
 
     public Optional<ErrorObject> validateTokenRequestParams(String tokenRequestBody) {

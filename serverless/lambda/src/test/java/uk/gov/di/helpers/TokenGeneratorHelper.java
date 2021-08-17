@@ -19,7 +19,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
-public class TokenGenerator {
+public class TokenGeneratorHelper {
 
     public static SignedJWT generateIDToken(
             String clientId, Subject subject, String issuerUrl, RSAKey signingKey) {

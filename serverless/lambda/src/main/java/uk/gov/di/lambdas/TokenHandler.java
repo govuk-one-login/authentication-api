@@ -23,6 +23,7 @@ import uk.gov.di.services.ClientSessionService;
 import uk.gov.di.services.DynamoClientService;
 import uk.gov.di.services.DynamoService;
 import uk.gov.di.services.RedisConnectionService;
+import uk.gov.di.services.TokenGeneratorService;
 import uk.gov.di.services.TokenService;
 
 import java.util.Map;
@@ -69,7 +70,9 @@ public class TokenHandler
                         configurationService.getDynamoEndpointUri());
         tokenService =
                 new TokenService(
-                        configurationService, new RedisConnectionService(configurationService));
+                        configurationService,
+                        new RedisConnectionService(configurationService),
+                        new TokenGeneratorService(configurationService));
         this.authenticationService =
                 new DynamoService(
                         configurationService.getAwsRegion(),

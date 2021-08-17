@@ -20,7 +20,7 @@ import org.glassfish.jersey.client.ClientProperties;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
-import uk.gov.di.helpers.TokenGenerator;
+import uk.gov.di.authentication.helpers.TokenGeneratorHelper;
 
 import java.io.IOException;
 import java.net.HttpCookie;
@@ -43,7 +43,7 @@ public class LogoutIntegrationTest extends IntegrationTestEndpoints {
         RSAKey signingKey =
                 new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
         SignedJWT signedJWT =
-                TokenGenerator.generateIDToken(
+                TokenGeneratorHelper.generateIDToken(
                         "client-id", new Subject(), "http://localhost/issuer", signingKey);
         RedisHelper.createSession(sessionId);
         RedisHelper.addAuthRequestToSession(
