@@ -26,7 +26,7 @@ dependencies {
             "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${dependencyVersions.jackson_version}",
             "io.lettuce:lettuce-core:6.1.4.RELEASE",
             "uk.gov.service.notify:notifications-java-client:3.17.2-RELEASE",
-            "org.bouncycastle:bcprov-jdk15on:1.69",
+            "org.bouncycastle:bcpkix-jdk15on:1.68",
             "com.googlecode.libphonenumber:libphonenumber:8.12.28",
             project(":shared")
 

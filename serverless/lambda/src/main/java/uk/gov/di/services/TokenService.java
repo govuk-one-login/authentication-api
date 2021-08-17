@@ -94,7 +94,7 @@ public class TokenService {
     }
 
     public JWK getSigningKey() {
-        return signingKey;
+        return tokenGeneratorService.getPublicKey();
     }
 
     public Optional<ErrorObject> validateTokenRequestParams(String tokenRequestBody) {

@@ -6,7 +6,7 @@ resource "aws_kms_key" "id_token_signing_key" {
 }
 
 resource "aws_kms_alias" "id_token_signing_key_alias" {
-  name          = "alias/id-token-signing-key-alias"
+  name          = "alias/${var.environment}-id-token-signing-key-alias"
   target_key_id = aws_kms_key.id_token_signing_key.key_id
 }
 

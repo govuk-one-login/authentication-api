@@ -3,12 +3,17 @@ package uk.gov.di.services;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.kms.AWSKMS;
 import com.amazonaws.services.kms.AWSKMSClientBuilder;
+import com.amazonaws.services.kms.model.GetPublicKeyRequest;
+import com.amazonaws.services.kms.model.GetPublicKeyResult;
 import com.amazonaws.services.kms.model.MessageType;
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;
 import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
@@ -16,11 +21,18 @@ import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.Issuer;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.openssl.PEMException;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.nio.ByteBuffer;
+import java.security.Provider;
+import java.security.PublicKey;
+import java.security.interfaces.ECPublicKey;
 import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -112,6 +124,28 @@ public class TokenGeneratorService {
             return SignedJWT.parse(message + "." + signature);
         } catch (ParseException e) {
             LOGGER.error("Exception thrown when trying to parse SignedJWT or JWTClaimSet", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public JWK getPublicKey() {
+        LOGGER.info("Retrieving PublicKey from KMS");
+        Provider bcProvider = new BouncyCastleProvider();
+        GetPublicKeyRequest getPublicKeyRequest = new GetPublicKeyRequest();
+        getPublicKeyRequest.setKeyId(keyId);
+        GetPublicKeyResult publicKeyResult = kmsClient.getPublicKey(getPublicKeyRequest);
+        try {
+            SubjectPublicKeyInfo subjectKeyInfo =
+                    SubjectPublicKeyInfo.getInstance(publicKeyResult.getPublicKey().array());
+            PublicKey publicKey =
+                    new JcaPEMKeyConverter().setProvider(bcProvider).getPublicKey(subjectKeyInfo);
+            ECKey jwk = new ECKey.Builder(Curve.P_256, (ECPublicKey) publicKey).build();
+            return JWK.parse(jwk.toJSONObject());
+        } catch (PEMException e) {
+            LOGGER.error("Error getting the PublicKey using the JcaPEMKeyConverter", e);
+            throw new RuntimeException();
+        } catch (ParseException e) {
+            LOGGER.error("Error parsing the ECKey to JWK", e);
             throw new RuntimeException(e);
         }
     }
