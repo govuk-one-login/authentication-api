@@ -112,3 +112,7 @@ variable "stub_rp_clients" {
   type        = list(object({ client_name : string, callback_urls : list(string), logout_urls : list(string) }))
   description = "The details of RP clients to provision in the Client table"
 }
+
+variable "aws_region" {
+  default = "eu-west-2"
+}
