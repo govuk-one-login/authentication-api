@@ -24,6 +24,8 @@ module "jwks" {
   logging_endpoint_enabled  = var.logging_endpoint_enabled
   logging_endpoint_arn      = var.logging_endpoint_arn
 
+  use_localstack = var.use_localstack
+
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_api,
     aws_api_gateway_resource.connect_resource,

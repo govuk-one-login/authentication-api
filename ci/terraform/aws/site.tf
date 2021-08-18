@@ -3,15 +3,15 @@ terraform {
 
   required_providers {
     aws = {
-      source = "hashicorp/aws"
+      source  = "hashicorp/aws"
       version = ">= 3.45.0"
     }
     time = {
-      source = "hashicorp/time"
+      source  = "hashicorp/time"
       version = ">= 0.7.1"
     }
     random = {
-      source = "hashicorp/random"
+      source  = "hashicorp/random"
       version = ">= 3.1.0"
     }
   }
@@ -27,7 +27,7 @@ provider "aws" {
     role_arn = var.deployer_role_arn
   }
 
-  insecure    = var.use_localstack
+  insecure = var.use_localstack
 
   s3_force_path_style         = var.use_localstack
   skip_credentials_validation = var.use_localstack

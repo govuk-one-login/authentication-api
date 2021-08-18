@@ -1,15 +1,15 @@
 module "update" {
   source = "../modules/endpoint-module"
 
-  path_part       = "{clientId}"
-  endpoint_name   = "update-client-info"
-  endpoint_method = "POST"
-  method_request_parameters =  {"method.request.path.clientId" = true}
-  integration_request_parameters = {"integration.request.path.clientId" = "method.request.path.clientId"}
+  path_part                      = "{clientId}"
+  endpoint_name                  = "update-client-info"
+  endpoint_method                = "POST"
+  method_request_parameters      = { "method.request.path.clientId" = true }
+  integration_request_parameters = { "integration.request.path.clientId" = "method.request.path.clientId" }
 
   handler_environment_variables = {
-    ENVIRONMENT = var.environment
-    BASE_URL = local.api_base_url
+    ENVIRONMENT     = var.environment
+    BASE_URL        = local.api_base_url
     DYNAMO_ENDPOINT = var.use_localstack ? var.lambda_dynamo_endpoint : null
   }
   handler_function_name = "uk.gov.di.lambdas.UpdateClientConfigHandler::handleRequest"
@@ -25,6 +25,8 @@ module "update" {
   environment               = var.environment
   logging_endpoint_enabled  = var.logging_endpoint_enabled
   logging_endpoint_arn      = var.logging_endpoint_arn
+
+  use_localstack = var.use_localstack
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_api,

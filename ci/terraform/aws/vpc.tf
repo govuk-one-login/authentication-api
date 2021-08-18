@@ -89,7 +89,7 @@ resource "aws_subnet" "authentication_public" {
 }
 
 resource "aws_internet_gateway" "igw" {
-  count = var.use_localstack ? 0 : 1
+  count  = var.use_localstack ? 0 : 1
   vpc_id = aws_vpc.authentication.id
 
   tags = {

@@ -6,6 +6,11 @@ variable "path_part" {
   type = string
 }
 
+variable "provisioned_concurrent_executions" {
+  type    = number
+  default = 10
+}
+
 variable "method_request_parameters" {
   type = map(bool)
   default = {}
@@ -82,4 +87,8 @@ variable "logging_endpoint_arn" {
   type        = string
   default     = ""
   description = "Amazon Resource Name (ARN) for the endpoint to ship logs to"
+}
+
+variable "use_localstack" {
+  type    = bool
 }
