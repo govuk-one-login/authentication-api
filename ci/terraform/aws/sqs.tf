@@ -126,6 +126,7 @@ resource "aws_lambda_function" "email_sqs_lambda" {
   timeout       = 30
   memory_size   = 512
   runtime       = "java11"
+  publish       = true
 
   source_code_hash = filebase64sha256(var.lambda_zip_file)
   vpc_config {

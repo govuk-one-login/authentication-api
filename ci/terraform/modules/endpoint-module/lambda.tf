@@ -5,6 +5,7 @@ resource "aws_lambda_function" "endpoint_lambda" {
   handler       = var.handler_function_name
   timeout       = 30
   memory_size   = 512
+  publish       = true
 
   tracing_config {
     mode = "Active"
