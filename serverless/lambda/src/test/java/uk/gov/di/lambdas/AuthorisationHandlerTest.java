@@ -7,9 +7,12 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCError;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.domain.OidcAuditableEvent;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.ResponseHeaders;
 import uk.gov.di.entity.Session;
@@ -41,6 +44,7 @@ class AuthorisationHandlerTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuthorizationService authorizationService = mock(AuthorizationService.class);
+    private final AuditService auditService = mock(AuditService.class);
 
     private static final String EXPECTED_COOKIE_STRING =
             "gs=a-session-id.client-session-id; Max-Age=1800; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
@@ -53,7 +57,16 @@ class AuthorisationHandlerTest {
     public void setUp() {
         handler =
                 new AuthorisationHandler(
-                        configService, sessionService, clientSessionService, authorizationService);
+                        configService,
+                        sessionService,
+                        clientSessionService,
+                        authorizationService,
+                        auditService);
+    }
+
+    @AfterEach
+    public void validateAuditRequestReceived() {
+        verify(auditService).submitAuditEvent(OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED);
     }
 
     @Test
