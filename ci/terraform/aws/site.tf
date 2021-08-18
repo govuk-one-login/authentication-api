@@ -1,10 +1,10 @@
 terraform {
-  required_version = ">= 1.0"
+  required_version = ">= 1.0.4"
 
   required_providers {
     aws = {
-      source  = "hashicorp/aws"
-      version = ">= 3.45.0"
+      source = "hashicorp/aws"
+      version = ">= 3.54.0"
     }
     time = {
       source  = "hashicorp/time"
@@ -14,6 +14,10 @@ terraform {
       source  = "hashicorp/random"
       version = ">= 3.1.0"
     }
+    cloudfoundry = {
+      source  = "cloudfoundry-community/cloudfoundry"
+      version = "0.14.2"
+    }
   }
 
   backend "s3" {
@@ -21,7 +25,7 @@ terraform {
 }
 
 provider "aws" {
-  region = "eu-west-2"
+  region = var.aws_region
 
   assume_role {
     role_arn = var.deployer_role_arn
