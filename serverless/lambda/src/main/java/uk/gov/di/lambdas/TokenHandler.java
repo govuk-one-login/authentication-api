@@ -45,6 +45,7 @@ public class TokenHandler
     private final ConfigurationService configurationService;
     private final AuthorisationCodeService authorisationCodeService;
     private final ClientSessionService clientSessionService;
+    private static final String TOKEN_PATH = "/token";
 
     public TokenHandler(
             ClientService clientService,
@@ -103,12 +104,11 @@ public class TokenHandler
             return generateApiGatewayProxyResponse(
                     400, OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString());
         }
-
+        String baseUrl = configurationService.getBaseURL().orElseThrow();
+        String tokenUrl = baseUrl + TOKEN_PATH;
         Optional<ErrorObject> invalidPrivateKeyJwtError =
                 tokenService.validatePrivateKeyJWT(
-                        input.getBody(),
-                        client.getPublicKey(),
-                        configurationService.getBaseURL().orElseThrow());
+                        input.getBody(), client.getPublicKey(), tokenUrl);
         if (invalidPrivateKeyJwtError.isPresent()) {
             LOG.error("Private Key JWT is not valid for Client ID {}", clientID);
             return generateApiGatewayProxyResponse(

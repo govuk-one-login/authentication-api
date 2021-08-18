@@ -129,7 +129,7 @@ public class TokenService {
     }
 
     public Optional<ErrorObject> validatePrivateKeyJWT(
-            String requestString, String publicKey, String baseUrl) {
+            String requestString, String publicKey, String tokenUrl) {
         PrivateKeyJWT privateKeyJWT;
         try {
             privateKeyJWT = PrivateKeyJWT.parse(requestString);
@@ -140,7 +140,7 @@ public class TokenService {
         ClientAuthenticationVerifier<?> authenticationVerifier =
                 new ClientAuthenticationVerifier<>(
                         generateClientCredentialsSelector(publicKey),
-                        Collections.singleton(new Audience(baseUrl)));
+                        Collections.singleton(new Audience(tokenUrl)));
         try {
             authenticationVerifier.verify(privateKeyJWT, null, null);
         } catch (InvalidClientException | JOSEException e) {
