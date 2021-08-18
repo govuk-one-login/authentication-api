@@ -113,6 +113,12 @@ resource "aws_iam_role_policy_attachment" "lambda_dynamo" {
   policy_arn = aws_iam_policy.lambda_dynamo_policy[0].arn
 }
 
+resource "aws_iam_role_policy_attachment" "token_lambda_dynamo" {
+  count      = var.use_localstack ? 0 : 1
+  role       = aws_iam_role.token_lambda_iam_role.name
+  policy_arn = aws_iam_policy.lambda_dynamo_policy[0].arn
+}
+
 resource "aws_iam_role_policy_attachment" "lambda_sqs_dynamo" {
   count      = var.use_localstack ? 0 : 1
   role       = aws_iam_role.dynamo_sqs_lambda_iam_role.name
