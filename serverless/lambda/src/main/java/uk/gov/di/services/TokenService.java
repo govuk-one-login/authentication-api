@@ -3,8 +3,6 @@ package uk.gov.di.services;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.jose.jwk.RSAKey;
-import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.GrantType;
@@ -37,13 +35,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 import static uk.gov.di.helpers.RequestBodyHelper.parseRequestBody;
 
 public class TokenService {
 
-    private final RSAKey signingKey;
     private final ConfigurationService configService;
     private final RedisConnectionService redisConnectionService;
     private final TokenGeneratorService tokenGeneratorService;
@@ -55,11 +51,6 @@ public class TokenService {
             TokenGeneratorService tokenGeneratorService) {
         this.configService = configService;
         this.redisConnectionService = redisConnectionService;
-        try {
-            signingKey = new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
-        } catch (JOSEException e) {
-            throw new RuntimeException(e);
-        }
         this.tokenGeneratorService = tokenGeneratorService;
     }
 
