@@ -1,7 +1,7 @@
 resource "aws_dynamodb_table" "user_credentials_table" {
-  name           = "${var.environment}-user-credentials"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "Email"
+  name         = "${var.environment}-user-credentials"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "Email"
 
   attribute {
     name = "Email"
@@ -14,9 +14,9 @@ resource "aws_dynamodb_table" "user_credentials_table" {
   }
 
   global_secondary_index {
-    name               = "SubjectIDIndex"
-    hash_key           = "SubjectID"
-    projection_type    = "ALL"
+    name            = "SubjectIDIndex"
+    hash_key        = "SubjectID"
+    projection_type = "ALL"
   }
 
   server_side_encryption {
@@ -25,9 +25,9 @@ resource "aws_dynamodb_table" "user_credentials_table" {
 }
 
 resource "aws_dynamodb_table" "user_profile_table" {
-  name           = "${var.environment}-user-profile"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "Email"
+  name         = "${var.environment}-user-profile"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "Email"
 
   attribute {
     name = "Email"
@@ -40,9 +40,9 @@ resource "aws_dynamodb_table" "user_profile_table" {
   }
 
   global_secondary_index {
-    name               = "SubjectIDIndex"
-    hash_key           = "SubjectID"
-    projection_type    = "ALL"
+    name            = "SubjectIDIndex"
+    hash_key        = "SubjectID"
+    projection_type = "ALL"
   }
 
   server_side_encryption {
@@ -51,9 +51,9 @@ resource "aws_dynamodb_table" "user_profile_table" {
 }
 
 resource "aws_dynamodb_table" "client_registry_table" {
-  name           = "${var.environment}-client-registry"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "ClientID"
+  name         = "${var.environment}-client-registry"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "ClientID"
 
   attribute {
     name = "ClientID"
@@ -66,9 +66,9 @@ resource "aws_dynamodb_table" "client_registry_table" {
   }
 
   global_secondary_index {
-    name               = "ClientNameIndex"
-    hash_key           = "ClientName"
-    projection_type    = "ALL"
+    name            = "ClientNameIndex"
+    hash_key        = "ClientName"
+    projection_type = "ALL"
   }
 }
 
@@ -99,7 +99,7 @@ data "aws_iam_policy_document" "dynamo_policy_document" {
 }
 
 resource "aws_iam_policy" "lambda_dynamo_policy" {
-  count = var.use_localstack ? 0 : 1
+  count       = var.use_localstack ? 0 : 1
   name        = "${var.environment}-standard-lambda-dynamo-policy"
   path        = "/"
   description = "IAM policy for managing Dynamo connection for a lambda"
@@ -108,7 +108,7 @@ resource "aws_iam_policy" "lambda_dynamo_policy" {
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_dynamo" {
-  count = var.use_localstack ? 0 : 1
+  count      = var.use_localstack ? 0 : 1
   role       = aws_iam_role.lambda_iam_role.name
   policy_arn = aws_iam_policy.lambda_dynamo_policy[0].arn
 }

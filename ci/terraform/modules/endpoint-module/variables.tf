@@ -88,3 +88,7 @@ variable "logging_endpoint_arn" {
   default     = ""
   description = "Amazon Resource Name (ARN) for the endpoint to ship logs to"
 }
+
+variable "use_localstack" {
+  type    = bool
+}

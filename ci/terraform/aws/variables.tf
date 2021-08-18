@@ -21,7 +21,7 @@ variable "notify_url" {
 }
 
 variable "environment" {
-  type    = string
+  type = string
 }
 
 variable "api_deployment_stage_name" {
@@ -45,8 +45,8 @@ variable "aws_dynamodb_endpoint" {
 }
 
 variable "lambda_dynamo_endpoint" {
-  type    = string
-  default = "http://dynamodb:8000"
+  type        = string
+  default     = "http://dynamodb:8000"
   description = "The endpoint that the Lambda must use to connect to DynamoDB API. This may or may not be the same as aws_dynamodb_endpoint"
 }
 
@@ -103,6 +103,6 @@ variable "logging_endpoint_arn" {
 
 variable "stub_rp_clients" {
   default     = []
-  type        = list(object({client_name: string, callback_urls: list(string), logout_urls: list(string)}))
+  type        = list(object({ client_name : string, callback_urls : list(string), logout_urls : list(string) }))
   description = "The details of RP clients to provision in the Client table"
 }

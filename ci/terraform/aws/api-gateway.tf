@@ -92,7 +92,7 @@ resource "aws_api_gateway_resource" "clients_resource" {
   path_part   = "clients"
 }
 
-data "aws_region" "current"{
+data "aws_region" "current" {
 }
 
 locals {
@@ -148,8 +148,8 @@ resource "aws_api_gateway_deployment" "deployment" {
 
 resource "aws_api_gateway_stage" "endpoint_stage" {
   deployment_id = aws_api_gateway_deployment.deployment.id
-  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  stage_name = var.api_deployment_stage_name
+  rest_api_id   = aws_api_gateway_rest_api.di_authentication_api.id
+  stage_name    = var.api_deployment_stage_name
 
   depends_on = [
     module.authorize,
@@ -185,9 +185,9 @@ resource "aws_api_gateway_method_settings" "api_gateway_logging_settings" {
   method_path = "*/*"
 
   settings {
-    metrics_enabled        = false
-    data_trace_enabled     = true
-    logging_level          = "INFO"
+    metrics_enabled    = false
+    data_trace_enabled = true
+    logging_level      = "INFO"
   }
   depends_on = [
     aws_api_gateway_stage.endpoint_stage
