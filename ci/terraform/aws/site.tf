@@ -44,6 +44,7 @@ provider "aws" {
     sqs         = var.aws_endpoint
     sts         = var.aws_endpoint
     elasticache = var.aws_endpoint
+    kms         = var.aws_endpoint
     dynamodb    = var.aws_dynamodb_endpoint
   }
 }

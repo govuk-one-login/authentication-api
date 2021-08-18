@@ -101,7 +101,8 @@ public class StateMachine<T> {
                                         MFA_CODE_NOT_VALID,
                                         MFA_CODE_MAX_RETRIES_REACHED)),
                         entry(MFA_CODE_MAX_RETRIES_REACHED, Collections.emptyList()),
-                        entry(MFA_CODE_VERIFIED, List.of(AUTHENTICATED)));
+                        entry(MFA_CODE_VERIFIED, List.of(AUTHENTICATED)),
+                        entry(AUTHENTICATED, List.of(AUTHENTICATED)));
 
         return new StateMachine<>(states);
     }

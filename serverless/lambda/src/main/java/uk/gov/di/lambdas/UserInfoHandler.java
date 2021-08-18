@@ -17,6 +17,7 @@ import uk.gov.di.entity.UserProfile;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.DynamoService;
 import uk.gov.di.services.RedisConnectionService;
+import uk.gov.di.services.TokenGeneratorService;
 import uk.gov.di.services.TokenService;
 
 import java.text.ParseException;
@@ -50,7 +51,9 @@ public class UserInfoHandler
         configurationService = new ConfigurationService();
         tokenService =
                 new TokenService(
-                        configurationService, new RedisConnectionService(configurationService));
+                        configurationService,
+                        new RedisConnectionService(configurationService),
+                        new TokenGeneratorService(configurationService));
         authenticationService =
                 new DynamoService(
                         configurationService.getAwsRegion(),
