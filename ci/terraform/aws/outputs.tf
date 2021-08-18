@@ -26,4 +26,5 @@ output "account_management_client_details" {
     KMS_KEY_ID            = aws_kms_key.account_management_jwt_key.id
     KMS_KEY_ALIAS         = aws_kms_alias.account_management_jwt_alias.name
   }
+  sensitive = true
 }
