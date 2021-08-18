@@ -9,11 +9,13 @@ import com.amazonaws.services.kms.model.MessageType;
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;
 import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
+import com.nimbusds.jose.Algorithm;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
@@ -139,7 +141,12 @@ public class TokenGeneratorService {
                     SubjectPublicKeyInfo.getInstance(publicKeyResult.getPublicKey().array());
             PublicKey publicKey =
                     new JcaPEMKeyConverter().setProvider(bcProvider).getPublicKey(subjectKeyInfo);
-            ECKey jwk = new ECKey.Builder(Curve.P_256, (ECPublicKey) publicKey).build();
+            ECKey jwk =
+                    new ECKey.Builder(Curve.P_256, (ECPublicKey) publicKey)
+                            .keyID(keyId)
+                            .keyUse(KeyUse.SIGNATURE)
+                            .algorithm(new Algorithm(JWSAlgorithm.ES256.getName()))
+                            .build();
             return JWK.parse(jwk.toJSONObject());
         } catch (PEMException e) {
             LOGGER.error("Error getting the PublicKey using the JcaPEMKeyConverter", e);
