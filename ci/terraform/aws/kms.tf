@@ -68,5 +68,5 @@ resource "aws_iam_role_policy_attachment" "lambda_kms" {
 resource "aws_iam_role_policy_attachment" "lambda_kms_signing_policy" {
   count = var.use_localstack ? 0 : 1
   role       = aws_iam_role.token_lambda_iam_role.name
-  policy_arn = aws_iam_policy.lambda_kms_policy[0].arn
+  policy_arn = aws_iam_policy.lambda_kms_signing_policy[0].arn
 }
