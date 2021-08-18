@@ -23,6 +23,7 @@ import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.Issuer;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
+import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMException;
@@ -31,6 +32,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.Provider;
 import java.security.PublicKey;
@@ -122,9 +125,11 @@ public class TokenGeneratorService {
             ByteBuffer messageToSign = ByteBuffer.wrap(message.getBytes());
             SignResult signResult = sign(messageToSign);
             LOGGER.info("Access token has been signed successfully");
-            String signature = Base64URL.encode(signResult.getSignature().toString()).toString();
+            String signature =
+                    Base64URL.encode(convertSignature(signResult.getSignature().array()))
+                            .toString();
             return SignedJWT.parse(message + "." + signature);
-        } catch (ParseException e) {
+        } catch (ParseException | IOException e) {
             LOGGER.error("Exception thrown when trying to parse SignedJWT or JWTClaimSet", e);
             throw new RuntimeException(e);
         }
@@ -174,5 +179,19 @@ public class TokenGeneratorService {
 
     private JWSHeader generateJWSHeader() {
         return new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(keyId).build();
+    }
+
+    private byte[] convertSignature(byte[] signature) throws IOException {
+        DERSequence der = (DERSequence) DERSequence.fromByteArray(signature);
+        var r = der.getObjectAt(0);
+        var s = der.getObjectAt(1);
+
+        if (r == null || s == null) return new byte[0];
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        outputStream.write(r.toASN1Primitive().getEncoded());
+        outputStream.write(s.toASN1Primitive().getEncoded());
+
+        return outputStream.toByteArray();
     }
 }
