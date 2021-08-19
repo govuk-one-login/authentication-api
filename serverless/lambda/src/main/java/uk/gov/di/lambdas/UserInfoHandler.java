@@ -18,7 +18,6 @@ import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.DynamoService;
 import uk.gov.di.services.KmsConnectionService;
 import uk.gov.di.services.RedisConnectionService;
-import uk.gov.di.services.TokenGeneratorService;
 import uk.gov.di.services.TokenService;
 
 import java.text.ParseException;
@@ -54,7 +53,6 @@ public class UserInfoHandler
                 new TokenService(
                         configurationService,
                         new RedisConnectionService(configurationService),
-                        new TokenGeneratorService(configurationService),
                         new KmsConnectionService(configurationService));
         authenticationService =
                 new DynamoService(

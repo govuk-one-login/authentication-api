@@ -8,7 +8,6 @@ import com.nimbusds.jose.jwk.JWKSet;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.services.KmsConnectionService;
 import uk.gov.di.services.RedisConnectionService;
-import uk.gov.di.services.TokenGeneratorService;
 import uk.gov.di.services.TokenService;
 
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -30,7 +29,6 @@ public class JwksHandler
                 new TokenService(
                         configurationService,
                         new RedisConnectionService(configurationService),
-                        new TokenGeneratorService(configurationService),
                         new KmsConnectionService(configurationService));
     }
 

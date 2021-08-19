@@ -2,14 +2,20 @@ package uk.gov.di.services;
 
 import com.amazonaws.services.kms.model.GetPublicKeyRequest;
 import com.amazonaws.services.kms.model.GetPublicKeyResult;
+import com.amazonaws.services.kms.model.SignRequest;
+import com.amazonaws.services.kms.model.SignResult;
+import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
 import com.nimbusds.jose.Algorithm;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.KeyUse;
+import com.nimbusds.jose.util.Base64URL;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.GrantType;
@@ -23,10 +29,12 @@ import com.nimbusds.oauth2.sdk.auth.verifier.ClientCredentialsSelector;
 import com.nimbusds.oauth2.sdk.auth.verifier.InvalidClientException;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.id.Issuer;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
+import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -36,6 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
+import java.nio.ByteBuffer;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.Provider;
@@ -43,11 +52,15 @@ import java.security.PublicKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import static uk.gov.di.helpers.RequestBodyHelper.parseRequestBody;
 
@@ -55,18 +68,15 @@ public class TokenService {
 
     private final ConfigurationService configService;
     private final RedisConnectionService redisConnectionService;
-    private final TokenGeneratorService tokenGeneratorService;
     private final KmsConnectionService kmsConnectionService;
     private static final Logger LOGGER = LoggerFactory.getLogger(TokenService.class);
 
     public TokenService(
             ConfigurationService configService,
             RedisConnectionService redisConnectionService,
-            TokenGeneratorService tokenGeneratorService,
             KmsConnectionService kmsConnectionService) {
         this.configService = configService;
         this.redisConnectionService = redisConnectionService;
-        this.tokenGeneratorService = tokenGeneratorService;
         this.kmsConnectionService = kmsConnectionService;
     }
 
@@ -78,15 +88,44 @@ public class TokenService {
     }
 
     private SignedJWT generateIDToken(String clientId, Subject subject) {
-        return tokenGeneratorService.generateSignedIdToken(
-                clientId, subject, configService.getBaseURL().get());
+        LOGGER.info("Generating IdToken for ClientId: {}", clientId);
+        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+        IDTokenClaimsSet idTokenClaims =
+                new IDTokenClaimsSet(
+                        new Issuer(configService.getBaseURL().get()),
+                        subject,
+                        List.of(new Audience(clientId)),
+                        expiryDate,
+                        new Date());
+        try {
+            return generateSignedJWT(idTokenClaims.toJWTClaimsSet());
+        } catch (com.nimbusds.oauth2.sdk.ParseException e) {
+            LOGGER.error("Error when trying to parse IDTokenClaims to JWTClaimSet", e);
+            throw new RuntimeException(e);
+        }
     }
 
     private AccessToken generateAndStoreAccessToken(
             String clientId, Subject subject, List<String> scopes) {
-        SignedJWT signedJWT =
-                tokenGeneratorService.generateSignedAccessToken(
-                        clientId, configService.getBaseURL().get(), scopes);
+        LOGGER.info("Generating AccessToken for ClientId: {}", clientId);
+        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+
+        JWTClaimsSet claimsSet =
+                new JWTClaimsSet.Builder()
+                        .claim("scope", scopes)
+                        .issuer(configService.getBaseURL().get())
+                        .expirationTime(expiryDate)
+                        .issueTime(
+                                Date.from(
+                                        LocalDateTime.now()
+                                                .atZone(ZoneId.systemDefault())
+                                                .toInstant()))
+                        .claim("client_id", clientId)
+                        .jwtID(UUID.randomUUID().toString())
+                        .build();
+        SignedJWT signedJWT = generateSignedJWT(claimsSet);
         AccessToken accessToken = new BearerAccessToken(signedJWT.serialize());
 
         redisConnectionService.saveWithExpiry(
@@ -178,6 +217,35 @@ public class TokenService {
             return Optional.of(OAuth2Error.INVALID_CLIENT);
         }
         return Optional.empty();
+    }
+
+    private SignedJWT generateSignedJWT(JWTClaimsSet claimsSet) {
+        try {
+            JWSHeader jwsHeader =
+                    new JWSHeader.Builder(JWSAlgorithm.ES256)
+                            .keyID(configService.getTokenSigningKeyId())
+                            .build();
+            Base64URL encodedHeader = jwsHeader.toBase64URL();
+            Base64URL encodedClaims = Base64URL.encode(claimsSet.toString());
+            String message = encodedHeader + "." + encodedClaims;
+            ByteBuffer messageToSign = ByteBuffer.wrap(message.getBytes());
+            SignRequest signRequest = new SignRequest();
+            signRequest.setMessage(messageToSign);
+            signRequest.setKeyId(configService.getTokenSigningKeyId());
+            signRequest.setSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256.toString());
+            SignResult signResult = kmsConnectionService.sign(signRequest);
+            LOGGER.info("Token has been signed successfully");
+            String signature =
+                    Base64URL.encode(
+                                    ECDSA.transcodeSignatureToConcat(
+                                            signResult.getSignature().array(),
+                                            ECDSA.getSignatureByteArrayLength(JWSAlgorithm.ES256)))
+                            .toString();
+            return SignedJWT.parse(message + "." + signature);
+        } catch (java.text.ParseException | JOSEException e) {
+            LOGGER.error("Exception thrown when trying to parse SignedJWT or JWTClaimSet", e);
+            throw new RuntimeException(e);
+        }
     }
 
     private ClientCredentialsSelector<?> generateClientCredentialsSelector(String publicKey) {

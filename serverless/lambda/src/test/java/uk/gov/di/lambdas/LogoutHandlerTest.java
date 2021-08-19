@@ -4,8 +4,10 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.jwk.RSAKey;
-import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.id.State;
@@ -27,7 +29,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -70,11 +71,11 @@ class LogoutHandlerTest {
                         dynamoClientService,
                         clientSessionService);
         when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
-        RSAKey signingKey =
-                new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
+        ECKey ecSigningKey =
+                new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         signedIDToken =
                 TokenGeneratorHelper.generateIDToken(
-                        "client-id", new Subject(), "http://localhost-rp", signingKey);
+                        "client-id", new Subject(), "http://localhost-rp", ecSigningKey);
     }
 
     @Test
@@ -193,11 +194,11 @@ class LogoutHandlerTest {
 
     @Test
     public void shouldThrowWhenClientIsNotFoundInClientRegistry() throws JOSEException {
-        RSAKey signingKey =
-                new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
+        ECKey ecSigningKey =
+                new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         SignedJWT signedJWT =
                 TokenGeneratorHelper.generateIDToken(
-                        "invalid-client-id", new Subject(), "http://localhost-rp", signingKey);
+                        "invalid-client-id", new Subject(), "http://localhost-rp", ecSigningKey);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
         event.setQueryStringParameters(
