@@ -20,6 +20,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,6 +54,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -128,7 +130,7 @@ public class TokenHandlerTest {
                                 generateAuthRequest().toParameters(), LocalDateTime.now()));
         when(authenticationService.getSubjectFromEmail(eq(TEST_EMAIL))).thenReturn(TEST_SUBJECT);
         when(tokenService.generateTokenResponse(
-                        eq(CLIENT_ID), any(Subject.class), eq(SCOPES), eq(Collections.emptyMap())))
+                        eq(CLIENT_ID), any(Subject.class), eq(SCOPES), anyMap()))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result = generateApiGatewayRequest(privateKeyJWT, authCode);
@@ -282,6 +284,7 @@ public class TokenHandlerTest {
                         new ClientID(CLIENT_ID),
                         URI.create(REDIRECT_URI))
                 .state(state)
+                .nonce(new Nonce())
                 .build();
     }
 

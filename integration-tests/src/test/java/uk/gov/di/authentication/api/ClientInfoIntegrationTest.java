@@ -5,6 +5,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.ClientBuilder;
@@ -61,6 +62,7 @@ public class ClientInfoIntegrationTest extends IntegrationTestEndpoints {
                                 scope,
                                 new ClientID(CLIENT_ID),
                                 URI.create("http://localhost/redirect"))
+                        .nonce(new Nonce())
                         .build();
         RedisHelper.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
 

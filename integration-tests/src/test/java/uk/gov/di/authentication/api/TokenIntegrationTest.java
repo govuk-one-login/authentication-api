@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.Nonce;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.ClientBuilder;
 import jakarta.ws.rs.client.Entity;
@@ -104,12 +105,14 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
         scopeValues.add("openid");
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         State state = new State();
+        Nonce nonce = new Nonce();
         return new AuthenticationRequest.Builder(
                         responseType,
                         scopeValues,
                         new ClientID(CLIENT_ID),
                         URI.create("http://localhost/redirect"))
                 .state(state)
+                .nonce(nonce)
                 .build();
     }
 }

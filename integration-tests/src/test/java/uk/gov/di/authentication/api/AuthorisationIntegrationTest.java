@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.api;
 
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCError;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.ClientBuilder;
@@ -217,12 +218,13 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
     private Response doAuthorisationRequest(
             Optional<String> clientId, Optional<Cookie> cookie, Optional<String> prompt) {
         Client client = ClientBuilder.newClient();
-
+        Nonce nonce = new Nonce();
         WebTarget webTarget =
                 client.target(ROOT_RESOURCE_URL + AUTHORIZE_ENDPOINT)
                         .queryParam("response_type", "code")
                         .queryParam("redirect_uri", "localhost")
                         .queryParam("state", "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU")
+                        .queryParam("nonce", nonce.getValue())
                         .queryParam("client_id", clientId.orElse("test-client"))
                         .queryParam("scope", "openid")
                         .property(ClientProperties.FOLLOW_REDIRECTS, Boolean.FALSE);

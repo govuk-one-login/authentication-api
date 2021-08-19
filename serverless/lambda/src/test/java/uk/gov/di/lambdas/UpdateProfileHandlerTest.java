@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
+import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -212,6 +213,7 @@ class UpdateProfileHandlerTest {
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(responseType, scope, clientID, REDIRECT_URI)
                         .state(state)
+                        .nonce(new Nonce())
                         .build();
         ClientSession clientSession =
                 new ClientSession(authRequest.toParameters(), LocalDateTime.now());

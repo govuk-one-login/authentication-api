@@ -85,6 +85,18 @@ public class AuthorizationService {
                 || !client.get().getScopes().containsAll(authRequest.getScope().toStringList())) {
             return Optional.of(OAuth2Error.INVALID_SCOPE);
         }
+        if (authRequest.getNonce() == null) {
+            return Optional.of(
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_CODE,
+                            "Request is missing nonce parameter"));
+        }
+        if (authRequest.getState() == null) {
+            return Optional.of(
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_CODE,
+                            "Request is missing state parameter"));
+        }
         return Optional.empty();
     }
 

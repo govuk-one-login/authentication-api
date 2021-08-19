@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.ClientBuilder;
@@ -96,6 +97,7 @@ public class LogoutIntegrationTest extends IntegrationTestEndpoints {
                         new ClientID("test-client"),
                         URI.create("http://localhost:8080/redirect"))
                 .state(state)
+                .nonce(new Nonce())
                 .build();
     }
 
