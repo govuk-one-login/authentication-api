@@ -74,7 +74,8 @@ public class UpdateClientConfigHandler
                             clientRegistry.getRedirectUrls(),
                             clientRegistry.getContacts(),
                             clientRegistry.getScopes(),
-                            clientRegistry.getPostLogoutRedirectUrls());
+                            clientRegistry.getPostLogoutRedirectUrls(),
+                            clientRegistry.getServiceType());
             LOGGER.info("Client with ClientId {} has been updated", clientId);
             return generateApiGatewayProxyResponse(200, clientRegistrationResponse);
         } catch (JsonProcessingException | NullPointerException e) {

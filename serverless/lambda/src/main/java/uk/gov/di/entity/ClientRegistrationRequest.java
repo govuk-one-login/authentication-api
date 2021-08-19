@@ -26,14 +26,17 @@ public class ClientRegistrationRequest {
     @JsonProperty("post_logout_redirect_uris")
     private List<String> postLogoutRedirectUris = new ArrayList<>();
 
+    @JsonProperty("service_type")
+    private String serviceType;
+
     public ClientRegistrationRequest(
             @JsonProperty(required = true, value = "client_name") String clientName,
             @JsonProperty(required = true, value = "redirect_uris") List<String> redirectUris,
             @JsonProperty(required = true, value = "contacts") List<String> contacts,
             @JsonProperty(required = true, value = "public_key") String publicKey,
             @JsonProperty(required = true, value = "scopes") List<String> scopes,
-            @JsonProperty(value = "post_logout_redirect_uris")
-                    List<String> postLogoutRedirectUris) {
+            @JsonProperty(value = "post_logout_redirect_uris") List<String> postLogoutRedirectUris,
+            @JsonProperty(required = true, value = "service_type") String serviceType) {
         this.clientName = clientName;
         this.redirectUris = redirectUris;
         this.contacts = contacts;
@@ -42,6 +45,7 @@ public class ClientRegistrationRequest {
         if (Objects.nonNull(postLogoutRedirectUris)) {
             this.postLogoutRedirectUris = postLogoutRedirectUris;
         }
+        this.serviceType = serviceType;
     }
 
     public String getClientName() {
@@ -66,5 +70,9 @@ public class ClientRegistrationRequest {
 
     public List<String> getPostLogoutRedirectUris() {
         return postLogoutRedirectUris;
+    }
+
+    public String getServiceType() {
+        return serviceType;
     }
 }

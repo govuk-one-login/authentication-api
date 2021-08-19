@@ -98,14 +98,16 @@ public class ClientInfoHandler
                             clientRegistry.getClientID(),
                             clientRegistry.getClientName(),
                             clientRegistry.getScopes(),
-                            redirectUri);
+                            redirectUri,
+                            clientRegistry.getServiceType());
 
             LOGGER.info(
-                    "Found Client Info for ClientID: {} ClientName {} Scopes {} Redirect Uri {}",
+                    "Found Client Info for ClientID: {} ClientName {} Scopes {} Redirect Uri {} Service Type {}",
                     clientRegistry.getClientID(),
                     clientRegistry.getClientName(),
                     clientRegistry.getScopes(),
-                    redirectUri);
+                    redirectUri,
+                    clientRegistry.getServiceType());
 
             return generateApiGatewayProxyResponse(200, clientInfoResponse);
 

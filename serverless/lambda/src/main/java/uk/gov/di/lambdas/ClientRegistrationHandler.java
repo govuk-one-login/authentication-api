@@ -62,7 +62,8 @@ public class ClientRegistrationHandler
                     clientRegistrationRequest.getContacts(),
                     clientRegistrationRequest.getScopes(),
                     clientRegistrationRequest.getPublicKey(),
-                    clientRegistrationRequest.getPostLogoutRedirectUris());
+                    clientRegistrationRequest.getPostLogoutRedirectUris(),
+                    clientRegistrationRequest.getServiceType());
 
             ClientRegistrationResponse clientRegistrationResponse =
                     new ClientRegistrationResponse(
@@ -71,7 +72,8 @@ public class ClientRegistrationHandler
                             clientRegistrationRequest.getRedirectUris(),
                             clientRegistrationRequest.getContacts(),
                             clientRegistrationRequest.getScopes(),
-                            clientRegistrationRequest.getPostLogoutRedirectUris());
+                            clientRegistrationRequest.getPostLogoutRedirectUris(),
+                            clientRegistrationRequest.getServiceType());
 
             return generateApiGatewayProxyResponse(200, clientRegistrationResponse);
         } catch (JsonProcessingException e) {
