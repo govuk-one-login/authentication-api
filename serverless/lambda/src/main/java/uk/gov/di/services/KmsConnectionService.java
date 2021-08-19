@@ -37,10 +37,12 @@ public class KmsConnectionService {
     }
 
     public GetPublicKeyResult getPublicKey(GetPublicKeyRequest getPublicKeyRequest) {
+        LOGGER.info("Retrieving public key from KMS with KeyID {}", getPublicKeyRequest.getKeyId());
         return kmsClient.getPublicKey(getPublicKeyRequest);
     }
 
     public SignResult sign(SignRequest signRequest) {
+        LOGGER.info("Calling KMS with SignRequest and KeyId {}", signRequest.getKeyId());
         return kmsClient.sign(signRequest);
     }
 }

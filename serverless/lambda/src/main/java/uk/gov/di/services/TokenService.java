@@ -1,8 +1,15 @@
 package uk.gov.di.services;
 
+import com.amazonaws.services.kms.model.GetPublicKeyRequest;
+import com.amazonaws.services.kms.model.GetPublicKeyResult;
+import com.nimbusds.jose.Algorithm;
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.GrantType;
@@ -21,13 +28,19 @@ import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.openssl.PEMException;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
+import java.security.Provider;
 import java.security.PublicKey;
+import java.security.interfaces.ECPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
@@ -43,15 +56,18 @@ public class TokenService {
     private final ConfigurationService configService;
     private final RedisConnectionService redisConnectionService;
     private final TokenGeneratorService tokenGeneratorService;
-    private static final Logger LOG = LoggerFactory.getLogger(TokenService.class);
+    private final KmsConnectionService kmsConnectionService;
+    private static final Logger LOGGER = LoggerFactory.getLogger(TokenService.class);
 
     public TokenService(
             ConfigurationService configService,
             RedisConnectionService redisConnectionService,
-            TokenGeneratorService tokenGeneratorService) {
+            TokenGeneratorService tokenGeneratorService,
+            KmsConnectionService kmsConnectionService) {
         this.configService = configService;
         this.redisConnectionService = redisConnectionService;
         this.tokenGeneratorService = tokenGeneratorService;
+        this.kmsConnectionService = kmsConnectionService;
     }
 
     public OIDCTokenResponse generateTokenResponse(
@@ -84,8 +100,31 @@ public class TokenService {
         return Optional.ofNullable(redisConnectionService.getValue(token.toJSONString()));
     }
 
-    public JWK getSigningKey() {
-        return tokenGeneratorService.getPublicKey();
+    public JWK getPublicKey() {
+        LOGGER.info("Creating GetPublicKeyRequest to retrieve PublicKey from KMS");
+        Provider bcProvider = new BouncyCastleProvider();
+        GetPublicKeyRequest getPublicKeyRequest = new GetPublicKeyRequest();
+        getPublicKeyRequest.setKeyId(configService.getTokenSigningKeyId());
+        GetPublicKeyResult publicKeyResult = kmsConnectionService.getPublicKey(getPublicKeyRequest);
+        try {
+            SubjectPublicKeyInfo subjectKeyInfo =
+                    SubjectPublicKeyInfo.getInstance(publicKeyResult.getPublicKey().array());
+            PublicKey publicKey =
+                    new JcaPEMKeyConverter().setProvider(bcProvider).getPublicKey(subjectKeyInfo);
+            ECKey jwk =
+                    new ECKey.Builder(Curve.P_256, (ECPublicKey) publicKey)
+                            .keyID(configService.getTokenSigningKeyId())
+                            .keyUse(KeyUse.SIGNATURE)
+                            .algorithm(new Algorithm(JWSAlgorithm.ES256.getName()))
+                            .build();
+            return JWK.parse(jwk.toJSONObject());
+        } catch (PEMException e) {
+            LOGGER.error("Error getting the PublicKey using the JcaPEMKeyConverter", e);
+            throw new RuntimeException();
+        } catch (java.text.ParseException e) {
+            LOGGER.error("Error parsing the ECKey to JWK", e);
+            throw new RuntimeException(e);
+        }
     }
 
     public Optional<ErrorObject> validateTokenRequestParams(String tokenRequestBody) {
@@ -125,7 +164,7 @@ public class TokenService {
         try {
             privateKeyJWT = PrivateKeyJWT.parse(requestString);
         } catch (ParseException e) {
-            LOG.error("Couldn't parse Private Key JWT", e);
+            LOGGER.error("Couldn't parse Private Key JWT", e);
             return Optional.of(OAuth2Error.INVALID_CLIENT);
         }
         ClientAuthenticationVerifier<?> authenticationVerifier =
@@ -135,7 +174,7 @@ public class TokenService {
         try {
             authenticationVerifier.verify(privateKeyJWT, null, null);
         } catch (InvalidClientException | JOSEException e) {
-            LOG.error("Unable to Verify Signature of Private Key JWT", e);
+            LOGGER.error("Unable to Verify Signature of Private Key JWT", e);
             return Optional.of(OAuth2Error.INVALID_CLIENT);
         }
         return Optional.empty();

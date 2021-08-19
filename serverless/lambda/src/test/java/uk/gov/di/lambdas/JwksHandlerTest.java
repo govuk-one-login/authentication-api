@@ -35,7 +35,7 @@ class JwksHandlerTest {
     @Test
     public void shouldReturn200WhenRequestIsSuccessful() throws JOSEException {
         JWK signingKey = new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
-        when(tokenService.getSigningKey()).thenReturn(signingKey);
+        when(tokenService.getPublicKey()).thenReturn(signingKey);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -48,7 +48,7 @@ class JwksHandlerTest {
 
     @Test
     public void shouldReturn500WhenSigningKeyIsNotPresent() {
-        when(tokenService.getSigningKey()).thenReturn(null);
+        when(tokenService.getPublicKey()).thenReturn(null);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
