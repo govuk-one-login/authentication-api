@@ -7,6 +7,7 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCError;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -33,7 +34,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthorisationHandlerTest {
@@ -61,6 +65,11 @@ class AuthorisationHandlerTest {
                         clientSessionService,
                         authorizationService,
                         auditService);
+    }
+
+    @AfterEach
+    public void afterEach() {
+        verifyNoMoreInteractions(auditService);
     }
 
     @Test
@@ -118,6 +127,13 @@ class AuthorisationHandlerTest {
                 "http://localhost:8080?error=invalid_request&error_description=Invalid+request%3A+Missing+response_type+parameter&state="
                         + state,
                 response.getHeaders().get(ResponseHeaders.LOCATION));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTHORISATION_REQUEST_ERROR,
+                        pair(
+                                "description",
+                                "Invalid request: Missing response_type parameter"));
     }
 
     @Test
@@ -138,6 +154,13 @@ class AuthorisationHandlerTest {
         assertEquals(
                 "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope",
                 response.getHeaders().get(ResponseHeaders.LOCATION));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTHORISATION_REQUEST_ERROR,
+                        pair(
+                                "description",
+                                OAuth2Error.INVALID_SCOPE.getDescription()));
     }
 
     @Test
@@ -196,6 +219,13 @@ class AuthorisationHandlerTest {
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 containsString("error=login_required"));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTHORISATION_REQUEST_ERROR,
+                        pair(
+                                "description",
+                                OIDCError.LOGIN_REQUIRED.getDescription()));
     }
 
     @Test
@@ -275,6 +305,13 @@ class AuthorisationHandlerTest {
         assertEquals(
                 "http://localhost:8080?error=invalid_request&error_description=Invalid+request%3A+Invalid+prompt+parameter%3A+Unknown+prompt+type%3A+unrecognised&state=some-state",
                 response.getHeaders().get(ResponseHeaders.LOCATION));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTHORISATION_REQUEST_ERROR,
+                        pair(
+                                "description",
+                                "Invalid request: Invalid prompt parameter: Unknown prompt type: unrecognised"));
     }
 
     @Test
@@ -287,6 +324,13 @@ class AuthorisationHandlerTest {
         assertEquals(
                 "http://localhost:8080?error=invalid_request&error_description=Invalid+request%3A+Invalid+prompt+parameter%3A+Invalid+prompt%3A+none+login&state=some-state",
                 response.getHeaders().get(ResponseHeaders.LOCATION));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTHORISATION_REQUEST_ERROR,
+                        pair(
+                                "description",
+                                "Invalid request: Invalid prompt parameter: Invalid prompt: none login"));
     }
 
     @Test
@@ -299,6 +343,13 @@ class AuthorisationHandlerTest {
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 containsString(OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS_CODE));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTHORISATION_REQUEST_ERROR,
+                        pair(
+                                "description",
+                                OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS.getDescription()));
     }
 
     @Test
@@ -311,6 +362,13 @@ class AuthorisationHandlerTest {
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 containsString(OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS_CODE));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTHORISATION_REQUEST_ERROR,
+                        pair(
+                                "description",
+                                OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS.getDescription()));
     }
 
     @Test
@@ -323,6 +381,14 @@ class AuthorisationHandlerTest {
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 containsString(OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS_CODE));
+
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTHORISATION_REQUEST_ERROR,
+                        pair(
+                                "description",
+                                OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS.getDescription()));
     }
 
     @Test
