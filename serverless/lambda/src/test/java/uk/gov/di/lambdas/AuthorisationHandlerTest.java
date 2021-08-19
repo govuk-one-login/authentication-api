@@ -131,9 +131,7 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
-                        pair(
-                                "description",
-                                "Invalid request: Missing response_type parameter"));
+                        pair("description", "Invalid request: Missing response_type parameter"));
     }
 
     @Test
@@ -158,9 +156,7 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
-                        pair(
-                                "description",
-                                OAuth2Error.INVALID_SCOPE.getDescription()));
+                        pair("description", OAuth2Error.INVALID_SCOPE.getDescription()));
     }
 
     @Test
@@ -223,9 +219,7 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
-                        pair(
-                                "description",
-                                OIDCError.LOGIN_REQUIRED.getDescription()));
+                        pair("description", OIDCError.LOGIN_REQUIRED.getDescription()));
     }
 
     @Test
@@ -381,7 +375,6 @@ class AuthorisationHandlerTest {
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 containsString(OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS_CODE));
-
 
         verify(auditService)
                 .submitAuditEvent(
