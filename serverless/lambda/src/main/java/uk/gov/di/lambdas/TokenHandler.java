@@ -26,6 +26,7 @@ import uk.gov.di.services.KmsConnectionService;
 import uk.gov.di.services.RedisConnectionService;
 import uk.gov.di.services.TokenService;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -144,9 +145,16 @@ public class TokenHandler
         }
         Subject subject =
                 authenticationService.getSubjectFromEmail(authCodeExchangeData.getEmail());
+        Map<String, Object> additionalTokenClaims = new HashMap<>();
+        if (authRequest.getNonce() != null) {
+            additionalTokenClaims.put("nonce", authRequest.getNonce());
+        }
         OIDCTokenResponse tokenResponse =
                 tokenService.generateTokenResponse(
-                        clientID, subject, authRequest.getScope().toStringList());
+                        clientID,
+                        subject,
+                        authRequest.getScope().toStringList(),
+                        additionalTokenClaims);
 
         clientSessionService.saveClientSession(
                 authCodeExchangeData.getClientSessionId(),
