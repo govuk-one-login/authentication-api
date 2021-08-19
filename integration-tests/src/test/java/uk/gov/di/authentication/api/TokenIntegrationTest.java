@@ -20,6 +20,7 @@ import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
+import uk.gov.di.entity.ServiceType;
 
 import java.net.URI;
 import java.security.KeyPair;
@@ -84,7 +85,8 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
                 singletonList(TEST_EMAIL),
                 singletonList("openid"),
                 Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
-                singletonList("http://localhost/post-logout-redirect"));
+                singletonList("http://localhost/post-logout-redirect"),
+                String.valueOf(ServiceType.MANDATORY));
         DynamoHelper.signUp(TEST_EMAIL, "password-1");
     }
 

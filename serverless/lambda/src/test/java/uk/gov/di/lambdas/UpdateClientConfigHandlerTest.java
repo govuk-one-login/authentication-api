@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.entity.ClientRegistrationResponse;
 import uk.gov.di.entity.ClientRegistry;
+import uk.gov.di.entity.ServiceType;
 import uk.gov.di.entity.UpdateClientConfigRequest;
 import uk.gov.di.services.ClientConfigValidationService;
 import uk.gov.di.services.ClientService;
@@ -35,6 +36,7 @@ class UpdateClientConfigHandlerTest {
     private static final String CLIENT_ID = "client-id-1";
     private static final String CLIENT_NAME = "client-name-one";
     private static final List<String> SCOPES = singletonList("openid");
+    private static final String SERVICE_TYPE = String.valueOf(ServiceType.MANDATORY);
     private final Context context = mock(Context.class);
     private final ClientService clientService = mock(ClientService.class);
     private final ClientConfigValidationService clientValidationService =
@@ -68,6 +70,7 @@ class UpdateClientConfigHandlerTest {
         assertThat(clientRegistrationResponse.getSubjectType(), equalTo("Public"));
         assertThat(clientRegistrationResponse.getTokenAuthMethod(), equalTo("private_key_jwt"));
         assertThat(clientRegistrationResponse.getScopes(), equalTo(SCOPES));
+        assertThat(clientRegistrationResponse.getServiceType(), equalTo(SERVICE_TYPE));
     }
 
     @Test
@@ -129,6 +132,7 @@ class UpdateClientConfigHandlerTest {
         clientRegistry.setRedirectUrls(singletonList("http://localhost/redirect"));
         clientRegistry.setContacts(singletonList("contant-name"));
         clientRegistry.setPostLogoutRedirectUrls(singletonList("localhost/logout"));
+        clientRegistry.setServiceType(SERVICE_TYPE);
         return clientRegistry;
     }
 }

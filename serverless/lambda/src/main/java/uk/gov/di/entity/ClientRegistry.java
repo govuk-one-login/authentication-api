@@ -16,6 +16,7 @@ public class ClientRegistry {
     private List<String> scopes = new ArrayList<>();
     private List<String> redirectUrls = new ArrayList<>();
     private List<String> contacts = new ArrayList<>();
+    private String serviceType;
 
     @DynamoDBHashKey(attributeName = "ClientID")
     public String getClientID() {
@@ -86,6 +87,16 @@ public class ClientRegistry {
 
     public ClientRegistry setPostLogoutRedirectUrls(List<String> postLogoutRedirectUrls) {
         this.postLogoutRedirectUrls = postLogoutRedirectUrls;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "ServiceType")
+    public String getServiceType() {
+        return serviceType;
+    }
+
+    public ClientRegistry setServiceType(String serviceType) {
+        this.serviceType = serviceType;
         return this;
     }
 }

@@ -33,20 +33,24 @@ public class ClientRegistrationResponse {
     @JsonProperty("response_type")
     private final String responseType = "code";
 
+    @JsonProperty("service_type")
+    private final String serviceType;
+
     public ClientRegistrationResponse(
             @JsonProperty(required = true, value = "client_name") String clientName,
             @JsonProperty(required = true, value = "client_id") String clientId,
             @JsonProperty(required = true, value = "redirect_uris") List<String> redirectUris,
             @JsonProperty(required = true, value = "contacts") List<String> contacts,
             @JsonProperty(required = true, value = "scopes") List<String> scopes,
-            @JsonProperty(value = "post_logout_redirect_uris")
-                    List<String> postLogoutRedirectUris) {
+            @JsonProperty(value = "post_logout_redirect_uris") List<String> postLogoutRedirectUris,
+            @JsonProperty(required = true, value = "service_type") String serviceType) {
         this.clientName = clientName;
         this.clientId = clientId;
         this.redirectUris = redirectUris;
         this.contacts = contacts;
         this.scopes = scopes;
         this.postLogoutRedirectUris = postLogoutRedirectUris;
+        this.serviceType = serviceType;
     }
 
     public String getClientName() {
@@ -83,5 +87,9 @@ public class ClientRegistrationResponse {
 
     public String getResponseType() {
         return responseType;
+    }
+
+    public String getServiceType() {
+        return serviceType;
     }
 }

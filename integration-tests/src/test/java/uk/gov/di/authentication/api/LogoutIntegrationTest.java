@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.helpers.TokenGeneratorHelper;
+import uk.gov.di.entity.ServiceType;
 
 import java.io.IOException;
 import java.net.HttpCookie;
@@ -59,8 +60,8 @@ public class LogoutIntegrationTest extends IntegrationTestEndpoints {
                 singletonList("client-1"),
                 singletonList("openid"),
                 "public-key",
-                singletonList(
-                        "https://di-auth-stub-relying-party-build.london.cloudapps.digital/"));
+                singletonList("https://di-auth-stub-relying-party-build.london.cloudapps.digital/"),
+                String.valueOf(ServiceType.MANDATORY));
         Client client = ClientBuilder.newClient();
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add(COOKIE, buildCookieString(sessionId, clientSessionId));

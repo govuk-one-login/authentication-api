@@ -98,7 +98,8 @@ public class ClientInfoHandler
                             clientRegistry.getClientID(),
                             clientRegistry.getClientName(),
                             clientRegistry.getScopes(),
-                            redirectUri);
+                            redirectUri,
+                            clientRegistry.getServiceType());
 
             LOGGER.info(
                     "Found Client Info for ClientID: {} ClientName {} Scopes {} Redirect Uri {}",

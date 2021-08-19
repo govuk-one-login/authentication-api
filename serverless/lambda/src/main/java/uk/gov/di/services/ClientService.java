@@ -18,7 +18,8 @@ public interface ClientService {
             List<String> contacts,
             List<String> scopes,
             String publicKey,
-            List<String> postLogoutRedirectUris);
+            List<String> postLogoutRedirectUris,
+            String serviceType);
 
     Optional<ClientRegistry> getClient(String clientId);
 
