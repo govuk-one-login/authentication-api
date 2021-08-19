@@ -20,6 +20,7 @@ import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
+import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -66,6 +67,7 @@ public class TokenServiceTest {
 
     @Test
     public void shouldSuccessfullyGenerateTokenResponse() throws ParseException, JOSEException {
+        Nonce nonce = new Nonce();
         when(configurationService.getTokenSigningKeyId()).thenReturn(KEY_ID);
         Optional<String> baseUrl = Optional.of(BASE_URL);
         when(configurationService.getBaseURL()).thenReturn(baseUrl);
@@ -87,8 +89,11 @@ public class TokenServiceTest {
         accessTokenResult.setSigningAlgorithm(JWSAlgorithm.ES256.getName());
         when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(accessTokenResult);
         when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(idTokenSignedResult);
+        Map<String, Object> additionalTokenClaims = new HashMap<>();
+        additionalTokenClaims.put("nonce", nonce);
         OIDCTokenResponse tokenResponse =
-                tokenService.generateTokenResponse(CLIENT_ID, SUBJECT, SCOPES);
+                tokenService.generateTokenResponse(
+                        CLIENT_ID, SUBJECT, SCOPES, additionalTokenClaims);
 
         assertEquals(
                 BASE_URL, tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getIssuer());
@@ -100,6 +105,9 @@ public class TokenServiceTest {
                         tokenResponse.getOIDCTokens().getAccessToken().toJSONString(),
                         SUBJECT.toString(),
                         300L);
+        assertEquals(
+                nonce.getValue(),
+                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("nonce"));
     }
 
     @Test

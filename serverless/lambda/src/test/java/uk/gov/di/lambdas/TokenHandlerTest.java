@@ -127,7 +127,8 @@ public class TokenHandlerTest {
                         new ClientSession(
                                 generateAuthRequest().toParameters(), LocalDateTime.now()));
         when(authenticationService.getSubjectFromEmail(eq(TEST_EMAIL))).thenReturn(TEST_SUBJECT);
-        when(tokenService.generateTokenResponse(eq(CLIENT_ID), any(Subject.class), eq(SCOPES)))
+        when(tokenService.generateTokenResponse(
+                        eq(CLIENT_ID), any(Subject.class), eq(SCOPES), eq(Collections.emptyMap())))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result = generateApiGatewayRequest(privateKeyJWT, authCode);

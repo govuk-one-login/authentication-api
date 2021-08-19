@@ -81,13 +81,17 @@ public class TokenService {
     }
 
     public OIDCTokenResponse generateTokenResponse(
-            String clientID, Subject subject, List<String> scopes) {
+            String clientID,
+            Subject subject,
+            List<String> scopes,
+            Map<String, Object> additionalTokenClaims) {
         AccessToken accessToken = generateAndStoreAccessToken(clientID, subject, scopes);
-        SignedJWT idToken = generateIDToken(clientID, subject);
+        SignedJWT idToken = generateIDToken(clientID, subject, additionalTokenClaims);
         return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, null));
     }
 
-    private SignedJWT generateIDToken(String clientId, Subject subject) {
+    private SignedJWT generateIDToken(
+            String clientId, Subject subject, Map<String, Object> additionalTokenClaims) {
         LOGGER.info("Generating IdToken for ClientId: {}", clientId);
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
@@ -98,6 +102,7 @@ public class TokenService {
                         List.of(new Audience(clientId)),
                         expiryDate,
                         new Date());
+        idTokenClaims.putAll(additionalTokenClaims);
         try {
             return generateSignedJWT(idTokenClaims.toJWTClaimsSet());
         } catch (com.nimbusds.oauth2.sdk.ParseException e) {
