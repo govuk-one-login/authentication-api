@@ -9,6 +9,7 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
+import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -86,6 +87,7 @@ class AuthorizationServiceTest {
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(responseType, scope, clientID, REDIRECT_URI)
                         .state(state)
+                        .nonce(new Nonce())
                         .build();
 
         AuthenticationSuccessResponse authSuccessResponse =
@@ -170,6 +172,60 @@ class AuthorizationServiceTest {
     }
 
     @Test
+    void shouldReturnErrorWhenStateIsNotIncludedInAuthRequest() {
+        ClientID clientID = new ClientID();
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        when(dynamoClientService.getClient(clientID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), clientID.toString())));
+        AuthenticationRequest authRequest =
+                new AuthenticationRequest.Builder(
+                                responseType, scope, new ClientID(clientID), REDIRECT_URI)
+                        .nonce(new Nonce())
+                        .build();
+        Optional<ErrorObject> errorObject = authorizationService.validateAuthRequest(authRequest);
+
+        assertThat(
+                errorObject,
+                equalTo(
+                        Optional.of(
+                                new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Request is missing state parameter"))));
+    }
+
+    @Test
+    void shouldReturnErrorWhenNonceIsNotIncludedInAuthRequest() {
+        ClientID clientID = new ClientID();
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        when(dynamoClientService.getClient(clientID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), clientID.toString())));
+        AuthenticationRequest authRequest =
+                new AuthenticationRequest.Builder(
+                                responseType, scope, new ClientID(clientID), REDIRECT_URI)
+                        .state(new State())
+                        .build();
+        Optional<ErrorObject> errorObject = authorizationService.validateAuthRequest(authRequest);
+
+        assertThat(
+                errorObject,
+                equalTo(
+                        Optional.of(
+                                new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Request is missing nonce parameter"))));
+    }
+
+    @Test
     void shouldThrowExceptionWhenRedirectUriIsInvalidInAuthRequest() {
         ClientID clientID = new ClientID();
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
@@ -210,6 +266,7 @@ class AuthorizationServiceTest {
         return new AuthenticationRequest.Builder(
                         responseType, scope, new ClientID(clientID), URI.create(redirectUri))
                 .state(state)
+                .nonce(new Nonce())
                 .build();
     }
 }

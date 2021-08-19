@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -137,6 +138,7 @@ public class ClientInfoHandlerTest {
                                 new ClientID(clientId),
                                 URI.create("http://localhost/redirect"))
                         .state(state)
+                        .nonce(new Nonce())
                         .build();
         return Optional.of(new ClientSession(authRequest.toParameters(), null));
     }
