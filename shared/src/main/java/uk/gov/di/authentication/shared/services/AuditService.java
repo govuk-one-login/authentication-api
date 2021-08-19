@@ -9,6 +9,10 @@ public class AuditService {
     private static final Logger LOGGER = LoggerFactory.getLogger(AuditService.class);
 
     public void submitAuditEvent(AuditableEvent event) {
-        LOGGER.info("Emitting audit event - " + event);
+        LOGGER.info(generateLogLine(event));
+    }
+
+    String generateLogLine(AuditableEvent event) {
+        return "Emitting audit event - " + event;
     }
 }
