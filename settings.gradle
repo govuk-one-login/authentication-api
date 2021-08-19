@@ -1,3 +1,4 @@
+include 'account-management-api'
 include 'integration-tests'
 include 'shared'
 include 'serverless'
