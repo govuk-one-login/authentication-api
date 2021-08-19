@@ -10,8 +10,10 @@ import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;
 import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
 import com.nimbusds.jose.Algorithm;
+import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
@@ -88,9 +90,14 @@ public class TokenGeneratorService {
             ByteBuffer messageToSign = ByteBuffer.wrap(message.getBytes());
             SignResult signResult = sign(messageToSign);
             LOGGER.info("ID token has been signed successfully");
-            String signature = Base64URL.encode(signResult.getSignature().toString()).toString();
+            String signature =
+                    Base64URL.encode(
+                                    ECDSA.transcodeSignatureToConcat(
+                                            signResult.getSignature().array(),
+                                            ECDSA.getSignatureByteArrayLength(JWSAlgorithm.ES256)))
+                            .toString();
             return SignedJWT.parse(message + "." + signature);
-        } catch (ParseException | com.nimbusds.oauth2.sdk.ParseException e) {
+        } catch (ParseException | com.nimbusds.oauth2.sdk.ParseException | JOSEException e) {
             LOGGER.error("Exception thrown when trying to parse SignedJWT or JWTClaimSet", e);
             throw new RuntimeException(e);
         }
@@ -122,9 +129,14 @@ public class TokenGeneratorService {
             ByteBuffer messageToSign = ByteBuffer.wrap(message.getBytes());
             SignResult signResult = sign(messageToSign);
             LOGGER.info("Access token has been signed successfully");
-            String signature = Base64URL.encode(signResult.getSignature().toString()).toString();
+            String signature =
+                    Base64URL.encode(
+                                    ECDSA.transcodeSignatureToConcat(
+                                            signResult.getSignature().array(),
+                                            ECDSA.getSignatureByteArrayLength(JWSAlgorithm.ES256)))
+                            .toString();
             return SignedJWT.parse(message + "." + signature);
-        } catch (ParseException e) {
+        } catch (ParseException | JOSEException e) {
             LOGGER.error("Exception thrown when trying to parse SignedJWT or JWTClaimSet", e);
             throw new RuntimeException(e);
         }
