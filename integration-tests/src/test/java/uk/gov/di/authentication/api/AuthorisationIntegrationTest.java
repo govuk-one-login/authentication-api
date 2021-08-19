@@ -15,6 +15,7 @@ import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.ResponseHeaders;
+import uk.gov.di.entity.ServiceType;
 import uk.gov.di.entity.SessionState;
 
 import java.security.KeyPair;
@@ -53,7 +54,8 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
                 singletonList("joe.bloggs@digital.cabinet-office.gov.uk"),
                 singletonList("openid"),
                 Base64.getMimeEncoder().encodeToString(KEY_PAIR.getPublic().getEncoded()),
-                singletonList("http://localhost/post-redirect-logout"));
+                singletonList("http://localhost/post-redirect-logout"),
+                String.valueOf(ServiceType.MANDATORY));
     }
 
     @Test

@@ -3,6 +3,7 @@ package uk.gov.di.services;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.client.RegistrationError;
 import uk.gov.di.entity.ClientRegistrationRequest;
+import uk.gov.di.entity.ServiceType;
 import uk.gov.di.entity.UpdateClientConfigRequest;
 import uk.gov.di.entity.ValidScopes;
 
@@ -23,6 +24,8 @@ public class ClientConfigValidationService {
             new ErrorObject("invalid_client_metadata", "Insufficient Scope");
     public static final ErrorObject INVALID_PUBLIC_KEY =
             new ErrorObject("invalid_client_metadata", "Invalid Public Key");
+    public static final ErrorObject INVALID_SERVICE_TYPE =
+            new ErrorObject("invalid_client_metadata", "Invalid Service Type");
 
     public Optional<ErrorObject> validateClientRegistrationConfig(
             ClientRegistrationRequest registrationRequest) {
@@ -39,6 +42,9 @@ public class ClientConfigValidationService {
         }
         if (!areScopesValid(registrationRequest.getScopes())) {
             return Optional.of(INVALID_SCOPE);
+        }
+        if (!isValidServiceType(registrationRequest.getServiceType())) {
+            return Optional.of(INVALID_SERVICE_TYPE);
         }
         return Optional.empty();
     }
@@ -64,6 +70,11 @@ public class ClientConfigValidationService {
                 .map(this::areScopesValid)
                 .orElse(true)) {
             return Optional.of(INVALID_SCOPE);
+        }
+        if (!Optional.ofNullable(registrationRequest.getServiceType())
+                .map(this::isValidServiceType)
+                .orElse(true)) {
+            return Optional.of(INVALID_SERVICE_TYPE);
         }
         return Optional.empty();
     }
@@ -99,5 +110,10 @@ public class ClientConfigValidationService {
             }
         }
         return true;
+    }
+
+    private boolean isValidServiceType(String serviceType) {
+        return serviceType.equalsIgnoreCase(String.valueOf(ServiceType.MANDATORY))
+                || serviceType.equalsIgnoreCase(String.valueOf(ServiceType.OPTIONAL));
     }
 }

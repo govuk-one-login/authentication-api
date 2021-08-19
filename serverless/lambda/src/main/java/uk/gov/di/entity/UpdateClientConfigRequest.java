@@ -27,6 +27,9 @@ public class UpdateClientConfigRequest {
     @JsonProperty("post_logout_redirect_uris")
     private List<String> postLogoutRedirectUris;
 
+    @JsonProperty("service_type")
+    private String serviceType;
+
     public UpdateClientConfigRequest() {}
 
     public String getClientId() {
@@ -55,6 +58,10 @@ public class UpdateClientConfigRequest {
 
     public List<String> getPostLogoutRedirectUris() {
         return postLogoutRedirectUris;
+    }
+
+    public String getServiceType() {
+        return serviceType;
     }
 
     public UpdateClientConfigRequest setClientId(String clientId) {
@@ -90,6 +97,11 @@ public class UpdateClientConfigRequest {
     public UpdateClientConfigRequest setPostLogoutRedirectUris(
             List<String> postLogoutRedirectUris) {
         this.postLogoutRedirectUris = postLogoutRedirectUris;
+        return this;
+    }
+
+    public UpdateClientConfigRequest setServiceType(String serviceType) {
+        this.serviceType = serviceType;
         return this;
     }
 }

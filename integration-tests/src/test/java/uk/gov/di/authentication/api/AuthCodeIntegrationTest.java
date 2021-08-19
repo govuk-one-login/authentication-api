@@ -14,6 +14,7 @@ import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
+import uk.gov.di.entity.ServiceType;
 import uk.gov.di.entity.SessionState;
 
 import java.io.IOException;
@@ -75,7 +76,8 @@ public class AuthCodeIntegrationTest extends IntegrationTestEndpoints {
                 singletonList(EMAIL),
                 singletonList("openid"),
                 Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
-                singletonList("http://localhost/post-redirect-logout"));
+                singletonList("http://localhost/post-redirect-logout"),
+                String.valueOf(ServiceType.MANDATORY));
     }
 
     private KeyPair generateRsaKeyPair() {

@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.entity.ClientInfoResponse;
+import uk.gov.di.entity.ServiceType;
 
 import java.io.IOException;
 import java.net.URI;
@@ -97,7 +98,8 @@ public class ClientInfoIntegrationTest extends IntegrationTestEndpoints {
                 singletonList(EMAIL),
                 List.of("openid", "email"),
                 Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
-                singletonList("http://localhost/post-redirect-logout"));
+                singletonList("http://localhost/post-redirect-logout"),
+                String.valueOf(ServiceType.MANDATORY));
     }
 
     private KeyPair generateRsaKeyPair() {
