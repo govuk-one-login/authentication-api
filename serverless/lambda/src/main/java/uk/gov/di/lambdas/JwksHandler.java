@@ -6,8 +6,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.jwk.JWKSet;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.services.KmsConnectionService;
 import uk.gov.di.services.RedisConnectionService;
-import uk.gov.di.services.TokenGeneratorService;
 import uk.gov.di.services.TokenService;
 
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -29,7 +29,7 @@ public class JwksHandler
                 new TokenService(
                         configurationService,
                         new RedisConnectionService(configurationService),
-                        new TokenGeneratorService(configurationService));
+                        new KmsConnectionService(configurationService));
     }
 
     @Override
@@ -37,7 +37,7 @@ public class JwksHandler
             APIGatewayProxyRequestEvent input, Context context) {
         JWKSet jwkSet;
         try {
-            jwkSet = new JWKSet(tokenService.getSigningKey());
+            jwkSet = new JWKSet(tokenService.getPublicKey());
         } catch (IllegalArgumentException e) {
             return generateApiGatewayProxyResponse(500, "Signing key is not present");
         }

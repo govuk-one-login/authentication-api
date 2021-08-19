@@ -3,7 +3,9 @@ package uk.gov.di.helpers;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.crypto.RSASSASigner;
+import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
@@ -46,8 +48,33 @@ public class TokenGeneratorHelper {
         return idToken;
     }
 
+    public static SignedJWT generateIDToken(
+            String clientId, Subject subject, String issuerUrl, ECKey signingKey) {
+        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+        IDTokenClaimsSet idTokenClaims =
+                new IDTokenClaimsSet(
+                        new Issuer(issuerUrl),
+                        subject,
+                        List.of(new Audience(clientId)),
+                        expiryDate,
+                        new Date());
+        JWSHeader jwsHeader =
+                new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(signingKey.getKeyID()).build();
+        SignedJWT idToken;
+
+        try {
+            ECDSASigner signer = new ECDSASigner(signingKey);
+            idToken = new SignedJWT(jwsHeader, idTokenClaims.toJWTClaimsSet());
+            idToken.sign(signer);
+        } catch (JOSEException | ParseException e) {
+            throw new RuntimeException(e);
+        }
+        return idToken;
+    }
+
     public static SignedJWT generateAccessToken(
-            String clientId, String issuerUrl, List<String> scopes, RSAKey signingKey) {
+            String clientId, String issuerUrl, List<String> scopes, ECKey signingKey) {
 
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
@@ -67,11 +94,11 @@ public class TokenGeneratorHelper {
                         .build();
 
         JWSHeader jwsHeader =
-                new JWSHeader.Builder(JWSAlgorithm.RS512).keyID(signingKey.getKeyID()).build();
+                new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(signingKey.getKeyID()).build();
         SignedJWT signedJWT;
 
         try {
-            RSASSASigner signer = new RSASSASigner(signingKey);
+            ECDSASigner signer = new ECDSASigner(signingKey);
             signedJWT = new SignedJWT(jwsHeader, claimsSet);
             signedJWT.sign(signer);
         } catch (JOSEException e) {
