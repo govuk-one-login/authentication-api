@@ -34,6 +34,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.entity.SessionState.AUTHENTICATED;
 import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
 
@@ -222,6 +223,11 @@ public class AuthorisationHandler
 
     private APIGatewayProxyResponseEvent generateErrorResponse(
             URI redirectUri, State state, ResponseMode responseMode, ErrorObject errorObject) {
+
+        auditService.submitAuditEvent(
+                OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR,
+                pair("description", errorObject.getDescription()));
+
         LOGGER.error(
                 "Returning error response: {} {}",
                 errorObject.getCode(),
