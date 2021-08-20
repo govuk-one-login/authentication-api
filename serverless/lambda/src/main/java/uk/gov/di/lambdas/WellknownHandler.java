@@ -7,14 +7,13 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
 import com.nimbusds.oauth2.sdk.id.Issuer;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.SubjectType;
 import com.nimbusds.openid.connect.sdk.claims.ClaimType;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.entity.ValidScopes;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -54,8 +53,7 @@ public class WellknownHandler
             providerMetadata.setRegistrationEndpointURI(buildURI("/connect/register", baseUrl));
             providerMetadata.setTokenEndpointAuthMethods(
                     List.of(ClientAuthenticationMethod.PRIVATE_KEY_JWT));
-            providerMetadata.setScopes(
-                    new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE));
+            providerMetadata.setScopes(ValidScopes.getScopesForWellKnownHandler());
             providerMetadata.setResponseTypes(List.of(new ResponseType("code")));
             providerMetadata.setGrantTypes(List.of(GrantType.AUTHORIZATION_CODE));
             providerMetadata.setClaimTypes(List.of(ClaimType.NORMAL));

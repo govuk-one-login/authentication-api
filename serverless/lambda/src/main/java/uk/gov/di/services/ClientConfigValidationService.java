@@ -11,7 +11,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.KeyFactory;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
@@ -104,8 +103,8 @@ public class ClientConfigValidationService {
 
     private boolean areScopesValid(List<String> scopes) {
         for (String scope : scopes) {
-            if (Arrays.stream(ValidScopes.values())
-                    .noneMatch((t) -> t.scopesLowerCase().equals(scope))) {
+            if (ValidScopes.getAllValidScopes().stream()
+                    .noneMatch((t) -> t.getValue().equals(scope))) {
                 return false;
             }
         }
