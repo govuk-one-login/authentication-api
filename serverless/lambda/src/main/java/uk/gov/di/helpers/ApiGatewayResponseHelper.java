@@ -15,9 +15,15 @@ public class ApiGatewayResponseHelper {
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiGatewayResponseHelper.class);
 
     public static <T> APIGatewayProxyResponseEvent generateApiGatewayProxyResponse(
-            int statusCode, T body) throws JsonProcessingException {
-        return generateApiGatewayProxyResponse(
-                statusCode, new ObjectMapper().writeValueAsString(body));
+            int statusCode, T body) {
+        try {
+            var serialisedBody = new ObjectMapper().writeValueAsString(body);
+
+            return generateApiGatewayProxyResponse(statusCode, serialisedBody);
+        } catch (JsonProcessingException e) {
+            LOGGER.warn("Unable to generateApiGatewayProxyResponse: " + e);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        }
     }
 
     public static <T> APIGatewayProxyResponseEvent generateApiGatewayProxyErrorResponse(
