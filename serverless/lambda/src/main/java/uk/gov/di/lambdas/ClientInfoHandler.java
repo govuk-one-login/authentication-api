@@ -19,8 +19,6 @@ import uk.gov.di.services.ClientSessionService;
 import uk.gov.di.services.DynamoClientService;
 import uk.gov.di.services.SessionService;
 
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -74,52 +72,52 @@ public class ClientInfoHandler
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1018);
         }
 
+        AuthenticationRequest authRequest;
+
         try {
-            Map<String, List<String>> requestParams = clientSession.get().getAuthRequestParams();
-
-            var authRequest = AuthenticationRequest.parse(requestParams);
-            String clientID = authRequest.getClientID().getValue();
-
-            String state = null;
-            if (authRequest.getState() != null) {
-                state = authRequest.getState().getValue();
-            }
-
-            String redirectUri = null;
-            if (authRequest.getRedirectionURI() != null) {
-                redirectUri = authRequest.getRedirectionURI().toString();
-            }
-
-            Optional<ClientRegistry> optionalClientRegistry = clientService.getClient(clientID);
-
-            if (optionalClientRegistry.isEmpty()) {
-                LOGGER.info("Client not found in ClientRegistry for ClientID: {}", clientID);
-                return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1015);
-            }
-
-            ClientRegistry clientRegistry = optionalClientRegistry.get();
-            ClientInfoResponse clientInfoResponse =
-                    new ClientInfoResponse(
-                            clientRegistry.getClientID(),
-                            clientRegistry.getClientName(),
-                            clientRegistry.getScopes(),
-                            redirectUri,
-                            clientRegistry.getServiceType(),
-                            state);
-
-            LOGGER.info(
-                    "Found Client Info for ClientID: {} ClientName {} Scopes {} Redirect Uri {} Service Type {} State {}",
-                    clientRegistry.getClientID(),
-                    clientRegistry.getClientName(),
-                    clientRegistry.getScopes(),
-                    redirectUri,
-                    clientRegistry.getServiceType(),
-                    state);
-
-            return generateApiGatewayProxyResponse(200, clientInfoResponse);
-
+            authRequest = AuthenticationRequest.parse(clientSession.get().getAuthRequestParams());
         } catch (ParseException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
+
+        String clientID = authRequest.getClientID().getValue();
+
+        String state = null;
+        if (authRequest.getState() != null) {
+            state = authRequest.getState().getValue();
+        }
+
+        String redirectUri = null;
+        if (authRequest.getRedirectionURI() != null) {
+            redirectUri = authRequest.getRedirectionURI().toString();
+        }
+
+        Optional<ClientRegistry> optionalClientRegistry = clientService.getClient(clientID);
+
+        if (optionalClientRegistry.isEmpty()) {
+            LOGGER.info("Client not found in ClientRegistry for ClientID: {}", clientID);
+            return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1015);
+        }
+
+        ClientRegistry clientRegistry = optionalClientRegistry.get();
+        ClientInfoResponse clientInfoResponse =
+                new ClientInfoResponse(
+                        clientRegistry.getClientID(),
+                        clientRegistry.getClientName(),
+                        clientRegistry.getScopes(),
+                        redirectUri,
+                        clientRegistry.getServiceType(),
+                        state);
+
+        LOGGER.info(
+                "Found Client Info for ClientID: {} ClientName {} Scopes {} Redirect Uri {} Service Type {} State {}",
+                clientRegistry.getClientID(),
+                clientRegistry.getClientName(),
+                clientRegistry.getScopes(),
+                redirectUri,
+                clientRegistry.getServiceType(),
+                state);
+
+        return generateApiGatewayProxyResponse(200, clientInfoResponse);
     }
 }
