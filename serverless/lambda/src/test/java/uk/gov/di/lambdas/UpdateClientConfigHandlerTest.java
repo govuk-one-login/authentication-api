@@ -6,8 +6,11 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.domain.ClientRegistryAuditableEvent;
 import uk.gov.di.entity.ClientRegistrationResponse;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ServiceType;
@@ -26,6 +29,8 @@ import static org.hamcrest.core.IsEqual.equalTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -41,11 +46,18 @@ class UpdateClientConfigHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private final ClientConfigValidationService clientValidationService =
             mock(ClientConfigValidationService.class);
+    private final AuditService auditService = mock(AuditService.class);
     private UpdateClientConfigHandler handler;
 
     @BeforeEach
     public void setUp() {
-        handler = new UpdateClientConfigHandler(clientService, clientValidationService);
+        handler =
+                new UpdateClientConfigHandler(clientService, clientValidationService, auditService);
+    }
+
+    @AfterEach
+    public void afterEach() {
+        verifyNoMoreInteractions(auditService);
     }
 
     @Test
@@ -60,7 +72,7 @@ class UpdateClientConfigHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(format("{\"client_name\": \"%s\"}", CLIENT_NAME));
         event.setPathParameters(Map.of("clientId", CLIENT_ID));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
         assertThat(result, hasStatus(200));
         ClientRegistrationResponse clientRegistrationResponse =
@@ -77,9 +89,11 @@ class UpdateClientConfigHandlerTest {
     public void shouldReturn400WhenRequestIsMissingClientID() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(format("{\"client_name\": \"%s\"}", CLIENT_NAME));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString()));
+
+        verify(auditService).submitAuditEvent(ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_ERROR);
     }
 
     @Test
@@ -87,9 +101,11 @@ class UpdateClientConfigHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("");
         event.setPathParameters(Map.of("clientId", CLIENT_ID));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString()));
+
+        verify(auditService).submitAuditEvent(ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_ERROR);
     }
 
     @Test
@@ -99,9 +115,11 @@ class UpdateClientConfigHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setPathParameters(Map.of("clientId", CLIENT_ID));
         event.setBody(format("{\"client_name\": \"%s\"}", CLIENT_NAME));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString()));
+
+        verify(auditService).submitAuditEvent(ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_ERROR);
     }
 
     @Test
@@ -117,10 +135,12 @@ class UpdateClientConfigHandlerTest {
                         "{\"client_name\": \"%s\", \"public_key\": \"%s\"}",
                         CLIENT_NAME, "rubbush-public-keu"));
         event.setPathParameters(Map.of("clientId", CLIENT_ID));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(INVALID_PUBLIC_KEY.toJSONObject().toJSONString()));
+
+        verify(auditService).submitAuditEvent(ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_ERROR);
     }
 
     private ClientRegistry createClientRegistry() {
@@ -134,5 +154,13 @@ class UpdateClientConfigHandlerTest {
         clientRegistry.setPostLogoutRedirectUrls(singletonList("localhost/logout"));
         clientRegistry.setServiceType(SERVICE_TYPE);
         return clientRegistry;
+    }
+
+    private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
+        var response = handler.handleRequest(event, context);
+
+        verify(auditService).submitAuditEvent(ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_RECEIVED);
+
+        return response;
     }
 }
