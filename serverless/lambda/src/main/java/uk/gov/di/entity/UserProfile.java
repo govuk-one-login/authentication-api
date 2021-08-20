@@ -5,7 +5,6 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBIndexHashKey;
 
 import java.util.List;
-import java.util.Map;
 
 public class UserProfile {
 
@@ -13,8 +12,7 @@ public class UserProfile {
     private String subjectID;
     private boolean emailVerified;
     private String phoneNumber;
-    private String consent;
-    private Map<String, List<String>> clientConsents;
+    private List<ClientConsent> clientConsent;
     private boolean phoneNumberVerified;
     private String created;
     private String updated;
@@ -62,16 +60,6 @@ public class UserProfile {
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "Consent")
-    public String getConsent() {
-        return consent;
-    }
-
-    public UserProfile setConsent(String consent) {
-        this.consent = consent;
-        return this;
-    }
-
     @DynamoDBAttribute(attributeName = "PhoneNumberVerified")
     public boolean isPhoneNumberVerified() {
         return phoneNumberVerified;
@@ -102,16 +90,6 @@ public class UserProfile {
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "ClientConsents")
-    public Map<String, List<String>> getClientConsents() {
-        return clientConsents;
-    }
-
-    public UserProfile setClientConsents(Map<String, List<String>> clientConsents) {
-        this.clientConsents = clientConsents;
-        return this;
-    }
-
     @DynamoDBAttribute(attributeName = "termsAndConditions")
     public TermsAndConditions getTermsAndConditions() {
         return termsAndConditions;
@@ -119,6 +97,25 @@ public class UserProfile {
 
     public UserProfile setTermsAndConditions(TermsAndConditions termsAndConditions) {
         this.termsAndConditions = termsAndConditions;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "ClientConsent")
+    public List<ClientConsent> getClientConsent() {
+        return clientConsent;
+    }
+
+    public UserProfile setClientConsent(List<ClientConsent> clientConsent) {
+        this.clientConsent = clientConsent;
+        return this;
+    }
+
+    public UserProfile setClientConsent(ClientConsent consent) {
+        if (this.clientConsent == null) {
+            this.clientConsent = List.of(consent);
+        } else {
+            this.clientConsent.add(consent);
+        }
         return this;
     }
 }
