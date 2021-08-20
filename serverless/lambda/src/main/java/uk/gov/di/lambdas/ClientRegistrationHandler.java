@@ -8,7 +8,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.domain.ClientRegistryAuditableEvent;
 import uk.gov.di.entity.ClientRegistrationRequest;
 import uk.gov.di.entity.ClientRegistrationResponse;
 import uk.gov.di.services.ClientConfigValidationService;
@@ -17,6 +19,7 @@ import uk.gov.di.services.DynamoClientService;
 
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class ClientRegistrationHandler
@@ -25,11 +28,15 @@ public class ClientRegistrationHandler
     private final ClientService clientService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ClientConfigValidationService validationService;
+    private final AuditService auditService;
 
     public ClientRegistrationHandler(
-            ClientService clientService, ClientConfigValidationService validationService) {
+            ClientService clientService,
+            ClientConfigValidationService validationService,
+            AuditService auditService) {
         this.clientService = clientService;
         this.validationService = validationService;
+        this.auditService = auditService;
     }
 
     public ClientRegistrationHandler() {
@@ -40,17 +47,23 @@ public class ClientRegistrationHandler
                         configurationService.getEnvironment(),
                         configurationService.getDynamoEndpointUri());
         this.validationService = new ClientConfigValidationService();
+        this.auditService = new AuditService();
     }
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        auditService.submitAuditEvent(
+                ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_RECEIVED);
+
         try {
             ClientRegistrationRequest clientRegistrationRequest =
                     objectMapper.readValue(input.getBody(), ClientRegistrationRequest.class);
             Optional<ErrorObject> errorResponse =
                     validationService.validateClientRegistrationConfig(clientRegistrationRequest);
             if (errorResponse.isPresent()) {
+                auditService.submitAuditEvent(ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_ERROR);
+
                 return generateApiGatewayProxyResponse(
                         400, errorResponse.get().toJSONObject().toJSONString());
             }
@@ -77,6 +90,8 @@ public class ClientRegistrationHandler
 
             return generateApiGatewayProxyResponse(200, clientRegistrationResponse);
         } catch (JsonProcessingException e) {
+            auditService.submitAuditEvent(ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_ERROR);
+
             return generateApiGatewayProxyResponse(
                     400, OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString());
         }
