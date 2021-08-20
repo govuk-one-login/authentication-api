@@ -76,17 +76,19 @@ public class ClientInfoHandler
         }
 
         try {
-            Map<String, List<String>> authRequest = clientSession.get().getAuthRequestParams();
+            Map<String, List<String>> requestParams = clientSession.get().getAuthRequestParams();
 
-            String clientID = AuthenticationRequest.parse(authRequest).getClientID().getValue();
+            var authRequest = AuthenticationRequest.parse(requestParams);
+            String clientID = authRequest.getClientID().getValue();
+
             String state = null;
-            if (AuthenticationRequest.parse(authRequest).getState() != null) {
-                state = AuthenticationRequest.parse(authRequest).getState().getValue();
+            if (authRequest.getState() != null) {
+                state = authRequest.getState().getValue();
             }
+
             String redirectUri = null;
-            if (AuthenticationRequest.parse(authRequest).getRedirectionURI() != null) {
-                redirectUri =
-                        AuthenticationRequest.parse(authRequest).getRedirectionURI().toString();
+            if (authRequest.getRedirectionURI() != null) {
+                redirectUri = authRequest.getRedirectionURI().toString();
             }
 
             Optional<ClientRegistry> optionalClientRegistry = clientService.getClient(clientID);
