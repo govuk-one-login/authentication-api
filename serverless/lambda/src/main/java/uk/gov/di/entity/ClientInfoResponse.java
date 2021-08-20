@@ -22,17 +22,22 @@ public class ClientInfoResponse {
     @JsonProperty("service_type")
     private String serviceType;
 
+    @JsonProperty("state")
+    private String state;
+
     public ClientInfoResponse(
             @JsonProperty(required = true, value = "client_id") String clientId,
             @JsonProperty(required = true, value = "client_name") String clientName,
             @JsonProperty(required = true, value = "scopes") List<String> scopes,
             @JsonProperty(required = false, value = "redirectUri") String redirectUri,
-            @JsonProperty(required = true, value = "service_type") String serviceType) {
+            @JsonProperty(required = true, value = "service_type") String serviceType,
+            @JsonProperty(required = false, value = "state") String state) {
         this.clientId = clientId;
         this.clientName = clientName;
         this.scopes = scopes;
         this.redirectUri = redirectUri;
         this.serviceType = serviceType;
+        this.state = state;
     }
 
     public String getClientId() {
@@ -53,5 +58,9 @@ public class ClientInfoResponse {
 
     public String getServiceType() {
         return serviceType;
+    }
+
+    public String getState() {
+        return state;
     }
 }
