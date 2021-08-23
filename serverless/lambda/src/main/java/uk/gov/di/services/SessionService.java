@@ -69,6 +69,7 @@ public class SessionService {
 
     public Optional<Session> getSessionFromRequestHeaders(Map<String, String> headers) {
         if (headers == null || headers.isEmpty() || !headers.containsKey(SESSION_ID_HEADER)) {
+            LOGGER.error("Headers are missing Session-Id header");
             return Optional.empty();
         }
         try {

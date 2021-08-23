@@ -7,13 +7,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.openid.connect.sdk.OIDCError;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.domain.ClientRegistryAuditableEvent;
-import uk.gov.di.domain.OidcAuditableEvent;
 import uk.gov.di.entity.ClientRegistrationRequest;
 import uk.gov.di.entity.ClientRegistrationResponse;
 import uk.gov.di.entity.ServiceType;
@@ -32,8 +30,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
@@ -108,7 +104,8 @@ class ClientRegistrationHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString()));
 
-        verify(auditService).submitAuditEvent(ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_ERROR);
+        verify(auditService)
+                .submitAuditEvent(ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_ERROR);
     }
 
     @Test
@@ -124,13 +121,15 @@ class ClientRegistrationHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(INVALID_PUBLIC_KEY.toJSONObject().toJSONString()));
 
-        verify(auditService).submitAuditEvent(ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_ERROR);
+        verify(auditService)
+                .submitAuditEvent(ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_ERROR);
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
         var response = handler.handleRequest(event, context);
 
-        verify(auditService).submitAuditEvent(ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_RECEIVED);
+        verify(auditService)
+                .submitAuditEvent(ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_RECEIVED);
 
         return response;
     }

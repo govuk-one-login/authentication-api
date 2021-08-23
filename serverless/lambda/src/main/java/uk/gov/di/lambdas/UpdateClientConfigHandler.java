@@ -22,7 +22,6 @@ import uk.gov.di.services.DynamoClientService;
 
 import java.util.Optional;
 
-import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class UpdateClientConfigHandler
@@ -65,7 +64,8 @@ public class UpdateClientConfigHandler
             UpdateClientConfigRequest updateClientConfigRequest =
                     objectMapper.readValue(input.getBody(), UpdateClientConfigRequest.class);
             if (!clientService.isValidClient(clientId)) {
-                auditService.submitAuditEvent(ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_ERROR);
+                auditService.submitAuditEvent(
+                        ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_ERROR);
                 LOGGER.error("Client with ClientId {} is not valid", clientId);
                 return generateApiGatewayProxyResponse(
                         400, OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString());
@@ -73,7 +73,8 @@ public class UpdateClientConfigHandler
             Optional<ErrorObject> errorResponse =
                     validationService.validateClientUpdateConfig(updateClientConfigRequest);
             if (errorResponse.isPresent()) {
-                auditService.submitAuditEvent(ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_ERROR);
+                auditService.submitAuditEvent(
+                        ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_ERROR);
                 return generateApiGatewayProxyResponse(
                         400, errorResponse.get().toJSONObject().toJSONString());
             }
