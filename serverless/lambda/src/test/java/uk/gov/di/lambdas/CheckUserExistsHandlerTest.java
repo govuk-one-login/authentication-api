@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
@@ -45,6 +46,7 @@ class CheckUserExistsHandlerTest {
         handler =
                 new CheckUserExistsHandler(
                         validationService, authenticationService, sessionService);
+        reset(authenticationService);
     }
 
     @Test
@@ -128,20 +130,42 @@ class CheckUserExistsHandlerTest {
     @Test
     public void shouldReturn400IfUserTransitionsFromWrongState() {
         usingValidSession();
-
         session.setState(SessionState.AUTHENTICATED);
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody("{ \"email\": \"joe.bloggs\" }");
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(usingTestEventWithSession(session), context);
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1017));
     }
 
+    @Test
+    public void shouldReturn200IfUserTransitionsFromUserNotFoundAndUserDoesNotExist() throws JsonProcessingException {
+        usingValidSession();
+        session.setState(SessionState.USER_NOT_FOUND);
+        when(authenticationService.userExists(eq("joe.bloggs")))
+                .thenReturn(false);
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(usingTestEventWithSession(session), context);
+
+        assertEquals(200, result.getStatusCode());
+        CheckUserExistsResponse checkUserExistsResponse =
+                objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+        assertEquals(
+                "joe.bloggs", checkUserExistsResponse.getEmail());
+        assertFalse(checkUserExistsResponse.doesUserExist());
+        assertTrue(
+        checkUserExistsResponse.getSessionState().equals(SessionState.USER_NOT_FOUND));
+    }
+
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
+    }
+
+    private APIGatewayProxyRequestEvent usingTestEventWithSession(Session testEventSession) {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setBody("{ \"email\": \"joe.bloggs\" }");
+        event.setHeaders(Map.of("Session-Id", testEventSession.getSessionId()));
+        return event;
     }
 }
