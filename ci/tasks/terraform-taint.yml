@@ -1,0 +1,33 @@
+platform: linux
+image_resource:
+  type: registry-image
+  source:
+    repository: hashicorp/terraform
+    tag: 1.0.4
+    username: ((docker-hub-username))
+    password: ((docker-hub-password))
+params:
+  DEPLOYER_ROLE_ARN: ((deployer-role-arn-non-prod))
+  DEPLOY_ENVIRONMENT: build
+inputs:
+  - name: api-release
+outputs:
+  - name: terraform-outputs
+run:
+  path: /bin/sh
+  args:
+    - -euc
+    - |
+      mkdir src
+      tar xfz api-release/source.tar.gz --strip-components=1 -C src/
+      cd "src/ci/terraform/oidc"
+      terraform init -input=false \
+        -backend-config "role_arn=${DEPLOYER_ROLE_ARN}" \
+        -backend-config "bucket=digital-identity-dev-tfstate" \
+        -backend-config "key=${DEPLOY_ENVIRONMENT}-terraform.tfstate" \
+        -backend-config "encrypt=true" \
+        -backend-config "region=eu-west-2"
+
+      terraform state list | grep ^tls_private_key.stub_rp_client_private_key | xargs -n 1 terraform taint
+
+      echo "All sensitive resources marked as needing re-creation, ** now manually run the 'deploy-api-${DEPLOY_ENVIRONMENT}' job **."
