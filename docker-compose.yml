@@ -8,7 +8,7 @@ services:
     environment:
       SERVICES: lambda, apigateway, iam, ec2, sqs, s3, sts, kms
       EDGE_PORT: "45678"
-      EXTERNAL_HOSTNAME: ${AWS_HOSTNAME:-localhost}
+      EXTERNAL_HOSTNAME: localhost
       DEFAULT_REGION: eu-west-2
       TEST_AWS_ACCOUNT_ID: 123456789012
       DEBUG: "1"
