@@ -24,7 +24,7 @@ dependencies {
             'org.eclipse.jetty:jetty-server:11.0.6',
             "software.amazon.awssdk:sqs:2.17.15",
             "org.awaitility:awaitility:4.1.0",
-            "com.amazonaws:aws-java-sdk-dynamodb:1.12.43",
+            "com.amazonaws:aws-java-sdk-dynamodb:1.12.52",
             "io.lettuce:lettuce-core:6.1.4.RELEASE",
             project(":serverless:lambda"),
             project(":shared")
