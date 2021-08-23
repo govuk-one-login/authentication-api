@@ -19,7 +19,6 @@ import uk.gov.di.services.DynamoClientService;
 
 import java.util.Optional;
 
-import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class ClientRegistrationHandler
@@ -62,7 +61,8 @@ public class ClientRegistrationHandler
             Optional<ErrorObject> errorResponse =
                     validationService.validateClientRegistrationConfig(clientRegistrationRequest);
             if (errorResponse.isPresent()) {
-                auditService.submitAuditEvent(ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_ERROR);
+                auditService.submitAuditEvent(
+                        ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_ERROR);
 
                 return generateApiGatewayProxyResponse(
                         400, errorResponse.get().toJSONObject().toJSONString());
@@ -90,7 +90,8 @@ public class ClientRegistrationHandler
 
             return generateApiGatewayProxyResponse(200, clientRegistrationResponse);
         } catch (JsonProcessingException e) {
-            auditService.submitAuditEvent(ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_ERROR);
+            auditService.submitAuditEvent(
+                    ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_ERROR);
 
             return generateApiGatewayProxyResponse(
                     400, OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString());

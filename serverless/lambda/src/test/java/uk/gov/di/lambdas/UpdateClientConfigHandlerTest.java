@@ -93,7 +93,8 @@ class UpdateClientConfigHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString()));
 
-        verify(auditService).submitAuditEvent(ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_ERROR);
+        verify(auditService)
+                .submitAuditEvent(ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_ERROR);
     }
 
     @Test
@@ -105,7 +106,8 @@ class UpdateClientConfigHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString()));
 
-        verify(auditService).submitAuditEvent(ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_ERROR);
+        verify(auditService)
+                .submitAuditEvent(ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_ERROR);
     }
 
     @Test
@@ -119,7 +121,8 @@ class UpdateClientConfigHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString()));
 
-        verify(auditService).submitAuditEvent(ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_ERROR);
+        verify(auditService)
+                .submitAuditEvent(ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_ERROR);
     }
 
     @Test
@@ -140,7 +143,8 @@ class UpdateClientConfigHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(INVALID_PUBLIC_KEY.toJSONObject().toJSONString()));
 
-        verify(auditService).submitAuditEvent(ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_ERROR);
+        verify(auditService)
+                .submitAuditEvent(ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_ERROR);
     }
 
     private ClientRegistry createClientRegistry() {
@@ -159,7 +163,8 @@ class UpdateClientConfigHandlerTest {
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
         var response = handler.handleRequest(event, context);
 
-        verify(auditService).submitAuditEvent(ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_RECEIVED);
+        verify(auditService)
+                .submitAuditEvent(ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_RECEIVED);
 
         return response;
     }
