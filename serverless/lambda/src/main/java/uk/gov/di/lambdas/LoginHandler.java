@@ -42,7 +42,6 @@ public class LoginHandler
     }
 
     public LoginHandler() {
-        LOGGER.info("LoginHandler called");
         ConfigurationService configurationService = new ConfigurationService();
         this.sessionService = new SessionService(configurationService);
         this.authenticationService =
