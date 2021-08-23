@@ -38,6 +38,7 @@ public class DynamoClientService implements ClientService {
                         .build();
 
         this.clientRegistryMapper = new DynamoDBMapper(dynamoDB, clientRegistryConfig);
+        this.clientRegistryMapper.load(ClientRegistry.class, "testkey1");
     }
 
     @Override
