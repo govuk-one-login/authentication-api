@@ -4,7 +4,8 @@ resource "aws_lambda_function" "endpoint_lambda" {
   role          = var.lambda_role_arn
   handler       = var.handler_function_name
   timeout       = 30
-  memory_size   = 512
+  memory_size   = 2048
+  publish       = true
 
   tracing_config {
     mode = "Active"

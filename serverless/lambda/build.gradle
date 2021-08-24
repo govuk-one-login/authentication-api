@@ -28,6 +28,7 @@ dependencies {
             "uk.gov.service.notify:notifications-java-client:3.17.2-RELEASE",
             "org.bouncycastle:bcprov-jdk15on:1.69",
             "com.googlecode.libphonenumber:libphonenumber:8.12.28",
+            "org.apache.commons:commons-pool2:2.11.1",
             project(":shared")
 
     runtimeOnly "org.apache.logging.log4j:log4j-slf4j18-impl:2.13.0",
