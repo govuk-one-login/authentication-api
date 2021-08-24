@@ -12,21 +12,25 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.BaseAPIResponse;
+import uk.gov.di.entity.ClientConsent;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.UpdateProfileRequest;
+import uk.gov.di.entity.ValidScopes;
 import uk.gov.di.helpers.StateMachine.InvalidStateTransitionException;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.ClientSessionService;
 import uk.gov.di.services.DynamoService;
 import uk.gov.di.services.SessionService;
 
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.Set;
 
-import static uk.gov.di.entity.SessionState.*;
+import static uk.gov.di.entity.SessionState.ADDED_CONSENT;
+import static uk.gov.di.entity.SessionState.ADDED_UNVERIFIED_PHONE_NUMBER;
+import static uk.gov.di.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS;
 import static uk.gov.di.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -101,58 +105,60 @@ public class UpdateProfileHandler
                                 clientSessionService.getClientSessionFromRequestHeaders(
                                         input.getHeaders());
 
-                        if (!clientSession.isPresent()) {
+                        if (clientSession.isEmpty()) {
                             LOGGER.info("ClientSession not found.");
                             return generateApiGatewayProxyErrorResponse(
                                     400, ErrorResponse.ERROR_1000);
                         }
-
+                        AuthenticationRequest authorizationRequest;
                         try {
-                            AuthenticationRequest authorizationRequest =
+                            authorizationRequest =
                                     AuthenticationRequest.parse(
                                             clientSession.get().getAuthRequestParams());
                             clientId = authorizationRequest.getClientID().getValue();
                         } catch (ParseException e) {
                             LOGGER.info(
-                                    "Cannot retreive auth request params from client session id.");
+                                    "Cannot retrieve auth request params from client session id.");
                             return generateApiGatewayProxyErrorResponse(
                                     400, ErrorResponse.ERROR_1001);
                         }
+                        Set<String> claims =
+                                ValidScopes.getClaimsForListOfScopes(
+                                        authorizationRequest.getScope().toStringList());
 
-                        Optional<Map<String, List<String>>> clientConsents =
-                                authenticationService.getUserConsents(profileRequest.getEmail());
+                        Optional<ClientConsent> clientConsentForClientId =
+                                authenticationService
+                                        .getUserConsents(profileRequest.getEmail())
+                                        .flatMap(
+                                                list ->
+                                                        list.stream()
+                                                                .filter(
+                                                                        c ->
+                                                                                c.getClientId()
+                                                                                        .equals(
+                                                                                                clientId))
+                                                                .findFirst());
 
-                        if (clientConsents.isPresent()
-                                && clientConsents.get().containsKey(clientId)) {
-                            clientConsents.get().get(clientId).clear();
-                            clientConsents
-                                    .get()
-                                    .get(clientId)
-                                    .add(profileRequest.getProfileInformation());
-                            LOGGER.info(
-                                    "Consent value successfully added to clientConsent map. Client ID {} - Consent Value {}",
-                                    clientId,
-                                    profileRequest.getProfileInformation());
-                        } else {
-                            clientConsents =
-                                    Optional.of(
-                                            Map.of(
-                                                    clientId,
-                                                    List.of(
-                                                            profileRequest
-                                                                    .getProfileInformation())));
-                            LOGGER.info(
-                                    "New consent map created. Client ID {} - Consent Value {}",
-                                    clientId,
-                                    profileRequest.getProfileInformation());
-                        }
+                        ClientConsent clientConsentToUpdate =
+                                clientConsentForClientId
+                                        .map(t -> t.setClaims(claims))
+                                        .orElse(
+                                                new ClientConsent(
+                                                        clientId,
+                                                        claims,
+                                                        LocalDateTime.now().toString()));
+
+                        LOGGER.info(
+                                "Consent value successfully added to ClientConsentObject. Attempting to update UserProfile with ClientConsent: {}",
+                                clientConsentToUpdate);
 
                         authenticationService.updateConsent(
-                                profileRequest.getEmail(), clientConsents.get());
+                                profileRequest.getEmail(), clientConsentToUpdate);
                         sessionService.save(session.get().setState(ADDED_CONSENT));
 
                         LOGGER.info(
-                                "Consent updated and session state changed. Session state {}",
+                                "Consent updated for ClientID {} and session state changed. Session state {}",
+                                clientId,
                                 ADDED_CONSENT);
 
                         return generateApiGatewayProxyResponse(

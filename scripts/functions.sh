@@ -40,7 +40,7 @@ function run_terraform() {
   pushd "$1" >/dev/null
   rm -fr .terraform/ *.tfstate
   terraform init -backend-config=localstack.hcl
-  printf "\nRunning terraform apply (quietly - output redirected to terraform.log)...\n"
+  printf "\nRunning terraform apply quietly (output redirected to terraform.log)...\n"
   set +e
   terraform apply -var-file=localstack.tfvars -auto-approve > terraform.log
   tf_exit_code=$?
@@ -81,7 +81,7 @@ startup() {
   ./gradlew clean build -x test
   printf "\nStarting Docker services...\n"
   startup_docker aws redis dynamodb
-  run_terraform ci/terraform/aws
+  run_terraform ci/terraform/oidc
   if [[ -z ${IN_GITHUB_ACTIONS+x} ||  ${IN_GITHUB_ACTIONS} -eq 0 ]]; then
     funky_started
   else
@@ -90,7 +90,7 @@ startup() {
 }
 
 run-integration-tests() {
-  pushd ci/terraform/aws >/dev/null
+  pushd ci/terraform/oidc >/dev/null
   export API_GATEWAY_ID="$(terraform output -raw api_gateway_root_id)"
   popd >/dev/null
   ./gradlew integration-tests:test

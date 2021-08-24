@@ -63,5 +63,8 @@ resource "aws_dynamodb_table_item" "stub_rp_client" {
         tls_private_key.stub_rp_client_private_key[count.index].public_key_pem, "-----BEGIN PUBLIC KEY-----", ""),
       "-----END PUBLIC KEY-----", ""), "\n", "")
     }
+    ServiceType = {
+      S = "MANDATORY"
+    }
   })
 }

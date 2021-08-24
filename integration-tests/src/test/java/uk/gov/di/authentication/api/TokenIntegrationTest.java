@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.Nonce;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.ClientBuilder;
 import jakarta.ws.rs.client.Entity;
@@ -20,6 +21,7 @@ import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
+import uk.gov.di.entity.ServiceType;
 
 import java.net.URI;
 import java.security.KeyPair;
@@ -84,7 +86,8 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
                 singletonList(TEST_EMAIL),
                 singletonList("openid"),
                 Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
-                singletonList("http://localhost/post-logout-redirect"));
+                singletonList("http://localhost/post-logout-redirect"),
+                String.valueOf(ServiceType.MANDATORY));
         DynamoHelper.signUp(TEST_EMAIL, "password-1");
     }
 
@@ -104,12 +107,14 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
         scopeValues.add("openid");
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         State state = new State();
+        Nonce nonce = new Nonce();
         return new AuthenticationRequest.Builder(
                         responseType,
                         scopeValues,
                         new ClientID(CLIENT_ID),
                         URI.create("http://localhost/redirect"))
                 .state(state)
+                .nonce(nonce)
                 .build();
     }
 }

@@ -8,7 +8,7 @@ variable "path_part" {
 
 variable "provisioned_concurrent_executions" {
   type    = number
-  default = 10
+  default = 5
 }
 
 variable "method_request_parameters" {

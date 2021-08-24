@@ -79,6 +79,10 @@ public class ClientInfoHandler
             Map<String, List<String>> authRequest = clientSession.get().getAuthRequestParams();
 
             String clientID = AuthenticationRequest.parse(authRequest).getClientID().getValue();
+            String state = null;
+            if (AuthenticationRequest.parse(authRequest).getState() != null) {
+                state = AuthenticationRequest.parse(authRequest).getState().getValue();
+            }
             String redirectUri = null;
             if (AuthenticationRequest.parse(authRequest).getRedirectionURI() != null) {
                 redirectUri =
@@ -98,14 +102,18 @@ public class ClientInfoHandler
                             clientRegistry.getClientID(),
                             clientRegistry.getClientName(),
                             clientRegistry.getScopes(),
-                            redirectUri);
+                            redirectUri,
+                            clientRegistry.getServiceType(),
+                            state);
 
             LOGGER.info(
-                    "Found Client Info for ClientID: {} ClientName {} Scopes {} Redirect Uri {}",
+                    "Found Client Info for ClientID: {} ClientName {} Scopes {} Redirect Uri {} Service Type {} State {}",
                     clientRegistry.getClientID(),
                     clientRegistry.getClientName(),
                     clientRegistry.getScopes(),
-                    redirectUri);
+                    redirectUri,
+                    clientRegistry.getServiceType(),
+                    state);
 
             return generateApiGatewayProxyResponse(200, clientInfoResponse);
 

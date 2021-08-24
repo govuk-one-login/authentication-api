@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.api;
 
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCError;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.ClientBuilder;
@@ -15,6 +16,7 @@ import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.ResponseHeaders;
+import uk.gov.di.entity.ServiceType;
 import uk.gov.di.entity.SessionState;
 
 import java.security.KeyPair;
@@ -53,7 +55,8 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
                 singletonList("joe.bloggs@digital.cabinet-office.gov.uk"),
                 singletonList("openid"),
                 Base64.getMimeEncoder().encodeToString(KEY_PAIR.getPublic().getEncoded()),
-                singletonList("http://localhost/post-redirect-logout"));
+                singletonList("http://localhost/post-redirect-logout"),
+                String.valueOf(ServiceType.MANDATORY));
     }
 
     @Test
@@ -217,12 +220,13 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
     private Response doAuthorisationRequest(
             Optional<String> clientId, Optional<Cookie> cookie, Optional<String> prompt) {
         Client client = ClientBuilder.newClient();
-
+        Nonce nonce = new Nonce();
         WebTarget webTarget =
                 client.target(ROOT_RESOURCE_URL + AUTHORIZE_ENDPOINT)
                         .queryParam("response_type", "code")
                         .queryParam("redirect_uri", "localhost")
                         .queryParam("state", "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU")
+                        .queryParam("nonce", nonce.getValue())
                         .queryParam("client_id", clientId.orElse("test-client"))
                         .queryParam("scope", "openid")
                         .property(ClientProperties.FOLLOW_REDIRECTS, Boolean.FALSE);

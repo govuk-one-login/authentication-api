@@ -3,6 +3,7 @@ package uk.gov.di.services;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.client.RegistrationError;
 import uk.gov.di.entity.ClientRegistrationRequest;
+import uk.gov.di.entity.ServiceType;
 import uk.gov.di.entity.UpdateClientConfigRequest;
 import uk.gov.di.entity.ValidScopes;
 
@@ -10,7 +11,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.KeyFactory;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
@@ -23,6 +23,8 @@ public class ClientConfigValidationService {
             new ErrorObject("invalid_client_metadata", "Insufficient Scope");
     public static final ErrorObject INVALID_PUBLIC_KEY =
             new ErrorObject("invalid_client_metadata", "Invalid Public Key");
+    public static final ErrorObject INVALID_SERVICE_TYPE =
+            new ErrorObject("invalid_client_metadata", "Invalid Service Type");
 
     public Optional<ErrorObject> validateClientRegistrationConfig(
             ClientRegistrationRequest registrationRequest) {
@@ -39,6 +41,9 @@ public class ClientConfigValidationService {
         }
         if (!areScopesValid(registrationRequest.getScopes())) {
             return Optional.of(INVALID_SCOPE);
+        }
+        if (!isValidServiceType(registrationRequest.getServiceType())) {
+            return Optional.of(INVALID_SERVICE_TYPE);
         }
         return Optional.empty();
     }
@@ -64,6 +69,11 @@ public class ClientConfigValidationService {
                 .map(this::areScopesValid)
                 .orElse(true)) {
             return Optional.of(INVALID_SCOPE);
+        }
+        if (!Optional.ofNullable(registrationRequest.getServiceType())
+                .map(this::isValidServiceType)
+                .orElse(true)) {
+            return Optional.of(INVALID_SERVICE_TYPE);
         }
         return Optional.empty();
     }
@@ -93,11 +103,16 @@ public class ClientConfigValidationService {
 
     private boolean areScopesValid(List<String> scopes) {
         for (String scope : scopes) {
-            if (Arrays.stream(ValidScopes.values())
-                    .noneMatch((t) -> t.scopesLowerCase().equals(scope))) {
+            if (ValidScopes.getAllValidScopes().stream()
+                    .noneMatch((t) -> t.getValue().equals(scope))) {
                 return false;
             }
         }
         return true;
+    }
+
+    private boolean isValidServiceType(String serviceType) {
+        return serviceType.equalsIgnoreCase(String.valueOf(ServiceType.MANDATORY))
+                || serviceType.equalsIgnoreCase(String.valueOf(ServiceType.OPTIONAL));
     }
 }

@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.ClientBuilder;
@@ -20,7 +21,8 @@ import org.glassfish.jersey.client.ClientProperties;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
-import uk.gov.di.helpers.TokenGenerator;
+import uk.gov.di.authentication.helpers.TokenGeneratorHelper;
+import uk.gov.di.entity.ServiceType;
 
 import java.io.IOException;
 import java.net.HttpCookie;
@@ -43,7 +45,7 @@ public class LogoutIntegrationTest extends IntegrationTestEndpoints {
         RSAKey signingKey =
                 new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
         SignedJWT signedJWT =
-                TokenGenerator.generateIDToken(
+                TokenGeneratorHelper.generateIDToken(
                         "client-id", new Subject(), "http://localhost/issuer", signingKey);
         RedisHelper.createSession(sessionId);
         RedisHelper.addAuthRequestToSession(
@@ -59,8 +61,8 @@ public class LogoutIntegrationTest extends IntegrationTestEndpoints {
                 singletonList("client-1"),
                 singletonList("openid"),
                 "public-key",
-                singletonList(
-                        "https://di-auth-stub-relying-party-build.london.cloudapps.digital/"));
+                singletonList("https://di-auth-stub-relying-party-build.london.cloudapps.digital/"),
+                String.valueOf(ServiceType.MANDATORY));
         Client client = ClientBuilder.newClient();
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add(COOKIE, buildCookieString(sessionId, clientSessionId));
@@ -96,6 +98,7 @@ public class LogoutIntegrationTest extends IntegrationTestEndpoints {
                         new ClientID("test-client"),
                         URI.create("http://localhost:8080/redirect"))
                 .state(state)
+                .nonce(new Nonce())
                 .build();
     }
 

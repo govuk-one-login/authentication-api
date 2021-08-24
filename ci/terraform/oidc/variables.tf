@@ -75,6 +75,12 @@ variable "external_redis_password" {
   default = null
 }
 
+variable "localstack_endpoint" {
+  type    = string
+  default = "http://localhost:45678/"
+}
+
+
 variable "redis_use_tls" {
   type    = string
   default = "true"
@@ -105,4 +111,8 @@ variable "stub_rp_clients" {
   default     = []
   type        = list(object({ client_name : string, callback_urls : list(string), logout_urls : list(string) }))
   description = "The details of RP clients to provision in the Client table"
+}
+
+variable "aws_region" {
+  default = "eu-west-2"
 }

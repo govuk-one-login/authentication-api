@@ -10,6 +10,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.QueryResultPage;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.util.Base64;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import uk.gov.di.entity.ClientConsent;
 import uk.gov.di.entity.TermsAndConditions;
 import uk.gov.di.entity.UserCredentials;
 import uk.gov.di.entity.UserProfile;
@@ -57,6 +58,8 @@ public class DynamoService implements AuthenticationService {
                         .build();
         this.userCredentialsMapper = new DynamoDBMapper(dynamoDB, userCredentialsConfig);
         this.userProfileMapper = new DynamoDBMapper(dynamoDB, userProfileConfig);
+        this.userProfileMapper.load(UserProfile.class, "TestKey1");
+        this.userProfileMapper.load(UserProfile.class, "TestKey1");
     }
 
     @Override
@@ -109,9 +112,9 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
-    public void updateConsent(String email, Map<String, List<String>> clientConsents) {
+    public void updateConsent(String email, ClientConsent clientConsent) {
         userProfileMapper.save(
-                userProfileMapper.load(UserProfile.class, email).setClientConsents(clientConsents));
+                userProfileMapper.load(UserProfile.class, email).setClientConsent(clientConsent));
     }
 
     @Override
@@ -126,9 +129,9 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
-    public Optional<Map<String, List<String>>> getUserConsents(String email) {
+    public Optional<List<ClientConsent>> getUserConsents(String email) {
         return Optional.ofNullable(
-                userProfileMapper.load(UserProfile.class, email).getClientConsents());
+                userProfileMapper.load(UserProfile.class, email).getClientConsent());
     }
 
     @Override

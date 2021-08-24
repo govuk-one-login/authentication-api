@@ -22,9 +22,11 @@ import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ClientSessionService;
 import uk.gov.di.services.DynamoClientService;
 import uk.gov.di.services.DynamoService;
+import uk.gov.di.services.KmsConnectionService;
 import uk.gov.di.services.RedisConnectionService;
 import uk.gov.di.services.TokenService;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -44,6 +46,7 @@ public class TokenHandler
     private final ConfigurationService configurationService;
     private final AuthorisationCodeService authorisationCodeService;
     private final ClientSessionService clientSessionService;
+    private static final String TOKEN_PATH = "/token";
 
     public TokenHandler(
             ClientService clientService,
@@ -69,7 +72,9 @@ public class TokenHandler
                         configurationService.getDynamoEndpointUri());
         tokenService =
                 new TokenService(
-                        configurationService, new RedisConnectionService(configurationService));
+                        configurationService,
+                        new RedisConnectionService(configurationService),
+                        new KmsConnectionService(configurationService));
         this.authenticationService =
                 new DynamoService(
                         configurationService.getAwsRegion(),
@@ -100,12 +105,11 @@ public class TokenHandler
             return generateApiGatewayProxyResponse(
                     400, OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString());
         }
-
+        String baseUrl = configurationService.getBaseURL().orElseThrow();
+        String tokenUrl = baseUrl + TOKEN_PATH;
         Optional<ErrorObject> invalidPrivateKeyJwtError =
                 tokenService.validatePrivateKeyJWT(
-                        input.getBody(),
-                        client.getPublicKey(),
-                        configurationService.getBaseURL().orElseThrow());
+                        input.getBody(), client.getPublicKey(), tokenUrl);
         if (invalidPrivateKeyJwtError.isPresent()) {
             LOG.error("Private Key JWT is not valid for Client ID {}", clientID);
             return generateApiGatewayProxyResponse(
@@ -141,9 +145,16 @@ public class TokenHandler
         }
         Subject subject =
                 authenticationService.getSubjectFromEmail(authCodeExchangeData.getEmail());
+        Map<String, Object> additionalTokenClaims = new HashMap<>();
+        if (authRequest.getNonce() != null) {
+            additionalTokenClaims.put("nonce", authRequest.getNonce());
+        }
         OIDCTokenResponse tokenResponse =
                 tokenService.generateTokenResponse(
-                        clientID, subject, authRequest.getScope().toStringList());
+                        clientID,
+                        subject,
+                        authRequest.getScope().toStringList(),
+                        additionalTokenClaims);
 
         clientSessionService.saveClientSession(
                 authCodeExchangeData.getClientSessionId(),

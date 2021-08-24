@@ -5,6 +5,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.ClientBuilder;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.entity.ClientInfoResponse;
+import uk.gov.di.entity.ServiceType;
 
 import java.io.IOException;
 import java.net.URI;
@@ -61,6 +63,7 @@ public class ClientInfoIntegrationTest extends IntegrationTestEndpoints {
                                 scope,
                                 new ClientID(CLIENT_ID),
                                 URI.create("http://localhost/redirect"))
+                        .nonce(new Nonce())
                         .build();
         RedisHelper.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
 
@@ -97,7 +100,8 @@ public class ClientInfoIntegrationTest extends IntegrationTestEndpoints {
                 singletonList(EMAIL),
                 List.of("openid", "email"),
                 Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
-                singletonList("http://localhost/post-redirect-logout"));
+                singletonList("http://localhost/post-redirect-logout"),
+                String.valueOf(ServiceType.MANDATORY));
     }
 
     private KeyPair generateRsaKeyPair() {

@@ -7,6 +7,7 @@ import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.ScanRequest;
 import com.amazonaws.services.dynamodbv2.model.ScanResult;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import uk.gov.di.entity.ClientConsent;
 import uk.gov.di.services.DynamoClientService;
 import uk.gov.di.services.DynamoService;
 
@@ -19,7 +20,6 @@ public class DynamoHelper {
     private static final String ENVIRONMENT = System.getenv().getOrDefault("ENVIRONMENT", "local");
     private static final String DYNAMO_ENDPOINT =
             System.getenv().getOrDefault("DYNAMO_ENDPOINT", "http://localhost:8000");
-
     private static final DynamoService DYNAMO_SERVICE =
             new DynamoService(REGION, ENVIRONMENT, Optional.of(DYNAMO_ENDPOINT));
 
@@ -46,6 +46,10 @@ public class DynamoHelper {
         DYNAMO_SERVICE.updatePhoneNumberVerifiedStatus(email, isVerified);
     }
 
+    public static Optional<List<ClientConsent>> getUserConsents(String email) {
+        return DYNAMO_SERVICE.getUserConsents(email);
+    }
+
     public static void registerClient(
             String clientID,
             String clientName,
@@ -53,7 +57,8 @@ public class DynamoHelper {
             List<String> contacts,
             List<String> scopes,
             String publicKey,
-            List<String> postLogoutRedirectUris) {
+            List<String> postLogoutRedirectUris,
+            String serviceType) {
         DYNAMO_CLIENT_SERVICE.addClient(
                 clientID,
                 clientName,
@@ -61,7 +66,8 @@ public class DynamoHelper {
                 contacts,
                 scopes,
                 publicKey,
-                postLogoutRedirectUris);
+                postLogoutRedirectUris,
+                serviceType);
     }
 
     public static boolean clientExists(String clientID) {

@@ -7,10 +7,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.ClientID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.domain.ClientRegistryAuditableEvent;
 import uk.gov.di.entity.ClientRegistrationRequest;
 import uk.gov.di.entity.ClientRegistrationResponse;
+import uk.gov.di.entity.ServiceType;
 import uk.gov.di.services.ClientConfigValidationService;
 import uk.gov.di.services.ClientService;
 
@@ -24,6 +28,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -35,12 +40,19 @@ class ClientRegistrationHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private final ClientConfigValidationService configValidationService =
             mock(ClientConfigValidationService.class);
+    private final AuditService auditService = mock(AuditService.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
     private ClientRegistrationHandler handler;
 
     @BeforeEach
     public void setup() {
-        handler = new ClientRegistrationHandler(clientService, configValidationService);
+        handler =
+                new ClientRegistrationHandler(clientService, configValidationService, auditService);
+    }
+
+    @AfterEach
+    public void afterEach() {
+        verifyNoMoreInteractions(auditService);
     }
 
     @Test
@@ -50,6 +62,7 @@ class ClientRegistrationHandlerTest {
         String clientName = "test-client";
         List<String> redirectUris = List.of("http://localhost:8080/redirect-uri");
         List<String> contacts = List.of("joe.bloggs@test.com");
+        String serviceType = String.valueOf(ServiceType.MANDATORY);
         when(configValidationService.validateClientRegistrationConfig(
                         any(ClientRegistrationRequest.class)))
                 .thenReturn(Optional.empty());
@@ -58,8 +71,8 @@ class ClientRegistrationHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
 
         event.setBody(
-                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"],  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"]}");
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"],  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"service_type\": \"MANDATORY\"}");
+        APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
         assertThat(result, hasStatus(200));
         ClientRegistrationResponse clientRegistrationResponseResult =
@@ -77,7 +90,8 @@ class ClientRegistrationHandlerTest {
                         contacts,
                         singletonList("openid"),
                         "some-public-key",
-                        singletonList("http://localhost:8080/post-logout-redirect-uri"));
+                        singletonList("http://localhost:8080/post-logout-redirect-uri"),
+                        serviceType);
     }
 
     @Test
@@ -85,10 +99,13 @@ class ClientRegistrationHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
                 "{\"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"] }");
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString()));
+
+        verify(auditService)
+                .submitAuditEvent(ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_ERROR);
     }
 
     @Test
@@ -98,10 +115,22 @@ class ClientRegistrationHandlerTest {
                 .thenReturn(Optional.of(INVALID_PUBLIC_KEY));
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
-                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"],  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"]}");
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"],  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"service_type\": \"MANDATORY\"}");
+        APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(INVALID_PUBLIC_KEY.toJSONObject().toJSONString()));
+
+        verify(auditService)
+                .submitAuditEvent(ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_ERROR);
+    }
+
+    private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
+        var response = handler.handleRequest(event, context);
+
+        verify(auditService)
+                .submitAuditEvent(ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_RECEIVED);
+
+        return response;
     }
 }

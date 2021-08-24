@@ -151,3 +151,21 @@ resource "aws_iam_role_policy_attachment" "dynamo_sqs_lambda_networking" {
   role       = aws_iam_role.dynamo_sqs_lambda_iam_role.name
   policy_arn = aws_iam_policy.endpoint_networking_policy.arn
 }
+
+resource "aws_iam_role" "token_lambda_iam_role" {
+  name = "${var.environment}-token-lambda-role"
+  assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_policy.json
+  tags = {
+    environment = var.environment
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "token_lambda_logs" {
+  role       = aws_iam_role.token_lambda_iam_role.name
+  policy_arn = aws_iam_policy.endpoint_logging_policy.arn
+}
+
+resource "aws_iam_role_policy_attachment" "token_lambda_networking" {
+  role       = aws_iam_role.token_lambda_iam_role.name
+  policy_arn = aws_iam_policy.endpoint_networking_policy.arn
+}

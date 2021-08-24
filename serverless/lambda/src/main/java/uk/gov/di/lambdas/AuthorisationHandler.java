@@ -15,7 +15,9 @@ import com.nimbusds.openid.connect.sdk.OIDCError;
 import com.nimbusds.openid.connect.sdk.Prompt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.domain.OidcAuditableEvent;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.ResponseHeaders;
 import uk.gov.di.entity.Session;
@@ -32,6 +34,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.entity.SessionState.AUTHENTICATED;
 import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
 
@@ -44,16 +47,19 @@ public class AuthorisationHandler
     private final ConfigurationService configurationService;
     private final ClientSessionService clientSessionService;
     private final AuthorizationService authorizationService;
+    private final AuditService auditService;
 
     public AuthorisationHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
             ClientSessionService clientSessionService,
-            AuthorizationService authorizationService) {
+            AuthorizationService authorizationService,
+            AuditService auditService) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
         this.authorizationService = authorizationService;
+        this.auditService = auditService;
     }
 
     public AuthorisationHandler() {
@@ -61,11 +67,13 @@ public class AuthorisationHandler
         this.sessionService = new SessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.authorizationService = new AuthorizationService(configurationService);
+        this.auditService = new AuditService();
     }
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        auditService.submitAuditEvent(OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED);
         LOGGER.info("Received authentication request");
 
         Map<String, List<String>> queryStringParameters = getQueryStringParametersAsMap(input);
@@ -98,7 +106,6 @@ public class AuthorisationHandler
             Map<String, List<String>> authRequestParameters,
             Optional<Session> existingSession,
             AuthenticationRequest authenticationRequest) {
-
         if (authenticationRequest.getPrompt() != null) {
             if (authenticationRequest.getPrompt().contains(Prompt.Type.CONSENT)
                     || authenticationRequest.getPrompt().contains(Prompt.Type.SELECT_ACCOUNT)) {
@@ -216,6 +223,11 @@ public class AuthorisationHandler
 
     private APIGatewayProxyResponseEvent generateErrorResponse(
             URI redirectUri, State state, ResponseMode responseMode, ErrorObject errorObject) {
+
+        auditService.submitAuditEvent(
+                OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR,
+                pair("description", errorObject.getDescription()));
+
         LOGGER.error(
                 "Returning error response: {} {}",
                 errorObject.getCode(),

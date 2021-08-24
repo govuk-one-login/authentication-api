@@ -5,7 +5,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
@@ -19,6 +20,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,18 +48,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.helpers.TokenGenerator.generateIDToken;
+import static uk.gov.di.helpers.TokenGeneratorHelper.generateIDToken;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -68,7 +70,8 @@ public class TokenHandlerTest {
     private static final Subject TEST_SUBJECT = new Subject();
     private static final String CLIENT_ID = "test-id";
     private static final List<String> SCOPES = List.of("openid");
-    private static final String ENDPOINT_URI = "http://localhost/token";
+    private static final String BASE_URI = "http://localhost";
+    private static final String TOKEN_URI = "http://localhost/token";
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     private final Context context = mock(Context.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
@@ -82,7 +85,7 @@ public class TokenHandlerTest {
 
     @BeforeEach
     public void setUp() {
-        when(configurationService.getBaseURL()).thenReturn(Optional.of(ENDPOINT_URI));
+        when(configurationService.getBaseURL()).thenReturn(Optional.of(BASE_URI));
         handler =
                 new TokenHandler(
                         clientService,
@@ -101,7 +104,7 @@ public class TokenHandlerTest {
                         CLIENT_ID,
                         TEST_SUBJECT,
                         "issuer-url",
-                        new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate());
+                        new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate());
         BearerAccessToken accessToken = new BearerAccessToken();
         OIDCTokenResponse tokenResponse =
                 new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, null));
@@ -111,7 +114,7 @@ public class TokenHandlerTest {
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
         when(tokenService.validatePrivateKeyJWT(
-                        anyString(), eq(clientRegistry.getPublicKey()), eq(ENDPOINT_URI)))
+                        anyString(), eq(clientRegistry.getPublicKey()), eq(BASE_URI)))
                 .thenReturn(Optional.empty());
         String authCode = new AuthorizationCode().toString();
         when(authorisationCodeService.getExchangeDataForCode(authCode))
@@ -126,7 +129,8 @@ public class TokenHandlerTest {
                         new ClientSession(
                                 generateAuthRequest().toParameters(), LocalDateTime.now()));
         when(authenticationService.getSubjectFromEmail(eq(TEST_EMAIL))).thenReturn(TEST_SUBJECT);
-        when(tokenService.generateTokenResponse(eq(CLIENT_ID), any(Subject.class), eq(SCOPES)))
+        when(tokenService.generateTokenResponse(
+                        eq(CLIENT_ID), any(Subject.class), eq(SCOPES), anyMap()))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result = generateApiGatewayRequest(privateKeyJWT, authCode);
@@ -168,10 +172,9 @@ public class TokenHandlerTest {
         KeyPair keyPairTwo = generateRsaKeyPair();
         ClientRegistry clientRegistry = generateClientRegistry(keyPairTwo);
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPairOne.getPrivate());
-        when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.empty());
         when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
         when(tokenService.validatePrivateKeyJWT(
-                        anyString(), eq(clientRegistry.getPublicKey()), eq(ENDPOINT_URI)))
+                        anyString(), eq(clientRegistry.getPublicKey()), eq(TOKEN_URI)))
                 .thenReturn(Optional.of(OAuth2Error.INVALID_CLIENT));
 
         APIGatewayProxyResponseEvent result =
@@ -190,7 +193,7 @@ public class TokenHandlerTest {
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
         when(tokenService.validatePrivateKeyJWT(
-                        anyString(), eq(clientRegistry.getPublicKey()), eq(ENDPOINT_URI)))
+                        anyString(), eq(clientRegistry.getPublicKey()), eq(BASE_URI)))
                 .thenReturn(Optional.empty());
         String authCode = new AuthorizationCode().toString();
         when(authorisationCodeService.getExchangeDataForCode(authCode))
@@ -211,7 +214,7 @@ public class TokenHandlerTest {
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
         when(tokenService.validatePrivateKeyJWT(
-                        anyString(), eq(clientRegistry.getPublicKey()), eq(ENDPOINT_URI)))
+                        anyString(), eq(clientRegistry.getPublicKey()), eq(BASE_URI)))
                 .thenReturn(Optional.empty());
         String authCode = new AuthorizationCode().toString();
         when(authorisationCodeService.getExchangeDataForCode(authCode))
@@ -234,7 +237,7 @@ public class TokenHandlerTest {
     private PrivateKeyJWT generatePrivateKeyJWT(PrivateKey privateKey) throws JOSEException {
         return new PrivateKeyJWT(
                 new ClientID(CLIENT_ID),
-                URI.create(ENDPOINT_URI),
+                URI.create(TOKEN_URI),
                 JWSAlgorithm.RS256,
                 (RSAPrivateKey) privateKey,
                 null,
@@ -281,6 +284,7 @@ public class TokenHandlerTest {
                         new ClientID(CLIENT_ID),
                         URI.create(REDIRECT_URI))
                 .state(state)
+                .nonce(new Nonce())
                 .build();
     }
 

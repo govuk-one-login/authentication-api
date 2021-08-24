@@ -4,8 +4,10 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.jwk.RSAKey;
-import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.id.Subject;
@@ -17,7 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.UserProfile;
-import uk.gov.di.helpers.TokenGenerator;
+import uk.gov.di.helpers.TokenGeneratorHelper;
 import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.TokenService;
 
@@ -26,7 +28,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.INVALID_TOKEN;
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.MISSING_TOKEN;
@@ -60,13 +61,14 @@ public class UserInfoHandlerTest {
     @Test
     public void shouldReturn200WithUserInfoBasedOnScopesForSuccessfulRequest()
             throws ParseException, JOSEException {
-        RSAKey signingKey =
-                new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
+        ECKey ecSigningKey =
+                new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         List<String> scopes = new ArrayList<>();
         scopes.add("email");
         scopes.add("phone");
         SignedJWT signedAccessToken =
-                TokenGenerator.generateAccessToken("client-id", "issuer-url", scopes, signingKey);
+                TokenGeneratorHelper.generateAccessToken(
+                        "client-id", "issuer-url", scopes, ecSigningKey);
         AccessToken accessToken = new BearerAccessToken(signedAccessToken.serialize());
         UserProfile userProfile =
                 new UserProfile()

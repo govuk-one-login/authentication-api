@@ -10,10 +10,12 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
+import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.entity.ClientConsent;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
@@ -27,7 +29,6 @@ import uk.gov.di.services.SessionService;
 
 import java.net.URI;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -127,8 +128,6 @@ class UpdateProfileHandlerTest {
         ClientID clientID = new ClientID();
         AuthorizationCode authorizationCode = new AuthorizationCode();
         AuthenticationRequest authRequest = generateValidClientSessionAndAuthRequest(clientID);
-        var consentMap =
-                Map.of(authRequest.getClientID().getValue(), List.of(String.valueOf(true)));
 
         AuthenticationSuccessResponse authSuccessResponse =
                 new AuthenticationSuccessResponse(
@@ -157,7 +156,8 @@ class UpdateProfileHandlerTest {
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        verify(authenticationService).updateConsent(eq(TEST_EMAIL_ADDRESS), eq(consentMap));
+        verify(authenticationService)
+                .updateConsent(eq(TEST_EMAIL_ADDRESS), any(ClientConsent.class));
 
         assertThat(result, hasStatus(200));
     }
@@ -212,6 +212,7 @@ class UpdateProfileHandlerTest {
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(responseType, scope, clientID, REDIRECT_URI)
                         .state(state)
+                        .nonce(new Nonce())
                         .build();
         ClientSession clientSession =
                 new ClientSession(authRequest.toParameters(), LocalDateTime.now());

@@ -11,12 +11,14 @@ repositories {
 
 def dependencyVersions = [
     jackson_version: '2.12.4',
+    aws_sdk_version: '1.12.52',
 ]
 
 dependencies {
     implementation "com.amazonaws:aws-lambda-java-core:1.2.1",
             "com.amazonaws:aws-lambda-java-events:3.9.0",
-            "com.amazonaws:aws-java-sdk-dynamodb:1.12.43",
+            "com.amazonaws:aws-java-sdk-dynamodb:${dependencyVersions.aws_sdk_version}",
+            "com.amazonaws:aws-java-sdk-xray:${dependencyVersions.aws_sdk_version}",
             "software.amazon.awssdk:sqs:2.17.15",
             "com.nimbusds:oauth2-oidc-sdk:9.10.2",
             "com.nimbusds:nimbus-jose-jwt:9.11.2",
@@ -26,7 +28,7 @@ dependencies {
             "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${dependencyVersions.jackson_version}",
             "io.lettuce:lettuce-core:6.1.4.RELEASE",
             "uk.gov.service.notify:notifications-java-client:3.17.2-RELEASE",
-            "org.bouncycastle:bcprov-jdk15on:1.69",
+            "org.bouncycastle:bcpkix-jdk15on:1.68",
             "com.googlecode.libphonenumber:libphonenumber:8.12.28",
             "org.apache.commons:commons-pool2:2.11.1",
             project(":shared")

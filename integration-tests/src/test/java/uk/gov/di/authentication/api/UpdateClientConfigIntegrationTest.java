@@ -11,6 +11,7 @@ import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.entity.ClientRegistrationResponse;
+import uk.gov.di.entity.ServiceType;
 import uk.gov.di.entity.UpdateClientConfigRequest;
 
 import static java.util.Collections.singletonList;
@@ -33,7 +34,8 @@ public class UpdateClientConfigIntegrationTest extends IntegrationTestEndpoints 
                 singletonList("test-client@test.com"),
                 singletonList("openid"),
                 VALID_PUBLIC_CERT,
-                singletonList("http://localhost/post-redirect-logout"));
+                singletonList("http://localhost/post-redirect-logout"),
+                String.valueOf(ServiceType.MANDATORY));
 
         UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
         updateRequest.setClientName("new-client-name");

@@ -17,7 +17,6 @@ import uk.gov.di.entity.ValidScopes;
 import uk.gov.di.exceptions.ClientNotFoundException;
 
 import java.net.URI;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -85,6 +84,18 @@ public class AuthorizationService {
                 || !client.get().getScopes().containsAll(authRequest.getScope().toStringList())) {
             return Optional.of(OAuth2Error.INVALID_SCOPE);
         }
+        if (authRequest.getNonce() == null) {
+            return Optional.of(
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_CODE,
+                            "Request is missing nonce parameter"));
+        }
+        if (authRequest.getState() == null) {
+            return Optional.of(
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_CODE,
+                            "Request is missing state parameter"));
+        }
         return Optional.empty();
     }
 
@@ -105,8 +116,8 @@ public class AuthorizationService {
 
     private boolean areScopesValid(List<String> scopes) {
         for (String scope : scopes) {
-            if (Arrays.stream(ValidScopes.values())
-                    .noneMatch((t) -> t.scopesLowerCase().equals(scope))) {
+            if (ValidScopes.getAllValidScopes().stream()
+                    .noneMatch((t) -> t.getValue().equals(scope))) {
                 return false;
             }
         }

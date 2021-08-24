@@ -7,9 +7,12 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCError;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.domain.OidcAuditableEvent;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.ResponseHeaders;
 import uk.gov.di.entity.Session;
@@ -31,7 +34,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR;
 import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthorisationHandlerTest {
@@ -41,6 +47,7 @@ class AuthorisationHandlerTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuthorizationService authorizationService = mock(AuthorizationService.class);
+    private final AuditService auditService = mock(AuditService.class);
 
     private static final String EXPECTED_COOKIE_STRING =
             "gs=a-session-id.client-session-id; Max-Age=1800; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
@@ -53,7 +60,16 @@ class AuthorisationHandlerTest {
     public void setUp() {
         handler =
                 new AuthorisationHandler(
-                        configService, sessionService, clientSessionService, authorizationService);
+                        configService,
+                        sessionService,
+                        clientSessionService,
+                        authorizationService,
+                        auditService);
+    }
+
+    @AfterEach
+    public void afterEach() {
+        verifyNoMoreInteractions(auditService);
     }
 
     @Test
@@ -79,7 +95,7 @@ class AuthorisationHandlerTest {
                         "scope", "email,openid,profile",
                         "response_type", "code",
                         "state", "some-state"));
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+        APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
         final String expectedCookieString =
                 "gs=a-session-id.client-session-id; Max-Age=1800; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
@@ -104,13 +120,18 @@ class AuthorisationHandlerTest {
                         "invalid_parameter", "nonsense",
                         "state", state.toString()));
 
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+        APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
 
         assertThat(response, hasStatus(302));
         assertEquals(
                 "http://localhost:8080?error=invalid_request&error_description=Invalid+request%3A+Missing+response_type+parameter&state="
                         + state,
                 response.getHeaders().get(ResponseHeaders.LOCATION));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTHORISATION_REQUEST_ERROR,
+                        pair("description", "Invalid request: Missing response_type parameter"));
     }
 
     @Test
@@ -125,12 +146,17 @@ class AuthorisationHandlerTest {
                         "scope", "email,openid,profile,non-existent-scope",
                         "response_type", "code"));
 
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+        APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
 
         assertThat(response, hasStatus(302));
         assertEquals(
                 "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope",
                 response.getHeaders().get(ResponseHeaders.LOCATION));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTHORISATION_REQUEST_ERROR,
+                        pair("description", OAuth2Error.INVALID_SCOPE.getDescription()));
     }
 
     @Test
@@ -148,7 +174,7 @@ class AuthorisationHandlerTest {
                 .thenReturn("client-session-id");
         when(configService.getDomainName()).thenReturn(domainName);
 
-        APIGatewayProxyResponseEvent response = handler.handleRequest(withRequestEvent(), context);
+        APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent());
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
         assertThat(response, hasStatus(302));
@@ -168,7 +194,7 @@ class AuthorisationHandlerTest {
         whenLoggedIn(session, loginUrl);
         when(configService.getAuthCodeURI()).thenReturn(authCodeUri);
 
-        APIGatewayProxyResponseEvent response = handler.handleRequest(withRequestEvent(), context);
+        APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent());
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
         assertThat(response, hasStatus(302));
@@ -184,12 +210,16 @@ class AuthorisationHandlerTest {
     void shouldReturnErrorWhenPromptParamNoneAndNotLoggedIn() {
         when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
-        APIGatewayProxyResponseEvent response =
-                handler.handleRequest(withPromptRequestEvent("none"), context);
+        APIGatewayProxyResponseEvent response = makeHandlerRequest(withPromptRequestEvent("none"));
         assertThat(response, hasStatus(302));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 containsString("error=login_required"));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTHORISATION_REQUEST_ERROR,
+                        pair("description", OIDCError.LOGIN_REQUIRED.getDescription()));
     }
 
     @Test
@@ -203,8 +233,7 @@ class AuthorisationHandlerTest {
         whenLoggedIn(session, loginUrl);
         when(configService.getAuthCodeURI()).thenReturn(authCodeUri);
 
-        APIGatewayProxyResponseEvent response =
-                handler.handleRequest(withPromptRequestEvent("none"), context);
+        APIGatewayProxyResponseEvent response = makeHandlerRequest(withPromptRequestEvent("none"));
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
         assertThat(response, hasStatus(302));
@@ -231,8 +260,7 @@ class AuthorisationHandlerTest {
                 .thenReturn("client-session-id");
         when(configService.getDomainName()).thenReturn(domainName);
 
-        APIGatewayProxyResponseEvent response =
-                handler.handleRequest(withPromptRequestEvent("login"), context);
+        APIGatewayProxyResponseEvent response = makeHandlerRequest(withPromptRequestEvent("login"));
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
         assertThat(response, hasStatus(302));
@@ -251,8 +279,7 @@ class AuthorisationHandlerTest {
 
         whenLoggedIn(session, loginUrl);
 
-        APIGatewayProxyResponseEvent response =
-                handler.handleRequest(withPromptRequestEvent("login"), context);
+        APIGatewayProxyResponseEvent response = makeHandlerRequest(withPromptRequestEvent("login"));
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
         assertThat(response, hasStatus(302));
@@ -267,11 +294,18 @@ class AuthorisationHandlerTest {
         when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent response =
-                handler.handleRequest(withPromptRequestEvent("unrecognised"), context);
+                makeHandlerRequest(withPromptRequestEvent("unrecognised"));
         assertThat(response, hasStatus(302));
         assertEquals(
                 "http://localhost:8080?error=invalid_request&error_description=Invalid+request%3A+Invalid+prompt+parameter%3A+Unknown+prompt+type%3A+unrecognised&state=some-state",
                 response.getHeaders().get(ResponseHeaders.LOCATION));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTHORISATION_REQUEST_ERROR,
+                        pair(
+                                "description",
+                                "Invalid request: Invalid prompt parameter: Unknown prompt type: unrecognised"));
     }
 
     @Test
@@ -279,11 +313,18 @@ class AuthorisationHandlerTest {
         when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent response =
-                handler.handleRequest(withPromptRequestEvent("none login"), context);
+                makeHandlerRequest(withPromptRequestEvent("none login"));
         assertThat(response, hasStatus(302));
         assertEquals(
                 "http://localhost:8080?error=invalid_request&error_description=Invalid+request%3A+Invalid+prompt+parameter%3A+Invalid+prompt%3A+none+login&state=some-state",
                 response.getHeaders().get(ResponseHeaders.LOCATION));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTHORISATION_REQUEST_ERROR,
+                        pair(
+                                "description",
+                                "Invalid request: Invalid prompt parameter: Invalid prompt: none login"));
     }
 
     @Test
@@ -291,11 +332,18 @@ class AuthorisationHandlerTest {
         when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent response =
-                handler.handleRequest(withPromptRequestEvent("login consent"), context);
+                makeHandlerRequest(withPromptRequestEvent("login consent"));
         assertThat(response, hasStatus(302));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 containsString(OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS_CODE));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTHORISATION_REQUEST_ERROR,
+                        pair(
+                                "description",
+                                OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS.getDescription()));
     }
 
     @Test
@@ -303,11 +351,18 @@ class AuthorisationHandlerTest {
         when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent response =
-                handler.handleRequest(withPromptRequestEvent("consent"), context);
+                makeHandlerRequest(withPromptRequestEvent("consent"));
         assertThat(response, hasStatus(302));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 containsString(OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS_CODE));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTHORISATION_REQUEST_ERROR,
+                        pair(
+                                "description",
+                                OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS.getDescription()));
     }
 
     @Test
@@ -315,11 +370,18 @@ class AuthorisationHandlerTest {
         when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent response =
-                handler.handleRequest(withPromptRequestEvent("select_account"), context);
+                makeHandlerRequest(withPromptRequestEvent("select_account"));
         assertThat(response, hasStatus(302));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 containsString(OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS_CODE));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTHORISATION_REQUEST_ERROR,
+                        pair(
+                                "description",
+                                OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS.getDescription()));
     }
 
     @Test
@@ -338,7 +400,7 @@ class AuthorisationHandlerTest {
                 .thenReturn("client-session-id");
         when(configService.getDomainName()).thenReturn(domainName);
 
-        APIGatewayProxyResponseEvent response = handler.handleRequest(withRequestEvent(), context);
+        APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent());
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
         assertThat(response, hasStatus(302));
@@ -356,7 +418,7 @@ class AuthorisationHandlerTest {
         whenLoggedIn(session, loginUrl);
         session.setState(SessionState.AUTHENTICATION_REQUIRED);
 
-        APIGatewayProxyResponseEvent response = handler.handleRequest(withRequestEvent(), context);
+        APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent());
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
         assertThat(response, hasStatus(302));
@@ -364,6 +426,14 @@ class AuthorisationHandlerTest {
         assertEquals(EXPECTED_COOKIE_STRING, response.getHeaders().get("Set-Cookie"));
         verify(sessionService).save(eq(session));
         assertEquals(SessionState.AUTHENTICATION_REQUIRED, session.getState());
+    }
+
+    private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
+        var response = handler.handleRequest(event, context);
+
+        verify(auditService).submitAuditEvent(OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED);
+
+        return response;
     }
 
     private APIGatewayProxyRequestEvent withPromptRequestEvent(String prompt) {
