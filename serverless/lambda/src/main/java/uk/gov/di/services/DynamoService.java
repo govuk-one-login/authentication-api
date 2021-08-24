@@ -58,6 +58,8 @@ public class DynamoService implements AuthenticationService {
                         .build();
         this.userCredentialsMapper = new DynamoDBMapper(dynamoDB, userCredentialsConfig);
         this.userProfileMapper = new DynamoDBMapper(dynamoDB, userProfileConfig);
+        this.userProfileMapper.load(UserProfile.class, "TestKey1");
+        this.userProfileMapper.load(UserProfile.class, "TestKey1");
     }
 
     @Override
