@@ -11,6 +11,7 @@ params:
   DEPLOY_ENVIRONMENT: build
   NOTIFY_API_KEY: ((build-notify-api-key))
 inputs:
+  - name: api-src
   - name: api-release
 outputs:
   - name: terraform-outputs
@@ -19,9 +20,7 @@ run:
   args:
     - -euc
     - |
-      mkdir src
-      tar xfz api-release/source.tar.gz --strip-components=1 -C src/
-      cd "src/ci/terraform/account-management"
+      cd "api-src/ci/terraform/account-management"
       terraform init -input=false \
         -backend-config "role_arn=${DEPLOYER_ROLE_ARN}" \
         -backend-config "bucket=digital-identity-dev-tfstate" \
