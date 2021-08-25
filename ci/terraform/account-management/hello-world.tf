@@ -20,4 +20,6 @@ module "hello_world" {
   lambda_role_arn           = aws_iam_role.lambda_iam_role.arn
   use_localstack            = var.use_localstack
   default_tags              = local.default_tags
+  logging_endpoint_enabled  = var.logging_endpoint_enabled
+  logging_endpoint_arn      = var.logging_endpoint_arn
 }

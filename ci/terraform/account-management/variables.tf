@@ -36,3 +36,15 @@ variable "lambda_zip_file" {
   description = "Location of the Lambda ZIP file"
   type        = string
 }
+
+variable "logging_endpoint_enabled" {
+  type        = bool
+  default     = false
+  description = "Whether the service should ship its Lambda logs to the `logging_endpoint_arn`"
+}
+
+variable "logging_endpoint_arn" {
+  type        = string
+  default     = ""
+  description = "Amazon Resource Name (ARN) for the endpoint to ship logs to"
+}
