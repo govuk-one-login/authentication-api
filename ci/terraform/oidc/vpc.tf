@@ -3,9 +3,7 @@ resource "aws_vpc" "authentication" {
   enable_dns_hostnames = true
   enable_dns_support   = true
 
-  tags = {
-    environment = var.environment
-  }
+  tags = local.default_tags
 }
 
 data "aws_availability_zones" "available" {}
@@ -20,10 +18,9 @@ resource "aws_subnet" "authentication" {
     aws_vpc.authentication,
   ]
 
-  tags = {
-    environment = var.environment
-    Name        = "${var.environment}-private-subnet-for-${data.aws_availability_zones.available.names[count.index]}"
-  }
+  tags = merge(local.default_tags, {
+    name = "${var.environment}-private-subnet-for-${data.aws_availability_zones.available.names[count.index]}"
+  })
 }
 
 data "aws_vpc_endpoint_service" "sqs" {
@@ -51,9 +48,7 @@ resource "aws_vpc_endpoint" "sqs" {
     aws_subnet.authentication,
   ]
 
-  tags = {
-    environment = var.environment
-  }
+  tags = local.default_tags
 }
 
 data "aws_vpc_endpoint_service" "dynamodb" {
@@ -67,6 +62,8 @@ resource "aws_vpc_endpoint" "dynamodb" {
   vpc_endpoint_type = "Gateway"
   vpc_id            = aws_vpc.authentication.id
   service_name      = data.aws_vpc_endpoint_service.dynamodb[0].service_name
+
+  tags = local.default_tags
 }
 
 resource "aws_vpc_endpoint_route_table_association" "dynamodb" {
@@ -82,30 +79,27 @@ resource "aws_subnet" "authentication_public" {
   cidr_block        = "10.0.${count.index + 128}.0/24"
   availability_zone = data.aws_availability_zones.available.names[count.index]
 
-  tags = {
-    environment = var.environment
-    Name        = "${var.environment}-public-subnet-for-${data.aws_availability_zones.available.names[count.index]}"
-  }
+  tags = merge(local.default_tags, {
+    name = "${var.environment}-public-subnet-for-${data.aws_availability_zones.available.names[count.index]}"
+  })
 }
 
 resource "aws_internet_gateway" "igw" {
   count  = var.use_localstack ? 0 : 1
   vpc_id = aws_vpc.authentication.id
 
-  tags = {
-    environment = var.environment
-    Name        = "${var.environment}-internet-gateway-for-${aws_vpc.authentication.id}"
-  }
+  tags = merge(local.default_tags, {
+    name = "${var.environment}-internet-gateway-for-${aws_vpc.authentication.id}"
+  })
 }
 
 resource "aws_eip" "nat_gateway_eip" {
   count = var.use_localstack ? 0 : length(data.aws_availability_zones.available.names)
   vpc   = true
 
-  tags = {
-    environment = var.environment
-    Name        = "${var.environment}-nat-gateway-ip-for-${data.aws_availability_zones.available.names[count.index]}"
-  }
+  tags = merge(local.default_tags, {
+    name = "${var.environment}-nat-gateway-ip-for-${data.aws_availability_zones.available.names[count.index]}"
+  })
 }
 
 resource "aws_nat_gateway" "nat_gateway" {
@@ -114,20 +108,18 @@ resource "aws_nat_gateway" "nat_gateway" {
   allocation_id = aws_eip.nat_gateway_eip[count.index].id
   subnet_id     = aws_subnet.authentication_public[count.index].id
 
-  tags = {
-    environment = var.environment
-    Name        = "${var.environment}-nat-gateway-for-${data.aws_availability_zones.available.names[count.index]}"
-  }
+  tags = merge(local.default_tags, {
+    name = "${var.environment}-nat-gateway-for-${data.aws_availability_zones.available.names[count.index]}"
+  })
 }
 
 resource "aws_route_table" "public_route_table" {
   count  = var.use_localstack ? 0 : 1
   vpc_id = aws_vpc.authentication.id
 
-  tags = {
-    environment = var.environment
-    Name        = "${var.environment}-public-route-table-for-${aws_vpc.authentication.id}"
-  }
+  tags = merge(local.default_tags, {
+    name = "${var.environment}-public-route-table-for-${aws_vpc.authentication.id}"
+  })
 }
 
 resource "aws_route" "public_to_internet" {
