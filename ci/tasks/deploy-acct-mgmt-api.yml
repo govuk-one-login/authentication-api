@@ -31,6 +31,6 @@ run:
       terraform apply -auto-approve \
         -var "deployer_role_arn=${DEPLOYER_ROLE_ARN}" \
         -var "environment=${DEPLOY_ENVIRONMENT}" \
-        -var 'lambda_zip_file=../../../../api-release/account-managment-api.zip' \
+        -var 'lambda_zip_file=../../../../api-release/account-management-api.zip' \
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-account-managment-api-terraform-outputs.json
