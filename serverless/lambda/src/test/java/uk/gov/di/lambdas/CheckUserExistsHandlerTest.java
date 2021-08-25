@@ -132,29 +132,29 @@ class CheckUserExistsHandlerTest {
         usingValidSession();
         session.setState(SessionState.AUTHENTICATED);
 
-        APIGatewayProxyResponseEvent result = handler.handleRequest(usingTestEventWithSession(session), context);
+        APIGatewayProxyResponseEvent result =
+                handler.handleRequest(usingTestEventWithSession(session), context);
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1017));
     }
 
     @Test
-    public void shouldReturn200IfUserTransitionsFromUserNotFoundAndUserDoesNotExist() throws JsonProcessingException {
+    public void shouldReturn200IfUserTransitionsFromUserNotFoundAndUserDoesNotExist()
+            throws JsonProcessingException {
         usingValidSession();
         session.setState(SessionState.USER_NOT_FOUND);
-        when(authenticationService.userExists(eq("joe.bloggs")))
-                .thenReturn(false);
+        when(authenticationService.userExists(eq("joe.bloggs"))).thenReturn(false);
 
-        APIGatewayProxyResponseEvent result = handler.handleRequest(usingTestEventWithSession(session), context);
+        APIGatewayProxyResponseEvent result =
+                handler.handleRequest(usingTestEventWithSession(session), context);
 
         assertEquals(200, result.getStatusCode());
         CheckUserExistsResponse checkUserExistsResponse =
                 objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
-        assertEquals(
-                "joe.bloggs", checkUserExistsResponse.getEmail());
+        assertEquals("joe.bloggs", checkUserExistsResponse.getEmail());
         assertFalse(checkUserExistsResponse.doesUserExist());
-        assertTrue(
-        checkUserExistsResponse.getSessionState().equals(SessionState.USER_NOT_FOUND));
+        assertTrue(checkUserExistsResponse.getSessionState().equals(SessionState.USER_NOT_FOUND));
     }
 
     private void usingValidSession() {
