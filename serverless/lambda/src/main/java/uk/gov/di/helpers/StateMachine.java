@@ -60,7 +60,10 @@ public class StateMachine<T> {
                         entry(NEW, List.of(USER_NOT_FOUND)),
                         entry(
                                 USER_NOT_FOUND,
-                                List.of(USER_NOT_FOUND, AUTHENTICATION_REQUIRED, VERIFY_EMAIL_CODE_SENT)),
+                                List.of(
+                                        USER_NOT_FOUND,
+                                        AUTHENTICATION_REQUIRED,
+                                        VERIFY_EMAIL_CODE_SENT)),
                         entry(
                                 VERIFY_EMAIL_CODE_SENT,
                                 List.of(EMAIL_CODE_VERIFIED, EMAIL_CODE_NOT_VALID)),

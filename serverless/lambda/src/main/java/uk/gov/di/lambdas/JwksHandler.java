@@ -37,7 +37,7 @@ public class JwksHandler
             APIGatewayProxyRequestEvent input, Context context) {
         JWKSet jwkSet;
         try {
-            jwkSet = new JWKSet(tokenService.getPublicKey());
+            jwkSet = new JWKSet(tokenService.getPublicJwk());
         } catch (IllegalArgumentException e) {
             return generateApiGatewayProxyResponse(500, "Signing key is not present");
         }
