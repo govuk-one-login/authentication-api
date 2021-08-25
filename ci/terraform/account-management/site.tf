@@ -19,3 +19,11 @@ provider "aws" {
     role_arn = var.deployer_role_arn
   }
 }
+
+locals {
+  // Using a local rather than the default_tags option on the AWS provider, as the latter has known issues which produce errors on apply.
+  default_tags = {
+    environment = var.environment
+    application = "account-management-api"
+  }
+}

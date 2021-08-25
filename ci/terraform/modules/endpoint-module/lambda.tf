@@ -22,9 +22,7 @@ resource "aws_lambda_function" "endpoint_lambda" {
 
   runtime = var.handler_runtime
 
-  tags = {
-    environment = var.environment
-  }
+  tags = var.default_tags
 }
 
 resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda" {

@@ -92,3 +92,9 @@ variable "logging_endpoint_arn" {
 variable "use_localstack" {
   type    = bool
 }
+
+variable "default_tags" {
+  default     = {}
+  type        = map(string)
+  description = "Default tags to apply to all resources"
+}
