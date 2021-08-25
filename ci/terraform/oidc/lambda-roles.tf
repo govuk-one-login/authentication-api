@@ -21,9 +21,7 @@ resource "aws_iam_role" "lambda_iam_role" {
 
   assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_policy.json
 
-  tags = {
-    environment = var.environment
-  }
+  tags = local.default_tags
 }
 
 data "aws_iam_policy_document" "endpoint_logging_policy" {

@@ -22,6 +22,8 @@ resource "aws_dynamodb_table" "user_credentials_table" {
   server_side_encryption {
     enabled = true
   }
+
+  tags = local.default_tags
 }
 
 resource "aws_dynamodb_table" "user_profile_table" {
@@ -48,6 +50,8 @@ resource "aws_dynamodb_table" "user_profile_table" {
   server_side_encryption {
     enabled = true
   }
+
+  tags = local.default_tags
 }
 
 resource "aws_dynamodb_table" "client_registry_table" {
@@ -70,12 +74,14 @@ resource "aws_dynamodb_table" "client_registry_table" {
     hash_key        = "ClientName"
     projection_type = "ALL"
   }
+
+  tags = local.default_tags
 }
 
 data "aws_iam_policy_document" "dynamo_policy_document" {
   count = var.use_localstack ? 0 : 1
   statement {
-    sid    = "AllowAccessToDynamoTables"
+    sid = "AllowAccessToDynamoTables"
     effect = "Allow"
 
     actions = [

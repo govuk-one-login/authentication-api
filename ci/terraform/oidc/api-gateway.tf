@@ -21,9 +21,7 @@ resource "aws_iam_role" "api_gateway_logging_iam_role" {
 
   assume_role_policy = data.aws_iam_policy_document.api_gateway_can_assume_policy.json
 
-  tags = {
-    environment = var.environment
-  }
+  tags = local.default_tags
 }
 
 data "aws_iam_policy_document" "api_gateway_logging_policy" {
@@ -63,9 +61,7 @@ resource "aws_iam_role_policy_attachment" "api_gateway_logging_logs" {
 resource "aws_api_gateway_rest_api" "di_authentication_api" {
   name = "${var.environment}-di-authentication-api"
 
-  tags = {
-    environment = var.environment
-  }
+  tags = local.default_tags
 }
 
 resource "aws_api_gateway_resource" "wellknown_resource" {
@@ -104,22 +100,23 @@ resource "aws_api_gateway_deployment" "deployment" {
 
   triggers = {
     redeployment = sha1(jsonencode([
-      module.authorize.resource_id,
-      module.jwks.resource_id,
-      module.openid_configuration_discovery.resource_id,
-      module.register.resource_id,
-      module.send_notification.resource_id,
-      module.signup.resource_id,
-      module.token.resource_id,
-      module.userexists.resource_id,
-      module.userinfo.resource_id,
-      module.update_profile.resource_id,
-      module.verify_code.resource_id,
-      module.mfa.resource_id,
-      module.auth-code.resource_id,
-      module.logout.resource_id,
-      module.update.resource_id,
-      module.client-info.resource_id,
+      module.auth-code.integration_trigger_value,
+      module.authorize.integration_trigger_value,
+      module.client-info.integration_trigger_value,
+      module.jwks.integration_trigger_value,
+      module.login.integration_trigger_value,
+      module.logout.integration_trigger_value,
+      module.mfa.integration_trigger_value,
+      module.openid_configuration_discovery.integration_trigger_value,
+      module.register.integration_trigger_value,
+      module.send_notification.integration_trigger_value,
+      module.signup.integration_trigger_value,
+      module.token.integration_trigger_value,
+      module.update.integration_trigger_value,
+      module.update_profile.integration_trigger_value,
+      module.userexists.integration_trigger_value,
+      module.userinfo.integration_trigger_value,
+      module.verify_code.integration_trigger_value,
     ]))
   }
 
@@ -127,22 +124,23 @@ resource "aws_api_gateway_deployment" "deployment" {
     create_before_destroy = true
   }
   depends_on = [
+    module.auth-code,
     module.authorize,
+    module.client-info,
     module.jwks,
+    module.login,
+    module.logout,
+    module.mfa,
     module.openid_configuration_discovery,
     module.register,
     module.send_notification,
     module.signup,
     module.token,
+    module.update,
+    module.update_profile,
     module.userexists,
     module.userinfo,
-    module.update_profile,
     module.verify_code,
-    module.mfa,
-    module.auth-code,
-    module.update,
-    module.logout,
-    module.client-info,
   ]
 }
 
@@ -151,23 +149,26 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
   rest_api_id   = aws_api_gateway_rest_api.di_authentication_api.id
   stage_name    = var.api_deployment_stage_name
 
+  tags = local.default_tags
+
   depends_on = [
+    module.auth-code,
     module.authorize,
+    module.client-info,
     module.jwks,
+    module.login,
+    module.logout,
+    module.mfa,
     module.openid_configuration_discovery,
     module.register,
     module.send_notification,
     module.signup,
     module.token,
+    module.update,
+    module.update_profile,
     module.userexists,
     module.userinfo,
-    module.update_profile,
     module.verify_code,
-    module.mfa,
-    module.auth-code,
-    module.logout,
-    module.update,
-    module.client-info,
     aws_api_gateway_deployment.deployment,
   ]
 }
@@ -177,7 +178,6 @@ resource "aws_api_gateway_account" "api_gateway_logging_role" {
 }
 
 resource "aws_api_gateway_method_settings" "api_gateway_logging_settings" {
-
   count = var.enable_api_gateway_execution_logging ? 1 : 0
 
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
