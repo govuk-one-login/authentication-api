@@ -5,9 +5,12 @@ resource "aws_sns_topic" "audit" {
 }
 
 data "aws_iam_policy_document" "audit_policy_document" {
-  version = "2008-10-17"
+  version   = "2008-10-17"
+  policy_id = "${var.environment}-audit-sns-topic-policy"
+
   statement {
     effect = "Allow"
+    sid    = "${var.environment}-audit-sns-topic-policy-publish"
     principals {
       type        = "AWS"
       identifiers = ["*"]
@@ -32,6 +35,7 @@ data "aws_iam_policy_document" "audit_policy_document" {
   }
   statement {
     effect = "Allow"
+    sid    = "${var.environment}-audit-sns-topic-policy-subscribe"
     principals {
       type        = "AWS"
       identifiers = ["*"]
