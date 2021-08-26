@@ -26,27 +26,35 @@ public class WellknownHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final ConfigurationService configService;
+    private final String baseUrl;
+    private final OIDCProviderMetadata providerMetadata;
 
     public WellknownHandler(ConfigurationService configService) {
         this.configService = configService;
+        baseUrl = configService.getBaseURL().orElseThrow();
+        providerMetadata =
+                new OIDCProviderMetadata(
+                        new Issuer(baseUrl),
+                        List.of(SubjectType.PUBLIC, SubjectType.PAIRWISE),
+                        buildURI("/.well-known/jwks.json", baseUrl));
     }
 
     public WellknownHandler() {
         this.configService = new ConfigurationService();
+        providerMetadata =
+                new OIDCProviderMetadata(
+                        new Issuer(configService.getBaseURL().get()),
+                        List.of(SubjectType.PUBLIC, SubjectType.PAIRWISE),
+                        buildURI(
+                                "/.well-known/jwks.json",
+                                configService.getBaseURL().orElseThrow()));
+        baseUrl = configService.getBaseURL().orElseThrow();
     }
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         try {
-            String baseUrl = configService.getBaseURL().orElseThrow();
-
-            var providerMetadata =
-                    new OIDCProviderMetadata(
-                            new Issuer(baseUrl),
-                            List.of(SubjectType.PUBLIC, SubjectType.PAIRWISE),
-                            buildURI("/.well-known/jwks.json", baseUrl));
-
             providerMetadata.setTokenEndpointURI(buildURI("/token", baseUrl));
             providerMetadata.setUserInfoEndpointURI(buildURI("/userinfo", baseUrl));
             providerMetadata.setAuthorizationEndpointURI(buildURI("/authorize", baseUrl));
@@ -88,7 +96,11 @@ public class WellknownHandler
         }
     }
 
-    private URI buildURI(String prefix, String baseUrl) throws URISyntaxException {
-        return new URI(baseUrl + prefix);
+    private URI buildURI(String prefix, String baseUrl) {
+        try {
+            return new URI(baseUrl + prefix);
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
