@@ -15,7 +15,10 @@ import uk.gov.di.entity.Session;
 import uk.gov.di.helpers.CookieHelper;
 import uk.gov.di.services.ClientSessionService;
 import uk.gov.di.services.DynamoClientService;
+import uk.gov.di.services.KmsConnectionService;
+import uk.gov.di.services.RedisConnectionService;
 import uk.gov.di.services.SessionService;
+import uk.gov.di.services.TokenService;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -35,6 +38,7 @@ public class LogoutHandler
     private final SessionService sessionService;
     private final DynamoClientService dynamoClientService;
     private final ClientSessionService clientSessionService;
+    private final TokenService tokenService;
 
     public LogoutHandler() {
         this.configurationService = new ConfigurationService();
@@ -45,17 +49,24 @@ public class LogoutHandler
                         configurationService.getEnvironment(),
                         configurationService.getDynamoEndpointUri());
         this.clientSessionService = new ClientSessionService(configurationService);
+        this.tokenService =
+                new TokenService(
+                        configurationService,
+                        new RedisConnectionService(configurationService),
+                        new KmsConnectionService(configurationService));
     }
 
     public LogoutHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
             DynamoClientService dynamoClientService,
-            ClientSessionService clientSessionService) {
+            ClientSessionService clientSessionService,
+            TokenService tokenService) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.dynamoClientService = dynamoClientService;
         this.clientSessionService = clientSessionService;
+        this.tokenService = tokenService;
     }
 
     @Override
@@ -92,9 +103,7 @@ public class LogoutHandler
             throw new RuntimeException(
                     format("ID Token does not exist for Session: %s", session.getSessionId()));
         }
-        if (!isIDTokenSignatureValid(
-                queryStringParameters.get("id_token_hint"), session.getSessionId())) {
-            LOG.error("ID token sig is invalid");
+        if (!tokenService.validateIdTokenSignature(queryStringParameters.get("id_token_hint"))) {
             throw new RuntimeException(
                     format(
                             "Unable to validate ID token signature for Session: %s",
@@ -113,12 +122,8 @@ public class LogoutHandler
                     .orElse(generateDefaultLogoutResponse(state));
         } catch (ParseException e) {
             LOG.error("Unable to process logout request", e);
-            throw new RuntimeException();
+            throw new RuntimeException(e);
         }
-    }
-
-    private boolean isIDTokenSignatureValid(String idTokenHint, String sessionID) {
-        return true;
     }
 
     private boolean doesIDTokenExistInSession(String idTokenHint, Session session) {

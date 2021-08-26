@@ -92,6 +92,8 @@ startup() {
 run-integration-tests() {
   pushd ci/terraform/oidc >/dev/null
   export API_GATEWAY_ID="$(terraform output -raw api_gateway_root_id)"
+  export TOKEN_SIGNING_KEY_ID="$(terraform output -raw token_signing_key_id)"
+  export BASE_URL="$(terraform output -raw base_url)"
   popd >/dev/null
   ./gradlew integration-tests:test
 }

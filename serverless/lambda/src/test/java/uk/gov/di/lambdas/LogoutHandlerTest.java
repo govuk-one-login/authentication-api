@@ -23,6 +23,7 @@ import uk.gov.di.helpers.TokenGeneratorHelper;
 import uk.gov.di.services.ClientSessionService;
 import uk.gov.di.services.DynamoClientService;
 import uk.gov.di.services.SessionService;
+import uk.gov.di.services.TokenService;
 
 import java.net.URI;
 import java.time.LocalDateTime;
@@ -50,6 +51,7 @@ class LogoutHandlerTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
+    private final TokenService tokenService = mock(TokenService.class);
 
     private static final State STATE = new State();
     private static final String COOKIE = "Cookie";
@@ -69,7 +71,8 @@ class LogoutHandlerTest {
                         configurationService,
                         sessionService,
                         dynamoClientService,
-                        clientSessionService);
+                        clientSessionService,
+                        tokenService);
         when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
@@ -82,6 +85,7 @@ class LogoutHandlerTest {
     public void shouldDeleteSessionAndRedirectToClientLogoutUriForValidLogoutRequest() {
         when(dynamoClientService.getClient("client-id"))
                 .thenReturn(Optional.of(createClientRegistry()));
+        when(tokenService.validateIdTokenSignature(signedIDToken.serialize())).thenReturn(true);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
         event.setQueryStringParameters(
@@ -105,6 +109,7 @@ class LogoutHandlerTest {
     public void shouldNotReturnStateWhenStateIsNotSentInRequest() {
         when(dynamoClientService.getClient("client-id"))
                 .thenReturn(Optional.of(createClientRegistry()));
+        when(tokenService.validateIdTokenSignature(signedIDToken.serialize())).thenReturn(true);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
         event.setQueryStringParameters(
@@ -199,6 +204,7 @@ class LogoutHandlerTest {
         SignedJWT signedJWT =
                 TokenGeneratorHelper.generateIDToken(
                         "invalid-client-id", new Subject(), "http://localhost-rp", ecSigningKey);
+        when(tokenService.validateIdTokenSignature(signedJWT.serialize())).thenReturn(true);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
         event.setQueryStringParameters(
@@ -227,6 +233,7 @@ class LogoutHandlerTest {
 
     @Test
     public void shouldRedirectToDefaultLogoutUriWhenLogoutUriInRequestDoesNotMatchClientRegistry() {
+        when(tokenService.validateIdTokenSignature(signedIDToken.serialize())).thenReturn(true);
         when(dynamoClientService.getClient("client-id"))
                 .thenReturn(Optional.of(createClientRegistry()));
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
