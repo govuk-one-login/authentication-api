@@ -28,7 +28,6 @@ class WellknownHandlerTest {
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private WellknownHandler handler;
 
-
     @Test
     public void shouldReturn200WhenRequestIsSuccessful() throws ParseException {
         when(configService.getBaseURL()).thenReturn(Optional.of("http://localhost:8080"));
@@ -54,9 +53,9 @@ class WellknownHandlerTest {
     public void shouldThrowExceptionWhenBaseUrlIsMissing() {
         when(configService.getBaseURL()).thenReturn(Optional.empty());
 
-                assertThrows(
-                        NoSuchElementException.class,
-                        () -> new WellknownHandler(configService),
-                        "Expected to throw exception");
+        assertThrows(
+                NoSuchElementException.class,
+                () -> new WellknownHandler(configService),
+                "Expected to throw exception");
     }
 }

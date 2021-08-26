@@ -20,13 +20,12 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
+import uk.gov.di.authentication.helpers.KeyPairHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.entity.ServiceType;
 
 import java.net.URI;
 import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.util.Base64;
@@ -47,7 +46,7 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
 
     @Test
     public void shouldCallTokenResourceAndReturn200() throws JOSEException {
-        KeyPair keyPair = generateRsaKeyPair();
+        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         setUpDynamo(keyPair);
         PrivateKey privateKey = keyPair.getPrivate();
         PrivateKeyJWT privateKeyJWT =
@@ -89,17 +88,6 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
                 singletonList("http://localhost/post-logout-redirect"),
                 String.valueOf(ServiceType.MANDATORY));
         DynamoHelper.signUp(TEST_EMAIL, "password-1");
-    }
-
-    private KeyPair generateRsaKeyPair() {
-        KeyPairGenerator kpg;
-        try {
-            kpg = KeyPairGenerator.getInstance("RSA");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException();
-        }
-        kpg.initialize(2048);
-        return kpg.generateKeyPair();
     }
 
     private AuthenticationRequest generateAuthRequest() {

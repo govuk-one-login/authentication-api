@@ -14,6 +14,7 @@ import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
+import uk.gov.di.authentication.helpers.KeyPairHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.entity.ClientInfoResponse;
 import uk.gov.di.entity.ServiceType;
@@ -21,8 +22,6 @@ import uk.gov.di.entity.ServiceType;
 import java.io.IOException;
 import java.net.URI;
 import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.List;
 
@@ -67,7 +66,7 @@ public class ClientInfoIntegrationTest extends IntegrationTestEndpoints {
                         .build();
         RedisHelper.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
 
-        registerClient(generateRsaKeyPair());
+        registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
 
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
@@ -102,16 +101,5 @@ public class ClientInfoIntegrationTest extends IntegrationTestEndpoints {
                 Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
                 singletonList("http://localhost/post-redirect-logout"),
                 String.valueOf(ServiceType.MANDATORY));
-    }
-
-    private KeyPair generateRsaKeyPair() {
-        KeyPairGenerator kpg;
-        try {
-            kpg = KeyPairGenerator.getInstance("RSA");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException();
-        }
-        kpg.initialize(2048);
-        return kpg.generateKeyPair();
     }
 }
