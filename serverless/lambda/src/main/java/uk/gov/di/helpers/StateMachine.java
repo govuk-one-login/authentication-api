@@ -96,7 +96,9 @@ public class StateMachine<T> {
                         entry(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED, Collections.emptyList()),
                         entry(AUTHENTICATION_REQUIRED, List.of(LOGGED_IN)),
                         entry(LOGGED_IN, List.of(MFA_SMS_CODE_SENT)),
-                        entry(MFA_SMS_CODE_SENT, List.of(MFA_CODE_VERIFIED, MFA_CODE_NOT_VALID)),
+                        entry(
+                                MFA_SMS_CODE_SENT,
+                                List.of(MFA_SMS_CODE_SENT, MFA_CODE_VERIFIED, MFA_CODE_NOT_VALID)),
                         entry(
                                 MFA_CODE_NOT_VALID,
                                 List.of(

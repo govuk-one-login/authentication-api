@@ -6,6 +6,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -29,6 +31,8 @@ import static uk.gov.di.helpers.StateMachine.validateStateTransition;
 
 public class MfaHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(MfaHandler.class);
 
     private final ConfigurationService configurationService;
     private final SessionService sessionService;
@@ -77,6 +81,7 @@ public class MfaHandler
         Session session =
                 sessionService.getSessionFromRequestHeaders(input.getHeaders()).orElse(null);
         if (session == null) {
+            LOGGER.error("Session cannot be found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         }
 
@@ -86,6 +91,7 @@ public class MfaHandler
             UserWithEmailRequest userWithEmailRequest =
                     objectMapper.readValue(input.getBody(), UserWithEmailRequest.class);
             if (!session.validateSession(userWithEmailRequest.getEmail())) {
+                LOGGER.error("Email in session does not match Email in Request");
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
             String phoneNumber =
@@ -94,6 +100,7 @@ public class MfaHandler
                             .orElse(null);
 
             if (phoneNumber == null) {
+                LOGGER.error("PhoneNumber is null");
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1014);
             }
             String code = codeGeneratorService.sixDigitCode();
@@ -107,8 +114,10 @@ public class MfaHandler
             sqsClient.send(objectMapper.writeValueAsString(notifyRequest));
             return generateApiGatewayProxyResponse(200, new BaseAPIResponse(session.getState()));
         } catch (JsonProcessingException e) {
+            LOGGER.error("Request is missing parameters. Request Body: {}", input.getBody());
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (InvalidStateTransitionException e) {
+            LOGGER.error("Invalid transition in user journey");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         }
     }
