@@ -6,4 +6,8 @@ include 'serverless:lambda'
 
 findProject(':serverless:lambda')?.name = 'lambda'
 rootProject.name = 'di-authentication-api'
+include 'client-registry-api'
+include 'frontend-api'
+include 'oidc-api'
+include 'shared-test'
 

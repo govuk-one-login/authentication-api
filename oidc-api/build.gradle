@@ -2,7 +2,7 @@ plugins {
     id "java"
 }
 
-group "uk.gov.di.authentication.accountmanagement"
+group "uk.gov.di.authentication.oidc"
 version "unspecified"
 
 repositories {
@@ -11,16 +11,17 @@ repositories {
 
 dependencies {
     implementation configurations.lambda,
+            configurations.sqs,
+            configurations.govuk_notify,
+            configurations.jackson,
             configurations.nimbus,
             configurations.dynamodb,
-            configurations.jackson,
+            configurations.bouncycastle,
+            "com.googlecode.libphonenumber:libphonenumber:8.12.28",
             project(":shared")
-
-    runtimeOnly configurations.logging_runtime
 
     testImplementation configurations.tests,
             configurations.lambda_tests
-
     testRuntimeOnly configurations.test_runtime
 }
 

@@ -2,7 +2,7 @@ plugins {
     id "java"
 }
 
-group "uk.gov.di.authentication.accountmanagement"
+group "uk.gov.di.clientregistry"
 version "unspecified"
 
 repositories {
@@ -13,7 +13,6 @@ dependencies {
     implementation configurations.lambda,
             configurations.nimbus,
             configurations.dynamodb,
-            configurations.jackson,
             project(":shared")
 
     runtimeOnly configurations.logging_runtime
