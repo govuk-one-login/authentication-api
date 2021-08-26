@@ -7,19 +7,19 @@ import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.claims.ClaimType;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.net.URI;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class WellknownHandlerTest {
@@ -28,15 +28,11 @@ class WellknownHandlerTest {
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private WellknownHandler handler;
 
-    @BeforeEach
-    public void setUp() {
-        handler = new WellknownHandler(configService);
-    }
 
     @Test
     public void shouldReturn200WhenRequestIsSuccessful() throws ParseException {
         when(configService.getBaseURL()).thenReturn(Optional.of("http://localhost:8080"));
-
+        handler = new WellknownHandler(configService);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -55,13 +51,12 @@ class WellknownHandlerTest {
     }
 
     @Test
-    public void shouldReturn500WhenConfigIsMissing() {
+    public void shouldThrowExceptionWhenBaseUrlIsMissing() {
         when(configService.getBaseURL()).thenReturn(Optional.empty());
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(500));
-        assertThat(result, hasBody("Service not configured"));
+                assertThrows(
+                        NoSuchElementException.class,
+                        () -> new WellknownHandler(configService),
+                        "Expected to throw exception");
     }
 }
