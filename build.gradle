@@ -2,21 +2,35 @@ plugins {
     id "com.diffplug.spotless" version "5.14.2"
 }
 
-apply plugin: 'java'
-apply plugin: 'application'
-apply plugin: 'idea'
+apply plugin: "java"
+apply plugin: "application"
+apply plugin: "idea"
+
+ext {
+    dependencyVersions = [
+        jackson_version: "2.12.4",
+        aws_sdk_version: "1.12.52",
+        aws_lambda_core_version: "1.2.1",
+        aws_lambda_events_version: "3.9.0",
+        nimbusds_oauth_version: "9.10.2",
+        nimbusds_jwt_version: "9.11.2",
+        junit: "5.7.2",
+        jackson_version: "2.12.4",
+        glassfish_version: "3.0.2",
+    ]
+}
 
 spotless {
     java {
-        target '**/*.java'
-        googleJavaFormat('1.9').aosp()
-        importOrder '', 'javax', 'java', '\\#'
+        target "**/*.java"
+        googleJavaFormat("1.9").aosp()
+        importOrder "", "javax", "java", "\\#"
     }
 
     groovyGradle {
-        target '**/*.gradle'
-        greclipse().configFile('tools/spotless-gradle.properties')
+        target "**/*.gradle"
+        greclipse().configFile("tools/spotless-gradle.properties")
     }
 }
 
-compileJava.dependsOn 'spotlessApply'
+compileJava.dependsOn "spotlessApply"

@@ -1,27 +1,22 @@
 plugins {
-    id 'java'
+    id "java"
 }
 
-group 'uk.gov.di'
-version 'unspecified'
+group "uk.gov.di"
+version "unspecified"
 
 repositories {
     mavenCentral()
 }
 
-def dependencyVersions = [
-    jackson_version: '2.12.4',
-    aws_sdk_version: '1.12.52',
-]
-
 dependencies {
-    implementation "com.amazonaws:aws-lambda-java-core:1.2.1",
-            "com.amazonaws:aws-lambda-java-events:3.9.0",
+    implementation "com.amazonaws:aws-lambda-java-core:${dependencyVersions.aws_lambda_core_version}",
+            "com.amazonaws:aws-lambda-java-events:${dependencyVersions.aws_lambda_events_version}",
             "com.amazonaws:aws-java-sdk-dynamodb:${dependencyVersions.aws_sdk_version}",
             "com.amazonaws:aws-java-sdk-xray:${dependencyVersions.aws_sdk_version}",
             "software.amazon.awssdk:sqs:2.17.15",
-            "com.nimbusds:oauth2-oidc-sdk:9.10.2",
-            "com.nimbusds:nimbus-jose-jwt:9.11.2",
+            "com.nimbusds:oauth2-oidc-sdk:${dependencyVersions.nimbusds_oauth_version}",
+            "com.nimbusds:nimbus-jose-jwt:${dependencyVersions.nimbusds_jwt_version}",
             "com.fasterxml.jackson.core:jackson-core:${dependencyVersions.jackson_version}",
             "com.fasterxml.jackson.core:jackson-databind:${dependencyVersions.jackson_version}",
             "com.fasterxml.jackson.core:jackson-annotations:${dependencyVersions.jackson_version}",
@@ -33,12 +28,12 @@ dependencies {
 
     runtimeOnly "org.apache.logging.log4j:log4j-slf4j18-impl:2.13.0",
             "com.amazonaws:aws-lambda-java-log4j2:1.2.0"
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.2',
-            'org.junit.jupiter:junit-jupiter-params:5.7.2',
-            'com.amazonaws:aws-lambda-java-tests:1.0.2',
-            'org.mockito:mockito-core:3.11.2',
-            'org.hamcrest:hamcrest:2.2'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.2'
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit}",
+            "org.junit.jupiter:junit-jupiter-params:${dependencyVersions.junit}",
+            "com.amazonaws:aws-lambda-java-tests:1.0.2",
+            "org.mockito:mockito-core:3.11.2",
+            "org.hamcrest:hamcrest:2.2"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
 }
 
 test {
@@ -48,7 +43,7 @@ test {
 task buildZip(type: Zip) {
     from compileJava
     from processResources
-    into('lib') {
+    into("lib") {
         from configurations.runtimeClasspath
     }
 }

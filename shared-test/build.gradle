@@ -1,0 +1,19 @@
+plugins {
+    id "java"
+}
+
+group "uk.gov.di.authentication.sharedtest"
+version "unspecified"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
+}
+
+test {
+    useJUnitPlatform()
+}

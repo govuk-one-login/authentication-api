@@ -1,18 +1,13 @@
 plugins {
-    id 'java-library'
+    id "java-library"
 }
 
-group 'uk.gov.di'
-version 'unspecified'
+group "uk.gov.di"
+version "unspecified"
 
 repositories {
     mavenCentral()
 }
-
-def dependencyVersions = [
-    jackson_version: '2.12.4',
-    aws_sdk_version: '1.12.52'
-]
 
 dependencies {
     implementation "org.apache.logging.log4j:log4j-slf4j18-impl:2.13.0",
@@ -30,10 +25,10 @@ dependencies {
             "org.bouncycastle:bcpkix-jdk15on:1.68",
             "org.apache.commons:commons-pool2:2.11.1",
             "io.lettuce:lettuce-core:6.1.4.RELEASE",
-            'org.hamcrest:hamcrest:2.2'
+            "org.hamcrest:hamcrest:2.2"
 
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
 }
 
 test {
