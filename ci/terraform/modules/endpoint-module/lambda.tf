@@ -25,6 +25,17 @@ resource "aws_lambda_function" "endpoint_lambda" {
   tags = var.default_tags
 }
 
+resource "aws_cloudwatch_log_group" "lambda_log_group" {
+  count = var.use_localstack ? 0 : 1
+
+  name  = "/aws/lambda/${aws_lambda_function.endpoint_lambda.function_name}"
+  tags  = var.default_tags
+
+  depends_on = [
+    aws_lambda_function.endpoint_lambda
+  ]
+}
+
 resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda" {
   count = var.use_localstack ? 0 : 1
 
@@ -36,7 +47,7 @@ resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda" {
 resource "aws_cloudwatch_log_subscription_filter" "log_subscription" {
   count           = var.logging_endpoint_enabled ? 1 : 0
   name            = "${var.endpoint_name}-log-subscription"
-  log_group_name  = "/aws/lambda/${aws_lambda_function.endpoint_lambda.function_name}"
+  log_group_name  = aws_cloudwatch_log_group.lambda_log_group[0].name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arn
 }
