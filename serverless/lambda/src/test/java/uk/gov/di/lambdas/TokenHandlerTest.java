@@ -25,15 +25,15 @@ import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.TokenService;
 import uk.gov.di.entity.AuthCodeExchangeData;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ClientSession;
-import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.AuthorisationCodeService;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ClientSessionService;
-import uk.gov.di.services.TokenService;
 
 import java.net.URI;
 import java.security.KeyPair;
@@ -59,9 +59,9 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.helpers.TokenGeneratorHelper.generateIDToken;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper.generateIDToken;
+import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
+import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class TokenHandlerTest {
 

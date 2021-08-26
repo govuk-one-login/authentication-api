@@ -1,7 +1,7 @@
 package uk.gov.di.services;
 
 import org.junit.jupiter.api.Test;
-import uk.gov.di.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 
 import java.util.Optional;

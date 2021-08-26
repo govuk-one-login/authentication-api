@@ -1,4 +1,4 @@
-package uk.gov.di.helpers;
+package uk.gov.di.authentication.shared.helpers;
 
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;

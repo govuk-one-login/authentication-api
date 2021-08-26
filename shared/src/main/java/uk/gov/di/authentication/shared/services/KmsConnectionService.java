@@ -1,4 +1,4 @@
-package uk.gov.di.services;
+package uk.gov.di.authentication.shared.services;
 
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.kms.AWSKMS;
@@ -9,7 +9,6 @@ import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Optional;
 

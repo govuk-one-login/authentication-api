@@ -1,8 +1,8 @@
-package uk.gov.di.services;
+package uk.gov.di.authentication.shared.services;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
-import uk.gov.di.entity.ClientConsent;
-import uk.gov.di.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.ClientConsent;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 
 import java.util.List;
 import java.util.Optional;

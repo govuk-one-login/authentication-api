@@ -6,25 +6,25 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.entity.BaseAPIResponse;
-import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.NotifyRequest;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.UserWithEmailRequest;
 import uk.gov.di.helpers.StateMachine.InvalidStateTransitionException;
-import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.AwsSqsClient;
 import uk.gov.di.services.CodeGeneratorService;
 import uk.gov.di.services.CodeStorageService;
-import uk.gov.di.services.DynamoService;
-import uk.gov.di.services.RedisConnectionService;
 import uk.gov.di.services.SessionService;
 
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.entity.SessionState.MFA_SMS_CODE_SENT;
-import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
-import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.helpers.StateMachine.validateStateTransition;
 
 public class MfaHandler

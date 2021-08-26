@@ -8,21 +8,21 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.entity.LoginRequest;
 import uk.gov.di.entity.LoginResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.helpers.StateMachine.InvalidStateTransitionException;
-import uk.gov.di.services.AuthenticationService;
-import uk.gov.di.services.DynamoService;
 import uk.gov.di.services.SessionService;
 
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.entity.SessionState.LOGGED_IN;
-import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
-import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.helpers.RedactPhoneNumberHelper.redactPhoneNumber;
 import static uk.gov.di.helpers.StateMachine.validateStateTransition;
 

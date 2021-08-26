@@ -1,4 +1,4 @@
-package uk.gov.di.helpers;
+package uk.gov.di.authentication.shared.helpers;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;

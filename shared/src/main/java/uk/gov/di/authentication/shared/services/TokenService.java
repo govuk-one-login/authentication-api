@@ -1,4 +1,4 @@
-package uk.gov.di.services;
+package uk.gov.di.authentication.shared.services;
 
 import com.amazonaws.services.kms.model.GetPublicKeyRequest;
 import com.amazonaws.services.kms.model.GetPublicKeyResult;
@@ -46,7 +46,7 @@ import org.bouncycastle.openssl.PEMException;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 
 import java.nio.ByteBuffer;
 import java.security.KeyFactory;
@@ -65,8 +65,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-
-import static uk.gov.di.helpers.RequestBodyHelper.parseRequestBody;
 
 public class TokenService {
 
@@ -162,7 +160,7 @@ public class TokenService {
     }
 
     public Optional<ErrorObject> validateTokenRequestParams(String tokenRequestBody) {
-        Map<String, String> requestBody = parseRequestBody(tokenRequestBody);
+        Map<String, String> requestBody = RequestBodyHelper.parseRequestBody(tokenRequestBody);
         if (!requestBody.containsKey("client_id")) {
             return Optional.of(
                     new ErrorObject(

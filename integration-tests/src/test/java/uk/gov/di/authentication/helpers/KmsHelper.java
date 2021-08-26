@@ -10,7 +10,7 @@ import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import uk.gov.di.services.KmsConnectionService;
+import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.nio.ByteBuffer;
 import java.util.Optional;
