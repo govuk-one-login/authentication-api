@@ -21,6 +21,7 @@ module "openid_configuration_discovery" {
   lambda_role_arn           = aws_iam_role.lambda_iam_role.arn
   logging_endpoint_enabled  = var.logging_endpoint_enabled
   logging_endpoint_arn      = var.logging_endpoint_arn
+  default_tags              = local.default_tags
 
   use_localstack = var.use_localstack
 

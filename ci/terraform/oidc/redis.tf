@@ -47,9 +47,7 @@ resource "aws_elasticache_replication_group" "sessions_store" {
     ]
   }
 
-  tags = {
-    environment = var.environment
-  }
+  tags = local.default_tags
 
   depends_on = [
     aws_vpc.authentication,

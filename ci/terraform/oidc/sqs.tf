@@ -3,9 +3,7 @@ resource "aws_iam_role" "email_lambda_iam_role" {
 
   assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_policy.json
 
-  tags = {
-    environment = var.environment
-  }
+  tags = local.default_tags
 }
 
 resource "aws_iam_role_policy_attachment" "emaiL_lambda_logging_policy" {
@@ -35,9 +33,7 @@ resource "aws_sqs_queue" "email_queue" {
   message_retention_seconds = 1209600
   receive_wait_time_seconds = 10
 
-  tags = {
-    environment = var.environment
-  }
+  tags = local.default_tags
 }
 
 resource "time_sleep" "wait_60_seconds" {
@@ -143,9 +139,7 @@ resource "aws_lambda_function" "email_sqs_lambda" {
     }
   }
 
-  tags = {
-    environment = var.environment
-  }
+  tags = local.default_tags
 
   depends_on = [
     aws_iam_role.lambda_iam_role,

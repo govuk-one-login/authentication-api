@@ -3,7 +3,7 @@ terraform {
 
   required_providers {
     aws = {
-      source = "hashicorp/aws"
+      source  = "hashicorp/aws"
       version = ">= 3.54.0"
     }
     time = {
@@ -50,5 +50,16 @@ provider "aws" {
     elasticache = var.aws_endpoint
     kms         = var.aws_endpoint
     dynamodb    = var.aws_dynamodb_endpoint
+    sns         = var.aws_endpoint
   }
 }
+
+locals {
+  // Using a local rather than the default_tags option on the AWS provider, as the latter has known issues which produce errors on apply.
+  default_tags = {
+    environment = var.environment
+    application = "oidc-api"
+  }
+}
+
+data "aws_caller_identity" "current" {}

@@ -27,6 +27,7 @@ module "auth-code" {
   environment               = var.environment
   logging_endpoint_enabled  = var.logging_endpoint_enabled
   logging_endpoint_arn      = var.logging_endpoint_arn
+  default_tags              = local.default_tags
 
   use_localstack = var.use_localstack
   depends_on = [

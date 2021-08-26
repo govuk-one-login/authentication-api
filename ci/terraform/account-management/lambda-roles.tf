@@ -17,7 +17,7 @@ data "aws_iam_policy_document" "lambda_can_assume_policy" {
 }
 
 resource "aws_iam_role" "lambda_iam_role" {
-  name = "${var.environment}-standard-lambda-role"
+  name = "${var.environment}-account-management-standard-lambda-role"
 
   assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_policy.json
 
@@ -33,7 +33,6 @@ data "aws_iam_policy_document" "endpoint_logging_policy" {
       "logs:CreateLogGroup",
       "logs:CreateLogStream",
       "logs:PutLogEvents",
-      "logs:CreateLogGroup"
     ]
 
     resources = [
@@ -43,9 +42,9 @@ data "aws_iam_policy_document" "endpoint_logging_policy" {
 }
 
 resource "aws_iam_policy" "endpoint_logging_policy" {
-  name        = "${var.environment}-standard-lambda-logging"
+  name        = "${var.environment}-account-management-standard-lambda-logging"
   path        = "/"
-  description = "IAM policy for logging from a lambda"
+  description = "IAM policy for logging from a Account Management API lambdas"
 
   policy = data.aws_iam_policy_document.endpoint_logging_policy.json
 }
@@ -71,9 +70,9 @@ data "aws_iam_policy_document" "endpoint_xray_policy" {
 }
 
 resource "aws_iam_policy" "endpoint_xray_policy" {
-  name        = "${var.environment}-standard-lambda-xray"
+  name        = "${var.environment}-account-management-standard-lambda-xray"
   path        = "/"
-  description = "IAM policy for xray with a lambda"
+  description = "IAM policy for xray with an account management lambda"
 
   policy = data.aws_iam_policy_document.endpoint_xray_policy.json
 }
@@ -100,9 +99,9 @@ data "aws_iam_policy_document" "endpoint_networking_policy" {
 }
 
 resource "aws_iam_policy" "endpoint_networking_policy" {
-  name        = "${var.environment}-standard-lambda-networking"
+  name        = "${var.environment}-account-management-standard-lambda-networking"
   path        = "/"
-  description = "IAM policy for managing VPC connection for a lambda"
+  description = "IAM policy for managing VPC connection for an account management lambda"
 
   policy = data.aws_iam_policy_document.endpoint_networking_policy.json
 }
@@ -112,58 +111,42 @@ resource "aws_iam_role_policy_attachment" "lambda_networking" {
   policy_arn = aws_iam_policy.endpoint_networking_policy.arn
 }
 
-resource "aws_iam_role" "sqs_lambda_iam_role" {
-  name = "${var.environment}-sqs-lambda-role"
+data "aws_dynamodb_table" "user_credentials_table" {
+  name = "${var.environment}-user-credentials"
+}
 
-  assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_policy.json
-  tags = {
-    environment = var.environment
+data "aws_dynamodb_table" "user_profile_table" {
+  name = "${var.environment}-user-profile"
+}
+
+data "aws_iam_policy_document" "dynamo_policy_document" {
+  count = var.use_localstack ? 0 : 1
+  statement {
+    sid = "AllowAccessToDynamoTables"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:GetItem",
+      "dynamodb:UpdateItem",
+    ]
+    resources = [
+      data.aws_dynamodb_table.user_credentials_table.arn,
+      data.aws_dynamodb_table.user_profile_table.arn,
+    ]
   }
 }
 
-resource "aws_iam_role_policy_attachment" "sqs_lambda_logs" {
-  role       = aws_iam_role.sqs_lambda_iam_role.name
-  policy_arn = aws_iam_policy.endpoint_logging_policy.arn
+resource "aws_iam_policy" "lambda_dynamo_policy" {
+  count       = var.use_localstack ? 0 : 1
+  name        = "${var.environment}-account-management-lambda-dynamo-policy"
+  path        = "/"
+  description = "IAM policy for managing Dynamo connection for an account management lambdas"
+
+  policy = data.aws_iam_policy_document.dynamo_policy_document[0].json
 }
 
-resource "aws_iam_role_policy_attachment" "sqs_lambda_networking" {
-  role       = aws_iam_role.sqs_lambda_iam_role.name
-  policy_arn = aws_iam_policy.endpoint_networking_policy.arn
-}
-
-resource "aws_iam_role" "dynamo_sqs_lambda_iam_role" {
-  name = "${var.environment}-dynamo-sqs-lambda-role"
-
-  assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_policy.json
-  tags = {
-    environment = var.environment
-  }
-}
-
-resource "aws_iam_role_policy_attachment" "dynamo_sqs_lambda_logs" {
-  role       = aws_iam_role.dynamo_sqs_lambda_iam_role.name
-  policy_arn = aws_iam_policy.endpoint_logging_policy.arn
-}
-
-resource "aws_iam_role_policy_attachment" "dynamo_sqs_lambda_networking" {
-  role       = aws_iam_role.dynamo_sqs_lambda_iam_role.name
-  policy_arn = aws_iam_policy.endpoint_networking_policy.arn
-}
-
-resource "aws_iam_role" "token_lambda_iam_role" {
-  name = "${var.environment}-token-lambda-role"
-  assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_policy.json
-  tags = {
-    environment = var.environment
-  }
-}
-
-resource "aws_iam_role_policy_attachment" "token_lambda_logs" {
-  role       = aws_iam_role.token_lambda_iam_role.name
-  policy_arn = aws_iam_policy.endpoint_logging_policy.arn
-}
-
-resource "aws_iam_role_policy_attachment" "token_lambda_networking" {
-  role       = aws_iam_role.token_lambda_iam_role.name
-  policy_arn = aws_iam_policy.endpoint_networking_policy.arn
+resource "aws_iam_role_policy_attachment" "lambda_dynamo" {
+  count      = var.use_localstack ? 0 : 1
+  role       = aws_iam_role.lambda_iam_role.name
+  policy_arn = aws_iam_policy.lambda_dynamo_policy[0].arn
 }

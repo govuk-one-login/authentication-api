@@ -3,6 +3,8 @@ resource "aws_kms_key" "id_token_signing_key" {
   deletion_window_in_days = 30
   key_usage               = "SIGN_VERIFY"
   customer_master_key_spec = "ECC_NIST_P256"
+
+  tags = local.default_tags
 }
 
 resource "aws_kms_alias" "id_token_signing_key_alias" {

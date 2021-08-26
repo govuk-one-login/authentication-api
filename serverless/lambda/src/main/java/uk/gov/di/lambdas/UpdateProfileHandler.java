@@ -15,6 +15,8 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.domain.AccountManagementAuditableEvent;
 import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.Session;
@@ -45,17 +47,20 @@ public class UpdateProfileHandler
     private final SessionService sessionService;
     private final ClientSessionService clientSessionService;
     private final ConfigurationService configurationService;
+    private final AuditService auditService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public UpdateProfileHandler(
             AuthenticationService authenticationService,
             SessionService sessionService,
             ClientSessionService clientSessionService,
-            ConfigurationService configurationService) {
+            ConfigurationService configurationService,
+            AuditService auditService) {
         this.authenticationService = authenticationService;
         this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
         this.configurationService = configurationService;
+        this.auditService = auditService;
     }
 
     public UpdateProfileHandler() {
@@ -67,24 +72,28 @@ public class UpdateProfileHandler
                         configurationService.getDynamoEndpointUri());
         sessionService = new SessionService(configurationService);
         clientSessionService = new ClientSessionService(configurationService);
+        auditService = new AuditService();
     }
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        auditService.submitAuditEvent(
+                AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_REQUEST_RECEIVED);
+
         Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
         String clientId;
 
         if (session.isEmpty()) {
             LOGGER.info("Session is empty.");
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+            return generateErrorResponse(ErrorResponse.ERROR_1000);
         }
         try {
             UpdateProfileRequest profileRequest =
                     objectMapper.readValue(input.getBody(), UpdateProfileRequest.class);
             if (!session.get().validateSession(profileRequest.getEmail())) {
                 LOGGER.info("Invalid session. Email {}", profileRequest.getEmail());
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+                return generateErrorResponse(ErrorResponse.ERROR_1000);
             }
             switch (profileRequest.getUpdateProfileType()) {
                 case ADD_PHONE_NUMBER:
@@ -92,6 +101,9 @@ public class UpdateProfileHandler
                         validateStateTransition(session.get(), ADDED_UNVERIFIED_PHONE_NUMBER);
                         authenticationService.updatePhoneNumber(
                                 profileRequest.getEmail(), profileRequest.getProfileInformation());
+                        auditService.submitAuditEvent(
+                                AccountManagementAuditableEvent
+                                        .ACCOUNT_MANAGEMENT_PHONE_NUMBER_UPDATED);
                         sessionService.save(session.get().setState(ADDED_UNVERIFIED_PHONE_NUMBER));
                         LOGGER.info(
                                 "Phone number updated and session state changed. Session state {}",
@@ -107,8 +119,7 @@ public class UpdateProfileHandler
 
                         if (clientSession.isEmpty()) {
                             LOGGER.info("ClientSession not found.");
-                            return generateApiGatewayProxyErrorResponse(
-                                    400, ErrorResponse.ERROR_1000);
+                            return generateErrorResponse(ErrorResponse.ERROR_1000);
                         }
                         AuthenticationRequest authorizationRequest;
                         try {
@@ -119,8 +130,7 @@ public class UpdateProfileHandler
                         } catch (ParseException e) {
                             LOGGER.info(
                                     "Cannot retrieve auth request params from client session id.");
-                            return generateApiGatewayProxyErrorResponse(
-                                    400, ErrorResponse.ERROR_1001);
+                            return generateErrorResponse(ErrorResponse.ERROR_1001);
                         }
                         Set<String> claims =
                                 ValidScopes.getClaimsForListOfScopes(
@@ -154,6 +164,10 @@ public class UpdateProfileHandler
 
                         authenticationService.updateConsent(
                                 profileRequest.getEmail(), clientConsentToUpdate);
+
+                        auditService.submitAuditEvent(
+                                AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_CONSENT_UPDATED);
+
                         sessionService.save(session.get().setState(ADDED_CONSENT));
 
                         LOGGER.info(
@@ -170,6 +184,9 @@ public class UpdateProfileHandler
                                 profileRequest.getEmail(),
                                 configurationService.getTermsAndConditionsVersion());
 
+                        auditService.submitAuditEvent(
+                                AccountManagementAuditableEvent
+                                        .ACCOUNT_MANAGEMENT_TERMS_CONDS_ACCEPTANCE_UPDATED);
                         LOGGER.info(
                                 "Updated terms and conditions. Email {} for Version {}",
                                 profileRequest.getEmail(),
@@ -187,11 +204,16 @@ public class UpdateProfileHandler
             }
         } catch (JsonProcessingException e) {
             LOGGER.info("JsonProcessingException", e);
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            return generateErrorResponse(ErrorResponse.ERROR_1001);
         } catch (InvalidStateTransitionException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
+            return generateErrorResponse(ErrorResponse.ERROR_1017);
         }
+        return generateErrorResponse(ErrorResponse.ERROR_1013);
+    }
 
-        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1013);
+    private APIGatewayProxyResponseEvent generateErrorResponse(ErrorResponse errorResponse) {
+        auditService.submitAuditEvent(
+                AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_REQUEST_ERROR);
+        return generateApiGatewayProxyErrorResponse(400, errorResponse);
     }
 }
