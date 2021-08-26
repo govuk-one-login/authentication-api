@@ -10,30 +10,19 @@ repositories {
 }
 
 dependencies {
-    implementation "com.amazonaws:aws-lambda-java-core:${dependencyVersions.aws_lambda_core_version}",
-            "com.amazonaws:aws-lambda-java-events:${dependencyVersions.aws_lambda_events_version}",
-            "com.amazonaws:aws-java-sdk-dynamodb:${dependencyVersions.aws_sdk_version}",
-            "com.amazonaws:aws-java-sdk-xray:${dependencyVersions.aws_sdk_version}",
-            "software.amazon.awssdk:sqs:2.17.15",
-            "com.nimbusds:oauth2-oidc-sdk:${dependencyVersions.nimbusds_oauth_version}",
-            "com.nimbusds:nimbus-jose-jwt:${dependencyVersions.nimbusds_jwt_version}",
-            "com.fasterxml.jackson.core:jackson-core:${dependencyVersions.jackson_version}",
-            "com.fasterxml.jackson.core:jackson-databind:${dependencyVersions.jackson_version}",
-            "com.fasterxml.jackson.core:jackson-annotations:${dependencyVersions.jackson_version}",
-            "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${dependencyVersions.jackson_version}",
-            "uk.gov.service.notify:notifications-java-client:3.17.2-RELEASE",
-            "org.bouncycastle:bcpkix-jdk15on:1.68",
+    implementation configurations.lambda,
+            configurations.sqs,
+            configurations.govuk_notify,
+            configurations.jackson,
+            configurations.nimbus,
+            configurations.dynamodb,
+            configurations.bouncycastle,
             "com.googlecode.libphonenumber:libphonenumber:8.12.28",
             project(":shared")
 
-    runtimeOnly "org.apache.logging.log4j:log4j-slf4j18-impl:2.13.0",
-            "com.amazonaws:aws-lambda-java-log4j2:1.2.0"
-    testImplementation "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit}",
-            "org.junit.jupiter:junit-jupiter-params:${dependencyVersions.junit}",
-            "com.amazonaws:aws-lambda-java-tests:1.0.2",
-            "org.mockito:mockito-core:3.11.2",
-            "org.hamcrest:hamcrest:2.2"
-    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
+    testImplementation configurations.tests,
+            configurations.lambda_tests
+    testRuntimeOnly configurations.test_runtime
 }
 
 test {

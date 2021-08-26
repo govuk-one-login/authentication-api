@@ -10,8 +10,19 @@ repositories {
 }
 
 dependencies {
-    testImplementation "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit}"
-    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
+    implementation configurations.lambda,
+            configurations.sqs,
+            configurations.govuk_notify,
+            configurations.jackson,
+            configurations.nimbus,
+            configurations.dynamodb,
+            configurations.bouncycastle,
+            "com.googlecode.libphonenumber:libphonenumber:8.12.28",
+            project(":shared")
+
+    testImplementation configurations.tests,
+            configurations.lambda_tests
+    testRuntimeOnly configurations.test_runtime
 }
 
 test {
