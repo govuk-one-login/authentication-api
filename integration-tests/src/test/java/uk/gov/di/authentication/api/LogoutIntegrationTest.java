@@ -34,6 +34,8 @@ import java.util.Date;
 import java.util.List;
 
 import static java.util.Collections.singletonList;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class LogoutIntegrationTest extends IntegrationTestEndpoints {
 
@@ -88,14 +90,14 @@ public class LogoutIntegrationTest extends IntegrationTestEndpoints {
                         .headers(headers)
                         .get();
 
-        //        assertEquals(302, response.getStatus());
-        //        assertTrue(
-        //                response.getHeaders()
-        //                        .get("Location")
-        //                        .contains(
-        //
-        // "https://di-auth-stub-relying-party-build.london.cloudapps.digital/?state="
-        //                                        + "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU"));
+                assertEquals(302, response.getStatus());
+                assertTrue(
+                        response.getHeaders()
+                                .get("Location")
+                                .contains(
+
+         "https://di-auth-stub-relying-party-build.london.cloudapps.digital/?state="
+                                                + "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU"));
     }
 
     private AuthenticationRequest generateAuthRequest(Nonce nonce) {
