@@ -30,7 +30,6 @@ data "aws_iam_policy_document" "endpoint_logging_policy" {
   statement {
     effect = "Allow"
     actions = [
-      "logs:CreateLogGroup",
       "logs:CreateLogStream",
       "logs:PutLogEvents",
     ]
