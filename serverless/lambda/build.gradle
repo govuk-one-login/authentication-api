@@ -26,11 +26,9 @@ dependencies {
             "com.fasterxml.jackson.core:jackson-databind:${dependencyVersions.jackson_version}",
             "com.fasterxml.jackson.core:jackson-annotations:${dependencyVersions.jackson_version}",
             "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${dependencyVersions.jackson_version}",
-            "io.lettuce:lettuce-core:6.1.4.RELEASE",
             "uk.gov.service.notify:notifications-java-client:3.17.2-RELEASE",
             "org.bouncycastle:bcpkix-jdk15on:1.68",
             "com.googlecode.libphonenumber:libphonenumber:8.12.28",
-            "org.apache.commons:commons-pool2:2.11.1",
             project(":shared")
 
     runtimeOnly "org.apache.logging.log4j:log4j-slf4j18-impl:2.13.0",

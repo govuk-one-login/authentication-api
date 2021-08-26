@@ -7,13 +7,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.entity.BaseAPIResponse;
-import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.SessionState;
 import uk.gov.di.services.CodeStorageService;
-import uk.gov.di.services.DynamoService;
 import uk.gov.di.services.SessionService;
 import uk.gov.di.services.ValidationService;
 
@@ -29,6 +29,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
+import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.entity.NotificationType.VERIFY_PHONE_NUMBER;
@@ -44,8 +46,6 @@ import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_NOT_VALID;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
 import static uk.gov.di.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
 import static uk.gov.di.entity.SessionState.VERIFY_PHONE_NUMBER_CODE_SENT;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class VerifyCodeRequestHandlerTest {
 

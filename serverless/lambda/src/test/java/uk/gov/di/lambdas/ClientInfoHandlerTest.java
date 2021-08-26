@@ -14,11 +14,11 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.ClientInfoResponse;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ClientSession;
-import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ClientSessionService;
@@ -34,8 +34,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
+import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class ClientInfoHandlerTest {
 

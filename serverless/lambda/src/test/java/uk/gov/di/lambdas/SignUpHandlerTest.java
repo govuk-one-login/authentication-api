@@ -8,12 +8,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.entity.BaseAPIResponse;
-import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.SessionState;
 import uk.gov.di.helpers.IdGenerator;
-import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.SessionService;
 import uk.gov.di.services.ValidationService;
 
@@ -29,11 +29,11 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
+import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
 import static uk.gov.di.entity.SessionState.NEW;
 import static uk.gov.di.entity.SessionState.TWO_FACTOR_REQUIRED;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class SignUpHandlerTest {
 

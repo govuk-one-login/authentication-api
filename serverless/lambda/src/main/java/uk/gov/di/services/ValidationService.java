@@ -2,7 +2,7 @@ package uk.gov.di.services;
 
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
-import uk.gov.di.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.SessionState;
 

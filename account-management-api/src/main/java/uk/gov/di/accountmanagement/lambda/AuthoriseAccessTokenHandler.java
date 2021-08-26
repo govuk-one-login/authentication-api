@@ -1,4 +1,4 @@
-package uk.gov.di.lambdas;
+package uk.gov.di.accountmanagement.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
@@ -29,25 +29,25 @@ import static com.nimbusds.oauth2.sdk.token.BearerTokenError.MISSING_TOKEN;
 import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
-public class UserInfoHandler
+public class AuthoriseAccessTokenHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(UserInfoHandler.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(AuthoriseAccessTokenHandler.class);
 
     private final TokenService tokenService;
     private final ConfigurationService configurationService;
     private final AuthenticationService authenticationService;
 
-    public UserInfoHandler(
+    public AuthoriseAccessTokenHandler(
             TokenService tokenService,
-            ConfigurationService configurationService,
-            AuthenticationService authenticationService) {
+            AuthenticationService authenticationService,
+            ConfigurationService configurationService) {
         this.tokenService = tokenService;
-        this.configurationService = configurationService;
         this.authenticationService = authenticationService;
+        this.configurationService = configurationService;
     }
 
-    public UserInfoHandler() {
+    public AuthoriseAccessTokenHandler() {
         configurationService = new ConfigurationService();
         tokenService =
                 new TokenService(
@@ -73,7 +73,9 @@ public class UserInfoHandler
                     "",
                     new UserInfoErrorResponse(MISSING_TOKEN).toHTTPResponse().getHeaderMap());
         }
+
         AccessToken accessToken;
+
         try {
             accessToken =
                     AccessToken.parse(
@@ -88,6 +90,7 @@ public class UserInfoHandler
                     "",
                     new UserInfoErrorResponse(INVALID_TOKEN).toHTTPResponse().getHeaderMap());
         }
+
         Optional<String> subjectFromAccessToken =
                 tokenService.getSubjectWithAccessToken(accessToken);
 

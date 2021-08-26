@@ -8,9 +8,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.BaseAPIResponse;
-import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.NotificationType;
 import uk.gov.di.entity.NotifyRequest;
 import uk.gov.di.entity.Session;
@@ -41,14 +41,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
+import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.entity.SessionState.NEW;
 import static uk.gov.di.entity.SessionState.USER_NOT_FOUND;
 import static uk.gov.di.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
 import static uk.gov.di.entity.SessionState.VERIFY_PHONE_NUMBER_CODE_SENT;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class SendNotificationHandlerTest {
 

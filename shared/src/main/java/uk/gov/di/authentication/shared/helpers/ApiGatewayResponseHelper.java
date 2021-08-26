@@ -1,11 +1,11 @@
-package uk.gov.di.helpers;
+package uk.gov.di.authentication.shared.helpers;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.di.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 
 import java.util.List;
 import java.util.Map;

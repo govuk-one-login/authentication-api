@@ -1,4 +1,4 @@
-package uk.gov.di.services;
+package uk.gov.di.authentication.shared.services;
 
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
@@ -10,11 +10,11 @@ import com.amazonaws.services.dynamodbv2.datamodeling.QueryResultPage;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.util.Base64;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import uk.gov.di.entity.ClientConsent;
-import uk.gov.di.entity.TermsAndConditions;
-import uk.gov.di.entity.UserCredentials;
-import uk.gov.di.entity.UserProfile;
-import uk.gov.di.helpers.Argon2Helper;
+import uk.gov.di.authentication.shared.entity.ClientConsent;
+import uk.gov.di.authentication.shared.entity.TermsAndConditions;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.Argon2Helper;
 
 import java.time.Instant;
 import java.time.LocalDateTime;

@@ -22,7 +22,7 @@ import uk.gov.di.services.DynamoClientService;
 
 import java.util.Optional;
 
-import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class UpdateClientConfigHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {

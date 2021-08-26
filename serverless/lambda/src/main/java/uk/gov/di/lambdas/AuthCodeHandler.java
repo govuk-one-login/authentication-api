@@ -12,8 +12,8 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.ResponseHeaders;
 import uk.gov.di.entity.Session;
 import uk.gov.di.exceptions.ClientNotFoundException;
@@ -29,8 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.entity.SessionState.AUTHENTICATED;
-import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.helpers.StateMachine.validateStateTransition;
 
 public class AuthCodeHandler

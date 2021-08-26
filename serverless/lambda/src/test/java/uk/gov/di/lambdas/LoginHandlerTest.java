@@ -7,12 +7,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.entity.LoginResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.helpers.IdGenerator;
 import uk.gov.di.helpers.RedactPhoneNumberHelper;
-import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.SessionService;
 
 import java.util.Map;
@@ -24,11 +24,11 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
+import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.entity.SessionState.LOGGED_IN;
 import static uk.gov.di.entity.SessionState.NEW;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
-import static uk.gov.di.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class LoginHandlerTest {
 

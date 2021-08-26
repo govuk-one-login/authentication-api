@@ -2,6 +2,7 @@ package uk.gov.di.services;
 
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.helpers.IdGenerator;
 
 import static org.hamcrest.CoreMatchers.is;

@@ -23,8 +23,11 @@ import com.nimbusds.oauth2.sdk.util.URLUtils;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.helpers.TokenGeneratorHelper;
+import uk.gov.di.authentication.shared.services.KmsConnectionService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
+import uk.gov.di.authentication.shared.services.TokenService;
 
 import java.net.URI;
 import java.nio.ByteBuffer;

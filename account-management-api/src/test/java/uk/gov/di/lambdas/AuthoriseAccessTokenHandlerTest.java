@@ -17,6 +17,7 @@ import com.nimbusds.openid.connect.sdk.UserInfoErrorResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.accountmanagement.lambda.AuthoriseAccessTokenHandler;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -35,27 +36,28 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-public class UserInfoHandlerTest {
+public class AuthoriseAccessTokenHandlerTest {
 
     private static final String EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String PHONE_NUMBER = "01234567890";
     private static final Subject SUBJECT = new Subject();
     private final Context context = mock(Context.class);
     private final TokenService tokenService = mock(TokenService.class);
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private static final Map<String, List<String>> INVALID_TOKEN_RESPONSE =
             new UserInfoErrorResponse(INVALID_TOKEN).toHTTPResponse().getHeaderMap();
-    private UserInfoHandler handler;
+    private AuthoriseAccessTokenHandler handler;
 
     @BeforeEach
     public void setUp() {
-        handler = new UserInfoHandler(tokenService, configurationService, authenticationService);
+        handler =
+                new AuthoriseAccessTokenHandler(
+                        tokenService, authenticationService, configurationService);
     }
 
     @Test
@@ -115,18 +117,5 @@ public class UserInfoHandlerTest {
         Map<String, List<String>> missingTokenExpectedResponse =
                 new UserInfoErrorResponse(MISSING_TOKEN).toHTTPResponse().getHeaderMap();
         assertEquals(missingTokenExpectedResponse, result.getMultiValueHeaders());
-    }
-
-    @Test
-    public void shouldReturn401WhenAccessTokenIsNotValid() {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Authorization", new BearerAccessToken().toAuthorizationHeader()));
-
-        when(tokenService.getSubjectWithAccessToken(any(BearerAccessToken.class)))
-                .thenReturn(Optional.empty());
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(401));
-        assertEquals(INVALID_TOKEN_RESPONSE, result.getMultiValueHeaders());
     }
 }

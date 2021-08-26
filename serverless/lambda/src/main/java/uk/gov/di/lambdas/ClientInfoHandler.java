@@ -9,11 +9,11 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.ClientInfoResponse;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ClientSession;
-import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ClientSessionService;
@@ -24,8 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
-import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class ClientInfoHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {

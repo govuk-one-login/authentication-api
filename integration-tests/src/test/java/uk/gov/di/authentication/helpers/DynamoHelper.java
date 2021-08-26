@@ -7,9 +7,9 @@ import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.ScanRequest;
 import com.amazonaws.services.dynamodbv2.model.ScanResult;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import uk.gov.di.entity.ClientConsent;
+import uk.gov.di.authentication.shared.entity.ClientConsent;
+import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.services.DynamoClientService;
-import uk.gov.di.services.DynamoService;
 
 import java.util.List;
 import java.util.Map;

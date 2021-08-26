@@ -2,6 +2,7 @@ package uk.gov.di.services;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.entity.NotificationType;
 import uk.gov.di.helpers.HashHelper;
 

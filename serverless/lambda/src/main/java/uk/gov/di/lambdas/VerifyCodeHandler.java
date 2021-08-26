@@ -6,29 +6,29 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.entity.BaseAPIResponse;
-import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.NotificationType;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.VerifyCodeRequest;
 import uk.gov.di.helpers.StateMachine.InvalidStateTransitionException;
 import uk.gov.di.services.CodeStorageService;
-import uk.gov.di.services.DynamoService;
-import uk.gov.di.services.RedisConnectionService;
 import uk.gov.di.services.SessionService;
 import uk.gov.di.services.ValidationService;
 
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
 import static uk.gov.di.entity.SessionState.MFA_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.MFA_CODE_VERIFIED;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
-import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
-import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.helpers.StateMachine.validateStateTransition;
 
 public class VerifyCodeHandler

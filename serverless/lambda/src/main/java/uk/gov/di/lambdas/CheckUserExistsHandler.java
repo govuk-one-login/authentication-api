@@ -6,23 +6,23 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.entity.CheckUserExistsResponse;
-import uk.gov.di.entity.ErrorResponse;
 import uk.gov.di.entity.Session;
 import uk.gov.di.entity.UserWithEmailRequest;
 import uk.gov.di.helpers.StateMachine.InvalidStateTransitionException;
-import uk.gov.di.services.AuthenticationService;
-import uk.gov.di.services.DynamoService;
 import uk.gov.di.services.SessionService;
 import uk.gov.di.services.ValidationService;
 
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.entity.SessionState.USER_NOT_FOUND;
-import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
-import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.helpers.StateMachine.validateStateTransition;
 
 public class CheckUserExistsHandler

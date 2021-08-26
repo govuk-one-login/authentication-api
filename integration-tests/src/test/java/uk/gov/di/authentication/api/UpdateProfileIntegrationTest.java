@@ -16,7 +16,7 @@ import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
-import uk.gov.di.entity.ClientConsent;
+import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.entity.SessionState;
 import uk.gov.di.entity.UpdateProfileRequest;
 import uk.gov.di.helpers.IdGenerator;

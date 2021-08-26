@@ -12,19 +12,19 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.KmsConnectionService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
+import uk.gov.di.authentication.shared.services.TokenService;
 import uk.gov.di.entity.AuthCodeExchangeData;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ClientSession;
-import uk.gov.di.services.AuthenticationService;
 import uk.gov.di.services.AuthorisationCodeService;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ClientSessionService;
 import uk.gov.di.services.DynamoClientService;
-import uk.gov.di.services.DynamoService;
-import uk.gov.di.services.KmsConnectionService;
-import uk.gov.di.services.RedisConnectionService;
-import uk.gov.di.services.TokenService;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -32,8 +32,8 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static java.lang.String.format;
-import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.helpers.RequestBodyHelper.parseRequestBody;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.RequestBodyHelper.parseRequestBody;
 
 public class TokenHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {

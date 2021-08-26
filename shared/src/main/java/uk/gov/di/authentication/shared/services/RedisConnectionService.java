@@ -1,4 +1,4 @@
-package uk.gov.di.services;
+package uk.gov.di.authentication.shared.services;
 
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
@@ -8,7 +8,6 @@ import io.lettuce.core.api.sync.RedisCommands;
 import io.lettuce.core.support.ConnectionPoolSupport;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Optional;
 

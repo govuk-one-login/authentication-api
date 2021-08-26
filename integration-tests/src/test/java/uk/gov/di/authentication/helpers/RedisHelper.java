@@ -6,6 +6,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.entity.AuthCodeExchangeData;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.Session;
@@ -13,7 +14,6 @@ import uk.gov.di.entity.SessionState;
 import uk.gov.di.helpers.IdGenerator;
 import uk.gov.di.services.CodeGeneratorService;
 import uk.gov.di.services.CodeStorageService;
-import uk.gov.di.services.RedisConnectionService;
 
 import java.io.IOException;
 import java.time.LocalDateTime;

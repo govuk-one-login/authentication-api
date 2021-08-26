@@ -6,11 +6,11 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.jwk.JWKSet;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.services.KmsConnectionService;
-import uk.gov.di.services.RedisConnectionService;
-import uk.gov.di.services.TokenService;
+import uk.gov.di.authentication.shared.services.KmsConnectionService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
+import uk.gov.di.authentication.shared.services.TokenService;
 
-import static uk.gov.di.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class JwksHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
