@@ -6,6 +6,7 @@ import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
@@ -22,6 +23,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -34,6 +36,8 @@ import java.nio.ByteBuffer;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.security.interfaces.ECPrivateKey;
+import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
 import java.util.Base64;
@@ -46,6 +50,7 @@ import java.util.Optional;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -68,12 +73,16 @@ public class TokenServiceTest {
     private static final String BASE_URL = "http://example.com";
     private static final String KEY_ID = "14342354354353";
 
+    @BeforeEach
+    public void setUp() {
+        Optional<String> baseUrl = Optional.of(BASE_URL);
+        when(configurationService.getBaseURL()).thenReturn(baseUrl);
+    }
+
     @Test
     public void shouldSuccessfullyGenerateTokenResponse() throws ParseException, JOSEException {
         Nonce nonce = new Nonce();
         when(configurationService.getTokenSigningKeyId()).thenReturn(KEY_ID);
-        Optional<String> baseUrl = Optional.of(BASE_URL);
-        when(configurationService.getBaseURL()).thenReturn(baseUrl);
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
         SignedJWT signedIdToken = createSignedIdToken();
         SignedJWT signedAccessToken = createSignedAccessToken();
@@ -125,6 +134,27 @@ public class TokenServiceTest {
     }
 
     @Test
+    public void shouldSuccessfullyValidateIdToken() throws JOSEException {
+        KeyPair keyPair = generateECKeyPair();
+        ECPrivateKey privateKey = (ECPrivateKey) keyPair.getPrivate();
+        ECDSASigner signer = new ECDSASigner(privateKey, Curve.P_256);
+        ECPublicKey ecPublicKey = (ECPublicKey) keyPair.getPublic();
+        byte[] encodedPublicKey = ecPublicKey.getEncoded();
+        when(configurationService.getTokenSigningKeyId()).thenReturn(KEY_ID);
+        GetPublicKeyResult getPublicKeyResult = new GetPublicKeyResult();
+        getPublicKeyResult.setKeyUsage("SIGN_VERIFY");
+        getPublicKeyResult.setKeyId(KEY_ID);
+        getPublicKeyResult.setSigningAlgorithms(
+                Collections.singletonList(JWSAlgorithm.ES256.getName()));
+        getPublicKeyResult.setPublicKey(ByteBuffer.wrap(encodedPublicKey));
+        when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
+                .thenReturn(getPublicKeyResult);
+
+        SignedJWT signedIdToken = createSignedIdToken(signer);
+        assertTrue(tokenService.validateIdTokenSignature(signedIdToken.serialize()));
+    }
+
+    @Test
     public void shouldReturnErrorIfUnableToValidatePrivateKeyJWT() throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
         KeyPair keyPairTwo = generateRsaKeyPair();
@@ -166,7 +196,7 @@ public class TokenServiceTest {
         getPublicKeyResult.setPublicKey(ByteBuffer.wrap(publicKey));
         when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
                 .thenReturn(getPublicKeyResult);
-        JWK publicKeyJwk = tokenService.getPublicKey();
+        JWK publicKeyJwk = tokenService.getPublicJwk();
         assertEquals(publicKeyJwk.getKeyID(), keyId);
         assertEquals(publicKeyJwk.getAlgorithm(), JWSAlgorithm.ES256);
         assertEquals(publicKeyJwk.getKeyUse(), KeyUse.SIGNATURE);
@@ -277,7 +307,13 @@ public class TokenServiceTest {
                         .keyID(KEY_ID)
                         .algorithm(JWSAlgorithm.ES256)
                         .generate();
-        return TokenGeneratorHelper.generateIDToken(CLIENT_ID, SUBJECT, BASE_URL, ecSigningKey);
+        ECDSASigner ecdsaSigner = new ECDSASigner(ecSigningKey);
+        return createSignedIdToken(ecdsaSigner);
+    }
+
+    private SignedJWT createSignedIdToken(ECDSASigner ecdsaSigner) {
+        return TokenGeneratorHelper.generateIDToken(
+                CLIENT_ID, SUBJECT, BASE_URL, ecdsaSigner, KEY_ID);
     }
 
     private SignedJWT createSignedAccessToken() throws JOSEException {
@@ -294,9 +330,20 @@ public class TokenServiceTest {
         try {
             kpg = KeyPairGenerator.getInstance("RSA");
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException();
+            throw new RuntimeException(e);
         }
         kpg.initialize(2048);
+        return kpg.generateKeyPair();
+    }
+
+    private KeyPair generateECKeyPair() {
+        KeyPairGenerator kpg;
+        try {
+            kpg = KeyPairGenerator.getInstance("EC");
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+        kpg.initialize(256);
         return kpg.generateKeyPair();
     }
 }

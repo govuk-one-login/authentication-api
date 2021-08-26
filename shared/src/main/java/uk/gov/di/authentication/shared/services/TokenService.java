@@ -13,7 +13,10 @@ import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.KeyUse;
+import com.nimbusds.jose.proc.BadJOSEException;
+import com.nimbusds.jose.proc.JWSKeySelector;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
@@ -36,6 +39,7 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
+import com.nimbusds.openid.connect.sdk.validators.IDTokenValidator;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMException;
@@ -88,81 +92,67 @@ public class TokenService {
         return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, null));
     }
 
-    private SignedJWT generateIDToken(
-            String clientId, Subject subject, Map<String, Object> additionalTokenClaims) {
-        LOGGER.info("Generating IdToken for ClientId: {}", clientId);
-        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
-        IDTokenClaimsSet idTokenClaims =
-                new IDTokenClaimsSet(
-                        new Issuer(configService.getBaseURL().get()),
-                        subject,
-                        List.of(new Audience(clientId)),
-                        expiryDate,
-                        new Date());
-        idTokenClaims.putAll(additionalTokenClaims);
-        try {
-            return generateSignedJWT(idTokenClaims.toJWTClaimsSet());
-        } catch (com.nimbusds.oauth2.sdk.ParseException e) {
-            LOGGER.error("Error when trying to parse IDTokenClaims to JWTClaimSet", e);
-            throw new RuntimeException(e);
-        }
-    }
-
-    private AccessToken generateAndStoreAccessToken(
-            String clientId, Subject subject, List<String> scopes) {
-        LOGGER.info("Generating AccessToken for ClientId: {}", clientId);
-        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
-
-        JWTClaimsSet claimsSet =
-                new JWTClaimsSet.Builder()
-                        .claim("scope", scopes)
-                        .issuer(configService.getBaseURL().get())
-                        .expirationTime(expiryDate)
-                        .issueTime(
-                                Date.from(
-                                        LocalDateTime.now()
-                                                .atZone(ZoneId.systemDefault())
-                                                .toInstant()))
-                        .claim("client_id", clientId)
-                        .jwtID(UUID.randomUUID().toString())
-                        .build();
-        SignedJWT signedJWT = generateSignedJWT(claimsSet);
-        AccessToken accessToken = new BearerAccessToken(signedJWT.serialize());
-
-        redisConnectionService.saveWithExpiry(
-                accessToken.toJSONString(),
-                subject.toString(),
-                configService.getAccessTokenExpiry());
-        return accessToken;
-    }
-
     public Optional<String> getSubjectWithAccessToken(AccessToken token) {
         return Optional.ofNullable(redisConnectionService.getValue(token.toJSONString()));
     }
 
-    public JWK getPublicKey() {
+    public boolean validateIdTokenSignature(String idTokenHint) {
+        try {
+            LOGGER.info("Validating ID token signature");
+            LOGGER.info("IDTokenHint: " + idTokenHint);
+            LOGGER.info("TokenSigningKeyID: " + configService.getTokenSigningKeyId());
+            SignedJWT idToken = SignedJWT.parse(idTokenHint);
+            LOGGER.info("ClientID:" + idToken.getJWTClaimsSet().getAudience().get(0));
+            LOGGER.info("Issuer: " + configService.getBaseURL().get());
+            JWK publicJwk = getPublicJwk();
+            LOGGER.info("PublicJWK: " + publicJwk.toString());
+            JWKSet jwkSet = new JWKSet(publicJwk);
+            LOGGER.info("JWKSET: " + jwkSet);
+            IDTokenValidator validator =
+                    new IDTokenValidator(
+                            new Issuer(configService.getBaseURL().get()),
+                            new ClientID(idToken.getJWTClaimsSet().getAudience().get(0)),
+                            JWSAlgorithm.ES256,
+                            jwkSet);
+            JWSKeySelector jwsKeySelector = validator.getJWSKeySelector();
+            LOGGER.info("KEYSELECTOR: " + jwsKeySelector.selectJWSKeys(idToken.getHeader(), null));
+            validator.validate(idToken, null);
+        } catch (java.text.ParseException | JOSEException | BadJOSEException e) {
+            LOGGER.error("Unable to validate Signature of ID token", e);
+            return false;
+        }
+        return true;
+    }
+
+    public PublicKey getPublicKey() {
         LOGGER.info("Creating GetPublicKeyRequest to retrieve PublicKey from KMS");
         Provider bcProvider = new BouncyCastleProvider();
         GetPublicKeyRequest getPublicKeyRequest = new GetPublicKeyRequest();
         getPublicKeyRequest.setKeyId(configService.getTokenSigningKeyId());
         GetPublicKeyResult publicKeyResult = kmsConnectionService.getPublicKey(getPublicKeyRequest);
         try {
+            LOGGER.info("PUBLICKEYRESULT: " + publicKeyResult.toString());
             SubjectPublicKeyInfo subjectKeyInfo =
                     SubjectPublicKeyInfo.getInstance(publicKeyResult.getPublicKey().array());
-            PublicKey publicKey =
-                    new JcaPEMKeyConverter().setProvider(bcProvider).getPublicKey(subjectKeyInfo);
+            return new JcaPEMKeyConverter().setProvider(bcProvider).getPublicKey(subjectKeyInfo);
+        } catch (PEMException e) {
+            LOGGER.error("Error getting the PublicKey using the JcaPEMKeyConverter", e);
+            throw new RuntimeException();
+        }
+    }
+
+    public JWK getPublicJwk() {
+        try {
+            PublicKey publicKey = getPublicKey();
             ECKey jwk =
                     new ECKey.Builder(Curve.P_256, (ECPublicKey) publicKey)
                             .keyID(configService.getTokenSigningKeyId())
                             .keyUse(KeyUse.SIGNATURE)
                             .algorithm(new Algorithm(JWSAlgorithm.ES256.getName()))
                             .build();
+            LOGGER.info("ECKey: " + jwk.toJSONString());
+            LOGGER.info("ECKey KeyID: " + jwk.getKeyID());
             return JWK.parse(jwk.toJSONObject());
-        } catch (PEMException e) {
-            LOGGER.error("Error getting the PublicKey using the JcaPEMKeyConverter", e);
-            throw new RuntimeException();
         } catch (java.text.ParseException e) {
             LOGGER.error("Error parsing the ECKey to JWK", e);
             throw new RuntimeException(e);
@@ -220,6 +210,56 @@ public class TokenService {
             return Optional.of(OAuth2Error.INVALID_CLIENT);
         }
         return Optional.empty();
+    }
+
+    private SignedJWT generateIDToken(
+            String clientId, Subject subject, Map<String, Object> additionalTokenClaims) {
+        LOGGER.info("Generating IdToken for ClientId: {}", clientId);
+        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+        IDTokenClaimsSet idTokenClaims =
+                new IDTokenClaimsSet(
+                        new Issuer(configService.getBaseURL().get()),
+                        subject,
+                        List.of(new Audience(clientId)),
+                        expiryDate,
+                        new Date());
+        idTokenClaims.putAll(additionalTokenClaims);
+        try {
+            return generateSignedJWT(idTokenClaims.toJWTClaimsSet());
+        } catch (com.nimbusds.oauth2.sdk.ParseException e) {
+            LOGGER.error("Error when trying to parse IDTokenClaims to JWTClaimSet", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    private AccessToken generateAndStoreAccessToken(
+            String clientId, Subject subject, List<String> scopes) {
+        LOGGER.info("Generating AccessToken for ClientId: {}", clientId);
+        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+
+        JWTClaimsSet claimsSet =
+                new JWTClaimsSet.Builder()
+                        .claim("scope", scopes)
+                        .issuer(configService.getBaseURL().get())
+                        .expirationTime(expiryDate)
+                        .issueTime(
+                                Date.from(
+                                        LocalDateTime.now()
+                                                .atZone(ZoneId.systemDefault())
+                                                .toInstant()))
+                        .claim("client_id", clientId)
+                        .jwtID(UUID.randomUUID().toString())
+                        .build();
+        SignedJWT signedJWT = generateSignedJWT(claimsSet);
+        AccessToken accessToken = new BearerAccessToken(signedJWT.serialize());
+
+        redisConnectionService.saveWithExpiry(
+                accessToken.toJSONString(),
+                subject.toString(),
+                configService.getAccessTokenExpiry());
+        return accessToken;
     }
 
     private SignedJWT generateSignedJWT(JWTClaimsSet claimsSet) {

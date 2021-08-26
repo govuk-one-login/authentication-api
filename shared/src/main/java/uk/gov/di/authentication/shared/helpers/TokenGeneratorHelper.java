@@ -50,6 +50,17 @@ public class TokenGeneratorHelper {
 
     public static SignedJWT generateIDToken(
             String clientId, Subject subject, String issuerUrl, ECKey signingKey) {
+        ECDSASigner signer;
+        try {
+            signer = new ECDSASigner(signingKey);
+        } catch (JOSEException e) {
+            throw new RuntimeException(e);
+        }
+        return generateIDToken(clientId, subject, issuerUrl, signer, signingKey.getKeyID());
+    }
+
+    public static SignedJWT generateIDToken(
+            String clientId, Subject subject, String issuerUrl, ECDSASigner signer, String keyId) {
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
         IDTokenClaimsSet idTokenClaims =
@@ -59,12 +70,10 @@ public class TokenGeneratorHelper {
                         List.of(new Audience(clientId)),
                         expiryDate,
                         new Date());
-        JWSHeader jwsHeader =
-                new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(signingKey.getKeyID()).build();
+        JWSHeader jwsHeader = new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(keyId).build();
         SignedJWT idToken;
 
         try {
-            ECDSASigner signer = new ECDSASigner(signingKey);
             idToken = new SignedJWT(jwsHeader, idTokenClaims.toJWTClaimsSet());
             idToken.sign(signer);
         } catch (JOSEException | ParseException e) {

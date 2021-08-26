@@ -6,6 +6,10 @@ output "api_gateway_root_id" {
   value = aws_api_gateway_rest_api.di_authentication_api.id
 }
 
+output "token_signing_key_id" {
+  value = aws_kms_key.id_token_signing_key.key_id
+}
+
 output "stub_rp_client_credentials" {
   value = [for i, rp in var.stub_rp_clients : {
     client_name = rp.client_name
