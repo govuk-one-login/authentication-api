@@ -72,6 +72,7 @@ public class LogoutHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        LOG.info("Logout request received");
         Optional<String> state = Optional.ofNullable(input.getQueryStringParameters().get("state"));
         Optional<Session> sessionFromSessionCookie =
                 sessionService.getSessionFromSessionCookie(input.getHeaders());
@@ -144,11 +145,19 @@ public class LogoutHandler
                                                 format(
                                                         "Client not found in ClientRegistry for ClientID: %s",
                                                         clientID)));
-        String postLogoutRedirectUri = queryStringParameters.get("post_logout_redirect_uri");
-        if (!queryStringParameters.get("post_logout_redirect_uri").isBlank()
-                && clientRegistry.getPostLogoutRedirectUrls().contains(postLogoutRedirectUri)) {
-            return generateLogoutResponse(URI.create(postLogoutRedirectUri), state);
+        if ((queryStringParameters.containsKey("post_logout_redirect_uri"))
+                && (!queryStringParameters.get("post_logout_redirect_uri").isBlank())
+                && (clientRegistry
+                        .getPostLogoutRedirectUrls()
+                        .contains(queryStringParameters.get("post_logout_redirect_uri")))) {
+            LOG.info(
+                    "post_logout_redirect_uri present in logout request. Value is {}",
+                    queryStringParameters.get("post_logout_redirect_uri"));
+            return generateLogoutResponse(
+                    URI.create(queryStringParameters.get("post_logout_redirect_uri")), state);
         }
+        LOG.info(
+                "post_logout_redirect_uri is NOT present in logout request. Generating default logout response");
         return generateDefaultLogoutResponse(state);
     }
 
@@ -158,6 +167,7 @@ public class LogoutHandler
 
     private APIGatewayProxyResponseEvent generateLogoutResponse(
             URI logoutUri, Optional<String> state) {
+        LOG.info("Generating Logout Response using URI: {}", logoutUri);
         URIBuilder uriBuilder = new URIBuilder(logoutUri);
         state.ifPresent(s -> uriBuilder.addParameter("state", s));
         URI uri;
