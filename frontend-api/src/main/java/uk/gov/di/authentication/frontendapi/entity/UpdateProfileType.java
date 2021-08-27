@@ -1,4 +1,4 @@
-package uk.gov.di.entity;
+package uk.gov.di.authentication.frontendapi.entity;
 
 public enum UpdateProfileType {
     ADD_PHONE_NUMBER,

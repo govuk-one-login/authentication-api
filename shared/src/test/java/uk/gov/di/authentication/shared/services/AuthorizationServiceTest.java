@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.frontendapi.services;
+package uk.gov.di.authentication.shared.services;
 
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
@@ -11,10 +11,12 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.entity.ClientRegistry;
-import uk.gov.di.exceptions.ClientNotFoundException;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 
 import java.net.URI;
 import java.util.Optional;
@@ -46,12 +48,12 @@ class AuthorizationServiceTest {
         when(dynamoClientService.getClient(clientID.toString())).thenReturn(Optional.empty());
 
         ClientNotFoundException exception =
-                assertThrows(
+                Assertions.assertThrows(
                         ClientNotFoundException.class,
                         () -> authorizationService.isClientRedirectUriValid(clientID, REDIRECT_URI),
                         "Expected to throw exception");
 
-        assertThat(
+        MatcherAssert.assertThat(
                 exception.getMessage(),
                 equalTo(format("No Client found for ClientID: %s", clientID)));
     }

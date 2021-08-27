@@ -1,4 +1,4 @@
-package uk.gov.di.lambdas;
+package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
@@ -10,33 +10,37 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.di.authentication.frontendapi.services.ClientSessionService;
+import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
+import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.StateMachine.InvalidStateTransitionException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.domain.AccountManagementAuditableEvent;
-import uk.gov.di.entity.ClientSession;
-import uk.gov.di.entity.UpdateProfileRequest;
-import uk.gov.di.entity.ValidScopes;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.Set;
 
+import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
+import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_CONSENT_UPDATED;
+import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_PHONE_NUMBER_UPDATED;
+import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_REQUEST_ERROR;
+import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_REQUEST_RECEIVED;
+import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_TERMS_CONDS_ACCEPTANCE_UPDATED;
 import static uk.gov.di.authentication.shared.entity.SessionState.ADDED_CONSENT;
 import static uk.gov.di.authentication.shared.entity.SessionState.ADDED_UNVERIFIED_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.StateMachine.validateStateTransition;
-import static uk.gov.di.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
 
 public class UpdateProfileHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -78,8 +82,7 @@ public class UpdateProfileHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        auditService.submitAuditEvent(
-                AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_REQUEST_RECEIVED);
+        auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_RECEIVED);
 
         Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
         String clientId;
@@ -101,9 +104,7 @@ public class UpdateProfileHandler
                         validateStateTransition(session.get(), ADDED_UNVERIFIED_PHONE_NUMBER);
                         authenticationService.updatePhoneNumber(
                                 profileRequest.getEmail(), profileRequest.getProfileInformation());
-                        auditService.submitAuditEvent(
-                                AccountManagementAuditableEvent
-                                        .ACCOUNT_MANAGEMENT_PHONE_NUMBER_UPDATED);
+                        auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_PHONE_NUMBER_UPDATED);
                         sessionService.save(session.get().setState(ADDED_UNVERIFIED_PHONE_NUMBER));
                         LOGGER.info(
                                 "Phone number updated and session state changed. Session state {}",
@@ -165,8 +166,7 @@ public class UpdateProfileHandler
                         authenticationService.updateConsent(
                                 profileRequest.getEmail(), clientConsentToUpdate);
 
-                        auditService.submitAuditEvent(
-                                AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_CONSENT_UPDATED);
+                        auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_CONSENT_UPDATED);
 
                         sessionService.save(session.get().setState(ADDED_CONSENT));
 
@@ -185,8 +185,7 @@ public class UpdateProfileHandler
                                 configurationService.getTermsAndConditionsVersion());
 
                         auditService.submitAuditEvent(
-                                AccountManagementAuditableEvent
-                                        .ACCOUNT_MANAGEMENT_TERMS_CONDS_ACCEPTANCE_UPDATED);
+                                ACCOUNT_MANAGEMENT_TERMS_CONDS_ACCEPTANCE_UPDATED);
                         LOGGER.info(
                                 "Updated terms and conditions. Email {} for Version {}",
                                 profileRequest.getEmail(),
@@ -212,8 +211,7 @@ public class UpdateProfileHandler
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(ErrorResponse errorResponse) {
-        auditService.submitAuditEvent(
-                AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_REQUEST_ERROR);
+        auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_ERROR);
         return generateApiGatewayProxyErrorResponse(400, errorResponse);
     }
 }

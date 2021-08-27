@@ -14,12 +14,12 @@ import jakarta.ws.rs.core.MultivaluedHashMap;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
-import uk.gov.di.entity.UpdateProfileRequest;
 
 import java.io.IOException;
 import java.net.URI;
@@ -27,9 +27,9 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.ADD_PHONE_NUMBER;
+import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.CAPTURE_CONSENT;
 import static uk.gov.di.authentication.helpers.RequestHelper.requestWithSession;
-import static uk.gov.di.entity.UpdateProfileType.ADD_PHONE_NUMBER;
-import static uk.gov.di.entity.UpdateProfileType.CAPTURE_CONSENT;
 
 public class UpdateProfileIntegrationTest extends IntegrationTestEndpoints {
 

@@ -1,4 +1,4 @@
-package uk.gov.di.lambdas;
+package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
@@ -15,20 +15,19 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.frontendapi.services.AuthorisationCodeService;
-import uk.gov.di.authentication.frontendapi.services.AuthorizationService;
-import uk.gov.di.authentication.frontendapi.services.ClientSessionService;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
+import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
+import uk.gov.di.authentication.shared.services.AuthorizationService;
+import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.domain.AccountManagementAuditableEvent;
-import uk.gov.di.entity.ClientSession;
-import uk.gov.di.exceptions.ClientNotFoundException;
 
 import java.net.URI;
 import java.time.LocalDateTime;
@@ -45,11 +44,17 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.ADD_PHONE_NUMBER;
+import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.CAPTURE_CONSENT;
+import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
+import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_CONSENT_UPDATED;
+import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_PHONE_NUMBER_UPDATED;
+import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_REQUEST_ERROR;
+import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_REQUEST_RECEIVED;
+import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_TERMS_CONDS_ACCEPTANCE_UPDATED;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.buildCookieString;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
-import static uk.gov.di.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_REQUEST_ERROR;
-import static uk.gov.di.entity.UpdateProfileType.*;
 
 class UpdateProfileHandlerTest {
 
@@ -111,9 +116,7 @@ class UpdateProfileHandlerTest {
 
         assertThat(result, hasStatus(200));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_PHONE_NUMBER_UPDATED);
+        verify(auditService).submitAuditEvent(ACCOUNT_MANAGEMENT_PHONE_NUMBER_UPDATED);
     }
 
     @Test
@@ -135,10 +138,7 @@ class UpdateProfileHandlerTest {
 
         assertThat(result, hasStatus(200));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        AccountManagementAuditableEvent
-                                .ACCOUNT_MANAGEMENT_TERMS_CONDS_ACCEPTANCE_UPDATED);
+        verify(auditService).submitAuditEvent(ACCOUNT_MANAGEMENT_TERMS_CONDS_ACCEPTANCE_UPDATED);
     }
 
     @Test
@@ -182,9 +182,7 @@ class UpdateProfileHandlerTest {
 
         assertThat(result, hasStatus(200));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_CONSENT_UPDATED);
+        verify(auditService).submitAuditEvent(ACCOUNT_MANAGEMENT_CONSENT_UPDATED);
     }
 
     @Test
@@ -253,9 +251,7 @@ class UpdateProfileHandlerTest {
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
         var response = handler.handleRequest(event, context);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_REQUEST_RECEIVED);
+        verify(auditService).submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_RECEIVED);
 
         return response;
     }

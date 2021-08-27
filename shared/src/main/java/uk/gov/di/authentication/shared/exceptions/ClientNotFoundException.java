@@ -1,4 +1,4 @@
-package uk.gov.di.exceptions;
+package uk.gov.di.authentication.shared.exceptions;
 
 import static java.lang.String.format;
 

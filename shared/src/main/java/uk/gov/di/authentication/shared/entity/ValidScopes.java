@@ -1,4 +1,4 @@
-package uk.gov.di.entity;
+package uk.gov.di.authentication.shared.entity;
 
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.Identifier;

@@ -2,10 +2,10 @@ package uk.gov.di.authentication.frontendapi.services;
 
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.client.RegistrationError;
+import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
+import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.entity.ClientRegistrationRequest;
 import uk.gov.di.entity.ServiceType;
-import uk.gov.di.entity.UpdateClientConfigRequest;
-import uk.gov.di.entity.ValidScopes;
 
 import java.net.MalformedURLException;
 import java.net.URL;
