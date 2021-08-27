@@ -1,4 +1,4 @@
-package uk.gov.di.lambdas;
+package uk.gov.di.authentication.clientregistry.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
@@ -9,14 +9,12 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.frontendapi.services.ClientConfigValidationService;
+import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
+import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.domain.ClientRegistryAuditableEvent;
-import uk.gov.di.entity.ClientRegistrationResponse;
-import uk.gov.di.entity.ServiceType;
 
 import java.util.List;
 import java.util.Map;
@@ -32,7 +30,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
+import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_ERROR;
+import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_RECEIVED;
+import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
+import static uk.gov.di.authentication.shared.entity.ServiceType.MANDATORY;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -41,7 +42,7 @@ class UpdateClientConfigHandlerTest {
     private static final String CLIENT_ID = "client-id-1";
     private static final String CLIENT_NAME = "client-name-one";
     private static final List<String> SCOPES = singletonList("openid");
-    private static final String SERVICE_TYPE = String.valueOf(ServiceType.MANDATORY);
+    private static final String SERVICE_TYPE = String.valueOf(MANDATORY);
     private final Context context = mock(Context.class);
     private final ClientService clientService = mock(ClientService.class);
     private final ClientConfigValidationService clientValidationService =
@@ -93,8 +94,7 @@ class UpdateClientConfigHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString()));
 
-        verify(auditService)
-                .submitAuditEvent(ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_ERROR);
+        verify(auditService).submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR);
     }
 
     @Test
@@ -106,8 +106,7 @@ class UpdateClientConfigHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString()));
 
-        verify(auditService)
-                .submitAuditEvent(ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_ERROR);
+        verify(auditService).submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR);
     }
 
     @Test
@@ -121,8 +120,7 @@ class UpdateClientConfigHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString()));
 
-        verify(auditService)
-                .submitAuditEvent(ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_ERROR);
+        verify(auditService).submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR);
     }
 
     @Test
@@ -143,8 +141,7 @@ class UpdateClientConfigHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(INVALID_PUBLIC_KEY.toJSONObject().toJSONString()));
 
-        verify(auditService)
-                .submitAuditEvent(ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_ERROR);
+        verify(auditService).submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR);
     }
 
     private ClientRegistry createClientRegistry() {
@@ -163,8 +160,7 @@ class UpdateClientConfigHandlerTest {
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
         var response = handler.handleRequest(event, context);
 
-        verify(auditService)
-                .submitAuditEvent(ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_RECEIVED);
+        verify(auditService).submitAuditEvent(UPDATE_CLIENT_REQUEST_RECEIVED);
 
         return response;
     }

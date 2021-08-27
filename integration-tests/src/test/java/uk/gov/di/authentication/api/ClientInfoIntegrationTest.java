@@ -13,11 +13,11 @@ import jakarta.ws.rs.core.MultivaluedHashMap;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.clientregistry.entity.ClientInfoResponse;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.KeyPairHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
-import uk.gov.di.entity.ClientInfoResponse;
-import uk.gov.di.entity.ServiceType;
+import uk.gov.di.authentication.shared.entity.ServiceType;
 
 import java.io.IOException;
 import java.net.URI;

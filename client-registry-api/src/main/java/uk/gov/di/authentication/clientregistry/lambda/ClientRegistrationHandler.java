@@ -1,4 +1,4 @@
-package uk.gov.di.lambdas;
+package uk.gov.di.authentication.clientregistry.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
@@ -8,17 +8,18 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
-import uk.gov.di.authentication.frontendapi.services.ClientConfigValidationService;
+import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
+import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
+import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
-import uk.gov.di.domain.ClientRegistryAuditableEvent;
-import uk.gov.di.entity.ClientRegistrationRequest;
-import uk.gov.di.entity.ClientRegistrationResponse;
 
 import java.util.Optional;
 
+import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_ERROR;
+import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class ClientRegistrationHandler
@@ -52,8 +53,7 @@ public class ClientRegistrationHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        auditService.submitAuditEvent(
-                ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_RECEIVED);
+        auditService.submitAuditEvent(REGISTER_CLIENT_REQUEST_RECEIVED);
 
         try {
             ClientRegistrationRequest clientRegistrationRequest =
@@ -61,8 +61,7 @@ public class ClientRegistrationHandler
             Optional<ErrorObject> errorResponse =
                     validationService.validateClientRegistrationConfig(clientRegistrationRequest);
             if (errorResponse.isPresent()) {
-                auditService.submitAuditEvent(
-                        ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_ERROR);
+                auditService.submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR);
 
                 return generateApiGatewayProxyResponse(
                         400, errorResponse.get().toJSONObject().toJSONString());
@@ -90,8 +89,7 @@ public class ClientRegistrationHandler
 
             return generateApiGatewayProxyResponse(200, clientRegistrationResponse);
         } catch (JsonProcessingException e) {
-            auditService.submitAuditEvent(
-                    ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_ERROR);
+            auditService.submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR);
 
             return generateApiGatewayProxyResponse(
                     400, OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString());

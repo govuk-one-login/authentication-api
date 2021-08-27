@@ -1,4 +1,4 @@
-package uk.gov.di.entity;
+package uk.gov.di.authentication.shared.entity;
 
 public enum ServiceType {
     MANDATORY,
