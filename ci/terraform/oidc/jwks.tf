@@ -11,7 +11,7 @@ module "jwks" {
     LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
     TOKEN_SIGNING_KEY_ID = aws_kms_key.id_token_signing_key.key_id
   }
-  handler_function_name = "uk.gov.di.lambdas.JwksHandler::handleRequest"
+  handler_function_name = "uk.gov.di.authentication.oidc.lambda.JwksHandler::handleRequest"
 
   rest_api_id               = aws_api_gateway_rest_api.di_authentication_api.id
   root_resource_id          = aws_api_gateway_resource.wellknown_resource.id
