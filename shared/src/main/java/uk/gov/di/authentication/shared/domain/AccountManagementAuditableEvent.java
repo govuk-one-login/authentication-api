@@ -1,6 +1,4 @@
-package uk.gov.di.domain;
-
-import uk.gov.di.authentication.shared.domain.AuditableEvent;
+package uk.gov.di.authentication.shared.domain;
 
 public enum AccountManagementAuditableEvent implements AuditableEvent {
     ACCOUNT_MANAGEMENT_REQUEST_RECEIVED,

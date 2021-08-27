@@ -6,14 +6,14 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
+import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
+import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.entity.AuthCodeExchangeData;
-import uk.gov.di.entity.ClientSession;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -21,10 +21,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static uk.gov.di.authentication.frontendapi.services.AuthorisationCodeService.AUTH_CODE_PREFIX;
-import static uk.gov.di.authentication.frontendapi.services.ClientSessionService.CLIENT_SESSION_PREFIX;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
+import static uk.gov.di.authentication.shared.services.AuthorisationCodeService.AUTH_CODE_PREFIX;
+import static uk.gov.di.authentication.shared.services.ClientSessionService.CLIENT_SESSION_PREFIX;
 
 public class RedisHelper {
 

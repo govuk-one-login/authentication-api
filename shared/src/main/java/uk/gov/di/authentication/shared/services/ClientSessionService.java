@@ -1,14 +1,12 @@
-package uk.gov.di.authentication.frontendapi.services;
+package uk.gov.di.authentication.shared.services;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.entity.ClientSession;
 
 import java.util.Map;
 import java.util.Optional;

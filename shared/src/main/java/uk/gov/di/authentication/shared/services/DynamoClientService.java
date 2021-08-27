@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.frontendapi.services;
+package uk.gov.di.authentication.shared.services;
 
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
@@ -6,9 +6,9 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
 import com.nimbusds.oauth2.sdk.id.ClientID;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
-import uk.gov.di.entity.ClientRegistry;
-import uk.gov.di.entity.UpdateClientConfigRequest;
 
 import java.util.List;
 import java.util.Optional;

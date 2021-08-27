@@ -10,13 +10,13 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.services.ClientConfigValidationService;
-import uk.gov.di.authentication.frontendapi.services.ClientService;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.domain.ClientRegistryAuditableEvent;
 import uk.gov.di.entity.ClientRegistrationResponse;
-import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ServiceType;
-import uk.gov.di.entity.UpdateClientConfigRequest;
 
 import java.util.List;
 import java.util.Map;

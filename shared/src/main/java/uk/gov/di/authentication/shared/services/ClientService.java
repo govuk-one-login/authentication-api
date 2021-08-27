@@ -1,8 +1,8 @@
-package uk.gov.di.authentication.frontendapi.services;
+package uk.gov.di.authentication.shared.services;
 
 import com.nimbusds.oauth2.sdk.id.ClientID;
-import uk.gov.di.entity.ClientRegistry;
-import uk.gov.di.entity.UpdateClientConfigRequest;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 
 import java.util.List;
 import java.util.Optional;
