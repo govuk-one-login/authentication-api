@@ -45,6 +45,36 @@ data "aws_iam_policy_document" "api_gateway_logging_policy" {
   }
 }
 
+resource "aws_api_gateway_authorizer" "di_account_management_api" {
+  name                   = "authorise-access-token"
+  rest_api_id            = aws_api_gateway_rest_api.di_account_management_api.id
+  authorizer_uri         = aws_lambda_function.authorizer.invoke_arn
+  authorizer_credentials = aws_iam_role.invocation_role.arn
+}
+
+resource "aws_api_gateway_rest_api" "di_account_management_api" {
+  name = "authorise-access-token"
+}
+
+resource "aws_lambda_function" "authorizer" {
+  filename      = var.lambda_zip_file
+  function_name = "api_gateway_authorizer"
+  role          = aws_iam_role.lambda_iam_role.arn
+  handler       = "uk.gov.di.accountmanagement.lambda.AuthoriseAccessTokenHandler::handleRequest"
+  runtime       = "java11"
+  source_code_hash = filebase64sha256(var.lambda_zip_file)
+  publish       = true
+  timeout       = 30
+  memory_size   = 2048
+}
+
+resource "aws_iam_role" "invocation_role" {
+  name = "api_gateway_auth_invocation"
+  path = "/"
+
+  assume_role_policy = data.aws_iam_policy_document.api_gateway_can_assume_policy.json
+}
+
 resource "aws_iam_policy" "api_gateway_logging_policy" {
   name        = "${var.environment}-account-management-api-gateway-logging"
   path        = "/"
