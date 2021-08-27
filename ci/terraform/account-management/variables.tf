@@ -8,6 +8,11 @@ variable "environment" {
   type = string
 }
 
+variable "api_deployment_stage_name" {
+  type    = string
+  default = "test"
+}
+
 variable "aws_region" {
   default = "eu-west-2"
 }
@@ -25,6 +30,12 @@ variable "aws_endpoint" {
 variable "aws_dynamodb_endpoint" {
   type    = string
   default = null
+}
+
+variable "lambda_dynamo_endpoint" {
+  type        = string
+  default     = "http://dynamodb:8000"
+  description = "The endpoint that the Lambda must use to connect to DynamoDB API. This may or may not be the same as aws_dynamodb_endpoint"
 }
 
 variable "service_domain_name" {
