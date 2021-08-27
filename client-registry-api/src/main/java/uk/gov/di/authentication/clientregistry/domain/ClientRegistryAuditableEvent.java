@@ -1,4 +1,4 @@
-package uk.gov.di.domain;
+package uk.gov.di.authentication.clientregistry.domain;
 
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 

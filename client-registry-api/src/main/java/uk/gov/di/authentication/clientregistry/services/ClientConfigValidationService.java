@@ -1,11 +1,10 @@
-package uk.gov.di.authentication.frontendapi.services;
+package uk.gov.di.authentication.clientregistry.services;
 
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.client.RegistrationError;
+import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
-import uk.gov.di.entity.ClientRegistrationRequest;
-import uk.gov.di.entity.ServiceType;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -14,6 +13,9 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+
+import static uk.gov.di.authentication.shared.entity.ServiceType.MANDATORY;
+import static uk.gov.di.authentication.shared.entity.ServiceType.OPTIONAL;
 
 public class ClientConfigValidationService {
 
@@ -112,7 +114,7 @@ public class ClientConfigValidationService {
     }
 
     private boolean isValidServiceType(String serviceType) {
-        return serviceType.equalsIgnoreCase(String.valueOf(ServiceType.MANDATORY))
-                || serviceType.equalsIgnoreCase(String.valueOf(ServiceType.OPTIONAL));
+        return serviceType.equalsIgnoreCase(String.valueOf(MANDATORY))
+                || serviceType.equalsIgnoreCase(String.valueOf(OPTIONAL));
     }
 }

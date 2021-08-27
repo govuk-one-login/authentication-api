@@ -8,10 +8,10 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.MultivaluedHashMap;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
+import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.helpers.DynamoHelper;
-import uk.gov.di.entity.ClientRegistrationRequest;
-import uk.gov.di.entity.ClientRegistrationResponse;
-import uk.gov.di.entity.ServiceType;
+import uk.gov.di.authentication.shared.entity.ServiceType;
 
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;

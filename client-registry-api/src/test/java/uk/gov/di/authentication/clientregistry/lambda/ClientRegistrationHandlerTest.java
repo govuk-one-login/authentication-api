@@ -1,4 +1,4 @@
-package uk.gov.di.lambdas;
+package uk.gov.di.authentication.clientregistry.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
@@ -10,13 +10,11 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.frontendapi.services.ClientConfigValidationService;
+import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
+import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
+import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.domain.ClientRegistryAuditableEvent;
-import uk.gov.di.entity.ClientRegistrationRequest;
-import uk.gov.di.entity.ClientRegistrationResponse;
-import uk.gov.di.entity.ServiceType;
 
 import java.util.List;
 import java.util.Optional;
@@ -30,7 +28,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
+import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_ERROR;
+import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_RECEIVED;
+import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
+import static uk.gov.di.authentication.shared.entity.ServiceType.MANDATORY;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -62,7 +63,7 @@ class ClientRegistrationHandlerTest {
         String clientName = "test-client";
         List<String> redirectUris = List.of("http://localhost:8080/redirect-uri");
         List<String> contacts = List.of("joe.bloggs@test.com");
-        String serviceType = String.valueOf(ServiceType.MANDATORY);
+        String serviceType = String.valueOf(MANDATORY);
         when(configValidationService.validateClientRegistrationConfig(
                         any(ClientRegistrationRequest.class)))
                 .thenReturn(Optional.empty());
@@ -104,8 +105,7 @@ class ClientRegistrationHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString()));
 
-        verify(auditService)
-                .submitAuditEvent(ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_ERROR);
+        verify(auditService).submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR);
     }
 
     @Test
@@ -121,15 +121,13 @@ class ClientRegistrationHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(INVALID_PUBLIC_KEY.toJSONObject().toJSONString()));
 
-        verify(auditService)
-                .submitAuditEvent(ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_ERROR);
+        verify(auditService).submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR);
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
         var response = handler.handleRequest(event, context);
 
-        verify(auditService)
-                .submitAuditEvent(ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_RECEIVED);
+        verify(auditService).submitAuditEvent(REGISTER_CLIENT_REQUEST_RECEIVED);
 
         return response;
     }
