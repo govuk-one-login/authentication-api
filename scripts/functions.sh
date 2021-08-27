@@ -40,7 +40,7 @@ function run_terraform() {
   pushd "$1" >/dev/null
   rm -fr .terraform/ *.tfstate
   terraform init -backend-config=localstack.hcl
-  printf "\nRunning terraform -> %s apply quietly (output redirected to terraform.log)...\n", "$1"
+  printf "\nRunning terraform -> %s apply quietly (output redirected to terraform.log)...\n" "$1"
   set +e
   terraform apply -var-file=localstack.tfvars -auto-approve > terraform.log
   tf_exit_code=$?
