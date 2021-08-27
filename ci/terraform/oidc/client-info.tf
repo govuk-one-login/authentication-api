@@ -15,13 +15,13 @@ module "client-info" {
     ENVIRONMENT     = var.environment
     DYNAMO_ENDPOINT = var.use_localstack ? var.lambda_dynamo_endpoint : null
   }
-  handler_function_name = "uk.gov.di.lambdas.ClientInfoHandler::handleRequest"
+  handler_function_name = "uk.gov.di.authentication.clientregistry.lambda.ClientInfoHandler::handleRequest"
 
   rest_api_id               = aws_api_gateway_rest_api.di_authentication_api.id
   root_resource_id          = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   execution_arn             = aws_api_gateway_rest_api.di_authentication_api.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
-  lambda_zip_file           = var.oidc_api_lambda_zip_file
+  lambda_zip_file           = var.client_registry_api_lambda_zip_file
   security_group_id         = aws_vpc.authentication.default_security_group_id
   subnet_id                 = aws_subnet.authentication.*.id
   lambda_role_arn           = aws_iam_role.lambda_iam_role.arn
