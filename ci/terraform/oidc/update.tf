@@ -12,6 +12,7 @@ module "update" {
     BASE_URL             = local.api_base_url
     DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
     EVENTS_SNS_TOPIC_ARN = aws_sns_topic.events.arn
+    LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
   }
   handler_function_name = "uk.gov.di.authentication.clientregistry.lambda.UpdateClientConfigHandler::handleRequest"
 

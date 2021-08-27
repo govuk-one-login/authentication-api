@@ -18,6 +18,7 @@ dependencies {
             configurations.dynamodb,
             configurations.lettuce,
             configurations.hamcrest,
+            "com.amazonaws:aws-java-sdk-sns:${dependencyVersions.aws_sdk_version}",
             "com.googlecode.libphonenumber:libphonenumber:8.12.28"
 
     testImplementation configurations.tests,

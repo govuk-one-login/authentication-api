@@ -55,6 +55,10 @@ public class ConfigurationService {
         return System.getenv("ENVIRONMENT");
     }
 
+    public String getEventsSnsTopicArn() {
+        return System.getenv("EVENTS_SNS_TOPIC_ARN");
+    }
+
     public Optional<String> getLocalstackEndpointUri() {
         return Optional.ofNullable(System.getenv("LOCALSTACK_ENDPOINT"));
     }
