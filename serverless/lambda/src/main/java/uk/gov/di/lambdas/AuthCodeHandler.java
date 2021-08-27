@@ -12,26 +12,26 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.frontendapi.services.AuthorisationCodeService;
+import uk.gov.di.authentication.frontendapi.services.AuthorizationService;
+import uk.gov.di.authentication.frontendapi.services.ClientSessionService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.helpers.CookieHelper;
+import uk.gov.di.authentication.shared.helpers.CookieHelper.SessionCookieIds;
+import uk.gov.di.authentication.shared.helpers.StateMachine;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.entity.ResponseHeaders;
-import uk.gov.di.entity.Session;
 import uk.gov.di.exceptions.ClientNotFoundException;
-import uk.gov.di.helpers.CookieHelper;
-import uk.gov.di.helpers.CookieHelper.SessionCookieIds;
-import uk.gov.di.helpers.StateMachine;
-import uk.gov.di.services.AuthorisationCodeService;
-import uk.gov.di.services.AuthorizationService;
-import uk.gov.di.services.ClientSessionService;
-import uk.gov.di.services.SessionService;
 
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
-import static uk.gov.di.entity.SessionState.AUTHENTICATED;
-import static uk.gov.di.helpers.StateMachine.validateStateTransition;
+import static uk.gov.di.authentication.shared.helpers.StateMachine.validateStateTransition;
 
 public class AuthCodeHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {

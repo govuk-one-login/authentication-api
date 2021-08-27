@@ -15,13 +15,13 @@ module "signup" {
     REDIS_TLS       = var.redis_use_tls
     DYNAMO_ENDPOINT = var.use_localstack ? var.lambda_dynamo_endpoint : null
   }
-  handler_function_name = "uk.gov.di.lambdas.SignUpHandler::handleRequest"
+  handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.SignUpHandler::handleRequest"
 
   rest_api_id               = aws_api_gateway_rest_api.di_authentication_api.id
   root_resource_id          = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   execution_arn             = aws_api_gateway_rest_api.di_authentication_api.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
-  lambda_zip_file           = var.lambda_zip_file
+  lambda_zip_file           = var.frontend_api_lambda_zip_file
   security_group_id         = aws_vpc.authentication.default_security_group_id
   subnet_id                 = aws_subnet.authentication.*.id
   lambda_role_arn           = aws_iam_role.lambda_iam_role.arn

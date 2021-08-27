@@ -10,9 +10,11 @@ repositories {
 }
 
 dependencies {
-    implementation configurations.lambda,
+    implementation configurations.dynamodb,
+            configurations.govuk_notify,
+            configurations.lambda,
             configurations.nimbus,
-            configurations.dynamodb,
+            configurations.sqs,
             project(":shared")
     runtimeOnly configurations.logging_runtime
 

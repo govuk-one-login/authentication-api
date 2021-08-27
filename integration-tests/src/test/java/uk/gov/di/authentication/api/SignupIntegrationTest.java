@@ -3,18 +3,18 @@ package uk.gov.di.authentication.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.frontendapi.entity.SignupRequest;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.helpers.RequestHelper;
-import uk.gov.di.entity.BaseAPIResponse;
-import uk.gov.di.entity.SignupRequest;
+import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 
 import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static uk.gov.di.entity.SessionState.EMAIL_CODE_VERIFIED;
-import static uk.gov.di.entity.SessionState.TWO_FACTOR_REQUIRED;
+import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_VERIFIED;
+import static uk.gov.di.authentication.shared.entity.SessionState.TWO_FACTOR_REQUIRED;
 
 public class SignupIntegrationTest extends IntegrationTestEndpoints {
 

@@ -17,7 +17,8 @@ dependencies {
             configurations.bouncycastle,
             configurations.dynamodb,
             configurations.lettuce,
-            configurations.hamcrest
+            configurations.hamcrest,
+            "com.googlecode.libphonenumber:libphonenumber:8.12.28"
 
     testImplementation configurations.tests,
             configurations.lambda_tests

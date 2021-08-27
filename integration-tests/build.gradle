@@ -23,6 +23,7 @@ dependencies {
             "com.amazonaws:aws-java-sdk-dynamodb:1.12.43",
             "org.bouncycastle:bcpkix-jdk15on:1.68",
             "io.lettuce:lettuce-core:6.1.4.RELEASE",
+            project(":frontend-api"),
             project(":serverless:lambda"),
             project(":shared")
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"

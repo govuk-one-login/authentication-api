@@ -6,9 +6,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.authentication.frontendapi.entity.NotifyRequest;
+import uk.gov.di.authentication.frontendapi.services.AwsSqsClient;
 import uk.gov.di.authentication.helpers.httpstub.HttpStubExtension;
-import uk.gov.di.entity.NotifyRequest;
-import uk.gov.di.services.AwsSqsClient;
 
 import java.util.Optional;
 
@@ -17,9 +17,9 @@ import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static uk.gov.di.entity.NotificationType.MFA_SMS;
-import static uk.gov.di.entity.NotificationType.VERIFY_EMAIL;
-import static uk.gov.di.entity.NotificationType.VERIFY_PHONE_NUMBER;
+import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 
 public class SendNotificationIntegrationTest {
 

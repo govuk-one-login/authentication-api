@@ -1,6 +1,12 @@
-variable "lambda_zip_file" {
+variable "oidc_api_lambda_zip_file" {
   default     = "../../../serverless/lambda/build/distributions/lambda.zip"
-  description = "Location of the Lambda ZIP file"
+  description = "Location of the OIDC API Lambda ZIP file"
+  type        = string
+}
+
+variable "frontend_api_lambda_zip_file" {
+  default     = "../../../frontend-api/build/distributions/frontend-api.zip"
+  description = "Location of the Frontend API Lambda ZIP file"
   type        = string
 }
 

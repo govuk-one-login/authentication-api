@@ -3,21 +3,21 @@ package uk.gov.di.authentication.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
+import uk.gov.di.authentication.frontendapi.entity.UserWithEmailRequest;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.helpers.RequestHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.entity.CheckUserExistsResponse;
-import uk.gov.di.entity.SessionState;
-import uk.gov.di.entity.UserWithEmailRequest;
+import uk.gov.di.authentication.shared.entity.SessionState;
 
 import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
-import static uk.gov.di.entity.SessionState.USER_NOT_FOUND;
+import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
+import static uk.gov.di.authentication.shared.entity.SessionState.USER_NOT_FOUND;
 
 public class UserExistsIntegrationTest extends IntegrationTestEndpoints {
 

@@ -10,13 +10,13 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.frontendapi.services.ClientConfigValidationService;
+import uk.gov.di.authentication.frontendapi.services.ClientService;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.domain.ClientRegistryAuditableEvent;
 import uk.gov.di.entity.ClientRegistrationRequest;
 import uk.gov.di.entity.ClientRegistrationResponse;
 import uk.gov.di.entity.ServiceType;
-import uk.gov.di.services.ClientConfigValidationService;
-import uk.gov.di.services.ClientService;
 
 import java.util.List;
 import java.util.Optional;
@@ -30,9 +30,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
-import static uk.gov.di.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
 
 class ClientRegistrationHandlerTest {
 
