@@ -1,4 +1,4 @@
-package uk.gov.di.services;
+package uk.gov.di.authentication.frontendapi.services;
 
 import com.amazonaws.services.kms.model.GetPublicKeyRequest;
 import com.amazonaws.services.kms.model.GetPublicKeyResult;

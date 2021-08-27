@@ -9,11 +9,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.exception.SdkClientException;
-import uk.gov.di.authentication.frontendapi.entity.NotificationType;
 import uk.gov.di.authentication.frontendapi.entity.NotifyRequest;
 import uk.gov.di.authentication.frontendapi.entity.SendNotificationRequest;
+import uk.gov.di.authentication.frontendapi.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.helpers.StateMachine;
@@ -23,7 +24,6 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.ValidationService;
-import uk.gov.di.services.AwsSqsClient;
 
 import java.util.Optional;
 

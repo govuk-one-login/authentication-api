@@ -3,20 +3,20 @@ package uk.gov.di.authentication.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.frontendapi.entity.NotificationType;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.helpers.RequestHelper;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.SessionState;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static uk.gov.di.authentication.frontendapi.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 
 public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
 

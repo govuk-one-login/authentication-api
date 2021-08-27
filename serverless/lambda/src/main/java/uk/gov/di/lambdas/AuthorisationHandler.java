@@ -15,6 +15,8 @@ import com.nimbusds.openid.connect.sdk.OIDCError;
 import com.nimbusds.openid.connect.sdk.Prompt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.frontendapi.services.AuthorizationService;
+import uk.gov.di.authentication.frontendapi.services.ClientSessionService;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -23,8 +25,6 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.domain.OidcAuditableEvent;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.ResponseHeaders;
-import uk.gov.di.services.AuthorizationService;
-import uk.gov.di.services.ClientSessionService;
 
 import java.net.URI;
 import java.time.LocalDateTime;

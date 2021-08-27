@@ -2,7 +2,7 @@ package uk.gov.di.authentication.shared.services;
 
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.frontendapi.entity.NotificationType;
+import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 
 class CodeStorageServiceTest {
 

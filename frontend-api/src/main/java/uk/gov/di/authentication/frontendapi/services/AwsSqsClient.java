@@ -1,4 +1,4 @@
-package uk.gov.di.services;
+package uk.gov.di.authentication.frontendapi.services;
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;

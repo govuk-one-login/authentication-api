@@ -2,8 +2,8 @@ package uk.gov.di.authentication.shared.services;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.di.authentication.frontendapi.entity.NotificationType;
-import uk.gov.di.helpers.HashHelper;
+import uk.gov.di.authentication.shared.entity.NotificationType;
+import uk.gov.di.authentication.shared.helpers.HashHelper;
 
 import java.util.Optional;
 

@@ -8,14 +8,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import uk.gov.di.authentication.frontendapi.services.ClientConfigValidationService;
+import uk.gov.di.authentication.frontendapi.services.ClientService;
+import uk.gov.di.authentication.frontendapi.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.domain.ClientRegistryAuditableEvent;
 import uk.gov.di.entity.ClientRegistrationRequest;
 import uk.gov.di.entity.ClientRegistrationResponse;
-import uk.gov.di.services.ClientConfigValidationService;
-import uk.gov.di.services.ClientService;
-import uk.gov.di.services.DynamoClientService;
 
 import java.util.Optional;
 

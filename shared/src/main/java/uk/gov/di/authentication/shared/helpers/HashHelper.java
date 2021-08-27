@@ -1,4 +1,4 @@
-package uk.gov.di.helpers;
+package uk.gov.di.authentication.shared.helpers;
 
 import org.apache.commons.codec.binary.Hex;
 

@@ -1,4 +1,4 @@
-package uk.gov.di.services;
+package uk.gov.di.authentication.frontendapi.services;
 
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;

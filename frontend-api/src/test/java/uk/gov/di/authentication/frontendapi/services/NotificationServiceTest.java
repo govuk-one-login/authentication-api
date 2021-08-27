@@ -1,4 +1,4 @@
-package uk.gov.di.services;
+package uk.gov.di.authentication.frontendapi.services;
 
 import org.junit.jupiter.api.Test;
 import uk.gov.service.notify.NotificationClient;

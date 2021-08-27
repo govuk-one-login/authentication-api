@@ -7,17 +7,17 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import uk.gov.di.authentication.frontendapi.entity.NotifyRequest;
+import uk.gov.di.authentication.frontendapi.services.NotificationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.services.NotificationService;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import static uk.gov.di.authentication.frontendapi.entity.NotificationType.MFA_SMS;
-import static uk.gov.di.authentication.frontendapi.entity.NotificationType.VERIFY_EMAIL;
-import static uk.gov.di.authentication.frontendapi.entity.NotificationType.VERIFY_PHONE_NUMBER;
+import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 
 public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 

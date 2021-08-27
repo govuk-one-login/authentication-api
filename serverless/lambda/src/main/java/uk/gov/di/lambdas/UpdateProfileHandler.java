@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.frontendapi.services.ClientSessionService;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -24,7 +25,6 @@ import uk.gov.di.domain.AccountManagementAuditableEvent;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.UpdateProfileRequest;
 import uk.gov.di.entity.ValidScopes;
-import uk.gov.di.services.ClientSessionService;
 
 import java.time.LocalDateTime;
 import java.util.Optional;

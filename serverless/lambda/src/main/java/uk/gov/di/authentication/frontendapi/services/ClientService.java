@@ -1,4 +1,4 @@
-package uk.gov.di.services;
+package uk.gov.di.authentication.frontendapi.services;
 
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import uk.gov.di.entity.ClientRegistry;

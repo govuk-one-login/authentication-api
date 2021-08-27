@@ -21,10 +21,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static uk.gov.di.authentication.frontendapi.entity.NotificationType.VERIFY_EMAIL;
-import static uk.gov.di.authentication.frontendapi.entity.NotificationType.VERIFY_PHONE_NUMBER;
-import static uk.gov.di.services.AuthorisationCodeService.AUTH_CODE_PREFIX;
-import static uk.gov.di.services.ClientSessionService.CLIENT_SESSION_PREFIX;
+import static uk.gov.di.authentication.frontendapi.services.AuthorisationCodeService.AUTH_CODE_PREFIX;
+import static uk.gov.di.authentication.frontendapi.services.ClientSessionService.CLIENT_SESSION_PREFIX;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 
 public class RedisHelper {
 
