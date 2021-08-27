@@ -6,9 +6,9 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
 import com.nimbusds.oauth2.sdk.id.ClientID;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.UpdateClientConfigRequest;
-import uk.gov.di.helpers.IdGenerator;
 
 import java.util.List;
 import java.util.Optional;

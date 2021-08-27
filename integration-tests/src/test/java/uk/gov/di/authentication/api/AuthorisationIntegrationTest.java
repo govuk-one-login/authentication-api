@@ -15,10 +15,10 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.KeyPairHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
+import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.entity.ResponseHeaders;
 import uk.gov.di.entity.ServiceType;
-import uk.gov.di.entity.SessionState;
 
 import java.security.KeyPair;
 import java.util.Base64;

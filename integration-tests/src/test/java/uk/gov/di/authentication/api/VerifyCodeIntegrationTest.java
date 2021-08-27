@@ -3,19 +3,20 @@ package uk.gov.di.authentication.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.frontendapi.entity.NotificationType;
+import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.helpers.RequestHelper;
+import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.entity.BaseAPIResponse;
-import uk.gov.di.entity.NotificationType;
-import uk.gov.di.entity.SessionState;
-import uk.gov.di.entity.VerifyCodeRequest;
+import uk.gov.di.authentication.shared.entity.SessionState;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static uk.gov.di.authentication.frontendapi.entity.NotificationType.VERIFY_EMAIL;
 
 public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
 
@@ -30,7 +31,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
         String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
-        VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.VERIFY_EMAIL, code);
+        VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, code);
 
         Response response =
                 RequestHelper.requestWithSession(VERIFY_CODE_ENDPOINT, codeRequest, sessionId);
@@ -46,7 +47,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
         String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 2);
-        VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.VERIFY_EMAIL, code);
+        VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, code);
 
         TimeUnit.SECONDS.sleep(3);
 
@@ -66,7 +67,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         RedisHelper.setSessionState(sessionId, SessionState.VERIFY_EMAIL_CODE_SENT);
         RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
         String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
-        VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.VERIFY_EMAIL, code);
+        VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, code);
 
         Response response =
                 RequestHelper.requestWithSession(VERIFY_CODE_ENDPOINT, codeRequest, sessionId);
@@ -152,8 +153,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
         RedisHelper.blockPhoneCode(EMAIL_ADDRESS, sessionId);
 
-        VerifyCodeRequest codeRequest =
-                new VerifyCodeRequest(NotificationType.VERIFY_EMAIL, "123456");
+        VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, "123456");
 
         Response response =
                 RequestHelper.requestWithSession(VERIFY_CODE_ENDPOINT, codeRequest, sessionId);
@@ -172,7 +172,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
         String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
-        VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.VERIFY_EMAIL, code);
+        VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, code);
 
         Response response =
                 RequestHelper.requestWithSession(VERIFY_CODE_ENDPOINT, codeRequest, sessionId);

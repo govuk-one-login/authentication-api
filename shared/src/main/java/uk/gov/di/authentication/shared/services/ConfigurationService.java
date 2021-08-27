@@ -115,5 +115,4 @@ public class ConfigurationService {
     public String getTokenSigningKeyId() {
         return System.getenv("TOKEN_SIGNING_KEY_ID");
     }
-
 }

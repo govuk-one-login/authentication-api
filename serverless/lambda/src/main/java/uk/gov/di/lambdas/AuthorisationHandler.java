@@ -15,16 +15,16 @@ import com.nimbusds.openid.connect.sdk.OIDCError;
 import com.nimbusds.openid.connect.sdk.Prompt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.domain.OidcAuditableEvent;
 import uk.gov.di.entity.ClientSession;
 import uk.gov.di.entity.ResponseHeaders;
-import uk.gov.di.entity.Session;
-import uk.gov.di.entity.SessionState;
 import uk.gov.di.services.AuthorizationService;
 import uk.gov.di.services.ClientSessionService;
-import uk.gov.di.services.SessionService;
 
 import java.net.URI;
 import java.time.LocalDateTime;
@@ -34,9 +34,9 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
+import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.entity.SessionState.AUTHENTICATED;
-import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
 
 public class AuthorisationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {

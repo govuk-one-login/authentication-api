@@ -10,33 +10,33 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.helpers.StateMachine.InvalidStateTransitionException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.domain.AccountManagementAuditableEvent;
-import uk.gov.di.entity.BaseAPIResponse;
 import uk.gov.di.entity.ClientSession;
-import uk.gov.di.entity.Session;
 import uk.gov.di.entity.UpdateProfileRequest;
 import uk.gov.di.entity.ValidScopes;
-import uk.gov.di.helpers.StateMachine.InvalidStateTransitionException;
 import uk.gov.di.services.ClientSessionService;
-import uk.gov.di.services.SessionService;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.Set;
 
+import static uk.gov.di.authentication.shared.entity.SessionState.ADDED_CONSENT;
+import static uk.gov.di.authentication.shared.entity.SessionState.ADDED_UNVERIFIED_PHONE_NUMBER;
+import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.entity.SessionState.ADDED_CONSENT;
-import static uk.gov.di.entity.SessionState.ADDED_UNVERIFIED_PHONE_NUMBER;
-import static uk.gov.di.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS;
+import static uk.gov.di.authentication.shared.helpers.StateMachine.validateStateTransition;
 import static uk.gov.di.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
-import static uk.gov.di.helpers.StateMachine.validateStateTransition;
 
 public class UpdateProfileHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {

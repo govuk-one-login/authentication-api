@@ -10,15 +10,15 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.entity.ClientInfoResponse;
 import uk.gov.di.entity.ClientRegistry;
 import uk.gov.di.entity.ClientSession;
-import uk.gov.di.entity.Session;
 import uk.gov.di.services.ClientService;
 import uk.gov.di.services.ClientSessionService;
 import uk.gov.di.services.DynamoClientService;
-import uk.gov.di.services.SessionService;
 
 import java.util.List;
 import java.util.Map;
