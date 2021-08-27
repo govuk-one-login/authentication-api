@@ -7,11 +7,12 @@ module "send_notification" {
   environment     = var.environment
 
   handler_environment_variables = {
-    EMAIL_QUEUE_URL = aws_sqs_queue.email_queue.id
-    REDIS_HOST      = var.use_localstack ? var.external_redis_host : aws_elasticache_replication_group.sessions_store[0].primary_endpoint_address
-    REDIS_PORT      = var.use_localstack ? var.external_redis_port : aws_elasticache_replication_group.sessions_store[0].port
-    REDIS_PASSWORD  = var.use_localstack ? var.external_redis_password : random_password.redis_password.result
-    REDIS_TLS       = var.redis_use_tls
+    EMAIL_QUEUE_URL      = aws_sqs_queue.email_queue.id
+    EVENTS_SNS_TOPIC_ARN = aws_sns_topic.events.arn
+    REDIS_HOST           = var.use_localstack ? var.external_redis_host : aws_elasticache_replication_group.sessions_store[0].primary_endpoint_address
+    REDIS_PORT           = var.use_localstack ? var.external_redis_port : aws_elasticache_replication_group.sessions_store[0].port
+    REDIS_PASSWORD       = var.use_localstack ? var.external_redis_password : random_password.redis_password.result
+    REDIS_TLS            = var.redis_use_tls
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.SendNotificationHandler::handleRequest"
 

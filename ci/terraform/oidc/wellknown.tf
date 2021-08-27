@@ -7,7 +7,8 @@ module "openid_configuration_discovery" {
   environment     = var.environment
 
   handler_environment_variables = {
-    BASE_URL = local.api_base_url
+    BASE_URL             = local.api_base_url
+    EVENTS_SNS_TOPIC_ARN = aws_sns_topic.events.arn
   }
   handler_function_name = "uk.gov.di.lambdas.WellknownHandler::handleRequest"
 
