@@ -10,7 +10,7 @@ module "openid_configuration_discovery" {
     BASE_URL             = local.api_base_url
     EVENTS_SNS_TOPIC_ARN = aws_sns_topic.events.arn
   }
-  handler_function_name = "uk.gov.di.lambdas.WellknownHandler::handleRequest"
+  handler_function_name = "uk.gov.di.authentication.oidc.lambda.WellknownHandler::handleRequest"
 
   rest_api_id               = aws_api_gateway_rest_api.di_authentication_api.id
   root_resource_id          = aws_api_gateway_resource.wellknown_resource.id

@@ -25,7 +25,7 @@ dependencies {
             "io.lettuce:lettuce-core:6.1.4.RELEASE",
             project(":client-registry-api"),
             project(":frontend-api"),
-            project(":serverless:lambda"),
+            project(":oidc-api"),
             project(":shared")
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
 }

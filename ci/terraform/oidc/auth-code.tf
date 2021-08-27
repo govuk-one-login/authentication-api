@@ -15,7 +15,7 @@ module "auth-code" {
     ENVIRONMENT          = var.environment
     DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
   }
-  handler_function_name = "uk.gov.di.lambdas.AuthCodeHandler::handleRequest"
+  handler_function_name = "uk.gov.di.authentication.oidc.lambda.AuthCodeHandler::handleRequest"
 
   rest_api_id               = aws_api_gateway_rest_api.di_authentication_api.id
   root_resource_id          = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
