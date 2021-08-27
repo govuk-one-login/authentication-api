@@ -7,8 +7,9 @@ module "jwks" {
   environment     = var.environment
 
   handler_environment_variables = {
-    BASE_URL = local.api_base_url
-    LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
+    BASE_URL             = local.api_base_url
+    EVENTS_SNS_TOPIC_ARN = aws_sns_topic.events.arn
+    LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
     TOKEN_SIGNING_KEY_ID = aws_kms_key.id_token_signing_key.key_id
   }
   handler_function_name = "uk.gov.di.lambdas.JwksHandler::handleRequest"

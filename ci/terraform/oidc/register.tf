@@ -6,9 +6,10 @@ module "register" {
   endpoint_method = "POST"
 
   handler_environment_variables = {
-    ENVIRONMENT     = var.environment
-    BASE_URL        = local.api_base_url
-    DYNAMO_ENDPOINT = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    ENVIRONMENT          = var.environment
+    BASE_URL             = local.api_base_url
+    DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    EVENTS_SNS_TOPIC_ARN = aws_sns_topic.events.arn
   }
   handler_function_name = "uk.gov.di.lambdas.ClientRegistrationHandler::handleRequest"
 
