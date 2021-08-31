@@ -1,0 +1,22 @@
+platform: linux
+image_resource:
+  type: registry-image
+  source:
+    repository: gradle
+    tag: 7.0.2-jdk11
+    username: ((docker-hub-username))
+    password: ((docker-hub-password))
+inputs:
+  - name: src
+outputs:
+  - name: lambda-zip
+params:
+  MODULE_NAME: oidc-api
+run:
+  path: /bin/bash
+  args:
+    - -euc
+    - |
+      cd src
+      gradle --no-daemon :${MODULE_NAME}:buildZip
+      cp "${MODULE_NAME}/build/distributions/${MODULE_NAME}.zip" ../lambda-zip/

@@ -1,0 +1,19 @@
+plugins {
+    id "java"
+}
+
+group "uk.gov.di.authentication.sharedtest"
+version "unspecified"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation configurations.tests
+    testRuntimeOnly configurations.test_runtime
+}
+
+test {
+    useJUnitPlatform()
+}

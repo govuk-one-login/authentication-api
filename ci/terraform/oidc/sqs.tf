@@ -115,16 +115,16 @@ resource "aws_lambda_event_source_mapping" "lambda_sqs_mapping" {
 }
 
 resource "aws_lambda_function" "email_sqs_lambda" {
-  filename      = var.lambda_zip_file
+  filename      = var.frontend_api_lambda_zip_file
   function_name = "${var.environment}-email-notification-sqs-lambda"
   role          = aws_iam_role.email_lambda_iam_role.arn
-  handler       = "uk.gov.di.lambdas.NotificationHandler::handleRequest"
+  handler       = "uk.gov.di.authentication.frontendapi.lambda.NotificationHandler::handleRequest"
   timeout       = 30
   memory_size   = 512
   runtime       = "java11"
   publish       = true
 
-  source_code_hash = filebase64sha256(var.lambda_zip_file)
+  source_code_hash = filebase64sha256(var.frontend_api_lambda_zip_file)
   vpc_config {
     security_group_ids = [aws_vpc.authentication.default_security_group_id]
     subnet_ids         = aws_subnet.authentication.*.id

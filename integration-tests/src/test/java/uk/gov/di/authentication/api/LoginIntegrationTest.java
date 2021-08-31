@@ -3,17 +3,17 @@ package uk.gov.di.authentication.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.frontendapi.entity.LoginRequest;
+import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.helpers.RequestHelper;
-import uk.gov.di.entity.LoginRequest;
-import uk.gov.di.entity.LoginResponse;
 
 import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static uk.gov.di.entity.SessionState.AUTHENTICATION_REQUIRED;
-import static uk.gov.di.entity.SessionState.LOGGED_IN;
+import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
+import static uk.gov.di.authentication.shared.entity.SessionState.LOGGED_IN;
 
 public class LoginIntegrationTest extends IntegrationTestEndpoints {
 

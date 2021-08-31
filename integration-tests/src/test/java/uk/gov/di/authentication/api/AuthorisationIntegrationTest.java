@@ -13,15 +13,14 @@ import org.glassfish.jersey.client.ClientProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
+import uk.gov.di.authentication.helpers.KeyPairHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
+import uk.gov.di.authentication.oidc.entity.ResponseHeaders;
+import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.entity.ResponseHeaders;
-import uk.gov.di.entity.ServiceType;
-import uk.gov.di.entity.SessionState;
 
 import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.Optional;
 
@@ -42,7 +41,7 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
 
     private static final String CLIENT_ID = "test-client";
     private static final String INVALID_CLIENT_ID = "invalid-test-client";
-    private static final KeyPair KEY_PAIR = generateRsaKeyPair();
+    private static final KeyPair KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
 
     private static final ConfigurationService configurationService = new ConfigurationService();
 
@@ -204,17 +203,6 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
         String sessionId = RedisHelper.createSession();
         RedisHelper.setSessionState(sessionId, initialState);
         return sessionId;
-    }
-
-    private static KeyPair generateRsaKeyPair() {
-        KeyPairGenerator kpg;
-        try {
-            kpg = KeyPairGenerator.getInstance("RSA");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException();
-        }
-        kpg.initialize(2048);
-        return kpg.generateKeyPair();
     }
 
     private Response doAuthorisationRequest(

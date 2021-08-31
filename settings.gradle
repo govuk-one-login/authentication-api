@@ -1,9 +1,10 @@
 include 'account-management-api'
+include 'client-registry-api'
+include 'frontend-api'
 include 'integration-tests'
+include 'oidc-api'
 include 'shared'
-include 'serverless'
-include 'serverless:lambda'
+include 'shared-test'
 
-findProject(':serverless:lambda')?.name = 'lambda'
 rootProject.name = 'di-authentication-api'
 

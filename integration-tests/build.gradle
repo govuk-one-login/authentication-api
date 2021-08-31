@@ -1,35 +1,33 @@
 plugins {
-    id 'java'
+    id "java"
 }
 
-group 'uk.gov.di'
-version 'unspecified'
+group "uk.gov.di"
+version "unspecified"
 
 repositories {
     mavenCentral()
 }
 
-def dependencyVersions = [
-    glassfish_version: '3.0.2',
-]
-
 dependencies {
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.2',
-            'com.nimbusds:nimbus-jose-jwt:9.11.2',
-            'com.nimbusds:oauth2-oidc-sdk:9.10.2',
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit}",
+            "com.nimbusds:nimbus-jose-jwt:9.11.2",
+            "com.nimbusds:oauth2-oidc-sdk:9.10.2",
             "org.glassfish.jersey.core:jersey-client:${dependencyVersions.glassfish_version}",
             "org.glassfish.jersey.inject:jersey-hk2:${dependencyVersions.glassfish_version}",
             "org.glassfish.jersey.media:jersey-media-json-jackson:${dependencyVersions.glassfish_version}",
             "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.12.4",
-            'org.eclipse.jetty:jetty-server:11.0.6',
+            "org.eclipse.jetty:jetty-server:11.0.6",
             "software.amazon.awssdk:sqs:2.17.15",
             "org.awaitility:awaitility:4.1.0",
             "com.amazonaws:aws-java-sdk-dynamodb:1.12.43",
             "org.bouncycastle:bcpkix-jdk15on:1.68",
             "io.lettuce:lettuce-core:6.1.4.RELEASE",
-            project(":serverless:lambda"),
+            project(":client-registry-api"),
+            project(":frontend-api"),
+            project(":oidc-api"),
             project(":shared")
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.2'
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
 }
 
 test {

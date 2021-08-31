@@ -1,8 +1,21 @@
-variable "lambda_zip_file" {
-  default     = "../../../serverless/lambda/build/distributions/lambda.zip"
-  description = "Location of the Lambda ZIP file"
+variable "oidc_api_lambda_zip_file" {
+  default     = "../../../oidc-api/build/distributions/oidc-api.zip"
+  description = "Location of the OIDC API Lambda ZIP file"
   type        = string
 }
+
+variable "frontend_api_lambda_zip_file" {
+  default     = "../../../frontend-api/build/distributions/frontend-api.zip"
+  description = "Location of the Frontend API Lambda ZIP file"
+  type        = string
+}
+
+variable "client_registry_api_lambda_zip_file" {
+  default     = "../../../client-registry-api/build/distributions/client-registry-api.zip"
+  description = "Location of the client registry API Lambda ZIP file"
+  type        = string
+}
+
 
 variable "deployer_role_arn" {
   default     = ""

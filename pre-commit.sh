@@ -16,18 +16,20 @@ function usage() {
     -u  run the unit tests
     -i  run the integration tests
     -g  running in GitHub actions
+    -t  terraform all modules
 USAGE
 }
 RUN_UNIT=0
 RUN_INTEGRATION=0
 IN_GITHUB_ACTIONS=0
+TF_ACCOUNT_MANAGEMENT=0
 
 if [[ $# -eq 0 ]] || [[ ( $# -eq 1 && ${1} == "-l" ) ]]; then
   RUN_UNIT=1
   RUN_INTEGRATION=1
 fi
 
-while getopts "uig" opt; do
+while getopts "uigt" opt; do
   case ${opt} in
     u)
       RUN_UNIT=1
@@ -37,6 +39,9 @@ while getopts "uig" opt; do
       ;;
     g)
       IN_GITHUB_ACTIONS=1
+      ;;
+    t)
+      TF_ACCOUNT_MANAGEMENT=1
       ;;
     *)
       usage

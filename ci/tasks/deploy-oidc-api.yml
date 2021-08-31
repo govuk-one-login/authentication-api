@@ -12,7 +12,9 @@ params:
   NOTIFY_API_KEY: ((build-notify-api-key))
 inputs:
   - name: api-src
-  - name: api-release
+  - name: oidc-api-release
+  - name: frontend-api-release
+  - name: client-registry-api-release
 outputs:
   - name: terraform-outputs
 run:
@@ -29,7 +31,9 @@ run:
         -backend-config "region=eu-west-2"
 
       terraform apply -auto-approve \
-        -var 'lambda_zip_file=../../../../api-release/lambda.zip' \
+        -var 'oidc_api_lambda_zip_file=../../../../oidc-api-release/oidc-api.zip' \
+        -var 'frontend_api_lambda_zip_file=../../../../frontend-api-release/frontend-api.zip' \
+        -var 'client_registry_api_lambda_zip_file=../../../../client-registry-api-release/client-registry-api.zip' \
         -var "deployer_role_arn=${DEPLOYER_ROLE_ARN}" \
         -var "notify_api_key=${NOTIFY_API_KEY}" \
         -var "environment=${DEPLOY_ENVIRONMENT}" \

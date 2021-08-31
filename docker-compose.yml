@@ -17,7 +17,7 @@ services:
     networks:
       - di-authentication-api-net
     volumes:
-      - ./serverless/lambda/build/distributions:/dist/lambda/
+      - ./oidc-api/build/distributions:/dist/lambda/
     ports:
       - 45678:45678
     healthcheck:

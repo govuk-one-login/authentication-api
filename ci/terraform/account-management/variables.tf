@@ -22,6 +22,11 @@ variable "aws_endpoint" {
   default = null
 }
 
+variable "aws_dynamodb_endpoint" {
+  type    = string
+  default = null
+}
+
 variable "service_domain_name" {
   default = "auth.ida.digital.cabinet-office.gov.uk"
 }

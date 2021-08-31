@@ -5,28 +5,78 @@ import java.util.Optional;
 
 public class ConfigurationService {
 
-    public Optional<String> getBaseURL() {
-        return Optional.ofNullable(System.getenv("BASE_URL"));
+    // Please keep the method names in alphabetical order so we can find stuff more easily.
+
+    public long getAccessTokenExpiry() {
+        return Long.parseLong(System.getenv().getOrDefault("ACCESS_TOKEN_EXPIRY", "300"));
     }
 
-    public URI getLoginURI() {
-        return URI.create(System.getenv("LOGIN_URI"));
+    public long getAuthCodeExpiry() {
+        return Long.parseLong(System.getenv().getOrDefault("AUTH_CODE_EXPIRY", "300"));
     }
 
     public URI getAuthCodeURI() {
         return URI.create(System.getenv().getOrDefault("AUTH_CODE_URI", "/auth-code"));
     }
 
-    public URI getSkipLoginURI() {
-        return URI.create(System.getenv().getOrDefault("SKIP_LOGIN_URI", "http://skip-login"));
+    public String getAwsRegion() {
+        return System.getenv("AWS_REGION");
+    }
+
+    public Optional<String> getBaseURL() {
+        return Optional.ofNullable(System.getenv("BASE_URL"));
+    }
+
+    public long getCodeExpiry() {
+        return Long.parseLong(System.getenv().getOrDefault("CODE_EXPIRY", "900"));
+    }
+
+    public int getCodeMaxRetries() {
+        return Integer.parseInt(System.getenv().getOrDefault("CODE_MAX_RETRIES", "5"));
     }
 
     public URI getDefaultLogoutURI() {
         return URI.create(System.getenv("DEFAULT_LOGOUT_URI"));
     }
 
+    public String getDomainName() {
+        return System.getenv("DOMAIN_NAME");
+    }
+
+    public Optional<String> getDynamoEndpointUri() {
+        return Optional.ofNullable(System.getenv("DYNAMO_ENDPOINT"));
+    }
+
+    public String getEmailQueueUri() {
+        return System.getenv("EMAIL_QUEUE_URL");
+    }
+
+    public String getEnvironment() {
+        return System.getenv("ENVIRONMENT");
+    }
+
+    public Optional<String> getLocalstackEndpointUri() {
+        return Optional.ofNullable(System.getenv("LOCALSTACK_ENDPOINT"));
+    }
+
+    public URI getLoginURI() {
+        return URI.create(System.getenv("LOGIN_URI"));
+    }
+
+    public String getNotifyApiKey() {
+        return System.getenv("NOTIFY_API_KEY");
+    }
+
+    public Optional<String> getNotifyApiUrl() {
+        return Optional.ofNullable(System.getenv("NOTIFY_URL"));
+    }
+
     public String getRedisHost() {
         return System.getenv().getOrDefault("REDIS_HOST", "redis");
+    }
+
+    public Optional<String> getRedisPassword() {
+        return Optional.ofNullable(System.getenv("REDIS_PASSWORD"));
     }
 
     public int getRedisPort() {
@@ -37,80 +87,32 @@ public class ConfigurationService {
         return Boolean.parseBoolean(System.getenv().getOrDefault("REDIS_TLS", "false"));
     }
 
-    public Optional<String> getRedisPassword() {
-        return Optional.ofNullable(System.getenv("REDIS_PASSWORD"));
-    }
-
-    public String getEnvironment() {
-        return System.getenv("ENVIRONMENT");
-    }
-
-    public long getSessionExpiry() {
-        return Long.parseLong(System.getenv().getOrDefault("SESSION_EXPIRY", "1800"));
-    }
-
-    public String getNotifyApiKey() {
-        return System.getenv("NOTIFY_API_KEY");
-    }
-
-    public long getCodeExpiry() {
-        return Long.parseLong(System.getenv().getOrDefault("CODE_EXPIRY", "900"));
-    }
-
-    public long getAuthCodeExpiry() {
-        return Long.parseLong(System.getenv().getOrDefault("AUTH_CODE_EXPIRY", "300"));
-    }
-
-    public long getAccessTokenExpiry() {
-        return Long.parseLong(System.getenv().getOrDefault("ACCESS_TOKEN_EXPIRY", "300"));
-    }
-
-    public Optional<String> getNotifyApiUrl() {
-        return Optional.ofNullable(System.getenv("NOTIFY_URL"));
-    }
-
-    public String getEmailQueueUri() {
-        return System.getenv("EMAIL_QUEUE_URL");
-    }
-
-    public String getAwsRegion() {
-        return System.getenv("AWS_REGION");
-    }
-
-    public Optional<String> getSqsEndpointUri() {
-        return Optional.ofNullable(System.getenv("SQS_ENDPOINT"));
-    }
-
-    public Optional<String> getLocalstackEndpointUri() {
-        return Optional.ofNullable(System.getenv("LOCALSTACK_ENDPOINT"));
-    }
-
-    public Optional<String> getDynamoEndpointUri() {
-        return Optional.ofNullable(System.getenv("DYNAMO_ENDPOINT"));
-    }
-
-    public String getDomainName() {
-        return System.getenv("DOMAIN_NAME");
-    }
-
-    public String getTokenSigningKeyId() {
-        return System.getenv("TOKEN_SIGNING_KEY_ID");
-    }
-
-    public int getCodeMaxRetries() {
-        return Integer.parseInt(System.getenv().getOrDefault("CODE_MAX_RETRIES", "5"));
+    public String getSessionCookieAttributes() {
+        return Optional.ofNullable(System.getenv("SESSION_COOKIE_ATTRIBUTES"))
+                .orElse("Secure; HttpOnly;");
     }
 
     public int getSessionCookieMaxAge() {
         return Integer.parseInt(System.getenv().getOrDefault("SESSION_COOKIE_MAX_AGE", "1800"));
     }
 
-    public String getSessionCookieAttributes() {
-        return Optional.ofNullable(System.getenv("SESSION_COOKIE_ATTRIBUTES"))
-                .orElse("Secure; HttpOnly;");
+    public long getSessionExpiry() {
+        return Long.parseLong(System.getenv().getOrDefault("SESSION_EXPIRY", "1800"));
+    }
+
+    public URI getSkipLoginURI() {
+        return URI.create(System.getenv().getOrDefault("SKIP_LOGIN_URI", "http://skip-login"));
+    }
+
+    public Optional<String> getSqsEndpointUri() {
+        return Optional.ofNullable(System.getenv("SQS_ENDPOINT"));
     }
 
     public String getTermsAndConditionsVersion() {
         return System.getenv("TERMS_CONDITIONS_VERSION");
+    }
+
+    public String getTokenSigningKeyId() {
+        return System.getenv("TOKEN_SIGNING_KEY_ID");
     }
 }
