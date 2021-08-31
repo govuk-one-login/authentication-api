@@ -3,7 +3,7 @@ module "authorise_access_token" {
 
   endpoint_name   = "authorise-access-token"
   path_part       = "authorise-access-token"
-  endpoint_method = "GET"
+  endpoint_method = "POST"
   handler_environment_variables = {
     ENVIRONMENT = var.environment
   }
