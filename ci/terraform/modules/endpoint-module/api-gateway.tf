@@ -24,7 +24,7 @@ resource "aws_api_gateway_integration" "endpoint_integration" {
 
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.endpoint_lambda.invoke_arn
+  uri                     = aws_lambda_alias.endpoint_lambda.invoke_arn
 
   depends_on = [
     aws_api_gateway_resource.endpoint_resource,
