@@ -127,7 +127,7 @@ data "aws_iam_policy_document" "dynamo_policy_document" {
     actions = [
       "dynamodb:GetItem",
       "dynamodb:UpdateItem",
-      "dynamodb:ListTables",
+      "dynamodb:DescribeTable",
     ]
     resources = [
       data.aws_dynamodb_table.user_credentials_table.arn,
