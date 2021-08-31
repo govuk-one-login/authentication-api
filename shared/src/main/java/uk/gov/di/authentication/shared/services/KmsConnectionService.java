@@ -33,6 +33,7 @@ public class KmsConnectionService {
         } else {
             this.kmsClient = AWSKMSClientBuilder.standard().withRegion(awsRegion).build();
         }
+        warmUp();
     }
 
     public GetPublicKeyResult getPublicKey(GetPublicKeyRequest getPublicKeyRequest) {
@@ -43,5 +44,9 @@ public class KmsConnectionService {
     public SignResult sign(SignRequest signRequest) {
         LOGGER.info("Calling KMS with SignRequest and KeyId {}", signRequest.getKeyId());
         return kmsClient.sign(signRequest);
+    }
+
+    private void warmUp() {
+        kmsClient.listKeys();
     }
 }

@@ -31,9 +31,10 @@ public class DynamoService implements AuthenticationService {
     private final DynamoDBMapper userProfileMapper;
     private static final String USER_CREDENTIALS_TABLE = "user-credentials";
     private static final String USER_PROFILE_TABLE = "user-profile";
+    private final AmazonDynamoDB dynamoDB;
 
     public DynamoService(String region, String environment, Optional<String> dynamoEndpoint) {
-        AmazonDynamoDB dynamoDB =
+        dynamoDB =
                 dynamoEndpoint
                         .map(
                                 t ->
@@ -58,8 +59,7 @@ public class DynamoService implements AuthenticationService {
                         .build();
         this.userCredentialsMapper = new DynamoDBMapper(dynamoDB, userCredentialsConfig);
         this.userProfileMapper = new DynamoDBMapper(dynamoDB, userProfileConfig);
-        this.userProfileMapper.load(UserProfile.class, "TestKey1");
-        this.userProfileMapper.load(UserProfile.class, "TestKey1");
+        warmUp();
     }
 
     @Override
@@ -169,6 +169,10 @@ public class DynamoService implements AuthenticationService {
                             scanPage.getResults().size()));
         }
         return scanPage.getResults().get(0);
+    }
+
+    private void warmUp() {
+        dynamoDB.listTables();
     }
 
     private static String hashPassword(String password) {

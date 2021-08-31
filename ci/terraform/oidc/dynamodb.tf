@@ -94,6 +94,7 @@ data "aws_iam_policy_document" "dynamo_policy_document" {
       "dynamodb:BatchWriteItem",
       "dynamodb:UpdateItem",
       "dynamodb:PutItem",
+      "dynamodb:ListTables",
     ]
     resources = [
       aws_dynamodb_table.user_credentials_table.arn,

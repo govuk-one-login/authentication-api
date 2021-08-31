@@ -26,6 +26,7 @@ public class RedisConnectionService implements AutoCloseable {
         this.pool =
                 ConnectionPoolSupport.createGenericObjectPool(
                         client::connect, new GenericObjectPoolConfig());
+        warmUp();
     }
 
     public RedisConnectionService(ConfigurationService configurationService) {
@@ -78,6 +79,14 @@ public class RedisConnectionService implements AutoCloseable {
             return result.get(0);
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    private void warmUp() {
+        try (StatefulRedisConnection<String, String> connection = pool.borrowObject()) {
+            boolean keyExists = connection.sync().exists("test-key") == 1;
+        } catch (Exception e) {
+
         }
     }
 
