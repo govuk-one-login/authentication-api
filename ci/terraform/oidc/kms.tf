@@ -20,6 +20,7 @@ data "aws_iam_policy_document" "kms_policy_document" {
 
     actions = [
       "kms:GetPublicKey",
+      "kms:ListKeys",
     ]
     resources = [
       aws_kms_key.id_token_signing_key.arn,
@@ -35,6 +36,7 @@ data "aws_iam_policy_document" "kms_signing_policy_document" {
 
     actions = [
       "kms:Sign",
+      "kms:ListKeys",
     ]
     resources = [
       aws_kms_key.id_token_signing_key.arn,
