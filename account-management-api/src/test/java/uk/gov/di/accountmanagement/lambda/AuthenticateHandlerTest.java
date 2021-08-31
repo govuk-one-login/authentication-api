@@ -4,13 +4,10 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.entity.AuthenticateResponse;
-import uk.gov.di.accountmanagement.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.helpers.RedactPhoneNumberHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 
 import java.util.Optional;
@@ -47,13 +44,6 @@ class AuthenticateHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
-
-        AuthenticateResponse response =
-                new ObjectMapper().readValue(result.getBody(), AuthenticateResponse.class);
-        assertThat(response.getSessionState(), equalTo(SessionState.LOGGED_IN));
-        assertThat(
-                response.getRedactedPhoneNumber(),
-                equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
     }
 
     @Test

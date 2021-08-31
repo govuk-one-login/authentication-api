@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.shared.helpers;
+package uk.gov.di.authentication.frontendapi.helpers;
 
 public class RedactPhoneNumberHelper {
 

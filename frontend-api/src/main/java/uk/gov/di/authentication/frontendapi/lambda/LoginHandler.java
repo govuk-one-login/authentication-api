@@ -13,7 +13,7 @@ import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionState;
-import uk.gov.di.authentication.shared.helpers.RedactPhoneNumberHelper;
+import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
 import uk.gov.di.authentication.shared.helpers.StateMachine;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
