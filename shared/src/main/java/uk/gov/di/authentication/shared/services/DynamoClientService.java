@@ -17,9 +17,10 @@ public class DynamoClientService implements ClientService {
 
     private static final String CLIENT_REGISTRY_TABLE = "client-registry";
     private final DynamoDBMapper clientRegistryMapper;
+    private final AmazonDynamoDB dynamoDB;
 
     public DynamoClientService(String region, String environment, Optional<String> dynamoEndpoint) {
-        AmazonDynamoDB dynamoDB =
+        dynamoDB =
                 dynamoEndpoint
                         .map(
                                 t ->
@@ -38,7 +39,7 @@ public class DynamoClientService implements ClientService {
                         .build();
 
         this.clientRegistryMapper = new DynamoDBMapper(dynamoDB, clientRegistryConfig);
-        this.clientRegistryMapper.load(ClientRegistry.class, "testkey1");
+        warmUp();
     }
 
     @Override
@@ -94,5 +95,9 @@ public class DynamoClientService implements ClientService {
     @Override
     public ClientID generateClientID() {
         return new ClientID(IdGenerator.generate());
+    }
+
+    private void warmUp() {
+        dynamoDB.listTables();
     }
 }
