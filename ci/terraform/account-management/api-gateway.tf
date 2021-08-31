@@ -52,13 +52,9 @@ resource "aws_api_gateway_authorizer" "di_account_management_api" {
   authorizer_credentials = aws_iam_role.invocation_role.arn
 }
 
-resource "aws_api_gateway_rest_api" "di_account_management_api" {
-  name = "authorise-access-token"
-}
-
 resource "aws_lambda_function" "authorizer" {
   filename      = var.lambda_zip_file
-  function_name = "api_gateway_authorizer"
+  function_name = "${var.environment}-api_gateway_authorizer"
   role          = aws_iam_role.lambda_iam_role.arn
   handler       = "uk.gov.di.accountmanagement.lambda.AuthoriseAccessTokenHandler::handleRequest"
   runtime       = "java11"
@@ -69,7 +65,7 @@ resource "aws_lambda_function" "authorizer" {
 }
 
 resource "aws_iam_role" "invocation_role" {
-  name = "api_gateway_auth_invocation"
+  name = "${var.environment}-api_gateway_auth_invocation"
   path = "/"
 
   assume_role_policy = data.aws_iam_policy_document.api_gateway_can_assume_policy.json
