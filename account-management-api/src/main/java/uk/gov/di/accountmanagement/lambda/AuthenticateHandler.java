@@ -9,8 +9,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.accountmanagement.entity.AuthenticateRequest;
-import uk.gov.di.accountmanagement.entity.AuthenticateResponse;
-import uk.gov.di.accountmanagement.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -18,7 +16,6 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.authentication.shared.helpers.RedactPhoneNumberHelper.redactPhoneNumber;
 
 public class AuthenticateHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -61,18 +58,9 @@ public class AuthenticateHandler
                 LOGGER.error("Invalid login credentials entered");
                 return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
             }
-            String phoneNumber =
-                    authenticationService.getPhoneNumber(loginRequest.getEmail()).orElse(null);
-
-            if (phoneNumber == null) {
-                LOGGER.error("No Phone Number has been registered for this user");
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1014);
-            }
-            String concatPhoneNumber = redactPhoneNumber(phoneNumber);
             LOGGER.info(
                     "User has successfully Logged in. Generating successful AuthenticateResponse");
-            return generateApiGatewayProxyResponse(
-                    200, new AuthenticateResponse(concatPhoneNumber, SessionState.LOGGED_IN));
+            return generateApiGatewayProxyResponse(200, "");
         } catch (JsonProcessingException e) {
             LOGGER.error(
                     "Request is missing parameters. The body present in request: {}",
