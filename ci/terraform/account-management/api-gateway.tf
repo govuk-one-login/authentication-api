@@ -52,10 +52,6 @@ resource "aws_api_gateway_authorizer" "di_account_management_api" {
   authorizer_credentials = aws_iam_role.invocation_role.arn
 }
 
-resource "aws_api_gateway_rest_api" "di_account_management_api" {
-  name = "authorise-access-token"
-}
-
 resource "aws_lambda_function" "authorizer" {
   filename      = var.lambda_zip_file
   function_name = "api_gateway_authorizer"
