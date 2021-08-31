@@ -5,6 +5,7 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
+import com.amazonaws.services.dynamodbv2.model.ListTablesRequest;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
@@ -20,6 +21,7 @@ public class DynamoClientService implements ClientService {
     private final AmazonDynamoDB dynamoDB;
 
     public DynamoClientService(String region, String environment, Optional<String> dynamoEndpoint) {
+        String tableName = environment + "-" + CLIENT_REGISTRY_TABLE;
         dynamoDB =
                 dynamoEndpoint
                         .map(
@@ -35,11 +37,11 @@ public class DynamoClientService implements ClientService {
                 new DynamoDBMapperConfig.Builder()
                         .withTableNameOverride(
                                 DynamoDBMapperConfig.TableNameOverride.withTableNameReplacement(
-                                        environment + "-" + CLIENT_REGISTRY_TABLE))
+                                        tableName))
                         .build();
 
         this.clientRegistryMapper = new DynamoDBMapper(dynamoDB, clientRegistryConfig);
-        warmUp();
+        warmUp(tableName);
     }
 
     @Override
@@ -97,7 +99,10 @@ public class DynamoClientService implements ClientService {
         return new ClientID(IdGenerator.generate());
     }
 
-    private void warmUp() {
-        dynamoDB.listTables();
+    private void warmUp(String tableName) {
+        ListTablesRequest request = new ListTablesRequest();
+        request.setLimit(1);
+        request.setExclusiveStartTableName(tableName);
+        dynamoDB.listTables(request);
     }
 }

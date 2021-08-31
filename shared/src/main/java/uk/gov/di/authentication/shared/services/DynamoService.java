@@ -59,7 +59,6 @@ public class DynamoService implements AuthenticationService {
                         .build();
         this.userCredentialsMapper = new DynamoDBMapper(dynamoDB, userCredentialsConfig);
         this.userProfileMapper = new DynamoDBMapper(dynamoDB, userProfileConfig);
-        warmUp();
     }
 
     @Override
@@ -169,10 +168,6 @@ public class DynamoService implements AuthenticationService {
                             scanPage.getResults().size()));
         }
         return scanPage.getResults().get(0);
-    }
-
-    private void warmUp() {
-        dynamoDB.listTables();
     }
 
     private static String hashPassword(String password) {
