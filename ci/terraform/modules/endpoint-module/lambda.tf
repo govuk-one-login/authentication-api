@@ -4,7 +4,7 @@ resource "aws_lambda_function" "endpoint_lambda" {
   role          = var.lambda_role_arn
   handler       = var.handler_function_name
   timeout       = 30
-  memory_size   = 6144
+  memory_size   = 4096
   publish       = true
 
   tracing_config {
@@ -50,4 +50,11 @@ resource "aws_cloudwatch_log_subscription_filter" "log_subscription" {
   log_group_name  = aws_cloudwatch_log_group.lambda_log_group[0].name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arn
+}
+
+resource "aws_lambda_alias" "endpoint_lambda"{
+  name = "endpoint_lambda_version"
+  description = "Versioned alias"
+  function_name = aws_lambda_function.endpoint_lambda.arn
+  function_version = aws_lambda_function.endpoint_lambda.version
 }
