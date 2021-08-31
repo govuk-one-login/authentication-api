@@ -51,3 +51,10 @@ resource "aws_cloudwatch_log_subscription_filter" "log_subscription" {
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arn
 }
+
+resource "aws_lambda_alias" "endpoint_lambda"{
+  name = "endpoint_lambda_version"
+  description = "Versioned alias"
+  function_name = aws_lambda_function.endpoint_lambda.arn
+  function_version = aws_lambda_function.endpoint_lambda.version
+}
