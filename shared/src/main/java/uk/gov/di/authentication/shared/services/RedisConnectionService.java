@@ -84,7 +84,7 @@ public class RedisConnectionService implements AutoCloseable {
 
     private void warmUp() {
         try (StatefulRedisConnection<String, String> connection = pool.borrowObject()) {
-            boolean keyExists = connection.sync().exists("test-key") == 1;
+            connection.sync().clientGetname();
         } catch (Exception e) {
 
         }
