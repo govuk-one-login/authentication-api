@@ -4,15 +4,11 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.jwt.SignedJWT;
-import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.AccessTokenType;
 import com.nimbusds.openid.connect.sdk.UserInfoErrorResponse;
-import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -20,14 +16,13 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenService;
 
-import java.text.ParseException;
-import java.util.List;
 import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.INVALID_TOKEN;
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.MISSING_TOKEN;
 import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.validateScopesAndRetrieveUserInfo;
 
 public class AuthoriseAccessTokenHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -95,7 +90,7 @@ public class AuthoriseAccessTokenHandler
                 tokenService.getSubjectWithAccessToken(accessToken);
 
         return subjectFromAccessToken
-                .map(t -> validateScopesAndRetrieveUserInfo(t, accessToken))
+                .map(t -> validateScopesAndRetrieveUserInfo(t, accessToken, authenticationService))
                 .orElse(
                         generateApiGatewayProxyResponse(
                                 401,
@@ -103,30 +98,5 @@ public class AuthoriseAccessTokenHandler
                                 new UserInfoErrorResponse(INVALID_TOKEN)
                                         .toHTTPResponse()
                                         .getHeaderMap()));
-    }
-
-    private APIGatewayProxyResponseEvent validateScopesAndRetrieveUserInfo(
-            String subject, AccessToken accessToken) {
-        UserProfile userProfile = authenticationService.getUserProfileFromSubject(subject);
-        List<String> scopes;
-        try {
-            SignedJWT signedAccessToken = SignedJWT.parse(accessToken.getValue());
-            scopes = (List<String>) signedAccessToken.getJWTClaimsSet().getClaim("scope");
-        } catch (ParseException e) {
-            return generateApiGatewayProxyResponse(
-                    401,
-                    "",
-                    new UserInfoErrorResponse(INVALID_TOKEN).toHTTPResponse().getHeaderMap());
-        }
-        UserInfo userInfo = new UserInfo(new Subject(subject));
-        if (scopes.contains("email")) {
-            userInfo.setEmailAddress(userProfile.getEmail());
-            userInfo.setEmailVerified(userProfile.isEmailVerified());
-        }
-        if (scopes.contains("phone")) {
-            userInfo.setPhoneNumber(userProfile.getPhoneNumber());
-            userInfo.setPhoneNumberVerified(userProfile.isPhoneNumberVerified());
-        }
-        return generateApiGatewayProxyResponse(200, userInfo.toJSONString());
     }
 }
