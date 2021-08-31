@@ -100,9 +100,6 @@ public class DynamoClientService implements ClientService {
     }
 
     private void warmUp(String tableName) {
-        ListTablesRequest request = new ListTablesRequest();
-        request.setLimit(1);
-        request.setExclusiveStartTableName(tableName);
-        dynamoDB.listTables(request);
+        dynamoDB.describeTable(tableName);
     }
 }
