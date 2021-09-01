@@ -24,7 +24,8 @@ public class KmsHelper {
     private static final String TOKEN_SIGNING_KEY_ID = System.getenv().get("TOKEN_SIGNING_KEY_ID");
 
     private static final KmsConnectionService KMS_CONNECTION_SERVICE =
-            new KmsConnectionService(Optional.of(LOCALSTACK_ENDPOINT), REGION);
+            new KmsConnectionService(
+                    Optional.of(LOCALSTACK_ENDPOINT), REGION, TOKEN_SIGNING_KEY_ID);
 
     public static SignedJWT signIdToken(JWTClaimsSet claimsSet) {
         try {

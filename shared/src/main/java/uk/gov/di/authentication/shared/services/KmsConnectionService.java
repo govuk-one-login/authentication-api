@@ -18,10 +18,14 @@ public class KmsConnectionService {
     private static final Logger LOGGER = LoggerFactory.getLogger(KmsConnectionService.class);
 
     public KmsConnectionService(ConfigurationService configurationService) {
-        this(configurationService.getLocalstackEndpointUri(), configurationService.getAwsRegion());
+        this(
+                configurationService.getLocalstackEndpointUri(),
+                configurationService.getAwsRegion(),
+                configurationService.getTokenSigningKeyId());
     }
 
-    public KmsConnectionService(Optional<String> localstackEndpointUri, String awsRegion) {
+    public KmsConnectionService(
+            Optional<String> localstackEndpointUri, String awsRegion, String tokenSigningKeyId) {
         if (localstackEndpointUri.isPresent()) {
             LOGGER.info("Localstack endpoint URI is present: " + localstackEndpointUri.get());
             this.kmsClient =
@@ -33,7 +37,7 @@ public class KmsConnectionService {
         } else {
             this.kmsClient = AWSKMSClientBuilder.standard().withRegion(awsRegion).build();
         }
-        warmUp();
+        warmUp(tokenSigningKeyId);
     }
 
     public GetPublicKeyResult getPublicKey(GetPublicKeyRequest getPublicKeyRequest) {
@@ -46,7 +50,13 @@ public class KmsConnectionService {
         return kmsClient.sign(signRequest);
     }
 
-    private void warmUp() {
-        kmsClient.listKeys();
+    private void warmUp(String keyId) {
+        GetPublicKeyRequest request = new GetPublicKeyRequest();
+        request.setKeyId(keyId);
+        try {
+            kmsClient.getPublicKey(request);
+        } catch (Exception e) {
+            LOGGER.info("Unable to retrieve Public Key whilst warming up");
+        }
     }
 }
