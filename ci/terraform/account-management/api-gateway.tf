@@ -136,7 +136,7 @@ resource "aws_api_gateway_method_settings" "api_gateway_logging_settings" {
   count = var.enable_api_gateway_execution_logging ? 1 : 0
 
   rest_api_id = aws_api_gateway_rest_api.di_account_management_api.id
-  stage_name  = var.api_deployment_stage_name
+  stage_name  = var.environment
   method_path = "*/*"
 
   settings {
