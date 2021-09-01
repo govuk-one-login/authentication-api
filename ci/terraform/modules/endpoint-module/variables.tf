@@ -6,11 +6,6 @@ variable "path_part" {
   type = string
 }
 
-variable "provisioned_concurrent_executions" {
-  type    = number
-  default = 5
-}
-
 variable "method_request_parameters" {
   type = map(bool)
   default = {}
