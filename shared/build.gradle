@@ -19,7 +19,7 @@ dependencies {
             configurations.lettuce,
             configurations.hamcrest,
             "com.amazonaws:aws-java-sdk-sns:${dependencyVersions.aws_sdk_version}",
-            "com.googlecode.libphonenumber:libphonenumber:8.12.28"
+            "com.googlecode.libphonenumber:libphonenumber:8.12.31"
 
     testImplementation configurations.tests,
             configurations.lambda_tests
