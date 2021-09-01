@@ -14,7 +14,16 @@ public class RequestHelper {
     public static Response requestWithSession(String endpoint, Object body, String sessionId) {
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
+        return buildRequest(endpoint, body, headers);
+    }
 
+    public static Response buildRequest(String endpoint, Object body) {
+        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
+        return buildRequest(endpoint, body, headers);
+    }
+
+    private static Response buildRequest(
+            String endpoint, Object body, MultivaluedMap<String, Object> headers) {
         return ClientBuilder.newClient()
                 .target(ROOT_RESOURCE_URL + endpoint)
                 .request(MediaType.APPLICATION_JSON)
