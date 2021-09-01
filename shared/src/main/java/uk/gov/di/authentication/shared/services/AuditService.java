@@ -1,7 +1,5 @@
 package uk.gov.di.authentication.shared.services;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 
 import java.util.Arrays;
@@ -10,10 +8,18 @@ import java.util.stream.Collectors;
 
 public class AuditService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(AuditService.class);
+    private final SnsService snsService;
+
+    public AuditService(SnsService snsService) {
+        this.snsService = snsService;
+    }
+
+    public AuditService() {
+        this.snsService = new SnsService(new ConfigurationService());
+    }
 
     public void submitAuditEvent(AuditableEvent event, MetadataPair... metadataPairs) {
-        LOGGER.info(generateLogLine(event, metadataPairs));
+        snsService.publishAuditMessage(generateLogLine(event, metadataPairs));
     }
 
     String generateLogLine(AuditableEvent event, MetadataPair... metadataPairs) {
