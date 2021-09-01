@@ -25,6 +25,15 @@ resource "aws_lambda_function" "endpoint_lambda" {
   tags = var.default_tags
 }
 
+
+resource "aws_api_gateway_authorizer" "di_account_management_api" {
+  name                   = "${var.endpoint_name}-authorizer"
+  rest_api_id            = "${var.rest_api_id}"
+  authorizer_uri         = aws_lambda_function.endpoint_lambda.invoke_arn
+  authorizer_credentials = "${var.api_gateway_role}"
+  count = var.use_authorizer ? 1 : 0
+}
+
 resource "aws_cloudwatch_log_group" "lambda_log_group" {
   count = var.use_localstack ? 0 : 1
 

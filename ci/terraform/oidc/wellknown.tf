@@ -12,6 +12,7 @@ module "openid_configuration_discovery" {
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.WellknownHandler::handleRequest"
 
+  api_gateway_role          = aws_iam_role.api_gateway_logging_iam_role.arn
   rest_api_id               = aws_api_gateway_rest_api.di_authentication_api.id
   root_resource_id          = aws_api_gateway_resource.wellknown_resource.id
   execution_arn             = aws_api_gateway_rest_api.di_authentication_api.execution_arn

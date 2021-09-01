@@ -14,10 +14,12 @@ module "authorise_access_token" {
   execution_arn             = aws_api_gateway_rest_api.di_account_management_api.execution_arn
   api_deployment_stage_name = var.environment
   lambda_zip_file           = var.lambda_zip_file
+  use_authorizer            = true
   security_group_id         = aws_vpc.account_management_vpc.default_security_group_id
   subnet_id                 = aws_subnet.account_management_subnets.*.id
   environment               = var.environment
   lambda_role_arn           = aws_iam_role.lambda_iam_role.arn
+  api_gateway_role          = aws_iam_role.api_gateway_logging_iam_role.arn
   use_localstack            = var.use_localstack
   default_tags              = local.default_tags
   logging_endpoint_enabled  = var.logging_endpoint_enabled

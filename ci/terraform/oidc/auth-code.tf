@@ -21,6 +21,7 @@ module "auth-code" {
   root_resource_id          = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   execution_arn             = aws_api_gateway_rest_api.di_authentication_api.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
+  api_gateway_role          = aws_iam_role.api_gateway_logging_iam_role.arn
   lambda_zip_file           = var.oidc_api_lambda_zip_file
   security_group_id         = aws_vpc.authentication.default_security_group_id
   subnet_id                 = aws_subnet.authentication.*.id

@@ -6,6 +6,11 @@ variable "path_part" {
   type = string
 }
 
+variable "use_authorizer" {
+  type = bool
+  default = false
+}
+
 variable "method_request_parameters" {
   type = map(bool)
   default = {}
@@ -70,6 +75,11 @@ variable "subnet_id" {
 
 variable "lambda_role_arn" {
   type = string
+}
+
+variable "api_gateway_role" {
+  type = string
+  default = ""
 }
 
 variable "logging_endpoint_enabled" {
