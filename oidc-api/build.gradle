@@ -17,7 +17,7 @@ dependencies {
             configurations.nimbus,
             configurations.dynamodb,
             configurations.bouncycastle,
-            "com.googlecode.libphonenumber:libphonenumber:8.12.28",
+            "com.googlecode.libphonenumber:libphonenumber:8.12.31",
             project(":shared")
 
     testImplementation configurations.tests,
