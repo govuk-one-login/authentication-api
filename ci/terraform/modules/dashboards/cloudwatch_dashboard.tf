@@ -6,6 +6,7 @@ resource "aws_cloudwatch_dashboard" "main" {
 
 locals {
   template = {
+    start = "-PT336H",
     widgets = [
       {
         height = 6, width = 12, y = 6, x = 0, type = "metric",
