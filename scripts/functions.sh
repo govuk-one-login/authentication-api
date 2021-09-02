@@ -63,7 +63,7 @@ function funky_success() {
 }
 
 function funky_started() {
-  tput setaf 2
+  tput setaf 2g
   cat scripts/started.txt
   tput sgr0
 }
@@ -99,4 +99,12 @@ run-integration-tests() {
   export BASE_URL="$(terraform output -raw base_url)"
   popd >/dev/null
   ./gradlew integration-tests:test
+}
+
+run-account-management-integration-tests() {
+  pushd ci/terraform/account-management >/dev/null
+  export API_GATEWAY_ID="$(terraform output -raw api_gateway_root_id)"
+  export BASE_URL="$(terraform output -raw base_url)"
+  popd >/dev/null
+  ./gradlew account-management-integration-tests:test
 }

@@ -54,7 +54,7 @@ if [[ ${RUN_UNIT} -eq 1 ]]; then
   printf "\nRunning build and unit tests...\n"
 
   set +e
-  ./gradlew clean build -x integration-tests:test
+  ./gradlew clean build -x integration-tests:test -x account-management-integration-tests:test
   build_and_test_exit_code=$?
   set -e
   if [ ${build_and_test_exit_code} -ne 0 ]; then
@@ -63,15 +63,21 @@ if [[ ${RUN_UNIT} -eq 1 ]]; then
   fi
 fi
 
-if [[ ${RUN_INTEGRATION} -eq 1 ]]; then
-
+if [ ${RUN_INTEGRATION} -eq 1 ] || [ ${TF_ACCOUNT_MANAGEMENT} -eq 1 ]; then
   startup
 
-  set +e
-  run-integration-tests
-  build_and_test_exit_code=$?
-  set -e
-
+  if [[ ${RUN_INTEGRATION} -eq 1 ]]; then
+      set +e
+      run-integration-tests
+      build_and_test_exit_code=$?
+      set -e
+  fi
+  if [[ ${TF_ACCOUNT_MANAGEMENT} -eq 1 ]]; then
+      set +e
+      run-account-management-integration-tests
+      build_and_test_exit_code=$?
+      set -e
+  fi
   stop_docker_services aws redis dynamodb
 fi
 
