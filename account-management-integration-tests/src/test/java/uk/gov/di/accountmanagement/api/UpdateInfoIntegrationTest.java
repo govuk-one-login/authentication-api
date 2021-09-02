@@ -11,7 +11,7 @@ import static uk.gov.di.accountmanagement.entity.UpdateInfoType.EMAIL;
 public class UpdateInfoIntegrationTest {
 
     private static final String UPDATE_INFO_ENDPOINT = "/update-info";
-    private static final String EXISTING_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
+    private static final String EXISTING_EMAIL_ADDRESS = "joe.bsssssloggs@digital.cabinet-office.gov.uk";
     private static final String NEW_EMAIL_ADDRESS = "joe.b@digital.cabinet-office.gov.uk";
 
     @Test
