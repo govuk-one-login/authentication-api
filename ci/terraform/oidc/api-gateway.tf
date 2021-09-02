@@ -201,3 +201,9 @@ resource "aws_api_gateway_base_path_mapping" "api" {
   stage_name  = aws_api_gateway_stage.endpoint_stage.stage_name
   domain_name = "api.${var.environment}.${var.service_domain_name}"
 }
+
+module "dashboard" {
+  source           = "../modules/dashboards"
+  api_gateway_name = aws_api_gateway_rest_api.di_authentication_api.name
+  use_localstack   = var.use_localstack
+}
