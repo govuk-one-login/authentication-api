@@ -1,14 +1,15 @@
-module "hello_world" {
-  source = "../modules/endpoint-module"
+module "update_info" {
+  source = "../modules/account-management-endpoint-module"
 
-  endpoint_name   = "hello-world"
-  path_part       = "hello-world"
-  endpoint_method = "GET"
+  endpoint_name   = "update-info"
+  path_part       = "update-info"
+  endpoint_method = "POST"
   handler_environment_variables = {
     ENVIRONMENT = var.environment
   }
-  handler_function_name = "uk.gov.di.accountmanagement.lambda.HelloWorldHandler::handleRequest"
+  handler_function_name = "uk.gov.di.accountmanagement.lambda.UpdateInfoHandler::handleRequest"
 
+  authorizer_id             = aws_api_gateway_authorizer.di_account_management_api.id
   rest_api_id               = aws_api_gateway_rest_api.di_account_management_api.id
   root_resource_id          = aws_api_gateway_rest_api.di_account_management_api.root_resource_id
   execution_arn             = aws_api_gateway_rest_api.di_account_management_api.execution_arn

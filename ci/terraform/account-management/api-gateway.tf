@@ -46,7 +46,7 @@ data "aws_iam_policy_document" "api_gateway_logging_policy" {
 }
 
 resource "aws_api_gateway_authorizer" "di_account_management_api" {
-  name                   = "authorise-access-token"
+  name                   = "${var.environment}-authorise-access-token"
   rest_api_id            = aws_api_gateway_rest_api.di_account_management_api.id
   authorizer_uri         = aws_lambda_function.authorizer.invoke_arn
   authorizer_credentials = aws_iam_role.invocation_role.arn
@@ -102,7 +102,8 @@ resource "aws_api_gateway_deployment" "deployment" {
 
   triggers = {
     redeployment = sha1(jsonencode([
-      module.hello_world.integration_trigger_value,
+      module.update_info.integration_trigger_value,
+      module.authenticate.integration_trigger_value,
     ]))
   }
 
@@ -110,7 +111,8 @@ resource "aws_api_gateway_deployment" "deployment" {
     create_before_destroy = true
   }
   depends_on = [
-    module.hello_world,
+    module.update_info,
+    module.authenticate,
   ]
 }
 
@@ -122,7 +124,8 @@ resource "aws_api_gateway_stage" "stage" {
   tags = local.default_tags
 
   depends_on = [
-    module.hello_world,
+    module.update_info,
+    module.authenticate,
     aws_api_gateway_deployment.deployment,
   ]
 }
