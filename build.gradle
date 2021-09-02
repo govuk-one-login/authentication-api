@@ -12,7 +12,7 @@ ext {
         aws_sdk_version: "1.12.52",
         aws_lambda_core_version: "1.2.1",
         aws_lambda_events_version: "3.9.0",
-        nimbusds_oauth_version: "9.10.2",
+        nimbusds_oauth_version: "9.15",
         nimbusds_jwt_version: "9.13",
         junit: "5.7.2",
         jackson_version: "2.12.4",
