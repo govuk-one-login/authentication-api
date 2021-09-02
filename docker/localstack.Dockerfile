@@ -2,7 +2,7 @@
 #
 # Container used to run tasks requiring Localstack in the build pipeline.
 
-FROM localstack/localstack:0.12.15@sha256:9ad944dafff54830ac2c60e07f1f084963ceb3ff71b7dc4ff6d50864affa383d
+FROM localstack/localstack:0.12.17.4@sha256:a2f37c72c974dccd46140c8832ba0f2f42e67865e7533e28240dc1061c79e8bc
 
 COPY localstack/*.sh /docker-entrypoint-initaws.d/
 
