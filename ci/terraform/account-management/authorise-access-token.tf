@@ -1,5 +1,5 @@
 module "authorise_access_token" {
-  source = "../modules/endpoint-module"
+  source = "../modules/account-management-endpoint-module"
 
   endpoint_name   = "authorise-access-token"
   path_part       = "authorise-access-token"
@@ -9,6 +9,7 @@ module "authorise_access_token" {
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.AuthoriseAccessTokenHandler::handleRequest"
 
+  authorizer_id             = aws_api_gateway_authorizer.di_account_management_api.id
   rest_api_id               = aws_api_gateway_rest_api.di_account_management_api.id
   root_resource_id          = aws_api_gateway_rest_api.di_account_management_api.root_resource_id
   execution_arn             = aws_api_gateway_rest_api.di_account_management_api.execution_arn

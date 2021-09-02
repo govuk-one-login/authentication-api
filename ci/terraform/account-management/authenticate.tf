@@ -1,5 +1,5 @@
 module "authenticate" {
-  source = "../modules/endpoint-module"
+  source = "../modules/account-management-endpoint-module"
 
   endpoint_name   = "authenticate"
   path_part       = "authenticate"
@@ -11,6 +11,7 @@ module "authenticate" {
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.AuthenticateHandler::handleRequest"
 
+  authorizer_id             = aws_api_gateway_authorizer.di_account_management_api.id
   rest_api_id               = aws_api_gateway_rest_api.di_account_management_api.id
   root_resource_id          = aws_api_gateway_rest_api.di_account_management_api.root_resource_id
   execution_arn             = aws_api_gateway_rest_api.di_account_management_api.execution_arn
