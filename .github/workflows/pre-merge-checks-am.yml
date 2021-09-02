@@ -1,16 +1,13 @@
 name: Pre-merge checks for Account Management
 on:
   pull_request:
+    paths: ['account-management-api/**', 'account-management-integration-tests/**', 'ci/terraform/account-management/**',  'ci/terraform/modules/account-management-endpoint-module/**']
     types:
       - opened
       - reopened
       - ready_for_review
       - synchronize
-    paths:
-      - 'account-management-api'
-      - 'account-management-integration-tests'
-      - 'ci/terraform/account-management/**'
-      - 'ci/terraform/modules/account-management-endpoint-module/**'
+
 jobs:
   unit-tests:
     runs-on: ubuntu-latest
