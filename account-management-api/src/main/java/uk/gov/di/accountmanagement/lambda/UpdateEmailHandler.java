@@ -76,8 +76,7 @@ public class UpdateEmailHandler
                             updateInfoRequest.getOtp(),
                             NotificationType.VERIFY_EMAIL);
             if (!isValidOtpCode) {
-                LOGGER.error(
-                        "Invalid OTP code sent in request");
+                LOGGER.error("Invalid OTP code sent in request");
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
             }
             Optional<ErrorResponse> emailValidationErrors =

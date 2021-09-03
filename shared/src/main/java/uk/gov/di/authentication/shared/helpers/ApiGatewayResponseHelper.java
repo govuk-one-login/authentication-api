@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.INVALID_TOKEN;
+import static java.lang.String.format;
 
 public class ApiGatewayResponseHelper {
 
@@ -59,13 +60,20 @@ public class ApiGatewayResponseHelper {
     }
 
     public static APIGatewayProxyResponseEvent validateScopesAndRetrieveUserInfo(
-            String subject, AccessToken accessToken, AuthenticationService authenticationService) {
+            String subject,
+            AccessToken accessToken,
+            AuthenticationService authenticationService,
+            Map<String, String> headers) {
         UserProfile userProfile = authenticationService.getUserProfileFromSubject(subject);
         List<String> scopes;
         try {
             SignedJWT signedAccessToken = SignedJWT.parse(accessToken.getValue());
             scopes = (List<String>) signedAccessToken.getJWTClaimsSet().getClaim("scope");
         } catch (ParseException e) {
+            LOGGER.error(
+                    format(
+                            "Unable to parse JWT on AccessToken with headers: %s.\n\n Exception thrown: %s",
+                            headers, e));
             return generateApiGatewayProxyResponse(
                     401,
                     "",

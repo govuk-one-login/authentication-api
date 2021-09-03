@@ -12,6 +12,8 @@ import com.nimbusds.oauth2.sdk.id.Issuer;
 import com.nimbusds.openid.connect.sdk.SubjectType;
 import com.nimbusds.openid.connect.sdk.claims.ClaimType;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -24,6 +26,8 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 
 public class WellknownHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(WellknownHandler.class);
 
     private final ConfigurationService configService;
     private final String baseUrl;
@@ -92,6 +96,7 @@ public class WellknownHandler
 
             return generateApiGatewayProxyResponse(200, providerMetadata.toString());
         } catch (URISyntaxException | NoSuchElementException e) {
+            LOG.error("Exception encountered in WellKnownHandler", e);
             return generateApiGatewayProxyResponse(500, "Service not configured");
         }
     }
