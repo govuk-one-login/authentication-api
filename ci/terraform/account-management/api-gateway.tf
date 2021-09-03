@@ -50,6 +50,25 @@ resource "aws_api_gateway_authorizer" "di_account_management_api" {
   rest_api_id            = aws_api_gateway_rest_api.di_account_management_api.id
   authorizer_uri         = aws_lambda_function.authorizer.invoke_arn
   authorizer_credentials = aws_iam_role.invocation_role.arn
+  authorizer_result_ttl_in_seconds = 0
+}
+
+resource "aws_iam_role_policy" "invocation_policy" {
+  name = "default"
+  role = aws_iam_role.invocation_role.id
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "lambda:InvokeFunction",
+      "Effect": "Allow",
+      "Resource": "${aws_lambda_function.authorizer.arn}"
+    }
+  ]
+}
+EOF
 }
 
 resource "aws_lambda_function" "authorizer" {
@@ -62,6 +81,10 @@ resource "aws_lambda_function" "authorizer" {
   publish       = true
   timeout       = 30
   memory_size   = 2048
+  vpc_config {
+    security_group_ids = [aws_vpc.account_management_vpc.default_security_group_id]
+    subnet_ids         = aws_subnet.account_management_subnets.*.id
+  }
 }
 
 resource "aws_iam_role" "invocation_role" {

@@ -36,14 +36,6 @@ resource "aws_cloudwatch_log_group" "lambda_log_group" {
   ]
 }
 
-resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda" {
-  count = var.use_localstack ? 0 : 1
-
-  function_name                     = aws_lambda_function.endpoint_lambda.function_name
-  provisioned_concurrent_executions = var.provisioned_concurrent_executions
-  qualifier                         = aws_lambda_function.endpoint_lambda.version
-}
-
 resource "aws_cloudwatch_log_subscription_filter" "log_subscription" {
   count           = var.logging_endpoint_enabled ? 1 : 0
   name            = "${var.endpoint_name}-log-subscription"

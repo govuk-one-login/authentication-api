@@ -2,43 +2,32 @@ package uk.gov.di.accountmanagement.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.AccessTokenType;
-import com.nimbusds.openid.connect.sdk.UserInfoErrorResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.accountmanagement.entity.AuthPolicy;
+import uk.gov.di.accountmanagement.entity.TokenAuthorizerContext;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenService;
 
-import java.util.Optional;
-
-import static com.nimbusds.oauth2.sdk.token.BearerTokenError.INVALID_TOKEN;
-import static com.nimbusds.oauth2.sdk.token.BearerTokenError.MISSING_TOKEN;
-import static java.lang.String.format;
-import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.validateScopesAndRetrieveUserInfo;
-
 public class AuthoriseAccessTokenHandler
-        implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+        implements RequestHandler<TokenAuthorizerContext, AuthPolicy> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthoriseAccessTokenHandler.class);
 
     private final TokenService tokenService;
     private final ConfigurationService configurationService;
-    private final AuthenticationService authenticationService;
 
     public AuthoriseAccessTokenHandler(
             TokenService tokenService,
             AuthenticationService authenticationService,
             ConfigurationService configurationService) {
         this.tokenService = tokenService;
-        this.authenticationService = authenticationService;
         this.configurationService = configurationService;
     }
 
@@ -49,54 +38,40 @@ public class AuthoriseAccessTokenHandler
                         configurationService,
                         new RedisConnectionService(configurationService),
                         new KmsConnectionService(configurationService));
-        authenticationService =
-                new DynamoService(
-                        configurationService.getAwsRegion(),
-                        configurationService.getEnvironment(),
-                        configurationService.getDynamoEndpointUri());
     }
 
     @Override
-    public APIGatewayProxyResponseEvent handleRequest(
-            APIGatewayProxyRequestEvent input, Context context) {
-        if (input.getHeaders() == null
-                || !input.getHeaders().containsKey("Authorization")
-                || input.getHeaders().get("Authorization").isEmpty()) {
-            LOGGER.error("AccessToken is missing from request");
-            return generateApiGatewayProxyResponse(
-                    401,
-                    "",
-                    new UserInfoErrorResponse(MISSING_TOKEN).toHTTPResponse().getHeaderMap());
-        }
-
-        AccessToken accessToken;
+    public AuthPolicy handleRequest(TokenAuthorizerContext input, Context context) {
 
         try {
-            accessToken =
-                    AccessToken.parse(
-                            input.getHeaders().get("Authorization"), AccessTokenType.BEARER);
+            String token = input.getAuthorizationToken();
+
+            AccessToken accessToken;
+            accessToken = AccessToken.parse(token, AccessTokenType.BEARER);
+            //            TODO - Renable when terraform resources are shared across modules
+            //            boolean isAccessTokenSignatureValid =
+            // tokenService.validateAccessTokenSignature(accessToken);
+            //            if (!isAccessTokenSignatureValid) {
+            //                LOGGER.error("Access Token signature is not valid");
+            //                throw new RuntimeException("Unauthorized");
+            //            }
+            LOGGER.info("Successfully validated Access Token signature");
+            String subject = SignedJWT.parse(accessToken.getValue()).getJWTClaimsSet().getSubject();
+            String methodArn = input.getMethodArn();
+            String[] arnPartials = methodArn.split(":");
+            String region = arnPartials[3];
+            String awsAccountId = arnPartials[4];
+            String[] apiGatewayArnPartials = arnPartials[5].split("/");
+            String restApiId = apiGatewayArnPartials[0];
+            String stage = apiGatewayArnPartials[1];
+            LOGGER.info("Generating AuthPolicy");
+            return new AuthPolicy(
+                    subject,
+                    AuthPolicy.PolicyDocument.getAllowAllPolicy(
+                            region, awsAccountId, restApiId, stage));
         } catch (Exception e) {
-            LOGGER.error(
-                    format(
-                            "Unable to parse AccessToken with headers: %s.\n\n Exception thrown: %s",
-                            input.getHeaders(), e));
-            return generateApiGatewayProxyResponse(
-                    401,
-                    "",
-                    new UserInfoErrorResponse(INVALID_TOKEN).toHTTPResponse().getHeaderMap());
+            LOGGER.error("Unable to parse Access Token", e);
+            throw new RuntimeException("Unauthorized");
         }
-
-        Optional<String> subjectFromAccessToken =
-                tokenService.getSubjectWithAccessToken(accessToken);
-
-        return subjectFromAccessToken
-                .map(t -> validateScopesAndRetrieveUserInfo(t, accessToken, authenticationService))
-                .orElse(
-                        generateApiGatewayProxyResponse(
-                                401,
-                                "",
-                                new UserInfoErrorResponse(INVALID_TOKEN)
-                                        .toHTTPResponse()
-                                        .getHeaderMap()));
     }
 }
