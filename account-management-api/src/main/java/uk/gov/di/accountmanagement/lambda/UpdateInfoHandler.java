@@ -23,7 +23,6 @@ public class UpdateInfoHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-
         try {
             UpdateInfoRequest updateInfoRequest =
                     objectMapper.readValue(input.getBody(), UpdateInfoRequest.class);

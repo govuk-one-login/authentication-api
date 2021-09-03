@@ -37,9 +37,12 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
+import com.nimbusds.openid.connect.sdk.claims.AccessTokenHash;
 import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
+import com.nimbusds.openid.connect.sdk.validators.AccessTokenValidator;
 import com.nimbusds.openid.connect.sdk.validators.IDTokenValidator;
+import com.nimbusds.openid.connect.sdk.validators.InvalidHashException;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMException;
@@ -119,6 +122,25 @@ public class TokenService {
             validator.validate(idToken, null);
         } catch (java.text.ParseException | JOSEException | BadJOSEException e) {
             LOGGER.error("Unable to validate Signature of ID token", e);
+            return false;
+        }
+        return true;
+    }
+
+    public boolean validateAccessTokenSignature(AccessToken accessToken) {
+        try {
+            LOGGER.info("Validating Access Token signature");
+            LOGGER.info("TokenSigningKeyID: " + configService.getTokenSigningKeyId());
+            LOGGER.info("Issuer: " + configService.getBaseURL().get());
+            JWK publicJwk = getPublicJwk();
+            LOGGER.info("PublicJWK: " + publicJwk.toString());
+            JWKSet jwkSet = new JWKSet(publicJwk);
+            LOGGER.info("JWKSET: " + jwkSet);
+            AccessTokenHash accessTokenHash =
+                    AccessTokenHash.compute(accessToken, JWSAlgorithm.ES256);
+            AccessTokenValidator.validate(accessToken, JWSAlgorithm.ES256, accessTokenHash);
+        } catch (InvalidHashException e) {
+            LOGGER.error("Unable to validate Signature of Access token", e);
             return false;
         }
         return true;
