@@ -6,6 +6,7 @@ module "update_info" {
   endpoint_method = "POST"
   handler_environment_variables = {
     ENVIRONMENT = var.environment
+    DYNAMO_ENDPOINT          = var.use_localstack ? var.lambda_dynamo_endpoint : null
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.UpdateInfoHandler::handleRequest"
 
