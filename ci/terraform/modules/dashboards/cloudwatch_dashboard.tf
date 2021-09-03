@@ -6,13 +6,14 @@ resource "aws_cloudwatch_dashboard" "main" {
 
 locals {
   template = {
+    start = "-PT336H",
     widgets = [
       {
         height = 6, width = 12, y = 6, x = 0, type = "metric",
         properties = {
           metrics = [
             [
-              { expression = "FILL(m1, 0)", label = "", id = "e1", region = "eu-west-2" }
+              { expression = "FILL(m1, 0)", label = "", id = "e1", region = "eu-west-2", period = 900 }
             ],
             [
               "AWS/ApiGateway", "Latency", "ApiName", var.api_gateway_name,
@@ -22,7 +23,7 @@ locals {
           "view"    = "timeSeries",
           "stacked" = false,
           "region"  = "eu-west-2",
-          "period"  = 21600,
+          "period"  = 900,
           "stat"    = "Average",
           "title"   = "Latency",
           "yAxis" = {
@@ -39,7 +40,7 @@ locals {
         properties = {
           "metrics" = [
             [
-              { expression = "FILL(m1, 0)", label = "", id = "e1", region = "eu-west-2" }
+              { expression = "FILL(m1, 0)", label = "", id = "e1", region = "eu-west-2", period = 900 }
             ],
             [
               "AWS/ApiGateway", "Count", "ApiName", var.api_gateway_name,
@@ -49,7 +50,7 @@ locals {
           "view"    = "timeSeries",
           "stacked" = false,
           "region"  = "eu-west-2",
-          "period"  = 21600,
+          "period"  = 900,
           "stat"    = "Sum",
           "title"   = "Requests (sum/hr)",
           "yAxis" = {
@@ -63,7 +64,7 @@ locals {
         properties = {
           "metrics" = [
             [
-              { expression = "FILL(IF(m2 == 0, 1, 1-(m1/m2)), 1)*100", label = "", id = "e2", region = "eu-west-2", }
+              { expression = "FILL(IF(m2 == 0, 1, 1-(m1/m2)), 1)*100", label = "", id = "e2", region = "eu-west-2", period = 900}
             ],
             [
               "AWS/ApiGateway", "5XXError", "ApiName", var.api_gateway_name,
@@ -77,7 +78,7 @@ locals {
           "view"    = "timeSeries",
           "stacked" = false,
           "region"  = "eu-west-2",
-          "period"  = 21600,
+          "period"  = 900,
           "stat"    = "Sum",
           "title"   = "Successful requests",
           "yAxis" = {
