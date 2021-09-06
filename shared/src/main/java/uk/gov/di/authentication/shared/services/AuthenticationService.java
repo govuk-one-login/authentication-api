@@ -33,4 +33,6 @@ public interface AuthenticationService {
     void updateTermsAndConditions(String email, String version);
 
     void updateEmail(String currentEmail, String newEmail);
+
+    void removeAccount(String email);
 }

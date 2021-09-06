@@ -141,7 +141,14 @@ public class DynamoService implements AuthenticationService {
         userProfileMapper.delete(userProfileMapper.load(UserProfile.class, currentEmail));
         userCredentialsMapper.save(
                 userCredentialsMapper.load(UserCredentials.class, currentEmail).setEmail(newEmail));
-        userCredentialsMapper.delete(userCredentialsMapper.load(UserCredentials.class, currentEmail));
+        userCredentialsMapper.delete(
+                userCredentialsMapper.load(UserCredentials.class, currentEmail));
+    }
+
+    @Override
+    public void removeAccount(String email) {
+        userProfileMapper.delete(userProfileMapper.load(UserProfile.class, email));
+        userCredentialsMapper.delete(userCredentialsMapper.load(UserCredentials.class, email));
     }
 
     @Override

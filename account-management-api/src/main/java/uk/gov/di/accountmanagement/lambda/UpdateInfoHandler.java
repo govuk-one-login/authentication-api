@@ -18,6 +18,7 @@ import java.util.Map;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.RequestBodyHelper.validatePrincipal;
 
 public class UpdateInfoHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -53,18 +54,8 @@ public class UpdateInfoHandler
                     Map<String, Object> authorizerParams =
                             input.getRequestContext().getAuthorizer();
 
-                    if (!authorizerParams.containsKey("principalId")) {
-                        LOGGER.error("principalId is missing");
-                        throw new RuntimeException("principalId is missing");
-                    } else if (!subjectFromEmail
-                            .getValue()
-                            .equals(authorizerParams.get("principalId"))) {
-                        LOGGER.error(
-                                "Subject ID: {} does not match principalId: {}",
-                                subjectFromEmail,
-                                authorizerParams.get("principalId"));
-                        throw new RuntimeException("Subject ID does not match principalId");
-                    }
+                    validatePrincipal(subjectFromEmail, authorizerParams);
+
                     dynamoService.updateEmail(
                             updateInfoRequest.getExistingProfileAttribute(),
                             updateInfoRequest.getReplacementProfileAttribute());
