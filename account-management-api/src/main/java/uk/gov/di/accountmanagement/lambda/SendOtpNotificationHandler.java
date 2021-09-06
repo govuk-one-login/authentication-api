@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.frontendapi.lambda;
+package uk.gov.di.accountmanagement.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
@@ -9,60 +9,50 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.exception.SdkClientException;
-import uk.gov.di.authentication.frontendapi.entity.SendNotificationRequest;
-import uk.gov.di.authentication.frontendapi.services.AwsSqsClient;
-import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
+import uk.gov.di.accountmanagement.entity.SendNotificationRequest;
+import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
-import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.SessionState;
-import uk.gov.di.authentication.shared.helpers.StateMachine;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.ValidationService;
 
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1011;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1017;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
-public class SendNotificationHandler
+public class SendOtpNotificationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SendNotificationHandler.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SendOtpNotificationHandler.class);
 
     private final ConfigurationService configurationService;
     private final ValidationService validationService;
     private final AwsSqsClient sqsClient;
-    private final SessionService sessionService;
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public SendNotificationHandler(
+    public SendOtpNotificationHandler(
             ConfigurationService configurationService,
             ValidationService validationService,
             AwsSqsClient sqsClient,
-            SessionService sessionService,
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService) {
         this.configurationService = configurationService;
         this.validationService = validationService;
         this.sqsClient = sqsClient;
-        this.sessionService = sessionService;
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
     }
 
-    public SendNotificationHandler() {
+    public SendOtpNotificationHandler() {
         this.configurationService = new ConfigurationService();
         this.sqsClient =
                 new AwsSqsClient(
@@ -70,7 +60,6 @@ public class SendNotificationHandler
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
         this.validationService = new ValidationService();
-        sessionService = new SessionService(configurationService);
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
@@ -79,50 +68,24 @@ public class SendNotificationHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
-        if (session.isEmpty()) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-        }
+        LOGGER.info("Request received in SendOtp Lambda");
         try {
             SendNotificationRequest sendNotificationRequest =
                     objectMapper.readValue(input.getBody(), SendNotificationRequest.class);
-            if (!session.get().validateSession(sendNotificationRequest.getEmail())) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-            }
             switch (sendNotificationRequest.getNotificationType()) {
                 case VERIFY_EMAIL:
-                    StateMachine.validateStateTransition(
-                            session.get(), SessionState.VERIFY_EMAIL_CODE_SENT);
-
+                    LOGGER.info("NotificationType is VERIFY_EMAIL");
                     Optional<ErrorResponse> emailErrorResponse =
                             validationService.validateEmailAddress(
                                     sendNotificationRequest.getEmail());
                     if (emailErrorResponse.isPresent()) {
+                        LOGGER.error(
+                                "Invalid email address. Errors are: {}", emailErrorResponse.get());
                         return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
                     }
                     return handleNotificationRequest(
                             sendNotificationRequest.getEmail(),
-                            sendNotificationRequest.getNotificationType(),
-                            session.get());
-                case VERIFY_PHONE_NUMBER:
-                    StateMachine.validateStateTransition(
-                            session.get(), SessionState.VERIFY_PHONE_NUMBER_CODE_SENT);
-
-                    if (sendNotificationRequest.getPhoneNumber() == null) {
-                        return generateApiGatewayProxyResponse(400, ERROR_1011);
-                    }
-                    String phoneNumber =
-                            removeWhitespaceFromPhoneNumber(
-                                    sendNotificationRequest.getPhoneNumber());
-                    Optional<ErrorResponse> errorResponse =
-                            validationService.validatePhoneNumber(phoneNumber);
-                    if (errorResponse.isPresent()) {
-                        return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
-                    }
-                    return handleNotificationRequest(
-                            phoneNumber,
-                            sendNotificationRequest.getNotificationType(),
-                            session.get());
+                            sendNotificationRequest.getNotificationType());
             }
             return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
         } catch (SdkClientException ex) {
@@ -131,18 +94,11 @@ public class SendNotificationHandler
         } catch (JsonProcessingException e) {
             LOGGER.error("Error parsing request", e);
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
-        } catch (StateMachine.InvalidStateTransitionException e) {
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
         }
     }
 
-    private String removeWhitespaceFromPhoneNumber(String phoneNumber) {
-        return phoneNumber.replaceAll("\\s+", "");
-    }
-
     private APIGatewayProxyResponseEvent handleNotificationRequest(
-            String destination, NotificationType notificationType, Session session)
-            throws JsonProcessingException {
+            String destination, NotificationType notificationType) throws JsonProcessingException {
 
         String code = codeGeneratorService.sixDigitCode();
         NotifyRequest notifyRequest = new NotifyRequest(destination, notificationType, code);
@@ -154,21 +110,12 @@ public class SendNotificationHandler
                         code,
                         configurationService.getCodeExpiry(),
                         NotificationType.VERIFY_EMAIL);
-                sessionService.save(session.setState(SessionState.VERIFY_EMAIL_CODE_SENT));
-                break;
-            case VERIFY_PHONE_NUMBER:
-                codeStorageService.saveOtpCode(
-                        session.getEmailAddress(),
-                        code,
-                        configurationService.getCodeExpiry(),
-                        NotificationType.VERIFY_PHONE_NUMBER);
-                sessionService.save(
-                        session.setState(SessionState.VERIFY_PHONE_NUMBER_CODE_SENT)
-                                .resetRetryCount());
                 break;
         }
+        LOGGER.info("Sending message to SQS queue for notificcationType: {}", notificationType);
         sqsClient.send(serialiseRequest(notifyRequest));
-        return generateApiGatewayProxyResponse(200, new BaseAPIResponse(session.getState()));
+        LOGGER.info("Generating successful API response");
+        return generateApiGatewayProxyResponse(200, "");
     }
 
     private String serialiseRequest(Object request) throws JsonProcessingException {

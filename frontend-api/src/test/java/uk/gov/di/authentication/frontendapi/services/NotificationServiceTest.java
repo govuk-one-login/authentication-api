@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.frontendapi.services;
 
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
