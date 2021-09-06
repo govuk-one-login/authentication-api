@@ -88,7 +88,6 @@ data "aws_iam_policy_document" "dynamo_policy_document" {
       "dynamodb:BatchGetItem",
       "dynamodb:DescribeStream",
       "dynamodb:DescribeTable",
-      "dynamodb:DeleteItem",
       "dynamodb:Get*",
       "dynamodb:Query",
       "dynamodb:Scan",
