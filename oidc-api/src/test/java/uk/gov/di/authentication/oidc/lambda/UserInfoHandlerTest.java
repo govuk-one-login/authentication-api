@@ -68,7 +68,7 @@ public class UserInfoHandlerTest {
         scopes.add("phone");
         SignedJWT signedAccessToken =
                 TokenGeneratorHelper.generateAccessToken(
-                        "client-id", "issuer-url", scopes, ecSigningKey);
+                        "client-id", "issuer-url", scopes, ecSigningKey, SUBJECT);
         AccessToken accessToken = new BearerAccessToken(signedAccessToken.serialize());
         UserProfile userProfile =
                 new UserProfile()

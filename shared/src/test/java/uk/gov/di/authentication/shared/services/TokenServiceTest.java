@@ -318,7 +318,8 @@ public class TokenServiceTest {
                         .keyID(KEY_ID)
                         .algorithm(JWSAlgorithm.ES256)
                         .generate();
-        return TokenGeneratorHelper.generateAccessToken(CLIENT_ID, BASE_URL, SCOPES, ecSigningKey);
+        return TokenGeneratorHelper.generateAccessToken(
+                CLIENT_ID, BASE_URL, SCOPES, ecSigningKey, SUBJECT);
     }
 
     private KeyPair generateRsaKeyPair() {
