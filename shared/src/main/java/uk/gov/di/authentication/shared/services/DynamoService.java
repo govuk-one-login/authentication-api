@@ -33,6 +33,13 @@ public class DynamoService implements AuthenticationService {
     private static final String USER_PROFILE_TABLE = "user-profile";
     private final AmazonDynamoDB dynamoDB;
 
+    public DynamoService(ConfigurationService configurationService) {
+        this(
+                configurationService.getAwsRegion(),
+                configurationService.getEnvironment(),
+                configurationService.getDynamoEndpointUri());
+    }
+
     public DynamoService(String region, String environment, Optional<String> dynamoEndpoint) {
         dynamoDB =
                 dynamoEndpoint
@@ -125,6 +132,14 @@ public class DynamoService implements AuthenticationService {
                 userProfileMapper
                         .load(UserProfile.class, email)
                         .setTermsAndConditions(termsAndConditions));
+    }
+
+    @Override
+    public void updateEmail(String currentEmail, String newEmail) {
+        userProfileMapper.save(
+                userProfileMapper.load(UserProfile.class, currentEmail).setEmail(newEmail));
+        userCredentialsMapper.save(
+                userCredentialsMapper.load(UserCredentials.class, currentEmail).setEmail(newEmail));
     }
 
     @Override
