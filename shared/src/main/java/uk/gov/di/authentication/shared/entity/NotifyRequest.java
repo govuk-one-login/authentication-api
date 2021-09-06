@@ -1,7 +1,6 @@
-package uk.gov.di.authentication.frontendapi.entity;
+package uk.gov.di.authentication.shared.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import uk.gov.di.authentication.shared.entity.NotificationType;
 
 public class NotifyRequest {
 

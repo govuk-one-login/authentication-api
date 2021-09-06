@@ -6,9 +6,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import uk.gov.di.authentication.frontendapi.entity.NotifyRequest;
 import uk.gov.di.authentication.frontendapi.services.AwsSqsClient;
 import uk.gov.di.authentication.helpers.httpstub.HttpStubExtension;
+import uk.gov.di.authentication.shared.entity.NotifyRequest;
 
 import java.util.Optional;
 
