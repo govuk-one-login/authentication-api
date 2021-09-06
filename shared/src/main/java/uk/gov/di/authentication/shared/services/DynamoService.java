@@ -138,8 +138,10 @@ public class DynamoService implements AuthenticationService {
     public void updateEmail(String currentEmail, String newEmail) {
         userProfileMapper.save(
                 userProfileMapper.load(UserProfile.class, currentEmail).setEmail(newEmail));
+        userProfileMapper.delete(userProfileMapper.load(UserProfile.class, currentEmail));
         userCredentialsMapper.save(
                 userCredentialsMapper.load(UserCredentials.class, currentEmail).setEmail(newEmail));
+        userCredentialsMapper.delete(userCredentialsMapper.load(UserCredentials.class, currentEmail));
     }
 
     @Override
