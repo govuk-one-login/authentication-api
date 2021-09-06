@@ -34,5 +34,7 @@ public interface AuthenticationService {
 
     void updateEmail(String currentEmail, String newEmail);
 
+    void updatePassword(String email, String newPassword);
+
     void removeAccount(String email);
 }

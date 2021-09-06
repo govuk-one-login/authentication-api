@@ -146,6 +146,14 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
+    public void updatePassword(String email, String newPassword) {
+        userCredentialsMapper.save(
+                userCredentialsMapper
+                        .load(UserCredentials.class, email)
+                        .setPassword(hashPassword(newPassword)));
+    }
+
+    @Override
     public void removeAccount(String email) {
         userProfileMapper.delete(userProfileMapper.load(UserProfile.class, email));
         userCredentialsMapper.delete(userCredentialsMapper.load(UserCredentials.class, email));
