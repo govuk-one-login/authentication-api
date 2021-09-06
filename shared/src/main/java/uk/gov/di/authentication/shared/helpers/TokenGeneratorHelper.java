@@ -83,7 +83,11 @@ public class TokenGeneratorHelper {
     }
 
     public static SignedJWT generateAccessToken(
-            String clientId, String issuerUrl, List<String> scopes, ECKey signingKey) {
+            String clientId,
+            String issuerUrl,
+            List<String> scopes,
+            ECKey signingKey,
+            Subject subject) {
 
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
@@ -99,6 +103,7 @@ public class TokenGeneratorHelper {
                                                 .atZone(ZoneId.systemDefault())
                                                 .toInstant()))
                         .claim("client_id", clientId)
+                        .subject(subject.getValue())
                         .jwtID(UUID.randomUUID().toString())
                         .build();
 

@@ -272,6 +272,7 @@ public class TokenService {
                                                 .atZone(ZoneId.systemDefault())
                                                 .toInstant()))
                         .claim("client_id", clientId)
+                        .subject(subject.getValue())
                         .jwtID(UUID.randomUUID().toString())
                         .build();
         SignedJWT signedJWT = generateSignedJWT(claimsSet);
