@@ -14,6 +14,18 @@ public class ValidationService {
     private static final Pattern EMAIL_REGEX = Pattern.compile("[^@]+@[^@]+\\.[^@]*");
     private static final Pattern PASSWORD_REGEX = Pattern.compile(".*\\d.*");
 
+    public Optional<ErrorResponse> validateEmailAddressUpdate(
+            String existingEmail, String replacementEmail) {
+        if (existingEmail.equals(replacementEmail)) {
+            return Optional.of(ErrorResponse.ERROR_1019);
+        }
+        Optional<ErrorResponse> existingEmailError = validateEmailAddress(existingEmail);
+        if (existingEmailError.isPresent()) {
+            return existingEmailError;
+        }
+        return validateEmailAddress(replacementEmail);
+    }
+
     public Optional<ErrorResponse> validateEmailAddress(String email) {
         if (email.isBlank()) {
             return Optional.of(ErrorResponse.ERROR_1003);

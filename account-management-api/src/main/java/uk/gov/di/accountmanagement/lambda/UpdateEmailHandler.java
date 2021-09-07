@@ -16,8 +16,10 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.ValidationService;
 
 import java.util.Map;
+import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -28,6 +30,7 @@ public class UpdateEmailHandler
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final DynamoService dynamoService;
     private final AwsSqsClient sqsClient;
+    private final ValidationService validationService;
     private static final Logger LOGGER = LoggerFactory.getLogger(UpdateEmailHandler.class);
 
     public UpdateEmailHandler() {
@@ -38,11 +41,16 @@ public class UpdateEmailHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
+        this.validationService = new ValidationService();
     }
 
-    public UpdateEmailHandler(DynamoService dynamoService, AwsSqsClient sqsClient) {
+    public UpdateEmailHandler(
+            DynamoService dynamoService,
+            AwsSqsClient sqsClient,
+            ValidationService validationService) {
         this.dynamoService = dynamoService;
         this.sqsClient = sqsClient;
+        this.validationService = validationService;
     }
 
     @Override
@@ -54,6 +62,16 @@ public class UpdateEmailHandler
         try {
             UpdateEmailRequest updateInfoRequest =
                     objectMapper.readValue(input.getBody(), UpdateEmailRequest.class);
+            Optional<ErrorResponse> emailValidationErrors =
+                    validationService.validateEmailAddressUpdate(
+                            updateInfoRequest.getExistingEmailAddress(),
+                            updateInfoRequest.getReplacementEmailAddress());
+            if (emailValidationErrors.isPresent()) {
+                LOGGER.error(
+                        "Invalid email address with error: {}",
+                        emailValidationErrors.get().getMessage());
+                return generateApiGatewayProxyErrorResponse(400, emailValidationErrors.get());
+            }
             Subject subjectFromEmail =
                     dynamoService.getSubjectFromEmail(updateInfoRequest.getExistingEmailAddress());
             Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
