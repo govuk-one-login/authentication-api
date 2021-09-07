@@ -13,6 +13,7 @@ public class CodeStorageService {
     private static final Logger LOGGER = LoggerFactory.getLogger(CodeStorageService.class);
     private final RedisConnectionService redisConnectionService;
     private static final String EMAIL_KEY_PREFIX = "email-code:";
+    private static final String PHONE_NUMBER_KEY_PREFIX = "phone-number-code:";
 
     public CodeStorageService(RedisConnectionService redisConnectionService) {
         this.redisConnectionService = redisConnectionService;
@@ -60,6 +61,8 @@ public class CodeStorageService {
         switch (notificationType) {
             case VERIFY_EMAIL:
                 return EMAIL_KEY_PREFIX;
+            case VERIFY_PHONE_NUMBER:
+                return PHONE_NUMBER_KEY_PREFIX;
         }
         throw new RuntimeException(
                 String.format("No redis prefix key configured for %s", notificationType));
