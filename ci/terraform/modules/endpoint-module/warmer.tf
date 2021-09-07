@@ -26,7 +26,7 @@ resource "aws_lambda_function" "warmer_function" {
 }
 
 resource "aws_cloudwatch_log_group" "warmer_lambda_log_group" {
-  count = var.use_localstack ? 0 : 1
+  count = var.warmer_handler_function_name == null ? 0 : 1
 
   name  = "/aws/lambda/${aws_lambda_function.warmer_function[0].function_name}"
   tags = merge(var.default_tags, {
