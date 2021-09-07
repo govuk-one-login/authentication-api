@@ -89,6 +89,10 @@ public class UpdateEmailHandler
                         emailValidationErrors.get().getMessage());
                 return generateApiGatewayProxyErrorResponse(400, emailValidationErrors.get());
             }
+            if (dynamoService.userExists(updateInfoRequest.getReplacementEmailAddress())) {
+                LOGGER.error("An account with this email address already exists");
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
+            }
             Subject subjectFromEmail =
                     dynamoService.getSubjectFromEmail(updateInfoRequest.getExistingEmailAddress());
             Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
