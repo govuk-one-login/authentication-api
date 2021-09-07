@@ -34,12 +34,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
 class SendOtpNotificationHandlerTest {
 
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_SIX_DIGIT_CODE = "123456";
+    private static final String TEST_PHONE_NUMBER = "01234567891";
     private static final long CODE_EXPIRY_TIME = 900;
     private final ValidationService validationService = mock(ValidationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -63,7 +65,7 @@ class SendOtpNotificationHandlerTest {
     }
 
     @Test
-    void shouldReturn200AndPutMessageOnQueueForAValidRequest() throws JsonProcessingException {
+    void shouldReturn200AndPutMessageOnQueueForAValidEmailRequest() throws JsonProcessingException {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
         NotifyRequest notifyRequest =
@@ -85,6 +87,32 @@ class SendOtpNotificationHandlerTest {
         verify(codeStorageService)
                 .saveOtpCode(
                         TEST_EMAIL_ADDRESS, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
+    }
+
+    @Test
+    void shouldReturn200AndPutMessageOnQueueForAValidPhoneRequest() throws JsonProcessingException {
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, TEST_SIX_DIGIT_CODE);
+        ObjectMapper objectMapper = new ObjectMapper();
+        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of());
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\"  }",
+                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(200, result.getStatusCode());
+
+        verify(awsSqsClient).send(serialisedRequest);
+        verify(codeStorageService)
+                .saveOtpCode(
+                        TEST_EMAIL_ADDRESS,
+                        TEST_SIX_DIGIT_CODE,
+                        CODE_EXPIRY_TIME,
+                        VERIFY_PHONE_NUMBER);
     }
 
     @Test
@@ -115,6 +143,24 @@ class SendOtpNotificationHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1004));
+    }
+
+    @Test
+    public void shouldReturn400IfPhoneNumberIsInvalid() {
+        when(validationService.validatePhoneNumber(eq("12345")))
+                .thenReturn(Optional.of(ErrorResponse.ERROR_1012));
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of());
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
+                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, "12345"));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1012));
     }
 
     @Test

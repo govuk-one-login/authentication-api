@@ -9,7 +9,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.exception.SdkClientException;
-import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.SendNotificationRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
@@ -84,8 +83,21 @@ public class SendOtpNotificationHandler
                         return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
                     }
                     return handleNotificationRequest(
-                            sendNotificationRequest.getEmail(),
-                            sendNotificationRequest.getNotificationType());
+                            sendNotificationRequest.getEmail(), sendNotificationRequest);
+                case VERIFY_PHONE_NUMBER:
+                    LOGGER.info("NotificationType is VERIFY_PHONE_NUMBER");
+                    Optional<ErrorResponse> phoneNumberValidationError =
+                            validationService.validatePhoneNumber(
+                                    sendNotificationRequest.getPhoneNumber());
+                    if (phoneNumberValidationError.isPresent()) {
+                        LOGGER.error(
+                                "Invalid phone number. Errors are: {}",
+                                phoneNumberValidationError.get());
+                        return generateApiGatewayProxyErrorResponse(
+                                400, phoneNumberValidationError.get());
+                    }
+                    return handleNotificationRequest(
+                            sendNotificationRequest.getPhoneNumber(), sendNotificationRequest);
             }
             return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
         } catch (SdkClientException ex) {
@@ -98,21 +110,20 @@ public class SendOtpNotificationHandler
     }
 
     private APIGatewayProxyResponseEvent handleNotificationRequest(
-            String destination, NotificationType notificationType) throws JsonProcessingException {
+            String destination, SendNotificationRequest sendNotificationRequest)
+            throws JsonProcessingException {
 
         String code = codeGeneratorService.sixDigitCode();
-        NotifyRequest notifyRequest = new NotifyRequest(destination, notificationType, code);
-
-        switch (notificationType) {
-            case VERIFY_EMAIL:
-                codeStorageService.saveOtpCode(
-                        destination,
-                        code,
-                        configurationService.getCodeExpiry(),
-                        NotificationType.VERIFY_EMAIL);
-                break;
-        }
-        LOGGER.info("Sending message to SQS queue for notificcationType: {}", notificationType);
+        NotifyRequest notifyRequest =
+                new NotifyRequest(destination, sendNotificationRequest.getNotificationType(), code);
+        codeStorageService.saveOtpCode(
+                sendNotificationRequest.getEmail(),
+                code,
+                configurationService.getCodeExpiry(),
+                sendNotificationRequest.getNotificationType());
+        LOGGER.info(
+                "Sending message to SQS queue for notificationType: {}",
+                sendNotificationRequest.getNotificationType());
         sqsClient.send(serialiseRequest(notifyRequest));
         LOGGER.info("Generating successful API response");
         return generateApiGatewayProxyResponse(200, "");
