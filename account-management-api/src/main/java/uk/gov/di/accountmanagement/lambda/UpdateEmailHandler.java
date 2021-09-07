@@ -13,9 +13,12 @@ import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdateEmailRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
+import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.ValidationService;
 
 import java.util.Map;
@@ -31,6 +34,7 @@ public class UpdateEmailHandler
     private final DynamoService dynamoService;
     private final AwsSqsClient sqsClient;
     private final ValidationService validationService;
+    private final CodeStorageService codeStorageService;
     private static final Logger LOGGER = LoggerFactory.getLogger(UpdateEmailHandler.class);
 
     public UpdateEmailHandler() {
@@ -42,15 +46,19 @@ public class UpdateEmailHandler
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
         this.validationService = new ValidationService();
+        this.codeStorageService =
+                new CodeStorageService(new RedisConnectionService(configurationService));
     }
 
     public UpdateEmailHandler(
             DynamoService dynamoService,
             AwsSqsClient sqsClient,
-            ValidationService validationService) {
+            ValidationService validationService,
+            CodeStorageService codeStorageService) {
         this.dynamoService = dynamoService;
         this.sqsClient = sqsClient;
         this.validationService = validationService;
+        this.codeStorageService = codeStorageService;
     }
 
     @Override
@@ -62,6 +70,16 @@ public class UpdateEmailHandler
         try {
             UpdateEmailRequest updateInfoRequest =
                     objectMapper.readValue(input.getBody(), UpdateEmailRequest.class);
+            boolean isValidOtpCode =
+                    codeStorageService.isValidOtpCode(
+                            updateInfoRequest.getExistingEmailAddress(),
+                            updateInfoRequest.getOtp(),
+                            NotificationType.VERIFY_EMAIL);
+            if (!isValidOtpCode) {
+                LOGGER.error(
+                        "Invalid OTP code sent in request");
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
+            }
             Optional<ErrorResponse> emailValidationErrors =
                     validationService.validateEmailAddressUpdate(
                             updateInfoRequest.getExistingEmailAddress(),
@@ -75,17 +93,7 @@ public class UpdateEmailHandler
             Subject subjectFromEmail =
                     dynamoService.getSubjectFromEmail(updateInfoRequest.getExistingEmailAddress());
             Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
-
-            if (!authorizerParams.containsKey("principalId")) {
-                LOGGER.error("principalId is missing");
-                throw new RuntimeException("principalId is missing");
-            } else if (!subjectFromEmail.getValue().equals(authorizerParams.get("principalId"))) {
-                LOGGER.error(
-                        "Subject ID: {} does not match principalId: {}",
-                        subjectFromEmail,
-                        authorizerParams.get("principalId"));
-                throw new RuntimeException("Subject ID does not match principalId");
-            }
+            RequestBodyHelper.validatePrincipal(subjectFromEmail, authorizerParams);
             dynamoService.updateEmail(
                     updateInfoRequest.getExistingEmailAddress(),
                     updateInfoRequest.getReplacementEmailAddress());
