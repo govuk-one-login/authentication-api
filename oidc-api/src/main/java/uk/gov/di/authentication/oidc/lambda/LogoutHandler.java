@@ -88,6 +88,7 @@ public class LogoutHandler
                 CookieHelper.parseSessionCookie(input.getHeaders());
 
         if (!session.getClientSessions().contains(sessionCookieIds.get().getClientSessionId())) {
+            LOG.error("Client Session ID does not exist in Session: {}", session.getSessionId());
             throw new RuntimeException(
                     format(
                             "Client Session ID does not exist in Session: %s",
@@ -100,11 +101,14 @@ public class LogoutHandler
             return generateDefaultLogoutResponse(state);
         }
         if (!doesIDTokenExistInSession(queryStringParameters.get("id_token_hint"), session)) {
-            LOG.error("ID token doesn't exist in session");
+            LOG.error("ID token doesn't exist in session {}", session.getSessionId());
             throw new RuntimeException(
                     format("ID Token does not exist for Session: %s", session.getSessionId()));
         }
         if (!tokenService.validateIdTokenSignature(queryStringParameters.get("id_token_hint"))) {
+            LOG.error(
+                    "Unable to validate ID token signature for Session: {}",
+                    session.getSessionId());
             throw new RuntimeException(
                     format(
                             "Unable to validate ID token signature for Session: %s",
@@ -140,11 +144,15 @@ public class LogoutHandler
                 dynamoClientService
                         .getClient(clientID)
                         .orElseThrow(
-                                () ->
-                                        new RuntimeException(
-                                                format(
-                                                        "Client not found in ClientRegistry for ClientID: %s",
-                                                        clientID)));
+                                () -> {
+                                    LOG.error(
+                                            "Client not found in ClientRegistry for ClientID: {}",
+                                            clientID);
+                                    return new RuntimeException(
+                                            format(
+                                                    "Client not found in ClientRegistry for ClientID: %s",
+                                                    clientID));
+                                });
         if ((queryStringParameters.containsKey("post_logout_redirect_uri"))
                 && (!queryStringParameters.get("post_logout_redirect_uri").isBlank())
                 && (clientRegistry

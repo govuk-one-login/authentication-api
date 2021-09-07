@@ -105,7 +105,17 @@ public class TokenHandler
             return generateApiGatewayProxyResponse(
                     400, OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString());
         }
-        String baseUrl = configurationService.getBaseURL().orElseThrow();
+        String baseUrl =
+                configurationService
+                        .getBaseURL()
+                        .orElseThrow(
+                                () -> {
+                                    LOG.error("Application was not configured with baseURL");
+                                    // TODO - We need to come up with a strategy to handle uncaught
+                                    // exceptions
+                                    return new RuntimeException(
+                                            "Application was not configured with baseURL");
+                                });
         String tokenUrl = baseUrl + TOKEN_PATH;
         Optional<ErrorObject> invalidPrivateKeyJwtError =
                 tokenService.validatePrivateKeyJWT(
@@ -140,6 +150,10 @@ public class TokenHandler
                             clientSession.getAuthRequestParams(), e));
         }
         if (!authRequest.getRedirectionURI().toString().equals(requestBody.get("redirect_uri"))) {
+            LOG.error(
+                    "Redirect URI for auth request ({}) does not match redirect URI for request body ({})",
+                    authRequest.getRedirectionURI(),
+                    requestBody.get("redirect_uri"));
             return generateApiGatewayProxyResponse(
                     400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
         }

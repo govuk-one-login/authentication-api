@@ -81,12 +81,14 @@ public class AuthorisationHandler
         try {
             authRequest = AuthenticationRequest.parse(queryStringParameters);
         } catch (ParseException e) {
-            LOGGER.error("Authentication request could not be parsed", e);
             if (e.getRedirectionURI() == null) {
-                LOGGER.error("Redirect URI or Client ID is missing from auth request");
+                LOGGER.error(
+                        "Authentication request could not be parsed: redirect URI or Client ID is missing from auth request");
+                // TODO - We need to come up with a strategy to handle uncaught exceptions
                 throw new RuntimeException(
                         "Redirect URI or ClientID is missing from auth request", e);
             }
+            LOGGER.error("Authentication request could not be parsed", e);
             return generateErrorResponse(
                     e.getRedirectionURI(), e.getState(), e.getResponseMode(), e.getErrorObject());
         }

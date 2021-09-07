@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenService;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.INVALID_TOKEN;
@@ -87,13 +88,20 @@ public class UserInfoHandler
                 tokenService.getSubjectWithAccessToken(accessToken);
 
         return subjectFromAccessToken
-                .map(t -> validateScopesAndRetrieveUserInfo(t, accessToken, authenticationService))
-                .orElse(
-                        generateApiGatewayProxyResponse(
-                                401,
-                                "",
-                                new UserInfoErrorResponse(INVALID_TOKEN)
-                                        .toHTTPResponse()
-                                        .getHeaderMap()));
+                .map(
+                        t ->
+                                validateScopesAndRetrieveUserInfo(
+                                        t, accessToken, authenticationService, input.getHeaders()))
+                .orElse(generateErrorResponse(input.getHeaders()));
+    }
+
+    private APIGatewayProxyResponseEvent generateErrorResponse(Map<String, String> headers) {
+        LOGGER.error(
+                format(
+                        "Encountered an error while validating scope and retrieving user info for AccessToken with headers: %s.",
+                        headers));
+
+        return generateApiGatewayProxyResponse(
+                401, "", new UserInfoErrorResponse(INVALID_TOKEN).toHTTPResponse().getHeaderMap());
     }
 }
