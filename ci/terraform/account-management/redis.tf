@@ -1,7 +1,7 @@
 resource "aws_elasticache_subnet_group" "account_management_sessions_store" {
   count = var.use_localstack ? 0 : 1
 
-  name       = "${var.environment}-account-management-session-store-cache-subnet"
+  name       = "${var.environment}-account-mgmt-session-store-cache-subnet"
   subnet_ids = aws_subnet.account_management_subnets.*.id
   depends_on = [
     aws_vpc.account_management_vpc,
@@ -24,7 +24,7 @@ resource "aws_elasticache_replication_group" "account_management_sessions_store"
 
   automatic_failover_enabled    = true
   availability_zones            = data.aws_availability_zones.available.names
-  replication_group_id          = "${var.environment}-account-management-sessions-store"
+  replication_group_id          = "${var.environment}-account-mgmt-sessions-store"
   replication_group_description = "A Redis cluster for storing user session data"
   node_type                     = "cache.t2.medium"
   number_cache_clusters         = length(data.aws_availability_zones.available.names)
