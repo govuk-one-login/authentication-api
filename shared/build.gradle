@@ -15,6 +15,7 @@ dependencies {
             configurations.nimbus,
             configurations.jackson,
             configurations.bouncycastle,
+            configurations.govuk_notify,
             configurations.dynamodb,
             configurations.lettuce,
             configurations.hamcrest,

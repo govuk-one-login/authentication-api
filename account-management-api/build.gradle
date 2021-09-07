@@ -13,7 +13,9 @@ dependencies {
     implementation configurations.lambda,
             configurations.nimbus,
             configurations.dynamodb,
+            configurations.govuk_notify,
             configurations.jackson,
+            configurations.sqs,
             project(":shared")
 
     runtimeOnly configurations.logging_runtime

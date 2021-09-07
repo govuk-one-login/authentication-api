@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.frontendapi.services;
+package uk.gov.di.authentication.shared.services;
 
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.service.notify.NotificationClient;

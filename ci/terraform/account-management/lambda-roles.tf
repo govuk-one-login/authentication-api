@@ -97,6 +97,25 @@ data "aws_iam_policy_document" "endpoint_networking_policy" {
   }
 }
 
+resource "aws_iam_role" "sqs_lambda_iam_role" {
+  name = "${var.environment}-account-management-sqs-lambda-role"
+
+  assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_policy.json
+  tags = {
+    environment = var.environment
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "sqs_lambda_logs" {
+  role       = aws_iam_role.sqs_lambda_iam_role.name
+  policy_arn = aws_iam_policy.endpoint_logging_policy.arn
+}
+
+resource "aws_iam_role_policy_attachment" "sqs_lambda_networking" {
+  role       = aws_iam_role.sqs_lambda_iam_role.name
+  policy_arn = aws_iam_policy.endpoint_networking_policy.arn
+}
+
 resource "aws_iam_policy" "endpoint_networking_policy" {
   name        = "${var.environment}-account-management-standard-lambda-networking"
   path        = "/"
@@ -128,6 +147,7 @@ data "aws_iam_policy_document" "dynamo_policy_document" {
       "dynamodb:GetItem",
       "dynamodb:UpdateItem",
       "dynamodb:DescribeTable",
+      "dynamodb:DeleteItem",
     ]
     resources = [
       data.aws_dynamodb_table.user_credentials_table.arn,

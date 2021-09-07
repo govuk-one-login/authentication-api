@@ -4,6 +4,16 @@ variable "deployer_role_arn" {
   type        = string
 }
 
+variable "notify_api_key" {
+  description = "The API key required to communicate with Notify"
+  type        = string
+}
+
+variable "notify_url" {
+  type    = string
+  default = null
+}
+
 variable "environment" {
   type = string
 }
@@ -63,4 +73,24 @@ variable "logging_endpoint_arn" {
   type        = string
   default     = ""
   description = "Amazon Resource Name (ARN) for the endpoint to ship logs to"
+}
+
+variable "external_redis_host" {
+  type    = string
+  default = "redis"
+}
+
+variable "external_redis_port" {
+  type    = number
+  default = 6379
+}
+
+variable "external_redis_password" {
+  type    = string
+  default = null
+}
+
+variable "redis_use_tls" {
+  type    = string
+  default = "true"
 }
