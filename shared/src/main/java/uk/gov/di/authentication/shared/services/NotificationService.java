@@ -32,6 +32,8 @@ public class NotificationService {
                 return System.getenv("VERIFY_PHONE_NUMBER_TEMPLATE_ID");
             case MFA_SMS:
                 return System.getenv("MFA_SMS_TEMPLATE_ID");
+            case EMAIL_UPDATED:
+                return System.getenv("EMAIL_UPDATED_TEMPLATE_ID");
             default:
                 throw new RuntimeException("NotificationType template ID does not exist");
         }

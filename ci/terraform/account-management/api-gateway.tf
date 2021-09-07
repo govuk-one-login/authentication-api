@@ -125,7 +125,7 @@ resource "aws_api_gateway_deployment" "deployment" {
 
   triggers = {
     redeployment = sha1(jsonencode([
-      module.update_info.integration_trigger_value,
+      module.update_email.integration_trigger_value,
       module.authenticate.integration_trigger_value,
     ]))
   }
@@ -134,7 +134,7 @@ resource "aws_api_gateway_deployment" "deployment" {
     create_before_destroy = true
   }
   depends_on = [
-    module.update_info,
+    module.update_email,
     module.authenticate,
   ]
 }
@@ -147,7 +147,7 @@ resource "aws_api_gateway_stage" "stage" {
   tags = local.default_tags
 
   depends_on = [
-    module.update_info,
+    module.update_email,
     module.authenticate,
     aws_api_gateway_deployment.deployment,
   ]
