@@ -8,19 +8,15 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.accountmanagement.entity.NotificationType;
+import uk.gov.di.accountmanagement.entity.NotifyRequest;
+import uk.gov.di.accountmanagement.services.NotificationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
 import java.util.HashMap;
 import java.util.Map;
-
-import static uk.gov.di.authentication.shared.entity.NotificationType.DELETE_ACCOUNT;
-import static uk.gov.di.authentication.shared.entity.NotificationType.EMAIL_UPDATED;
-import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
-import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 
 public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
@@ -64,18 +60,19 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     emailPersonalisation,
-                                    notificationService.getNotificationTemplateId(VERIFY_EMAIL));
+                                    notificationService.getNotificationTemplateId(
+                                            NotificationType.VERIFY_EMAIL));
                             LOGGER.info("VERIFY_EMAIL email has been sent using Notify");
                             break;
                         case VERIFY_PHONE_NUMBER:
                             Map<String, Object> phonePersonalisation = new HashMap<>();
                             phonePersonalisation.put("validation-code", notifyRequest.getCode());
-                            LOGGER.info("Sending VERIFY_EMAIL email using Notify");
+                            LOGGER.info("Sending VERIFY_PHONE_NUMBER email using Notify");
                             notificationService.sendText(
                                     notifyRequest.getDestination(),
                                     phonePersonalisation,
                                     notificationService.getNotificationTemplateId(
-                                            VERIFY_PHONE_NUMBER));
+                                            NotificationType.VERIFY_PHONE_NUMBER));
                             LOGGER.info("VERIFY_PHONE_NUMBER text has been sent using Notify");
                             break;
                         case EMAIL_UPDATED:
@@ -86,14 +83,16 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     emailUpdatePersonalisation,
-                                    notificationService.getNotificationTemplateId(EMAIL_UPDATED));
+                                    notificationService.getNotificationTemplateId(
+                                            NotificationType.EMAIL_UPDATED));
                             LOGGER.info("EMAIL_UPDATED email has been sent using Notify");
                             break;
                         case DELETE_ACCOUNT:
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     new HashMap<>(),
-                                    notificationService.getNotificationTemplateId(DELETE_ACCOUNT));
+                                    notificationService.getNotificationTemplateId(
+                                            NotificationType.DELETE_ACCOUNT));
                             LOGGER.info("DELETE_ACCOUNT email has been sent using Notify");
                             break;
                     }

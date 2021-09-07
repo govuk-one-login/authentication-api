@@ -20,10 +20,6 @@ public class NotifyRequest {
         this.code = code;
     }
 
-    public NotifyRequest(String destination, NotificationType notificationType) {
-        this(destination, notificationType, null);
-    }
-
     public NotificationType getNotificationType() {
         return notificationType;
     }
