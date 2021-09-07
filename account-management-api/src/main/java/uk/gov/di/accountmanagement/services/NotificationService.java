@@ -1,6 +1,6 @@
-package uk.gov.di.authentication.shared.services;
+package uk.gov.di.accountmanagement.services;
 
-import uk.gov.di.authentication.shared.entity.NotificationType;
+import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
@@ -30,8 +30,10 @@ public class NotificationService {
                 return System.getenv("VERIFY_EMAIL_TEMPLATE_ID");
             case VERIFY_PHONE_NUMBER:
                 return System.getenv("VERIFY_PHONE_NUMBER_TEMPLATE_ID");
-            case MFA_SMS:
-                return System.getenv("MFA_SMS_TEMPLATE_ID");
+            case EMAIL_UPDATED:
+                return System.getenv("EMAIL_UPDATED_TEMPLATE_ID");
+            case DELETE_ACCOUNT:
+                return System.getenv("DELETE_ACCOUNT_TEMPLATE_ID");
             default:
                 throw new RuntimeException("NotificationType template ID does not exist");
         }

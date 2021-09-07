@@ -34,7 +34,8 @@ public class RemoveAccountHandler
     private final AwsSqsClient sqsClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public RemoveAccountHandler(AuthenticationService authenticationService, AwsSqsClient sqsClient) {
+    public RemoveAccountHandler(
+            AuthenticationService authenticationService, AwsSqsClient sqsClient) {
         this.authenticationService = authenticationService;
         this.sqsClient = sqsClient;
     }
@@ -61,8 +62,7 @@ public class RemoveAccountHandler
                     objectMapper.readValue(input.getBody(), RemoveAccountRequest.class);
 
             String email = removeAccountRequest.getEmail();
-            Subject subjectFromEmail =
-                    authenticationService.getSubjectFromEmail(email);
+            Subject subjectFromEmail = authenticationService.getSubjectFromEmail(email);
             Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
 
             validatePrincipal(subjectFromEmail, authorizerParams);

@@ -11,7 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
-import uk.gov.di.accountmanagement.entity.UpdateEmailRequest;
+import uk.gov.di.accountmanagement.entity.UpdatePhoneNumberRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -27,7 +27,7 @@ import java.util.Optional;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
-public class UpdateEmailHandler
+public class UpdatePhoneNumberHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -35,9 +35,9 @@ public class UpdateEmailHandler
     private final AwsSqsClient sqsClient;
     private final ValidationService validationService;
     private final CodeStorageService codeStorageService;
-    private static final Logger LOGGER = LoggerFactory.getLogger(UpdateEmailHandler.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(UpdatePhoneNumberHandler.class);
 
-    public UpdateEmailHandler() {
+    public UpdatePhoneNumberHandler() {
         ConfigurationService configurationService = new ConfigurationService();
         this.dynamoService = new DynamoService(configurationService);
         this.sqsClient =
@@ -50,7 +50,7 @@ public class UpdateEmailHandler
                 new CodeStorageService(new RedisConnectionService(configurationService));
     }
 
-    public UpdateEmailHandler(
+    public UpdatePhoneNumberHandler(
             DynamoService dynamoService,
             AwsSqsClient sqsClient,
             ValidationService validationService,
@@ -64,49 +64,45 @@ public class UpdateEmailHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        LOGGER.info("UpdateEmailHandler received request");
-        LOGGER.info(
-                "Authorizer parameters received: {}", input.getRequestContext().getAuthorizer());
+        LOGGER.info("UpdatePhoneNumberHandler received request");
         try {
-            UpdateEmailRequest updateInfoRequest =
-                    objectMapper.readValue(input.getBody(), UpdateEmailRequest.class);
+            UpdatePhoneNumberRequest updatePhoneNumberRequest =
+                    objectMapper.readValue(input.getBody(), UpdatePhoneNumberRequest.class);
             boolean isValidOtpCode =
                     codeStorageService.isValidOtpCode(
-                            updateInfoRequest.getExistingEmailAddress(),
-                            updateInfoRequest.getOtp(),
-                            NotificationType.VERIFY_EMAIL);
+                            updatePhoneNumberRequest.getEmail(),
+                            updatePhoneNumberRequest.getOtp(),
+                            NotificationType.VERIFY_PHONE_NUMBER);
             if (!isValidOtpCode) {
                 LOGGER.error("Invalid OTP code sent in request");
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
             }
-            Optional<ErrorResponse> emailValidationErrors =
-                    validationService.validateEmailAddressUpdate(
-                            updateInfoRequest.getExistingEmailAddress(),
-                            updateInfoRequest.getReplacementEmailAddress());
-            if (emailValidationErrors.isPresent()) {
+            Optional<ErrorResponse> phoneValidationErrors =
+                    validationService.validatePhoneNumber(
+                            updatePhoneNumberRequest.getPhoneNumber());
+            if (phoneValidationErrors.isPresent()) {
                 LOGGER.error(
-                        "Invalid email address with error: {}",
-                        emailValidationErrors.get().getMessage());
-                return generateApiGatewayProxyErrorResponse(400, emailValidationErrors.get());
+                        "Invalid phone number with error: {}",
+                        phoneValidationErrors.get().getMessage());
+                return generateApiGatewayProxyErrorResponse(400, phoneValidationErrors.get());
             }
             Subject subjectFromEmail =
-                    dynamoService.getSubjectFromEmail(updateInfoRequest.getExistingEmailAddress());
+                    dynamoService.getSubjectFromEmail(updatePhoneNumberRequest.getEmail());
             Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
             RequestBodyHelper.validatePrincipal(subjectFromEmail, authorizerParams);
-            dynamoService.updateEmail(
-                    updateInfoRequest.getExistingEmailAddress(),
-                    updateInfoRequest.getReplacementEmailAddress());
-            LOGGER.info("Email has successfully been updated. Adding message to SQS queue");
+            dynamoService.updatePhoneNumber(
+                    updatePhoneNumberRequest.getEmail(), updatePhoneNumberRequest.getPhoneNumber());
+            LOGGER.info("Phone Number has successfully been updated. Adding message to SQS queue");
             NotifyRequest notifyRequest =
                     new NotifyRequest(
-                            updateInfoRequest.getReplacementEmailAddress(),
-                            NotificationType.EMAIL_UPDATED);
+                            updatePhoneNumberRequest.getEmail(),
+                            NotificationType.PHONE_NUMBER_UPDATED);
             sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
             LOGGER.info(
                     "Message successfully added to queue. Generating successful gateway response");
             return generateApiGatewayProxyResponse(200, "");
         } catch (JsonProcessingException | IllegalArgumentException e) {
-            LOGGER.error("UpdateInfo request is missing or contains invalid parameters.", e);
+            LOGGER.error("UpdatePhoneNumber request is missing or contains invalid parameters.", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
     }
