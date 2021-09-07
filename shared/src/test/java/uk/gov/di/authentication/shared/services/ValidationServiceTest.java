@@ -229,4 +229,30 @@ public class ValidationServiceTest {
                 validationService.validateMfaVerificationCode(
                         Optional.of("654321"), "123456", session, 5));
     }
+
+    @Test
+    public void shouldReturnErrorWhenEmailAddressesAreTheSame() {
+        String email = "joe.bloggs@digital.cabinet-office.gov.uk";
+        assertEquals(
+                Optional.of(ErrorResponse.ERROR_1019),
+                validationService.validateEmailAddressUpdate(email, email));
+    }
+
+    @Test
+    public void shouldReturnErrorWhenExistingEmailIsInvalid() {
+        String existingEmail = "joe.bloggs";
+        String replacementEmail = "joe.bloggs@digital.cabinet-office.gov.uk";
+        assertEquals(
+                Optional.of(ErrorResponse.ERROR_1004),
+                validationService.validateEmailAddressUpdate(existingEmail, replacementEmail));
+    }
+
+    @Test
+    public void shouldReturnErrorWhenReplacementEmailIsInvalid() {
+        String existingEmail = "joe.bloggs@digital.cabinet-office.gov.uk";
+        String replacementEmail = "joe.bloggs";
+        assertEquals(
+                Optional.of(ErrorResponse.ERROR_1004),
+                validationService.validateEmailAddressUpdate(existingEmail, replacementEmail));
+    }
 }
