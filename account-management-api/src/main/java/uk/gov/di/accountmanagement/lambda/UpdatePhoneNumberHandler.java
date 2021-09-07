@@ -91,8 +91,7 @@ public class UpdatePhoneNumberHandler
             Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
             RequestBodyHelper.validatePrincipal(subjectFromEmail, authorizerParams);
             dynamoService.updatePhoneNumber(
-                    updatePhoneNumberRequest.getEmail(),
-                    updatePhoneNumberRequest.getPhoneNumber());
+                    updatePhoneNumberRequest.getEmail(), updatePhoneNumberRequest.getPhoneNumber());
             LOGGER.info("Phone Number has successfully been updated. Adding message to SQS queue");
             NotifyRequest notifyRequest =
                     new NotifyRequest(

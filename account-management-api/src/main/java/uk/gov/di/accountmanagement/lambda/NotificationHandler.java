@@ -17,9 +17,10 @@ import uk.gov.service.notify.NotificationClientException;
 import java.util.HashMap;
 import java.util.Map;
 
+import static uk.gov.di.authentication.shared.entity.NotificationType.DELETE_ACCOUNT;
 import static uk.gov.di.authentication.shared.entity.NotificationType.EMAIL_UPDATED;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
-import static uk.gov.di.authentication.shared.entity.NotificationType.DELETE_ACCOUNT;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 
 public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
@@ -66,6 +67,17 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                     notificationService.getNotificationTemplateId(VERIFY_EMAIL));
                             LOGGER.info("VERIFY_EMAIL email has been sent using Notify");
                             break;
+                        case VERIFY_PHONE_NUMBER:
+                            Map<String, Object> phonePersonalisation = new HashMap<>();
+                            phonePersonalisation.put("validation-code", notifyRequest.getCode());
+                            LOGGER.info("Sending VERIFY_EMAIL email using Notify");
+                            notificationService.sendText(
+                                    notifyRequest.getDestination(),
+                                    phonePersonalisation,
+                                    notificationService.getNotificationTemplateId(
+                                            VERIFY_PHONE_NUMBER));
+                            LOGGER.info("VERIFY_PHONE_NUMBER text has been sent using Notify");
+                            break;
                         case EMAIL_UPDATED:
                             Map<String, Object> emailUpdatePersonalisation = new HashMap<>();
                             emailUpdatePersonalisation.put(
@@ -81,8 +93,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     new HashMap<>(),
-                                    notificationService.getNotificationTemplateId(DELETE_ACCOUNT)
-                            );
+                                    notificationService.getNotificationTemplateId(DELETE_ACCOUNT));
                             LOGGER.info("DELETE_ACCOUNT email has been sent using Notify");
                             break;
                     }
