@@ -3,9 +3,14 @@ package uk.gov.di.accountmanagement.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.accountmanagement.entity.NotificationType;
+import uk.gov.di.accountmanagement.entity.NotifyRequest;
+import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
@@ -24,6 +29,8 @@ class UpdatePasswordHandlerTest {
 
     private final Context context = mock(Context.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
+    private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
+
     private UpdatePasswordHandler handler;
     private static final String EXISTING_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String NEW_PASSWORD = "password2";
@@ -31,11 +38,11 @@ class UpdatePasswordHandlerTest {
 
     @BeforeEach
     public void setUp() {
-        handler = new UpdatePasswordHandler(dynamoService);
+        handler = new UpdatePasswordHandler(dynamoService, sqsClient);
     }
 
     @Test
-    public void shouldReturn200ForValidRequest() {
+    public void shouldReturn200ForValidRequest() throws JsonProcessingException {
         when(dynamoService.getSubjectFromEmail(EXISTING_EMAIL_ADDRESS)).thenReturn(SUBJECT);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
@@ -53,6 +60,9 @@ class UpdatePasswordHandlerTest {
 
         assertThat(result, hasStatus(200));
         verify(dynamoService).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
+        NotifyRequest notifyRequest =
+                new NotifyRequest(EXISTING_EMAIL_ADDRESS, NotificationType.PASSWORD_UPDATED);
+        verify(sqsClient).send(new ObjectMapper().writeValueAsString(notifyRequest));
     }
 
     @Test

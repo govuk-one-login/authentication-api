@@ -105,6 +105,14 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                             NotificationType.PHONE_NUMBER_UPDATED));
                             LOGGER.info("PHONE_NUMBER_UPDATED email has been sent using Notify");
                             break;
+                        case PASSWORD_UPDATED:
+                            notificationService.sendEmail(
+                                    notifyRequest.getDestination(),
+                                    new HashMap<>(),
+                                    notificationService.getNotificationTemplateId(
+                                            NotificationType.PASSWORD_UPDATED));
+                            LOGGER.info("PASSWORD_UPDATED email has been sent using Notify");
+                            break;
                     }
                 } catch (NotificationClientException e) {
                     LOGGER.error("Error sending with Notify", e);
