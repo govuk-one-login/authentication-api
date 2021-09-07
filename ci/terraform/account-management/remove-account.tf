@@ -5,8 +5,9 @@ module "delete_account" {
   path_part       = "delete-account"
   endpoint_method = "POST"
   handler_environment_variables = {
-    ENVIRONMENT = var.environment
-    DYNAMO_ENDPOINT          = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    ENVIRONMENT     = var.environment
+    DYNAMO_ENDPOINT = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    EMAIL_QUEUE_URL = aws_sqs_queue.email_queue.id
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.RemoveAccountHandler::handleRequest"
 
@@ -19,7 +20,7 @@ module "delete_account" {
   security_group_id         = aws_vpc.account_management_vpc.default_security_group_id
   subnet_id                 = aws_subnet.account_management_subnets.*.id
   environment               = var.environment
-  lambda_role_arn           = aws_iam_role.lambda_iam_role.arn
+  lambda_role_arn           = aws_iam_role.dynamo_sqs_lambda_iam_role.arn
   use_localstack            = var.use_localstack
   default_tags              = local.default_tags
   logging_endpoint_enabled  = var.logging_endpoint_enabled

@@ -4,5 +4,6 @@ public enum NotificationType {
     VERIFY_EMAIL,
     VERIFY_PHONE_NUMBER,
     MFA_SMS,
-    EMAIL_UPDATED
+    EMAIL_UPDATED,
+    DELETE_ACCOUNT
 }
