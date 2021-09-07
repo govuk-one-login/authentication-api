@@ -34,6 +34,8 @@ public class NotificationService {
                 return System.getenv("EMAIL_UPDATED_TEMPLATE_ID");
             case DELETE_ACCOUNT:
                 return System.getenv("DELETE_ACCOUNT_TEMPLATE_ID");
+            case PHONE_NUMBER_UPDATED:
+                return System.getenv("PHONE_NUMBER_UPDATED_TEMPLATE_ID");
             default:
                 throw new RuntimeException("NotificationType template ID does not exist");
         }

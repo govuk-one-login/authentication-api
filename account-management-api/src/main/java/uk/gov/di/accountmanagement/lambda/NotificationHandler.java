@@ -88,12 +88,22 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             LOGGER.info("EMAIL_UPDATED email has been sent using Notify");
                             break;
                         case DELETE_ACCOUNT:
+                            LOGGER.info("Sending DELETE_ACCOUNT email using Notify");
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     new HashMap<>(),
                                     notificationService.getNotificationTemplateId(
                                             NotificationType.DELETE_ACCOUNT));
                             LOGGER.info("DELETE_ACCOUNT email has been sent using Notify");
+                            break;
+                        case PHONE_NUMBER_UPDATED:
+                            LOGGER.info("Sending PHONE_NUMBER_UPDATED email using Notify");
+                            notificationService.sendEmail(
+                                    notifyRequest.getDestination(),
+                                    Map.of(),
+                                    notificationService.getNotificationTemplateId(
+                                            NotificationType.PHONE_NUMBER_UPDATED));
+                            LOGGER.info("PHONE_NUMBER_UPDATED email has been sent using Notify");
                             break;
                     }
                 } catch (NotificationClientException e) {
