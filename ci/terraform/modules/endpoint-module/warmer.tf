@@ -5,7 +5,7 @@ resource "aws_lambda_function" "warmer_function" {
   function_name = replace("${var.environment}-${var.endpoint_name}-lambda-warmer", ".", "")
   role          = var.warmer_lambda_role_arn
   handler       = var.warmer_handler_function_name
-  timeout       = 30
+  timeout       = 60
   memory_size   = 4096
 
   tracing_config {
