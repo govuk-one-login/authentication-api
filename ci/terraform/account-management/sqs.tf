@@ -133,7 +133,8 @@ resource "aws_lambda_function" "email_sqs_lambda" {
     variables = {
       VERIFY_EMAIL_TEMPLATE_ID        = "b7dbb02f-941b-4d72-ad64-84cbe5d77c2e"
       VERIFY_PHONE_NUMBER_TEMPLATE_ID = "7dd388f1-e029-4fe7-92ff-18496dcb53e9"
-      EMAIL_UPDATED_TEMPLATE_ID       =  "0a200a63-97b2-4920-bc40-48e9a9e1121e"
+      EMAIL_UPDATED_TEMPLATE_ID       = "0a200a63-97b2-4920-bc40-48e9a9e1121e"
+      DELETE_ACCOUNT_TEMPLATE_ID      = "0706adcc-b593-4d2d-afa6-c3da7149e426"
       NOTIFY_API_KEY                  = var.notify_api_key
       NOTIFY_URL                      = var.notify_url
     }

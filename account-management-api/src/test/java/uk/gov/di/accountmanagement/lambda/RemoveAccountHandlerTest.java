@@ -3,10 +3,14 @@ package uk.gov.di.accountmanagement.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 
 import java.util.HashMap;
@@ -16,6 +20,7 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+import static uk.gov.di.authentication.shared.entity.NotificationType.DELETE_ACCOUNT;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -25,15 +30,16 @@ class RemoveAccountHandlerTest {
     private static final Subject SUBJECT = new Subject();
     private RemoveAccountHandler handler;
     private final Context context = mock(Context.class);
+    private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
 
     @BeforeEach
     public void setUp() {
-        handler = new RemoveAccountHandler(authenticationService);
+        handler = new RemoveAccountHandler(authenticationService, sqsClient);
     }
 
     @Test
-    public void shouldReturn200IfAccountRemovalIsSuccessful() {
+    public void shouldReturn200IfAccountRemovalIsSuccessful() throws JsonProcessingException {
         when(authenticationService.getSubjectFromEmail(EMAIL)).thenReturn(SUBJECT);
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
                 new APIGatewayProxyRequestEvent.ProxyRequestContext();
@@ -48,12 +54,14 @@ class RemoveAccountHandlerTest {
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         verify(authenticationService).removeAccount(eq(EMAIL));
+        NotifyRequest notifyRequest = new NotifyRequest(EMAIL, DELETE_ACCOUNT);
+        verify(sqsClient).send(new ObjectMapper().writeValueAsString(notifyRequest));
 
         assertThat(result, hasStatus(200));
     }
 
     @Test
-    public void shouldReturn400WhenAccountDoesNotExist() {
+    public void shouldReturn400WhenAccountDoesNotExist() throws JsonProcessingException {
         when(authenticationService.getSubjectFromEmail(EMAIL)).thenReturn(SUBJECT);
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
                 new APIGatewayProxyRequestEvent.ProxyRequestContext();
@@ -68,6 +76,8 @@ class RemoveAccountHandlerTest {
         when(authenticationService.userExists(EMAIL)).thenReturn(false);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         verify(authenticationService, never()).removeAccount(eq(EMAIL));
+        NotifyRequest notifyRequest = new NotifyRequest(EMAIL, DELETE_ACCOUNT);
+        verify(sqsClient, never()).send(new ObjectMapper().writeValueAsString(notifyRequest));
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
