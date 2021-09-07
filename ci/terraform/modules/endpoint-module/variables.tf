@@ -7,12 +7,12 @@ variable "path_part" {
 }
 
 variable "method_request_parameters" {
-  type = map(bool)
+  type    = map(bool)
   default = {}
 }
 
 variable "integration_request_parameters" {
-  type = map(string)
+  type    = map(string)
   default = {}
 }
 
@@ -50,7 +50,7 @@ variable "execution_arn" {
 }
 
 variable "environment" {
-  type    = string
+  type = string
 }
 
 variable "api_deployment_stage_name" {
@@ -59,12 +59,12 @@ variable "api_deployment_stage_name" {
 }
 
 variable "security_group_id" {
-  type = string
+  type        = string
   description = "The id of the security for the lambda"
 }
 
 variable "subnet_id" {
-  type = list(string)
+  type        = list(string)
   description = "The id of the subnets for the lambda"
 }
 
@@ -85,11 +85,36 @@ variable "logging_endpoint_arn" {
 }
 
 variable "use_localstack" {
-  type    = bool
+  type = bool
 }
 
 variable "default_tags" {
   default     = {}
   type        = map(string)
   description = "Default tags to apply to all resources"
+}
+
+variable "warmer_lambda_zip_file" {
+  type    = string
+  default = null
+}
+
+variable "warmer_handler_function_name" {
+  type    = string
+  default = null
+}
+
+variable "warmer_handler_environment_variables" {
+  type    = map(string)
+  default = null
+}
+
+variable "warmer_handler_runtime" {
+  type    = string
+  default = "java11"
+}
+
+variable "warmer_lambda_role_arn" {
+  type    = string
+  default = null
 }
