@@ -136,6 +136,7 @@ resource "aws_lambda_function" "email_sqs_lambda" {
       EMAIL_UPDATED_TEMPLATE_ID             = "0a200a63-97b2-4920-bc40-48e9a9e1121e"
       DELETE_ACCOUNT_TEMPLATE_ID            = "0706adcc-b593-4d2d-afa6-c3da7149e426"
       PHONE_NUMBER_UPDATED_TEMPLATE_ID      = "8274a2a3-5121-4630-a27e-e8578f8cba59"
+      PASSWORD_UPDATED_TEMPLATE_ID          = "323ebef4-cfa7-414f-bfba-1db324acdd66"
       NOTIFY_API_KEY                        = var.notify_api_key
       NOTIFY_URL                            = var.notify_url
     }

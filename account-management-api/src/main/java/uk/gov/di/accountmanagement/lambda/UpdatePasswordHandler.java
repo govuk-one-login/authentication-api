@@ -9,7 +9,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.accountmanagement.entity.NotificationType;
+import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdatePasswordRequest;
+import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -25,14 +28,23 @@ public class UpdatePasswordHandler
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final DynamoService dynamoService;
+    private final AwsSqsClient sqsClient;
+
     private static final Logger LOGGER = LoggerFactory.getLogger(UpdatePasswordHandler.class);
 
     public UpdatePasswordHandler() {
+        ConfigurationService configurationService = new ConfigurationService();
         this.dynamoService = new DynamoService(new ConfigurationService());
+        this.sqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEmailQueueUri(),
+                        configurationService.getSqsEndpointUri());
     }
 
-    public UpdatePasswordHandler(DynamoService dynamoService) {
+    public UpdatePasswordHandler(DynamoService dynamoService, AwsSqsClient sqsClient) {
         this.dynamoService = dynamoService;
+        this.sqsClient = sqsClient;
     }
 
     @Override
@@ -55,7 +67,14 @@ public class UpdatePasswordHandler
             dynamoService.updatePassword(
                     updatePasswordRequest.getEmail(), updatePasswordRequest.getNewPassword());
 
-            LOGGER.info("User Password has successfully been updated");
+            LOGGER.info(
+                    "User Password has successfully been updated.  Adding confirmation message to SQS queue");
+            NotifyRequest notifyRequest =
+                    new NotifyRequest(
+                            updatePasswordRequest.getEmail(), NotificationType.PASSWORD_UPDATED);
+            sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+            LOGGER.info(
+                    "Message successfully added to queue. Generating successful gateway response");
             return generateApiGatewayProxyResponse(200, "");
 
         } catch (JsonProcessingException | IllegalArgumentException e) {
