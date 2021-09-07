@@ -146,6 +146,12 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
+    public void removeAccount(String email) {
+        userProfileMapper.delete(userProfileMapper.load(UserProfile.class, email));
+        userCredentialsMapper.delete(userCredentialsMapper.load(UserCredentials.class, email));
+    }
+
+    @Override
     public Optional<List<ClientConsent>> getUserConsents(String email) {
         return Optional.ofNullable(
                 userProfileMapper.load(UserProfile.class, email).getClientConsent());
