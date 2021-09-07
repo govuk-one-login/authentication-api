@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.shared.entity;
+package uk.gov.di.accountmanagement.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

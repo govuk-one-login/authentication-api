@@ -9,12 +9,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.accountmanagement.entity.NotificationType;
+import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
+import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.NotificationType;
-import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
-import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.ValidationService;
 
@@ -33,7 +33,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
 class SendOtpNotificationHandlerTest {

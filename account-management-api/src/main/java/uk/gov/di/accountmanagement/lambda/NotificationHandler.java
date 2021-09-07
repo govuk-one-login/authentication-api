@@ -17,6 +17,7 @@ import uk.gov.service.notify.NotificationClientException;
 import java.util.HashMap;
 import java.util.Map;
 
+import static uk.gov.di.authentication.shared.entity.NotificationType.EMAIL_UPDATED;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 
 public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
@@ -57,11 +58,23 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             emailPersonalisation.put("validation-code", notifyRequest.getCode());
                             emailPersonalisation.put(
                                     "email-address", notifyRequest.getDestination());
-                            LOGGER.info("Sending email using Notify");
+                            LOGGER.info("Sending VERIFY_EMAIL email using Notify");
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     emailPersonalisation,
                                     notificationService.getNotificationTemplateId(VERIFY_EMAIL));
+                            LOGGER.info("VERIFY_EMAIL email has been sent using Notify");
+                            break;
+                        case EMAIL_UPDATED:
+                            Map<String, Object> emailUpdatePersonalisation = new HashMap<>();
+                            emailUpdatePersonalisation.put(
+                                    "email-address", notifyRequest.getDestination());
+                            LOGGER.info("Sending EMAIL_UPDATED email using Notify");
+                            notificationService.sendEmail(
+                                    notifyRequest.getDestination(),
+                                    emailUpdatePersonalisation,
+                                    notificationService.getNotificationTemplateId(EMAIL_UPDATED));
+                            LOGGER.info("EMAIL_UPDATED email has been sent using Notify");
                             break;
                     }
                 } catch (NotificationClientException e) {

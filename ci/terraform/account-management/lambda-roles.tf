@@ -170,3 +170,28 @@ resource "aws_iam_role_policy_attachment" "lambda_dynamo" {
   role       = aws_iam_role.lambda_iam_role.name
   policy_arn = aws_iam_policy.lambda_dynamo_policy[0].arn
 }
+
+resource "aws_iam_role_policy_attachment" "lambda_sqs_dynamo" {
+  count      = var.use_localstack ? 0 : 1
+  role       = aws_iam_role.dynamo_sqs_lambda_iam_role.name
+  policy_arn = aws_iam_policy.lambda_dynamo_policy[0].arn
+}
+
+resource "aws_iam_role" "dynamo_sqs_lambda_iam_role" {
+  name = "${var.environment}-dynamo-sqs-account-management-lambda-role"
+
+  assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_policy.json
+  tags = {
+    environment = var.environment
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "dynamo_sqs_lambda_logs" {
+  role       = aws_iam_role.dynamo_sqs_lambda_iam_role.name
+  policy_arn = aws_iam_policy.endpoint_logging_policy.arn
+}
+
+resource "aws_iam_role_policy_attachment" "dynamo_sqs_lambda_networking" {
+  role       = aws_iam_role.dynamo_sqs_lambda_iam_role.name
+  policy_arn = aws_iam_policy.endpoint_networking_policy.arn
+}

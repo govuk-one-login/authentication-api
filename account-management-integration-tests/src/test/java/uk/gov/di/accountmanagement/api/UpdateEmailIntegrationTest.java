@@ -7,19 +7,19 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.MultivaluedHashMap;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.accountmanagement.entity.UpdateInfoRequest;
+import uk.gov.di.accountmanagement.entity.UpdateEmailRequest;
 import uk.gov.di.accountmanagement.helpers.DynamoHelper;
 
 import java.util.Map;
 
 import static uk.gov.di.accountmanagement.api.IntegrationTestEndpoints.ROOT_RESOURCE_URL;
-import static uk.gov.di.accountmanagement.entity.UpdateInfoType.EMAIL;
 
-public class UpdateInfoIntegrationTest {
+public class UpdateEmailIntegrationTest {
 
-    private static final String UPDATE_INFO_ENDPOINT = "/update-info";
+    private static final String UPDATE_EMAIL_ENDPOINT = "/update-email";
     private static final String EXISTING_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String NEW_EMAIL_ADDRESS = "joe.b@digital.cabinet-office.gov.uk";
+    private static final String OTP = "123456";
     private static final Subject SUBJECT = new Subject();
 
     @Test
@@ -28,13 +28,13 @@ public class UpdateInfoIntegrationTest {
 
         Response response =
                 ClientBuilder.newClient()
-                        .target(ROOT_RESOURCE_URL + UPDATE_INFO_ENDPOINT)
+                        .target(ROOT_RESOURCE_URL + UPDATE_EMAIL_ENDPOINT)
                         .request(MediaType.APPLICATION_JSON)
                         .headers(new MultivaluedHashMap<>())
                         .buildPost(
                                 Entity.entity(
-                                        new UpdateInfoRequest(
-                                                EMAIL, EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS),
+                                        new UpdateEmailRequest(
+                                                EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS, OTP),
                                         MediaType.APPLICATION_JSON))
                         .property("authorizer", Map.of("principalId", SUBJECT.getValue()))
                         .invoke();

@@ -22,12 +22,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.entity.NotificationType.EMAIL_UPDATED;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 
 public class NotificationHandlerTest {
 
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final String TEMPLATE_ID = "fdsfdssd";
+    private static final String TEMPLATE_ID = "12345667";
     private final Context context = mock(Context.class);
     private final NotificationService notificationService = mock(NotificationService.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
@@ -52,6 +53,23 @@ public class NotificationHandlerTest {
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
+        personalisation.put("email-address", notifyRequest.getDestination());
+
+        verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, TEMPLATE_ID);
+    }
+
+    @Test
+    public void shouldSuccessfullyProcessUpdateEmailMessageFromSQSQueue()
+            throws JsonProcessingException, NotificationClientException {
+        when(notificationService.getNotificationTemplateId(EMAIL_UPDATED)).thenReturn(TEMPLATE_ID);
+
+        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, EMAIL_UPDATED);
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("email-address", notifyRequest.getDestination());
 
         verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, TEMPLATE_ID);
