@@ -22,7 +22,7 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.entity.NotificationType.EMAIL_UPDATED;
@@ -81,6 +81,36 @@ class UpdateEmailHandlerTest {
     }
 
     @Test
+    public void shouldReturn400WhenReplacementEmailAlreadyExists() throws JsonProcessingException {
+        when(dynamoService.getSubjectFromEmail(EXISTING_EMAIL_ADDRESS)).thenReturn(SUBJECT);
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setBody(
+                format(
+                        "{\"existingEmailAddress\": \"%s\", \"replacementEmailAddress\": \"%s\", \"otp\": \"%s\"  }",
+                        EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS, OTP));
+        APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
+                new APIGatewayProxyRequestEvent.ProxyRequestContext();
+        Map<String, Object> authorizerParams = new HashMap<>();
+        authorizerParams.put("principalId", SUBJECT.getValue());
+        proxyRequestContext.setAuthorizer(authorizerParams);
+        event.setRequestContext(proxyRequestContext);
+        when(codeStorageService.isValidOtpCode(EXISTING_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
+                .thenReturn(true);
+        when(validationService.validateEmailAddressUpdate(
+                        EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS))
+                .thenReturn(Optional.empty());
+        when(dynamoService.userExists(NEW_EMAIL_ADDRESS)).thenReturn(true);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        verify(dynamoService, never()).updateEmail(EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS);
+        NotifyRequest notifyRequest = new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED);
+        verify(sqsClient, never()).send(new ObjectMapper().writeValueAsString(notifyRequest));
+        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1009);
+        assertThat(result, hasBody(expectedResponse));
+    }
+
+    @Test
     public void shouldReturn400WhenRequestIsMissingParameters() {
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
                 new APIGatewayProxyRequestEvent.ProxyRequestContext();
@@ -115,9 +145,9 @@ class UpdateEmailHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        verify(dynamoService, times(0)).updateEmail(EXISTING_EMAIL_ADDRESS, INVALID_EMAIL_ADDRESS);
+        verify(dynamoService, never()).updateEmail(EXISTING_EMAIL_ADDRESS, INVALID_EMAIL_ADDRESS);
         NotifyRequest notifyRequest = new NotifyRequest(INVALID_EMAIL_ADDRESS, EMAIL_UPDATED);
-        verify(sqsClient, times(0)).send(new ObjectMapper().writeValueAsString(notifyRequest));
+        verify(sqsClient, never()).send(new ObjectMapper().writeValueAsString(notifyRequest));
         String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1020);
         assertThat(result, hasBody(expectedResponse));
     }
@@ -145,9 +175,9 @@ class UpdateEmailHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        verify(dynamoService, times(0)).updateEmail(EXISTING_EMAIL_ADDRESS, INVALID_EMAIL_ADDRESS);
+        verify(dynamoService, never()).updateEmail(EXISTING_EMAIL_ADDRESS, INVALID_EMAIL_ADDRESS);
         NotifyRequest notifyRequest = new NotifyRequest(INVALID_EMAIL_ADDRESS, EMAIL_UPDATED);
-        verify(sqsClient, times(0)).send(new ObjectMapper().writeValueAsString(notifyRequest));
+        verify(sqsClient, never()).send(new ObjectMapper().writeValueAsString(notifyRequest));
         String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1004);
         assertThat(result, hasBody(expectedResponse));
     }
