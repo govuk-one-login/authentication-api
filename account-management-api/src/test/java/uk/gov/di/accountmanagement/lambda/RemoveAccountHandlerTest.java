@@ -10,7 +10,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 
 import java.util.HashMap;
@@ -20,11 +19,9 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.entity.NotificationType.DELETE_ACCOUNT;
-import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class RemoveAccountHandlerTest {
@@ -61,28 +58,5 @@ class RemoveAccountHandlerTest {
         verify(sqsClient).send(new ObjectMapper().writeValueAsString(notifyRequest));
 
         assertThat(result, hasStatus(200));
-    }
-
-    @Test
-    public void shouldReturn400WhenAccountDoesNotExist() throws JsonProcessingException {
-        when(authenticationService.getSubjectFromEmail(EMAIL)).thenReturn(SUBJECT);
-        APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
-                new APIGatewayProxyRequestEvent.ProxyRequestContext();
-        Map<String, Object> authorizerParams = new HashMap<>();
-        authorizerParams.put("principalId", SUBJECT.getValue());
-        proxyRequestContext.setAuthorizer(authorizerParams);
-
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(proxyRequestContext);
-        event.setBody(format("{ \"email\": \"%s\" }", EMAIL));
-
-        when(authenticationService.userExists(EMAIL)).thenReturn(false);
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-        verify(authenticationService, never()).removeAccount(eq(EMAIL));
-        NotifyRequest notifyRequest = new NotifyRequest(EMAIL, DELETE_ACCOUNT);
-        verify(sqsClient, never()).send(new ObjectMapper().writeValueAsString(notifyRequest));
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
     }
 }
