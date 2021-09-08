@@ -116,7 +116,7 @@ public class ConfigurationService {
         return System.getenv("TERMS_CONDITIONS_VERSION");
     }
 
-    public String getTokenSigningKeyId() {
-        return System.getenv("TOKEN_SIGNING_KEY_ID");
+    public String getTokenSigningKeyAlias() {
+        return System.getenv("TOKEN_SIGNING_KEY_ALIAS");
     }
 }

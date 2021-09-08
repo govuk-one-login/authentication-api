@@ -17,7 +17,7 @@ module "logout" {
     REDIS_TLS            = var.redis_use_tls
     ENVIRONMENT          = var.environment
     DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    TOKEN_SIGNING_KEY_ID = aws_kms_key.id_token_signing_key.key_id
+    TOKEN_SIGNING_KEY_ALIAS = aws_kms_alias.id_token_signing_key_alias.name
     LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.LogoutHandler::handleRequest"

@@ -103,7 +103,7 @@ public class TokenService {
         try {
             LOGGER.info("Validating ID token signature");
             LOGGER.info("IDTokenHint: " + idTokenHint);
-            LOGGER.info("TokenSigningKeyID: " + configService.getTokenSigningKeyId());
+            LOGGER.info("TokenSigningKeyID: " + configService.getTokenSigningKeyAlias());
             SignedJWT idToken = SignedJWT.parse(idTokenHint);
             LOGGER.info("ClientID:" + idToken.getJWTClaimsSet().getAudience().get(0));
             LOGGER.info("Issuer: " + configService.getBaseURL().get());
@@ -130,7 +130,7 @@ public class TokenService {
     public boolean validateAccessTokenSignature(AccessToken accessToken) {
         try {
             LOGGER.info("Validating Access Token signature");
-            LOGGER.info("TokenSigningKeyID: " + configService.getTokenSigningKeyId());
+            LOGGER.info("TokenSigningKeyID: " + configService.getTokenSigningKeyAlias());
             LOGGER.info("Issuer: " + configService.getBaseURL().get());
             JWK publicJwk = getPublicJwk();
             LOGGER.info("PublicJWK: " + publicJwk.toString());
@@ -150,7 +150,7 @@ public class TokenService {
         LOGGER.info("Creating GetPublicKeyRequest to retrieve PublicKey from KMS");
         Provider bcProvider = new BouncyCastleProvider();
         GetPublicKeyRequest getPublicKeyRequest = new GetPublicKeyRequest();
-        getPublicKeyRequest.setKeyId(configService.getTokenSigningKeyId());
+        getPublicKeyRequest.setKeyId(configService.getTokenSigningKeyAlias());
         GetPublicKeyResult publicKeyResult = kmsConnectionService.getPublicKey(getPublicKeyRequest);
         try {
             LOGGER.info("PUBLICKEYRESULT: " + publicKeyResult.toString());
@@ -168,7 +168,7 @@ public class TokenService {
             PublicKey publicKey = getPublicKey();
             ECKey jwk =
                     new ECKey.Builder(Curve.P_256, (ECPublicKey) publicKey)
-                            .keyID(configService.getTokenSigningKeyId())
+                            .keyID(configService.getTokenSigningKeyAlias())
                             .keyUse(KeyUse.SIGNATURE)
                             .algorithm(new Algorithm(JWSAlgorithm.ES256.getName()))
                             .build();
@@ -289,7 +289,7 @@ public class TokenService {
         try {
             JWSHeader jwsHeader =
                     new JWSHeader.Builder(JWSAlgorithm.ES256)
-                            .keyID(configService.getTokenSigningKeyId())
+                            .keyID(configService.getTokenSigningKeyAlias())
                             .build();
             Base64URL encodedHeader = jwsHeader.toBase64URL();
             Base64URL encodedClaims = Base64URL.encode(claimsSet.toString());
@@ -297,7 +297,7 @@ public class TokenService {
             ByteBuffer messageToSign = ByteBuffer.wrap(message.getBytes());
             SignRequest signRequest = new SignRequest();
             signRequest.setMessage(messageToSign);
-            signRequest.setKeyId(configService.getTokenSigningKeyId());
+            signRequest.setKeyId(configService.getTokenSigningKeyAlias());
             signRequest.setSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256.toString());
             SignResult signResult = kmsConnectionService.sign(signRequest);
             LOGGER.info("Token has been signed successfully");

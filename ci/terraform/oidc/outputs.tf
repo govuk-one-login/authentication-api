@@ -6,8 +6,8 @@ output "api_gateway_root_id" {
   value = aws_api_gateway_rest_api.di_authentication_api.id
 }
 
-output "token_signing_key_id" {
-  value = aws_kms_key.id_token_signing_key.key_id
+output "token_signing_key_alias" {
+  value = aws_kms_alias.id_token_signing_key_alias.name
 }
 
 output "stub_rp_client_credentials" {

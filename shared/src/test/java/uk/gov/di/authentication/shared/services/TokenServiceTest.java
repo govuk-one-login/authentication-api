@@ -78,7 +78,7 @@ public class TokenServiceTest {
     @Test
     public void shouldSuccessfullyGenerateTokenResponse() throws ParseException, JOSEException {
         Nonce nonce = new Nonce();
-        when(configurationService.getTokenSigningKeyId()).thenReturn(KEY_ID);
+        when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
         SignedJWT signedIdToken = createSignedIdToken();
         SignedJWT signedAccessToken = createSignedAccessToken();
@@ -136,7 +136,7 @@ public class TokenServiceTest {
         ECDSASigner signer = new ECDSASigner(privateKey, Curve.P_256);
         ECPublicKey ecPublicKey = (ECPublicKey) keyPair.getPublic();
         byte[] encodedPublicKey = ecPublicKey.getEncoded();
-        when(configurationService.getTokenSigningKeyId()).thenReturn(KEY_ID);
+        when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
         GetPublicKeyResult getPublicKeyResult = new GetPublicKeyResult();
         getPublicKeyResult.setKeyUsage("SIGN_VERIFY");
         getPublicKeyResult.setKeyId(KEY_ID);
@@ -183,7 +183,7 @@ public class TokenServiceTest {
                 Base64.getDecoder()
                         .decode(
                                 "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEpRm+QZsh2IkUWcqXUhBI9ulOzO8dz0Z8HIS6m77tI4eWoZgKYUcbByshDtN4gWPql7E5mN4uCLsg5+6SDXlQcA==");
-        when(configurationService.getTokenSigningKeyId()).thenReturn(keyId);
+        when(configurationService.getTokenSigningKeyAlias()).thenReturn(keyId);
         GetPublicKeyResult getPublicKeyResult = new GetPublicKeyResult();
         getPublicKeyResult.setKeyUsage("SIGN_VERIFY");
         getPublicKeyResult.setKeyId(keyId);

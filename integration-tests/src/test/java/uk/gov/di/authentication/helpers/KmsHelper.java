@@ -21,23 +21,26 @@ public class KmsHelper {
     private static final String BASE_URL = System.getenv().getOrDefault("BASE_URL", "rubbish");
     private static final String LOCALSTACK_ENDPOINT =
             System.getenv().getOrDefault("LOCALSTACK_ENDPOINT", "http://localhost:45678");
-    private static final String TOKEN_SIGNING_KEY_ID = System.getenv().get("TOKEN_SIGNING_KEY_ID");
+    private static final String TOKEN_SIGNING_KEY_ALIAS =
+            System.getenv().get("TOKEN_SIGNING_KEY_ALIAS");
 
     private static final KmsConnectionService KMS_CONNECTION_SERVICE =
             new KmsConnectionService(
-                    Optional.of(LOCALSTACK_ENDPOINT), REGION, TOKEN_SIGNING_KEY_ID);
+                    Optional.of(LOCALSTACK_ENDPOINT), REGION, TOKEN_SIGNING_KEY_ALIAS);
 
     public static SignedJWT signIdToken(JWTClaimsSet claimsSet) {
         try {
             JWSHeader jwsHeader =
-                    new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(TOKEN_SIGNING_KEY_ID).build();
+                    new JWSHeader.Builder(JWSAlgorithm.ES256)
+                            .keyID(TOKEN_SIGNING_KEY_ALIAS)
+                            .build();
             Base64URL encodedHeader = jwsHeader.toBase64URL();
             Base64URL encodedClaims = Base64URL.encode(claimsSet.toString());
             String message = encodedHeader + "." + encodedClaims;
             ByteBuffer messageToSign = ByteBuffer.wrap(message.getBytes());
             SignRequest signRequest = new SignRequest();
             signRequest.setMessage(messageToSign);
-            signRequest.setKeyId(TOKEN_SIGNING_KEY_ID);
+            signRequest.setKeyId(TOKEN_SIGNING_KEY_ALIAS);
             signRequest.setSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256.toString());
             SignResult signResult = KMS_CONNECTION_SERVICE.sign(signRequest);
             String signature =
