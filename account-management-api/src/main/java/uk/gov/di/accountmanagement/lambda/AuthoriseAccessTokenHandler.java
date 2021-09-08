@@ -63,8 +63,12 @@ public class AuthoriseAccessTokenHandler
             try {
                 dynamoService.getUserProfileFromSubject(subject);
             } catch (Exception e) {
-                LOGGER.error("Unable to retrieve UserProfile from Dynamo with given SubjectID: {}", subject, e);
-                throw new RuntimeException("Unable to retrieve UserProfile from Dynamo with given SubjectID", e);
+                LOGGER.error(
+                        "Unable to retrieve UserProfile from Dynamo with given SubjectID: {}",
+                        subject,
+                        e);
+                throw new RuntimeException(
+                        "Unable to retrieve UserProfile from Dynamo with given SubjectID", e);
             }
             String methodArn = input.getMethodArn();
             String[] arnPartials = methodArn.split(":");
