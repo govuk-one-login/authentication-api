@@ -129,6 +129,40 @@ resource "aws_iam_role_policy_attachment" "lambda_networking" {
   policy_arn = aws_iam_policy.endpoint_networking_policy.arn
 }
 
+data "aws_kms_key" "id_token_public_key" {
+  key_id = "alias/${var.environment}-id-token-signing-key-alias"
+}
+
+data "aws_iam_policy_document" "kms_policy_document" {
+  count = var.use_localstack ? 0 : 1
+  statement {
+    sid    = "AllowAccessToKmsPublicKey"
+    effect = "Allow"
+
+    actions = [
+      "kms:GetPublicKey",
+    ]
+    resources = [
+      data.aws_kms_key.id_token_public_key.arn,
+    ]
+  }
+}
+
+resource "aws_iam_policy" "lambda_kms_policy" {
+  count = var.use_localstack ? 0 : 1
+  name        = "${var.environment}--account-mgmt-lambda-kms-policy"
+  path        = "/"
+  description = "IAM policy for managing KMS connection for a lambda"
+
+  policy = data.aws_iam_policy_document.kms_policy_document[0].json
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_kms" {
+  count      = var.use_localstack ? 0 : 1
+  role       = aws_iam_role.lambda_iam_role.name
+  policy_arn = aws_iam_policy.lambda_kms_policy[0].arn
+}
+
 data "aws_dynamodb_table" "user_credentials_table" {
   name = "${var.environment}-user-credentials"
 }
