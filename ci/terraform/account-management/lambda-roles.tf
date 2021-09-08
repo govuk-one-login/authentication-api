@@ -187,6 +187,7 @@ data "aws_iam_policy_document" "dynamo_policy_document" {
     resources = [
       data.aws_dynamodb_table.user_credentials_table.arn,
       data.aws_dynamodb_table.user_profile_table.arn,
+      "${data.aws_dynamodb_table.user_profile_table.arn}/index/*",
     ]
   }
 }
