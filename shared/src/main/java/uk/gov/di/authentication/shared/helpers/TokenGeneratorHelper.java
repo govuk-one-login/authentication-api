@@ -3,6 +3,7 @@ package uk.gov.di.authentication.shared.helpers;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.ECKey;
@@ -60,7 +61,7 @@ public class TokenGeneratorHelper {
     }
 
     public static SignedJWT generateIDToken(
-            String clientId, Subject subject, String issuerUrl, ECDSASigner signer, String keyId) {
+            String clientId, Subject subject, String issuerUrl, JWSSigner signer, String keyId) {
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
         IDTokenClaimsSet idTokenClaims =
@@ -86,8 +87,9 @@ public class TokenGeneratorHelper {
             String clientId,
             String issuerUrl,
             List<String> scopes,
-            ECKey signingKey,
-            Subject subject) {
+            JWSSigner signer,
+            Subject subject,
+            String keyId) {
 
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
@@ -107,12 +109,10 @@ public class TokenGeneratorHelper {
                         .jwtID(UUID.randomUUID().toString())
                         .build();
 
-        JWSHeader jwsHeader =
-                new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(signingKey.getKeyID()).build();
+        JWSHeader jwsHeader = new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(keyId).build();
         SignedJWT signedJWT;
 
         try {
-            ECDSASigner signer = new ECDSASigner(signingKey);
             signedJWT = new SignedJWT(jwsHeader, claimsSet);
             signedJWT.sign(signer);
         } catch (JOSEException e) {
