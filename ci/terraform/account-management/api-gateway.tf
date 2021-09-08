@@ -88,6 +88,7 @@ resource "aws_lambda_function" "authorizer" {
   environment {
     variables = {
       TOKEN_SIGNING_KEY_ALIAS = data.aws_kms_key.id_token_public_key.key_id
+      ENVIRONMENT             = var.environment
     }
   }
 }
