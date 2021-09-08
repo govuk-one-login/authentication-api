@@ -85,6 +85,11 @@ resource "aws_lambda_function" "authorizer" {
     security_group_ids = [aws_vpc.account_management_vpc.default_security_group_id]
     subnet_ids         = aws_subnet.account_management_subnets.*.id
   }
+  environment {
+    variables = {
+      TOKEN_SIGNING_KEY_ID = data.aws_kms_key.id_token_public_key.key_id
+    }
+  }
 }
 
 resource "aws_iam_role" "invocation_role" {
