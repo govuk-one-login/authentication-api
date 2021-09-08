@@ -67,8 +67,7 @@ public class AuthoriseAccessTokenHandler
                         "Unable to retrieve UserProfile from Dynamo with given SubjectID: {}",
                         subject,
                         e);
-                throw new RuntimeException(
-                        "Unauthorized");
+                throw new RuntimeException("Unauthorized");
             }
             LOGGER.info("User found in Dynamo with given SubjectID");
             String methodArn = input.getMethodArn();

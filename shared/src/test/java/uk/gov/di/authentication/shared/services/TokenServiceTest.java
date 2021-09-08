@@ -6,6 +6,7 @@ import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
@@ -20,6 +21,7 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
@@ -32,8 +34,6 @@ import java.nio.ByteBuffer;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
-import java.security.interfaces.ECPrivateKey;
-import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
 import java.util.Base64;
@@ -77,11 +77,17 @@ public class TokenServiceTest {
 
     @Test
     public void shouldSuccessfullyGenerateTokenResponse() throws ParseException, JOSEException {
+        ECKey ecSigningKey =
+                new ECKeyGenerator(Curve.P_256)
+                        .keyID(KEY_ID)
+                        .algorithm(JWSAlgorithm.ES256)
+                        .generate();
+        ECDSASigner signer = new ECDSASigner(ecSigningKey);
         Nonce nonce = new Nonce();
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
         SignedJWT signedIdToken = createSignedIdToken();
-        SignedJWT signedAccessToken = createSignedAccessToken();
+        SignedJWT signedAccessToken = createSignedAccessToken(signer, ecSigningKey.getKeyID());
         SignResult idTokenSignedResult = new SignResult();
         byte[] idTokenSignatureDer =
                 ECDSA.transcodeSignatureToDER(signedIdToken.getSignature().decode());
@@ -130,24 +136,43 @@ public class TokenServiceTest {
     }
 
     @Test
-    public void shouldSuccessfullyValidateIdToken() throws JOSEException {
-        KeyPair keyPair = generateECKeyPair();
-        ECPrivateKey privateKey = (ECPrivateKey) keyPair.getPrivate();
-        ECDSASigner signer = new ECDSASigner(privateKey, Curve.P_256);
-        ECPublicKey ecPublicKey = (ECPublicKey) keyPair.getPublic();
-        byte[] encodedPublicKey = ecPublicKey.getEncoded();
+    public void shouldSuccessfullyValidateIDToken() throws JOSEException {
+        ECKey ecJWK = generateECKeyPair();
+        ECKey ecPublicJWK = ecJWK.toPublicJWK();
+        JWSSigner signer = new ECDSASigner(ecJWK);
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
         GetPublicKeyResult getPublicKeyResult = new GetPublicKeyResult();
         getPublicKeyResult.setKeyUsage("SIGN_VERIFY");
         getPublicKeyResult.setKeyId(KEY_ID);
         getPublicKeyResult.setSigningAlgorithms(
                 Collections.singletonList(JWSAlgorithm.ES256.getName()));
-        getPublicKeyResult.setPublicKey(ByteBuffer.wrap(encodedPublicKey));
+        getPublicKeyResult.setPublicKey(ByteBuffer.wrap(ecPublicJWK.toECPublicKey().getEncoded()));
         when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
                 .thenReturn(getPublicKeyResult);
 
         SignedJWT signedIdToken = createSignedIdToken(signer);
         assertTrue(tokenService.validateIdTokenSignature(signedIdToken.serialize()));
+    }
+
+    @Test
+    public void shouldSuccessfullyValidateAccessToken() throws JOSEException {
+        ECKey ecJWK = generateECKeyPair();
+        ECKey ecPublicJWK = ecJWK.toPublicJWK();
+        JWSSigner signer = new ECDSASigner(ecJWK);
+        when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
+        GetPublicKeyResult getPublicKeyResult = new GetPublicKeyResult();
+        getPublicKeyResult.setKeyUsage("SIGN_VERIFY");
+        getPublicKeyResult.setKeyId(KEY_ID);
+        getPublicKeyResult.setSigningAlgorithms(
+                Collections.singletonList(JWSAlgorithm.ES256.getName()));
+        getPublicKeyResult.setPublicKey(ByteBuffer.wrap(ecPublicJWK.toECPublicKey().getEncoded()));
+        when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
+                .thenReturn(getPublicKeyResult);
+
+        SignedJWT signedAccessToken = createSignedAccessToken(signer, KEY_ID);
+        assertTrue(
+                tokenService.validateAccessTokenSignature(
+                        new BearerAccessToken(signedAccessToken.serialize())));
     }
 
     @Test
@@ -307,19 +332,14 @@ public class TokenServiceTest {
         return createSignedIdToken(ecdsaSigner);
     }
 
-    private SignedJWT createSignedIdToken(ECDSASigner ecdsaSigner) {
-        return TokenGeneratorHelper.generateIDToken(
-                CLIENT_ID, SUBJECT, BASE_URL, ecdsaSigner, KEY_ID);
+    private SignedJWT createSignedIdToken(JWSSigner signer) {
+        return TokenGeneratorHelper.generateIDToken(CLIENT_ID, SUBJECT, BASE_URL, signer, KEY_ID);
     }
 
-    private SignedJWT createSignedAccessToken() throws JOSEException {
-        ECKey ecSigningKey =
-                new ECKeyGenerator(Curve.P_256)
-                        .keyID(KEY_ID)
-                        .algorithm(JWSAlgorithm.ES256)
-                        .generate();
+    private SignedJWT createSignedAccessToken(JWSSigner signer, String keyId) {
+
         return TokenGeneratorHelper.generateAccessToken(
-                CLIENT_ID, BASE_URL, SCOPES, ecSigningKey, SUBJECT);
+                CLIENT_ID, BASE_URL, SCOPES, signer, SUBJECT, keyId);
     }
 
     private KeyPair generateRsaKeyPair() {
@@ -333,14 +353,11 @@ public class TokenServiceTest {
         return kpg.generateKeyPair();
     }
 
-    private KeyPair generateECKeyPair() {
-        KeyPairGenerator kpg;
+    private ECKey generateECKeyPair() {
         try {
-            kpg = KeyPairGenerator.getInstance("EC");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
+            return new ECKeyGenerator(Curve.P_256).keyID(KEY_ID).generate();
+        } catch (JOSEException e) {
+            throw new RuntimeException();
         }
-        kpg.initialize(256);
-        return kpg.generateKeyPair();
     }
 }

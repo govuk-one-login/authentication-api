@@ -9,6 +9,8 @@ import com.nimbusds.jose.Algorithm;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
@@ -37,12 +39,9 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
-import com.nimbusds.openid.connect.sdk.claims.AccessTokenHash;
 import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
-import com.nimbusds.openid.connect.sdk.validators.AccessTokenValidator;
 import com.nimbusds.openid.connect.sdk.validators.IDTokenValidator;
-import com.nimbusds.openid.connect.sdk.validators.InvalidHashException;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMException;
@@ -128,20 +127,18 @@ public class TokenService {
     }
 
     public boolean validateAccessTokenSignature(AccessToken accessToken) {
+        boolean isVerified;
         try {
             LOGGER.info("Validating Access Token signature");
             LOGGER.info("TokenSigningKeyID: " + configService.getTokenSigningKeyAlias());
-            JWK publicJwk = getPublicJwk();
-            JWKSet jwkSet = new JWKSet(publicJwk);
-            LOGGER.info("JWKSET: " + jwkSet);
-            AccessTokenHash accessTokenHash =
-                    AccessTokenHash.compute(accessToken, JWSAlgorithm.ES256);
-            AccessTokenValidator.validate(accessToken, JWSAlgorithm.ES256, accessTokenHash);
-        } catch (InvalidHashException e) {
+            SignedJWT signedJwt = SignedJWT.parse(accessToken.getValue());
+            JWSVerifier verifier = new ECDSAVerifier(getPublicJwk().toECKey());
+            isVerified = signedJwt.verify(verifier);
+        } catch (JOSEException | java.text.ParseException e) {
             LOGGER.error("Unable to validate Signature of Access token", e);
             return false;
         }
-        return true;
+        return isVerified;
     }
 
     public PublicKey getPublicKey() {

@@ -4,7 +4,8 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
@@ -61,14 +62,19 @@ public class UserInfoHandlerTest {
     @Test
     public void shouldReturn200WithUserInfoBasedOnScopesForSuccessfulRequest()
             throws ParseException, JOSEException {
-        ECKey ecSigningKey =
-                new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+        ECKey ecSigningKey = new ECKeyGenerator(Curve.P_256).generate();
+        JWSSigner signer = new ECDSASigner(ecSigningKey);
         List<String> scopes = new ArrayList<>();
         scopes.add("email");
         scopes.add("phone");
         SignedJWT signedAccessToken =
                 TokenGeneratorHelper.generateAccessToken(
-                        "client-id", "issuer-url", scopes, ecSigningKey, SUBJECT);
+                        "client-id",
+                        "issuer-url",
+                        scopes,
+                        signer,
+                        SUBJECT,
+                        ecSigningKey.getKeyID());
         AccessToken accessToken = new BearerAccessToken(signedAccessToken.serialize());
         UserProfile userProfile =
                 new UserProfile()
