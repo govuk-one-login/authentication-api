@@ -3,6 +3,7 @@ package uk.gov.di.accountmanagement.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.AccessTokenType;
 import org.slf4j.Logger;
@@ -45,19 +46,18 @@ public class AuthoriseAccessTokenHandler
 
     @Override
     public AuthPolicy handleRequest(TokenAuthorizerContext input, Context context) {
-
+        LOGGER.info("Request received in AuthoriseAccessTokenHandler");
         try {
             String token = input.getAuthorizationToken();
 
             AccessToken accessToken;
             accessToken = AccessToken.parse(token, AccessTokenType.BEARER);
-            //            TODO - Renable when terraform resources are shared across modules
-            //            boolean isAccessTokenSignatureValid =
-            // tokenService.validateAccessTokenSignature(accessToken);
-            //            if (!isAccessTokenSignatureValid) {
-            //                LOGGER.error("Access Token signature is not valid");
-            //                throw new RuntimeException("Unauthorized");
-            //            }
+            boolean isAccessTokenSignatureValid =
+                    tokenService.validateAccessTokenSignature(accessToken);
+            if (!isAccessTokenSignatureValid) {
+                LOGGER.error("Access Token signature is not valid");
+                throw new RuntimeException("Unauthorized");
+            }
             LOGGER.info("Successfully validated Access Token signature");
             String subject = SignedJWT.parse(accessToken.getValue()).getJWTClaimsSet().getSubject();
             try {
@@ -68,8 +68,9 @@ public class AuthoriseAccessTokenHandler
                         subject,
                         e);
                 throw new RuntimeException(
-                        "Unable to retrieve UserProfile from Dynamo with given SubjectID", e);
+                        "Unauthorized");
             }
+            LOGGER.info("User found in Dynamo with given SubjectID");
             String methodArn = input.getMethodArn();
             String[] arnPartials = methodArn.split(":");
             String region = arnPartials[3];
@@ -82,7 +83,7 @@ public class AuthoriseAccessTokenHandler
                     subject,
                     AuthPolicy.PolicyDocument.getAllowAllPolicy(
                             region, awsAccountId, restApiId, stage));
-        } catch (Exception e) {
+        } catch (ParseException | java.text.ParseException e) {
             LOGGER.error("Unable to parse Access Token", e);
             throw new RuntimeException("Unauthorized");
         }
