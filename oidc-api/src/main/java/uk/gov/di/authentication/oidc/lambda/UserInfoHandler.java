@@ -22,6 +22,7 @@ import java.util.Optional;
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.INVALID_TOKEN;
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.MISSING_TOKEN;
 import static java.lang.String.format;
+import static software.amazon.awssdk.http.HttpStatusCode.OK;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.validateScopesAndRetrieveUserInfo;
 
@@ -60,6 +61,9 @@ public class UserInfoHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        if (input == null)
+            return new APIGatewayProxyResponseEvent().withBody("I'm warm").withStatusCode(OK);
+
         if (input.getHeaders() == null
                 || !input.getHeaders().containsKey("Authorization")
                 || input.getHeaders().get("Authorization").isEmpty()) {

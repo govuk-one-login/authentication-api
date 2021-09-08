@@ -34,6 +34,9 @@ module "logout" {
   logging_endpoint_arn      = var.logging_endpoint_arn
   default_tags              = local.default_tags
 
+  warmer_handler_function_name = "uk.gov.di.lambdawarmer.lambda.LambdaWarmerHandler::handleRequest"
+  warmer_lambda_zip_file       = var.lambda_warmer_zip_file
+
   use_localstack = var.use_localstack
 
   depends_on = [

@@ -45,8 +45,8 @@ resource "aws_cloudwatch_log_subscription_filter" "log_subscription" {
 }
 
 resource "aws_lambda_alias" "endpoint_lambda"{
-  name = "endpoint_lambda_version"
-  description = "Versioned alias"
+  name = replace("${var.environment}-${var.endpoint_name}-lambda-active", ".", "")
+  description = "Alias pointing at active version of Lambda"
   function_name = aws_lambda_function.endpoint_lambda.arn
   function_version = aws_lambda_function.endpoint_lambda.version
 }

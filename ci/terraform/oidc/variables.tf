@@ -16,6 +16,11 @@ variable "client_registry_api_lambda_zip_file" {
   type        = string
 }
 
+variable "lambda_warmer_zip_file" {
+  default     = "../../../lambda-warmer/build/distributions/lambda-warmer.zip"
+  description = "Location of the Lambda Warmer ZIP file"
+  type        = string
+}
 
 variable "deployer_role_arn" {
   default     = ""

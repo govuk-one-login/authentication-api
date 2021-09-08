@@ -114,7 +114,3 @@ variable "warmer_handler_runtime" {
   default = "java11"
 }
 
-variable "warmer_lambda_role_arn" {
-  type    = string
-  default = null
-}

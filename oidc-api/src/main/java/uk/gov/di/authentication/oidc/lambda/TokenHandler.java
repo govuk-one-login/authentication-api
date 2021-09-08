@@ -32,6 +32,7 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static java.lang.String.format;
+import static software.amazon.awssdk.http.HttpStatusCode.OK;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.RequestBodyHelper.parseRequestBody;
 
@@ -87,6 +88,10 @@ public class TokenHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        LOG.info("Input is {}", input.toString());
+        if (input == null)
+            return new APIGatewayProxyResponseEvent().withBody("I'm warm").withStatusCode(OK);
+
         Optional<ErrorObject> invalidRequestParamError =
                 tokenService.validateTokenRequestParams(input.getBody());
         if (invalidRequestParamError.isPresent()) {

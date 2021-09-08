@@ -1,146 +1,74 @@
 package uk.gov.di.lambdawarmer.lambda;
 
+import com.amazonaws.services.lambda.AWSLambda;
+import com.amazonaws.services.lambda.AWSLambdaClientBuilder;
+import com.amazonaws.services.lambda.model.InvocationType;
+import com.amazonaws.services.lambda.model.InvokeRequest;
+import com.amazonaws.services.lambda.model.InvokeResult;
+import com.amazonaws.services.lambda.model.ServiceException;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
-public class LambdaWarmerHandler
-        implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+import static com.amazonaws.regions.Regions.EU_WEST_2;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(LambdaWarmerHandler.class);
+public class LambdaWarmerHandler implements RequestHandler<ScheduledEvent, String> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(LambdaWarmerHandler.class);
     private final ConfigurationService configurationService;
+    private final AWSLambda awsLambda;
 
-    public LambdaWarmerHandler(ConfigurationService configurationService) {
+    public LambdaWarmerHandler(ConfigurationService configurationService, AWSLambda awsLambda) {
         this.configurationService = configurationService;
+        this.awsLambda = awsLambda;
     }
 
-    //https://github.com/jeremydaly/lambda-warmer/blob/master/index.js
-    //https://github.com/juanjoDiaz/serverless-plugin-warmup/blob/master/src/index.js
+    public LambdaWarmerHandler() {
+        this.configurationService = new ConfigurationService();
+        this.awsLambda = AWSLambdaClientBuilder.standard().withRegion(EU_WEST_2).build();
+    }
+
     @Override
-    public APIGatewayProxyResponseEvent handleRequest(
-            APIGatewayProxyRequestEvent input, Context context) {
+    public String handleRequest(ScheduledEvent input, Context context) {
+        LOG.info("Lambda warmer started");
 
-        LOGGER.info("Lambda warmer started");
+        String lambdaArn = configurationService.getLambdaArn();
+        int concurrency = configurationService.getMinConcurrency();
+        CompletableFuture<InvokeResult>[] invocations = new CompletableFuture[concurrency];
+        try {
+            for (int i = 0; i < concurrency; i++) {
+                invocations[i] = CompletableFuture.supplyAsync(() -> warmLambda(lambdaArn));
+                Thread.sleep(75);
+            }
+        } catch (InterruptedException e) {
+            LOG.error("Sleep was interrupted", e);
+        }
 
-        //get list of lambdas most likley env var
-        List<String> lambdasToInvoke = List.of("urls");
+        CompletableFuture.allOf(invocations).join();
 
-        //call lambdas in parallel
+        LOG.info("Lambda warmer finished");
+        return "Winter is coming!";
+    }
 
-        LOGGER.info("Lambda warmer finished");
-        return new APIGatewayProxyResponseEvent().withStatusCode(200).withBody("Winter is coming!");
+    private InvokeResult warmLambda(String functionName) {
+        InvokeRequest invokeRequest =
+                new InvokeRequest()
+                        .withFunctionName(functionName)
+                        .withQualifier(configurationService.getLambdaQualifier())
+                        .withPayload("{ \"Hello\": \"World\" }")
+                        .withInvocationType(InvocationType.RequestResponse);
+
+        try {
+            InvokeResult invokeResult = awsLambda.invoke(invokeRequest);
+            LOG.info("Status code: {}", invokeResult.getStatusCode());
+            return invokeResult;
+        } catch (ServiceException e) {
+            LOG.error("Error invoking lambda", e);
+            throw new RuntimeException("Error invoking Lambda", e);
+        }
     }
 }
-
-
-//const id = Date.now().toString() + '-' + ('0000' + Math.floor(Math.random()*1000).toString()).substr(-4)
-//
-//        let warm = false
-//        let lastAccess = null
-//
-//        const funcName = process.env.AWS_LAMBDA_FUNCTION_NAME
-//        const funcVersion = process.env.AWS_LAMBDA_FUNCTION_VERSION
-//
-//        const delay = ms => new Promise(res => setTimeout(res, ms))
-//
-//module.exports = (event,cfg = {}) => {
-//
-//        let config = Object.assign({}, {
-//        flag: 'warmer', // default test flag
-//        concurrency: 'concurrency', // default concurrency field
-//        test: 'test', // default test flag
-//        log: true, // default logging to true
-//        correlationId: id, // default the correlationId
-//        delay: 75 // default the delay to 75ms
-//        },cfg)
-//
-//        // If the event is a warmer ping
-//        if (event && event[config.flag]) {
-//
-//        let concurrency = event[config.concurrency]
-//        && !isNaN(event[config.concurrency])
-//        && event[config.concurrency] > 1
-//        ? event[config.concurrency] : 1
-//
-//        let invokeCount = event['__WARMER_INVOCATION__']
-//        && !isNaN(event['__WARMER_INVOCATION__'])
-//        ? event['__WARMER_INVOCATION__'] : 1
-//
-//        let invokeTotal = event['__WARMER_CONCURRENCY__']
-//        && !isNaN(event['__WARMER_CONCURRENCY__'])
-//        ? event['__WARMER_CONCURRENCY__'] : concurrency
-//
-//        let correlationId = event['__WARMER_CORRELATIONID__']
-//        ? event['__WARMER_CORRELATIONID__'] : config.correlationId
-//
-//        // Create log record
-//        let log = {
-//        action: 'warmer',
-//        function: funcName + ':' + funcVersion,
-//        id,
-//        correlationId,
-//        count: invokeCount,
-//        concurrency: invokeTotal,
-//        warm,
-//        lastAccessed: lastAccess,
-//        lastAccessedSeconds: lastAccess === null ? null : ((Date.now()-lastAccess)/1000).toFixed(1)
-//        }
-//
-//        // Log it
-//        config.log && console.log(log) // eslint-disable-line no-console
-//
-//        // flag as warm
-//        warm = true
-//        lastAccess = Date.now()
-//
-//        // Fan out if concurrency is set higher than 1
-//        if (concurrency > 1 && !event[config.test]) {
-//
-//        // init Lambda service
-//        let lambda = require('./lib/lambda-service')
-//
-//        // init promise array
-//        let invocations = []
-//
-//        // loop through concurrency count
-//        for (let i=2; i <= concurrency; i++) {
-//
-//        // Set the params and wait for the final function to finish
-//        let params = {
-//        FunctionName: funcName + ':' + funcVersion,
-//        InvocationType: i === concurrency ? 'RequestResponse' : 'Event',
-//        LogType: 'None',
-//        Payload: Buffer.from(JSON.stringify({
-//        [config.flag]: true, // send warmer flag
-//        '__WARMER_INVOCATION__': i, // send invocation number
-//        '__WARMER_CONCURRENCY__': concurrency, // send total concurrency
-//        '__WARMER_CORRELATIONID__': correlationId // send correlation id
-//        }))
-//        }
-//
-//        // Add promise to invocations array
-//        invocations.push(lambda.invoke(params).promise())
-//
-//        } // end for
-//
-//        // Invoke concurrent functions
-//        return Promise.all(invocations)
-//        .then(() => true)
-//
-//        } else if (invokeCount > 1) {
-//        return delay(config.delay).then(() => true)
-//        }
-//
-//        return Promise.resolve(true)
-//        } else {
-//        warm = true
-//        lastAccess = Date.now()
-//        return Promise.resolve(false)
-//        }
-//
-//        } // end

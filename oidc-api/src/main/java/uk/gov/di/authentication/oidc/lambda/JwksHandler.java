@@ -10,6 +10,7 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenService;
 
+import static software.amazon.awssdk.http.HttpStatusCode.OK;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class JwksHandler
@@ -35,6 +36,8 @@ public class JwksHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        if (input == null)
+            return new APIGatewayProxyResponseEvent().withBody("I'm warm").withStatusCode(OK);
         JWKSet jwkSet;
         try {
             jwkSet = new JWKSet(tokenService.getPublicJwk());

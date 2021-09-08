@@ -22,6 +22,7 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import static software.amazon.awssdk.http.HttpStatusCode.OK;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class WellknownHandler
@@ -59,6 +60,9 @@ public class WellknownHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         try {
+            if (input == null)
+                return new APIGatewayProxyResponseEvent().withBody("I'm warm").withStatusCode(OK);
+
             providerMetadata.setTokenEndpointURI(buildURI("/token", baseUrl));
             providerMetadata.setUserInfoEndpointURI(buildURI("/userinfo", baseUrl));
             providerMetadata.setAuthorizationEndpointURI(buildURI("/authorize", baseUrl));

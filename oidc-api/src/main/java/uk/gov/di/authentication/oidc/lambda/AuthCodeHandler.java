@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import static software.amazon.awssdk.http.HttpStatusCode.OK;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.StateMachine.validateStateTransition;
@@ -67,6 +68,8 @@ public class AuthCodeHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        if (input == null)
+            return new APIGatewayProxyResponseEvent().withBody("I'm warm").withStatusCode(OK);
         SessionCookieIds sessionCookieIds;
         Session session;
         try {

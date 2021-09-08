@@ -28,6 +28,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static java.lang.String.format;
+import static software.amazon.awssdk.http.HttpStatusCode.OK;
 
 public class LogoutHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -72,6 +73,8 @@ public class LogoutHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        if (input == null)
+            return new APIGatewayProxyResponseEvent().withBody("I'm warm").withStatusCode(OK);
         LOG.info("Logout request received");
         Optional<String> state = Optional.ofNullable(input.getQueryStringParameters().get("state"));
         Optional<Session> sessionFromSessionCookie =

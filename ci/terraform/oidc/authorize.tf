@@ -20,7 +20,6 @@ module "authorize" {
     DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.AuthorisationHandler::handleRequest"
-
   rest_api_id               = aws_api_gateway_rest_api.di_authentication_api.id
   root_resource_id          = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   execution_arn             = aws_api_gateway_rest_api.di_authentication_api.execution_arn
@@ -32,6 +31,9 @@ module "authorize" {
   logging_endpoint_enabled  = var.logging_endpoint_enabled
   logging_endpoint_arn      = var.logging_endpoint_arn
   default_tags              = local.default_tags
+
+  warmer_handler_function_name = "uk.gov.di.lambdawarmer.lambda.LambdaWarmerHandler::handleRequest"
+  warmer_lambda_zip_file       = var.lambda_warmer_zip_file
 
   use_localstack = var.use_localstack
   depends_on = [
