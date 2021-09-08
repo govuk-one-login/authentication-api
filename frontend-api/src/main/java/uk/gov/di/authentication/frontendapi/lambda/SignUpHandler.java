@@ -7,6 +7,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.frontendapi.entity.SignupRequest;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -26,6 +28,8 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 
 public class SignUpHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(SignUpHandler.class);
 
     private final AuthenticationService authenticationService;
     private final ValidationService validationService;
@@ -58,6 +62,10 @@ public class SignUpHandler
         Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
         if (session.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        } else {
+            LOG.info(
+                    "SignUpHandler processing request for session {}",
+                    session.get().getSessionId());
         }
 
         try {
@@ -80,6 +88,11 @@ public class SignUpHandler
                         session.get()
                                 .setState(SessionState.TWO_FACTOR_REQUIRED)
                                 .setEmailAddress(signupRequest.getEmail()));
+
+                LOG.info(
+                        "SignUpHandler successfully processed request for session {}",
+                        session.get().getSessionId());
+
                 return generateApiGatewayProxyResponse(
                         200, new BaseAPIResponse(session.get().getState()));
             } else {

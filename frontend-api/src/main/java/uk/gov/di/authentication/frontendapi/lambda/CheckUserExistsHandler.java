@@ -6,6 +6,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.frontendapi.entity.UserWithEmailRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -25,6 +27,8 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 
 public class CheckUserExistsHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(CheckUserExistsHandler.class);
 
     private final ValidationService validationService;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -58,6 +62,9 @@ public class CheckUserExistsHandler
             Optional<Session> session =
                     sessionService.getSessionFromRequestHeaders(input.getHeaders());
             if (session.isPresent()) {
+                LOG.info(
+                        "CheckUserExistsHandler processing request for session {}",
+                        session.get().getSessionId());
 
                 StateMachine.validateStateTransition(session.get(), SessionState.USER_NOT_FOUND);
                 session.get().setState(SessionState.USER_NOT_FOUND);
@@ -82,9 +89,15 @@ public class CheckUserExistsHandler
                                 emailAddress, userExists, session.get().getState());
                 sessionService.save(session.get());
 
+                LOG.info(
+                        "CheckUserExistsHandler successfully processed request for session {}",
+                        session.get().getSessionId());
+
                 return generateApiGatewayProxyResponse(200, checkUserExistsResponse);
+            } else {
+                LOG.error("Session cannot be found");
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
