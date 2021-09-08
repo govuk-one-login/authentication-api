@@ -131,9 +131,7 @@ public class TokenService {
         try {
             LOGGER.info("Validating Access Token signature");
             LOGGER.info("TokenSigningKeyID: " + configService.getTokenSigningKeyAlias());
-            LOGGER.info("Issuer: " + configService.getBaseURL().get());
             JWK publicJwk = getPublicJwk();
-            LOGGER.info("PublicJWK: " + publicJwk.toString());
             JWKSet jwkSet = new JWKSet(publicJwk);
             LOGGER.info("JWKSET: " + jwkSet);
             AccessTokenHash accessTokenHash =
