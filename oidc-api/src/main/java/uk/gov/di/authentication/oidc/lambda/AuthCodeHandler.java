@@ -80,6 +80,8 @@ public class AuthCodeHandler
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         }
 
+        LOGGER.info("AuthCodeHandler processing request for session {}", session.getSessionId());
+
         try {
             validateStateTransition(session, AUTHENTICATED);
         } catch (StateMachine.InvalidStateTransitionException e) {

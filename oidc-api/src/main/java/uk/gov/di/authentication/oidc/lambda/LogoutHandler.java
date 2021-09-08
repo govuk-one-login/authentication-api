@@ -83,6 +83,8 @@ public class LogoutHandler
 
     private APIGatewayProxyResponseEvent processLogoutRequest(
             Session session, APIGatewayProxyRequestEvent input, Optional<String> state) {
+        LOG.info("LogoutHandler processing request for session {}", session.getSessionId());
+
         Map<String, String> queryStringParameters = input.getQueryStringParameters();
         Optional<CookieHelper.SessionCookieIds> sessionCookieIds =
                 CookieHelper.parseSessionCookie(input.getHeaders());
