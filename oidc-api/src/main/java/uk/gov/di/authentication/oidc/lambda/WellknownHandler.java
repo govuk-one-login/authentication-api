@@ -48,7 +48,7 @@ public class WellknownHandler
         providerMetadata =
                 new OIDCProviderMetadata(
                         new Issuer(configService.getBaseURL().get()),
-                        List.of(SubjectType.PUBLIC, SubjectType.PAIRWISE),
+                        List.of(SubjectType.PAIRWISE),
                         buildURI(
                                 "/.well-known/jwks.json",
                                 configService.getBaseURL().orElseThrow()));
