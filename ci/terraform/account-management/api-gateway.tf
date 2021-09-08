@@ -99,6 +99,16 @@ resource "aws_iam_role" "invocation_role" {
   assume_role_policy = data.aws_iam_policy_document.api_gateway_can_assume_policy.json
 }
 
+resource "aws_cloudwatch_log_group" "lambda_log_group" {
+  count = var.use_localstack ? 0 : 1
+  name  = "/aws/lambda/${aws_lambda_function.authorizer.function_name}"
+  tags  = local.default_tags
+
+  depends_on = [
+    aws_lambda_function.authorizer
+  ]
+}
+
 resource "aws_iam_policy" "api_gateway_logging_policy" {
   name        = "${var.environment}-account-management-api-gateway-logging"
   path        = "/"
