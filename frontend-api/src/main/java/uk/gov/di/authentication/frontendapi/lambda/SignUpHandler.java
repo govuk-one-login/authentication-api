@@ -79,6 +79,7 @@ public class SignUpHandler
 
             if (passwordValidationErrors.isEmpty()) {
                 if (authenticationService.userExists(signupRequest.getEmail())) {
+                    LOG.error("User with email {} already exists", signupRequest.getEmail());
                     return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
                 }
                 authenticationService.signUp(
@@ -99,8 +100,10 @@ public class SignUpHandler
                 return generateApiGatewayProxyErrorResponse(400, passwordValidationErrors.get());
             }
         } catch (JsonProcessingException e) {
+            LOG.error("Error parsing request", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
+            LOG.error("Invalid transition in user journey", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         }
     }

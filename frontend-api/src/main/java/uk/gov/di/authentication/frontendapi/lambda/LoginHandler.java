@@ -98,7 +98,7 @@ public class LoginHandler
                     input.getBody());
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
-            LOGGER.error("Invalid transition in user journey. Unable to Login user");
+            LOGGER.error("Invalid transition in user journey. Unable to Login user", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         }
     }

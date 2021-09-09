@@ -162,10 +162,15 @@ public class VerifyCodeHandler
                     return generateSuccessResponse(session.get());
             }
         } catch (JsonProcessingException e) {
+            LOG.error("Error parsing request", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
+            LOG.error("Invalid transition in user journey", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         }
+        LOG.error(
+                "Encountered unexpected error while processing session {}",
+                session.get().getSessionId());
         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
     }
 

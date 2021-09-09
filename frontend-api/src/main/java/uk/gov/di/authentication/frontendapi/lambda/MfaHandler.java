@@ -126,7 +126,7 @@ public class MfaHandler
             LOGGER.error("Request is missing parameters. Request Body: {}", input.getBody());
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
-            LOGGER.error("Invalid transition in user journey");
+            LOGGER.error("Invalid transition in user journey", e);
             return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
         }
     }
