@@ -1,7 +1,5 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.amazonaws.services.kms.model.GetPublicKeyRequest;
-import com.amazonaws.services.kms.model.GetPublicKeyResult;
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;
 import com.nimbusds.jose.JOSEException;
@@ -11,8 +9,6 @@ import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
-import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
@@ -21,7 +17,6 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
@@ -46,7 +41,6 @@ import java.util.Optional;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -136,46 +130,6 @@ public class TokenServiceTest {
     }
 
     @Test
-    public void shouldSuccessfullyValidateIDToken() throws JOSEException {
-        ECKey ecJWK = generateECKeyPair();
-        ECKey ecPublicJWK = ecJWK.toPublicJWK();
-        JWSSigner signer = new ECDSASigner(ecJWK);
-        when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
-        GetPublicKeyResult getPublicKeyResult = new GetPublicKeyResult();
-        getPublicKeyResult.setKeyUsage("SIGN_VERIFY");
-        getPublicKeyResult.setKeyId(KEY_ID);
-        getPublicKeyResult.setSigningAlgorithms(
-                Collections.singletonList(JWSAlgorithm.ES256.getName()));
-        getPublicKeyResult.setPublicKey(ByteBuffer.wrap(ecPublicJWK.toECPublicKey().getEncoded()));
-        when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
-                .thenReturn(getPublicKeyResult);
-
-        SignedJWT signedIdToken = createSignedIdToken(signer);
-        assertTrue(tokenService.validateIdTokenSignature(signedIdToken.serialize()));
-    }
-
-    @Test
-    public void shouldSuccessfullyValidateAccessToken() throws JOSEException {
-        ECKey ecJWK = generateECKeyPair();
-        ECKey ecPublicJWK = ecJWK.toPublicJWK();
-        JWSSigner signer = new ECDSASigner(ecJWK);
-        when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
-        GetPublicKeyResult getPublicKeyResult = new GetPublicKeyResult();
-        getPublicKeyResult.setKeyUsage("SIGN_VERIFY");
-        getPublicKeyResult.setKeyId(KEY_ID);
-        getPublicKeyResult.setSigningAlgorithms(
-                Collections.singletonList(JWSAlgorithm.ES256.getName()));
-        getPublicKeyResult.setPublicKey(ByteBuffer.wrap(ecPublicJWK.toECPublicKey().getEncoded()));
-        when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
-                .thenReturn(getPublicKeyResult);
-
-        SignedJWT signedAccessToken = createSignedAccessToken(signer, KEY_ID);
-        assertTrue(
-                tokenService.validateAccessTokenSignature(
-                        new BearerAccessToken(signedAccessToken.serialize())));
-    }
-
-    @Test
     public void shouldReturnErrorIfUnableToValidatePrivateKeyJWT() throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
         KeyPair keyPairTwo = generateRsaKeyPair();
@@ -199,28 +153,6 @@ public class TokenServiceTest {
                 tokenService.validateTokenRequestParams(URLUtils.serializeParameters(customParams));
 
         assertThat(errorObject, equalTo(Optional.empty()));
-    }
-
-    @Test
-    public void shouldRetrievePublicKeyfromKmsAndParseToJwk() {
-        String keyId = "3423543t5435345";
-        byte[] publicKey =
-                Base64.getDecoder()
-                        .decode(
-                                "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEpRm+QZsh2IkUWcqXUhBI9ulOzO8dz0Z8HIS6m77tI4eWoZgKYUcbByshDtN4gWPql7E5mN4uCLsg5+6SDXlQcA==");
-        when(configurationService.getTokenSigningKeyAlias()).thenReturn(keyId);
-        GetPublicKeyResult getPublicKeyResult = new GetPublicKeyResult();
-        getPublicKeyResult.setKeyUsage("SIGN_VERIFY");
-        getPublicKeyResult.setKeyId(keyId);
-        getPublicKeyResult.setSigningAlgorithms(
-                Collections.singletonList(JWSAlgorithm.ES256.getName()));
-        getPublicKeyResult.setPublicKey(ByteBuffer.wrap(publicKey));
-        when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
-                .thenReturn(getPublicKeyResult);
-        JWK publicKeyJwk = tokenService.getPublicJwk();
-        assertEquals(publicKeyJwk.getKeyID(), keyId);
-        assertEquals(publicKeyJwk.getAlgorithm(), JWSAlgorithm.ES256);
-        assertEquals(publicKeyJwk.getKeyUse(), KeyUse.SIGNATURE);
     }
 
     @Test

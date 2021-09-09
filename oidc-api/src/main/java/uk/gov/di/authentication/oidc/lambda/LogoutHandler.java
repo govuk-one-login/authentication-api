@@ -18,7 +18,7 @@ import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.shared.services.TokenService;
+import uk.gov.di.authentication.shared.services.TokenValidationService;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -39,7 +39,7 @@ public class LogoutHandler
     private final SessionService sessionService;
     private final DynamoClientService dynamoClientService;
     private final ClientSessionService clientSessionService;
-    private final TokenService tokenService;
+    private final TokenValidationService tokenValidationService;
 
     public LogoutHandler() {
         this.configurationService = new ConfigurationService();
@@ -50,8 +50,8 @@ public class LogoutHandler
                         configurationService.getEnvironment(),
                         configurationService.getDynamoEndpointUri());
         this.clientSessionService = new ClientSessionService(configurationService);
-        this.tokenService =
-                new TokenService(
+        this.tokenValidationService =
+                new TokenValidationService(
                         configurationService,
                         new RedisConnectionService(configurationService),
                         new KmsConnectionService(configurationService));
@@ -62,12 +62,12 @@ public class LogoutHandler
             SessionService sessionService,
             DynamoClientService dynamoClientService,
             ClientSessionService clientSessionService,
-            TokenService tokenService) {
+            TokenValidationService tokenValidationService) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.dynamoClientService = dynamoClientService;
         this.clientSessionService = clientSessionService;
-        this.tokenService = tokenService;
+        this.tokenValidationService = tokenValidationService;
     }
 
     @Override
@@ -114,7 +114,8 @@ public class LogoutHandler
             throw new RuntimeException(
                     format("ID Token does not exist for Session: %s", session.getSessionId()));
         }
-        if (!tokenService.validateIdTokenSignature(queryStringParameters.get("id_token_hint"))) {
+        if (!tokenValidationService.validateIdTokenSignature(
+                queryStringParameters.get("id_token_hint"))) {
             LOG.error(
                     "Unable to validate ID token signature for Session: {}",
                     session.getSessionId());

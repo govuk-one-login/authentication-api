@@ -8,7 +8,7 @@ import com.nimbusds.jose.jwk.JWKSet;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.TokenService;
+import uk.gov.di.authentication.shared.services.TokenValidationService;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
@@ -16,18 +16,20 @@ import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 public class JwksHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private final TokenService tokenService;
+    private final TokenValidationService tokenValidationService;
     private final ConfigurationService configurationService;
 
-    public JwksHandler(TokenService tokenService, ConfigurationService configurationService) {
-        this.tokenService = tokenService;
+    public JwksHandler(
+            TokenValidationService tokenValidationService,
+            ConfigurationService configurationService) {
+        this.tokenValidationService = tokenValidationService;
         this.configurationService = configurationService;
     }
 
     public JwksHandler() {
         this.configurationService = new ConfigurationService();
-        this.tokenService =
-                new TokenService(
+        this.tokenValidationService =
+                new TokenValidationService(
                         configurationService,
                         new RedisConnectionService(configurationService),
                         new KmsConnectionService(configurationService));
@@ -41,7 +43,7 @@ public class JwksHandler
                         () -> {
                             JWKSet jwkSet;
                             try {
-                                jwkSet = new JWKSet(tokenService.getPublicJwk());
+                                jwkSet = new JWKSet(tokenValidationService.getPublicJwk());
                             } catch (IllegalArgumentException e) {
                                 return generateApiGatewayProxyResponse(
                                         500, "Signing key is not present");

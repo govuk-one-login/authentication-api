@@ -17,7 +17,7 @@ import uk.gov.di.accountmanagement.entity.TokenAuthorizerContext;
 import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.TokenService;
+import uk.gov.di.authentication.shared.services.TokenValidationService;
 
 import java.util.List;
 
@@ -31,7 +31,8 @@ import static org.mockito.Mockito.when;
 
 class AuthoriseAccessTokenHandlerTest {
 
-    private final TokenService tokenService = mock(TokenService.class);
+    private final TokenValidationService tokenValidationServicen =
+            mock(TokenValidationService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private AuthoriseAccessTokenHandler handler;
@@ -46,7 +47,8 @@ class AuthoriseAccessTokenHandlerTest {
     @BeforeEach
     public void setUp() {
         handler =
-                new AuthoriseAccessTokenHandler(tokenService, configurationService, dynamoService);
+                new AuthoriseAccessTokenHandler(
+                        tokenValidationServicen, configurationService, dynamoService);
     }
 
     @Test
@@ -56,7 +58,8 @@ class AuthoriseAccessTokenHandlerTest {
         TokenAuthorizerContext tokenAuthorizerContext =
                 new TokenAuthorizerContext(
                         TOKEN_TYPE, signedAccessToken.toAuthorizationHeader(), METHOD_ARN);
-        when(tokenService.validateAccessTokenSignature(signedAccessToken)).thenReturn(true);
+        when(tokenValidationServicen.validateAccessTokenSignature(signedAccessToken))
+                .thenReturn(true);
         AuthPolicy authPolicy = handler.handleRequest(tokenAuthorizerContext, context);
 
         assertThat(authPolicy.getPrincipalId(), equalTo(SUBJECT.getValue()));
@@ -70,7 +73,8 @@ class AuthoriseAccessTokenHandlerTest {
         TokenAuthorizerContext tokenAuthorizerContext =
                 new TokenAuthorizerContext(
                         TOKEN_TYPE, signedAccessToken.toAuthorizationHeader(), METHOD_ARN);
-        when(tokenService.validateAccessTokenSignature(signedAccessToken)).thenReturn(false);
+        when(tokenValidationServicen.validateAccessTokenSignature(signedAccessToken))
+                .thenReturn(false);
 
         RuntimeException exception =
                 assertThrows(
@@ -88,7 +92,8 @@ class AuthoriseAccessTokenHandlerTest {
         TokenAuthorizerContext tokenAuthorizerContext =
                 new TokenAuthorizerContext(
                         TOKEN_TYPE, signedAccessToken.toAuthorizationHeader(), METHOD_ARN);
-        when(tokenService.validateAccessTokenSignature(signedAccessToken)).thenReturn(true);
+        when(tokenValidationServicen.validateAccessTokenSignature(signedAccessToken))
+                .thenReturn(true);
         when(dynamoService.getUserProfileFromSubject(SUBJECT.getValue()))
                 .thenThrow(RuntimeException.class);
 
