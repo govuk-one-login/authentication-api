@@ -52,6 +52,7 @@ public class AuthoriseAccessTokenHandler
 
             AccessToken accessToken;
             accessToken = AccessToken.parse(token, AccessTokenType.BEARER);
+            String subject = SignedJWT.parse(accessToken.getValue()).getJWTClaimsSet().getSubject();
             boolean isAccessTokenSignatureValid =
                     tokenService.validateAccessTokenSignature(accessToken);
             if (!isAccessTokenSignatureValid) {
@@ -59,7 +60,6 @@ public class AuthoriseAccessTokenHandler
                 throw new RuntimeException("Unauthorized");
             }
             LOGGER.info("Successfully validated Access Token signature");
-            String subject = SignedJWT.parse(accessToken.getValue()).getJWTClaimsSet().getSubject();
             try {
                 dynamoService.getUserProfileFromSubject(subject);
             } catch (Exception e) {
