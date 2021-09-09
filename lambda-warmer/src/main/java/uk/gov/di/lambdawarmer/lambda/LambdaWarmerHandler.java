@@ -12,9 +12,14 @@ import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 import static com.amazonaws.regions.Regions.EU_WEST_2;
+import static java.text.MessageFormat.format;
 
 public class LambdaWarmerHandler implements RequestHandler<ScheduledEvent, String> {
 
@@ -38,20 +43,20 @@ public class LambdaWarmerHandler implements RequestHandler<ScheduledEvent, Strin
 
         String lambdaArn = configurationService.getLambdaArn();
         int concurrency = configurationService.getMinConcurrency();
-        CompletableFuture<InvokeResult>[] invocations = new CompletableFuture[concurrency];
-        try {
-            for (int i = 0; i < concurrency; i++) {
-                invocations[i] = CompletableFuture.supplyAsync(() -> warmLambda(lambdaArn));
-                Thread.sleep(75);
-            }
-        } catch (InterruptedException e) {
-            LOG.error("Sleep was interrupted", e);
+        List<CompletableFuture<InvokeResult>> invocations = new ArrayList<>();
+        Executor executor = Executors.newFixedThreadPool(concurrency);
+        for (int i = 0; i < concurrency; i++) {
+            invocations.add(CompletableFuture.supplyAsync(() -> warmLambda(lambdaArn), executor));
         }
 
-        CompletableFuture.allOf(invocations).join();
+        CompletableFuture.allOf(invocations.toArray(new CompletableFuture[concurrency]))
+                .thenRun(() -> {
+                    invocations.forEach( i -> LOG.info("Completed Successfully: {}", !i.isCompletedExceptionally()));
+                })
+                .join();
 
         LOG.info("Lambda warmer finished");
-        return "Winter is coming!";
+        return format("Lambda warmup for {0}:{1} complete!", lambdaArn, configurationService.getLambdaQualifier());
     }
 
     private InvokeResult warmLambda(String functionName) {
@@ -59,12 +64,10 @@ public class LambdaWarmerHandler implements RequestHandler<ScheduledEvent, Strin
                 new InvokeRequest()
                         .withFunctionName(functionName)
                         .withQualifier(configurationService.getLambdaQualifier())
-                        .withPayload("{ \"Hello\": \"World\" }")
                         .withInvocationType(InvocationType.RequestResponse);
 
         try {
             InvokeResult invokeResult = awsLambda.invoke(invokeRequest);
-            LOG.info("Status code: {}", invokeResult.getStatusCode());
             return invokeResult;
         } catch (ServiceException e) {
             LOG.error("Error invoking lambda", e);
