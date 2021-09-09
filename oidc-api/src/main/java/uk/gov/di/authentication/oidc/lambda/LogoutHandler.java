@@ -73,15 +73,19 @@ public class LogoutHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return isWarming(input).orElseGet(() -> {
-            LOG.info("Logout request received");
-            Optional<String> state = Optional.ofNullable(input.getQueryStringParameters().get("state"));
-            Optional<Session> sessionFromSessionCookie =
-                    sessionService.getSessionFromSessionCookie(input.getHeaders());
-            return sessionFromSessionCookie
-                    .map(t -> processLogoutRequest(t, input, state))
-                    .orElse(generateDefaultLogoutResponse(state));
-        });
+        return isWarming(input)
+                .orElseGet(
+                        () -> {
+                            LOG.info("Logout request received");
+                            Optional<String> state =
+                                    Optional.ofNullable(
+                                            input.getQueryStringParameters().get("state"));
+                            Optional<Session> sessionFromSessionCookie =
+                                    sessionService.getSessionFromSessionCookie(input.getHeaders());
+                            return sessionFromSessionCookie
+                                    .map(t -> processLogoutRequest(t, input, state))
+                                    .orElse(generateDefaultLogoutResponse(state));
+                        });
     }
 
     private APIGatewayProxyResponseEvent processLogoutRequest(

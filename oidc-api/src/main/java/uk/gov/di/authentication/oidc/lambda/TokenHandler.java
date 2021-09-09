@@ -32,9 +32,9 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static java.lang.String.format;
-import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.RequestBodyHelper.parseRequestBody;
+import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class TokenHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -88,97 +88,125 @@ public class TokenHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return isWarming(input).orElseGet(() -> {
+        return isWarming(input)
+                .orElseGet(
+                        () -> {
+                            Optional<ErrorObject> invalidRequestParamError =
+                                    tokenService.validateTokenRequestParams(input.getBody());
+                            if (invalidRequestParamError.isPresent()) {
+                                LOG.error("Parameters missing from Token Request");
+                                return generateApiGatewayProxyResponse(
+                                        400,
+                                        invalidRequestParamError
+                                                .get()
+                                                .toJSONObject()
+                                                .toJSONString());
+                            }
 
-            Optional<ErrorObject> invalidRequestParamError =
-                    tokenService.validateTokenRequestParams(input.getBody());
-            if (invalidRequestParamError.isPresent()) {
-                LOG.error("Parameters missing from Token Request");
-                return generateApiGatewayProxyResponse(
-                        400, invalidRequestParamError.get().toJSONObject().toJSONString());
-            }
+                            Map<String, String> requestBody = parseRequestBody(input.getBody());
+                            String clientID = requestBody.get("client_id");
+                            ClientRegistry client;
+                            try {
+                                client = clientService.getClient(clientID).orElseThrow();
+                            } catch (NoSuchElementException e) {
+                                LOG.error(
+                                        "Client not found in Client Registry with Client ID {}",
+                                        clientID);
+                                return generateApiGatewayProxyResponse(
+                                        400,
+                                        OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString());
+                            }
+                            String baseUrl =
+                                    configurationService
+                                            .getBaseURL()
+                                            .orElseThrow(
+                                                    () -> {
+                                                        LOG.error(
+                                                                "Application was not configured with baseURL");
+                                                        // TODO - We need to come up with a strategy
+                                                        // to handle uncaught
+                                                        // exceptions
+                                                        return new RuntimeException(
+                                                                "Application was not configured with baseURL");
+                                                    });
+                            String tokenUrl = baseUrl + TOKEN_PATH;
+                            Optional<ErrorObject> invalidPrivateKeyJwtError =
+                                    tokenService.validatePrivateKeyJWT(
+                                            input.getBody(), client.getPublicKey(), tokenUrl);
+                            if (invalidPrivateKeyJwtError.isPresent()) {
+                                LOG.error(
+                                        "Private Key JWT is not valid for Client ID {}", clientID);
+                                return generateApiGatewayProxyResponse(
+                                        400,
+                                        invalidPrivateKeyJwtError
+                                                .get()
+                                                .toJSONObject()
+                                                .toJSONString());
+                            }
 
-            Map<String, String> requestBody = parseRequestBody(input.getBody());
-            String clientID = requestBody.get("client_id");
-            ClientRegistry client;
-            try {
-                client = clientService.getClient(clientID).orElseThrow();
-            } catch (NoSuchElementException e) {
-                LOG.error("Client not found in Client Registry with Client ID {}", clientID);
-                return generateApiGatewayProxyResponse(
-                        400, OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString());
-            }
-            String baseUrl =
-                    configurationService
-                            .getBaseURL()
-                            .orElseThrow(
-                                    () -> {
-                                        LOG.error("Application was not configured with baseURL");
-                                        // TODO - We need to come up with a strategy to handle uncaught
-                                        // exceptions
-                                        return new RuntimeException(
-                                                "Application was not configured with baseURL");
-                                    });
-            String tokenUrl = baseUrl + TOKEN_PATH;
-            Optional<ErrorObject> invalidPrivateKeyJwtError =
-                    tokenService.validatePrivateKeyJWT(
-                            input.getBody(), client.getPublicKey(), tokenUrl);
-            if (invalidPrivateKeyJwtError.isPresent()) {
-                LOG.error("Private Key JWT is not valid for Client ID {}", clientID);
-                return generateApiGatewayProxyResponse(
-                        400, invalidPrivateKeyJwtError.get().toJSONObject().toJSONString());
-            }
+                            AuthCodeExchangeData authCodeExchangeData;
+                            try {
+                                authCodeExchangeData =
+                                        authorisationCodeService
+                                                .getExchangeDataForCode(requestBody.get("code"))
+                                                .orElseThrow();
+                            } catch (NoSuchElementException e) {
+                                LOG.error("Could not retrieve client session ID from code", e);
+                                return generateApiGatewayProxyResponse(
+                                        400,
+                                        OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
+                            }
+                            ClientSession clientSession =
+                                    clientSessionService.getClientSession(
+                                            authCodeExchangeData.getClientSessionId());
+                            AuthenticationRequest authRequest;
+                            try {
+                                authRequest =
+                                        AuthenticationRequest.parse(
+                                                clientSession.getAuthRequestParams());
+                            } catch (ParseException e) {
+                                LOG.error("Could not parse authentication request", e);
+                                throw new RuntimeException(
+                                        format(
+                                                "Unable to parse Auth Request\n Auth Request Params: %s \n Exception: %s",
+                                                clientSession.getAuthRequestParams(), e));
+                            }
+                            if (!authRequest
+                                    .getRedirectionURI()
+                                    .toString()
+                                    .equals(requestBody.get("redirect_uri"))) {
+                                LOG.error(
+                                        "Redirect URI for auth request ({}) does not match redirect URI for request body ({})",
+                                        authRequest.getRedirectionURI(),
+                                        requestBody.get("redirect_uri"));
+                                return generateApiGatewayProxyResponse(
+                                        400,
+                                        OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
+                            }
+                            Subject subject =
+                                    authenticationService.getSubjectFromEmail(
+                                            authCodeExchangeData.getEmail());
+                            Map<String, Object> additionalTokenClaims = new HashMap<>();
+                            if (authRequest.getNonce() != null) {
+                                additionalTokenClaims.put("nonce", authRequest.getNonce());
+                            }
+                            OIDCTokenResponse tokenResponse =
+                                    tokenService.generateTokenResponse(
+                                            clientID,
+                                            subject,
+                                            authRequest.getScope().toStringList(),
+                                            additionalTokenClaims);
 
-            AuthCodeExchangeData authCodeExchangeData;
-            try {
-                authCodeExchangeData =
-                        authorisationCodeService
-                                .getExchangeDataForCode(requestBody.get("code"))
-                                .orElseThrow();
-            } catch (NoSuchElementException e) {
-                LOG.error("Could not retrieve client session ID from code", e);
-                return generateApiGatewayProxyResponse(
-                        400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
-            }
-            ClientSession clientSession =
-                    clientSessionService.getClientSession(authCodeExchangeData.getClientSessionId());
-            AuthenticationRequest authRequest;
-            try {
-                authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
-            } catch (ParseException e) {
-                LOG.error("Could not parse authentication request", e);
-                throw new RuntimeException(
-                        format(
-                                "Unable to parse Auth Request\n Auth Request Params: %s \n Exception: %s",
-                                clientSession.getAuthRequestParams(), e));
-            }
-            if (!authRequest.getRedirectionURI().toString().equals(requestBody.get("redirect_uri"))) {
-                LOG.error(
-                        "Redirect URI for auth request ({}) does not match redirect URI for request body ({})",
-                        authRequest.getRedirectionURI(),
-                        requestBody.get("redirect_uri"));
-                return generateApiGatewayProxyResponse(
-                        400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
-            }
-            Subject subject =
-                    authenticationService.getSubjectFromEmail(authCodeExchangeData.getEmail());
-            Map<String, Object> additionalTokenClaims = new HashMap<>();
-            if (authRequest.getNonce() != null) {
-                additionalTokenClaims.put("nonce", authRequest.getNonce());
-            }
-            OIDCTokenResponse tokenResponse =
-                    tokenService.generateTokenResponse(
-                            clientID,
-                            subject,
-                            authRequest.getScope().toStringList(),
-                            additionalTokenClaims);
-
-            clientSessionService.saveClientSession(
-                    authCodeExchangeData.getClientSessionId(),
-                    clientSession.setIdTokenHint(
-                            tokenResponse.getOIDCTokens().getIDToken().serialize()));
-            LOG.info("Successfully generated tokens");
-            return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
-        });
+                            clientSessionService.saveClientSession(
+                                    authCodeExchangeData.getClientSessionId(),
+                                    clientSession.setIdTokenHint(
+                                            tokenResponse
+                                                    .getOIDCTokens()
+                                                    .getIDToken()
+                                                    .serialize()));
+                            LOG.info("Successfully generated tokens");
+                            return generateApiGatewayProxyResponse(
+                                    200, tokenResponse.toJSONObject().toJSONString());
+                        });
     }
 }

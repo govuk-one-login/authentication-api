@@ -10,8 +10,8 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenService;
 
-import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class JwksHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -36,14 +36,17 @@ public class JwksHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return isWarming(input).orElseGet(() -> {
-            JWKSet jwkSet;
-            try {
-                jwkSet = new JWKSet(tokenService.getPublicJwk());
-            } catch (IllegalArgumentException e) {
-                return generateApiGatewayProxyResponse(500, "Signing key is not present");
-            }
-            return generateApiGatewayProxyResponse(200, jwkSet.toString(true));
-        });
+        return isWarming(input)
+                .orElseGet(
+                        () -> {
+                            JWKSet jwkSet;
+                            try {
+                                jwkSet = new JWKSet(tokenService.getPublicJwk());
+                            } catch (IllegalArgumentException e) {
+                                return generateApiGatewayProxyResponse(
+                                        500, "Signing key is not present");
+                            }
+                            return generateApiGatewayProxyResponse(200, jwkSet.toString(true));
+                        });
     }
 }
