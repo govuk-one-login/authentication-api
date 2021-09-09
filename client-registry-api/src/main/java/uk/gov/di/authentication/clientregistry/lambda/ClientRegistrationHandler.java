@@ -21,6 +21,7 @@ import java.util.Optional;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_ERROR;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class ClientRegistrationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -53,46 +54,55 @@ public class ClientRegistrationHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        auditService.submitAuditEvent(REGISTER_CLIENT_REQUEST_RECEIVED);
+        return isWarming(input)
+                .orElseGet(
+                        () -> {
+                            auditService.submitAuditEvent(REGISTER_CLIENT_REQUEST_RECEIVED);
 
-        try {
-            ClientRegistrationRequest clientRegistrationRequest =
-                    objectMapper.readValue(input.getBody(), ClientRegistrationRequest.class);
-            Optional<ErrorObject> errorResponse =
-                    validationService.validateClientRegistrationConfig(clientRegistrationRequest);
-            if (errorResponse.isPresent()) {
-                auditService.submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR);
+                            try {
+                                ClientRegistrationRequest clientRegistrationRequest =
+                                        objectMapper.readValue(
+                                                input.getBody(), ClientRegistrationRequest.class);
+                                Optional<ErrorObject> errorResponse =
+                                        validationService.validateClientRegistrationConfig(
+                                                clientRegistrationRequest);
+                                if (errorResponse.isPresent()) {
+                                    auditService.submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR);
 
-                return generateApiGatewayProxyResponse(
-                        400, errorResponse.get().toJSONObject().toJSONString());
-            }
-            String clientID = clientService.generateClientID().toString();
-            clientService.addClient(
-                    clientID,
-                    clientRegistrationRequest.getClientName(),
-                    clientRegistrationRequest.getRedirectUris(),
-                    clientRegistrationRequest.getContacts(),
-                    clientRegistrationRequest.getScopes(),
-                    clientRegistrationRequest.getPublicKey(),
-                    clientRegistrationRequest.getPostLogoutRedirectUris(),
-                    clientRegistrationRequest.getServiceType());
+                                    return generateApiGatewayProxyResponse(
+                                            400, errorResponse.get().toJSONObject().toJSONString());
+                                }
+                                String clientID = clientService.generateClientID().toString();
+                                clientService.addClient(
+                                        clientID,
+                                        clientRegistrationRequest.getClientName(),
+                                        clientRegistrationRequest.getRedirectUris(),
+                                        clientRegistrationRequest.getContacts(),
+                                        clientRegistrationRequest.getScopes(),
+                                        clientRegistrationRequest.getPublicKey(),
+                                        clientRegistrationRequest.getPostLogoutRedirectUris(),
+                                        clientRegistrationRequest.getServiceType());
 
-            ClientRegistrationResponse clientRegistrationResponse =
-                    new ClientRegistrationResponse(
-                            clientRegistrationRequest.getClientName(),
-                            clientID,
-                            clientRegistrationRequest.getRedirectUris(),
-                            clientRegistrationRequest.getContacts(),
-                            clientRegistrationRequest.getScopes(),
-                            clientRegistrationRequest.getPostLogoutRedirectUris(),
-                            clientRegistrationRequest.getServiceType());
+                                ClientRegistrationResponse clientRegistrationResponse =
+                                        new ClientRegistrationResponse(
+                                                clientRegistrationRequest.getClientName(),
+                                                clientID,
+                                                clientRegistrationRequest.getRedirectUris(),
+                                                clientRegistrationRequest.getContacts(),
+                                                clientRegistrationRequest.getScopes(),
+                                                clientRegistrationRequest
+                                                        .getPostLogoutRedirectUris(),
+                                                clientRegistrationRequest.getServiceType());
 
-            return generateApiGatewayProxyResponse(200, clientRegistrationResponse);
-        } catch (JsonProcessingException e) {
-            auditService.submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR);
+                                return generateApiGatewayProxyResponse(
+                                        200, clientRegistrationResponse);
+                            } catch (JsonProcessingException e) {
+                                auditService.submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR);
 
-            return generateApiGatewayProxyResponse(
-                    400, OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString());
-        }
+                                return generateApiGatewayProxyResponse(
+                                        400,
+                                        OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString());
+                            }
+                        });
     }
 }

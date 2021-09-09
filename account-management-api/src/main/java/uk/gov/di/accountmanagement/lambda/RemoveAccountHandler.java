@@ -23,6 +23,7 @@ import java.util.Map;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.RequestBodyHelper.validatePrincipal;
+import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class RemoveAccountHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -56,29 +57,39 @@ public class RemoveAccountHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        try {
-            LOGGER.info("RemoveAccountHandler received request");
-            RemoveAccountRequest removeAccountRequest =
-                    objectMapper.readValue(input.getBody(), RemoveAccountRequest.class);
+        return isWarming(input)
+                .orElseGet(
+                        () -> {
+                            try {
+                                LOGGER.info("RemoveAccountHandler received request");
+                                RemoveAccountRequest removeAccountRequest =
+                                        objectMapper.readValue(
+                                                input.getBody(), RemoveAccountRequest.class);
 
-            String email = removeAccountRequest.getEmail();
+                                String email = removeAccountRequest.getEmail();
 
-            Subject subjectFromEmail = authenticationService.getSubjectFromEmail(email);
-            Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
-            validatePrincipal(subjectFromEmail, authorizerParams);
+                                Subject subjectFromEmail =
+                                        authenticationService.getSubjectFromEmail(email);
+                                Map<String, Object> authorizerParams =
+                                        input.getRequestContext().getAuthorizer();
+                                validatePrincipal(subjectFromEmail, authorizerParams);
 
-            authenticationService.removeAccount(email);
-            LOGGER.info("User account removed. Adding message to SQS queue");
+                                authenticationService.removeAccount(email);
+                                LOGGER.info("User account removed. Adding message to SQS queue");
 
-            NotifyRequest notifyRequest = new NotifyRequest(email, NotificationType.DELETE_ACCOUNT);
-            sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
-            LOGGER.info(
-                    "Remove account message successfully added to queue. Generating successful gateway response");
-            return generateApiGatewayProxyResponse(200, "");
-        } catch (JsonProcessingException e) {
-            LOGGER.error(
-                    "RemoveAccountRequest request is missing or contains invalid parameters.", e);
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
-        }
+                                NotifyRequest notifyRequest =
+                                        new NotifyRequest(email, NotificationType.DELETE_ACCOUNT);
+                                sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+                                LOGGER.info(
+                                        "Remove account message successfully added to queue. Generating successful gateway response");
+                                return generateApiGatewayProxyResponse(200, "");
+                            } catch (JsonProcessingException e) {
+                                LOGGER.error(
+                                        "RemoveAccountRequest request is missing or contains invalid parameters.",
+                                        e);
+                                return generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.ERROR_1001);
+                            }
+                        });
     }
 }

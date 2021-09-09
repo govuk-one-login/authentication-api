@@ -25,6 +25,7 @@ import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class SignUpHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -59,52 +60,70 @@ public class SignUpHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
-        if (session.isEmpty()) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-        } else {
-            LOG.info(
-                    "SignUpHandler processing request for session {}",
-                    session.get().getSessionId());
-        }
+        return isWarming(input)
+                .orElseGet(
+                        () -> {
+                            Optional<Session> session =
+                                    sessionService.getSessionFromRequestHeaders(input.getHeaders());
+                            if (session.isEmpty()) {
+                                return generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.ERROR_1000);
+                            } else {
+                                LOG.info(
+                                        "SignUpHandler processing request for session {}",
+                                        session.get().getSessionId());
+                            }
 
-        try {
-            StateMachine.validateStateTransition(session.get(), SessionState.TWO_FACTOR_REQUIRED);
+                            try {
+                                StateMachine.validateStateTransition(
+                                        session.get(), SessionState.TWO_FACTOR_REQUIRED);
 
-            SignupRequest signupRequest =
-                    objectMapper.readValue(input.getBody(), SignupRequest.class);
+                                SignupRequest signupRequest =
+                                        objectMapper.readValue(
+                                                input.getBody(), SignupRequest.class);
 
-            Optional<ErrorResponse> passwordValidationErrors =
-                    validationService.validatePassword(signupRequest.getPassword());
+                                Optional<ErrorResponse> passwordValidationErrors =
+                                        validationService.validatePassword(
+                                                signupRequest.getPassword());
 
-            if (passwordValidationErrors.isEmpty()) {
-                if (authenticationService.userExists(signupRequest.getEmail())) {
-                    LOG.error("User with email {} already exists", signupRequest.getEmail());
-                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
-                }
-                authenticationService.signUp(
-                        signupRequest.getEmail(), signupRequest.getPassword(), new Subject());
+                                if (passwordValidationErrors.isEmpty()) {
+                                    if (authenticationService.userExists(
+                                            signupRequest.getEmail())) {
+                                        LOG.error(
+                                                "User with email {} already exists",
+                                                signupRequest.getEmail());
+                                        return generateApiGatewayProxyErrorResponse(
+                                                400, ErrorResponse.ERROR_1009);
+                                    }
+                                    authenticationService.signUp(
+                                            signupRequest.getEmail(),
+                                            signupRequest.getPassword(),
+                                            new Subject());
 
-                sessionService.save(
-                        session.get()
-                                .setState(SessionState.TWO_FACTOR_REQUIRED)
-                                .setEmailAddress(signupRequest.getEmail()));
+                                    sessionService.save(
+                                            session.get()
+                                                    .setState(SessionState.TWO_FACTOR_REQUIRED)
+                                                    .setEmailAddress(signupRequest.getEmail()));
 
-                LOG.info(
-                        "SignUpHandler successfully processed request for session {}",
-                        session.get().getSessionId());
+                                    LOG.info(
+                                            "SignUpHandler successfully processed request for session {}",
+                                            session.get().getSessionId());
 
-                return generateApiGatewayProxyResponse(
-                        200, new BaseAPIResponse(session.get().getState()));
-            } else {
-                return generateApiGatewayProxyErrorResponse(400, passwordValidationErrors.get());
-            }
-        } catch (JsonProcessingException e) {
-            LOG.error("Error parsing request", e);
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
-        } catch (StateMachine.InvalidStateTransitionException e) {
-            LOG.error("Invalid transition in user journey", e);
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
-        }
+                                    return generateApiGatewayProxyResponse(
+                                            200, new BaseAPIResponse(session.get().getState()));
+                                } else {
+                                    return generateApiGatewayProxyErrorResponse(
+                                            400, passwordValidationErrors.get());
+                                }
+                            } catch (JsonProcessingException e) {
+                                LOG.error("Error parsing request", e);
+                                return generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.ERROR_1001);
+                            } catch (StateMachine.InvalidStateTransitionException e) {
+                                LOG.error("Invalid transition in user journey", e);
+                                return generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.ERROR_1017);
+                            }
+                        });
     }
 }

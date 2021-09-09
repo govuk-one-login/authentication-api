@@ -33,6 +33,7 @@ import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1011;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1017;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class SendNotificationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -79,70 +80,86 @@ public class SendNotificationHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
-        if (session.isEmpty()) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-        } else {
-            LOGGER.info(
-                    "SendNotificationHandler processing request for session {}",
-                    session.get().getSessionId());
-        }
-        try {
-            SendNotificationRequest sendNotificationRequest =
-                    objectMapper.readValue(input.getBody(), SendNotificationRequest.class);
-            if (!session.get().validateSession(sendNotificationRequest.getEmail())) {
-                LOGGER.info("Invalid session. Email {}", sendNotificationRequest.getEmail());
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-            }
-            switch (sendNotificationRequest.getNotificationType()) {
-                case VERIFY_EMAIL:
-                    StateMachine.validateStateTransition(
-                            session.get(), SessionState.VERIFY_EMAIL_CODE_SENT);
+        return isWarming(input)
+                .orElseGet(
+                        () -> {
+                            Optional<Session> session =
+                                    sessionService.getSessionFromRequestHeaders(input.getHeaders());
+                            if (session.isEmpty()) {
+                                return generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.ERROR_1000);
+                            } else {
+                                LOGGER.info(
+                                        "SendNotificationHandler processing request for session {}",
+                                        session.get().getSessionId());
+                            }
+                            try {
+                                SendNotificationRequest sendNotificationRequest =
+                                        objectMapper.readValue(
+                                                input.getBody(), SendNotificationRequest.class);
+                                if (!session.get()
+                                        .validateSession(sendNotificationRequest.getEmail())) {
+                                    LOGGER.info(
+                                            "Invalid session. Email {}",
+                                            sendNotificationRequest.getEmail());
+                                    return generateApiGatewayProxyErrorResponse(
+                                            400, ErrorResponse.ERROR_1000);
+                                }
+                                switch (sendNotificationRequest.getNotificationType()) {
+                                    case VERIFY_EMAIL:
+                                        StateMachine.validateStateTransition(
+                                                session.get(), SessionState.VERIFY_EMAIL_CODE_SENT);
 
-                    Optional<ErrorResponse> emailErrorResponse =
-                            validationService.validateEmailAddress(
-                                    sendNotificationRequest.getEmail());
-                    if (emailErrorResponse.isPresent()) {
-                        LOGGER.error(
-                                "Encountered emailErrorResponse: {}", emailErrorResponse.get());
-                        return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
-                    }
-                    return handleNotificationRequest(
-                            sendNotificationRequest.getEmail(),
-                            sendNotificationRequest.getNotificationType(),
-                            session.get());
-                case VERIFY_PHONE_NUMBER:
-                    StateMachine.validateStateTransition(
-                            session.get(), SessionState.VERIFY_PHONE_NUMBER_CODE_SENT);
+                                        Optional<ErrorResponse> emailErrorResponse =
+                                                validationService.validateEmailAddress(
+                                                        sendNotificationRequest.getEmail());
+                                        if (emailErrorResponse.isPresent()) {
+                                            LOGGER.error(
+                                                    "Encountered emailErrorResponse: {}",
+                                                    emailErrorResponse.get());
+                                            return generateApiGatewayProxyErrorResponse(
+                                                    400, emailErrorResponse.get());
+                                        }
+                                        return handleNotificationRequest(
+                                                sendNotificationRequest.getEmail(),
+                                                sendNotificationRequest.getNotificationType(),
+                                                session.get());
+                                    case VERIFY_PHONE_NUMBER:
+                                        StateMachine.validateStateTransition(
+                                                session.get(),
+                                                SessionState.VERIFY_PHONE_NUMBER_CODE_SENT);
 
-                    if (sendNotificationRequest.getPhoneNumber() == null) {
-                        LOGGER.error("No phone number provided");
-                        return generateApiGatewayProxyResponse(400, ERROR_1011);
-                    }
-                    String phoneNumber =
-                            removeWhitespaceFromPhoneNumber(
-                                    sendNotificationRequest.getPhoneNumber());
-                    Optional<ErrorResponse> errorResponse =
-                            validationService.validatePhoneNumber(phoneNumber);
-                    if (errorResponse.isPresent()) {
-                        return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
-                    }
-                    return handleNotificationRequest(
-                            phoneNumber,
-                            sendNotificationRequest.getNotificationType(),
-                            session.get());
-            }
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
-        } catch (SdkClientException ex) {
-            LOGGER.error("Error sending message to queue", ex);
-            return generateApiGatewayProxyResponse(500, "Error sending message to queue");
-        } catch (JsonProcessingException e) {
-            LOGGER.error("Error parsing request", e);
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
-        } catch (StateMachine.InvalidStateTransitionException e) {
-            LOGGER.error("Invalid transition in user journey", e);
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
-        }
+                                        if (sendNotificationRequest.getPhoneNumber() == null) {
+                                            LOGGER.error("No phone number provided");
+                                            return generateApiGatewayProxyResponse(400, ERROR_1011);
+                                        }
+                                        String phoneNumber =
+                                                removeWhitespaceFromPhoneNumber(
+                                                        sendNotificationRequest.getPhoneNumber());
+                                        Optional<ErrorResponse> errorResponse =
+                                                validationService.validatePhoneNumber(phoneNumber);
+                                        if (errorResponse.isPresent()) {
+                                            return generateApiGatewayProxyErrorResponse(
+                                                    400, errorResponse.get());
+                                        }
+                                        return handleNotificationRequest(
+                                                phoneNumber,
+                                                sendNotificationRequest.getNotificationType(),
+                                                session.get());
+                                }
+                                return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
+                            } catch (SdkClientException ex) {
+                                LOGGER.error("Error sending message to queue", ex);
+                                return generateApiGatewayProxyResponse(
+                                        500, "Error sending message to queue");
+                            } catch (JsonProcessingException e) {
+                                LOGGER.error("Error parsing request", e);
+                                return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
+                            } catch (StateMachine.InvalidStateTransitionException e) {
+                                LOGGER.error("Invalid transition in user journey", e);
+                                return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
+                            }
+                        });
     }
 
     private String removeWhitespaceFromPhoneNumber(String phoneNumber) {

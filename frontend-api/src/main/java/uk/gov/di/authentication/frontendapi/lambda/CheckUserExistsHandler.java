@@ -24,6 +24,7 @@ import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class CheckUserExistsHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -58,56 +59,73 @@ public class CheckUserExistsHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        try {
-            Optional<Session> session =
-                    sessionService.getSessionFromRequestHeaders(input.getHeaders());
-            if (session.isPresent()) {
-                LOG.info(
-                        "CheckUserExistsHandler processing request for session {}",
-                        session.get().getSessionId());
+        return isWarming(input)
+                .orElseGet(
+                        () -> {
+                            try {
+                                Optional<Session> session =
+                                        sessionService.getSessionFromRequestHeaders(
+                                                input.getHeaders());
+                                if (session.isPresent()) {
+                                    LOG.info(
+                                            "CheckUserExistsHandler processing request for session {}",
+                                            session.get().getSessionId());
 
-                StateMachine.validateStateTransition(session.get(), SessionState.USER_NOT_FOUND);
-                session.get().setState(SessionState.USER_NOT_FOUND);
+                                    StateMachine.validateStateTransition(
+                                            session.get(), SessionState.USER_NOT_FOUND);
+                                    session.get().setState(SessionState.USER_NOT_FOUND);
 
-                UserWithEmailRequest userExistsRequest =
-                        objectMapper.readValue(input.getBody(), UserWithEmailRequest.class);
-                String emailAddress = userExistsRequest.getEmail();
-                Optional<ErrorResponse> errorResponse =
-                        validationService.validateEmailAddress(emailAddress);
-                if (errorResponse.isPresent()) {
-                    LOG.error(
-                            "Encountered an error while processing request for session {}; errorResponse is {}",
-                            session.get().getSessionId(),
-                            errorResponse.get());
-                    return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
-                }
-                boolean userExists = authenticationService.userExists(emailAddress);
-                session.get().setEmailAddress(emailAddress);
-                if (userExists) {
-                    StateMachine.validateStateTransition(
-                            session.get(), SessionState.AUTHENTICATION_REQUIRED);
-                    session.get().setState(SessionState.AUTHENTICATION_REQUIRED);
-                }
-                CheckUserExistsResponse checkUserExistsResponse =
-                        new CheckUserExistsResponse(
-                                emailAddress, userExists, session.get().getState());
-                sessionService.save(session.get());
+                                    UserWithEmailRequest userExistsRequest =
+                                            objectMapper.readValue(
+                                                    input.getBody(), UserWithEmailRequest.class);
+                                    String emailAddress = userExistsRequest.getEmail();
+                                    Optional<ErrorResponse> errorResponse =
+                                            validationService.validateEmailAddress(emailAddress);
+                                    if (errorResponse.isPresent()) {
+                                        LOG.error(
+                                                "Encountered an error while processing request for session {}; errorResponse is {}",
+                                                session.get().getSessionId(),
+                                                errorResponse.get());
+                                        return generateApiGatewayProxyErrorResponse(
+                                                400, errorResponse.get());
+                                    }
+                                    boolean userExists =
+                                            authenticationService.userExists(emailAddress);
+                                    session.get().setEmailAddress(emailAddress);
+                                    if (userExists) {
+                                        StateMachine.validateStateTransition(
+                                                session.get(),
+                                                SessionState.AUTHENTICATION_REQUIRED);
+                                        session.get()
+                                                .setState(SessionState.AUTHENTICATION_REQUIRED);
+                                    }
+                                    CheckUserExistsResponse checkUserExistsResponse =
+                                            new CheckUserExistsResponse(
+                                                    emailAddress,
+                                                    userExists,
+                                                    session.get().getState());
+                                    sessionService.save(session.get());
 
-                LOG.info(
-                        "CheckUserExistsHandler successfully processed request for session {}",
-                        session.get().getSessionId());
+                                    LOG.info(
+                                            "CheckUserExistsHandler successfully processed request for session {}",
+                                            session.get().getSessionId());
 
-                return generateApiGatewayProxyResponse(200, checkUserExistsResponse);
-            } else {
-                LOG.error("Session cannot be found");
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-            }
-        } catch (JsonProcessingException e) {
-            LOG.error("Error parsing request", e);
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
-        } catch (StateMachine.InvalidStateTransitionException e) {
-            LOG.error("Invalid transition in user journey", e);
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
-        }
+                                    return generateApiGatewayProxyResponse(
+                                            200, checkUserExistsResponse);
+                                } else {
+                                    LOG.error("Session cannot be found");
+                                    return generateApiGatewayProxyErrorResponse(
+                                            400, ErrorResponse.ERROR_1000);
+                                }
+                            } catch (JsonProcessingException e) {
+                                LOG.error("Error parsing request", e);
+                                return generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.ERROR_1001);
+                            } catch (StateMachine.InvalidStateTransitionException e) {
+                                LOG.error("Invalid transition in user journey", e);
+                                return generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.ERROR_1017);
+                            }
+                        });
     }
 }

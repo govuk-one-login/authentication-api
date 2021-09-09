@@ -56,7 +56,10 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
     public void shouldReturnUnmetAuthenticationRequirementsErrorWhenUsingInvalidClient() {
         Response response =
                 doAuthorisationRequest(
-                        Optional.of(INVALID_CLIENT_ID), Optional.empty(), Optional.empty(), "openid");
+                        Optional.of(INVALID_CLIENT_ID),
+                        Optional.empty(),
+                        Optional.empty(),
+                        "openid");
         assertEquals(302, response.getStatus());
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
@@ -98,8 +101,8 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
         assertEquals(302, response.getStatus());
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
-                containsString("error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope")
-        );
+                containsString(
+                        "error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope"));
     }
 
     @Test

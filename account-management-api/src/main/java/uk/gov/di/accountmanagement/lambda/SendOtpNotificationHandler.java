@@ -25,6 +25,7 @@ import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class SendOtpNotificationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -67,46 +68,56 @@ public class SendOtpNotificationHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        LOGGER.info("Request received in SendOtp Lambda");
-        try {
-            SendNotificationRequest sendNotificationRequest =
-                    objectMapper.readValue(input.getBody(), SendNotificationRequest.class);
-            switch (sendNotificationRequest.getNotificationType()) {
-                case VERIFY_EMAIL:
-                    LOGGER.info("NotificationType is VERIFY_EMAIL");
-                    Optional<ErrorResponse> emailErrorResponse =
-                            validationService.validateEmailAddress(
-                                    sendNotificationRequest.getEmail());
-                    if (emailErrorResponse.isPresent()) {
-                        LOGGER.error(
-                                "Invalid email address. Errors are: {}", emailErrorResponse.get());
-                        return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
-                    }
-                    return handleNotificationRequest(
-                            sendNotificationRequest.getEmail(), sendNotificationRequest);
-                case VERIFY_PHONE_NUMBER:
-                    LOGGER.info("NotificationType is VERIFY_PHONE_NUMBER");
-                    Optional<ErrorResponse> phoneNumberValidationError =
-                            validationService.validatePhoneNumber(
-                                    sendNotificationRequest.getPhoneNumber());
-                    if (phoneNumberValidationError.isPresent()) {
-                        LOGGER.error(
-                                "Invalid phone number. Errors are: {}",
-                                phoneNumberValidationError.get());
-                        return generateApiGatewayProxyErrorResponse(
-                                400, phoneNumberValidationError.get());
-                    }
-                    return handleNotificationRequest(
-                            sendNotificationRequest.getPhoneNumber(), sendNotificationRequest);
-            }
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
-        } catch (SdkClientException ex) {
-            LOGGER.error("Error sending message to queue", ex);
-            return generateApiGatewayProxyResponse(500, "Error sending message to queue");
-        } catch (JsonProcessingException e) {
-            LOGGER.error("Error parsing request", e);
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
-        }
+        return isWarming(input)
+                .orElseGet(
+                        () -> {
+                            LOGGER.info("Request received in SendOtp Lambda");
+                            try {
+                                SendNotificationRequest sendNotificationRequest =
+                                        objectMapper.readValue(
+                                                input.getBody(), SendNotificationRequest.class);
+                                switch (sendNotificationRequest.getNotificationType()) {
+                                    case VERIFY_EMAIL:
+                                        LOGGER.info("NotificationType is VERIFY_EMAIL");
+                                        Optional<ErrorResponse> emailErrorResponse =
+                                                validationService.validateEmailAddress(
+                                                        sendNotificationRequest.getEmail());
+                                        if (emailErrorResponse.isPresent()) {
+                                            LOGGER.error(
+                                                    "Invalid email address. Errors are: {}",
+                                                    emailErrorResponse.get());
+                                            return generateApiGatewayProxyErrorResponse(
+                                                    400, emailErrorResponse.get());
+                                        }
+                                        return handleNotificationRequest(
+                                                sendNotificationRequest.getEmail(),
+                                                sendNotificationRequest);
+                                    case VERIFY_PHONE_NUMBER:
+                                        LOGGER.info("NotificationType is VERIFY_PHONE_NUMBER");
+                                        Optional<ErrorResponse> phoneNumberValidationError =
+                                                validationService.validatePhoneNumber(
+                                                        sendNotificationRequest.getPhoneNumber());
+                                        if (phoneNumberValidationError.isPresent()) {
+                                            LOGGER.error(
+                                                    "Invalid phone number. Errors are: {}",
+                                                    phoneNumberValidationError.get());
+                                            return generateApiGatewayProxyErrorResponse(
+                                                    400, phoneNumberValidationError.get());
+                                        }
+                                        return handleNotificationRequest(
+                                                sendNotificationRequest.getPhoneNumber(),
+                                                sendNotificationRequest);
+                                }
+                                return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
+                            } catch (SdkClientException ex) {
+                                LOGGER.error("Error sending message to queue", ex);
+                                return generateApiGatewayProxyResponse(
+                                        500, "Error sending message to queue");
+                            } catch (JsonProcessingException e) {
+                                LOGGER.error("Error parsing request", e);
+                                return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
+                            }
+                        });
     }
 
     private APIGatewayProxyResponseEvent handleNotificationRequest(

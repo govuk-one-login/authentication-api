@@ -26,6 +26,7 @@ import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class ClientInfoHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -61,64 +62,86 @@ public class ClientInfoHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        return isWarming(input)
+                .orElseGet(
+                        () -> {
+                            Optional<Session> session =
+                                    sessionService.getSessionFromRequestHeaders(input.getHeaders());
+                            if (session.isEmpty()) {
+                                return generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.ERROR_1000);
+                            }
 
-        Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
-        if (session.isEmpty()) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-        }
+                            Optional<ClientSession> clientSession =
+                                    clientSessionService.getClientSessionFromRequestHeaders(
+                                            input.getHeaders());
 
-        Optional<ClientSession> clientSession =
-                clientSessionService.getClientSessionFromRequestHeaders(input.getHeaders());
+                            if (clientSession.isEmpty()) {
+                                LOGGER.info("ClientSession not found.");
+                                return generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.ERROR_1018);
+                            }
 
-        if (clientSession.isEmpty()) {
-            LOGGER.info("ClientSession not found.");
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1018);
-        }
+                            try {
+                                Map<String, List<String>> authRequest =
+                                        clientSession.get().getAuthRequestParams();
 
-        try {
-            Map<String, List<String>> authRequest = clientSession.get().getAuthRequestParams();
+                                String clientID =
+                                        AuthenticationRequest.parse(authRequest)
+                                                .getClientID()
+                                                .getValue();
+                                String state = null;
+                                if (AuthenticationRequest.parse(authRequest).getState() != null) {
+                                    state =
+                                            AuthenticationRequest.parse(authRequest)
+                                                    .getState()
+                                                    .getValue();
+                                }
+                                String redirectUri = null;
+                                if (AuthenticationRequest.parse(authRequest).getRedirectionURI()
+                                        != null) {
+                                    redirectUri =
+                                            AuthenticationRequest.parse(authRequest)
+                                                    .getRedirectionURI()
+                                                    .toString();
+                                }
 
-            String clientID = AuthenticationRequest.parse(authRequest).getClientID().getValue();
-            String state = null;
-            if (AuthenticationRequest.parse(authRequest).getState() != null) {
-                state = AuthenticationRequest.parse(authRequest).getState().getValue();
-            }
-            String redirectUri = null;
-            if (AuthenticationRequest.parse(authRequest).getRedirectionURI() != null) {
-                redirectUri =
-                        AuthenticationRequest.parse(authRequest).getRedirectionURI().toString();
-            }
+                                Optional<ClientRegistry> optionalClientRegistry =
+                                        clientService.getClient(clientID);
 
-            Optional<ClientRegistry> optionalClientRegistry = clientService.getClient(clientID);
+                                if (optionalClientRegistry.isEmpty()) {
+                                    LOGGER.info(
+                                            "Client not found in ClientRegistry for ClientID: {}",
+                                            clientID);
+                                    return generateApiGatewayProxyErrorResponse(
+                                            403, ErrorResponse.ERROR_1015);
+                                }
 
-            if (optionalClientRegistry.isEmpty()) {
-                LOGGER.info("Client not found in ClientRegistry for ClientID: {}", clientID);
-                return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1015);
-            }
+                                ClientRegistry clientRegistry = optionalClientRegistry.get();
+                                ClientInfoResponse clientInfoResponse =
+                                        new ClientInfoResponse(
+                                                clientRegistry.getClientID(),
+                                                clientRegistry.getClientName(),
+                                                clientRegistry.getScopes(),
+                                                redirectUri,
+                                                clientRegistry.getServiceType(),
+                                                state);
 
-            ClientRegistry clientRegistry = optionalClientRegistry.get();
-            ClientInfoResponse clientInfoResponse =
-                    new ClientInfoResponse(
-                            clientRegistry.getClientID(),
-                            clientRegistry.getClientName(),
-                            clientRegistry.getScopes(),
-                            redirectUri,
-                            clientRegistry.getServiceType(),
-                            state);
+                                LOGGER.info(
+                                        "Found Client Info for ClientID: {} ClientName {} Scopes {} Redirect Uri {} Service Type {} State {}",
+                                        clientRegistry.getClientID(),
+                                        clientRegistry.getClientName(),
+                                        clientRegistry.getScopes(),
+                                        redirectUri,
+                                        clientRegistry.getServiceType(),
+                                        state);
 
-            LOGGER.info(
-                    "Found Client Info for ClientID: {} ClientName {} Scopes {} Redirect Uri {} Service Type {} State {}",
-                    clientRegistry.getClientID(),
-                    clientRegistry.getClientName(),
-                    clientRegistry.getScopes(),
-                    redirectUri,
-                    clientRegistry.getServiceType(),
-                    state);
+                                return generateApiGatewayProxyResponse(200, clientInfoResponse);
 
-            return generateApiGatewayProxyResponse(200, clientInfoResponse);
-
-        } catch (ParseException | JsonProcessingException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
-        }
+                            } catch (ParseException | JsonProcessingException e) {
+                                return generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.ERROR_1001);
+                            }
+                        });
     }
 }

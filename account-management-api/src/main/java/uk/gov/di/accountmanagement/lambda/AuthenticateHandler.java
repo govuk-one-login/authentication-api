@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class AuthenticateHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -41,31 +42,41 @@ public class AuthenticateHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        LOGGER.info("Request received to the AuthenticateHandler");
+        return isWarming(input)
+                .orElseGet(
+                        () -> {
+                            LOGGER.info("Request received to the AuthenticateHandler");
 
-        try {
-            AuthenticateRequest loginRequest =
-                    objectMapper.readValue(input.getBody(), AuthenticateRequest.class);
-            boolean userHasAccount = authenticationService.userExists(loginRequest.getEmail());
-            if (!userHasAccount) {
-                LOGGER.error("The user does not have an account");
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
-            }
-            boolean hasValidCredentials =
-                    authenticationService.login(
-                            loginRequest.getEmail(), loginRequest.getPassword());
-            if (!hasValidCredentials) {
-                LOGGER.error("Invalid login credentials entered");
-                return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
-            }
-            LOGGER.info(
-                    "User has successfully Logged in. Generating successful AuthenticateResponse");
-            return generateApiGatewayProxyResponse(200, "");
-        } catch (JsonProcessingException e) {
-            LOGGER.error(
-                    "Request is missing parameters. The body present in request: {}",
-                    input.getBody());
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
-        }
+                            try {
+                                AuthenticateRequest loginRequest =
+                                        objectMapper.readValue(
+                                                input.getBody(), AuthenticateRequest.class);
+                                boolean userHasAccount =
+                                        authenticationService.userExists(loginRequest.getEmail());
+                                if (!userHasAccount) {
+                                    LOGGER.error("The user does not have an account");
+                                    return generateApiGatewayProxyErrorResponse(
+                                            400, ErrorResponse.ERROR_1010);
+                                }
+                                boolean hasValidCredentials =
+                                        authenticationService.login(
+                                                loginRequest.getEmail(),
+                                                loginRequest.getPassword());
+                                if (!hasValidCredentials) {
+                                    LOGGER.error("Invalid login credentials entered");
+                                    return generateApiGatewayProxyErrorResponse(
+                                            401, ErrorResponse.ERROR_1008);
+                                }
+                                LOGGER.info(
+                                        "User has successfully Logged in. Generating successful AuthenticateResponse");
+                                return generateApiGatewayProxyResponse(200, "");
+                            } catch (JsonProcessingException e) {
+                                LOGGER.error(
+                                        "Request is missing parameters. The body present in request: {}",
+                                        input.getBody());
+                                return generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.ERROR_1001);
+                            }
+                        });
     }
 }

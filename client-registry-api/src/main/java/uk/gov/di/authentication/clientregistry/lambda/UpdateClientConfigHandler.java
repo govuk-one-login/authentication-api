@@ -24,6 +24,7 @@ import java.util.Optional;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_ERROR;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class UpdateClientConfigHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -57,46 +58,58 @@ public class UpdateClientConfigHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        auditService.submitAuditEvent(UPDATE_CLIENT_REQUEST_RECEIVED);
+        return isWarming(input)
+                .orElseGet(
+                        () -> {
+                            auditService.submitAuditEvent(UPDATE_CLIENT_REQUEST_RECEIVED);
 
-        try {
-            String clientId = input.getPathParameters().get("clientId");
-            LOGGER.info("Request received with ClientId {}", clientId);
-            UpdateClientConfigRequest updateClientConfigRequest =
-                    objectMapper.readValue(input.getBody(), UpdateClientConfigRequest.class);
-            if (!clientService.isValidClient(clientId)) {
-                auditService.submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR);
-                LOGGER.error("Client with ClientId {} is not valid", clientId);
-                return generateApiGatewayProxyResponse(
-                        400, OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString());
-            }
-            Optional<ErrorObject> errorResponse =
-                    validationService.validateClientUpdateConfig(updateClientConfigRequest);
-            if (errorResponse.isPresent()) {
-                auditService.submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR);
-                return generateApiGatewayProxyResponse(
-                        400, errorResponse.get().toJSONObject().toJSONString());
-            }
-            ClientRegistry clientRegistry =
-                    clientService.updateClient(clientId, updateClientConfigRequest);
-            ClientRegistrationResponse clientRegistrationResponse =
-                    new ClientRegistrationResponse(
-                            clientRegistry.getClientName(),
-                            clientRegistry.getClientID(),
-                            clientRegistry.getRedirectUrls(),
-                            clientRegistry.getContacts(),
-                            clientRegistry.getScopes(),
-                            clientRegistry.getPostLogoutRedirectUrls(),
-                            clientRegistry.getServiceType());
-            LOGGER.info("Client with ClientId {} has been updated", clientId);
-            return generateApiGatewayProxyResponse(200, clientRegistrationResponse);
-        } catch (JsonProcessingException | NullPointerException e) {
-            auditService.submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR);
-            LOGGER.error(
-                    "Request with path parameters {} is missing request parameters",
-                    input.getPathParameters());
-            return generateApiGatewayProxyResponse(
-                    400, OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString());
-        }
+                            try {
+                                String clientId = input.getPathParameters().get("clientId");
+                                LOGGER.info("Request received with ClientId {}", clientId);
+                                UpdateClientConfigRequest updateClientConfigRequest =
+                                        objectMapper.readValue(
+                                                input.getBody(), UpdateClientConfigRequest.class);
+                                if (!clientService.isValidClient(clientId)) {
+                                    auditService.submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR);
+                                    LOGGER.error("Client with ClientId {} is not valid", clientId);
+                                    return generateApiGatewayProxyResponse(
+                                            400,
+                                            OAuth2Error.INVALID_CLIENT
+                                                    .toJSONObject()
+                                                    .toJSONString());
+                                }
+                                Optional<ErrorObject> errorResponse =
+                                        validationService.validateClientUpdateConfig(
+                                                updateClientConfigRequest);
+                                if (errorResponse.isPresent()) {
+                                    auditService.submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR);
+                                    return generateApiGatewayProxyResponse(
+                                            400, errorResponse.get().toJSONObject().toJSONString());
+                                }
+                                ClientRegistry clientRegistry =
+                                        clientService.updateClient(
+                                                clientId, updateClientConfigRequest);
+                                ClientRegistrationResponse clientRegistrationResponse =
+                                        new ClientRegistrationResponse(
+                                                clientRegistry.getClientName(),
+                                                clientRegistry.getClientID(),
+                                                clientRegistry.getRedirectUrls(),
+                                                clientRegistry.getContacts(),
+                                                clientRegistry.getScopes(),
+                                                clientRegistry.getPostLogoutRedirectUrls(),
+                                                clientRegistry.getServiceType());
+                                LOGGER.info("Client with ClientId {} has been updated", clientId);
+                                return generateApiGatewayProxyResponse(
+                                        200, clientRegistrationResponse);
+                            } catch (JsonProcessingException | NullPointerException e) {
+                                auditService.submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR);
+                                LOGGER.error(
+                                        "Request with path parameters {} is missing request parameters",
+                                        input.getPathParameters());
+                                return generateApiGatewayProxyResponse(
+                                        400,
+                                        OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString());
+                            }
+                        });
     }
 }

@@ -26,6 +26,7 @@ import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class UpdatePhoneNumberHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -64,46 +65,61 @@ public class UpdatePhoneNumberHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        LOGGER.info("UpdatePhoneNumberHandler received request");
-        try {
-            UpdatePhoneNumberRequest updatePhoneNumberRequest =
-                    objectMapper.readValue(input.getBody(), UpdatePhoneNumberRequest.class);
-            boolean isValidOtpCode =
-                    codeStorageService.isValidOtpCode(
-                            updatePhoneNumberRequest.getEmail(),
-                            updatePhoneNumberRequest.getOtp(),
-                            NotificationType.VERIFY_PHONE_NUMBER);
-            if (!isValidOtpCode) {
-                LOGGER.error("Invalid OTP code sent in request");
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
-            }
-            Optional<ErrorResponse> phoneValidationErrors =
-                    validationService.validatePhoneNumber(
-                            updatePhoneNumberRequest.getPhoneNumber());
-            if (phoneValidationErrors.isPresent()) {
-                LOGGER.error(
-                        "Invalid phone number with error: {}",
-                        phoneValidationErrors.get().getMessage());
-                return generateApiGatewayProxyErrorResponse(400, phoneValidationErrors.get());
-            }
-            Subject subjectFromEmail =
-                    dynamoService.getSubjectFromEmail(updatePhoneNumberRequest.getEmail());
-            Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
-            RequestBodyHelper.validatePrincipal(subjectFromEmail, authorizerParams);
-            dynamoService.updatePhoneNumber(
-                    updatePhoneNumberRequest.getEmail(), updatePhoneNumberRequest.getPhoneNumber());
-            LOGGER.info("Phone Number has successfully been updated. Adding message to SQS queue");
-            NotifyRequest notifyRequest =
-                    new NotifyRequest(
-                            updatePhoneNumberRequest.getEmail(),
-                            NotificationType.PHONE_NUMBER_UPDATED);
-            sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
-            LOGGER.info(
-                    "Message successfully added to queue. Generating successful gateway response");
-            return generateApiGatewayProxyResponse(200, "");
-        } catch (JsonProcessingException | IllegalArgumentException e) {
-            LOGGER.error("UpdatePhoneNumber request is missing or contains invalid parameters.", e);
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
-        }
+        return isWarming(input)
+                .orElseGet(
+                        () -> {
+                            LOGGER.info("UpdatePhoneNumberHandler received request");
+                            try {
+                                UpdatePhoneNumberRequest updatePhoneNumberRequest =
+                                        objectMapper.readValue(
+                                                input.getBody(), UpdatePhoneNumberRequest.class);
+                                boolean isValidOtpCode =
+                                        codeStorageService.isValidOtpCode(
+                                                updatePhoneNumberRequest.getEmail(),
+                                                updatePhoneNumberRequest.getOtp(),
+                                                NotificationType.VERIFY_PHONE_NUMBER);
+                                if (!isValidOtpCode) {
+                                    LOGGER.error("Invalid OTP code sent in request");
+                                    return generateApiGatewayProxyErrorResponse(
+                                            400, ErrorResponse.ERROR_1020);
+                                }
+                                Optional<ErrorResponse> phoneValidationErrors =
+                                        validationService.validatePhoneNumber(
+                                                updatePhoneNumberRequest.getPhoneNumber());
+                                if (phoneValidationErrors.isPresent()) {
+                                    LOGGER.error(
+                                            "Invalid phone number with error: {}",
+                                            phoneValidationErrors.get().getMessage());
+                                    return generateApiGatewayProxyErrorResponse(
+                                            400, phoneValidationErrors.get());
+                                }
+                                Subject subjectFromEmail =
+                                        dynamoService.getSubjectFromEmail(
+                                                updatePhoneNumberRequest.getEmail());
+                                Map<String, Object> authorizerParams =
+                                        input.getRequestContext().getAuthorizer();
+                                RequestBodyHelper.validatePrincipal(
+                                        subjectFromEmail, authorizerParams);
+                                dynamoService.updatePhoneNumber(
+                                        updatePhoneNumberRequest.getEmail(),
+                                        updatePhoneNumberRequest.getPhoneNumber());
+                                LOGGER.info(
+                                        "Phone Number has successfully been updated. Adding message to SQS queue");
+                                NotifyRequest notifyRequest =
+                                        new NotifyRequest(
+                                                updatePhoneNumberRequest.getEmail(),
+                                                NotificationType.PHONE_NUMBER_UPDATED);
+                                sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+                                LOGGER.info(
+                                        "Message successfully added to queue. Generating successful gateway response");
+                                return generateApiGatewayProxyResponse(200, "");
+                            } catch (JsonProcessingException | IllegalArgumentException e) {
+                                LOGGER.error(
+                                        "UpdatePhoneNumber request is missing or contains invalid parameters.",
+                                        e);
+                                return generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.ERROR_1001);
+                            }
+                        });
     }
 }
