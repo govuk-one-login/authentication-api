@@ -22,7 +22,7 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import static software.amazon.awssdk.http.HttpStatusCode.OK;
+import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class WellknownHandler
@@ -59,50 +59,49 @@ public class WellknownHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        try {
-            if (input == null)
-                return new APIGatewayProxyResponseEvent().withBody("I'm warm").withStatusCode(OK);
+        return isWarming(input).orElseGet(() -> {
+            try {
+                providerMetadata.setTokenEndpointURI(buildURI("/token", baseUrl));
+                providerMetadata.setUserInfoEndpointURI(buildURI("/userinfo", baseUrl));
+                providerMetadata.setAuthorizationEndpointURI(buildURI("/authorize", baseUrl));
+                providerMetadata.setRegistrationEndpointURI(buildURI("/connect/register", baseUrl));
+                providerMetadata.setTokenEndpointAuthMethods(
+                        List.of(ClientAuthenticationMethod.PRIVATE_KEY_JWT));
+                providerMetadata.setScopes(ValidScopes.getScopesForWellKnownHandler());
+                providerMetadata.setResponseTypes(List.of(new ResponseType("code")));
+                providerMetadata.setGrantTypes(List.of(GrantType.AUTHORIZATION_CODE));
+                providerMetadata.setClaimTypes(List.of(ClaimType.NORMAL));
+                providerMetadata.setClaims(
+                        List.of(
+                                "sub",
+                                "email",
+                                "email_verified",
+                                "phone_number",
+                                "phone_number_verified"));
+                providerMetadata.setIDTokenJWSAlgs(List.of(JWSAlgorithm.ES256));
+                providerMetadata.setTokenEndpointJWSAlgs(
+                        List.of(
+                                JWSAlgorithm.RS256,
+                                JWSAlgorithm.RS384,
+                                JWSAlgorithm.RS512,
+                                JWSAlgorithm.PS256,
+                                JWSAlgorithm.PS384,
+                                JWSAlgorithm.PS512,
+                                JWSAlgorithm.ES256,
+                                JWSAlgorithm.ES384,
+                                JWSAlgorithm.ES512,
+                                JWSAlgorithm.HS256,
+                                JWSAlgorithm.HS384,
+                                JWSAlgorithm.HS512));
+                providerMetadata.setServiceDocsURI(new URI("http://TBA"));
+                providerMetadata.setEndSessionEndpointURI(buildURI("/logout", baseUrl));
 
-            providerMetadata.setTokenEndpointURI(buildURI("/token", baseUrl));
-            providerMetadata.setUserInfoEndpointURI(buildURI("/userinfo", baseUrl));
-            providerMetadata.setAuthorizationEndpointURI(buildURI("/authorize", baseUrl));
-            providerMetadata.setRegistrationEndpointURI(buildURI("/connect/register", baseUrl));
-            providerMetadata.setTokenEndpointAuthMethods(
-                    List.of(ClientAuthenticationMethod.PRIVATE_KEY_JWT));
-            providerMetadata.setScopes(ValidScopes.getScopesForWellKnownHandler());
-            providerMetadata.setResponseTypes(List.of(new ResponseType("code")));
-            providerMetadata.setGrantTypes(List.of(GrantType.AUTHORIZATION_CODE));
-            providerMetadata.setClaimTypes(List.of(ClaimType.NORMAL));
-            providerMetadata.setClaims(
-                    List.of(
-                            "sub",
-                            "email",
-                            "email_verified",
-                            "phone_number",
-                            "phone_number_verified"));
-            providerMetadata.setIDTokenJWSAlgs(List.of(JWSAlgorithm.ES256));
-            providerMetadata.setTokenEndpointJWSAlgs(
-                    List.of(
-                            JWSAlgorithm.RS256,
-                            JWSAlgorithm.RS384,
-                            JWSAlgorithm.RS512,
-                            JWSAlgorithm.PS256,
-                            JWSAlgorithm.PS384,
-                            JWSAlgorithm.PS512,
-                            JWSAlgorithm.ES256,
-                            JWSAlgorithm.ES384,
-                            JWSAlgorithm.ES512,
-                            JWSAlgorithm.HS256,
-                            JWSAlgorithm.HS384,
-                            JWSAlgorithm.HS512));
-            providerMetadata.setServiceDocsURI(new URI("http://TBA"));
-            providerMetadata.setEndSessionEndpointURI(buildURI("/logout", baseUrl));
-
-            return generateApiGatewayProxyResponse(200, providerMetadata.toString());
-        } catch (URISyntaxException | NoSuchElementException e) {
-            LOG.error("Exception encountered in WellKnownHandler", e);
-            return generateApiGatewayProxyResponse(500, "Service not configured");
-        }
+                return generateApiGatewayProxyResponse(200, providerMetadata.toString());
+            } catch (URISyntaxException | NoSuchElementException e) {
+                LOG.error("Exception encountered in WellKnownHandler", e);
+                return generateApiGatewayProxyResponse(500, "Service not configured");
+            }
+        });
     }
 
     private URI buildURI(String prefix, String baseUrl) {

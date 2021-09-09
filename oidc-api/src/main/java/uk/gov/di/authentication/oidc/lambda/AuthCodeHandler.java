@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
-import static software.amazon.awssdk.http.HttpStatusCode.OK;
+import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.StateMachine.validateStateTransition;
@@ -68,91 +68,91 @@ public class AuthCodeHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        if (input == null)
-            return new APIGatewayProxyResponseEvent().withBody("I'm warm").withStatusCode(OK);
-        SessionCookieIds sessionCookieIds;
-        Session session;
-        try {
-            sessionCookieIds = CookieHelper.parseSessionCookie(input.getHeaders()).orElseThrow();
-            session =
-                    sessionService
-                            .readSessionFromRedis(sessionCookieIds.getSessionId())
-                            .orElseThrow();
-        } catch (NoSuchElementException e) {
-            LOGGER.error("SessionID not there for INPUT: {}", input.getHeaders());
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-        }
-
-        LOGGER.info("AuthCodeHandler processing request for session {}", session.getSessionId());
-
-        try {
-            validateStateTransition(session, AUTHENTICATED);
-        } catch (StateMachine.InvalidStateTransitionException e) {
-            LOGGER.error("Invalid state transition for session {}", session.getSessionId());
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
-        }
-
-        AuthenticationRequest authenticationRequest;
-        try {
-            Map<String, List<String>> authRequest =
-                    clientSessionService
-                            .getClientSession(sessionCookieIds.getClientSessionId())
-                            .getAuthRequestParams();
-            authenticationRequest = AuthenticationRequest.parse(authRequest);
-        } catch (ParseException e) {
-            if (e.getRedirectionURI() == null) {
-                LOGGER.error(
-                        "Authentication request could not be parsed: redirect URI or Client ID is missing from auth request",
-                        e);
-                // TODO - We need to come up with a strategy to handle uncaught exceptions
-                throw new RuntimeException(
-                        "Redirect URI or Client ID is missing from auth request", e);
+        return isWarming(input).orElseGet(() -> {
+            SessionCookieIds sessionCookieIds;
+            Session session;
+            try {
+                sessionCookieIds = CookieHelper.parseSessionCookie(input.getHeaders()).orElseThrow();
+                session =
+                        sessionService
+                                .readSessionFromRedis(sessionCookieIds.getSessionId())
+                                .orElseThrow();
+            } catch (NoSuchElementException e) {
+                LOGGER.error("SessionID not there for INPUT: {}", input.getHeaders());
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
-            LOGGER.error("Authentication request could not be parsed", e);
-            AuthenticationErrorResponse errorResponse =
-                    authorizationService.generateAuthenticationErrorResponse(
-                            e.getRedirectionURI(),
-                            e.getState(),
-                            e.getResponseMode(),
-                            e.getErrorObject());
+
+            LOGGER.info("AuthCodeHandler processing request for session {}", session.getSessionId());
+
+            try {
+                validateStateTransition(session, AUTHENTICATED);
+            } catch (StateMachine.InvalidStateTransitionException e) {
+                LOGGER.error("Invalid state transition for session {}", session.getSessionId());
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
+            }
+
+            AuthenticationRequest authenticationRequest;
+            try {
+                Map<String, List<String>> authRequest =
+                        clientSessionService
+                                .getClientSession(sessionCookieIds.getClientSessionId())
+                                .getAuthRequestParams();
+                authenticationRequest = AuthenticationRequest.parse(authRequest);
+            } catch (ParseException e) {
+                if (e.getRedirectionURI() == null) {
+                    LOGGER.error(
+                            "Authentication request could not be parsed: redirect URI or Client ID is missing from auth request",
+                            e);
+                    // TODO - We need to come up with a strategy to handle uncaught exceptions
+                    throw new RuntimeException(
+                            "Redirect URI or Client ID is missing from auth request", e);
+                }
+                LOGGER.error("Authentication request could not be parsed", e);
+                AuthenticationErrorResponse errorResponse =
+                        authorizationService.generateAuthenticationErrorResponse(
+                                e.getRedirectionURI(),
+                                e.getState(),
+                                e.getResponseMode(),
+                                e.getErrorObject());
+                return new APIGatewayProxyResponseEvent()
+                        .withStatusCode(302)
+                        .withHeaders(
+                                Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()));
+            }
+            try {
+                if (!authorizationService.isClientRedirectUriValid(
+                        authenticationRequest.getClientID(),
+                        authenticationRequest.getRedirectionURI())) {
+                    LOGGER.error(
+                            "Invalid client redirect URI ({}) for session {}",
+                            authenticationRequest.getRedirectionURI(),
+                            session.getSessionId());
+                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1016);
+                }
+            } catch (ClientNotFoundException e) {
+                AuthenticationErrorResponse errorResponse =
+                        authorizationService.generateAuthenticationErrorResponse(
+                                authenticationRequest, OAuth2Error.INVALID_CLIENT);
+                LOGGER.error("Client not found for session {}", session.getSessionId());
+                return new APIGatewayProxyResponseEvent()
+                        .withStatusCode(302)
+                        .withHeaders(
+                                Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()));
+            }
+
+            AuthorizationCode authCode =
+                    authorisationCodeService.generateAuthorisationCode(
+                            sessionCookieIds.getClientSessionId(), session.getEmailAddress());
+            AuthenticationSuccessResponse authenticationResponse =
+                    authorizationService.generateSuccessfulAuthResponse(
+                            authenticationRequest, authCode);
+            sessionService.save(session.setState(AUTHENTICATED));
             return new APIGatewayProxyResponseEvent()
                     .withStatusCode(302)
                     .withHeaders(
-                            Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()));
-        }
-        try {
-            if (!authorizationService.isClientRedirectUriValid(
-                    authenticationRequest.getClientID(),
-                    authenticationRequest.getRedirectionURI())) {
-                LOGGER.error(
-                        "Invalid client redirect URI ({}) for session {}",
-                        authenticationRequest.getRedirectionURI(),
-                        session.getSessionId());
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1016);
-            }
-        } catch (ClientNotFoundException e) {
-            AuthenticationErrorResponse errorResponse =
-                    authorizationService.generateAuthenticationErrorResponse(
-                            authenticationRequest, OAuth2Error.INVALID_CLIENT);
-            LOGGER.error("Client not found for session {}", session.getSessionId());
-            return new APIGatewayProxyResponseEvent()
-                    .withStatusCode(302)
-                    .withHeaders(
-                            Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()));
-        }
-
-        AuthorizationCode authCode =
-                authorisationCodeService.generateAuthorisationCode(
-                        sessionCookieIds.getClientSessionId(), session.getEmailAddress());
-        AuthenticationSuccessResponse authenticationResponse =
-                authorizationService.generateSuccessfulAuthResponse(
-                        authenticationRequest, authCode);
-        sessionService.save(session.setState(AUTHENTICATED));
-        return new APIGatewayProxyResponseEvent()
-                .withStatusCode(302)
-                .withHeaders(
-                        Map.of(
-                                ResponseHeaders.LOCATION,
-                                authenticationResponse.toURI().toString()));
+                            Map.of(
+                                    ResponseHeaders.LOCATION,
+                                    authenticationResponse.toURI().toString()));
+        });
     }
 }

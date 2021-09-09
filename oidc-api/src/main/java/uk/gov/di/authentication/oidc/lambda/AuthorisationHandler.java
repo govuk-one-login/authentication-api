@@ -34,7 +34,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static software.amazon.awssdk.http.HttpStatusCode.OK;
+import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -74,39 +74,37 @@ public class AuthorisationHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        LOGGER.info("Input is {}", input.toString());
-        if (input == null)
-            return new APIGatewayProxyResponseEvent().withBody("I'm warm").withStatusCode(OK);
+        return isWarming(input).orElseGet(() -> {
+            auditService.submitAuditEvent(OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED);
+            LOGGER.info("Received authentication request");
 
-        auditService.submitAuditEvent(OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED);
-        LOGGER.info("Received authentication request");
-
-        Map<String, List<String>> queryStringParameters = getQueryStringParametersAsMap(input);
-        AuthenticationRequest authRequest;
-        try {
-            authRequest = AuthenticationRequest.parse(queryStringParameters);
-        } catch (ParseException e) {
-            if (e.getRedirectionURI() == null) {
-                LOGGER.error(
-                        "Authentication request could not be parsed: redirect URI or Client ID is missing from auth request");
-                // TODO - We need to come up with a strategy to handle uncaught exceptions
-                throw new RuntimeException(
-                        "Redirect URI or ClientID is missing from auth request", e);
+            Map<String, List<String>> queryStringParameters = getQueryStringParametersAsMap(input);
+            AuthenticationRequest authRequest;
+            try {
+                authRequest = AuthenticationRequest.parse(queryStringParameters);
+            } catch (ParseException e) {
+                if (e.getRedirectionURI() == null) {
+                    LOGGER.error(
+                            "Authentication request could not be parsed: redirect URI or Client ID is missing from auth request");
+                    // TODO - We need to come up with a strategy to handle uncaught exceptions
+                    throw new RuntimeException(
+                            "Redirect URI or ClientID is missing from auth request", e);
+                }
+                LOGGER.error("Authentication request could not be parsed", e);
+                return generateErrorResponse(
+                        e.getRedirectionURI(), e.getState(), e.getResponseMode(), e.getErrorObject());
             }
-            LOGGER.error("Authentication request could not be parsed", e);
-            return generateErrorResponse(
-                    e.getRedirectionURI(), e.getState(), e.getResponseMode(), e.getErrorObject());
-        }
-        Optional<ErrorObject> error = authorizationService.validateAuthRequest(authRequest);
+            Optional<ErrorObject> error = authorizationService.validateAuthRequest(authRequest);
 
-        return error.map(e -> generateErrorResponse(authRequest, e))
-                .orElseGet(
-                        () ->
-                                getOrCreateSessionAndRedirect(
-                                        queryStringParameters,
-                                        sessionService.getSessionFromSessionCookie(
-                                                input.getHeaders()),
-                                        authRequest));
+            return error.map(e -> generateErrorResponse(authRequest, e))
+                    .orElseGet(
+                            () ->
+                                    getOrCreateSessionAndRedirect(
+                                            queryStringParameters,
+                                            sessionService.getSessionFromSessionCookie(
+                                                    input.getHeaders()),
+                                            authRequest));
+        });
     }
 
     private APIGatewayProxyResponseEvent getOrCreateSessionAndRedirect(

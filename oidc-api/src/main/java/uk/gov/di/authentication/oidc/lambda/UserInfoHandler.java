@@ -22,7 +22,7 @@ import java.util.Optional;
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.INVALID_TOKEN;
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.MISSING_TOKEN;
 import static java.lang.String.format;
-import static software.amazon.awssdk.http.HttpStatusCode.OK;
+import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.validateScopesAndRetrieveUserInfo;
 
@@ -61,42 +61,41 @@ public class UserInfoHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        if (input == null)
-            return new APIGatewayProxyResponseEvent().withBody("I'm warm").withStatusCode(OK);
+        return isWarming(input).orElseGet(() -> {
+            if (input.getHeaders() == null
+                    || !input.getHeaders().containsKey("Authorization")
+                    || input.getHeaders().get("Authorization").isEmpty()) {
+                LOGGER.error("AccessToken is missing from request");
+                return generateApiGatewayProxyResponse(
+                        401,
+                        "",
+                        new UserInfoErrorResponse(MISSING_TOKEN).toHTTPResponse().getHeaderMap());
+            }
+            AccessToken accessToken;
+            try {
+                accessToken =
+                        AccessToken.parse(
+                                input.getHeaders().get("Authorization"), AccessTokenType.BEARER);
+            } catch (Exception e) {
+                LOGGER.error(
+                        format(
+                                "Unable to parse AccessToken with headers: %s.\n\n Exception thrown: %s",
+                                input.getHeaders(), e));
+                return generateApiGatewayProxyResponse(
+                        401,
+                        "",
+                        new UserInfoErrorResponse(INVALID_TOKEN).toHTTPResponse().getHeaderMap());
+            }
+            Optional<String> subjectFromAccessToken =
+                    tokenService.getSubjectWithAccessToken(accessToken);
 
-        if (input.getHeaders() == null
-                || !input.getHeaders().containsKey("Authorization")
-                || input.getHeaders().get("Authorization").isEmpty()) {
-            LOGGER.error("AccessToken is missing from request");
-            return generateApiGatewayProxyResponse(
-                    401,
-                    "",
-                    new UserInfoErrorResponse(MISSING_TOKEN).toHTTPResponse().getHeaderMap());
-        }
-        AccessToken accessToken;
-        try {
-            accessToken =
-                    AccessToken.parse(
-                            input.getHeaders().get("Authorization"), AccessTokenType.BEARER);
-        } catch (Exception e) {
-            LOGGER.error(
-                    format(
-                            "Unable to parse AccessToken with headers: %s.\n\n Exception thrown: %s",
-                            input.getHeaders(), e));
-            return generateApiGatewayProxyResponse(
-                    401,
-                    "",
-                    new UserInfoErrorResponse(INVALID_TOKEN).toHTTPResponse().getHeaderMap());
-        }
-        Optional<String> subjectFromAccessToken =
-                tokenService.getSubjectWithAccessToken(accessToken);
-
-        return subjectFromAccessToken
-                .map(
-                        t ->
-                                validateScopesAndRetrieveUserInfo(
-                                        t, accessToken, authenticationService, input.getHeaders()))
-                .orElse(generateErrorResponse(input.getHeaders()));
+            return subjectFromAccessToken
+                    .map(
+                            t ->
+                                    validateScopesAndRetrieveUserInfo(
+                                            t, accessToken, authenticationService, input.getHeaders()))
+                    .orElse(generateErrorResponse(input.getHeaders()));
+        });
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(Map<String, String> headers) {

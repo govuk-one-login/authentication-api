@@ -28,7 +28,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static java.lang.String.format;
-import static software.amazon.awssdk.http.HttpStatusCode.OK;
+import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class LogoutHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -73,15 +73,15 @@ public class LogoutHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        if (input == null)
-            return new APIGatewayProxyResponseEvent().withBody("I'm warm").withStatusCode(OK);
-        LOG.info("Logout request received");
-        Optional<String> state = Optional.ofNullable(input.getQueryStringParameters().get("state"));
-        Optional<Session> sessionFromSessionCookie =
-                sessionService.getSessionFromSessionCookie(input.getHeaders());
-        return sessionFromSessionCookie
-                .map(t -> processLogoutRequest(t, input, state))
-                .orElse(generateDefaultLogoutResponse(state));
+        return isWarming(input).orElseGet(() -> {
+            LOG.info("Logout request received");
+            Optional<String> state = Optional.ofNullable(input.getQueryStringParameters().get("state"));
+            Optional<Session> sessionFromSessionCookie =
+                    sessionService.getSessionFromSessionCookie(input.getHeaders());
+            return sessionFromSessionCookie
+                    .map(t -> processLogoutRequest(t, input, state))
+                    .orElse(generateDefaultLogoutResponse(state));
+        });
     }
 
     private APIGatewayProxyResponseEvent processLogoutRequest(

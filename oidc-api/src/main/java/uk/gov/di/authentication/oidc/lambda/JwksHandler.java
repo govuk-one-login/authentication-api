@@ -10,7 +10,7 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenService;
 
-import static software.amazon.awssdk.http.HttpStatusCode.OK;
+import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class JwksHandler
@@ -36,14 +36,14 @@ public class JwksHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        if (input == null)
-            return new APIGatewayProxyResponseEvent().withBody("I'm warm").withStatusCode(OK);
-        JWKSet jwkSet;
-        try {
-            jwkSet = new JWKSet(tokenService.getPublicJwk());
-        } catch (IllegalArgumentException e) {
-            return generateApiGatewayProxyResponse(500, "Signing key is not present");
-        }
-        return generateApiGatewayProxyResponse(200, jwkSet.toString(true));
+        return isWarming(input).orElseGet(() -> {
+            JWKSet jwkSet;
+            try {
+                jwkSet = new JWKSet(tokenService.getPublicJwk());
+            } catch (IllegalArgumentException e) {
+                return generateApiGatewayProxyResponse(500, "Signing key is not present");
+            }
+            return generateApiGatewayProxyResponse(200, jwkSet.toString(true));
+        });
     }
 }

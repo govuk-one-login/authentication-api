@@ -119,4 +119,8 @@ public class ConfigurationService {
     public String getTokenSigningKeyAlias() {
         return System.getenv("TOKEN_SIGNING_KEY_ALIAS");
     }
+
+    public int getWarmupDelayMillis() {
+        return Integer.parseInt(System.getenv().getOrDefault("WARMER_DELAY", "75"));
+    }
 }
