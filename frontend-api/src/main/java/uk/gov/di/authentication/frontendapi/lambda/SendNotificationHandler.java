@@ -82,6 +82,10 @@ public class SendNotificationHandler
         Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
         if (session.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        } else {
+            LOGGER.info(
+                    "SendNotificationHandler processing request for session {}",
+                    session.get().getSessionId());
         }
         try {
             SendNotificationRequest sendNotificationRequest =
@@ -168,6 +172,9 @@ public class SendNotificationHandler
                 break;
         }
         sqsClient.send(serialiseRequest(notifyRequest));
+        LOGGER.info(
+                "SendNotificationHandler successfully processed request for session {}",
+                session.getSessionId());
         return generateApiGatewayProxyResponse(200, new BaseAPIResponse(session.getState()));
     }
 

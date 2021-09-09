@@ -90,7 +90,12 @@ public class UpdateProfileHandler
         if (session.isEmpty()) {
             LOGGER.info("Session is empty.");
             return generateErrorResponse(ErrorResponse.ERROR_1000);
+        } else {
+            LOGGER.info(
+                    "UpdateProfileHandler processing request for session {}",
+                    session.get().getSessionId());
         }
+
         try {
             UpdateProfileRequest profileRequest =
                     objectMapper.readValue(input.getBody(), UpdateProfileRequest.class);
@@ -109,8 +114,7 @@ public class UpdateProfileHandler
                         LOGGER.info(
                                 "Phone number updated and session state changed. Session state {}",
                                 ADDED_UNVERIFIED_PHONE_NUMBER);
-                        return generateApiGatewayProxyResponse(
-                                200, new BaseAPIResponse(session.get().getState()));
+                        return generateSuccessResponse(session.get());
                     }
                 case CAPTURE_CONSENT:
                     {
@@ -175,8 +179,7 @@ public class UpdateProfileHandler
                                 clientId,
                                 ADDED_CONSENT);
 
-                        return generateApiGatewayProxyResponse(
-                                200, new BaseAPIResponse(session.get().getState()));
+                        return generateSuccessResponse(session.get());
                     }
                 case UPDATE_TERMS_CONDS:
                     {
@@ -197,8 +200,7 @@ public class UpdateProfileHandler
                                 "Updated terms and conditions. Session state {}",
                                 UPDATE_TERMS_CONDS);
 
-                        return generateApiGatewayProxyResponse(
-                                200, new BaseAPIResponse(session.get().getState()));
+                        return generateSuccessResponse(session.get());
                     }
             }
         } catch (JsonProcessingException e) {
@@ -208,6 +210,15 @@ public class UpdateProfileHandler
             return generateErrorResponse(ErrorResponse.ERROR_1017);
         }
         return generateErrorResponse(ErrorResponse.ERROR_1013);
+    }
+
+    private APIGatewayProxyResponseEvent generateSuccessResponse(Session session)
+            throws JsonProcessingException {
+        LOGGER.info(
+                "UpdateProfileHandler successfully processed request for session {}",
+                session.getSessionId());
+
+        return generateApiGatewayProxyResponse(200, new BaseAPIResponse(session.getState()));
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(ErrorResponse errorResponse) {

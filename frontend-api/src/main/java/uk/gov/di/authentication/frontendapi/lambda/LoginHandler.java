@@ -58,6 +58,8 @@ public class LoginHandler
         if (session.isEmpty()) {
             LOGGER.error("Unable to find session");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        } else {
+            LOGGER.info("LoginHandler processing session with ID {}", session.get().getSessionId());
         }
 
         try {
@@ -85,7 +87,9 @@ public class LoginHandler
             }
             String concatPhoneNumber = RedactPhoneNumberHelper.redactPhoneNumber(phoneNumber);
             sessionService.save(session.get().setState(SessionState.LOGGED_IN));
-            LOGGER.info("User has successfully Logged in. Generating successful LoginResponse");
+            LOGGER.info(
+                    "User has successfully Logged in. Generating successful LoginResponse for session with ID {}",
+                    session.get().getSessionId());
             return generateApiGatewayProxyResponse(
                     200, new LoginResponse(concatPhoneNumber, session.get().getState()));
         } catch (JsonProcessingException e) {

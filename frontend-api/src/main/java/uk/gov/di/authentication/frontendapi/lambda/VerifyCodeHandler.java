@@ -6,6 +6,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -27,6 +29,8 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 
 public class VerifyCodeHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(VerifyCodeHandler.class);
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final SessionService sessionService;
@@ -68,6 +72,10 @@ public class VerifyCodeHandler
         Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
         if (session.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        } else {
+            LOG.info(
+                    "VerifyCodeHandler processing request for session {}",
+                    session.get().getSessionId());
         }
 
         try {
@@ -100,8 +108,7 @@ public class VerifyCodeHandler
                         sessionService.save(session.get().setState(newState));
                         processCodeSessionState(session.get(), codeRequest.getNotificationType());
                     }
-                    return generateApiGatewayProxyResponse(
-                            200, new BaseAPIResponse(session.get().getState()));
+                    return generateSuccessResponse(session.get());
                 case VERIFY_PHONE_NUMBER:
                     if (codeStorageService.isCodeBlockedForSession(
                             session.get().getEmailAddress(), session.get().getSessionId())) {
@@ -128,8 +135,7 @@ public class VerifyCodeHandler
                         sessionService.save(session.get().setState(newState));
                         processCodeSessionState(session.get(), codeRequest.getNotificationType());
                     }
-                    return generateApiGatewayProxyResponse(
-                            200, new BaseAPIResponse(session.get().getState()));
+                    return generateSuccessResponse(session.get());
                 case MFA_SMS:
                     if (codeStorageService.isCodeBlockedForSession(
                             session.get().getEmailAddress(), session.get().getSessionId())) {
@@ -153,8 +159,7 @@ public class VerifyCodeHandler
                         sessionService.save(session.get().setState(newState));
                         processCodeSessionState(session.get(), codeRequest.getNotificationType());
                     }
-                    return generateApiGatewayProxyResponse(
-                            200, new BaseAPIResponse(session.get().getState()));
+                    return generateSuccessResponse(session.get());
             }
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
@@ -162,6 +167,15 @@ public class VerifyCodeHandler
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         }
         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
+    }
+
+    private APIGatewayProxyResponseEvent generateSuccessResponse(Session session)
+            throws JsonProcessingException {
+        LOG.info(
+                "VerifyCodeHandler successfully processed request for session {}",
+                session.getSessionId());
+
+        return generateApiGatewayProxyResponse(200, new BaseAPIResponse(session.getState()));
     }
 
     private void blockCodeForSessionAndResetCount(Session session) {

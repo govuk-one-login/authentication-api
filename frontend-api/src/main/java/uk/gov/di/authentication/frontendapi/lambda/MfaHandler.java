@@ -85,6 +85,8 @@ public class MfaHandler
         if (session == null) {
             LOGGER.error("Session cannot be found");
             return generateApiGatewayProxyErrorResponse(400, ERROR_1000);
+        } else {
+            LOGGER.info("MfaHandler processing request for session {}", session.getSessionId());
         }
 
         try {
@@ -114,6 +116,11 @@ public class MfaHandler
             sessionService.save(session.setState(MFA_SMS_CODE_SENT));
             NotifyRequest notifyRequest = new NotifyRequest(phoneNumber, MFA_SMS, code);
             sqsClient.send(objectMapper.writeValueAsString(notifyRequest));
+
+            LOGGER.info(
+                    "MfaHandler successfully processed request for session {}",
+                    session.getSessionId());
+
             return generateApiGatewayProxyResponse(200, new BaseAPIResponse(session.getState()));
         } catch (JsonProcessingException e) {
             LOGGER.error("Request is missing parameters. Request Body: {}", input.getBody());
