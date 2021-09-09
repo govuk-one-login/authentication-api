@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.security.KeyPair;
 import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
 
 import static com.nimbusds.openid.connect.sdk.Prompt.Type.LOGIN;
@@ -40,6 +41,7 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
     private static final String AUTHORIZE_ENDPOINT = "/authorize";
 
     private static final String CLIENT_ID = "test-client";
+    private static final String AM_CLIENT_ID = "am-test-client";
     private static final String INVALID_CLIENT_ID = "invalid-test-client";
     private static final KeyPair KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
 
@@ -47,22 +49,14 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
 
     @BeforeEach
     public void setup() {
-        DynamoHelper.registerClient(
-                CLIENT_ID,
-                "test-client",
-                singletonList("localhost"),
-                singletonList("joe.bloggs@digital.cabinet-office.gov.uk"),
-                singletonList("openid"),
-                Base64.getMimeEncoder().encodeToString(KEY_PAIR.getPublic().getEncoded()),
-                singletonList("http://localhost/post-redirect-logout"),
-                String.valueOf(ServiceType.MANDATORY));
+        registerClient(CLIENT_ID, "test-client", singletonList("openid"));
     }
 
     @Test
     public void shouldReturnUnmetAuthenticationRequirementsErrorWhenUsingInvalidClient() {
         Response response =
                 doAuthorisationRequest(
-                        Optional.of(INVALID_CLIENT_ID), Optional.empty(), Optional.empty());
+                        Optional.of(INVALID_CLIENT_ID), Optional.empty(), Optional.empty(), "openid");
         assertEquals(302, response.getStatus());
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
@@ -72,7 +66,8 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
     @Test
     public void shouldRedirectToLoginWhenNoCookie() {
         Response response =
-                doAuthorisationRequest(Optional.of(CLIENT_ID), Optional.empty(), Optional.empty());
+                doAuthorisationRequest(
+                        Optional.of(CLIENT_ID), Optional.empty(), Optional.empty(), "openid");
 
         assertEquals(302, response.getStatus());
         assertThat(
@@ -82,12 +77,39 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
     }
 
     @Test
+    public void shouldRedirectToLoginForAccountManagementClient() {
+        registerClient(AM_CLIENT_ID, "am-client-name", List.of("openid", "am"));
+        Response response =
+                doAuthorisationRequest(
+                        Optional.of(AM_CLIENT_ID), Optional.empty(), Optional.empty(), "openid am");
+
+        assertEquals(302, response.getStatus());
+        assertThat(
+                getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
+                startsWith(configurationService.getLoginURI().toString()));
+        assertNotNull(response.getCookies().get("gs"));
+    }
+
+    @Test
+    public void shouldReturnInvalidScopeErrorWhenNotAccountManagementClient() {
+        Response response =
+                doAuthorisationRequest(
+                        Optional.of(CLIENT_ID), Optional.empty(), Optional.empty(), "openid am");
+        assertEquals(302, response.getStatus());
+        assertThat(
+                getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
+                containsString("error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope")
+        );
+    }
+
+    @Test
     public void shouldRedirectToLoginWhenBadCookie() {
         Response response =
                 doAuthorisationRequest(
                         Optional.of(CLIENT_ID),
                         Optional.of(new Cookie("gs", "this is bad")),
-                        Optional.empty());
+                        Optional.empty(),
+                        "openid");
 
         assertEquals(302, response.getStatus());
         assertThat(
@@ -102,7 +124,8 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
                 doAuthorisationRequest(
                         Optional.of(CLIENT_ID),
                         Optional.of(new Cookie("gs", "123.456")),
-                        Optional.empty());
+                        Optional.empty(),
+                        "openid");
 
         assertEquals(302, response.getStatus());
         assertThat(
@@ -119,7 +142,8 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
                 doAuthorisationRequest(
                         Optional.of(CLIENT_ID),
                         Optional.of(new Cookie("gs", format("%s.456", sessionId))),
-                        Optional.empty());
+                        Optional.empty(),
+                        "openid");
 
         assertEquals(302, response.getStatus());
         assertThat(
@@ -138,7 +162,8 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
                 doAuthorisationRequest(
                         Optional.of(CLIENT_ID),
                         Optional.of(new Cookie("gs", format("%s.456", sessionId))),
-                        Optional.empty());
+                        Optional.empty(),
+                        "openid");
 
         assertEquals(302, response.getStatus());
         // TODO: Update assertions to reflect code issuance, once we've written that code
@@ -150,7 +175,10 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
     public void shouldReturnLoginRequiredErrorWhenPromptNoneAndUserUnauthenticated() {
         Response response =
                 doAuthorisationRequest(
-                        Optional.of(CLIENT_ID), Optional.empty(), Optional.of(NONE.toString()));
+                        Optional.of(CLIENT_ID),
+                        Optional.empty(),
+                        Optional.of(NONE.toString()),
+                        "openid");
         assertEquals(302, response.getStatus());
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
@@ -165,7 +193,8 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
                 doAuthorisationRequest(
                         Optional.of(CLIENT_ID),
                         Optional.of(new Cookie("gs", format("%s.456", sessionId))),
-                        Optional.of(NONE.toString()));
+                        Optional.of(NONE.toString()),
+                        "openid");
 
         assertEquals(302, response.getStatus());
         assertNotNull(response.getCookies().get("gs"));
@@ -183,7 +212,8 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
                 doAuthorisationRequest(
                         Optional.of(CLIENT_ID),
                         Optional.of(new Cookie("gs", format("%s.456", sessionId))),
-                        Optional.of(LOGIN.toString()));
+                        Optional.of(LOGIN.toString()),
+                        "openid");
 
         assertEquals(302, response.getStatus());
         assertNotNull(response.getCookies().get("gs"));
@@ -206,7 +236,10 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
     }
 
     private Response doAuthorisationRequest(
-            Optional<String> clientId, Optional<Cookie> cookie, Optional<String> prompt) {
+            Optional<String> clientId,
+            Optional<Cookie> cookie,
+            Optional<String> prompt,
+            String scopes) {
         Client client = ClientBuilder.newClient();
         Nonce nonce = new Nonce();
         WebTarget webTarget =
@@ -216,12 +249,11 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
                         .queryParam("state", "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU")
                         .queryParam("nonce", nonce.getValue())
                         .queryParam("client_id", clientId.orElse("test-client"))
-                        .queryParam("scope", "openid")
+                        .queryParam("scope", scopes)
                         .property(ClientProperties.FOLLOW_REDIRECTS, Boolean.FALSE);
         if (prompt.isPresent()) {
             webTarget = webTarget.queryParam("prompt", prompt.get());
         }
-
         Invocation.Builder builder = webTarget.request();
         cookie.ifPresent(builder::cookie);
         return builder.get();
@@ -229,5 +261,17 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
 
     private String getHeaderValueByParamName(Response response, String paramName) {
         return response.getHeaders().get(paramName).get(0).toString();
+    }
+
+    private void registerClient(String clientId, String clientName, List<String> scopes) {
+        DynamoHelper.registerClient(
+                clientId,
+                clientName,
+                singletonList("localhost"),
+                singletonList("joe.bloggs@digital.cabinet-office.gov.uk"),
+                scopes,
+                Base64.getMimeEncoder().encodeToString(KEY_PAIR.getPublic().getEncoded()),
+                singletonList("http://localhost/post-redirect-logout"),
+                String.valueOf(ServiceType.MANDATORY));
     }
 }

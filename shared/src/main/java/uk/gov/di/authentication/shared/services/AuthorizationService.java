@@ -115,8 +115,7 @@ public class AuthorizationService {
 
     private boolean areScopesValid(List<String> scopes) {
         for (String scope : scopes) {
-            if (ValidScopes.getAllValidScopes().stream()
-                    .noneMatch((t) -> t.getValue().equals(scope))) {
+            if (ValidScopes.getAllValidScopes().stream().noneMatch((t) -> t.equals(scope))) {
                 return false;
             }
         }

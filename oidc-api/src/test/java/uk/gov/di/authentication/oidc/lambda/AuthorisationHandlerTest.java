@@ -135,7 +135,7 @@ class AuthorisationHandlerTest {
     }
 
     @Test
-    void shouldReturn400WhenAuthorisationRequestContainsInvalidData() {
+    void shouldReturn400WhenAuthorisationRequestContainsInvalidScope() {
         when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.of(OAuth2Error.INVALID_SCOPE));
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
