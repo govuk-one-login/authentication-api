@@ -102,7 +102,9 @@ public class UserInfoHandler
                                 return generateApiGatewayProxyResponse(
                                         401,
                                         "",
-                                        new UserInfoErrorResponse(INVALID_TOKEN).toHTTPResponse().getHeaderMap());
+                                        new UserInfoErrorResponse(INVALID_TOKEN)
+                                                .toHTTPResponse()
+                                                .getHeaderMap());
                             }
                             Optional<String> subjectFromAccessToken =
                                     getSubjectWithAccessToken(accessToken);

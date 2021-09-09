@@ -23,8 +23,6 @@ import java.util.List;
 import java.util.UUID;
 
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.INVALID_TOKEN;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -71,16 +69,18 @@ public class UserInfoIntegrationTest extends IntegrationTestEndpoints {
                         .header("Authorization", accessToken.toAuthorizationHeader())
                         .get();
 
-//        Commented out due to same reason as LogoutIntegration test. It's an issue with KSM running inside localstack which causes the Caused by: java.security.NoSuchAlgorithmException: EC KeyFactory not available error. 
-//        assertEquals(200, response.getStatus());
+        //        Commented out due to same reason as LogoutIntegration test. It's an issue with KSM
+        // running inside localstack which causes the Caused by:
+        // java.security.NoSuchAlgorithmException: EC KeyFactory not available error.
+        //        assertEquals(200, response.getStatus());
         UserInfo expectedUserInfoResponse = new UserInfo(subject);
         expectedUserInfoResponse.setEmailAddress(TEST_EMAIL_ADDRESS);
         expectedUserInfoResponse.setEmailVerified(true);
         expectedUserInfoResponse.setPhoneNumber(TEST_PHONE_NUMBER);
         expectedUserInfoResponse.setPhoneNumberVerified(true);
-//        assertThat(
-//                response.readEntity(String.class),
-//                equalTo(expectedUserInfoResponse.toJSONString()));
+        //        assertThat(
+        //                response.readEntity(String.class),
+        //                equalTo(expectedUserInfoResponse.toJSONString()));
     }
 
     @Test
