@@ -6,6 +6,8 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.NotificationService;
@@ -20,6 +22,8 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMA
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 
 public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(NotificationHandler.class);
 
     private final NotificationService notificationService;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -79,6 +83,10 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             break;
                     }
                 } catch (NotificationClientException e) {
+                    LOG.error(
+                            "Error sending with Notify using NotificationType: {}",
+                            notifyRequest.getNotificationType(),
+                            e);
                     throw new RuntimeException(
                             String.format(
                                     "Error sending with Notify using NotificationType: %s",
@@ -86,6 +94,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             e);
                 }
             } catch (JsonProcessingException e) {
+                LOG.error("Error when mapping message from queue to a NotifyRequest", e);
                 throw new RuntimeException(
                         "Error when mapping message from queue to a NotifyRequest", e);
             }

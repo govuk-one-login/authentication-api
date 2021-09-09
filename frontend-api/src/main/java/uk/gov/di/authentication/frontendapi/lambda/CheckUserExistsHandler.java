@@ -75,6 +75,10 @@ public class CheckUserExistsHandler
                 Optional<ErrorResponse> errorResponse =
                         validationService.validateEmailAddress(emailAddress);
                 if (errorResponse.isPresent()) {
+                    LOG.error(
+                            "Encountered an error while processing request for session {}; errorResponse is {}",
+                            session.get().getSessionId(),
+                            errorResponse.get());
                     return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
                 }
                 boolean userExists = authenticationService.userExists(emailAddress);
@@ -99,8 +103,10 @@ public class CheckUserExistsHandler
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
         } catch (JsonProcessingException e) {
+            LOG.error("Error parsing request", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
+            LOG.error("Invalid transition in user journey", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         }
     }

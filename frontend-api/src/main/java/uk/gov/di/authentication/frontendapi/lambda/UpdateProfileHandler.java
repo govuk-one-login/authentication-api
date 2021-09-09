@@ -88,7 +88,6 @@ public class UpdateProfileHandler
         String clientId;
 
         if (session.isEmpty()) {
-            LOGGER.info("Session is empty.");
             return generateErrorResponse(ErrorResponse.ERROR_1000);
         } else {
             LOGGER.info(
@@ -204,11 +203,15 @@ public class UpdateProfileHandler
                     }
             }
         } catch (JsonProcessingException e) {
-            LOGGER.info("JsonProcessingException", e);
+            LOGGER.error("Error parsing request", e);
             return generateErrorResponse(ErrorResponse.ERROR_1001);
         } catch (InvalidStateTransitionException e) {
+            LOGGER.error("Invalid transition in user journey", e);
             return generateErrorResponse(ErrorResponse.ERROR_1017);
         }
+        LOGGER.error(
+                "Encountered unexpected error while processing session {}",
+                session.get().getSessionId());
         return generateErrorResponse(ErrorResponse.ERROR_1013);
     }
 

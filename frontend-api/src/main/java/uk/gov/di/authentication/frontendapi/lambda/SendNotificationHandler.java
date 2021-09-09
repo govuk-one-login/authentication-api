@@ -91,6 +91,7 @@ public class SendNotificationHandler
             SendNotificationRequest sendNotificationRequest =
                     objectMapper.readValue(input.getBody(), SendNotificationRequest.class);
             if (!session.get().validateSession(sendNotificationRequest.getEmail())) {
+                LOGGER.info("Invalid session. Email {}", sendNotificationRequest.getEmail());
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
             switch (sendNotificationRequest.getNotificationType()) {
@@ -102,6 +103,8 @@ public class SendNotificationHandler
                             validationService.validateEmailAddress(
                                     sendNotificationRequest.getEmail());
                     if (emailErrorResponse.isPresent()) {
+                        LOGGER.error(
+                                "Encountered emailErrorResponse: {}", emailErrorResponse.get());
                         return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
                     }
                     return handleNotificationRequest(
@@ -113,6 +116,7 @@ public class SendNotificationHandler
                             session.get(), SessionState.VERIFY_PHONE_NUMBER_CODE_SENT);
 
                     if (sendNotificationRequest.getPhoneNumber() == null) {
+                        LOGGER.error("No phone number provided");
                         return generateApiGatewayProxyResponse(400, ERROR_1011);
                     }
                     String phoneNumber =
@@ -136,6 +140,7 @@ public class SendNotificationHandler
             LOGGER.error("Error parsing request", e);
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
+            LOGGER.error("Invalid transition in user journey", e);
             return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
         }
     }
