@@ -12,9 +12,7 @@ import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.TokenService;
 
 import java.util.Map;
 import java.util.Optional;
@@ -31,31 +29,27 @@ public class UserInfoHandler
 
     private static final Logger LOGGER = LoggerFactory.getLogger(UserInfoHandler.class);
 
-    private final TokenService tokenService;
+    private final RedisConnectionService redisConnectionService;
     private final ConfigurationService configurationService;
     private final AuthenticationService authenticationService;
 
     public UserInfoHandler(
-            TokenService tokenService,
             ConfigurationService configurationService,
-            AuthenticationService authenticationService) {
-        this.tokenService = tokenService;
+            AuthenticationService authenticationService,
+            RedisConnectionService redisConnectionService) {
         this.configurationService = configurationService;
         this.authenticationService = authenticationService;
+        this.redisConnectionService = redisConnectionService;
     }
 
     public UserInfoHandler() {
         configurationService = new ConfigurationService();
-        tokenService =
-                new TokenService(
-                        configurationService,
-                        new RedisConnectionService(configurationService),
-                        new KmsConnectionService(configurationService));
         authenticationService =
                 new DynamoService(
                         configurationService.getAwsRegion(),
                         configurationService.getEnvironment(),
                         configurationService.getDynamoEndpointUri());
+        redisConnectionService = new RedisConnectionService(configurationService);
     }
 
     @Override
@@ -94,7 +88,7 @@ public class UserInfoHandler
                                                 .getHeaderMap());
                             }
                             Optional<String> subjectFromAccessToken =
-                                    tokenService.getSubjectWithAccessToken(accessToken);
+                                    getSubjectWithAccessToken(accessToken);
 
                             return subjectFromAccessToken
                                     .map(
@@ -116,5 +110,9 @@ public class UserInfoHandler
 
         return generateApiGatewayProxyResponse(
                 401, "", new UserInfoErrorResponse(INVALID_TOKEN).toHTTPResponse().getHeaderMap());
+    }
+
+    private Optional<String> getSubjectWithAccessToken(AccessToken token) {
+        return Optional.ofNullable(redisConnectionService.getValue(token.toJSONString()));
     }
 }

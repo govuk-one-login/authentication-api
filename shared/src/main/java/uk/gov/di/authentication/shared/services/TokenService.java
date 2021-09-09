@@ -94,10 +94,6 @@ public class TokenService {
         return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, null));
     }
 
-    public Optional<String> getSubjectWithAccessToken(AccessToken token) {
-        return Optional.ofNullable(redisConnectionService.getValue(token.toJSONString()));
-    }
-
     public boolean validateIdTokenSignature(String idTokenHint) {
         try {
             LOGGER.info("Validating ID token signature");
