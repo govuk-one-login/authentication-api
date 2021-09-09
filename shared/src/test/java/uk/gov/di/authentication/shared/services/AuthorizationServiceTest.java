@@ -16,9 +16,11 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -100,7 +102,7 @@ class AuthorizationServiceTest {
     }
 
     @Test
-    void shouldSuccessfullyValidAuthRequest() {
+    void shouldSuccessfullyValidateAuthRequest() {
         ClientID clientID = new ClientID();
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope();
@@ -116,6 +118,44 @@ class AuthorizationServiceTest {
                                 clientID, REDIRECT_URI.toString(), responseType, scope));
 
         assertThat(errorObject, equalTo(Optional.empty()));
+    }
+
+    @Test
+    void shouldSuccessfullyValidateAccountManagementAuthRequest() {
+        ClientID clientID = new ClientID();
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope(OIDCScopeValue.OPENID, CustomScopeValue.ACCOUNT_MANAGEMENT);
+        when(dynamoClientService.getClient(clientID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(),
+                                        clientID.toString(),
+                                        List.of("openid", "am"))));
+        Optional<ErrorObject> errorObject =
+                authorizationService.validateAuthRequest(
+                        generateAuthRequest(
+                                clientID, REDIRECT_URI.toString(), responseType, scope));
+
+        assertThat(errorObject, equalTo(Optional.empty()));
+    }
+
+    @Test
+    void shouldReturnErrorForAccountManagementAuthRequestWhenScopeNotInClient() {
+        ClientID clientID = new ClientID();
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope(OIDCScopeValue.OPENID, CustomScopeValue.ACCOUNT_MANAGEMENT);
+        when(dynamoClientService.getClient(clientID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), clientID.toString())));
+        Optional<ErrorObject> errorObject =
+                authorizationService.validateAuthRequest(
+                        generateAuthRequest(
+                                clientID, REDIRECT_URI.toString(), responseType, scope));
+
+        assertThat(errorObject, equalTo(Optional.of(OAuth2Error.INVALID_SCOPE)));
     }
 
     @Test
@@ -254,12 +294,17 @@ class AuthorizationServiceTest {
     }
 
     private ClientRegistry generateClientRegistry(String redirectURI, String clientID) {
+        return generateClientRegistry(redirectURI, clientID, singletonList("openid"));
+    }
+
+    private ClientRegistry generateClientRegistry(
+            String redirectURI, String clientID, List<String> scopes) {
         return new ClientRegistry()
                 .setRedirectUrls(singletonList(redirectURI))
                 .setClientID(clientID)
                 .setContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
                 .setPublicKey(null)
-                .setScopes(singletonList("openid"));
+                .setScopes(scopes);
     }
 
     private AuthenticationRequest generateAuthRequest(

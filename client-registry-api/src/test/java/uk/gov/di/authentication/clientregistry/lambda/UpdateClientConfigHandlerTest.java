@@ -33,6 +33,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_ERROR;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
+import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_SCOPE;
 import static uk.gov.di.authentication.shared.entity.ServiceType.MANDATORY;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -140,6 +141,24 @@ class UpdateClientConfigHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(INVALID_PUBLIC_KEY.toJSONObject().toJSONString()));
+
+        verify(auditService).submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR);
+    }
+
+    @Test
+    public void shouldReturn400WhenRequestHasInvalidScope() {
+        when(clientService.isValidClient(CLIENT_ID)).thenReturn(true);
+        when(clientValidationService.validateClientUpdateConfig(
+                        any(UpdateClientConfigRequest.class)))
+                .thenReturn(Optional.of(INVALID_SCOPE));
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setBody(format("{\"client_name\": \"%s\"}", CLIENT_NAME));
+        event.setPathParameters(Map.of("clientId", CLIENT_ID));
+        APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasBody(INVALID_SCOPE.toJSONObject().toJSONString()));
 
         verify(auditService).submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR);
     }

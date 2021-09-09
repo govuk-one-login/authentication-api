@@ -31,6 +31,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_ERROR;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
+import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_SCOPE;
 import static uk.gov.di.authentication.shared.entity.ServiceType.MANDATORY;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -120,6 +121,22 @@ class ClientRegistrationHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(INVALID_PUBLIC_KEY.toJSONObject().toJSONString()));
+
+        verify(auditService).submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR);
+    }
+
+    @Test
+    public void shouldReturn400ResponseIfRequestHasPrivateScope() {
+        when(configValidationService.validateClientRegistrationConfig(
+                        any(ClientRegistrationRequest.class)))
+                .thenReturn(Optional.of(INVALID_SCOPE));
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setBody(
+                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"],  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"service_type\": \"MANDATORY\"}");
+        APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasBody(INVALID_SCOPE.toJSONObject().toJSONString()));
 
         verify(auditService).submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR);
     }

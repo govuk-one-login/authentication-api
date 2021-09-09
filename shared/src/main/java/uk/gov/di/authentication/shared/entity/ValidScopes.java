@@ -9,16 +9,25 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class ValidScopes {
 
-    private static final List<OIDCScopeValue> allowedScopes =
+    private static final List<OIDCScopeValue> allowedOIDCScopes =
             List.of(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
+
+    private static final List<CustomScopeValue> allowedCustomScopes =
+            List.of(CustomScopeValue.ACCOUNT_MANAGEMENT);
 
     private ValidScopes() {}
 
-    public static Set<String> getClaimsForScope(String scope) {
-        for (OIDCScopeValue scopeValue : allowedScopes) {
+    private static Set<String> getClaimsForScope(String scope) {
+        for (OIDCScopeValue scopeValue : allowedOIDCScopes) {
+            if (scopeValue.getValue().equals(scope)) {
+                return scopeValue.getClaimNames();
+            }
+        }
+        for (CustomScopeValue scopeValue : allowedCustomScopes) {
             if (scopeValue.getValue().equals(scope)) {
                 return scopeValue.getClaimNames();
             }
@@ -34,12 +43,26 @@ public class ValidScopes {
         return claims;
     }
 
-    public static List<OIDCScopeValue> getAllValidScopes() {
-        return allowedScopes;
+    public static List<String> getAllValidScopes() {
+        return Stream.concat(
+                        allowedOIDCScopes.stream().map(Identifier::getValue),
+                        allowedCustomScopes.stream().map(Identifier::getValue))
+                .collect(Collectors.toList());
+    }
+
+    public static List<String> getPublicValidScopes() {
+        return Stream.concat(
+                        allowedOIDCScopes.stream().map(Identifier::getValue),
+                        allowedCustomScopes.stream()
+                                .filter(CustomScopeValue::isPublicScope)
+                                .map(Identifier::getValue))
+                .collect(Collectors.toList());
     }
 
     public static Scope getScopesForWellKnownHandler() {
         return new Scope(
-                allowedScopes.stream().map(Identifier::getValue).collect(Collectors.joining(",")));
+                allowedOIDCScopes.stream()
+                        .map(Identifier::getValue)
+                        .collect(Collectors.joining(",")));
     }
 }
