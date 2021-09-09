@@ -17,7 +17,9 @@ resource "aws_lambda_function" "endpoint_lambda" {
     subnet_ids         = var.subnet_id
   }
   environment {
-    variables = var.handler_environment_variables
+    variables = merge(var.handler_environment_variables,{
+      WARMER_DELAY = var.warmer_delay_millis
+    })
   }
 
   runtime = var.handler_runtime
@@ -45,8 +47,8 @@ resource "aws_cloudwatch_log_subscription_filter" "log_subscription" {
 }
 
 resource "aws_lambda_alias" "endpoint_lambda"{
-  name = "endpoint_lambda_version"
-  description = "Versioned alias"
+  name = replace("${var.environment}-${var.endpoint_name}-lambda-active", ".", "")
+  description = "Alias pointing at active version of Lambda"
   function_name = aws_lambda_function.endpoint_lambda.arn
   function_version = aws_lambda_function.endpoint_lambda.version
 }

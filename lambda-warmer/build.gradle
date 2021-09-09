@@ -1,0 +1,40 @@
+plugins {
+    id "java"
+}
+
+group "uk.gov.di.lambdawarmer"
+version "unspecified"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation configurations.lambda,
+            "com.amazonaws:aws-java-sdk-lambda:1.12.58"
+
+    runtimeOnly configurations.logging_runtime
+
+    testImplementation configurations.tests,
+            configurations.lambda_tests
+
+    testRuntimeOnly configurations.test_runtime
+}
+
+test {
+    useJUnitPlatform()
+}
+
+task buildZip(type: Zip) {
+    from compileJava
+    from processResources
+    into("lib") {
+        from configurations.runtimeClasspath
+    }
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+build.dependsOn buildZip
