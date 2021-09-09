@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -23,9 +24,11 @@ import static java.text.MessageFormat.format;
 
 public class LambdaWarmerHandler implements RequestHandler<ScheduledEvent, String> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(LambdaWarmerHandler.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(LambdaWarmerHandler.class);
     private final ConfigurationService configurationService;
     private final AWSLambda awsLambda;
+
+    public static final String WARMUP_HEADER = "__WARMUP_REQUEST__";
 
     public LambdaWarmerHandler(ConfigurationService configurationService, AWSLambda awsLambda) {
         this.configurationService = configurationService;
@@ -39,7 +42,7 @@ public class LambdaWarmerHandler implements RequestHandler<ScheduledEvent, Strin
 
     @Override
     public String handleRequest(ScheduledEvent input, Context context) {
-        LOG.info("Lambda warmer started");
+        LOGGER.info("Lambda warmer started");
 
         String lambdaArn = configurationService.getLambdaArn();
         int concurrency = configurationService.getMinConcurrency();
@@ -50,27 +53,43 @@ public class LambdaWarmerHandler implements RequestHandler<ScheduledEvent, Strin
         }
 
         CompletableFuture.allOf(invocations.toArray(new CompletableFuture[concurrency]))
-                .thenRun(() -> {
-                    invocations.forEach( i -> LOG.info("Completed Successfully: {}", !i.isCompletedExceptionally()));
-                })
+                .thenRun(
+                        () -> {
+                            invocations.forEach(
+                                    i ->
+                                            LOGGER.info(
+                                                    "Completed Successfully: {}",
+                                                    !i.isCompletedExceptionally()));
+                        })
                 .join();
 
-        LOG.info("Lambda warmer finished");
-        return format("Lambda warmup for {0}:{1} complete!", lambdaArn, configurationService.getLambdaQualifier());
+        LOGGER.info(
+                format(
+                        "Lambda warmup for {0}:{1} complete!",
+                        lambdaArn, configurationService.getLambdaQualifier()));
+        return format(
+                "Lambda warmup for {0}:{1} complete!",
+                lambdaArn, configurationService.getLambdaQualifier());
     }
 
     private InvokeResult warmLambda(String functionName) {
+        String warmupRequestId = UUID.randomUUID().toString();
         InvokeRequest invokeRequest =
                 new InvokeRequest()
+                        .withPayload(
+                                format(
+                                        "'{' \"headers\": '{' \"{0}\": \"{1}\" '}}'",
+                                        WARMUP_HEADER, warmupRequestId))
                         .withFunctionName(functionName)
                         .withQualifier(configurationService.getLambdaQualifier())
                         .withInvocationType(InvocationType.RequestResponse);
 
         try {
+            LOGGER.info("Invoking warmup request with ID {}", warmupRequestId);
             InvokeResult invokeResult = awsLambda.invoke(invokeRequest);
             return invokeResult;
         } catch (ServiceException e) {
-            LOG.error("Error invoking lambda", e);
+            LOGGER.error("Error invoking lambda", e);
             throw new RuntimeException("Error invoking Lambda", e);
         }
     }
