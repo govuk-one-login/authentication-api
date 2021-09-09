@@ -117,7 +117,7 @@ public class TokenValidationService {
                             .build();
             LOGGER.info("ECKey: " + jwk.toJSONString());
             LOGGER.info("ECKey KeyID: " + jwk.getKeyID());
-            return JWK.parse(jwk.toJSONObject());
+            return JWK.parse(jwk.toString());
         } catch (java.text.ParseException e) {
             LOGGER.error("Error parsing the ECKey to JWK", e);
             throw new RuntimeException(e);

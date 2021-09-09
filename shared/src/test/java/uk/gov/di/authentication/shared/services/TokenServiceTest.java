@@ -284,12 +284,4 @@ public class TokenServiceTest {
         kpg.initialize(2048);
         return kpg.generateKeyPair();
     }
-
-    private ECKey generateECKeyPair() {
-        try {
-            return new ECKeyGenerator(Curve.P_256).keyID(KEY_ID).generate();
-        } catch (JOSEException e) {
-            throw new RuntimeException();
-        }
-    }
 }

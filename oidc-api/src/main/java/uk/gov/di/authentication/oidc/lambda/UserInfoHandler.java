@@ -12,7 +12,9 @@ import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
+import uk.gov.di.authentication.shared.services.TokenValidationService;
 
 import java.util.Map;
 import java.util.Optional;
@@ -32,14 +34,17 @@ public class UserInfoHandler
     private final RedisConnectionService redisConnectionService;
     private final ConfigurationService configurationService;
     private final AuthenticationService authenticationService;
+    private final TokenValidationService tokenValidationService;
 
     public UserInfoHandler(
             ConfigurationService configurationService,
             AuthenticationService authenticationService,
-            RedisConnectionService redisConnectionService) {
+            RedisConnectionService redisConnectionService,
+            TokenValidationService tokenValidationService) {
         this.configurationService = configurationService;
         this.authenticationService = authenticationService;
         this.redisConnectionService = redisConnectionService;
+        this.tokenValidationService = tokenValidationService;
     }
 
     public UserInfoHandler() {
@@ -50,6 +55,11 @@ public class UserInfoHandler
                         configurationService.getEnvironment(),
                         configurationService.getDynamoEndpointUri());
         redisConnectionService = new RedisConnectionService(configurationService);
+        this.tokenValidationService =
+                new TokenValidationService(
+                        configurationService,
+                        redisConnectionService,
+                        new KmsConnectionService(configurationService));
     }
 
     @Override
@@ -86,6 +96,13 @@ public class UserInfoHandler
                                         new UserInfoErrorResponse(INVALID_TOKEN)
                                                 .toHTTPResponse()
                                                 .getHeaderMap());
+                            }
+                            if (!tokenValidationService.validateAccessTokenSignature(accessToken)) {
+                                LOGGER.error("Unable to validate AccessToken signature");
+                                return generateApiGatewayProxyResponse(
+                                        401,
+                                        "",
+                                        new UserInfoErrorResponse(INVALID_TOKEN).toHTTPResponse().getHeaderMap());
                             }
                             Optional<String> subjectFromAccessToken =
                                     getSubjectWithAccessToken(accessToken);
