@@ -10,7 +10,7 @@ import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.TokenService;
+import uk.gov.di.authentication.shared.services.TokenValidationService;
 
 import java.util.UUID;
 
@@ -23,19 +23,20 @@ import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEv
 class JwksHandlerTest {
 
     private final Context context = mock(Context.class);
-    private final TokenService tokenService = mock(TokenService.class);
+    private final TokenValidationService tokenValidationService =
+            mock(TokenValidationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private JwksHandler handler;
 
     @BeforeEach
     public void setUp() {
-        handler = new JwksHandler(tokenService, configurationService);
+        handler = new JwksHandler(tokenValidationService, configurationService);
     }
 
     @Test
     public void shouldReturn200WhenRequestIsSuccessful() throws JOSEException {
         JWK signingKey = new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
-        when(tokenService.getPublicJwk()).thenReturn(signingKey);
+        when(tokenValidationService.getPublicJwk()).thenReturn(signingKey);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -48,7 +49,7 @@ class JwksHandlerTest {
 
     @Test
     public void shouldReturn500WhenSigningKeyIsNotPresent() {
-        when(tokenService.getPublicJwk()).thenReturn(null);
+        when(tokenValidationService.getPublicJwk()).thenReturn(null);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);

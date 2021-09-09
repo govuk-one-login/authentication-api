@@ -17,7 +17,7 @@ import uk.gov.di.accountmanagement.entity.TokenAuthorizerContext;
 import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.TokenService;
+import uk.gov.di.authentication.shared.services.TokenValidationService;
 
 import java.util.List;
 
@@ -31,27 +31,35 @@ import static org.mockito.Mockito.when;
 
 class AuthoriseAccessTokenHandlerTest {
 
-    private final TokenService tokenService = mock(TokenService.class);
+    private final TokenValidationService tokenValidationServicen =
+            mock(TokenValidationService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private AuthoriseAccessTokenHandler handler;
     private final Context context = mock(Context.class);
     private static final String KEY_ID = "14342354354353";
     private static final String TOKEN_TYPE = "TOKEN";
-    private static final String METHOD_ARN = "arn:aws:execute-api:eu-west-2:123456789012:ymy8tbxw7b/*/POST/";
+    private static final String METHOD_ARN =
+            "arn:aws:execute-api:eu-west-2:123456789012:ymy8tbxw7b/*/POST/";
     private static final List<String> SCOPES = List.of("openid", "email", "phone", "am");
     private static final Subject SUBJECT = new Subject("some-subject");
 
     @BeforeEach
     public void setUp() {
-        handler = new AuthoriseAccessTokenHandler(tokenService, configurationService, dynamoService);
+        handler =
+                new AuthoriseAccessTokenHandler(
+                        tokenValidationServicen, configurationService, dynamoService);
     }
 
     @Test
     public void shouldReturnAuthPolicyForSuccessfulRequest() throws JOSEException {
-        BearerAccessToken signedAccessToken = new BearerAccessToken(createSignedAccessToken().serialize());
-        TokenAuthorizerContext tokenAuthorizerContext = new TokenAuthorizerContext(TOKEN_TYPE, signedAccessToken.toAuthorizationHeader(), METHOD_ARN);
-        when(tokenService.validateAccessTokenSignature(signedAccessToken)).thenReturn(true);
+        BearerAccessToken signedAccessToken =
+                new BearerAccessToken(createSignedAccessToken().serialize());
+        TokenAuthorizerContext tokenAuthorizerContext =
+                new TokenAuthorizerContext(
+                        TOKEN_TYPE, signedAccessToken.toAuthorizationHeader(), METHOD_ARN);
+        when(tokenValidationServicen.validateAccessTokenSignature(signedAccessToken))
+                .thenReturn(true);
         AuthPolicy authPolicy = handler.handleRequest(tokenAuthorizerContext, context);
 
         assertThat(authPolicy.getPrincipalId(), equalTo(SUBJECT.getValue()));
@@ -60,9 +68,13 @@ class AuthoriseAccessTokenHandlerTest {
 
     @Test
     public void shouldThrowExceptionWhenAccessTokenHasInvalidSignature() throws JOSEException {
-        BearerAccessToken signedAccessToken = new BearerAccessToken(createSignedAccessToken().serialize());
-        TokenAuthorizerContext tokenAuthorizerContext = new TokenAuthorizerContext(TOKEN_TYPE, signedAccessToken.toAuthorizationHeader(), METHOD_ARN);
-        when(tokenService.validateAccessTokenSignature(signedAccessToken)).thenReturn(false);
+        BearerAccessToken signedAccessToken =
+                new BearerAccessToken(createSignedAccessToken().serialize());
+        TokenAuthorizerContext tokenAuthorizerContext =
+                new TokenAuthorizerContext(
+                        TOKEN_TYPE, signedAccessToken.toAuthorizationHeader(), METHOD_ARN);
+        when(tokenValidationServicen.validateAccessTokenSignature(signedAccessToken))
+                .thenReturn(false);
 
         RuntimeException exception =
                 assertThrows(
@@ -70,16 +82,20 @@ class AuthoriseAccessTokenHandlerTest {
                         () -> handler.handleRequest(tokenAuthorizerContext, context),
                         "Expected to throw exception");
 
-        assertEquals(
-                "Unauthorized", exception.getMessage());
+        assertEquals("Unauthorized", exception.getMessage());
     }
 
     @Test
     public void shouldThrowExceptionWhenSubjectIdCannotBeLinkedToAUser() throws JOSEException {
-        BearerAccessToken signedAccessToken = new BearerAccessToken(createSignedAccessToken().serialize());
-        TokenAuthorizerContext tokenAuthorizerContext = new TokenAuthorizerContext(TOKEN_TYPE, signedAccessToken.toAuthorizationHeader(), METHOD_ARN);
-        when(tokenService.validateAccessTokenSignature(signedAccessToken)).thenReturn(true);
-        when(dynamoService.getUserProfileFromSubject(SUBJECT.getValue())).thenThrow(RuntimeException.class);
+        BearerAccessToken signedAccessToken =
+                new BearerAccessToken(createSignedAccessToken().serialize());
+        TokenAuthorizerContext tokenAuthorizerContext =
+                new TokenAuthorizerContext(
+                        TOKEN_TYPE, signedAccessToken.toAuthorizationHeader(), METHOD_ARN);
+        when(tokenValidationServicen.validateAccessTokenSignature(signedAccessToken))
+                .thenReturn(true);
+        when(dynamoService.getUserProfileFromSubject(SUBJECT.getValue()))
+                .thenThrow(RuntimeException.class);
 
         RuntimeException exception =
                 assertThrows(
@@ -87,14 +103,14 @@ class AuthoriseAccessTokenHandlerTest {
                         () -> handler.handleRequest(tokenAuthorizerContext, context),
                         "Expected to throw exception");
 
-        assertEquals(
-                "Unauthorized", exception.getMessage());
+        assertEquals("Unauthorized", exception.getMessage());
     }
 
     @Test
     public void shouldThrowExceptionWhenInvalidAccessTokenIsSentInRequest() throws JOSEException {
         String invalidAccessToken = createSignedAccessToken().serialize();
-        TokenAuthorizerContext tokenAuthorizerContext = new TokenAuthorizerContext(TOKEN_TYPE, invalidAccessToken, METHOD_ARN);
+        TokenAuthorizerContext tokenAuthorizerContext =
+                new TokenAuthorizerContext(TOKEN_TYPE, invalidAccessToken, METHOD_ARN);
 
         RuntimeException exception =
                 assertThrows(
@@ -102,13 +118,14 @@ class AuthoriseAccessTokenHandlerTest {
                         () -> handler.handleRequest(tokenAuthorizerContext, context),
                         "Expected to throw exception");
 
-        assertEquals(
-                "Unauthorized", exception.getMessage());
+        assertEquals("Unauthorized", exception.getMessage());
     }
 
     @Test
     public void shouldThrowExceptionWhenAccessTokenHasNotBeenSigned() throws JOSEException {
-        TokenAuthorizerContext tokenAuthorizerContext = new TokenAuthorizerContext(TOKEN_TYPE, new BearerAccessToken().toAuthorizationHeader(), METHOD_ARN);
+        TokenAuthorizerContext tokenAuthorizerContext =
+                new TokenAuthorizerContext(
+                        TOKEN_TYPE, new BearerAccessToken().toAuthorizationHeader(), METHOD_ARN);
 
         RuntimeException exception =
                 assertThrows(
@@ -116,8 +133,7 @@ class AuthoriseAccessTokenHandlerTest {
                         () -> handler.handleRequest(tokenAuthorizerContext, context),
                         "Expected to throw exception");
 
-        assertEquals(
-                "Unauthorized", exception.getMessage());
+        assertEquals("Unauthorized", exception.getMessage());
     }
 
     private SignedJWT createSignedAccessToken() throws JOSEException {
@@ -126,5 +142,4 @@ class AuthoriseAccessTokenHandlerTest {
         return TokenGeneratorHelper.generateAccessToken(
                 "client-id", "http://example.com", SCOPES, signer, SUBJECT, "14342354354353");
     }
-
 }

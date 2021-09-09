@@ -14,30 +14,30 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.TokenService;
+import uk.gov.di.authentication.shared.services.TokenValidationService;
 
 public class AuthoriseAccessTokenHandler
         implements RequestHandler<TokenAuthorizerContext, AuthPolicy> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthoriseAccessTokenHandler.class);
 
-    private final TokenService tokenService;
+    private final TokenValidationService tokenValidationService;
     private final ConfigurationService configurationService;
     private final DynamoService dynamoService;
 
     public AuthoriseAccessTokenHandler(
-            TokenService tokenService,
+            TokenValidationService tokenValidationService,
             ConfigurationService configurationService,
             DynamoService dynamoService) {
-        this.tokenService = tokenService;
+        this.tokenValidationService = tokenValidationService;
         this.configurationService = configurationService;
         this.dynamoService = dynamoService;
     }
 
     public AuthoriseAccessTokenHandler() {
         configurationService = new ConfigurationService();
-        tokenService =
-                new TokenService(
+        tokenValidationService =
+                new TokenValidationService(
                         configurationService,
                         new RedisConnectionService(configurationService),
                         new KmsConnectionService(configurationService));
@@ -54,7 +54,7 @@ public class AuthoriseAccessTokenHandler
             accessToken = AccessToken.parse(token, AccessTokenType.BEARER);
             String subject = SignedJWT.parse(accessToken.getValue()).getJWTClaimsSet().getSubject();
             boolean isAccessTokenSignatureValid =
-                    tokenService.validateAccessTokenSignature(accessToken);
+                    tokenValidationService.validateAccessTokenSignature(accessToken);
             if (!isAccessTokenSignatureValid) {
                 LOGGER.error("Access Token signature is not valid");
                 throw new RuntimeException("Unauthorized");

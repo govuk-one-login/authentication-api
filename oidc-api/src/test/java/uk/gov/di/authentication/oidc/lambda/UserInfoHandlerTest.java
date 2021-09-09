@@ -22,13 +22,13 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.TokenService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
+import uk.gov.di.authentication.shared.services.TokenValidationService;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.INVALID_TOKEN;
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.MISSING_TOKEN;
@@ -36,7 +36,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -47,8 +47,11 @@ public class UserInfoHandlerTest {
     private static final String PHONE_NUMBER = "01234567890";
     private static final Subject SUBJECT = new Subject();
     private final Context context = mock(Context.class);
-    private final TokenService tokenService = mock(TokenService.class);
+    private final RedisConnectionService redisConnectionService =
+            mock(RedisConnectionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final TokenValidationService tokenValidationService =
+            mock(TokenValidationService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private static final Map<String, List<String>> INVALID_TOKEN_RESPONSE =
             new UserInfoErrorResponse(INVALID_TOKEN).toHTTPResponse().getHeaderMap();
@@ -56,7 +59,12 @@ public class UserInfoHandlerTest {
 
     @BeforeEach
     public void setUp() {
-        handler = new UserInfoHandler(tokenService, configurationService, authenticationService);
+        handler =
+                new UserInfoHandler(
+                        configurationService,
+                        authenticationService,
+                        redisConnectionService,
+                        tokenValidationService);
     }
 
     @Test
@@ -85,8 +93,9 @@ public class UserInfoHandlerTest {
                         .setSubjectID(SUBJECT.toString())
                         .setCreated(LocalDateTime.now().toString())
                         .setUpdated(LocalDateTime.now().toString());
-        when(tokenService.getSubjectWithAccessToken(accessToken))
-                .thenReturn(Optional.of(SUBJECT.toString()));
+        when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
+        when(redisConnectionService.getValue(accessToken.toJSONString()))
+                .thenReturn(SUBJECT.toString());
         when(authenticationService.getUserProfileFromSubject(SUBJECT.toString()))
                 .thenReturn(userProfile);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -128,8 +137,21 @@ public class UserInfoHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Authorization", new BearerAccessToken().toAuthorizationHeader()));
 
-        when(tokenService.getSubjectWithAccessToken(any(BearerAccessToken.class)))
-                .thenReturn(Optional.empty());
+        when(redisConnectionService.getValue(anyString())).thenReturn(null);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(401));
+        assertEquals(INVALID_TOKEN_RESPONSE, result.getMultiValueHeaders());
+    }
+
+    @Test
+    public void shouldReturn401WhenAccessTokenHasInvalidSignature() {
+        BearerAccessToken bearerAccessToken = new BearerAccessToken();
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Authorization", bearerAccessToken.toAuthorizationHeader()));
+
+        when(tokenValidationService.validateAccessTokenSignature(bearerAccessToken))
+                .thenReturn(false);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(401));

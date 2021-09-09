@@ -16,6 +16,7 @@ module "userinfo" {
     REDIS_PASSWORD       = var.use_localstack ? var.external_redis_password : random_password.redis_password.result
     REDIS_TLS            = var.redis_use_tls
     DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    TOKEN_SIGNING_KEY_ALIAS = aws_kms_alias.id_token_signing_key_alias.name
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.UserInfoHandler::handleRequest"
 

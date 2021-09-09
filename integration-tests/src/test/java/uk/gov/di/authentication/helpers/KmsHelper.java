@@ -54,4 +54,31 @@ public class KmsHelper {
             throw new RuntimeException(e);
         }
     }
+
+    public static SignedJWT signAccessToken(JWTClaimsSet claimsSet) {
+        try {
+            JWSHeader jwsHeader =
+                    new JWSHeader.Builder(JWSAlgorithm.ES256)
+                            .keyID(TOKEN_SIGNING_KEY_ALIAS)
+                            .build();
+            Base64URL encodedHeader = jwsHeader.toBase64URL();
+            Base64URL encodedClaims = Base64URL.encode(claimsSet.toString());
+            String message = encodedHeader + "." + encodedClaims;
+            ByteBuffer messageToSign = ByteBuffer.wrap(message.getBytes());
+            SignRequest signRequest = new SignRequest();
+            signRequest.setMessage(messageToSign);
+            signRequest.setKeyId(TOKEN_SIGNING_KEY_ALIAS);
+            signRequest.setSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256.toString());
+            SignResult signResult = KMS_CONNECTION_SERVICE.sign(signRequest);
+            String signature =
+                    Base64URL.encode(
+                                    ECDSA.transcodeSignatureToConcat(
+                                            signResult.getSignature().array(),
+                                            ECDSA.getSignatureByteArrayLength(JWSAlgorithm.ES256)))
+                            .toString();
+            return SignedJWT.parse(message + "." + signature);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 }
