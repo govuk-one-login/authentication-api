@@ -22,6 +22,7 @@ import java.util.Map;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class UpdatePasswordHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -50,36 +51,50 @@ public class UpdatePasswordHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        LOGGER.info("UpdatePasswordHandler received request");
-        LOGGER.info(
-                "Authorizer parameters received: {}", input.getRequestContext().getAuthorizer());
-        context.getClientContext();
-        try {
-            UpdatePasswordRequest updatePasswordRequest =
-                    objectMapper.readValue(input.getBody(), UpdatePasswordRequest.class);
+        return isWarming(input)
+                .orElseGet(
+                        () -> {
+                            LOGGER.info("UpdatePasswordHandler received request");
+                            LOGGER.info(
+                                    "Authorizer parameters received: {}",
+                                    input.getRequestContext().getAuthorizer());
+                            context.getClientContext();
+                            try {
+                                UpdatePasswordRequest updatePasswordRequest =
+                                        objectMapper.readValue(
+                                                input.getBody(), UpdatePasswordRequest.class);
 
-            Subject subjectFromEmail =
-                    dynamoService.getSubjectFromEmail(updatePasswordRequest.getEmail());
-            Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
+                                Subject subjectFromEmail =
+                                        dynamoService.getSubjectFromEmail(
+                                                updatePasswordRequest.getEmail());
+                                Map<String, Object> authorizerParams =
+                                        input.getRequestContext().getAuthorizer();
 
-            RequestBodyHelper.validatePrincipal(subjectFromEmail, authorizerParams);
+                                RequestBodyHelper.validatePrincipal(
+                                        subjectFromEmail, authorizerParams);
 
-            dynamoService.updatePassword(
-                    updatePasswordRequest.getEmail(), updatePasswordRequest.getNewPassword());
+                                dynamoService.updatePassword(
+                                        updatePasswordRequest.getEmail(),
+                                        updatePasswordRequest.getNewPassword());
 
-            LOGGER.info(
-                    "User Password has successfully been updated.  Adding confirmation message to SQS queue");
-            NotifyRequest notifyRequest =
-                    new NotifyRequest(
-                            updatePasswordRequest.getEmail(), NotificationType.PASSWORD_UPDATED);
-            sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
-            LOGGER.info(
-                    "Message successfully added to queue. Generating successful gateway response");
-            return generateApiGatewayProxyResponse(200, "");
+                                LOGGER.info(
+                                        "User Password has successfully been updated.  Adding confirmation message to SQS queue");
+                                NotifyRequest notifyRequest =
+                                        new NotifyRequest(
+                                                updatePasswordRequest.getEmail(),
+                                                NotificationType.PASSWORD_UPDATED);
+                                sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+                                LOGGER.info(
+                                        "Message successfully added to queue. Generating successful gateway response");
+                                return generateApiGatewayProxyResponse(200, "");
 
-        } catch (JsonProcessingException | IllegalArgumentException e) {
-            LOGGER.error("UpdatePassword request is missing or contains invalid parameters.", e);
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
-        }
+                            } catch (JsonProcessingException | IllegalArgumentException e) {
+                                LOGGER.error(
+                                        "UpdatePassword request is missing or contains invalid parameters.",
+                                        e);
+                                return generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.ERROR_1001);
+                            }
+                        });
     }
 }
