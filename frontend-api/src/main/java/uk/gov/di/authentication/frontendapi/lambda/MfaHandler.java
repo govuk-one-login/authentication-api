@@ -30,6 +30,7 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_SMS_CODE_SENT;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class MfaHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -80,54 +81,68 @@ public class MfaHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        Session session =
-                sessionService.getSessionFromRequestHeaders(input.getHeaders()).orElse(null);
-        if (session == null) {
-            LOGGER.error("Session cannot be found");
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1000);
-        } else {
-            LOGGER.info("MfaHandler processing request for session {}", session.getSessionId());
-        }
+        return isWarming(input)
+                .orElseGet(
+                        () -> {
+                            Session session =
+                                    sessionService
+                                            .getSessionFromRequestHeaders(input.getHeaders())
+                                            .orElse(null);
+                            if (session == null) {
+                                LOGGER.error("Session cannot be found");
+                                return generateApiGatewayProxyErrorResponse(400, ERROR_1000);
+                            } else {
+                                LOGGER.info(
+                                        "MfaHandler processing request for session {}",
+                                        session.getSessionId());
+                            }
 
-        try {
-            StateMachine.validateStateTransition(session, MFA_SMS_CODE_SENT);
+                            try {
+                                StateMachine.validateStateTransition(session, MFA_SMS_CODE_SENT);
 
-            UserWithEmailRequest userWithEmailRequest =
-                    objectMapper.readValue(input.getBody(), UserWithEmailRequest.class);
-            if (!session.validateSession(userWithEmailRequest.getEmail())) {
-                LOGGER.error("Email in session does not match Email in Request");
-                return generateApiGatewayProxyErrorResponse(400, ERROR_1000);
-            }
-            String phoneNumber =
-                    authenticationService
-                            .getPhoneNumber(userWithEmailRequest.getEmail())
-                            .orElse(null);
+                                UserWithEmailRequest userWithEmailRequest =
+                                        objectMapper.readValue(
+                                                input.getBody(), UserWithEmailRequest.class);
+                                if (!session.validateSession(userWithEmailRequest.getEmail())) {
+                                    LOGGER.error(
+                                            "Email in session does not match Email in Request");
+                                    return generateApiGatewayProxyErrorResponse(400, ERROR_1000);
+                                }
+                                String phoneNumber =
+                                        authenticationService
+                                                .getPhoneNumber(userWithEmailRequest.getEmail())
+                                                .orElse(null);
 
-            if (phoneNumber == null) {
-                LOGGER.error("PhoneNumber is null");
-                return generateApiGatewayProxyErrorResponse(400, ERROR_1014);
-            }
-            String code = codeGeneratorService.sixDigitCode();
-            codeStorageService.saveOtpCode(
-                    userWithEmailRequest.getEmail(),
-                    code,
-                    configurationService.getCodeExpiry(),
-                    MFA_SMS);
-            sessionService.save(session.setState(MFA_SMS_CODE_SENT));
-            NotifyRequest notifyRequest = new NotifyRequest(phoneNumber, MFA_SMS, code);
-            sqsClient.send(objectMapper.writeValueAsString(notifyRequest));
+                                if (phoneNumber == null) {
+                                    LOGGER.error("PhoneNumber is null");
+                                    return generateApiGatewayProxyErrorResponse(400, ERROR_1014);
+                                }
+                                String code = codeGeneratorService.sixDigitCode();
+                                codeStorageService.saveOtpCode(
+                                        userWithEmailRequest.getEmail(),
+                                        code,
+                                        configurationService.getCodeExpiry(),
+                                        MFA_SMS);
+                                sessionService.save(session.setState(MFA_SMS_CODE_SENT));
+                                NotifyRequest notifyRequest =
+                                        new NotifyRequest(phoneNumber, MFA_SMS, code);
+                                sqsClient.send(objectMapper.writeValueAsString(notifyRequest));
 
-            LOGGER.info(
-                    "MfaHandler successfully processed request for session {}",
-                    session.getSessionId());
+                                LOGGER.info(
+                                        "MfaHandler successfully processed request for session {}",
+                                        session.getSessionId());
 
-            return generateApiGatewayProxyResponse(200, new BaseAPIResponse(session.getState()));
-        } catch (JsonProcessingException e) {
-            LOGGER.error("Request is missing parameters. Request Body: {}", input.getBody());
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
-        } catch (StateMachine.InvalidStateTransitionException e) {
-            LOGGER.error("Invalid transition in user journey", e);
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
-        }
+                                return generateApiGatewayProxyResponse(
+                                        200, new BaseAPIResponse(session.getState()));
+                            } catch (JsonProcessingException e) {
+                                LOGGER.error(
+                                        "Request is missing parameters. Request Body: {}",
+                                        input.getBody());
+                                return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
+                            } catch (StateMachine.InvalidStateTransitionException e) {
+                                LOGGER.error("Invalid transition in user journey", e);
+                                return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
+                            }
+                        });
     }
 }

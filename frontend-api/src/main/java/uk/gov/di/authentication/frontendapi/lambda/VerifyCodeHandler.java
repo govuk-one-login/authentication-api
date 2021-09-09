@@ -26,6 +26,7 @@ import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class VerifyCodeHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -68,110 +69,143 @@ public class VerifyCodeHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        return isWarming(input)
+                .orElseGet(
+                        () -> {
+                            Optional<Session> session =
+                                    sessionService.getSessionFromRequestHeaders(input.getHeaders());
+                            if (session.isEmpty()) {
+                                return generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.ERROR_1000);
+                            } else {
+                                LOG.info(
+                                        "VerifyCodeHandler processing request for session {}",
+                                        session.get().getSessionId());
+                            }
 
-        Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
-        if (session.isEmpty()) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-        } else {
-            LOG.info(
-                    "VerifyCodeHandler processing request for session {}",
-                    session.get().getSessionId());
-        }
+                            try {
+                                VerifyCodeRequest codeRequest =
+                                        objectMapper.readValue(
+                                                input.getBody(), VerifyCodeRequest.class);
+                                switch (codeRequest.getNotificationType()) {
+                                    case VERIFY_EMAIL:
+                                        if (codeStorageService.isCodeBlockedForSession(
+                                                session.get().getEmailAddress(),
+                                                session.get().getSessionId())) {
 
-        try {
-            VerifyCodeRequest codeRequest =
-                    objectMapper.readValue(input.getBody(), VerifyCodeRequest.class);
-            switch (codeRequest.getNotificationType()) {
-                case VERIFY_EMAIL:
-                    if (codeStorageService.isCodeBlockedForSession(
-                            session.get().getEmailAddress(), session.get().getSessionId())) {
+                                            StateMachine.validateStateTransition(
+                                                    session.get(),
+                                                    SessionState.EMAIL_CODE_MAX_RETRIES_REACHED);
 
-                        StateMachine.validateStateTransition(
-                                session.get(), SessionState.EMAIL_CODE_MAX_RETRIES_REACHED);
+                                            sessionService.save(
+                                                    session.get()
+                                                            .setState(
+                                                                    SessionState
+                                                                            .EMAIL_CODE_MAX_RETRIES_REACHED));
+                                        } else {
+                                            Optional<String> emailCode =
+                                                    codeStorageService.getOtpCode(
+                                                            session.get().getEmailAddress(),
+                                                            codeRequest.getNotificationType());
+                                            var newState =
+                                                    validationService.validateEmailVerificationCode(
+                                                            emailCode,
+                                                            codeRequest.getCode(),
+                                                            session.get(),
+                                                            configurationService
+                                                                    .getCodeMaxRetries());
 
-                        sessionService.save(
-                                session.get()
-                                        .setState(SessionState.EMAIL_CODE_MAX_RETRIES_REACHED));
-                    } else {
-                        Optional<String> emailCode =
-                                codeStorageService.getOtpCode(
-                                        session.get().getEmailAddress(),
-                                        codeRequest.getNotificationType());
-                        var newState =
-                                validationService.validateEmailVerificationCode(
-                                        emailCode,
-                                        codeRequest.getCode(),
-                                        session.get(),
-                                        configurationService.getCodeMaxRetries());
+                                            StateMachine.validateStateTransition(
+                                                    session.get(), newState);
+                                            sessionService.save(session.get().setState(newState));
+                                            processCodeSessionState(
+                                                    session.get(),
+                                                    codeRequest.getNotificationType());
+                                        }
+                                        return generateSuccessResponse(session.get());
+                                    case VERIFY_PHONE_NUMBER:
+                                        if (codeStorageService.isCodeBlockedForSession(
+                                                session.get().getEmailAddress(),
+                                                session.get().getSessionId())) {
+                                            StateMachine.validateStateTransition(
+                                                    session.get(),
+                                                    SessionState
+                                                            .PHONE_NUMBER_CODE_MAX_RETRIES_REACHED);
+                                            sessionService.save(
+                                                    session.get()
+                                                            .setState(
+                                                                    SessionState
+                                                                            .PHONE_NUMBER_CODE_MAX_RETRIES_REACHED));
+                                        } else {
+                                            Optional<String> phoneNumberCode =
+                                                    codeStorageService.getOtpCode(
+                                                            session.get().getEmailAddress(),
+                                                            codeRequest.getNotificationType());
+                                            var newState =
+                                                    validationService.validatePhoneVerificationCode(
+                                                            phoneNumberCode,
+                                                            codeRequest.getCode(),
+                                                            session.get(),
+                                                            configurationService
+                                                                    .getCodeMaxRetries());
 
-                        StateMachine.validateStateTransition(session.get(), newState);
-                        sessionService.save(session.get().setState(newState));
-                        processCodeSessionState(session.get(), codeRequest.getNotificationType());
-                    }
-                    return generateSuccessResponse(session.get());
-                case VERIFY_PHONE_NUMBER:
-                    if (codeStorageService.isCodeBlockedForSession(
-                            session.get().getEmailAddress(), session.get().getSessionId())) {
-                        StateMachine.validateStateTransition(
-                                session.get(), SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED);
-                        sessionService.save(
-                                session.get()
-                                        .setState(
-                                                SessionState
-                                                        .PHONE_NUMBER_CODE_MAX_RETRIES_REACHED));
-                    } else {
-                        Optional<String> phoneNumberCode =
-                                codeStorageService.getOtpCode(
-                                        session.get().getEmailAddress(),
-                                        codeRequest.getNotificationType());
-                        var newState =
-                                validationService.validatePhoneVerificationCode(
-                                        phoneNumberCode,
-                                        codeRequest.getCode(),
-                                        session.get(),
-                                        configurationService.getCodeMaxRetries());
+                                            StateMachine.validateStateTransition(
+                                                    session.get(), newState);
+                                            sessionService.save(session.get().setState(newState));
+                                            processCodeSessionState(
+                                                    session.get(),
+                                                    codeRequest.getNotificationType());
+                                        }
+                                        return generateSuccessResponse(session.get());
+                                    case MFA_SMS:
+                                        if (codeStorageService.isCodeBlockedForSession(
+                                                session.get().getEmailAddress(),
+                                                session.get().getSessionId())) {
+                                            StateMachine.validateStateTransition(
+                                                    session.get(),
+                                                    SessionState.MFA_CODE_MAX_RETRIES_REACHED);
+                                            sessionService.save(
+                                                    session.get()
+                                                            .setState(
+                                                                    SessionState
+                                                                            .MFA_CODE_MAX_RETRIES_REACHED));
+                                        } else {
+                                            Optional<String> mfaCode =
+                                                    codeStorageService.getOtpCode(
+                                                            session.get().getEmailAddress(),
+                                                            codeRequest.getNotificationType());
+                                            var newState =
+                                                    validationService.validateMfaVerificationCode(
+                                                            mfaCode,
+                                                            codeRequest.getCode(),
+                                                            session.get(),
+                                                            configurationService
+                                                                    .getCodeMaxRetries());
 
-                        StateMachine.validateStateTransition(session.get(), newState);
-                        sessionService.save(session.get().setState(newState));
-                        processCodeSessionState(session.get(), codeRequest.getNotificationType());
-                    }
-                    return generateSuccessResponse(session.get());
-                case MFA_SMS:
-                    if (codeStorageService.isCodeBlockedForSession(
-                            session.get().getEmailAddress(), session.get().getSessionId())) {
-                        StateMachine.validateStateTransition(
-                                session.get(), SessionState.MFA_CODE_MAX_RETRIES_REACHED);
-                        sessionService.save(
-                                session.get().setState(SessionState.MFA_CODE_MAX_RETRIES_REACHED));
-                    } else {
-                        Optional<String> mfaCode =
-                                codeStorageService.getOtpCode(
-                                        session.get().getEmailAddress(),
-                                        codeRequest.getNotificationType());
-                        var newState =
-                                validationService.validateMfaVerificationCode(
-                                        mfaCode,
-                                        codeRequest.getCode(),
-                                        session.get(),
-                                        configurationService.getCodeMaxRetries());
-
-                        StateMachine.validateStateTransition(session.get(), newState);
-                        sessionService.save(session.get().setState(newState));
-                        processCodeSessionState(session.get(), codeRequest.getNotificationType());
-                    }
-                    return generateSuccessResponse(session.get());
-            }
-        } catch (JsonProcessingException e) {
-            LOG.error("Error parsing request", e);
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
-        } catch (StateMachine.InvalidStateTransitionException e) {
-            LOG.error("Invalid transition in user journey", e);
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
-        }
-        LOG.error(
-                "Encountered unexpected error while processing session {}",
-                session.get().getSessionId());
-        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
+                                            StateMachine.validateStateTransition(
+                                                    session.get(), newState);
+                                            sessionService.save(session.get().setState(newState));
+                                            processCodeSessionState(
+                                                    session.get(),
+                                                    codeRequest.getNotificationType());
+                                        }
+                                        return generateSuccessResponse(session.get());
+                                }
+                            } catch (JsonProcessingException e) {
+                                LOG.error("Error parsing request", e);
+                                return generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.ERROR_1001);
+                            } catch (StateMachine.InvalidStateTransitionException e) {
+                                LOG.error("Invalid transition in user journey", e);
+                                return generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.ERROR_1017);
+                            }
+                            LOG.error(
+                                    "Encountered unexpected error while processing session {}",
+                                    session.get().getSessionId());
+                            return generateApiGatewayProxyErrorResponse(
+                                    400, ErrorResponse.ERROR_1002);
+                        });
     }
 
     private APIGatewayProxyResponseEvent generateSuccessResponse(Session session)
