@@ -5,3 +5,4 @@ use_localstack            = true
 redis_use_tls             = "false"
 external_redis_password   = "redis"
 api_deployment_stage_name = "local"
+keep_lambdas_warm         = false

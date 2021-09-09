@@ -17,7 +17,9 @@ resource "aws_lambda_function" "endpoint_lambda" {
     subnet_ids         = var.subnet_id
   }
   environment {
-    variables = var.handler_environment_variables
+    variables = merge(var.handler_environment_variables,{
+      WARMER_DELAY = var.warmer_delay_millis
+    })
   }
 
   runtime = var.handler_runtime

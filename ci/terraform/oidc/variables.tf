@@ -134,3 +134,8 @@ variable "stub_rp_clients" {
 variable "aws_region" {
   default = "eu-west-2"
 }
+
+variable "keep_lambdas_warm" {
+  default = true
+  type    = bool
+}

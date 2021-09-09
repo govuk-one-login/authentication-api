@@ -94,6 +94,11 @@ variable "default_tags" {
   description = "Default tags to apply to all resources"
 }
 
+variable "keep_lambda_warm"{
+  type    = bool
+  default = true
+}
+
 variable "warmer_lambda_zip_file" {
   type    = string
   default = null
@@ -112,5 +117,15 @@ variable "warmer_handler_environment_variables" {
 variable "warmer_handler_runtime" {
   type    = string
   default = "java11"
+}
+
+variable "warmer_run_minutes" {
+  type    = number
+  default = 5
+}
+
+variable "warmer_delay_millis" {
+  type    = number
+  default = 200
 }
 
