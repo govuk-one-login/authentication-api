@@ -12,7 +12,17 @@ public class ConfigurationService {
         return System.getenv().get("LAMBDA_QUALIFIER");
     }
 
+    public LambdaType getLambdaType() {
+        return Enum.valueOf(
+                LambdaType.class, System.getenv().getOrDefault("LAMBDA_TYPE", "ENDPOINT"));
+    }
+
     public int getMinConcurrency() {
         return Integer.parseInt(System.getenv().getOrDefault("LAMBDA_MIN_CONCURRENCY", "10"));
+    }
+
+    public enum LambdaType {
+        ENDPOINT,
+        AUTHORIZER
     }
 }
