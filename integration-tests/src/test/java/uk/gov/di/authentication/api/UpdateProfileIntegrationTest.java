@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
+import uk.gov.di.authentication.helpers.RequestHelper;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
@@ -29,7 +30,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.ADD_PHONE_NUMBER;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.CAPTURE_CONSENT;
-import static uk.gov.di.authentication.helpers.RequestHelper.requestWithSession;
 
 public class UpdateProfileIntegrationTest extends IntegrationTestEndpoints {
 
@@ -43,11 +43,13 @@ public class UpdateProfileIntegrationTest extends IntegrationTestEndpoints {
         RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
         RedisHelper.setSessionState(sessionId, SessionState.TWO_FACTOR_REQUIRED);
         DynamoHelper.signUp(EMAIL_ADDRESS, "password-1");
-
+        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
+        headers.add("Session-Id", sessionId);
+        headers.add("X-API-Key", API_KEY);
         UpdateProfileRequest request =
                 new UpdateProfileRequest(EMAIL_ADDRESS, ADD_PHONE_NUMBER, "0123456789");
 
-        Response response = requestWithSession(UPDATE_PROFILE_ENDPOINT, request, sessionId);
+        Response response = RequestHelper.request(UPDATE_PROFILE_ENDPOINT, request, headers);
 
         assertEquals(200, response.getStatus());
     }
@@ -60,13 +62,13 @@ public class UpdateProfileIntegrationTest extends IntegrationTestEndpoints {
         RedisHelper.setSessionState(sessionId, SessionState.TWO_FACTOR_REQUIRED);
         RedisHelper.createClientSession(clientSessionId, generateAuthRequest().toParameters());
         DynamoHelper.signUp(EMAIL_ADDRESS, "password-1");
-
-        UpdateProfileRequest request =
-                new UpdateProfileRequest(EMAIL_ADDRESS, CAPTURE_CONSENT, String.valueOf(true));
-
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
         headers.add("Client-Session-Id", clientSessionId);
+        headers.add("X-API-Key", API_KEY);
+
+        UpdateProfileRequest request =
+                new UpdateProfileRequest(EMAIL_ADDRESS, CAPTURE_CONSENT, String.valueOf(true));
 
         Response response =
                 ClientBuilder.newClient()

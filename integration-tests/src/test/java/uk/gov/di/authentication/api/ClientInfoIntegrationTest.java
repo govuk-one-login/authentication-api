@@ -47,7 +47,14 @@ public class ClientInfoIntegrationTest extends IntegrationTestEndpoints {
     public void shouldReturn400WhenClientSessionIdMissing() {
 
         Client client = ClientBuilder.newClient();
-        Response response = client.target(ROOT_RESOURCE_URL + CLIENTINFO_ENDPOINT).request().get();
+        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
+        headers.add("X-API-Key", API_KEY);
+
+        Response response =
+                client.target(ROOT_RESOURCE_URL + CLIENTINFO_ENDPOINT)
+                        .request()
+                        .headers(headers)
+                        .get();
         assertEquals(400, response.getStatus());
     }
 
@@ -71,6 +78,7 @@ public class ClientInfoIntegrationTest extends IntegrationTestEndpoints {
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
         headers.add("Client-Session-Id", CLIENT_SESSION_ID);
+        headers.add("X-API-Key", API_KEY);
 
         Client client = ClientBuilder.newClient();
         Response response =

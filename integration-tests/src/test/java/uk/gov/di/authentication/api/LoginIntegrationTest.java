@@ -1,6 +1,8 @@
 package uk.gov.di.authentication.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.ws.rs.core.MultivaluedHashMap;
+import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.LoginRequest;
@@ -29,10 +31,11 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
         DynamoHelper.addPhoneNumber(email, phoneNumber);
         String sessionId = RedisHelper.createSession();
         RedisHelper.setSessionState(sessionId, AUTHENTICATION_REQUIRED);
-
+        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
+        headers.add("Session-Id", sessionId);
+        headers.add("X-API-Key", API_KEY);
         Response response =
-                RequestHelper.requestWithSession(
-                        LOGIN_ENDPOINT, new LoginRequest(email, password), sessionId);
+                RequestHelper.request(LOGIN_ENDPOINT, new LoginRequest(email, password), headers);
 
         assertEquals(200, response.getStatus());
 
@@ -49,10 +52,12 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
         DynamoHelper.signUp(email, "wrong-password");
         String sessionId = RedisHelper.createSession();
         RedisHelper.setSessionState(sessionId, AUTHENTICATION_REQUIRED);
+        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
+        headers.add("Session-Id", sessionId);
+        headers.add("X-API-Key", API_KEY);
 
         Response response =
-                RequestHelper.requestWithSession(
-                        LOGIN_ENDPOINT, new LoginRequest(email, password), sessionId);
+                RequestHelper.request(LOGIN_ENDPOINT, new LoginRequest(email, password), headers);
 
         assertEquals(401, response.getStatus());
     }
