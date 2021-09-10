@@ -1,6 +1,8 @@
 package uk.gov.di.authentication.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.ws.rs.core.MultivaluedHashMap;
+import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
@@ -32,10 +34,12 @@ public class UserExistsIntegrationTest extends IntegrationTestEndpoints {
         DynamoHelper.signUp(emailAddress, "password-1");
         RedisHelper.setSessionState(sessionId, SessionState.NEW);
 
+        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
+        headers.add("Session-Id", sessionId);
+        headers.add("X-API-Key", API_KEY);
         UserWithEmailRequest request = new UserWithEmailRequest(emailAddress);
 
-        Response response =
-                RequestHelper.requestWithSession(USEREXISTS_ENDPOINT, request, sessionId);
+        Response response = RequestHelper.request(USEREXISTS_ENDPOINT, request, headers);
 
         assertEquals(200, response.getStatus());
         String responseString = response.readEntity(String.class);
@@ -51,10 +55,12 @@ public class UserExistsIntegrationTest extends IntegrationTestEndpoints {
             throws IOException {
         String emailAddress = "joe.bloggs+2@digital.cabinet-office.gov.uk";
         String sessionId = RedisHelper.createSession();
+        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
+        headers.add("Session-Id", sessionId);
+        headers.add("X-API-Key", API_KEY);
         RedisHelper.setSessionState(sessionId, SessionState.NEW);
         UserWithEmailRequest request = new UserWithEmailRequest(emailAddress);
-        Response response =
-                RequestHelper.requestWithSession(USEREXISTS_ENDPOINT, request, sessionId);
+        Response response = RequestHelper.request(USEREXISTS_ENDPOINT, request, headers);
 
         assertEquals(200, response.getStatus());
         String responseString = response.readEntity(String.class);
@@ -69,10 +75,12 @@ public class UserExistsIntegrationTest extends IntegrationTestEndpoints {
     public void shouldReturn400IfStateTransitionIsInvalid() throws IOException {
         String emailAddress = "joe.bloggs+2@digital.cabinet-office.gov.uk";
         String sessionId = RedisHelper.createSession();
+        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
+        headers.add("Session-Id", sessionId);
+        headers.add("X-API-Key", API_KEY);
         RedisHelper.setSessionState(sessionId, SessionState.AUTHENTICATED);
         UserWithEmailRequest request = new UserWithEmailRequest(emailAddress);
-        Response response =
-                RequestHelper.requestWithSession(USEREXISTS_ENDPOINT, request, sessionId);
+        Response response = RequestHelper.request(USEREXISTS_ENDPOINT, request, headers);
 
         assertEquals(400, response.getStatus());
 

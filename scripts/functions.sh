@@ -97,6 +97,7 @@ run-integration-tests() {
   export API_GATEWAY_ID="$(terraform output -raw api_gateway_root_id)"
   export TOKEN_SIGNING_KEY_ALIAS="$(terraform output -raw token_signing_key_alias)"
   export BASE_URL="$(terraform output -raw base_url)"
+  export API_KEY="$(terraform output -raw frontend_api_key)"
   popd >/dev/null
   if [[ -z ${IN_GITHUB_ACTIONS+x} ||  ${IN_GITHUB_ACTIONS} -eq 0 ]]; then
     ./gradlew --no-daemon integration-tests:test

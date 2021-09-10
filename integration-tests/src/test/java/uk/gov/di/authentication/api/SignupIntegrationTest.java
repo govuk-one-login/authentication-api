@@ -1,6 +1,8 @@
 package uk.gov.di.authentication.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.ws.rs.core.MultivaluedHashMap;
+import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.SignupRequest;
@@ -29,8 +31,11 @@ public class SignupIntegrationTest extends IntegrationTestEndpoints {
 
         SignupRequest request =
                 new SignupRequest("joe.bloggs+5@digital.cabinet-office.gov.uk", "password-1");
+        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
+        headers.add("Session-Id", sessionId);
+        headers.add("X-API-Key", API_KEY);
 
-        Response response = RequestHelper.requestWithSession(SIGNUP_ENDPOINT, request, sessionId);
+        Response response = RequestHelper.request(SIGNUP_ENDPOINT, request, headers);
 
         assertEquals(200, response.getStatus());
 
