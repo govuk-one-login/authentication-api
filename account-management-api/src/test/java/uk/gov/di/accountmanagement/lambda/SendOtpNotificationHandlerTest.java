@@ -16,6 +16,7 @@ import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.ValidationService;
 
 import java.util.Map;
@@ -48,6 +49,7 @@ class SendOtpNotificationHandlerTest {
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
+    private final DynamoService dynamoService = mock(DynamoService.class);
     private final Context context = mock(Context.class);
 
     private final SendOtpNotificationHandler handler =
@@ -56,7 +58,8 @@ class SendOtpNotificationHandlerTest {
                     validationService,
                     awsSqsClient,
                     codeGeneratorService,
-                    codeStorageService);
+                    codeStorageService,
+                    dynamoService);
 
     @BeforeEach
     void setup() {
@@ -204,5 +207,23 @@ class SendOtpNotificationHandlerTest {
         verify(awsSqsClient, never()).send(anyString());
         verify(codeStorageService, never())
                 .saveOtpCode(anyString(), anyString(), anyLong(), any(NotificationType.class));
+    }
+
+    @Test
+    public void shouldReturn400WhenAccountAlreadyExistsWithGivenEmail() {
+        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
+                .thenReturn(Optional.empty());
+        when(dynamoService.userExists(eq(TEST_EMAIL_ADDRESS))).thenReturn(true);
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of());
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                        TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1009));
     }
 }
