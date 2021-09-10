@@ -76,14 +76,21 @@ public class LambdaWarmerHandler implements RequestHandler<ScheduledEvent, Strin
         String warmupRequestId = UUID.randomUUID().toString();
         InvokeRequest invokeRequest =
                 new InvokeRequest()
-                        .withPayload(
-                                format(
-                                        "'{' \"headers\": '{' \"{0}\": \"{1}\" '}}'",
-                                        WARMUP_HEADER, warmupRequestId))
                         .withFunctionName(functionName)
                         .withQualifier(configurationService.getLambdaQualifier())
                         .withInvocationType(InvocationType.RequestResponse);
-
+        switch (configurationService.getLambdaType()) {
+            case ENDPOINT:
+                invokeRequest.setPayload(
+                        format(
+                                "'{' \"headers\": '{' \"{0}\": \"{1}\" '}}'",
+                                WARMUP_HEADER, warmupRequestId));
+            case AUTHORIZER:
+                invokeRequest.setPayload(
+                        format(
+                                "'{' \"type\": \"{0}\", \"authorizationToken\": \"{1}\" '}'",
+                                WARMUP_HEADER, warmupRequestId));
+        }
         try {
             LOGGER.info("Invoking warmup request with ID {}", warmupRequestId);
             InvokeResult invokeResult = awsLambda.invoke(invokeRequest);

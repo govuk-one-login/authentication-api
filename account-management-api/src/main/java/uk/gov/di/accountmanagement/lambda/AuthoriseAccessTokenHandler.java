@@ -16,6 +16,9 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
+import static java.lang.Thread.sleep;
+import static uk.gov.di.authentication.shared.helpers.WarmerHelper.WARMUP_HEADER;
+
 public class AuthoriseAccessTokenHandler
         implements RequestHandler<TokenAuthorizerContext, AuthPolicy> {
 
@@ -46,45 +49,58 @@ public class AuthoriseAccessTokenHandler
 
     @Override
     public AuthPolicy handleRequest(TokenAuthorizerContext input, Context context) {
-        LOGGER.info("Request received in AuthoriseAccessTokenHandler");
-        try {
-            String token = input.getAuthorizationToken();
-
-            AccessToken accessToken;
-            accessToken = AccessToken.parse(token, AccessTokenType.BEARER);
-            String subject = SignedJWT.parse(accessToken.getValue()).getJWTClaimsSet().getSubject();
-            boolean isAccessTokenSignatureValid =
-                    tokenValidationService.validateAccessTokenSignature(accessToken);
-            if (!isAccessTokenSignatureValid) {
-                LOGGER.error("Access Token signature is not valid");
-                throw new RuntimeException("Unauthorized");
-            }
-            LOGGER.info("Successfully validated Access Token signature");
+        if (input.getType().equals(WARMUP_HEADER)) {
+            LOGGER.info("Warmup Request Received {}", input.getAuthorizationToken());
             try {
-                dynamoService.getUserProfileFromSubject(subject);
-            } catch (Exception e) {
-                LOGGER.error(
-                        "Unable to retrieve UserProfile from Dynamo with given SubjectID: {}",
+                sleep(configurationService.getWarmupDelayMillis());
+            } catch (InterruptedException e) {
+                LOGGER.error("Sleep was interrupted", e);
+                throw new RuntimeException("Sleep was interrupted", e);
+            }
+            LOGGER.info("Instance warmed for request {}", input.getAuthorizationToken());
+            throw new RuntimeException("Unauthorized");
+        } else {
+            LOGGER.info("Request received in AuthoriseAccessTokenHandler");
+            try {
+                String token = input.getAuthorizationToken();
+
+                AccessToken accessToken;
+                accessToken = AccessToken.parse(token, AccessTokenType.BEARER);
+                String subject =
+                        SignedJWT.parse(accessToken.getValue()).getJWTClaimsSet().getSubject();
+                boolean isAccessTokenSignatureValid =
+                        tokenValidationService.validateAccessTokenSignature(accessToken);
+                if (!isAccessTokenSignatureValid) {
+                    LOGGER.error("Access Token signature is not valid");
+                    throw new RuntimeException("Unauthorized");
+                }
+                LOGGER.info("Successfully validated Access Token signature");
+                try {
+                    dynamoService.getUserProfileFromSubject(subject);
+                } catch (Exception e) {
+                    LOGGER.error(
+                            "Unable to retrieve UserProfile from Dynamo with given SubjectID: {}",
+                            subject,
+                            e);
+                    throw new RuntimeException("Unauthorized");
+                }
+                LOGGER.info("User found in Dynamo with given SubjectID");
+                String methodArn = input.getMethodArn();
+                String[] arnPartials = methodArn.split(":");
+                String region = arnPartials[3];
+                String awsAccountId = arnPartials[4];
+                String[] apiGatewayArnPartials = arnPartials[5].split("/");
+                String restApiId = apiGatewayArnPartials[0];
+                String stage = apiGatewayArnPartials[1];
+                LOGGER.info("Generating AuthPolicy");
+                return new AuthPolicy(
                         subject,
-                        e);
+                        AuthPolicy.PolicyDocument.getAllowAllPolicy(
+                                region, awsAccountId, restApiId, stage));
+            } catch (ParseException | java.text.ParseException e) {
+                LOGGER.error("Unable to parse Access Token", e);
                 throw new RuntimeException("Unauthorized");
             }
-            LOGGER.info("User found in Dynamo with given SubjectID");
-            String methodArn = input.getMethodArn();
-            String[] arnPartials = methodArn.split(":");
-            String region = arnPartials[3];
-            String awsAccountId = arnPartials[4];
-            String[] apiGatewayArnPartials = arnPartials[5].split("/");
-            String restApiId = apiGatewayArnPartials[0];
-            String stage = apiGatewayArnPartials[1];
-            LOGGER.info("Generating AuthPolicy");
-            return new AuthPolicy(
-                    subject,
-                    AuthPolicy.PolicyDocument.getAllowAllPolicy(
-                            region, awsAccountId, restApiId, stage));
-        } catch (ParseException | java.text.ParseException e) {
-            LOGGER.error("Unable to parse Access Token", e);
-            throw new RuntimeException("Unauthorized");
         }
     }
 }

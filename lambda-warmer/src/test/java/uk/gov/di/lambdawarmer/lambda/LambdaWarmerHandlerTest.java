@@ -15,6 +15,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.lambdawarmer.lambda.ConfigurationService.LambdaType.ENDPOINT;
 
 class LambdaWarmerHandlerTest {
 
@@ -25,6 +26,7 @@ class LambdaWarmerHandlerTest {
     @Test
     void shouldExecuteTheSpecifiedNumberOfTimes() {
         when(configurationService.getLambdaArn()).thenReturn("a-function-arn");
+        when(configurationService.getLambdaType()).thenReturn(ENDPOINT);
         when(configurationService.getMinConcurrency()).thenReturn(5);
         when(lambda.invoke(any(InvokeRequest.class)))
                 .thenReturn(
@@ -42,6 +44,7 @@ class LambdaWarmerHandlerTest {
 
     void shouldExecuteTheDefaultNumberOfTimes() {
         when(configurationService.getLambdaArn()).thenReturn("a-function-arn");
+        when(configurationService.getLambdaType()).thenReturn(ENDPOINT);
         when(lambda.invoke(any(InvokeRequest.class)))
                 .thenReturn(
                         new InvokeResult()
