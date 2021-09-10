@@ -13,7 +13,7 @@ resource "aws_api_gateway_method" "endpoint_method" {
   authorizer_id = var.authorizer_id
 
   request_parameters   = var.method_request_parameters
-
+  api_key_required = var.api_key_required
   depends_on = [
     aws_api_gateway_resource.endpoint_resource
   ]

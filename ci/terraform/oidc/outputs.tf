@@ -19,3 +19,8 @@ output "stub_rp_client_credentials" {
   }]
   sensitive = true
 }
+
+output "frontend_api_key" {
+  value = aws_api_gateway_api_key.di_auth_api_key.value
+  sensitive = true
+}
