@@ -16,6 +16,7 @@ import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.ValidationService;
 
@@ -37,6 +38,7 @@ public class SendOtpNotificationHandler
     private final AwsSqsClient sqsClient;
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
+    private final DynamoService dynamoService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public SendOtpNotificationHandler(
@@ -44,12 +46,14 @@ public class SendOtpNotificationHandler
             ValidationService validationService,
             AwsSqsClient sqsClient,
             CodeGeneratorService codeGeneratorService,
-            CodeStorageService codeStorageService) {
+            CodeStorageService codeStorageService,
+            DynamoService dynamoService) {
         this.configurationService = configurationService;
         this.validationService = validationService;
         this.sqsClient = sqsClient;
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
+        this.dynamoService = dynamoService;
     }
 
     public SendOtpNotificationHandler() {
@@ -63,6 +67,7 @@ public class SendOtpNotificationHandler
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
+        this.dynamoService = new DynamoService(configurationService);
     }
 
     @Override
@@ -88,6 +93,13 @@ public class SendOtpNotificationHandler
                                                     emailErrorResponse.get());
                                             return generateApiGatewayProxyErrorResponse(
                                                     400, emailErrorResponse.get());
+                                        }
+                                        if (dynamoService.userExists(
+                                                sendNotificationRequest.getEmail())) {
+                                            LOGGER.error(
+                                                    "User already exists with this email address");
+                                            return generateApiGatewayProxyErrorResponse(
+                                                    400, ErrorResponse.ERROR_1009);
                                         }
                                         return handleNotificationRequest(
                                                 sendNotificationRequest.getEmail(),

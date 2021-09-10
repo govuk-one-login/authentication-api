@@ -50,7 +50,7 @@ data "aws_iam_policy_document" "email_queue_policy_document" {
 
     principals {
       type        = "AWS"
-      identifiers = [aws_iam_role.sqs_lambda_iam_role.arn, aws_iam_role.dynamo_sqs_lambda_iam_role.arn]
+      identifiers = [aws_iam_role.dynamo_sqs_lambda_iam_role.arn]
     }
 
     actions = [
@@ -87,7 +87,6 @@ data "aws_iam_policy_document" "email_queue_policy_document" {
   depends_on = [
     time_sleep.wait_60_seconds,
     aws_iam_role.account_management_sqs_iam_role,
-    aws_iam_role.sqs_lambda_iam_role,
     aws_iam_role.dynamo_sqs_lambda_iam_role,
   ]
 }
