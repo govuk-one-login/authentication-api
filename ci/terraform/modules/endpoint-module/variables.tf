@@ -11,6 +11,11 @@ variable "method_request_parameters" {
   default = {}
 }
 
+variable "api_key_required" {
+  type = bool
+  default = false
+}
+
 variable "integration_request_parameters" {
   type    = map(string)
   default = {}
