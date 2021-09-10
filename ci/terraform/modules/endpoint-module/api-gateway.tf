@@ -8,7 +8,10 @@ resource "aws_api_gateway_method" "endpoint_method" {
   rest_api_id   = var.rest_api_id
   resource_id   = aws_api_gateway_resource.endpoint_resource.id
   http_method   = var.endpoint_method
-  authorization = "NONE"
+
+  authorization = var.authorizer_id == null ? "NONE" : "CUSTOM"
+  authorizer_id = var.authorizer_id
+
   request_parameters   = var.method_request_parameters
 
   depends_on = [

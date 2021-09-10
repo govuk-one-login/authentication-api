@@ -1,5 +1,5 @@
 module "update_phone_number" {
-  source = "../modules/account-management-endpoint-module"
+  source = "../modules/endpoint-module"
 
   endpoint_name   = "update-phone-number"
   path_part       = "update-phone-number"
@@ -29,4 +29,8 @@ module "update_phone_number" {
   default_tags              = local.default_tags
   logging_endpoint_enabled  = var.logging_endpoint_enabled
   logging_endpoint_arn      = var.logging_endpoint_arn
+
+  keep_lambda_warm             = var.keep_lambdas_warm
+  warmer_handler_function_name = "uk.gov.di.lambdawarmer.lambda.LambdaWarmerHandler::handleRequest"
+  warmer_lambda_zip_file       = var.lambda_warmer_zip_file
 }

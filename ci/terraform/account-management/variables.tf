@@ -94,3 +94,14 @@ variable "redis_use_tls" {
   type    = string
   default = "true"
 }
+
+variable "keep_lambdas_warm" {
+  default = true
+  type    = bool
+}
+
+variable "lambda_warmer_zip_file" {
+  default     = "../../../lambda-warmer/build/distributions/lambda-warmer.zip"
+  description = "Location of the Lambda Warmer ZIP file"
+  type        = string
+}

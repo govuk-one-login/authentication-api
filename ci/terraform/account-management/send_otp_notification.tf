@@ -1,5 +1,5 @@
 module "send_otp_notification" {
-  source = "../modules/account-management-endpoint-module"
+  source = "../modules/endpoint-module"
 
   endpoint_name   = "send-otp-notification"
   path_part       = "send-otp-notification"
@@ -30,6 +30,10 @@ module "send_otp_notification" {
   default_tags              = local.default_tags
   authorizer_id             = aws_api_gateway_authorizer.di_account_management_api.id
   use_localstack = var.use_localstack
+
+  keep_lambda_warm             = var.keep_lambdas_warm
+  warmer_handler_function_name = "uk.gov.di.lambdawarmer.lambda.LambdaWarmerHandler::handleRequest"
+  warmer_lambda_zip_file       = var.lambda_warmer_zip_file
 
   depends_on = [
     aws_api_gateway_rest_api.di_account_management_api,

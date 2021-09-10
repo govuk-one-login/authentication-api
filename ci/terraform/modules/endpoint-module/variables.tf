@@ -129,3 +129,7 @@ variable "warmer_delay_millis" {
   default = 200
 }
 
+variable "authorizer_id" {
+  type    = string
+  default = null
+}
