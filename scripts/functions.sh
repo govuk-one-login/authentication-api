@@ -98,7 +98,11 @@ run-integration-tests() {
   export TOKEN_SIGNING_KEY_ALIAS="$(terraform output -raw token_signing_key_alias)"
   export BASE_URL="$(terraform output -raw base_url)"
   popd >/dev/null
-  ./gradlew integration-tests:test
+  if [[ -z ${IN_GITHUB_ACTIONS+x} ||  ${IN_GITHUB_ACTIONS} -eq 0 ]]; then
+    ./gradlew --no-daemon integration-tests:test
+  else
+    ./gradlew integration-tests:test
+  fi
 }
 
 run-account-management-integration-tests() {
@@ -106,5 +110,9 @@ run-account-management-integration-tests() {
   export API_GATEWAY_ID="$(terraform output -raw api_gateway_root_id)"
   export BASE_URL="$(terraform output -raw base_url)"
   popd >/dev/null
-  ./gradlew account-management-integration-tests:test
+  if [[ -z ${IN_GITHUB_ACTIONS+x} ||  ${IN_GITHUB_ACTIONS} -eq 0 ]]; then
+    ./gradlew --no-daemon account-management-integration-tests:test
+  else
+    ./gradlew account-management-integration-tests:test
+  fi
 }
