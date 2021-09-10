@@ -20,7 +20,7 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
       - name: Run Unit Tests
-        run: ./gradlew build -x integration-tests:test -x account-management-integration-tests:test
+        run: ./gradlew test -x integration-tests:test -x account-management-integration-tests:test -x spotlessApply spotlessCheck
 
   integration-tests:
     runs-on: ubuntu-latest
