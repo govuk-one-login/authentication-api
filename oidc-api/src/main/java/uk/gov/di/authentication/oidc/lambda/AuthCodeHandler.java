@@ -18,12 +18,12 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper.SessionCookieIds;
-import uk.gov.di.authentication.shared.helpers.StateMachine;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.AuthorizationService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.state.StateMachine;
 
 import java.util.List;
 import java.util.Map;
@@ -31,8 +31,8 @@ import java.util.NoSuchElementException;
 
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
-import static uk.gov.di.authentication.shared.helpers.StateMachine.validateStateTransition;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
+import static uk.gov.di.authentication.shared.state.StateMachine.validateStateTransition;
 
 public class AuthCodeHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {

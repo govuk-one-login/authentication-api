@@ -14,11 +14,11 @@ import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionState;
-import uk.gov.di.authentication.shared.helpers.StateMachine;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.state.StateMachine;
 
 import java.util.Optional;
 

@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.shared.helpers;
+package uk.gov.di.authentication.shared.state;
 
 import org.junit.jupiter.api.Test;
 
@@ -7,9 +7,9 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static uk.gov.di.authentication.shared.helpers.StateMachineTest.State.STATE_1;
-import static uk.gov.di.authentication.shared.helpers.StateMachineTest.State.STATE_2;
-import static uk.gov.di.authentication.shared.helpers.StateMachineTest.State.STATE_3;
+import static uk.gov.di.authentication.shared.state.StateMachineTest.State.STATE_1;
+import static uk.gov.di.authentication.shared.state.StateMachineTest.State.STATE_2;
+import static uk.gov.di.authentication.shared.state.StateMachineTest.State.STATE_3;
 
 public class StateMachineTest {
 
