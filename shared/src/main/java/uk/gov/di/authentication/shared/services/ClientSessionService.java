@@ -2,6 +2,8 @@ package uk.gov.di.authentication.shared.services;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -81,6 +83,16 @@ public class ClientSessionService {
             return Optional.of(getClientSession(clientSessionId));
         } catch (Exception e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public Optional<String> getClientIdForClientSession(ClientSession clientSession) {
+        try {
+            AuthenticationRequest authenticationRequest =
+                    AuthenticationRequest.parse(clientSession.getAuthRequestParams());
+            return Optional.ofNullable(authenticationRequest.getClientID().getValue());
+        } catch (ParseException e) {
+            return Optional.empty();
         }
     }
 }

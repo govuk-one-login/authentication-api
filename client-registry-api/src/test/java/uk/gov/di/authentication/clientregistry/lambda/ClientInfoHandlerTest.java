@@ -99,13 +99,13 @@ public class ClientInfoHandlerTest {
     }
 
     @Test
-    public void shouldReturn403ForUnknownClientInRegistry() throws JsonProcessingException {
+    public void shouldReturn400ForUnknownClientInRegistry() throws JsonProcessingException {
         usingUnregisteredClientSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(CLIENT_SESSION_ID_HEADER, KNOWN_CLIENT_SESSION_ID));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        assertThat(result, hasStatus(403));
+        assertThat(result, hasStatus(400));
 
         String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1015);
         assertThat(result, hasBody(expectedResponse));
@@ -114,6 +114,8 @@ public class ClientInfoHandlerTest {
     private void usingValidClientSession() {
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(getClientSession(TEST_CLIENT_ID));
+        when(clientSessionService.getClientIdForClientSession(any()))
+                .thenReturn(Optional.of(TEST_CLIENT_ID));
     }
 
     private void usingInvalidClientSession() {
