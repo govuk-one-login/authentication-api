@@ -2,6 +2,7 @@ package uk.gov.di.accountmanagement.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
@@ -10,11 +11,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.accountmanagement.entity.AuthPolicy;
 import uk.gov.di.accountmanagement.entity.TokenAuthorizerContext;
+import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
+
+import java.util.List;
 
 import static java.lang.Thread.sleep;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.WARMUP_HEADER;
@@ -64,10 +68,9 @@ public class AuthoriseAccessTokenHandler
             try {
                 String token = input.getAuthorizationToken();
 
-                AccessToken accessToken;
-                accessToken = AccessToken.parse(token, AccessTokenType.BEARER);
-                String subject =
-                        SignedJWT.parse(accessToken.getValue()).getJWTClaimsSet().getSubject();
+                AccessToken accessToken = AccessToken.parse(token, AccessTokenType.BEARER);
+                JWTClaimsSet claimsSet = SignedJWT.parse(accessToken.getValue()).getJWTClaimsSet();
+
                 boolean isAccessTokenSignatureValid =
                         tokenValidationService.validateAccessTokenSignature(accessToken);
                 if (!isAccessTokenSignatureValid) {
@@ -75,6 +78,20 @@ public class AuthoriseAccessTokenHandler
                     throw new RuntimeException("Unauthorized");
                 }
                 LOGGER.info("Successfully validated Access Token signature");
+
+                List<String> scopeList = claimsSet.getStringListClaim("scope");
+                if (scopeList == null
+                        || !scopeList.contains(CustomScopeValue.ACCOUNT_MANAGEMENT.getValue())) {
+                    LOGGER.error("Access Token scope is not valid");
+                    throw new RuntimeException("Unauthorized");
+                }
+                LOGGER.info("Successfully validated Access Token scope");
+
+                String subject = claimsSet.getSubject();
+                if (subject == null) {
+                    LOGGER.error("Access Token subject is missing");
+                    throw new RuntimeException("Unauthorized");
+                }
                 try {
                     dynamoService.getUserProfileFromSubject(subject);
                 } catch (Exception e) {

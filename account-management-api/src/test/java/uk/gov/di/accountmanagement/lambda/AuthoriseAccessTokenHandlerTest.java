@@ -42,6 +42,8 @@ class AuthoriseAccessTokenHandlerTest {
     private static final String METHOD_ARN =
             "arn:aws:execute-api:eu-west-2:123456789012:ymy8tbxw7b/*/POST/";
     private static final List<String> SCOPES = List.of("openid", "email", "phone", "am");
+    private static final List<String> INVALID_SCOPES = List.of("openid", "email", "phone");
+
     private static final Subject SUBJECT = new Subject("some-subject");
 
     @BeforeEach
@@ -54,7 +56,7 @@ class AuthoriseAccessTokenHandlerTest {
     @Test
     public void shouldReturnAuthPolicyForSuccessfulRequest() throws JOSEException {
         BearerAccessToken signedAccessToken =
-                new BearerAccessToken(createSignedAccessToken().serialize());
+                new BearerAccessToken(createSignedAccessToken(SCOPES).serialize());
         TokenAuthorizerContext tokenAuthorizerContext =
                 new TokenAuthorizerContext(
                         TOKEN_TYPE, signedAccessToken.toAuthorizationHeader(), METHOD_ARN);
@@ -69,7 +71,7 @@ class AuthoriseAccessTokenHandlerTest {
     @Test
     public void shouldThrowExceptionWhenAccessTokenHasInvalidSignature() throws JOSEException {
         BearerAccessToken signedAccessToken =
-                new BearerAccessToken(createSignedAccessToken().serialize());
+                new BearerAccessToken(createSignedAccessToken(SCOPES).serialize());
         TokenAuthorizerContext tokenAuthorizerContext =
                 new TokenAuthorizerContext(
                         TOKEN_TYPE, signedAccessToken.toAuthorizationHeader(), METHOD_ARN);
@@ -88,7 +90,7 @@ class AuthoriseAccessTokenHandlerTest {
     @Test
     public void shouldThrowExceptionWhenSubjectIdCannotBeLinkedToAUser() throws JOSEException {
         BearerAccessToken signedAccessToken =
-                new BearerAccessToken(createSignedAccessToken().serialize());
+                new BearerAccessToken(createSignedAccessToken(SCOPES).serialize());
         TokenAuthorizerContext tokenAuthorizerContext =
                 new TokenAuthorizerContext(
                         TOKEN_TYPE, signedAccessToken.toAuthorizationHeader(), METHOD_ARN);
@@ -108,7 +110,7 @@ class AuthoriseAccessTokenHandlerTest {
 
     @Test
     public void shouldThrowExceptionWhenInvalidAccessTokenIsSentInRequest() throws JOSEException {
-        String invalidAccessToken = createSignedAccessToken().serialize();
+        String invalidAccessToken = createSignedAccessToken(SCOPES).serialize();
         TokenAuthorizerContext tokenAuthorizerContext =
                 new TokenAuthorizerContext(TOKEN_TYPE, invalidAccessToken, METHOD_ARN);
 
@@ -136,10 +138,29 @@ class AuthoriseAccessTokenHandlerTest {
         assertEquals("Unauthorized", exception.getMessage());
     }
 
-    private SignedJWT createSignedAccessToken() throws JOSEException {
+    @Test
+    public void shouldThrowExceptionWhenAccessTokenHasInvalidScopes() throws JOSEException {
+        BearerAccessToken signedAccessToken =
+                new BearerAccessToken(createSignedAccessToken(INVALID_SCOPES).serialize());
+        TokenAuthorizerContext tokenAuthorizerContext =
+                new TokenAuthorizerContext(
+                        TOKEN_TYPE, signedAccessToken.toAuthorizationHeader(), METHOD_ARN);
+        when(tokenValidationServicen.validateAccessTokenSignature(signedAccessToken))
+                .thenReturn(true);
+
+        RuntimeException exception =
+                assertThrows(
+                        RuntimeException.class,
+                        () -> handler.handleRequest(tokenAuthorizerContext, context),
+                        "Expected to throw exception");
+
+        assertEquals("Unauthorized", exception.getMessage());
+    }
+
+    private SignedJWT createSignedAccessToken(List<String> scopes) throws JOSEException {
         ECKey ecJWK = new ECKeyGenerator(Curve.P_256).keyID(KEY_ID).generate();
         JWSSigner signer = new ECDSASigner(ecJWK);
         return TokenGeneratorHelper.generateAccessToken(
-                "client-id", "http://example.com", SCOPES, signer, SUBJECT, "14342354354353");
+                "client-id", "http://example.com", scopes, signer, SUBJECT, "14342354354353");
     }
 }
