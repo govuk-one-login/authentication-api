@@ -19,6 +19,11 @@ public class StateMachineTest {
         STATE_3,
     }
 
+    enum Action {
+        MOVE_TO_2,
+        MOVE_TO_3
+    }
+
     @Test
     public void returnsTrueForValidTransition() {
         var stateMachine = new StateMachine<>(Map.of(STATE_1, List.of(STATE_2)));
