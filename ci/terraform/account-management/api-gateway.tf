@@ -141,8 +141,18 @@ resource "aws_api_gateway_deployment" "deployment" {
 
   triggers = {
     redeployment = sha1(jsonencode([
-      module.update_email.integration_trigger_value,
       module.authenticate.integration_trigger_value,
+      module.authenticate.method_trigger_value,
+      module.delete_account.integration_trigger_value,
+      module.delete_account.method_trigger_value,
+      module.update_email.integration_trigger_value,
+      module.update_email.method_trigger_value,
+      module.update_password.integration_trigger_value,
+      module.update_password.method_trigger_value,
+      module.update_phone_number.integration_trigger_value,
+      module.update_phone_number.method_trigger_value,
+      module.send_otp_notification.integration_trigger_value,
+      module.send_otp_notification.method_trigger_value,
     ]))
   }
 
