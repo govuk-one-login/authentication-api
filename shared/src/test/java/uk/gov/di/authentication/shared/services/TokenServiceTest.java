@@ -41,6 +41,7 @@ import java.util.Optional;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -108,6 +109,7 @@ public class TokenServiceTest {
         assertEquals(
                 SUBJECT.getValue(),
                 tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("sub"));
+        assertNotNull(tokenResponse.getOIDCTokens().getRefreshToken());
         verify(redisConnectionService)
                 .saveWithExpiry(
                         tokenResponse.getOIDCTokens().getAccessToken().toJSONString(),

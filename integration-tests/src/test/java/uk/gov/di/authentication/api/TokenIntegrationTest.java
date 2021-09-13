@@ -3,11 +3,14 @@ package uk.gov.di.authentication.api;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
+import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.TokenResponse;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.util.JSONObjectUtils;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
@@ -18,6 +21,7 @@ import jakarta.ws.rs.client.Invocation;
 import jakarta.ws.rs.client.WebTarget;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.KeyPairHelper;
@@ -36,6 +40,7 @@ import java.util.Map;
 
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class TokenIntegrationTest extends IntegrationTestEndpoints {
 
@@ -45,7 +50,7 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
     private static final String REDIRECT_URI = "http://localhost/redirect";
 
     @Test
-    public void shouldCallTokenResourceAndReturn200() throws JOSEException {
+    public void shouldCallTokenResourceAndReturn200() throws JOSEException, ParseException {
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         setUpDynamo(keyPair);
         PrivateKey privateKey = keyPair.getPrivate();
@@ -75,6 +80,17 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
                 invocationBuilder.post(Entity.entity(requestParams, MediaType.TEXT_PLAIN));
 
         assertEquals(200, response.getStatus());
+        JSONObject jsonResponse = JSONObjectUtils.parse(response.readEntity(String.class));
+        assertNotNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getRefreshToken());
+        assertNotNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getBearerAccessToken());
     }
 
     private void setUpDynamo(KeyPair keyPair) {

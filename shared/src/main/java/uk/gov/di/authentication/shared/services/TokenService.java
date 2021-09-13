@@ -26,7 +26,9 @@ import com.nimbusds.oauth2.sdk.id.Issuer;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
+import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
+import com.nimbusds.openid.connect.sdk.claims.AccessTokenHash;
 import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import org.slf4j.Logger;
@@ -54,6 +56,7 @@ public class TokenService {
     private final ConfigurationService configService;
     private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
+    private static final JWSAlgorithm TOKEN_ALGORITHM = JWSAlgorithm.ES256;
     private static final Logger LOGGER = LoggerFactory.getLogger(TokenService.class);
 
     public TokenService(
@@ -71,8 +74,11 @@ public class TokenService {
             List<String> scopes,
             Map<String, Object> additionalTokenClaims) {
         AccessToken accessToken = generateAndStoreAccessToken(clientID, subject, scopes);
-        SignedJWT idToken = generateIDToken(clientID, subject, additionalTokenClaims);
-        return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, null));
+        AccessTokenHash accessTokenHash = AccessTokenHash.compute(accessToken, TOKEN_ALGORITHM);
+        SignedJWT idToken =
+                generateIDToken(clientID, subject, additionalTokenClaims, accessTokenHash);
+        RefreshToken refreshToken = generateAndStoreRefreshToken(clientID, subject, scopes);
+        return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, refreshToken));
     }
 
     public Optional<ErrorObject> validateTokenRequestParams(String tokenRequestBody) {
@@ -129,7 +135,10 @@ public class TokenService {
     }
 
     private SignedJWT generateIDToken(
-            String clientId, Subject subject, Map<String, Object> additionalTokenClaims) {
+            String clientId,
+            Subject subject,
+            Map<String, Object> additionalTokenClaims,
+            AccessTokenHash accessTokenHash) {
         LOGGER.info("Generating IdToken for ClientId: {}", clientId);
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
@@ -140,6 +149,7 @@ public class TokenService {
                         List.of(new Audience(clientId)),
                         expiryDate,
                         new Date());
+        idTokenClaims.setAccessTokenHash(accessTokenHash);
         idTokenClaims.putAll(additionalTokenClaims);
         try {
             return generateSignedJWT(idTokenClaims.toJWTClaimsSet());
@@ -152,7 +162,8 @@ public class TokenService {
     private AccessToken generateAndStoreAccessToken(
             String clientId, Subject subject, List<String> scopes) {
         LOGGER.info("Generating AccessToken for ClientId: {}", clientId);
-        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
+        LocalDateTime localDateTime =
+                LocalDateTime.now().plusMinutes(configService.getAccessTokenExpiry());
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
 
         JWTClaimsSet claimsSet =
@@ -179,10 +190,40 @@ public class TokenService {
         return accessToken;
     }
 
+    private RefreshToken generateAndStoreRefreshToken(
+            String clientId, Subject subject, List<String> scopes) {
+        LOGGER.info("Generating RefreshToken for ClientId: {}", clientId);
+        LocalDateTime localDateTime =
+                LocalDateTime.now().plusMinutes(configService.getSessionExpiry());
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+        JWTClaimsSet claimsSet =
+                new JWTClaimsSet.Builder()
+                        .claim("scope", scopes)
+                        .issuer(configService.getBaseURL().get())
+                        .expirationTime(expiryDate)
+                        .issueTime(
+                                Date.from(
+                                        LocalDateTime.now()
+                                                .atZone(ZoneId.systemDefault())
+                                                .toInstant()))
+                        .claim("client_id", clientId)
+                        .subject(subject.getValue())
+                        .jwtID(UUID.randomUUID().toString())
+                        .build();
+        SignedJWT signedJWT = generateSignedJWT(claimsSet);
+        RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
+
+        redisConnectionService.saveWithExpiry(
+                refreshToken.toJSONString(),
+                subject.toString(),
+                configService.getAccessTokenExpiry());
+        return refreshToken;
+    }
+
     private SignedJWT generateSignedJWT(JWTClaimsSet claimsSet) {
         try {
             JWSHeader jwsHeader =
-                    new JWSHeader.Builder(JWSAlgorithm.ES256)
+                    new JWSHeader.Builder(TOKEN_ALGORITHM)
                             .keyID(configService.getTokenSigningKeyAlias())
                             .build();
             Base64URL encodedHeader = jwsHeader.toBase64URL();
@@ -199,7 +240,7 @@ public class TokenService {
                     Base64URL.encode(
                                     ECDSA.transcodeSignatureToConcat(
                                             signResult.getSignature().array(),
-                                            ECDSA.getSignatureByteArrayLength(JWSAlgorithm.ES256)))
+                                            ECDSA.getSignatureByteArrayLength(TOKEN_ALGORITHM)))
                             .toString();
             return SignedJWT.parse(message + "." + signature);
         } catch (java.text.ParseException | JOSEException e) {
