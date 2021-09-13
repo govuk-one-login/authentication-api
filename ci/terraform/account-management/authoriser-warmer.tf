@@ -60,7 +60,7 @@ resource "aws_iam_policy" "lambda_warmer_logging_policy" {
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_warmer_logs" {
-  count = var.keep_lambdas_warm  ? 1 : 0
+  count = var.keep_lambdas_warm ? 1 : 0
 
   role       = aws_iam_role.lambda_warmer_role[0].name
   policy_arn = aws_iam_policy.lambda_warmer_logging_policy[0].arn

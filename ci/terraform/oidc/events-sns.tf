@@ -5,7 +5,7 @@ resource "aws_sns_topic" "events" {
 }
 
 data "aws_iam_policy_document" "events_policy_document" {
-  version = "2012-10-17"
+  version   = "2012-10-17"
   policy_id = "${var.environment}-events-sns-topic-policy"
 
   statement {

@@ -1,0 +1,40 @@
+name: Pre-merge checks for Terraform
+on:
+  pull_request:
+    paths: ['ci/terraform/**']
+    types:
+      - opened
+      - reopened
+      - ready_for_review
+      - synchronize
+
+jobs:
+  terraform-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+
+      - name: Get Terraform version
+        id: getterraformversion
+        run: echo "::set-output name=version::$(cat ci/terraform/.terraform-version)"
+
+      - uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: ${{ steps.getterraformversion.outputs.version }}
+
+      - name: Terraform Format Check
+        working-directory: ci/terraform/
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Validate (account-management)
+        working-directory: ci/terraform/account-management
+        run: |
+          terraform init -input=false -backend=false
+          terraform validate
+
+      - name: Terraform Validate (oidc)
+        working-directory: ci/terraform/oidc
+        run: |
+          terraform init -input=false -backend=false
+          terraform validate

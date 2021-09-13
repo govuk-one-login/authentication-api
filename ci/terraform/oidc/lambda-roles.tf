@@ -149,7 +149,7 @@ resource "aws_iam_role_policy_attachment" "dynamo_sqs_lambda_networking" {
 }
 
 resource "aws_iam_role" "token_lambda_iam_role" {
-  name = "${var.environment}-token-lambda-role"
+  name               = "${var.environment}-token-lambda-role"
   assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_policy.json
   tags = {
     environment = var.environment

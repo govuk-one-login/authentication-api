@@ -81,7 +81,7 @@ resource "aws_dynamodb_table" "client_registry_table" {
 data "aws_iam_policy_document" "dynamo_policy_document" {
   count = var.use_localstack ? 0 : 1
   statement {
-    sid = "AllowAccessToDynamoTables"
+    sid    = "AllowAccessToDynamoTables"
     effect = "Allow"
 
     actions = [

@@ -1,7 +1,7 @@
 name: Pre-merge checks for Account Management
 on:
   pull_request:
-    paths: ['account-management-api/**', 'account-management-integration-tests/**', 'ci/terraform/account-management/**',  'ci/terraform/modules/account-management-endpoint-module/**']
+    paths: ['account-management-api/**', 'account-management-integration-tests/**', 'ci/terraform/account-management/**']
     types:
       - opened
       - reopened
@@ -9,6 +9,28 @@ on:
       - synchronize
 
 jobs:
+  style-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+      - name: Set up JDK 11
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+      - name: Cache Gradle packages
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+      - name: Run Spotless
+        run: ./gradlew --no-daemon spotlessCheck
+
   unit-tests:
     runs-on: ubuntu-latest
     steps:

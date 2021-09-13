@@ -5,25 +5,25 @@ resource "aws_api_gateway_resource" "endpoint_resource" {
 }
 
 resource "aws_api_gateway_method" "endpoint_method" {
-  rest_api_id   = var.rest_api_id
-  resource_id   = aws_api_gateway_resource.endpoint_resource.id
-  http_method   = var.endpoint_method
+  rest_api_id = var.rest_api_id
+  resource_id = aws_api_gateway_resource.endpoint_resource.id
+  http_method = var.endpoint_method
 
   authorization = var.authorizer_id == null ? "NONE" : "CUSTOM"
   authorizer_id = var.authorizer_id
 
-  request_parameters   = var.method_request_parameters
-  api_key_required = var.api_key_required
+  request_parameters = var.method_request_parameters
+  api_key_required   = var.api_key_required
   depends_on = [
     aws_api_gateway_resource.endpoint_resource
   ]
 }
 
 resource "aws_api_gateway_integration" "endpoint_integration" {
-  rest_api_id          = var.rest_api_id
-  resource_id          = aws_api_gateway_resource.endpoint_resource.id
-  http_method          = aws_api_gateway_method.endpoint_method.http_method
-  request_parameters   = var.integration_request_parameters
+  rest_api_id        = var.rest_api_id
+  resource_id        = aws_api_gateway_resource.endpoint_resource.id
+  http_method        = aws_api_gateway_method.endpoint_method.http_method
+  request_parameters = var.integration_request_parameters
 
   integration_http_method = "POST"
   type                    = "AWS_PROXY"

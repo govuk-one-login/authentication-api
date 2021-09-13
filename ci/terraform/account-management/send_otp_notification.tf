@@ -7,13 +7,13 @@ module "send_otp_notification" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT = var.environment
-    EMAIL_QUEUE_URL      = aws_sqs_queue.email_queue.id
-    DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    REDIS_HOST           = var.use_localstack ? var.external_redis_host : aws_elasticache_replication_group.account_management_sessions_store[0].primary_endpoint_address
-    REDIS_PORT           = var.use_localstack ? var.external_redis_port : aws_elasticache_replication_group.account_management_sessions_store[0].port
-    REDIS_PASSWORD       = var.use_localstack ? var.external_redis_password : random_password.redis_password.result
-    REDIS_TLS            = var.redis_use_tls
+    ENVIRONMENT     = var.environment
+    EMAIL_QUEUE_URL = aws_sqs_queue.email_queue.id
+    DYNAMO_ENDPOINT = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    REDIS_HOST      = var.use_localstack ? var.external_redis_host : aws_elasticache_replication_group.account_management_sessions_store[0].primary_endpoint_address
+    REDIS_PORT      = var.use_localstack ? var.external_redis_port : aws_elasticache_replication_group.account_management_sessions_store[0].port
+    REDIS_PASSWORD  = var.use_localstack ? var.external_redis_password : random_password.redis_password.result
+    REDIS_TLS       = var.redis_use_tls
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.SendOtpNotificationHandler::handleRequest"
 
@@ -29,7 +29,7 @@ module "send_otp_notification" {
   logging_endpoint_arn      = var.logging_endpoint_arn
   default_tags              = local.default_tags
   authorizer_id             = aws_api_gateway_authorizer.di_account_management_api.id
-  use_localstack = var.use_localstack
+  use_localstack            = var.use_localstack
 
   keep_lambda_warm             = var.keep_lambdas_warm
   warmer_handler_function_name = "uk.gov.di.lambdawarmer.lambda.LambdaWarmerHandler::handleRequest"

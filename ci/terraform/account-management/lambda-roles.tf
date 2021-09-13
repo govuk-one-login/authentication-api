@@ -130,7 +130,7 @@ data "aws_iam_policy_document" "kms_policy_document" {
 }
 
 resource "aws_iam_policy" "lambda_kms_policy" {
-  count = var.use_localstack ? 0 : 1
+  count       = var.use_localstack ? 0 : 1
   name        = "${var.environment}--account-mgmt-lambda-kms-policy"
   path        = "/"
   description = "IAM policy for managing KMS connection for a lambda"
@@ -155,7 +155,7 @@ data "aws_dynamodb_table" "user_profile_table" {
 data "aws_iam_policy_document" "dynamo_policy_document" {
   count = var.use_localstack ? 0 : 1
   statement {
-    sid = "AllowAccessToDynamoTables"
+    sid    = "AllowAccessToDynamoTables"
     effect = "Allow"
 
     actions = [
