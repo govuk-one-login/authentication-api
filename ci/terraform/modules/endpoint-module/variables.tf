@@ -12,7 +12,7 @@ variable "method_request_parameters" {
 }
 
 variable "api_key_required" {
-  type = bool
+  type    = bool
   default = false
 }
 
@@ -99,7 +99,7 @@ variable "default_tags" {
   description = "Default tags to apply to all resources"
 }
 
-variable "keep_lambda_warm"{
+variable "keep_lambda_warm" {
   type    = bool
   default = true
 }

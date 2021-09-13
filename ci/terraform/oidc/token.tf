@@ -7,17 +7,17 @@ module "token" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT          = var.environment
-    BASE_URL             = local.api_base_url
-    DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    EVENTS_SNS_TOPIC_ARN = aws_sns_topic.events.arn
-    LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
-    REDIS_HOST           = var.use_localstack ? var.external_redis_host : aws_elasticache_replication_group.sessions_store[0].primary_endpoint_address
-    REDIS_PORT           = var.use_localstack ? var.external_redis_port : aws_elasticache_replication_group.sessions_store[0].port
-    REDIS_PASSWORD       = var.use_localstack ? var.external_redis_password : random_password.redis_password.result
-    REDIS_TLS            = var.redis_use_tls
-    TOKEN_SIGNING_KEY_ALIAS =aws_kms_alias.id_token_signing_key_alias.name
-    LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
+    ENVIRONMENT             = var.environment
+    BASE_URL                = local.api_base_url
+    DYNAMO_ENDPOINT         = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    EVENTS_SNS_TOPIC_ARN    = aws_sns_topic.events.arn
+    LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
+    REDIS_HOST              = var.use_localstack ? var.external_redis_host : aws_elasticache_replication_group.sessions_store[0].primary_endpoint_address
+    REDIS_PORT              = var.use_localstack ? var.external_redis_port : aws_elasticache_replication_group.sessions_store[0].port
+    REDIS_PASSWORD          = var.use_localstack ? var.external_redis_password : random_password.redis_password.result
+    REDIS_TLS               = var.redis_use_tls
+    TOKEN_SIGNING_KEY_ALIAS = aws_kms_alias.id_token_signing_key_alias.name
+    LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.TokenHandler::handleRequest"
 

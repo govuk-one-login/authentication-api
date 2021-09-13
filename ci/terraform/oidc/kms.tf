@@ -1,7 +1,7 @@
 resource "aws_kms_key" "id_token_signing_key" {
-  description             = "KMS signing key for ID tokens"
-  deletion_window_in_days = 30
-  key_usage               = "SIGN_VERIFY"
+  description              = "KMS signing key for ID tokens"
+  deletion_window_in_days  = 30
+  key_usage                = "SIGN_VERIFY"
   customer_master_key_spec = "ECC_NIST_P256"
 
   tags = local.default_tags
@@ -44,7 +44,7 @@ data "aws_iam_policy_document" "kms_signing_policy_document" {
 }
 
 resource "aws_iam_policy" "lambda_kms_signing_policy" {
-  count = var.use_localstack ? 0 : 1
+  count       = var.use_localstack ? 0 : 1
   name        = "${var.environment}-standard-lambda-kms-signing-policy"
   path        = "/"
   description = "IAM policy for managing KMS connection for a lambda which allows signing"
@@ -54,7 +54,7 @@ resource "aws_iam_policy" "lambda_kms_signing_policy" {
 
 
 resource "aws_iam_policy" "lambda_kms_policy" {
-  count = var.use_localstack ? 0 : 1
+  count       = var.use_localstack ? 0 : 1
   name        = "${var.environment}-standard-lambda-kms-policy"
   path        = "/"
   description = "IAM policy for managing KMS connection for a lambda"
@@ -63,13 +63,13 @@ resource "aws_iam_policy" "lambda_kms_policy" {
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_kms" {
-  count = var.use_localstack ? 0 : 1
+  count      = var.use_localstack ? 0 : 1
   role       = aws_iam_role.lambda_iam_role.name
   policy_arn = aws_iam_policy.lambda_kms_policy[0].arn
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_kms_signing_policy" {
-  count = var.use_localstack ? 0 : 1
+  count      = var.use_localstack ? 0 : 1
   role       = aws_iam_role.token_lambda_iam_role.name
   policy_arn = aws_iam_policy.lambda_kms_signing_policy[0].arn
 }

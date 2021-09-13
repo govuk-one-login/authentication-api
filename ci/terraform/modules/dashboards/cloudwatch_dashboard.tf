@@ -64,7 +64,7 @@ locals {
         properties = {
           "metrics" = [
             [
-              { expression = "FILL(IF(m2 == 0, 1, 1-(m1/m2)), 1)*100", label = "", id = "e2", region = "eu-west-2", period = 900}
+              { expression = "FILL(IF(m2 == 0, 1, 1-(m1/m2)), 1)*100", label = "", id = "e2", region = "eu-west-2", period = 900 }
             ],
             [
               "AWS/ApiGateway", "5XXError", "ApiName", var.api_gateway_name,
