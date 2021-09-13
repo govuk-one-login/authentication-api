@@ -81,15 +81,19 @@ public class LambdaWarmerHandler implements RequestHandler<ScheduledEvent, Strin
                         .withInvocationType(InvocationType.RequestResponse);
         switch (configurationService.getLambdaType()) {
             case ENDPOINT:
+                LOGGER.info("Using ENDPOINT payload");
                 invokeRequest.setPayload(
                         format(
                                 "'{' \"headers\": '{' \"{0}\": \"{1}\" '}}'",
                                 WARMUP_HEADER, warmupRequestId));
+                break;
             case AUTHORIZER:
+                LOGGER.info("Using AUTHORIZER payload");
                 invokeRequest.setPayload(
                         format(
                                 "'{' \"type\": \"{0}\", \"authorizationToken\": \"{1}\" '}'",
                                 WARMUP_HEADER, warmupRequestId));
+                break;
         }
         try {
             LOGGER.info("Invoking warmup request with ID {}", warmupRequestId);
