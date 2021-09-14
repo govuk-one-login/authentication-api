@@ -15,6 +15,9 @@ import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.oidc.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.SessionAction;
+import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper.SessionCookieIds;
@@ -29,10 +32,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
-import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
+import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
-import static uk.gov.di.authentication.shared.state.StateMachine.validateStateTransition;
+import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class AuthCodeHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -42,6 +45,9 @@ public class AuthCodeHandler
     private final ConfigurationService configurationService;
     private final AuthorizationService authorizationService;
     private final ClientSessionService clientSessionService;
+    private final StateMachine<SessionState, SessionAction, UserProfile> stateMachine =
+            userJourneyStateMachine();
+
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthCodeHandler.class);
 
     public AuthCodeHandler(
@@ -93,8 +99,12 @@ public class AuthCodeHandler
                                     "AuthCodeHandler processing request for session {}",
                                     session.getSessionId());
 
+                            SessionState nextState;
                             try {
-                                validateStateTransition(session, AUTHENTICATED);
+                                nextState =
+                                        stateMachine.transition(
+                                                session.getState(),
+                                                SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE);
                             } catch (StateMachine.InvalidStateTransitionException e) {
                                 LOGGER.error(
                                         "Invalid state transition for session {}",
@@ -168,7 +178,7 @@ public class AuthCodeHandler
                             AuthenticationSuccessResponse authenticationResponse =
                                     authorizationService.generateSuccessfulAuthResponse(
                                             authenticationRequest, authCode);
-                            sessionService.save(session.setState(AUTHENTICATED));
+                            sessionService.save(session.setState(nextState));
                             return new APIGatewayProxyResponseEvent()
                                     .withStatusCode(302)
                                     .withHeaders(

@@ -13,7 +13,9 @@ import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -24,9 +26,13 @@ import uk.gov.di.authentication.shared.state.StateMachine;
 
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
+import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class VerifyCodeHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -39,6 +45,8 @@ public class VerifyCodeHandler
     private final DynamoService dynamoService;
     private final ConfigurationService configurationService;
     private final ValidationService validationService;
+    private final StateMachine<SessionState, SessionAction, UserProfile> stateMachine =
+            userJourneyStateMachine();
 
     public VerifyCodeHandler(
             SessionService sessionService,
@@ -92,32 +100,33 @@ public class VerifyCodeHandler
                                         if (codeStorageService.isCodeBlockedForSession(
                                                 session.get().getEmailAddress(),
                                                 session.get().getSessionId())) {
-
-                                            StateMachine.validateStateTransition(
-                                                    session.get(),
-                                                    SessionState.EMAIL_CODE_MAX_RETRIES_REACHED);
-
                                             sessionService.save(
                                                     session.get()
                                                             .setState(
-                                                                    SessionState
-                                                                            .EMAIL_CODE_MAX_RETRIES_REACHED));
+                                                                    stateMachine.transition(
+                                                                            session.get()
+                                                                                    .getState(),
+                                                                            USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES)));
                                         } else {
                                             Optional<String> emailCode =
                                                     codeStorageService.getOtpCode(
                                                             session.get().getEmailAddress(),
                                                             codeRequest.getNotificationType());
-                                            var newState =
-                                                    validationService.validateEmailVerificationCode(
-                                                            emailCode,
-                                                            codeRequest.getCode(),
-                                                            session.get(),
-                                                            configurationService
-                                                                    .getCodeMaxRetries());
-
-                                            StateMachine.validateStateTransition(
-                                                    session.get(), newState);
-                                            sessionService.save(session.get().setState(newState));
+                                            sessionService.save(
+                                                    session.get()
+                                                            .setState(
+                                                                    stateMachine.transition(
+                                                                            session.get()
+                                                                                    .getState(),
+                                                                            validationService
+                                                                                    .validateEmailVerificationCode(
+                                                                                            emailCode,
+                                                                                            codeRequest
+                                                                                                    .getCode(),
+                                                                                            session
+                                                                                                    .get(),
+                                                                                            configurationService
+                                                                                                    .getCodeMaxRetries()))));
                                             processCodeSessionState(
                                                     session.get(),
                                                     codeRequest.getNotificationType());
@@ -127,31 +136,33 @@ public class VerifyCodeHandler
                                         if (codeStorageService.isCodeBlockedForSession(
                                                 session.get().getEmailAddress(),
                                                 session.get().getSessionId())) {
-                                            StateMachine.validateStateTransition(
-                                                    session.get(),
-                                                    SessionState
-                                                            .PHONE_NUMBER_CODE_MAX_RETRIES_REACHED);
                                             sessionService.save(
                                                     session.get()
                                                             .setState(
-                                                                    SessionState
-                                                                            .PHONE_NUMBER_CODE_MAX_RETRIES_REACHED));
+                                                                    stateMachine.transition(
+                                                                            session.get()
+                                                                                    .getState(),
+                                                                            USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES)));
                                         } else {
                                             Optional<String> phoneNumberCode =
                                                     codeStorageService.getOtpCode(
                                                             session.get().getEmailAddress(),
                                                             codeRequest.getNotificationType());
-                                            var newState =
-                                                    validationService.validatePhoneVerificationCode(
-                                                            phoneNumberCode,
-                                                            codeRequest.getCode(),
-                                                            session.get(),
-                                                            configurationService
-                                                                    .getCodeMaxRetries());
-
-                                            StateMachine.validateStateTransition(
-                                                    session.get(), newState);
-                                            sessionService.save(session.get().setState(newState));
+                                            sessionService.save(
+                                                    session.get()
+                                                            .setState(
+                                                                    stateMachine.transition(
+                                                                            session.get()
+                                                                                    .getState(),
+                                                                            validationService
+                                                                                    .validatePhoneVerificationCode(
+                                                                                            phoneNumberCode,
+                                                                                            codeRequest
+                                                                                                    .getCode(),
+                                                                                            session
+                                                                                                    .get(),
+                                                                                            configurationService
+                                                                                                    .getCodeMaxRetries()))));
                                             processCodeSessionState(
                                                     session.get(),
                                                     codeRequest.getNotificationType());
@@ -161,30 +172,33 @@ public class VerifyCodeHandler
                                         if (codeStorageService.isCodeBlockedForSession(
                                                 session.get().getEmailAddress(),
                                                 session.get().getSessionId())) {
-                                            StateMachine.validateStateTransition(
-                                                    session.get(),
-                                                    SessionState.MFA_CODE_MAX_RETRIES_REACHED);
                                             sessionService.save(
                                                     session.get()
                                                             .setState(
-                                                                    SessionState
-                                                                            .MFA_CODE_MAX_RETRIES_REACHED));
+                                                                    stateMachine.transition(
+                                                                            session.get()
+                                                                                    .getState(),
+                                                                            USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES)));
                                         } else {
                                             Optional<String> mfaCode =
                                                     codeStorageService.getOtpCode(
                                                             session.get().getEmailAddress(),
                                                             codeRequest.getNotificationType());
-                                            var newState =
-                                                    validationService.validateMfaVerificationCode(
-                                                            mfaCode,
-                                                            codeRequest.getCode(),
-                                                            session.get(),
-                                                            configurationService
-                                                                    .getCodeMaxRetries());
-
-                                            StateMachine.validateStateTransition(
-                                                    session.get(), newState);
-                                            sessionService.save(session.get().setState(newState));
+                                            sessionService.save(
+                                                    session.get()
+                                                            .setState(
+                                                                    stateMachine.transition(
+                                                                            session.get()
+                                                                                    .getState(),
+                                                                            validationService
+                                                                                    .validateMfaVerificationCode(
+                                                                                            mfaCode,
+                                                                                            codeRequest
+                                                                                                    .getCode(),
+                                                                                            session
+                                                                                                    .get(),
+                                                                                            configurationService
+                                                                                                    .getCodeMaxRetries()))));
                                             processCodeSessionState(
                                                     session.get(),
                                                     codeRequest.getNotificationType());

@@ -16,7 +16,9 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -31,9 +33,11 @@ import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1011;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1017;
+import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
+import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class SendNotificationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -47,6 +51,8 @@ public class SendNotificationHandler
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final StateMachine<SessionState, SessionAction, UserProfile> stateMachine =
+            userJourneyStateMachine();
 
     public SendNotificationHandler(
             ConfigurationService configurationService,
@@ -105,10 +111,13 @@ public class SendNotificationHandler
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1000);
                                 }
+                                SessionState nextState;
                                 switch (sendNotificationRequest.getNotificationType()) {
                                     case VERIFY_EMAIL:
-                                        StateMachine.validateStateTransition(
-                                                session.get(), SessionState.VERIFY_EMAIL_CODE_SENT);
+                                        nextState =
+                                                stateMachine.transition(
+                                                        session.get().getState(),
+                                                        SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE);
 
                                         Optional<ErrorResponse> emailErrorResponse =
                                                 validationService.validateEmailAddress(
@@ -123,11 +132,14 @@ public class SendNotificationHandler
                                         return handleNotificationRequest(
                                                 sendNotificationRequest.getEmail(),
                                                 sendNotificationRequest.getNotificationType(),
-                                                session.get());
-                                    case VERIFY_PHONE_NUMBER:
-                                        StateMachine.validateStateTransition(
                                                 session.get(),
-                                                SessionState.VERIFY_PHONE_NUMBER_CODE_SENT);
+                                                nextState);
+                                    case VERIFY_PHONE_NUMBER:
+                                        nextState =
+                                                stateMachine.transition(
+                                                        session.get().getState(),
+                                                        SessionAction
+                                                                .SYSTEM_HAS_SENT_PHONE_VERIFICATION_CODE);
 
                                         if (sendNotificationRequest.getPhoneNumber() == null) {
                                             LOGGER.error("No phone number provided");
@@ -145,7 +157,8 @@ public class SendNotificationHandler
                                         return handleNotificationRequest(
                                                 phoneNumber,
                                                 sendNotificationRequest.getNotificationType(),
-                                                session.get());
+                                                session.get(),
+                                                nextState);
                                 }
                                 return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
                             } catch (SdkClientException ex) {
@@ -167,7 +180,10 @@ public class SendNotificationHandler
     }
 
     private APIGatewayProxyResponseEvent handleNotificationRequest(
-            String destination, NotificationType notificationType, Session session)
+            String destination,
+            NotificationType notificationType,
+            Session session,
+            SessionState nextState)
             throws JsonProcessingException {
 
         String code = codeGeneratorService.sixDigitCode();
@@ -180,7 +196,7 @@ public class SendNotificationHandler
                         code,
                         configurationService.getCodeExpiry(),
                         NotificationType.VERIFY_EMAIL);
-                sessionService.save(session.setState(SessionState.VERIFY_EMAIL_CODE_SENT));
+                sessionService.save(session.setState(nextState));
                 break;
             case VERIFY_PHONE_NUMBER:
                 codeStorageService.saveOtpCode(
@@ -188,9 +204,7 @@ public class SendNotificationHandler
                         code,
                         configurationService.getCodeExpiry(),
                         NotificationType.VERIFY_PHONE_NUMBER);
-                sessionService.save(
-                        session.setState(SessionState.VERIFY_PHONE_NUMBER_CODE_SENT)
-                                .resetRetryCount());
+                sessionService.save(session.setState(nextState).resetRetryCount());
                 break;
         }
         sqsClient.send(serialiseRequest(notifyRequest));

@@ -32,6 +32,15 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_MFA_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_MFA_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_PHONE_VERIFICATION_CODE;
 import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_NOT_VALID;
 import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_VERIFIED;
@@ -81,7 +90,7 @@ class VerifyCodeRequestHandlerTest {
                 .thenReturn(Optional.of(CODE));
         when(validationService.validateEmailVerificationCode(
                         eq(Optional.of(CODE)), eq(CODE), any(Session.class), eq(5)))
-                .thenReturn(EMAIL_CODE_VERIFIED);
+                .thenReturn(USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE);
         APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, VERIFY_EMAIL.toString());
 
         verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL);
@@ -97,7 +106,7 @@ class VerifyCodeRequestHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(validationService.validatePhoneVerificationCode(
                         eq(Optional.of(CODE)), eq(CODE), any(Session.class), eq(5)))
-                .thenReturn(PHONE_NUMBER_CODE_VERIFIED);
+                .thenReturn(USER_ENTERED_VALID_PHONE_VERIFICATION_CODE);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(CODE));
 
@@ -120,7 +129,7 @@ class VerifyCodeRequestHandlerTest {
                 .thenReturn(Optional.of(CODE));
         when(validationService.validateEmailVerificationCode(
                         eq(Optional.of(CODE)), eq("123457"), any(Session.class), eq(5)))
-                .thenReturn(EMAIL_CODE_NOT_VALID);
+                .thenReturn(USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE);
 
         APIGatewayProxyResponseEvent result = makeCallWithCode("123457", VERIFY_EMAIL.toString());
 
@@ -137,7 +146,7 @@ class VerifyCodeRequestHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(validationService.validatePhoneVerificationCode(
                         eq(Optional.of(CODE)), eq(CODE), any(Session.class), eq(5)))
-                .thenReturn(PHONE_NUMBER_CODE_NOT_VALID);
+                .thenReturn(USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(CODE));
 
@@ -190,7 +199,7 @@ class VerifyCodeRequestHandlerTest {
         when(configurationService.getCodeExpiry()).thenReturn(900L);
         when(validationService.validatePhoneVerificationCode(
                         eq(Optional.of(CODE)), eq(USER_INPUT), any(Session.class), eq(5)))
-                .thenReturn(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED);
+                .thenReturn(USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(CODE));
 
@@ -236,7 +245,7 @@ class VerifyCodeRequestHandlerTest {
         when(configurationService.getCodeExpiry()).thenReturn(900L);
         when(validationService.validateEmailVerificationCode(
                         eq(Optional.of(CODE)), eq(USER_INPUT), any(Session.class), eq(5)))
-                .thenReturn(EMAIL_CODE_MAX_RETRIES_REACHED);
+                .thenReturn(USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
                 .thenReturn(Optional.of(CODE));
 
@@ -276,7 +285,7 @@ class VerifyCodeRequestHandlerTest {
                 .thenReturn(Optional.of(CODE));
         when(validationService.validateMfaVerificationCode(
                         eq(Optional.of(CODE)), eq(CODE), any(Session.class), eq(5)))
-                .thenReturn(MFA_CODE_VERIFIED);
+                .thenReturn(USER_ENTERED_VALID_MFA_CODE);
         APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, MFA_SMS.toString());
 
         verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS);
@@ -295,7 +304,7 @@ class VerifyCodeRequestHandlerTest {
                 .thenReturn(Optional.of(CODE));
         when(validationService.validateMfaVerificationCode(
                         eq(Optional.of(CODE)), eq("123457"), any(Session.class), eq(5)))
-                .thenReturn(MFA_CODE_NOT_VALID);
+                .thenReturn(USER_ENTERED_INVALID_MFA_CODE);
 
         APIGatewayProxyResponseEvent result = makeCallWithCode("123457", MFA_SMS.toString());
 
@@ -314,7 +323,7 @@ class VerifyCodeRequestHandlerTest {
         when(configurationService.getCodeExpiry()).thenReturn(900L);
         when(validationService.validateMfaVerificationCode(
                         eq(Optional.of(CODE)), eq(USER_INPUT), any(Session.class), eq(5)))
-                .thenReturn(MFA_CODE_MAX_RETRIES_REACHED);
+                .thenReturn(USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
                 .thenReturn(Optional.of(CODE));
 
@@ -354,7 +363,7 @@ class VerifyCodeRequestHandlerTest {
                 .thenReturn(Optional.of(CODE));
         when(validationService.validateEmailVerificationCode(
                         eq(Optional.of(CODE)), eq(CODE), any(Session.class), eq(5)))
-                .thenReturn(EMAIL_CODE_VERIFIED);
+                .thenReturn(USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE);
         APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, VERIFY_EMAIL.toString());
 
         assertThat(result, hasStatus(400));

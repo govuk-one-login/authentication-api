@@ -13,7 +13,9 @@ import uk.gov.di.authentication.frontendapi.entity.SignupRequest;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -23,9 +25,11 @@ import uk.gov.di.authentication.shared.state.StateMachine;
 
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_CREATED_A_PASSWORD;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
+import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class SignUpHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -36,6 +40,8 @@ public class SignUpHandler
     private final ValidationService validationService;
     private final SessionService sessionService;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final StateMachine<SessionState, SessionAction, UserProfile> stateMachine =
+            userJourneyStateMachine();
 
     public SignUpHandler(
             AuthenticationService authenticationService,
@@ -75,8 +81,10 @@ public class SignUpHandler
                             }
 
                             try {
-                                StateMachine.validateStateTransition(
-                                        session.get(), SessionState.TWO_FACTOR_REQUIRED);
+                                var nextState =
+                                        stateMachine.transition(
+                                                session.get().getState(),
+                                                USER_HAS_CREATED_A_PASSWORD);
 
                                 SignupRequest signupRequest =
                                         objectMapper.readValue(
@@ -102,7 +110,7 @@ public class SignUpHandler
 
                                     sessionService.save(
                                             session.get()
-                                                    .setState(SessionState.TWO_FACTOR_REQUIRED)
+                                                    .setState(nextState)
                                                     .setEmailAddress(signupRequest.getEmail()));
 
                                     LOG.info(

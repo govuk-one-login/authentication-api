@@ -81,6 +81,9 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         Response response = RequestHelper.request(VERIFY_CODE_ENDPOINT, codeRequest, headers);
 
         assertEquals(200, response.getStatus());
+        BaseAPIResponse codeResponse1 =
+                objectMapper.readValue(response.readEntity(String.class), BaseAPIResponse.class);
+        assertEquals(SessionState.EMAIL_CODE_VERIFIED, codeResponse1.getSessionState());
 
         Response response2 = RequestHelper.request(VERIFY_CODE_ENDPOINT, codeRequest, headers);
 

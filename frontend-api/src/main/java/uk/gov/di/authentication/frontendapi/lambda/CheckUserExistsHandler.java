@@ -12,7 +12,9 @@ import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.frontendapi.entity.UserWithEmailRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -22,9 +24,12 @@ import uk.gov.di.authentication.shared.state.StateMachine;
 
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_REGISTERED_EMAIL_ADDRESS;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
+import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class CheckUserExistsHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -35,6 +40,8 @@ public class CheckUserExistsHandler
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final AuthenticationService authenticationService;
     private final SessionService sessionService;
+    private final StateMachine<SessionState, SessionAction, UserProfile> stateMachine =
+            userJourneyStateMachine();
 
     public CheckUserExistsHandler(
             ValidationService validationService,
@@ -71,9 +78,11 @@ public class CheckUserExistsHandler
                                             "CheckUserExistsHandler processing request for session {}",
                                             session.get().getSessionId());
 
-                                    StateMachine.validateStateTransition(
-                                            session.get(), SessionState.USER_NOT_FOUND);
-                                    session.get().setState(SessionState.USER_NOT_FOUND);
+                                    session.get()
+                                            .setState(
+                                                    stateMachine.transition(
+                                                            session.get().getState(),
+                                                            USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS));
 
                                     UserWithEmailRequest userExistsRequest =
                                             objectMapper.readValue(
@@ -93,11 +102,11 @@ public class CheckUserExistsHandler
                                             authenticationService.userExists(emailAddress);
                                     session.get().setEmailAddress(emailAddress);
                                     if (userExists) {
-                                        StateMachine.validateStateTransition(
-                                                session.get(),
-                                                SessionState.AUTHENTICATION_REQUIRED);
                                         session.get()
-                                                .setState(SessionState.AUTHENTICATION_REQUIRED);
+                                                .setState(
+                                                        stateMachine.transition(
+                                                                session.get().getState(),
+                                                                USER_ENTERED_REGISTERED_EMAIL_ADDRESS));
                                     }
                                     CheckUserExistsResponse checkUserExistsResponse =
                                             new CheckUserExistsResponse(

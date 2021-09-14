@@ -35,13 +35,14 @@ import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableE
 import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_REQUEST_ERROR;
 import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_TERMS_CONDS_ACCEPTANCE_UPDATED;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_A_NEW_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.entity.SessionState.ADDED_CONSENT;
 import static uk.gov.di.authentication.shared.entity.SessionState.ADDED_UNVERIFIED_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
-import static uk.gov.di.authentication.shared.state.StateMachine.validateStateTransition;
+import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class UpdateProfileHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -112,17 +113,17 @@ public class UpdateProfileHandler
                                 switch (profileRequest.getUpdateProfileType()) {
                                     case ADD_PHONE_NUMBER:
                                         {
-                                            validateStateTransition(
-                                                    session.get(), ADDED_UNVERIFIED_PHONE_NUMBER);
+                                            var nextState =
+                                                    userJourneyStateMachine()
+                                                            .transition(
+                                                                    session.get().getState(),
+                                                                    USER_ENTERED_A_NEW_PHONE_NUMBER);
                                             authenticationService.updatePhoneNumber(
                                                     profileRequest.getEmail(),
                                                     profileRequest.getProfileInformation());
                                             auditService.submitAuditEvent(
                                                     ACCOUNT_MANAGEMENT_PHONE_NUMBER_UPDATED);
-                                            sessionService.save(
-                                                    session.get()
-                                                            .setState(
-                                                                    ADDED_UNVERIFIED_PHONE_NUMBER));
+                                            sessionService.save(session.get().setState(nextState));
                                             LOGGER.info(
                                                     "Phone number updated and session state changed. Session state {}",
                                                     ADDED_UNVERIFIED_PHONE_NUMBER);
