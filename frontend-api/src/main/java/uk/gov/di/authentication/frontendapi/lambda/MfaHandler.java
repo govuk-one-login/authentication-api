@@ -13,7 +13,9 @@ import uk.gov.di.authentication.frontendapi.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.helpers.StateMachine;
+import uk.gov.di.authentication.shared.entity.SessionAction;
+import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -21,16 +23,18 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.state.StateMachine;
 
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1000;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1014;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1017;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
-import static uk.gov.di.authentication.shared.entity.SessionState.MFA_SMS_CODE_SENT;
+import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_MFA_CODE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
+import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class MfaHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -44,6 +48,8 @@ public class MfaHandler
     private final AuthenticationService authenticationService;
     private final AwsSqsClient sqsClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final StateMachine<SessionState, SessionAction, UserProfile> stateMachine =
+            userJourneyStateMachine();
 
     public MfaHandler(
             ConfigurationService configurationService,
@@ -98,7 +104,9 @@ public class MfaHandler
                             }
 
                             try {
-                                StateMachine.validateStateTransition(session, MFA_SMS_CODE_SENT);
+                                var nextState =
+                                        stateMachine.transition(
+                                                session.getState(), SYSTEM_HAS_SENT_MFA_CODE);
 
                                 UserWithEmailRequest userWithEmailRequest =
                                         objectMapper.readValue(
@@ -123,7 +131,7 @@ public class MfaHandler
                                         code,
                                         configurationService.getCodeExpiry(),
                                         MFA_SMS);
-                                sessionService.save(session.setState(MFA_SMS_CODE_SENT));
+                                sessionService.save(session.setState(nextState));
                                 NotifyRequest notifyRequest =
                                         new NotifyRequest(phoneNumber, MFA_SMS, code);
                                 sqsClient.send(objectMapper.writeValueAsString(notifyRequest));

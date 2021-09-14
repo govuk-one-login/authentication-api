@@ -4,10 +4,20 @@ import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.entity.SessionAction;
 
 import java.util.Optional;
 import java.util.regex.Pattern;
+
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_MFA_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_MFA_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_PHONE_VERIFICATION_CODE;
 
 public class ValidationService {
 
@@ -65,42 +75,42 @@ public class ValidationService {
         }
     }
 
-    public SessionState validatePhoneVerificationCode(
+    public SessionAction validatePhoneVerificationCode(
             Optional<String> phoneNumberCode, String input, Session session, int maxRetries) {
         if (phoneNumberCode.isEmpty() || !phoneNumberCode.get().equals(input)) {
             session.incrementRetryCount();
             if (session.getRetryCount() > maxRetries) {
-                return SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
+                return USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES;
             } else {
-                return SessionState.PHONE_NUMBER_CODE_NOT_VALID;
+                return USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE;
             }
         }
-        return SessionState.PHONE_NUMBER_CODE_VERIFIED;
+        return USER_ENTERED_VALID_PHONE_VERIFICATION_CODE;
     }
 
-    public SessionState validateMfaVerificationCode(
+    public SessionAction validateMfaVerificationCode(
             Optional<String> mfaCode, String input, Session session, int maxRetries) {
         if (mfaCode.isEmpty() || !mfaCode.get().equals(input)) {
             session.incrementRetryCount();
             if (session.getRetryCount() > maxRetries) {
-                return SessionState.MFA_CODE_MAX_RETRIES_REACHED;
+                return USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES;
             } else {
-                return SessionState.MFA_CODE_NOT_VALID;
+                return USER_ENTERED_INVALID_MFA_CODE;
             }
         }
-        return SessionState.MFA_CODE_VERIFIED;
+        return USER_ENTERED_VALID_MFA_CODE;
     }
 
-    public SessionState validateEmailVerificationCode(
+    public SessionAction validateEmailVerificationCode(
             Optional<String> emailCode, String input, Session session, int maxRetries) {
         if (emailCode.isEmpty() || !emailCode.get().equals(input)) {
             session.incrementRetryCount();
             if (session.getRetryCount() > maxRetries) {
-                return SessionState.EMAIL_CODE_MAX_RETRIES_REACHED;
+                return USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES;
             } else {
-                return SessionState.EMAIL_CODE_NOT_VALID;
+                return USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE;
             }
         }
-        return SessionState.EMAIL_CODE_VERIFIED;
+        return USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE;
     }
 }

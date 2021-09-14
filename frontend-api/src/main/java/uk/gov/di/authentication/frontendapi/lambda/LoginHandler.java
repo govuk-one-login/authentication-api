@@ -13,18 +13,22 @@ import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
-import uk.gov.di.authentication.shared.helpers.StateMachine;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.state.StateMachine;
 
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_CREDENTIALS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
+import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class LoginHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -34,6 +38,8 @@ public class LoginHandler
     private final AuthenticationService authenticationService;
     private final SessionService sessionService;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final StateMachine<SessionState, SessionAction, UserProfile> stateMachine =
+            userJourneyStateMachine();
 
     public LoginHandler(
             SessionService sessionService, AuthenticationService authenticationService) {
@@ -71,8 +77,10 @@ public class LoginHandler
                             }
 
                             try {
-                                StateMachine.validateStateTransition(
-                                        session.get(), SessionState.LOGGED_IN);
+                                var nextState =
+                                        stateMachine.transition(
+                                                session.get().getState(),
+                                                USER_ENTERED_VALID_CREDENTIALS);
 
                                 LoginRequest loginRequest =
                                         objectMapper.readValue(input.getBody(), LoginRequest.class);
@@ -105,7 +113,7 @@ public class LoginHandler
                                 }
                                 String concatPhoneNumber =
                                         RedactPhoneNumberHelper.redactPhoneNumber(phoneNumber);
-                                sessionService.save(session.get().setState(SessionState.LOGGED_IN));
+                                sessionService.save(session.get().setState(nextState));
                                 LOGGER.info(
                                         "User has successfully Logged in. Generating successful LoginResponse for session with ID {}",
                                         session.get().getSessionId());
