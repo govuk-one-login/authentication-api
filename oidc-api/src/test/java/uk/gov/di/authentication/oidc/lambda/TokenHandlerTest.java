@@ -5,11 +5,14 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -18,9 +21,11 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
+import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,12 +33,15 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenService;
+import uk.gov.di.authentication.shared.services.TokenValidationService;
 
 import java.net.URI;
 import java.security.KeyPair;
@@ -58,6 +66,8 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper.generateIDToken;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
@@ -69,7 +79,7 @@ public class TokenHandlerTest {
     private static final String REDIRECT_URI = "http://localhost/redirect";
     private static final Subject TEST_SUBJECT = new Subject();
     private static final String CLIENT_ID = "test-id";
-    private static final List<String> SCOPES = List.of("openid");
+    private static final Scope SCOPES = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
     private static final String BASE_URI = "http://localhost";
     private static final String TOKEN_URI = "http://localhost/token";
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
@@ -78,9 +88,13 @@ public class TokenHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final TokenService tokenService = mock(TokenService.class);
     private final ClientService clientService = mock(ClientService.class);
+    private final TokenValidationService tokenValidationService =
+            mock(TokenValidationService.class);
     private final AuthorisationCodeService authorisationCodeService =
             mock(AuthorisationCodeService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
+    private final RedisConnectionService redisConnectionService =
+            mock(RedisConnectionService.class);
     private TokenHandler handler;
 
     @BeforeEach
@@ -93,7 +107,9 @@ public class TokenHandlerTest {
                         authenticationService,
                         configurationService,
                         authorisationCodeService,
-                        clientSessionService);
+                        clientSessionService,
+                        tokenValidationService,
+                        redisConnectionService);
     }
 
     @Test
@@ -106,8 +122,9 @@ public class TokenHandlerTest {
                         "issuer-url",
                         new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate());
         BearerAccessToken accessToken = new BearerAccessToken();
+        RefreshToken refreshToken = new RefreshToken();
         OIDCTokenResponse tokenResponse =
-                new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, null));
+                new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
         ClientRegistry clientRegistry = generateClientRegistry(keyPair);
 
@@ -130,12 +147,44 @@ public class TokenHandlerTest {
                                 generateAuthRequest().toParameters(), LocalDateTime.now()));
         when(authenticationService.getSubjectFromEmail(eq(TEST_EMAIL))).thenReturn(TEST_SUBJECT);
         when(tokenService.generateTokenResponse(
-                        eq(CLIENT_ID), any(Subject.class), eq(SCOPES), anyMap()))
+                        eq(CLIENT_ID), any(Subject.class), eq(SCOPES.toStringList()), anyMap()))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result = generateApiGatewayRequest(privateKeyJWT, authCode);
         assertThat(result, hasStatus(200));
+        assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
+    }
+
+    @Test
+    public void shouldReturn200ForSuccessfulRefreshTokenRequest() throws JOSEException {
+        SignedJWT signedRefreshToken = createSignedRefreshToken();
+        KeyPair keyPair = generateRsaKeyPair();
+        BearerAccessToken accessToken = new BearerAccessToken();
+        RefreshToken refreshToken = new RefreshToken(signedRefreshToken.serialize());
+        OIDCTokenResponse tokenResponse =
+                new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
+        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
+        ClientRegistry clientRegistry = generateClientRegistry(keyPair);
+
+        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
+        when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
+        when(tokenService.validatePrivateKeyJWT(
+                        anyString(), eq(clientRegistry.getPublicKey()), eq(BASE_URI)))
+                .thenReturn(Optional.empty());
+        when(tokenValidationService.validateRefreshTokenSignature(refreshToken)).thenReturn(true);
+        String redisKey = CLIENT_ID + ":" + TEST_SUBJECT.getValue();
+        when(redisConnectionService.getValue(redisKey)).thenReturn(refreshToken.getValue());
+        when(tokenService.generateRefreshTokenResponse(
+                        eq(CLIENT_ID), eq(TEST_SUBJECT), eq(SCOPES.toStringList())))
+                .thenReturn(tokenResponse);
+
+        APIGatewayProxyResponseEvent result =
+                generateApiGatewayRefreshRequest(privateKeyJWT, refreshToken.getValue());
+        assertThat(result, hasStatus(200));
+        assertTrue(result.getBody().contains(refreshToken.getValue()));
+        assertTrue(result.getBody().contains(accessToken.getValue()));
+        verify(redisConnectionService, times(1)).deleteValue(redisKey);
     }
 
     @Test
@@ -234,6 +283,17 @@ public class TokenHandlerTest {
         assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
     }
 
+    private SignedJWT createSignedRefreshToken() throws JOSEException {
+        ECKey ecSigningKey =
+                new ECKeyGenerator(Curve.P_256)
+                        .keyID("KEY_ID")
+                        .algorithm(JWSAlgorithm.ES256)
+                        .generate();
+        ECDSASigner signer = new ECDSASigner(ecSigningKey);
+        return TokenGeneratorHelper.generateSignedToken(
+                CLIENT_ID, BASE_URI, SCOPES.toStringList(), signer, TEST_SUBJECT, "KEY_ID");
+    }
+
     private PrivateKeyJWT generatePrivateKeyJWT(PrivateKey privateKey) throws JOSEException {
         return new PrivateKeyJWT(
                 new ClientID(CLIENT_ID),
@@ -249,7 +309,7 @@ public class TokenHandlerTest {
                 .setClientID(CLIENT_ID)
                 .setClientName("test-client")
                 .setRedirectUrls(singletonList(REDIRECT_URI))
-                .setScopes(singletonList("openid"))
+                .setScopes(SCOPES.toStringList())
                 .setContacts(singletonList(TEST_EMAIL))
                 .setPublicKey(
                         Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()));
@@ -258,10 +318,27 @@ public class TokenHandlerTest {
     private APIGatewayProxyResponseEvent generateApiGatewayRequest(
             PrivateKeyJWT privateKeyJWT, String authorisationCode, String redirectUri) {
         Map<String, List<String>> customParams = new HashMap<>();
-        customParams.put("grant_type", Collections.singletonList("authorization_code"));
+        customParams.put(
+                "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
         customParams.put("client_id", Collections.singletonList(CLIENT_ID));
         customParams.put("code", Collections.singletonList(authorisationCode));
         customParams.put("redirect_uri", Collections.singletonList(redirectUri));
+        Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
+        privateKeyParams.putAll(customParams);
+        String requestParams = URLUtils.serializeParameters(privateKeyParams);
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setBody(requestParams);
+        return handler.handleRequest(event, context);
+    }
+
+    private APIGatewayProxyResponseEvent generateApiGatewayRefreshRequest(
+            PrivateKeyJWT privateKeyJWT, String refreshToken) {
+        Map<String, List<String>> customParams = new HashMap<>();
+        customParams.put(
+                "grant_type", Collections.singletonList(GrantType.REFRESH_TOKEN.getValue()));
+        customParams.put("client_id", Collections.singletonList(CLIENT_ID));
+        customParams.put("scope", Collections.singletonList(SCOPES.toString()));
+        customParams.put("refresh_token", Collections.singletonList(refreshToken));
         Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
         privateKeyParams.putAll(customParams);
         String requestParams = URLUtils.serializeParameters(privateKeyParams);
@@ -280,7 +357,7 @@ public class TokenHandlerTest {
         State state = new State();
         return new AuthenticationRequest.Builder(
                         responseType,
-                        Scope.parse(SCOPES),
+                        Scope.parse(SCOPES.toString()),
                         new ClientID(CLIENT_ID),
                         URI.create(REDIRECT_URI))
                 .state(state)

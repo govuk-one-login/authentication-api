@@ -83,7 +83,7 @@ public class TokenGeneratorHelper {
         return idToken;
     }
 
-    public static SignedJWT generateAccessToken(
+    public static SignedJWT generateSignedToken(
             String clientId,
             String issuerUrl,
             List<String> scopes,

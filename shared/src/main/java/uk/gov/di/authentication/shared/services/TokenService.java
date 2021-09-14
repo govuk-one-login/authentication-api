@@ -27,12 +27,14 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.claims.AccessTokenHash;
 import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 
 import java.nio.ByteBuffer;
@@ -43,6 +45,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
@@ -58,6 +61,8 @@ public class TokenService {
     private final KmsConnectionService kmsConnectionService;
     private static final JWSAlgorithm TOKEN_ALGORITHM = JWSAlgorithm.ES256;
     private static final Logger LOGGER = LoggerFactory.getLogger(TokenService.class);
+    private static final List<String> ALLOWED_GRANTS =
+            List.of(GrantType.AUTHORIZATION_CODE.getValue(), GrantType.REFRESH_TOKEN.getValue());
 
     public TokenService(
             ConfigurationService configService,
@@ -81,6 +86,13 @@ public class TokenService {
         return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, refreshToken));
     }
 
+    public OIDCTokenResponse generateRefreshTokenResponse(
+            String clientID, Subject subject, List<String> scopes) {
+        AccessToken accessToken = generateAndStoreAccessToken(clientID, subject, scopes);
+        RefreshToken refreshToken = generateAndStoreRefreshToken(clientID, subject, scopes);
+        return new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
+    }
+
     public Optional<ErrorObject> validateTokenRequestParams(String tokenRequestBody) {
         Map<String, String> requestBody = RequestBodyHelper.parseRequestBody(tokenRequestBody);
         if (!requestBody.containsKey("client_id")) {
@@ -89,25 +101,30 @@ public class TokenService {
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "Request is missing client_id parameter"));
         }
-        if (!requestBody.containsKey("redirect_uri")) {
-            return Optional.of(
-                    new ErrorObject(
-                            OAuth2Error.INVALID_REQUEST_CODE,
-                            "Request is missing redirect_uri parameter"));
-        }
         if (!requestBody.containsKey("grant_type")) {
             return Optional.of(
                     new ErrorObject(
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "Request is missing grant_type parameter"));
         }
-        if (!requestBody.get("grant_type").equals(GrantType.AUTHORIZATION_CODE.getValue())) {
+        if (!ALLOWED_GRANTS.contains(requestBody.get("grant_type"))) {
             return Optional.of(OAuth2Error.UNSUPPORTED_GRANT_TYPE);
         }
-        if (!requestBody.containsKey("code")) {
-            return Optional.of(
-                    new ErrorObject(
-                            OAuth2Error.INVALID_REQUEST_CODE, "Request is missing code parameter"));
+        if (requestBody.get("grant_type").equals(GrantType.AUTHORIZATION_CODE.getValue())) {
+            if (!requestBody.containsKey("redirect_uri")) {
+                return Optional.of(
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Request is missing redirect_uri parameter"));
+            }
+            if (!requestBody.containsKey("code")) {
+                return Optional.of(
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Request is missing code parameter"));
+            }
+        } else if (requestBody.get("grant_type").equals(GrantType.REFRESH_TOKEN.getValue())) {
+            return validateRefreshRequestParams(requestBody);
         }
         return Optional.empty();
     }
@@ -130,6 +147,36 @@ public class TokenService {
         } catch (InvalidClientException | JOSEException e) {
             LOGGER.error("Unable to Verify Signature of Private Key JWT", e);
             return Optional.of(OAuth2Error.INVALID_CLIENT);
+        }
+        return Optional.empty();
+    }
+
+    private Optional<ErrorObject> validateRefreshRequestParams(Map<String, String> requestBody) {
+        if (!requestBody.containsKey("refresh_token")) {
+            return Optional.of(
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_CODE, "Request is missing refresh token"));
+        }
+        if (!requestBody.containsKey("scope")) {
+            return Optional.of(
+                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request is missing scope"));
+        }
+        List<String> scopes = Arrays.asList(requestBody.get("scope").split(" "));
+        for (String scope : scopes) {
+            if (ValidScopes.getAllValidScopes().stream().noneMatch((t) -> t.equals(scope))) {
+                return Optional.of(OAuth2Error.INVALID_SCOPE);
+            }
+        }
+        if (!scopes.contains(OIDCScopeValue.OPENID.getValue())) {
+            return Optional.of(
+                    new ErrorObject(OAuth2Error.INVALID_SCOPE_CODE, "openid scope is missing"));
+        }
+        try {
+            RefreshToken refreshToken = new RefreshToken(requestBody.get("refresh_token"));
+        } catch (IllegalArgumentException e) {
+            LOGGER.error("Invalid RefreshToken", e);
+            return Optional.of(
+                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Invalid refresh token"));
         }
         return Optional.empty();
     }
@@ -212,11 +259,9 @@ public class TokenService {
                         .build();
         SignedJWT signedJWT = generateSignedJWT(claimsSet);
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
-
+        String redisKey = clientId + ":" + subject.getValue();
         redisConnectionService.saveWithExpiry(
-                refreshToken.toJSONString(),
-                subject.toString(),
-                configService.getAccessTokenExpiry());
+                redisKey, refreshToken.getValue(), configService.getAccessTokenExpiry());
         return refreshToken;
     }
 
