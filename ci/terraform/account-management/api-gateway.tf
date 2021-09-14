@@ -163,6 +163,7 @@ resource "aws_api_gateway_deployment" "deployment" {
       module.update_phone_number.method_trigger_value,
       module.send_otp_notification.integration_trigger_value,
       module.send_otp_notification.method_trigger_value,
+      aws_lambda_alias.authorizer_alias.function_version
     ]))
   }
 
