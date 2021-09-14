@@ -66,6 +66,7 @@ public class DynamoService implements AuthenticationService {
                         .build();
         this.userCredentialsMapper = new DynamoDBMapper(dynamoDB, userCredentialsConfig);
         this.userProfileMapper = new DynamoDBMapper(dynamoDB, userProfileConfig);
+        warmUp(environment + "-" + USER_PROFILE_TABLE);
     }
 
     @Override
@@ -208,5 +209,9 @@ public class DynamoService implements AuthenticationService {
 
     private static boolean verifyPassword(String hashedPassword, String password) {
         return hashedPassword.equals(hashPassword(password));
+    }
+
+    private void warmUp(String tableName) {
+        dynamoDB.describeTable(tableName);
     }
 }
