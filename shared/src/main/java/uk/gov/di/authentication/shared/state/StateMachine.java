@@ -9,6 +9,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static java.util.Collections.emptyList;
 import static java.util.Map.entry;
@@ -61,17 +62,21 @@ public class StateMachine<T, A, C> {
         this.states = Collections.unmodifiableMap(states);
     }
 
+    public T transition(T from, A action, Optional<C> context) {
+            T to =
+                    states.getOrDefault(from, emptyList()).stream()
+                            .filter(t -> t.getAction().equals(action))
+                            .findFirst()
+                            .orElseThrow(() -> handleBadStateTransition(from, action))
+                            .getNextState();
+
+            LOGGER.info("Session transitioned from {} to {} on action {}", from, to, action);
+
+            return to;
+    }
+
     public T transition(T from, A action) {
-        T to =
-                states.getOrDefault(from, emptyList()).stream()
-                        .filter(t -> t.getAction().equals(action))
-                        .findFirst()
-                        .orElseThrow(() -> handleBadStateTransition(from, action))
-                        .getNextState();
-
-        LOGGER.info("Session transitioned from {} to {} on action {}", from, to, action);
-
-        return to;
+        return transition(from, action, Optional.empty());
     }
 
     public static StateMachine<SessionState, SessionAction, UserProfile> userJourneyStateMachine() {
