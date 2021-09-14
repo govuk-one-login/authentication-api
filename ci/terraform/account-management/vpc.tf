@@ -19,7 +19,7 @@ resource "aws_subnet" "account_management_subnets" {
   ]
 
   tags = merge(local.default_tags, {
-    name = "${var.environment}-account-management-private-subnet-for-${data.aws_availability_zones.available.names[count.index]}"
+    Name = "${var.environment}-account-management-private-subnet-for-${data.aws_availability_zones.available.names[count.index]}"
   })
 }
 
@@ -80,7 +80,7 @@ resource "aws_subnet" "account_management_public" {
   availability_zone = data.aws_availability_zones.available.names[count.index]
 
   tags = merge(local.default_tags, {
-    name = "${var.environment}-account-management-public-subnet-for-${data.aws_availability_zones.available.names[count.index]}"
+    Name = "${var.environment}-account-management-public-subnet-for-${data.aws_availability_zones.available.names[count.index]}"
   })
 }
 
@@ -89,7 +89,7 @@ resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.account_management_vpc.id
 
   tags = merge(local.default_tags, {
-    name = "${var.environment}-account-management-internet-gateway-for-${aws_vpc.account_management_vpc.id}"
+    Name = "${var.environment}-account-management-internet-gateway-for-${aws_vpc.account_management_vpc.id}"
   })
 }
 
@@ -98,7 +98,7 @@ resource "aws_eip" "nat_gateway_eip" {
   vpc   = true
 
   tags = merge(local.default_tags, {
-    name = "${var.environment}-account-management-nat-gateway-ip-for-${data.aws_availability_zones.available.names[count.index]}"
+    Name = "${var.environment}-account-management-nat-gateway-ip-for-${data.aws_availability_zones.available.names[count.index]}"
   })
 }
 
@@ -109,7 +109,7 @@ resource "aws_nat_gateway" "nat_gateway" {
   subnet_id     = aws_subnet.account_management_public[count.index].id
 
   tags = merge(local.default_tags, {
-    name = "${var.environment}-account-management-nat-gateway-for-${data.aws_availability_zones.available.names[count.index]}"
+    Name = "${var.environment}-account-management-nat-gateway-for-${data.aws_availability_zones.available.names[count.index]}"
   })
 }
 
@@ -118,7 +118,7 @@ resource "aws_route_table" "public_route_table" {
   vpc_id = aws_vpc.account_management_vpc.id
 
   tags = merge(local.default_tags, {
-    name = "${var.environment}-account-management-public-route-table-for-${aws_vpc.account_management_vpc.id}"
+    Name = "${var.environment}-account-management-public-route-table-for-${aws_vpc.account_management_vpc.id}"
   })
 }
 
@@ -142,7 +142,7 @@ resource "aws_route_table" "private_route_table" {
   vpc_id = aws_vpc.account_management_vpc.id
 
   tags = merge(local.default_tags, {
-    name = "${var.environment}-account-management-private-route-table-for-${data.aws_availability_zones.available.names[count.index]}"
+    Name = "${var.environment}-account-management-private-route-table-for-${data.aws_availability_zones.available.names[count.index]}"
   })
 }
 

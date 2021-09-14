@@ -19,7 +19,7 @@ resource "aws_subnet" "authentication" {
   ]
 
   tags = merge(local.default_tags, {
-    name = "${var.environment}-private-subnet-for-${data.aws_availability_zones.available.names[count.index]}"
+    Name = "${var.environment}-private-subnet-for-${data.aws_availability_zones.available.names[count.index]}"
   })
 }
 
@@ -80,7 +80,7 @@ resource "aws_subnet" "authentication_public" {
   availability_zone = data.aws_availability_zones.available.names[count.index]
 
   tags = merge(local.default_tags, {
-    name = "${var.environment}-public-subnet-for-${data.aws_availability_zones.available.names[count.index]}"
+    Name = "${var.environment}-public-subnet-for-${data.aws_availability_zones.available.names[count.index]}"
   })
 }
 
@@ -89,7 +89,7 @@ resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.authentication.id
 
   tags = merge(local.default_tags, {
-    name = "${var.environment}-internet-gateway-for-${aws_vpc.authentication.id}"
+    Name = "${var.environment}-internet-gateway-for-${aws_vpc.authentication.id}"
   })
 }
 
@@ -98,7 +98,7 @@ resource "aws_eip" "nat_gateway_eip" {
   vpc   = true
 
   tags = merge(local.default_tags, {
-    name = "${var.environment}-nat-gateway-ip-for-${data.aws_availability_zones.available.names[count.index]}"
+    Name = "${var.environment}-nat-gateway-ip-for-${data.aws_availability_zones.available.names[count.index]}"
   })
 }
 
@@ -109,7 +109,7 @@ resource "aws_nat_gateway" "nat_gateway" {
   subnet_id     = aws_subnet.authentication_public[count.index].id
 
   tags = merge(local.default_tags, {
-    name = "${var.environment}-nat-gateway-for-${data.aws_availability_zones.available.names[count.index]}"
+    Name = "${var.environment}-nat-gateway-for-${data.aws_availability_zones.available.names[count.index]}"
   })
 }
 
@@ -118,7 +118,7 @@ resource "aws_route_table" "public_route_table" {
   vpc_id = aws_vpc.authentication.id
 
   tags = merge(local.default_tags, {
-    name = "${var.environment}-public-route-table-for-${aws_vpc.authentication.id}"
+    Name = "${var.environment}-public-route-table-for-${aws_vpc.authentication.id}"
   })
 }
 
