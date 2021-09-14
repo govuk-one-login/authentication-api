@@ -17,6 +17,8 @@ public class ClientRegistry {
     private List<String> redirectUrls = new ArrayList<>();
     private List<String> contacts = new ArrayList<>();
     private String serviceType;
+    private String sectorIdentifierUri;
+    private String subjectType;
 
     @DynamoDBHashKey(attributeName = "ClientID")
     public String getClientID() {
@@ -97,6 +99,26 @@ public class ClientRegistry {
 
     public ClientRegistry setServiceType(String serviceType) {
         this.serviceType = serviceType;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "SectorIdentifierUri")
+    public String getSectorIdentifierUri() {
+        return sectorIdentifierUri;
+    }
+
+    public ClientRegistry setSectorIdentifierUri(String sectorIdentifierUri) {
+        this.sectorIdentifierUri = sectorIdentifierUri;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "SubjectType")
+    public String getSubjectType() {
+        return subjectType;
+    }
+
+    public ClientRegistry setSubjectType(String subjectType) {
+        this.subjectType = subjectType;
         return this;
     }
 }

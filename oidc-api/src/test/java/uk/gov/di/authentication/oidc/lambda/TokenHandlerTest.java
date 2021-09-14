@@ -28,11 +28,12 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.TokenService;
 
 import java.net.URI;
@@ -66,6 +67,8 @@ import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEv
 public class TokenHandlerTest {
 
     private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
+    private static final String PHONE_NUMBER = "01234567890";
+    private static final Subject SUBJECT = new Subject();
     private static final String REDIRECT_URI = "http://localhost/redirect";
     private static final Subject TEST_SUBJECT = new Subject();
     private static final String CLIENT_ID = "test-id";
@@ -74,7 +77,7 @@ public class TokenHandlerTest {
     private static final String TOKEN_URI = "http://localhost/token";
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     private final Context context = mock(Context.class);
-    private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+    private final DynamoService dynamoService = mock(DynamoService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final TokenService tokenService = mock(TokenService.class);
     private final ClientService clientService = mock(ClientService.class);
@@ -90,7 +93,7 @@ public class TokenHandlerTest {
                 new TokenHandler(
                         clientService,
                         tokenService,
-                        authenticationService,
+                        dynamoService,
                         configurationService,
                         authorisationCodeService,
                         clientSessionService);
@@ -99,6 +102,16 @@ public class TokenHandlerTest {
     @Test
     public void shouldReturn200ForSuccessfulTokenRequest() throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
+        UserProfile userProfile =
+                new UserProfile()
+                        .setEmail(TEST_EMAIL)
+                        .setEmailVerified(true)
+                        .setPhoneNumber(PHONE_NUMBER)
+                        .setPhoneNumberVerified(true)
+                        .setSubjectID(SUBJECT.toString())
+                        .setCreated(LocalDateTime.now().toString())
+                        .setUpdated(LocalDateTime.now().toString())
+                        .setPublicSubjectID(SUBJECT.toString());
         SignedJWT signedJWT =
                 generateIDToken(
                         CLIENT_ID,
@@ -128,7 +141,8 @@ public class TokenHandlerTest {
                 .thenReturn(
                         new ClientSession(
                                 generateAuthRequest().toParameters(), LocalDateTime.now()));
-        when(authenticationService.getSubjectFromEmail(eq(TEST_EMAIL))).thenReturn(TEST_SUBJECT);
+        when(dynamoService.getSubjectFromEmail(eq(TEST_EMAIL))).thenReturn(TEST_SUBJECT);
+        when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         eq(CLIENT_ID), any(Subject.class), eq(SCOPES), anyMap()))
                 .thenReturn(tokenResponse);
@@ -252,7 +266,9 @@ public class TokenHandlerTest {
                 .setScopes(singletonList("openid"))
                 .setContacts(singletonList(TEST_EMAIL))
                 .setPublicKey(
-                        Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()));
+                        Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()))
+                .setSectorIdentifierUri("https://test.com")
+                .setSubjectType("public");
     }
 
     private APIGatewayProxyResponseEvent generateApiGatewayRequest(

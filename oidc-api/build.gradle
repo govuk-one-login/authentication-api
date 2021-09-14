@@ -18,7 +18,8 @@ dependencies {
             configurations.dynamodb,
             configurations.bouncycastle,
             "com.googlecode.libphonenumber:libphonenumber:8.12.31",
-            project(":shared")
+            project(":shared"),
+            project(":client-registry-api")
 
     testImplementation configurations.tests,
             configurations.lambda_tests

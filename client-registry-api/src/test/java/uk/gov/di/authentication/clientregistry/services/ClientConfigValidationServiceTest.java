@@ -33,7 +33,9 @@ class ClientConfigValidationServiceTest {
                                 VALID_PUBLIC_CERT,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
-                                String.valueOf(MANDATORY)));
+                                String.valueOf(MANDATORY),
+                                "http://test.com",
+                                "public"));
         assertThat(errorResponse, equalTo(Optional.empty()));
     }
 
@@ -46,7 +48,9 @@ class ClientConfigValidationServiceTest {
                                 VALID_PUBLIC_CERT,
                                 singletonList("openid"),
                                 singletonList("invalid-logout-uri"),
-                                String.valueOf(MANDATORY)));
+                                String.valueOf(MANDATORY),
+                                "http://test.com",
+                                "public"));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_POST_LOGOUT_URI)));
     }
 
@@ -59,7 +63,9 @@ class ClientConfigValidationServiceTest {
                                 VALID_PUBLIC_CERT,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
-                                String.valueOf(MANDATORY)));
+                                String.valueOf(MANDATORY),
+                                "http://test.com",
+                                "public"));
         assertThat(errorResponse, equalTo(Optional.of(RegistrationError.INVALID_REDIRECT_URI)));
     }
 
@@ -72,7 +78,9 @@ class ClientConfigValidationServiceTest {
                                 "invalid-public-cert",
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
-                                String.valueOf(MANDATORY)));
+                                String.valueOf(MANDATORY),
+                                "http://test.com",
+                                "public"));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_PUBLIC_KEY)));
     }
 
@@ -85,7 +93,9 @@ class ClientConfigValidationServiceTest {
                                 VALID_PUBLIC_CERT,
                                 List.of("openid", "email", "fax"),
                                 singletonList("http://localhost/post-redirect-logout"),
-                                String.valueOf(MANDATORY)));
+                                String.valueOf(MANDATORY),
+                                "http://test.com",
+                                "public"));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
     }
 
@@ -98,7 +108,9 @@ class ClientConfigValidationServiceTest {
                                 VALID_PUBLIC_CERT,
                                 List.of("openid", "am"),
                                 singletonList("http://localhost/post-redirect-logout"),
-                                String.valueOf(MANDATORY)));
+                                String.valueOf(MANDATORY),
+                                "http://test.com",
+                                "public"));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
     }
 
@@ -179,7 +191,9 @@ class ClientConfigValidationServiceTest {
             String publicCert,
             List<String> scopes,
             List<String> postLogoutUris,
-            String serviceType) {
+            String serviceType,
+            String sectorIdentifierUri,
+            String subjectType) {
         return new ClientRegistrationRequest(
                 "The test client",
                 redirectUri,
@@ -187,7 +201,9 @@ class ClientConfigValidationServiceTest {
                 publicCert,
                 scopes,
                 postLogoutUris,
-                serviceType);
+                serviceType,
+                sectorIdentifierUri,
+                subjectType);
     }
 
     private UpdateClientConfigRequest generateClientUpdateRequest(

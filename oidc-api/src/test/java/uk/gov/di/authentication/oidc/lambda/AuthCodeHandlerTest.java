@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
@@ -18,10 +19,12 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.entity.ResponseHeaders;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.AuthorizationService;
@@ -47,11 +50,19 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.entity.ServiceType.MANDATORY;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthCodeHandlerTest {
 
+    private static final String CLIENT_ID = "client-id-1";
+    private static final String CLIENT_NAME = "client-name-one";
+    private static final List<String> SCOPES = singletonList("openid");
+    private static final String SERVICE_TYPE = String.valueOf(MANDATORY);
+    private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
+    private static final String PHONE_NUMBER = "01234567890";
+    private static final Subject SUBJECT = new Subject();
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "client-session-id";
     private static final String COOKIE = "Cookie";
@@ -85,6 +96,8 @@ class AuthCodeHandlerTest {
 
     @Test
     public void shouldGenerateSuccessfulAuthResponse() throws ClientNotFoundException {
+        UserProfile userProfile = createUserProfile();
+        Subject subject = new Subject();
         ClientID clientID = new ClientID();
         AuthorizationCode authorizationCode = new AuthorizationCode();
         AuthenticationRequest authRequest =
@@ -130,6 +143,8 @@ class AuthCodeHandlerTest {
     @Test
     public void shouldGenerateErrorResponseWhenRedirectUriIsInvalid()
             throws ClientNotFoundException {
+        UserProfile userProfile = createUserProfile();
+        Subject subject = new Subject();
         ClientID clientID = new ClientID();
         generateValidSessionAndAuthRequest(clientID, new State());
         when(authorizationService.isClientRedirectUriValid(eq(new ClientID()), eq(REDIRECT_URI)))
@@ -144,6 +159,8 @@ class AuthCodeHandlerTest {
 
     @Test
     public void shouldGenerateErrorResponseWhenClientIsNotFound() throws ClientNotFoundException {
+        UserProfile userProfile = createUserProfile();
+        Subject subject = new Subject();
         State state = new State();
         AuthenticationErrorResponse authenticationErrorResponse =
                 new AuthenticationErrorResponse(
@@ -251,5 +268,31 @@ class AuthCodeHandlerTest {
         return format(
                 "%s=%s.%s; Max-Age=%d; %s",
                 "gs", SESSION_ID, CLIENT_SESSION_ID, 1800, "Secure; HttpOnly;");
+    }
+
+    private UserProfile createUserProfile() {
+        return new UserProfile()
+                .setEmail(TEST_EMAIL)
+                .setEmailVerified(true)
+                .setPhoneNumber(PHONE_NUMBER)
+                .setPhoneNumberVerified(true)
+                .setSubjectID(SUBJECT.toString())
+                .setCreated(LocalDateTime.now().toString())
+                .setUpdated(LocalDateTime.now().toString());
+    }
+
+    private ClientRegistry createClientRegistry() {
+        ClientRegistry clientRegistry = new ClientRegistry();
+        clientRegistry.setClientName(CLIENT_NAME);
+        clientRegistry.setClientID(CLIENT_ID);
+        clientRegistry.setPublicKey("public-key");
+        clientRegistry.setScopes(SCOPES);
+        clientRegistry.setRedirectUrls(singletonList("http://localhost/redirect"));
+        clientRegistry.setContacts(singletonList("contant-name"));
+        clientRegistry.setPostLogoutRedirectUrls(singletonList("localhost/logout"));
+        clientRegistry.setServiceType(SERVICE_TYPE);
+        clientRegistry.setSubjectType("public");
+        clientRegistry.setSectorIdentifierUri("https://test.com");
+        return clientRegistry;
     }
 }

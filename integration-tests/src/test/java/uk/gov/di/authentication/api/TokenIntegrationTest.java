@@ -86,7 +86,9 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
                 singletonList("openid"),
                 Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
                 singletonList("http://localhost/post-logout-redirect"),
-                String.valueOf(ServiceType.MANDATORY));
+                String.valueOf(ServiceType.MANDATORY),
+                "https://test.com",
+                "public");
         DynamoHelper.signUp(TEST_EMAIL, "password-1");
     }
 

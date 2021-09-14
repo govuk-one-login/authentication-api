@@ -32,6 +32,7 @@ public class AuthCodeIntegrationTest extends IntegrationTestEndpoints {
 
     private static final String AUTH_CODE_ENDPOINT = "/auth-code";
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
+    private static final String TEST_PASSWORD = "test-pass-01";
     private static final URI REDIRECT_URI =
             URI.create(System.getenv("STUB_RELYING_PARTY_REDIRECT_URI"));
     private static final ClientID CLIENT_ID = new ClientID("test-client");
@@ -79,7 +80,9 @@ public class AuthCodeIntegrationTest extends IntegrationTestEndpoints {
                 singletonList("openid"),
                 Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
                 singletonList("http://localhost/post-redirect-logout"),
-                String.valueOf(ServiceType.MANDATORY));
+                String.valueOf(ServiceType.MANDATORY),
+                "https://test.com",
+                "public");
     }
 
     private String buildCookieString(String sessionID, String clientSessionID) {

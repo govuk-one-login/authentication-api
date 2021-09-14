@@ -35,7 +35,9 @@ public class UpdateClientConfigIntegrationTest extends IntegrationTestEndpoints 
                 singletonList("openid"),
                 VALID_PUBLIC_CERT,
                 singletonList("http://localhost/post-redirect-logout"),
-                String.valueOf(ServiceType.MANDATORY));
+                String.valueOf(ServiceType.MANDATORY),
+                "https://test.com",
+                "public");
 
         UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
         updateRequest.setClientName("new-client-name");

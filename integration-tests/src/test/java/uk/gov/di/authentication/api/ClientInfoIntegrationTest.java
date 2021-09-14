@@ -108,6 +108,8 @@ public class ClientInfoIntegrationTest extends IntegrationTestEndpoints {
                 List.of("openid", "email"),
                 Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
                 singletonList("http://localhost/post-redirect-logout"),
-                String.valueOf(ServiceType.MANDATORY));
+                String.valueOf(ServiceType.MANDATORY),
+                "https://test.com",
+                "public");
     }
 }

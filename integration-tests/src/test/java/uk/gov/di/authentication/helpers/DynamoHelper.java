@@ -8,6 +8,7 @@ import com.amazonaws.services.dynamodbv2.model.ScanRequest;
 import com.amazonaws.services.dynamodbv2.model.ScanResult;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
@@ -30,8 +31,16 @@ public class DynamoHelper {
         return DYNAMO_SERVICE.userExists(email);
     }
 
+    public static UserProfile getUserProfileByEmail(String email) {
+        return DYNAMO_SERVICE.getUserProfileByEmail(email);
+    }
+
     public static void signUp(String email, String password) {
         signUp(email, password, new Subject());
+    }
+
+    public static Subject getSubjectFromEmail(String email) {
+        return DYNAMO_SERVICE.getSubjectFromEmail(email);
     }
 
     public static void signUp(String email, String password, Subject subject) {
@@ -58,7 +67,9 @@ public class DynamoHelper {
             List<String> scopes,
             String publicKey,
             List<String> postLogoutRedirectUris,
-            String serviceType) {
+            String serviceType,
+            String sectorIdentifierUri,
+            String subjectType) {
         DYNAMO_CLIENT_SERVICE.addClient(
                 clientID,
                 clientName,
@@ -67,7 +78,9 @@ public class DynamoHelper {
                 scopes,
                 publicKey,
                 postLogoutRedirectUris,
-                serviceType);
+                serviceType,
+                sectorIdentifierUri,
+                subjectType);
     }
 
     public static boolean clientExists(String clientID) {

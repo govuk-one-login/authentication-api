@@ -17,6 +17,7 @@ public class UserProfile {
     private String created;
     private String updated;
     private TermsAndConditions termsAndConditions;
+    private String publicSubjectID;
 
     public UserProfile() {}
 
@@ -116,6 +117,16 @@ public class UserProfile {
         } else {
             this.clientConsent.add(consent);
         }
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "PublicSubjectID")
+    public String getPublicSubjectID() {
+        return publicSubjectID;
+    }
+
+    public UserProfile setPublicSubjectID(String publicSubjectID) {
+        this.publicSubjectID = publicSubjectID;
         return this;
     }
 }

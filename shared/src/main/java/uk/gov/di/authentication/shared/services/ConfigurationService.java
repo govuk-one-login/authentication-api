@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.shared.services;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 public class ConfigurationService {
@@ -122,5 +123,9 @@ public class ConfigurationService {
 
     public int getWarmupDelayMillis() {
         return Integer.parseInt(System.getenv().getOrDefault("WARMER_DELAY", "75"));
+    }
+
+    public byte[] getSalt() {
+        return System.getenv().getOrDefault("SALT", "random").getBytes(StandardCharsets.UTF_8);
     }
 }

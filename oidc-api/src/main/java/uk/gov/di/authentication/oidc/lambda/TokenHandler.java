@@ -15,7 +15,8 @@ import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -26,6 +27,8 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenService;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -43,7 +46,7 @@ public class TokenHandler
 
     private final ClientService clientService;
     private final TokenService tokenService;
-    private final AuthenticationService authenticationService;
+    private final DynamoService dynamoService;
     private final ConfigurationService configurationService;
     private final AuthorisationCodeService authorisationCodeService;
     private final ClientSessionService clientSessionService;
@@ -52,13 +55,13 @@ public class TokenHandler
     public TokenHandler(
             ClientService clientService,
             TokenService tokenService,
-            AuthenticationService authenticationService,
+            DynamoService dynamoService,
             ConfigurationService configurationService,
             AuthorisationCodeService authorisationCodeService,
             ClientSessionService clientSessionService) {
         this.clientService = clientService;
         this.tokenService = tokenService;
-        this.authenticationService = authenticationService;
+        this.dynamoService = dynamoService;
         this.configurationService = configurationService;
         this.authorisationCodeService = authorisationCodeService;
         this.clientSessionService = clientSessionService;
@@ -76,11 +79,7 @@ public class TokenHandler
                         configurationService,
                         new RedisConnectionService(configurationService),
                         new KmsConnectionService(configurationService));
-        this.authenticationService =
-                new DynamoService(
-                        configurationService.getAwsRegion(),
-                        configurationService.getEnvironment(),
-                        configurationService.getDynamoEndpointUri());
+        this.dynamoService = new DynamoService(configurationService);
         this.authorisationCodeService = new AuthorisationCodeService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
     }
@@ -184,8 +183,8 @@ public class TokenHandler
                                         OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
                             }
                             Subject subject =
-                                    authenticationService.getSubjectFromEmail(
-                                            authCodeExchangeData.getEmail());
+                                    getSubjectByEmailAndClient(
+                                            authCodeExchangeData.getEmail(), client);
                             Map<String, Object> additionalTokenClaims = new HashMap<>();
                             if (authRequest.getNonce() != null) {
                                 additionalTokenClaims.put("nonce", authRequest.getNonce());
@@ -208,5 +207,37 @@ public class TokenHandler
                             return generateApiGatewayProxyResponse(
                                     200, tokenResponse.toJSONObject().toJSONString());
                         });
+    }
+
+    private Subject getSubjectByEmailAndClient(String email, ClientRegistry client) {
+        UserProfile userProfile = dynamoService.getUserProfileByEmail(email);
+
+        if (client.getSubjectType().equalsIgnoreCase("public")) {
+            return new Subject(userProfile.getPublicSubjectID());
+        } else {
+            String uri =
+                    client.getSectorIdentifierUri() != null
+                            ? client.getSectorIdentifierUri()
+                            : returnHost(client);
+            return new Subject(
+                    ClientSubjectHelper.pairwiseIdentifier(userProfile.getSubjectID(), uri));
+        }
+    }
+
+    private String returnHost(ClientRegistry clientRegistry) {
+        String redirectUri = null;
+
+        if (clientRegistry.getRedirectUrls().stream().findFirst().isPresent()) {
+            redirectUri = clientRegistry.getRedirectUrls().stream().findFirst().get();
+            try {
+                String hostname = new URI(redirectUri).getHost();
+                if (hostname != null)
+                    return hostname.startsWith("www.") ? hostname.substring(4) : hostname;
+            } catch (URISyntaxException e) {
+                LOG.info("Not a valid URI {} - Exception {}", redirectUri, e);
+            }
+        }
+
+        return redirectUri;
     }
 }
