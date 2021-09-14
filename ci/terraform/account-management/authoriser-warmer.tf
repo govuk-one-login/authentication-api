@@ -85,7 +85,7 @@ resource "aws_lambda_function" "warmer_function" {
   environment {
     variables = {
       LAMBDA_ARN       = aws_lambda_function.authorizer.arn
-      LAMBDA_QUALIFIER = aws_lambda_function.authorizer.version
+      LAMBDA_QUALIFIER = aws_lambda_alias.authorizer_alias.name
       LAMBDA_TYPE      = "AUTHORIZER"
     }
   }
