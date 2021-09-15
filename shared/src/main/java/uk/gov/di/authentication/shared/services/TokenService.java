@@ -61,6 +61,7 @@ public class TokenService {
     private final KmsConnectionService kmsConnectionService;
     private static final JWSAlgorithm TOKEN_ALGORITHM = JWSAlgorithm.ES256;
     private static final Logger LOGGER = LoggerFactory.getLogger(TokenService.class);
+    private static final String REFRESH_TOKEN_PREFIX = "REFRESH";
     private static final List<String> ALLOWED_GRANTS =
             List.of(GrantType.AUTHORIZATION_CODE.getValue(), GrantType.REFRESH_TOKEN.getValue());
 
@@ -263,7 +264,7 @@ public class TokenService {
                         .build();
         SignedJWT signedJWT = generateSignedJWT(claimsSet);
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
-        String redisKey = clientId + ":" + subject.getValue();
+        String redisKey = REFRESH_TOKEN_PREFIX + "." + clientId + "." + subject.getValue();
         redisConnectionService.saveWithExpiry(
                 redisKey, refreshToken.getValue(), configService.getAccessTokenExpiry());
         return refreshToken;

@@ -12,6 +12,7 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +31,6 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +56,7 @@ public class TokenHandler
     private final TokenValidationService tokenValidationService;
     private final RedisConnectionService redisConnectionService;
     private static final String TOKEN_PATH = "/token";
+    private static final String REFRESH_TOKEN_PREFIX = "REFRESH";
 
     public TokenHandler(
             ClientService clientService,
@@ -244,15 +245,12 @@ public class TokenHandler
             return generateApiGatewayProxyResponse(
                     400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
         }
-        List<String> scopes = Arrays.asList(requestBody.get("scope").split(" "));
-        if (!clientScopes.containsAll(scopes)) {
-            return generateApiGatewayProxyResponse(
-                    400, OAuth2Error.INVALID_SCOPE.toJSONObject().toJSONString());
-        }
         Subject subject;
+        List<String> scopes;
         try {
             SignedJWT signedJwt = SignedJWT.parse(currentRefreshToken.getValue());
             subject = new Subject(signedJwt.getJWTClaimsSet().getSubject());
+            scopes = (List<String>) signedJwt.getJWTClaimsSet().getClaim("scope");
         } catch (java.text.ParseException e) {
             LOG.error("Unable to parse RefreshToken", e);
             return generateApiGatewayProxyResponse(
@@ -261,7 +259,16 @@ public class TokenHandler
                             .toJSONObject()
                             .toJSONString());
         }
-        String redisKey = requestBody.get("client_id") + ":" + subject.getValue();
+        if (!clientScopes.containsAll(scopes)) {
+            return generateApiGatewayProxyResponse(
+                    400, OAuth2Error.INVALID_SCOPE.toJSONObject().toJSONString());
+        }
+        if (!scopes.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
+            return generateApiGatewayProxyResponse(
+                    400, OAuth2Error.INVALID_SCOPE.toJSONObject().toJSONString());
+        }
+        String clientId = requestBody.get("client_id");
+        String redisKey = REFRESH_TOKEN_PREFIX + "." + clientId + "." + subject.getValue();
         Optional<String> refreshToken =
                 Optional.ofNullable(redisConnectionService.getValue(redisKey));
         if (refreshToken.isEmpty()) {
@@ -282,8 +289,7 @@ public class TokenHandler
         }
         redisConnectionService.deleteValue(redisKey);
         OIDCTokenResponse tokenResponse =
-                tokenService.generateRefreshTokenResponse(
-                        requestBody.get("client_id"), subject, scopes);
+                tokenService.generateRefreshTokenResponse(clientId, subject, scopes);
         return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
     }
 }

@@ -70,6 +70,7 @@ public class TokenServiceTest {
     private static final String REDIRECT_URI = "http://localhost/redirect";
     private static final String BASE_URL = "http://example.com";
     private static final String KEY_ID = "14342354354353";
+    private static final String REFRESH_TOKEN_PREFIX = "REFRESH";
 
     @BeforeEach
     public void setUp() {
@@ -100,6 +101,11 @@ public class TokenServiceTest {
                 .saveWithExpiry(
                         tokenResponse.getOIDCTokens().getAccessToken().toJSONString(),
                         SUBJECT.toString(),
+                        300L);
+        verify(redisConnectionService)
+                .saveWithExpiry(
+                        REFRESH_TOKEN_PREFIX + "." + CLIENT_ID + "." + SUBJECT,
+                        tokenResponse.getOIDCTokens().getRefreshToken().getValue(),
                         300L);
         assertEquals(
                 nonce.getValue(),

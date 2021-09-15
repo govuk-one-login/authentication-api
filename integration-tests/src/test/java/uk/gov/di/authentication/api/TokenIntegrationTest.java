@@ -129,7 +129,6 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
         customParams.put(
                 "grant_type", Collections.singletonList(GrantType.REFRESH_TOKEN.getValue()));
         customParams.put("client_id", Collections.singletonList(CLIENT_ID));
-        customParams.put("scope", Collections.singletonList(scope.toString()));
         customParams.put("refresh_token", Collections.singletonList(refreshToken.getValue()));
         Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
         privateKeyParams.putAll(customParams);

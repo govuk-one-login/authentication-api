@@ -79,10 +79,12 @@ public class TokenHandlerTest {
     private static final String REDIRECT_URI = "http://localhost/redirect";
     private static final Subject TEST_SUBJECT = new Subject();
     private static final String CLIENT_ID = "test-id";
-    private static final Scope SCOPES = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
+    private static final Scope SCOPES =
+            new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
     private static final String BASE_URI = "http://localhost";
     private static final String TOKEN_URI = "http://localhost/token";
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
+    private static final String REFRESH_TOKEN_PREFIX = "REFRESH";
     private final Context context = mock(Context.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -173,7 +175,7 @@ public class TokenHandlerTest {
                         anyString(), eq(clientRegistry.getPublicKey()), eq(BASE_URI)))
                 .thenReturn(Optional.empty());
         when(tokenValidationService.validateRefreshTokenSignature(refreshToken)).thenReturn(true);
-        String redisKey = CLIENT_ID + ":" + TEST_SUBJECT.getValue();
+        String redisKey = REFRESH_TOKEN_PREFIX + "." + CLIENT_ID + "." + TEST_SUBJECT.getValue();
         when(redisConnectionService.getValue(redisKey)).thenReturn(refreshToken.getValue());
         when(tokenService.generateRefreshTokenResponse(
                         eq(CLIENT_ID), eq(TEST_SUBJECT), eq(SCOPES.toStringList())))
@@ -337,7 +339,6 @@ public class TokenHandlerTest {
         customParams.put(
                 "grant_type", Collections.singletonList(GrantType.REFRESH_TOKEN.getValue()));
         customParams.put("client_id", Collections.singletonList(CLIENT_ID));
-        customParams.put("scope", Collections.singletonList(SCOPES.toString()));
         customParams.put("refresh_token", Collections.singletonList(refreshToken));
         Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
         privateKeyParams.putAll(customParams);
