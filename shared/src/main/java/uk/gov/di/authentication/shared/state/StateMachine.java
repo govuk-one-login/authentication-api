@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -49,10 +50,11 @@ import static uk.gov.di.authentication.shared.entity.SessionState.PHONE_NUMBER_C
 import static uk.gov.di.authentication.shared.entity.SessionState.PHONE_NUMBER_CODE_NOT_VALID;
 import static uk.gov.di.authentication.shared.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
 import static uk.gov.di.authentication.shared.entity.SessionState.TWO_FACTOR_REQUIRED;
+import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS;
 import static uk.gov.di.authentication.shared.entity.SessionState.USER_NOT_FOUND;
 import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
 import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_PHONE_NUMBER_CODE_SENT;
-import static uk.gov.di.authentication.shared.state.Transition.on;
+import static uk.gov.di.authentication.shared.state.conditions.TermsAndConditionsVersionNotAccepted.userHasNotAcceptedTermsAndConditionsVersion;
 
 public class StateMachine<T, A, C> {
 
@@ -67,7 +69,10 @@ public class StateMachine<T, A, C> {
     public T transition(T from, A action, Optional<C> context) {
         T to =
                 states.getOrDefault(from, emptyList()).stream()
-                        .filter(t -> t.getAction().equals(action))
+                        .filter(
+                                t ->
+                                        t.getAction().equals(action)
+                                                && t.getCondition().isMet(context))
                         .findFirst()
                         .orElseThrow(() -> handleBadStateTransition(from, action))
                         .getNextState();
@@ -81,9 +86,18 @@ public class StateMachine<T, A, C> {
         return transition(from, action, Optional.empty());
     }
 
-    public static StateMachine<SessionState, SessionAction, UserProfile> userJourneyStateMachine() {
+    public static Transition.Builder<SessionState, SessionAction, UserProfile> on(
+            SessionAction action) {
+        return Transition.<SessionState, SessionAction, UserProfile>builder().on(action);
+    }
 
-        return builder()
+    public static StateMachine<SessionState, SessionAction, UserProfile> userJourneyStateMachine() {
+        return userJourneyStateMachine(ConfigurationService.getInstance());
+    }
+
+    public static StateMachine<SessionState, SessionAction, UserProfile> userJourneyStateMachine(
+            ConfigurationService configurationService) {
+        return StateMachine.<SessionState, SessionAction, UserProfile>builder()
                 .when(NEW)
                 .allow(on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND))
                 .when(USER_NOT_FOUND)
@@ -144,7 +158,13 @@ public class StateMachine<T, A, C> {
                         on(USER_ENTERED_INVALID_MFA_CODE).then(MFA_CODE_NOT_VALID))
                 .when(MFA_CODE_NOT_VALID)
                 .allow(
-                        on(USER_ENTERED_VALID_MFA_CODE).then(MFA_CODE_VERIFIED),
+                        on(USER_ENTERED_VALID_MFA_CODE)
+                                .then(UPDATED_TERMS_AND_CONDITIONS)
+                                .ifCondition(
+                                        userHasNotAcceptedTermsAndConditionsVersion(
+                                                configurationService
+                                                        .getTermsAndConditionsVersion())),
+                        on(USER_ENTERED_VALID_MFA_CODE).then(MFA_CODE_VERIFIED).byDefault(),
                         on(USER_ENTERED_INVALID_MFA_CODE).then(MFA_CODE_NOT_VALID),
                         on(USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES)
                                 .then(MFA_CODE_MAX_RETRIES_REACHED))
@@ -159,7 +179,7 @@ public class StateMachine<T, A, C> {
 
     public static class InvalidStateTransitionException extends RuntimeException {}
 
-    public static <T, A, C> Builder builder() {
+    public static <T, A, C> Builder<T, A, C> builder() {
         return new Builder<>();
     }
 

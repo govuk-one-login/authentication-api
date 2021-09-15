@@ -10,12 +10,15 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.ValidationService;
+import uk.gov.di.authentication.shared.state.StateMachine;
 
 import java.util.Map;
 import java.util.Optional;
@@ -48,6 +51,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_MAX_R
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_NOT_VALID;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_VERIFIED;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_SMS_CODE_SENT;
+import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
 import static uk.gov.di.authentication.shared.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.shared.entity.SessionState.PHONE_NUMBER_CODE_NOT_VALID;
 import static uk.gov.di.authentication.shared.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
@@ -66,6 +70,7 @@ class VerifyCodeRequestHandlerTest {
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final ValidationService validationService = mock(ValidationService.class);
+    private final StateMachine<SessionState, SessionAction, UserProfile> stateMachine = mock(StateMachine.class);
     private final Session session =
             new Session("session-id")
                     .setEmailAddress(TEST_EMAIL_ADDRESS)
@@ -80,7 +85,21 @@ class VerifyCodeRequestHandlerTest {
                         codeStorageService,
                         dynamoService,
                         configurationService,
-                        validationService);
+                        validationService,
+                        stateMachine);
+        when(stateMachine.transition(eq(VERIFY_EMAIL_CODE_SENT),eq(USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE))).thenReturn(EMAIL_CODE_VERIFIED);
+        when(stateMachine.transition(eq(VERIFY_EMAIL_CODE_SENT),eq(USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE))).thenReturn(EMAIL_CODE_NOT_VALID);
+        when(stateMachine.transition(eq(EMAIL_CODE_NOT_VALID),eq(USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES))).thenReturn(EMAIL_CODE_MAX_RETRIES_REACHED);
+
+        when(stateMachine.transition(eq(VERIFY_PHONE_NUMBER_CODE_SENT),eq(USER_ENTERED_VALID_PHONE_VERIFICATION_CODE))).thenReturn(PHONE_NUMBER_CODE_VERIFIED);
+        when(stateMachine.transition(eq(VERIFY_PHONE_NUMBER_CODE_SENT),eq(USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE))).thenReturn(PHONE_NUMBER_CODE_NOT_VALID);
+        when(stateMachine.transition(eq(PHONE_NUMBER_CODE_NOT_VALID),eq(USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES))).thenReturn(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED);
+
+        when(stateMachine.transition(eq(MFA_SMS_CODE_SENT),eq(USER_ENTERED_VALID_MFA_CODE))).thenReturn(MFA_CODE_VERIFIED);
+        when(stateMachine.transition(eq(MFA_SMS_CODE_SENT),eq(USER_ENTERED_INVALID_MFA_CODE))).thenReturn(MFA_CODE_NOT_VALID);
+        when(stateMachine.transition(eq(MFA_CODE_NOT_VALID),eq(USER_ENTERED_VALID_MFA_CODE))).thenReturn(MFA_CODE_VERIFIED);
+        when(stateMachine.transition(eq(MFA_CODE_NOT_VALID),eq(USER_ENTERED_INVALID_MFA_CODE))).thenReturn(MFA_CODE_NOT_VALID);
+        when(stateMachine.transition(eq(MFA_CODE_NOT_VALID),eq(USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES))).thenReturn(MFA_CODE_MAX_RETRIES_REACHED);
     }
 
     @Test
@@ -357,13 +376,14 @@ class VerifyCodeRequestHandlerTest {
     @Test
     public void shouldReturn400IfUserTransitionsFromWrongStateForEmailCode() {
         session.setState(SessionState.NEW);
-
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
                 .thenReturn(Optional.of(CODE));
         when(validationService.validateEmailVerificationCode(
                         eq(Optional.of(CODE)), eq(CODE), any(Session.class), eq(5)))
                 .thenReturn(USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE);
+        when(stateMachine.transition(eq(NEW),eq(USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE))).thenThrow(new StateMachine.InvalidStateTransitionException());
+
         APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, VERIFY_EMAIL.toString());
 
         assertThat(result, hasStatus(400));

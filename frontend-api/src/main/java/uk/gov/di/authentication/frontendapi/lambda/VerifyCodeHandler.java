@@ -45,20 +45,20 @@ public class VerifyCodeHandler
     private final DynamoService dynamoService;
     private final ConfigurationService configurationService;
     private final ValidationService validationService;
-    private final StateMachine<SessionState, SessionAction, UserProfile> stateMachine =
-            userJourneyStateMachine();
+    private final StateMachine<SessionState, SessionAction, UserProfile> stateMachine;
 
     public VerifyCodeHandler(
             SessionService sessionService,
             CodeStorageService codeStorageService,
             DynamoService dynamoService,
             ConfigurationService configurationService,
-            ValidationService validationService) {
+            ValidationService validationService, StateMachine<SessionState, SessionAction, UserProfile> stateMachine) {
         this.sessionService = sessionService;
         this.codeStorageService = codeStorageService;
         this.dynamoService = dynamoService;
         this.configurationService = configurationService;
         this.validationService = validationService;
+        this.stateMachine = stateMachine;
     }
 
     public VerifyCodeHandler() {
@@ -72,6 +72,7 @@ public class VerifyCodeHandler
                         configurationService.getEnvironment(),
                         configurationService.getDynamoEndpointUri());
         this.validationService = new ValidationService();
+        this.stateMachine = userJourneyStateMachine();
     }
 
     @Override

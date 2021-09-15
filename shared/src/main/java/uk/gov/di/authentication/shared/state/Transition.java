@@ -27,8 +27,8 @@ public class Transition<T, A, C> {
         return condition;
     }
 
-    public static <T, A, C> Builder on(A action) {
-        return new Builder<>(action);
+    public static <T, A, C> Builder<T, A, C> builder() {
+        return new Builder<>();
     }
 
     public static class Builder<T, A, C> {
@@ -36,8 +36,9 @@ public class Transition<T, A, C> {
         private T nextState;
         private Condition<C> condition;
 
-        protected Builder(A action) {
+        public Builder<T, A, C> on(A action) {
             this.action = action;
+            return this;
         }
 
         public Builder<T, A, C> ifCondition(Condition<C> condition) {
@@ -56,6 +57,9 @@ public class Transition<T, A, C> {
         }
 
         public Transition<T, A, C> build() {
+            if (this.condition == null) {
+                this.condition = new Default<>();
+            }
             return new Transition<>(action, nextState, condition);
         }
     }
