@@ -50,9 +50,10 @@ while getopts "uigt" opt; do
   esac
 done
 
+auth_api_pre_commit_start_seconds=$SECONDS
+
 if [[ ${RUN_UNIT} -eq 1 ]]; then
   printf "\nRunning build and unit tests...\n"
-
   set +e
   ./gradlew clean build -x integration-tests:test -x account-management-integration-tests:test
   build_and_test_exit_code=$?
@@ -80,6 +81,12 @@ if [ ${RUN_INTEGRATION} -eq 1 ] || [ ${TF_ACCOUNT_MANAGEMENT} -eq 1 ]; then
   fi
   stop_docker_services aws redis dynamodb
 fi
+
+record_timings "auth api pre-commit total" auth_api_pre_commit_start_seconds $SECONDS true
+
+printf "\nauth api pre-commit task timings:\n\n"
+for i in "${task_timings[@]}"; do echo "$i"; done
+printf "\n"
 
 if [ ${build_and_test_exit_code} -ne 0 ]; then
   printf "\npre-commit failed.\n"
