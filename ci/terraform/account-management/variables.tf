@@ -54,7 +54,12 @@ variable "service_domain_name" {
 
 variable "enable_api_gateway_execution_logging" {
   default     = true
-  description = "Whether to enable logging of API gateway runs (including capturing of requests/responses)"
+  description = "Whether to enable logging of API gateway runs"
+}
+
+variable "enable_api_gateway_execution_request_tracing" {
+  default     = false
+  description = "Whether to enable capturing of requests/responses from API gateway runs (ONLY ENABLE IN NON-PROD ENVIRONMENTS)"
 }
 
 variable "lambda_zip_file" {

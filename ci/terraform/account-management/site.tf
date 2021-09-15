@@ -47,4 +47,6 @@ locals {
     environment = var.environment
     application = "account-management-api"
   }
+
+  request_tracing_allowed = contains(["build", "sandpit"], var.environment)
 }
