@@ -163,20 +163,10 @@ public class TokenHandler
                             if (requestBody
                                     .get("grant_type")
                                     .equals(GrantType.REFRESH_TOKEN.getValue())) {
-                                RefreshToken refreshToken =
-                                        new RefreshToken(requestBody.get("refresh_token"));
-                                boolean refreshTokenSignatureValid =
-                                        tokenValidationService.validateRefreshTokenSignature(
-                                                refreshToken);
-                                if (!refreshTokenSignatureValid) {
-                                    return generateApiGatewayProxyResponse(
-                                            400,
-                                            OAuth2Error.INVALID_GRANT
-                                                    .toJSONObject()
-                                                    .toJSONString());
-                                }
                                 return processRefreshTokenRequest(
-                                        requestBody, client.getScopes(), refreshToken);
+                                        requestBody,
+                                        client.getScopes(),
+                                        new RefreshToken(requestBody.get("refresh_token")));
                             }
                             AuthCodeExchangeData authCodeExchangeData;
                             try {
@@ -248,6 +238,12 @@ public class TokenHandler
             Map<String, String> requestBody,
             List<String> clientScopes,
             RefreshToken currentRefreshToken) {
+        boolean refreshTokenSignatureValid =
+                tokenValidationService.validateRefreshTokenSignature(currentRefreshToken);
+        if (!refreshTokenSignatureValid) {
+            return generateApiGatewayProxyResponse(
+                    400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
+        }
         List<String> scopes = Arrays.asList(requestBody.get("scope").split(" "));
         if (!clientScopes.containsAll(scopes)) {
             return generateApiGatewayProxyResponse(

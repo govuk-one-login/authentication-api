@@ -46,6 +46,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -62,6 +63,8 @@ public class TokenServiceTest {
             new TokenService(configurationService, redisConnectionService, kmsConnectionService);
     private static final Subject SUBJECT = new Subject("some-subject");
     private static final List<String> SCOPES = List.of("openid", "email", "phone");
+    private static final List<String> SCOPES_OFFLINE_ACCESS =
+            List.of("openid", "email", "phone", "offline_access");
     private static final String CLIENT_ID = "client-id";
     private static final String AUTH_CODE = new AuthorizationCode().toString();
     private static final String REDIRECT_URI = "http://localhost/redirect";
@@ -75,33 +78,42 @@ public class TokenServiceTest {
     }
 
     @Test
-    public void shouldSuccessfullyGenerateTokenResponse() throws ParseException, JOSEException {
-        ECKey ecSigningKey =
-                new ECKeyGenerator(Curve.P_256)
-                        .keyID(KEY_ID)
-                        .algorithm(JWSAlgorithm.ES256)
-                        .generate();
-        ECDSASigner signer = new ECDSASigner(ecSigningKey);
+    public void shouldGenerateTokenResponseWithRefreshToken() throws ParseException, JOSEException {
         Nonce nonce = new Nonce();
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
-        SignedJWT signedIdToken = createSignedIdToken();
-        SignedJWT signedAccessToken = createSignedAccessToken(signer, ecSigningKey.getKeyID());
-        SignResult idTokenSignedResult = new SignResult();
-        byte[] idTokenSignatureDer =
-                ECDSA.transcodeSignatureToDER(signedIdToken.getSignature().decode());
-        idTokenSignedResult.setSignature(ByteBuffer.wrap(idTokenSignatureDer));
-        idTokenSignedResult.setKeyId(KEY_ID);
-        idTokenSignedResult.setSigningAlgorithm(JWSAlgorithm.ES256.getName());
+        createSignedIdToken();
+        createSignedAccessToken();
+        Map<String, Object> additionalTokenClaims = new HashMap<>();
+        additionalTokenClaims.put("nonce", nonce);
+        OIDCTokenResponse tokenResponse =
+                tokenService.generateTokenResponse(
+                        CLIENT_ID, SUBJECT, SCOPES_OFFLINE_ACCESS, additionalTokenClaims);
 
-        SignResult accessTokenResult = new SignResult();
-        byte[] accessTokenSignatureDer =
-                ECDSA.transcodeSignatureToDER(signedAccessToken.getSignature().decode());
-        accessTokenResult.setSignature(ByteBuffer.wrap(accessTokenSignatureDer));
-        accessTokenResult.setKeyId(KEY_ID);
-        accessTokenResult.setSigningAlgorithm(JWSAlgorithm.ES256.getName());
-        when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(accessTokenResult);
-        when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(idTokenSignedResult);
+        assertEquals(
+                BASE_URL, tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getIssuer());
+        assertEquals(
+                SUBJECT.getValue(),
+                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("sub"));
+        assertNotNull(tokenResponse.getOIDCTokens().getRefreshToken());
+        verify(redisConnectionService)
+                .saveWithExpiry(
+                        tokenResponse.getOIDCTokens().getAccessToken().toJSONString(),
+                        SUBJECT.toString(),
+                        300L);
+        assertEquals(
+                nonce.getValue(),
+                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("nonce"));
+    }
+
+    @Test
+    public void shouldGenerateTokenResponseWithoutRefreshTokenWhenOfflineAccessScopeIsMissing()
+            throws ParseException, JOSEException {
+        Nonce nonce = new Nonce();
+        when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
+        when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
+        createSignedIdToken();
+        createSignedAccessToken();
         Map<String, Object> additionalTokenClaims = new HashMap<>();
         additionalTokenClaims.put("nonce", nonce);
         OIDCTokenResponse tokenResponse =
@@ -113,7 +125,7 @@ public class TokenServiceTest {
         assertEquals(
                 SUBJECT.getValue(),
                 tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("sub"));
-        assertNotNull(tokenResponse.getOIDCTokens().getRefreshToken());
+        assertNull(tokenResponse.getOIDCTokens().getRefreshToken());
         verify(redisConnectionService)
                 .saveWithExpiry(
                         tokenResponse.getOIDCTokens().getAccessToken().toJSONString(),
@@ -297,24 +309,44 @@ public class TokenServiceTest {
         return URLUtils.serializeParameters(privateKeyParams);
     }
 
-    private SignedJWT createSignedIdToken() throws JOSEException {
+    private void createSignedIdToken() throws JOSEException {
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256)
                         .keyID(KEY_ID)
                         .algorithm(JWSAlgorithm.ES256)
                         .generate();
         ECDSASigner ecdsaSigner = new ECDSASigner(ecSigningKey);
-        return createSignedIdToken(ecdsaSigner);
+        SignedJWT signedIdToken = createSignedIdToken(ecdsaSigner);
+        SignResult idTokenSignedResult = new SignResult();
+        byte[] idTokenSignatureDer =
+                ECDSA.transcodeSignatureToDER(signedIdToken.getSignature().decode());
+        idTokenSignedResult.setSignature(ByteBuffer.wrap(idTokenSignatureDer));
+        idTokenSignedResult.setKeyId(KEY_ID);
+        idTokenSignedResult.setSigningAlgorithm(JWSAlgorithm.ES256.getName());
+        when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(idTokenSignedResult);
     }
 
     private SignedJWT createSignedIdToken(JWSSigner signer) {
         return TokenGeneratorHelper.generateIDToken(CLIENT_ID, SUBJECT, BASE_URL, signer, KEY_ID);
     }
 
-    private SignedJWT createSignedAccessToken(JWSSigner signer, String keyId) {
-
-        return TokenGeneratorHelper.generateSignedToken(
-                CLIENT_ID, BASE_URL, SCOPES, signer, SUBJECT, keyId);
+    private void createSignedAccessToken() throws JOSEException {
+        ECKey ecSigningKey =
+                new ECKeyGenerator(Curve.P_256)
+                        .keyID(KEY_ID)
+                        .algorithm(JWSAlgorithm.ES256)
+                        .generate();
+        ECDSASigner signer = new ECDSASigner(ecSigningKey);
+        SignedJWT signedJWT =
+                TokenGeneratorHelper.generateSignedToken(
+                        CLIENT_ID, BASE_URL, SCOPES, signer, SUBJECT, ecSigningKey.getKeyID());
+        SignResult accessTokenResult = new SignResult();
+        byte[] accessTokenSignatureDer =
+                ECDSA.transcodeSignatureToDER(signedJWT.getSignature().decode());
+        accessTokenResult.setSignature(ByteBuffer.wrap(accessTokenSignatureDer));
+        accessTokenResult.setKeyId(KEY_ID);
+        accessTokenResult.setSigningAlgorithm(JWSAlgorithm.ES256.getName());
+        when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(accessTokenResult);
     }
 
     private KeyPair generateRsaKeyPair() {

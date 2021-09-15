@@ -14,7 +14,11 @@ import java.util.stream.Stream;
 public class ValidScopes {
 
     private static final List<OIDCScopeValue> allowedOIDCScopes =
-            List.of(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
+            List.of(
+                    OIDCScopeValue.OPENID,
+                    OIDCScopeValue.EMAIL,
+                    OIDCScopeValue.PHONE,
+                    OIDCScopeValue.OFFLINE_ACCESS);
 
     private static final List<CustomScopeValue> allowedCustomScopes =
             List.of(CustomScopeValue.ACCOUNT_MANAGEMENT);

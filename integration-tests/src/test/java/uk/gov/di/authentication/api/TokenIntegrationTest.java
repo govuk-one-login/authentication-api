@@ -52,6 +52,7 @@ import java.util.UUID;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class TokenIntegrationTest extends IntegrationTestEndpoints {
 
@@ -61,36 +62,14 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
     private static final String REDIRECT_URI = "http://localhost/redirect";
 
     @Test
-    public void shouldCallTokenResourceAndReturn200() throws JOSEException, ParseException {
+    public void shouldCallTokenResourceAndReturnAccessAndRefreshToken()
+            throws JOSEException, ParseException {
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-        Scope scope = new Scope(OIDCScopeValue.OPENID.getValue());
+        Scope scope =
+                new Scope(
+                        OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
         setUpDynamo(keyPair, scope);
-        PrivateKey privateKey = keyPair.getPrivate();
-        PrivateKeyJWT privateKeyJWT =
-                new PrivateKeyJWT(
-                        new ClientID(CLIENT_ID),
-                        URI.create(ROOT_RESOURCE_URL + TOKEN_ENDPOINT),
-                        JWSAlgorithm.RS256,
-                        (RSAPrivateKey) privateKey,
-                        null,
-                        null);
-        String code = new AuthorizationCode().toString();
-        RedisHelper.addAuthCodeAndCreateClientSession(
-                code, "a-client-session-id", TEST_EMAIL, generateAuthRequest().toParameters());
-        Map<String, List<String>> customParams = new HashMap<>();
-        customParams.put(
-                "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
-        customParams.put("client_id", Collections.singletonList(CLIENT_ID));
-        customParams.put("code", Collections.singletonList(code));
-        customParams.put("redirect_uri", Collections.singletonList(REDIRECT_URI));
-        Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
-        privateKeyParams.putAll(customParams);
-        Client client = ClientBuilder.newClient();
-        WebTarget webTarget = client.target(ROOT_RESOURCE_URL + TOKEN_ENDPOINT);
-        Invocation.Builder invocationBuilder = webTarget.request(MediaType.TEXT_PLAIN);
-        String requestParams = URLUtils.serializeParameters(privateKeyParams);
-        Response response =
-                invocationBuilder.post(Entity.entity(requestParams, MediaType.TEXT_PLAIN));
+        Response response = generateTokenRequest(keyPair, scope);
 
         assertEquals(200, response.getStatus());
         JSONObject jsonResponse = JSONObjectUtils.parse(response.readEntity(String.class));
@@ -107,8 +86,29 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
     }
 
     @Test
-    public void shouldCallTokenResourceWithRefreshTokenGrantAndReturn200()
+    public void shouldCallTokenResourceAndReturnAccessWithoutOfflineAccessScope()
             throws JOSEException, ParseException {
+        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        Scope scope = new Scope(OIDCScopeValue.OPENID.getValue());
+        setUpDynamo(keyPair, scope);
+        Response response = generateTokenRequest(keyPair, scope);
+
+        assertEquals(200, response.getStatus());
+        JSONObject jsonResponse = JSONObjectUtils.parse(response.readEntity(String.class));
+        assertNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getRefreshToken());
+        assertNotNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getBearerAccessToken());
+    }
+
+    @Test
+    public void shouldCallTokenResourceWithRefreshTokenGrantAndReturn200() throws JOSEException {
         Scope scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
         Subject subject = new Subject();
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
@@ -192,19 +192,45 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
         DynamoHelper.signUp(TEST_EMAIL, "password-1");
     }
 
-    private AuthenticationRequest generateAuthRequest() {
-        Scope scopeValues = new Scope();
-        scopeValues.add("openid");
+    private AuthenticationRequest generateAuthRequest(Scope scope) {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         State state = new State();
         Nonce nonce = new Nonce();
         return new AuthenticationRequest.Builder(
                         responseType,
-                        scopeValues,
+                        scope,
                         new ClientID(CLIENT_ID),
                         URI.create("http://localhost/redirect"))
                 .state(state)
                 .nonce(nonce)
                 .build();
+    }
+
+    private Response generateTokenRequest(KeyPair keyPair, Scope scope) throws JOSEException {
+        PrivateKey privateKey = keyPair.getPrivate();
+        PrivateKeyJWT privateKeyJWT =
+                new PrivateKeyJWT(
+                        new ClientID(CLIENT_ID),
+                        URI.create(ROOT_RESOURCE_URL + TOKEN_ENDPOINT),
+                        JWSAlgorithm.RS256,
+                        (RSAPrivateKey) privateKey,
+                        null,
+                        null);
+        String code = new AuthorizationCode().toString();
+        RedisHelper.addAuthCodeAndCreateClientSession(
+                code, "a-client-session-id", TEST_EMAIL, generateAuthRequest(scope).toParameters());
+        Map<String, List<String>> customParams = new HashMap<>();
+        customParams.put(
+                "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
+        customParams.put("client_id", Collections.singletonList(CLIENT_ID));
+        customParams.put("code", Collections.singletonList(code));
+        customParams.put("redirect_uri", Collections.singletonList(REDIRECT_URI));
+        Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
+        privateKeyParams.putAll(customParams);
+        Client client = ClientBuilder.newClient();
+        WebTarget webTarget = client.target(ROOT_RESOURCE_URL + TOKEN_ENDPOINT);
+        Invocation.Builder invocationBuilder = webTarget.request(MediaType.TEXT_PLAIN);
+        String requestParams = URLUtils.serializeParameters(privateKeyParams);
+        return invocationBuilder.post(Entity.entity(requestParams, MediaType.TEXT_PLAIN));
     }
 }

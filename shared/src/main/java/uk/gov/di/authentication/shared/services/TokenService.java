@@ -82,8 +82,12 @@ public class TokenService {
         AccessTokenHash accessTokenHash = AccessTokenHash.compute(accessToken, TOKEN_ALGORITHM);
         SignedJWT idToken =
                 generateIDToken(clientID, subject, additionalTokenClaims, accessTokenHash);
-        RefreshToken refreshToken = generateAndStoreRefreshToken(clientID, subject, scopes);
-        return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, refreshToken));
+        if (scopes.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
+            RefreshToken refreshToken = generateAndStoreRefreshToken(clientID, subject, scopes);
+            return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, refreshToken));
+        } else {
+            return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, null));
+        }
     }
 
     public OIDCTokenResponse generateRefreshTokenResponse(
