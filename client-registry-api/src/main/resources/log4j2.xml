@@ -1,9 +1,7 @@
 <Configuration status="WARN">
     <Appenders>
         <Lambda name="Lambda">
-            <PatternLayout>
-                <pattern>RequestId = %X{AWSRequestId} %-5p %c{1} - %m%n</pattern>
-            </PatternLayout>
+            <JsonLayout compact="true" eventEol="true" />
         </Lambda>
     </Appenders>
     <Loggers>
