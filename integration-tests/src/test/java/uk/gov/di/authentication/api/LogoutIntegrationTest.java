@@ -72,7 +72,9 @@ public class LogoutIntegrationTest extends IntegrationTestEndpoints {
                 singletonList("openid"),
                 "public-key",
                 singletonList("https://di-auth-stub-relying-party-build.london.cloudapps.digital/"),
-                String.valueOf(ServiceType.MANDATORY));
+                String.valueOf(ServiceType.MANDATORY),
+                "https://test.com",
+                "public");
         Client client = ClientBuilder.newClient();
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add(COOKIE, buildCookieString(sessionId, clientSessionId));

@@ -57,7 +57,9 @@ public class DynamoClientService implements ClientService {
             List<String> scopes,
             String publicKey,
             List<String> postLogoutRedirectUris,
-            String serviceType) {
+            String serviceType,
+            String sectorIdentifierUri,
+            String subjectType) {
         ClientRegistry clientRegistry =
                 new ClientRegistry()
                         .setClientID(clientID)
@@ -67,7 +69,9 @@ public class DynamoClientService implements ClientService {
                         .setScopes(scopes)
                         .setPublicKey(publicKey)
                         .setPostLogoutRedirectUrls(postLogoutRedirectUris)
-                        .setServiceType(serviceType);
+                        .setServiceType(serviceType)
+                        .setSectorIdentifierUri(sectorIdentifierUri)
+                        .setSubjectType(subjectType);
         clientRegistryMapper.save(clientRegistry);
     }
 

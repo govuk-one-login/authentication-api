@@ -85,13 +85,15 @@ public class DynamoService implements AuthenticationService {
                         .setPassword(hashedPassword)
                         .setCreated(dateTime)
                         .setUpdated(dateTime);
+
         UserProfile userProfile =
                 new UserProfile()
                         .setEmail(email)
                         .setSubjectID(subject.toString())
                         .setEmailVerified(true)
                         .setCreated(dateTime)
-                        .setUpdated(dateTime);
+                        .setUpdated(dateTime)
+                        .setPublicSubjectID((new Subject()).toString());
         userCredentialsMapper.save(userCredentials);
         userProfileMapper.save(userProfile);
     }
@@ -122,6 +124,11 @@ public class DynamoService implements AuthenticationService {
     public void updateConsent(String email, ClientConsent clientConsent) {
         userProfileMapper.save(
                 userProfileMapper.load(UserProfile.class, email).setClientConsent(clientConsent));
+    }
+
+    @Override
+    public UserProfile getUserProfileByEmail(String email) {
+        return userProfileMapper.load(UserProfile.class, email);
     }
 
     @Override
@@ -192,6 +199,10 @@ public class DynamoService implements AuthenticationService {
                         .withExpressionAttributeValues(eav)
                         .withConsistentRead(false);
 
+        return getUserProfile(queryExpression);
+    }
+
+    private UserProfile getUserProfile(DynamoDBQueryExpression<UserProfile> queryExpression) {
         QueryResultPage<UserProfile> scanPage =
                 userProfileMapper.queryPage(UserProfile.class, queryExpression);
         if (scanPage.getResults().isEmpty() || scanPage.getResults().size() > 1) {
