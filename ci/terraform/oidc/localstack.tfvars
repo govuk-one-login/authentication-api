@@ -9,3 +9,4 @@ keep_lambdas_warm         = false
 dns_state_bucket          = null
 dns_state_key             = null
 dns_state_role            = null
+frontend_base_url         = "http://localhost:3000"

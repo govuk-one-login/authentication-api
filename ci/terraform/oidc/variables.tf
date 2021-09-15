@@ -145,6 +145,11 @@ variable "keep_lambdas_warm" {
   type    = bool
 }
 
+variable "reset_password_route" {
+  type    = string
+  default = "/reset-password?code="
+}
+
 variable "frontend_base_url" {
   type    = string
   default = ""

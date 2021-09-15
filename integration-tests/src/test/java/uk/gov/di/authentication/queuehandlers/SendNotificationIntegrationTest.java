@@ -9,15 +9,19 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.services.AwsSqsClient;
 import uk.gov.di.authentication.helpers.httpstub.HttpStubExtension;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 
 import java.util.Optional;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
+import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 
@@ -26,6 +30,14 @@ public class SendNotificationIntegrationTest {
     private static final String TEST_PHONE_NUMBER = "01234567811";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@example.com";
     private static final int VERIFICATION_CODE_LENGTH = 6;
+
+    private static final AwsSqsClient client =
+            new AwsSqsClient(
+                    "eu-west-2",
+                    "http://localhost:45678/123456789012/local-email-notification-queue",
+                    Optional.of("http://localhost:45678/"));
+
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @RegisterExtension
     public static final HttpStubExtension notifyStub = new HttpStubExtension(8888);
@@ -38,16 +50,10 @@ public class SendNotificationIntegrationTest {
     @Test
     void shouldCallNotifyWhenValidEmailRequestIsAddedToQueue() throws JsonProcessingException {
         registerEmail();
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "162534");
 
-        AwsSqsClient client =
-                new AwsSqsClient(
-                        "eu-west-2",
-                        "http://localhost:45678/123456789012/local-email-notification-queue",
-                        Optional.of("http://localhost:45678/"));
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        client.send(objectMapper.writeValueAsString(notifyRequest));
+        client.send(
+                objectMapper.writeValueAsString(
+                        new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "162534")));
 
         await().atMost(1, MINUTES)
                 .untilAsserted(() -> assertThat(notifyStub.getCountOfRequests(), equalTo(1)));
@@ -64,17 +70,10 @@ public class SendNotificationIntegrationTest {
     void shouldCallNotifyWhenValidPhoneNumberRequestIsAddedToQueue()
             throws JsonProcessingException {
         registerText();
-        NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "162534");
 
-        AwsSqsClient client =
-                new AwsSqsClient(
-                        "eu-west-2",
-                        "http://localhost:45678/123456789012/local-email-notification-queue",
-                        Optional.of("http://localhost:45678/"));
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        client.send(objectMapper.writeValueAsString(notifyRequest));
+        client.send(
+                objectMapper.writeValueAsString(
+                        new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "162534")));
 
         await().atMost(1, MINUTES)
                 .untilAsserted(() -> assertThat(notifyStub.getCountOfRequests(), equalTo(1)));
@@ -89,16 +88,10 @@ public class SendNotificationIntegrationTest {
     @Test
     void shouldCallNotifyWhenValidMfaRequestIsAddedToQueue() throws JsonProcessingException {
         registerText();
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_PHONE_NUMBER, MFA_SMS, "162534");
 
-        AwsSqsClient client =
-                new AwsSqsClient(
-                        "eu-west-2",
-                        "http://localhost:45678/123456789012/local-email-notification-queue",
-                        Optional.of("http://localhost:45678/"));
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        client.send(objectMapper.writeValueAsString(notifyRequest));
+        client.send(
+                objectMapper.writeValueAsString(
+                        new NotifyRequest(TEST_PHONE_NUMBER, MFA_SMS, "162534")));
 
         await().atMost(1, MINUTES)
                 .untilAsserted(() -> assertThat(notifyStub.getCountOfRequests(), equalTo(1)));
@@ -108,6 +101,28 @@ public class SendNotificationIntegrationTest {
         assertEquals(TEST_PHONE_NUMBER, request.get("phone_number").asText());
         assertEquals(
                 VERIFICATION_CODE_LENGTH, personalisation.get("validation-code").asText().length());
+    }
+
+    @Test
+    void shouldCallNotifyWhenValidResetPasswordRequestIsAddedToQueue()
+            throws JsonProcessingException {
+        registerEmail();
+
+        String code = new CodeGeneratorService().twentyByteEncodedRandomCode();
+
+        client.send(
+                objectMapper.writeValueAsString(
+                        new NotifyRequest(TEST_EMAIL_ADDRESS, RESET_PASSWORD, code)));
+
+        await().atMost(1, MINUTES)
+                .untilAsserted(() -> assertThat(notifyStub.getCountOfRequests(), equalTo(1)));
+
+        JsonNode request = objectMapper.readTree(notifyStub.getLastRequest().getEntity());
+        JsonNode personalisation = request.get("personalisation");
+        assertThat(personalisation.get("reset-password-link").asText(), endsWith(code));
+        assertThat(
+                personalisation.get("reset-password-link").asText(),
+                startsWith("http://localhost:3000/reset-password?code="));
     }
 
     private void registerEmail() {

@@ -24,3 +24,7 @@ output "frontend_api_key" {
   value     = aws_api_gateway_api_key.di_auth_api_key.value
   sensitive = true
 }
+
+output "email_queue" {
+  value = aws_sqs_queue.email_queue.id
+}
