@@ -7,7 +7,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.jose.jwk.JWKSet;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -30,9 +29,7 @@ public class JwksHandler
         this.configurationService = new ConfigurationService();
         this.tokenValidationService =
                 new TokenValidationService(
-                        configurationService,
-                        new RedisConnectionService(configurationService),
-                        new KmsConnectionService(configurationService));
+                        configurationService, new KmsConnectionService(configurationService));
     }
 
     @Override

@@ -13,12 +13,16 @@ import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
 import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,6 +45,9 @@ import java.util.Optional;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -56,12 +63,14 @@ public class TokenServiceTest {
             new TokenService(configurationService, redisConnectionService, kmsConnectionService);
     private static final Subject SUBJECT = new Subject("some-subject");
     private static final List<String> SCOPES = List.of("openid", "email", "phone");
+    private static final List<String> SCOPES_OFFLINE_ACCESS =
+            List.of("openid", "email", "phone", "offline_access");
     private static final String CLIENT_ID = "client-id";
     private static final String AUTH_CODE = new AuthorizationCode().toString();
-    private static final String GRANT_TYPE = "authorization_code";
     private static final String REDIRECT_URI = "http://localhost/redirect";
     private static final String BASE_URL = "http://example.com";
     private static final String KEY_ID = "14342354354353";
+    private static final String REFRESH_TOKEN_PREFIX = "REFRESH";
 
     @BeforeEach
     public void setUp() {
@@ -70,33 +79,47 @@ public class TokenServiceTest {
     }
 
     @Test
-    public void shouldSuccessfullyGenerateTokenResponse() throws ParseException, JOSEException {
-        ECKey ecSigningKey =
-                new ECKeyGenerator(Curve.P_256)
-                        .keyID(KEY_ID)
-                        .algorithm(JWSAlgorithm.ES256)
-                        .generate();
-        ECDSASigner signer = new ECDSASigner(ecSigningKey);
+    public void shouldGenerateTokenResponseWithRefreshToken() throws ParseException, JOSEException {
         Nonce nonce = new Nonce();
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
-        SignedJWT signedIdToken = createSignedIdToken();
-        SignedJWT signedAccessToken = createSignedAccessToken(signer, ecSigningKey.getKeyID());
-        SignResult idTokenSignedResult = new SignResult();
-        byte[] idTokenSignatureDer =
-                ECDSA.transcodeSignatureToDER(signedIdToken.getSignature().decode());
-        idTokenSignedResult.setSignature(ByteBuffer.wrap(idTokenSignatureDer));
-        idTokenSignedResult.setKeyId(KEY_ID);
-        idTokenSignedResult.setSigningAlgorithm(JWSAlgorithm.ES256.getName());
+        createSignedIdToken();
+        createSignedAccessToken();
+        Map<String, Object> additionalTokenClaims = new HashMap<>();
+        additionalTokenClaims.put("nonce", nonce);
+        OIDCTokenResponse tokenResponse =
+                tokenService.generateTokenResponse(
+                        CLIENT_ID, SUBJECT, SCOPES_OFFLINE_ACCESS, additionalTokenClaims);
 
-        SignResult accessTokenResult = new SignResult();
-        byte[] accessTokenSignatureDer =
-                ECDSA.transcodeSignatureToDER(signedAccessToken.getSignature().decode());
-        accessTokenResult.setSignature(ByteBuffer.wrap(accessTokenSignatureDer));
-        accessTokenResult.setKeyId(KEY_ID);
-        accessTokenResult.setSigningAlgorithm(JWSAlgorithm.ES256.getName());
-        when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(accessTokenResult);
-        when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(idTokenSignedResult);
+        assertEquals(
+                BASE_URL, tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getIssuer());
+        assertEquals(
+                SUBJECT.getValue(),
+                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("sub"));
+        assertNotNull(tokenResponse.getOIDCTokens().getRefreshToken());
+        verify(redisConnectionService)
+                .saveWithExpiry(
+                        tokenResponse.getOIDCTokens().getAccessToken().toJSONString(),
+                        SUBJECT.toString(),
+                        300L);
+        verify(redisConnectionService)
+                .saveWithExpiry(
+                        REFRESH_TOKEN_PREFIX + "." + CLIENT_ID + "." + SUBJECT,
+                        tokenResponse.getOIDCTokens().getRefreshToken().getValue(),
+                        300L);
+        assertEquals(
+                nonce.getValue(),
+                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("nonce"));
+    }
+
+    @Test
+    public void shouldGenerateTokenResponseWithoutRefreshTokenWhenOfflineAccessScopeIsMissing()
+            throws ParseException, JOSEException {
+        Nonce nonce = new Nonce();
+        when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
+        when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
+        createSignedIdToken();
+        createSignedAccessToken();
         Map<String, Object> additionalTokenClaims = new HashMap<>();
         additionalTokenClaims.put("nonce", nonce);
         OIDCTokenResponse tokenResponse =
@@ -108,6 +131,7 @@ public class TokenServiceTest {
         assertEquals(
                 SUBJECT.getValue(),
                 tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("sub"));
+        assertNull(tokenResponse.getOIDCTokens().getRefreshToken());
         verify(redisConnectionService)
                 .saveWithExpiry(
                         tokenResponse.getOIDCTokens().getAccessToken().toJSONString(),
@@ -145,7 +169,8 @@ public class TokenServiceTest {
     @Test
     public void shouldSuccessfullyValidateTokenRequest() {
         Map<String, List<String>> customParams = new HashMap<>();
-        customParams.put("grant_type", Collections.singletonList(GRANT_TYPE));
+        customParams.put(
+                "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
         customParams.put("client_id", Collections.singletonList(CLIENT_ID));
         customParams.put("code", Collections.singletonList(AUTH_CODE));
         customParams.put("redirect_uri", Collections.singletonList(REDIRECT_URI));
@@ -158,7 +183,8 @@ public class TokenServiceTest {
     @Test
     public void shouldReturnErrorIfClientIdIsMissingWhenValidatingTokenRequest() {
         Map<String, List<String>> customParams = new HashMap<>();
-        customParams.put("grant_type", Collections.singletonList(GRANT_TYPE));
+        customParams.put(
+                "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
         customParams.put("code", Collections.singletonList(AUTH_CODE));
         customParams.put("redirect_uri", Collections.singletonList(REDIRECT_URI));
         Optional<ErrorObject> errorObject =
@@ -176,7 +202,8 @@ public class TokenServiceTest {
     @Test
     public void shouldReturnErrorIfRedirectUriIsMissingWhenValidatingTokenRequest() {
         Map<String, List<String>> customParams = new HashMap<>();
-        customParams.put("grant_type", Collections.singletonList(GRANT_TYPE));
+        customParams.put(
+                "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
         customParams.put("client_id", Collections.singletonList(CLIENT_ID));
         customParams.put("code", Collections.singletonList(AUTH_CODE));
         Optional<ErrorObject> errorObject =
@@ -212,7 +239,8 @@ public class TokenServiceTest {
     @Test
     public void shouldReturnErrorIfCodeIsMissingWhenValidatingTokenRequest() {
         Map<String, List<String>> customParams = new HashMap<>();
-        customParams.put("grant_type", Collections.singletonList(GRANT_TYPE));
+        customParams.put(
+                "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
         customParams.put("client_id", Collections.singletonList(CLIENT_ID));
         customParams.put("redirect_uri", Collections.singletonList(REDIRECT_URI));
         Optional<ErrorObject> errorObject =
@@ -240,6 +268,39 @@ public class TokenServiceTest {
         assertThat(errorObject, equalTo(Optional.of(OAuth2Error.UNSUPPORTED_GRANT_TYPE)));
     }
 
+    @Test
+    public void shouldSuccessfullyValidateRefreshTokenRequest() {
+        Scope scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
+        RefreshToken refreshToken = new RefreshToken();
+        Map<String, List<String>> customParams = new HashMap<>();
+        customParams.put(
+                "grant_type", Collections.singletonList(GrantType.REFRESH_TOKEN.getValue()));
+        customParams.put("client_id", Collections.singletonList(CLIENT_ID));
+        customParams.put("scope", Collections.singletonList(scope.toString()));
+        customParams.put("refresh_token", Collections.singletonList(refreshToken.getValue()));
+
+        Optional<ErrorObject> errorObject =
+                tokenService.validateTokenRequestParams(URLUtils.serializeParameters(customParams));
+        assertTrue(errorObject.isEmpty());
+    }
+
+    @Test
+    public void shouldReturnErrorWhenValidatingRefreshTokenRequestWithWrongGrant() {
+        Scope scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
+        RefreshToken refreshToken = new RefreshToken();
+        Map<String, List<String>> customParams = new HashMap<>();
+        customParams.put(
+                "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
+        customParams.put("client_id", Collections.singletonList(CLIENT_ID));
+        customParams.put("scope", Collections.singletonList(scope.toString()));
+        customParams.put("refresh_token", Collections.singletonList(refreshToken.getValue()));
+
+        Optional<ErrorObject> errorObject =
+                tokenService.validateTokenRequestParams(URLUtils.serializeParameters(customParams));
+
+        assertTrue(errorObject.isPresent());
+    }
+
     private String generateSerialisedPrivateKeyJWT(KeyPair keyPair) throws JOSEException {
         PrivateKeyJWT privateKeyJWT =
                 new PrivateKeyJWT(
@@ -254,24 +315,44 @@ public class TokenServiceTest {
         return URLUtils.serializeParameters(privateKeyParams);
     }
 
-    private SignedJWT createSignedIdToken() throws JOSEException {
+    private void createSignedIdToken() throws JOSEException {
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256)
                         .keyID(KEY_ID)
                         .algorithm(JWSAlgorithm.ES256)
                         .generate();
         ECDSASigner ecdsaSigner = new ECDSASigner(ecSigningKey);
-        return createSignedIdToken(ecdsaSigner);
+        SignedJWT signedIdToken = createSignedIdToken(ecdsaSigner);
+        SignResult idTokenSignedResult = new SignResult();
+        byte[] idTokenSignatureDer =
+                ECDSA.transcodeSignatureToDER(signedIdToken.getSignature().decode());
+        idTokenSignedResult.setSignature(ByteBuffer.wrap(idTokenSignatureDer));
+        idTokenSignedResult.setKeyId(KEY_ID);
+        idTokenSignedResult.setSigningAlgorithm(JWSAlgorithm.ES256.getName());
+        when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(idTokenSignedResult);
     }
 
     private SignedJWT createSignedIdToken(JWSSigner signer) {
         return TokenGeneratorHelper.generateIDToken(CLIENT_ID, SUBJECT, BASE_URL, signer, KEY_ID);
     }
 
-    private SignedJWT createSignedAccessToken(JWSSigner signer, String keyId) {
-
-        return TokenGeneratorHelper.generateAccessToken(
-                CLIENT_ID, BASE_URL, SCOPES, signer, SUBJECT, keyId);
+    private void createSignedAccessToken() throws JOSEException {
+        ECKey ecSigningKey =
+                new ECKeyGenerator(Curve.P_256)
+                        .keyID(KEY_ID)
+                        .algorithm(JWSAlgorithm.ES256)
+                        .generate();
+        ECDSASigner signer = new ECDSASigner(ecSigningKey);
+        SignedJWT signedJWT =
+                TokenGeneratorHelper.generateSignedToken(
+                        CLIENT_ID, BASE_URL, SCOPES, signer, SUBJECT, ecSigningKey.getKeyID());
+        SignResult accessTokenResult = new SignResult();
+        byte[] accessTokenSignatureDer =
+                ECDSA.transcodeSignatureToDER(signedJWT.getSignature().decode());
+        accessTokenResult.setSignature(ByteBuffer.wrap(accessTokenSignatureDer));
+        accessTokenResult.setKeyId(KEY_ID);
+        accessTokenResult.setSigningAlgorithm(JWSAlgorithm.ES256.getName());
+        when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(accessTokenResult);
     }
 
     private KeyPair generateRsaKeyPair() {

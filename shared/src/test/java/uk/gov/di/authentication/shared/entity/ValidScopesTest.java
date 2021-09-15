@@ -71,24 +71,28 @@ class ValidScopesTest {
 
     @Test
     void shouldReturnAllValidScopesInCorrectOrder() {
-        assertThat(ValidScopes.getAllValidScopes(), contains("openid", "email", "phone", "am"));
+        assertThat(
+                ValidScopes.getAllValidScopes(),
+                contains("openid", "email", "phone", "offline_access", "am"));
     }
 
     @Test
     void shouldReturnCorrectNumberOfValidScopes() {
-        assertEquals(ValidScopes.getAllValidScopes().size(), 4);
+        assertEquals(ValidScopes.getAllValidScopes().size(), 5);
     }
 
     @Test
     void shouldNotReturnPrivateScopesWhenPublicRequested() {
-        assertEquals(ValidScopes.getPublicValidScopes().size(), 3);
-        assertThat(ValidScopes.getPublicValidScopes(), contains("openid", "email", "phone"));
+        assertEquals(ValidScopes.getPublicValidScopes().size(), 4);
+        assertThat(
+                ValidScopes.getPublicValidScopes(),
+                contains("openid", "email", "phone", "offline_access"));
         assertThat(ValidScopes.getPublicValidScopes(), not(contains("am")));
     }
 
     @Test
     void shouldReturnOIDCScopesForWellKnown() {
         Scope scope = ValidScopes.getScopesForWellKnownHandler();
-        assertEquals(scope.toString(), "openid,email,phone");
+        assertEquals(scope.toString(), "openid,email,phone,offline_access");
     }
 }
