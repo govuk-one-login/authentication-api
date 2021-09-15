@@ -49,7 +49,6 @@ subprojects {
 
         lambda "com.amazonaws:aws-lambda-java-core:${dependencyVersions.aws_lambda_core_version}",
                 "com.amazonaws:aws-lambda-java-events:${dependencyVersions.aws_lambda_events_version}",
-                "com.amazonaws:aws-java-sdk-xray:${dependencyVersions.aws_sdk_version}",
                 "org.apache.logging.log4j:log4j-slf4j18-impl:2.13.0",
                 "com.amazonaws:aws-lambda-java-log4j2:1.2.0"
 
