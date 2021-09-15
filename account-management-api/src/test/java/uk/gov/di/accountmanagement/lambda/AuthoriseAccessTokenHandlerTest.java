@@ -160,7 +160,7 @@ class AuthoriseAccessTokenHandlerTest {
     private SignedJWT createSignedAccessToken(List<String> scopes) throws JOSEException {
         ECKey ecJWK = new ECKeyGenerator(Curve.P_256).keyID(KEY_ID).generate();
         JWSSigner signer = new ECDSASigner(ecJWK);
-        return TokenGeneratorHelper.generateAccessToken(
+        return TokenGeneratorHelper.generateSignedToken(
                 "client-id", "http://example.com", scopes, signer, SUBJECT, "14342354354353");
     }
 }

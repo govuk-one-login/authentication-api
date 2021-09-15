@@ -17,7 +17,7 @@ dependencies {
             configurations.nimbus,
             configurations.dynamodb,
             configurations.bouncycastle,
-            "com.googlecode.libphonenumber:libphonenumber:8.12.31",
+            "com.googlecode.libphonenumber:libphonenumber:8.12.32",
             project(":shared"),
             project(":client-registry-api")
 

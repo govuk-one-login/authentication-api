@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.shared.helpers;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.nio.charset.StandardCharsets;
@@ -7,6 +9,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 public class ClientSubjectHelper {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ClientSubjectHelper.class);
 
     private static final ConfigurationService configurationService = new ConfigurationService();
 
@@ -26,9 +30,7 @@ public class ClientSubjectHelper {
 
             return sb.toString();
         } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-
-        return null;
     }
 }

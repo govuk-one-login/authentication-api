@@ -62,18 +62,16 @@ public class StateMachine<T, A, C> {
     }
 
     public T transition(T from, A action) {
-        return states.getOrDefault(from, emptyList()).stream()
-                .filter(t -> t.getAction().equals(action))
-                .findFirst()
-                .orElseThrow(
-                        () -> {
-                            LOGGER.info(
-                                    "Session attempted invalid transition from {} on action {}",
-                                    from,
-                                    action);
-                            return new InvalidStateTransitionException();
-                        })
-                .getNextState();
+        T to =
+                states.getOrDefault(from, emptyList()).stream()
+                        .filter(t -> t.getAction().equals(action))
+                        .findFirst()
+                        .orElseThrow(() -> handleBadStateTransition(from, action))
+                        .getNextState();
+
+        LOGGER.info("Session transitioned from {} to {} on action {}", from, to, action);
+
+        return to;
     }
 
     public static StateMachine<SessionState, SessionAction, UserProfile> userJourneyStateMachine() {
@@ -217,4 +215,9 @@ public class StateMachine<T, A, C> {
     }
 
     public static class InvalidStateTransitionException extends RuntimeException {}
+
+    private InvalidStateTransitionException handleBadStateTransition(T from, A action) {
+        LOGGER.error("Session attempted invalid transition from {} on action {}", from, action);
+        return new InvalidStateTransitionException();
+    }
 }

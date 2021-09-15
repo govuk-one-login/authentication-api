@@ -48,7 +48,7 @@ data "aws_iam_policy_document" "api_gateway_logging_policy" {
 resource "aws_api_gateway_authorizer" "di_account_management_api" {
   name                             = "${var.environment}-authorise-access-token"
   rest_api_id                      = aws_api_gateway_rest_api.di_account_management_api.id
-  authorizer_uri                   = aws_lambda_function.authorizer.invoke_arn
+  authorizer_uri                   = aws_lambda_alias.authorizer_alias.invoke_arn
   authorizer_credentials           = aws_iam_role.invocation_role.arn
   authorizer_result_ttl_in_seconds = 0
 }
@@ -64,7 +64,10 @@ resource "aws_iam_role_policy" "invocation_policy" {
     {
       "Action": "lambda:InvokeFunction",
       "Effect": "Allow",
-      "Resource": "${aws_lambda_function.authorizer.arn}"
+      "Resource": [
+          "${aws_lambda_function.authorizer.arn}",
+          "${aws_lambda_alias.authorizer_alias.arn}"
+        ]
     }
   ]
 }
@@ -98,6 +101,13 @@ resource "aws_iam_role" "invocation_role" {
   path = "/"
 
   assume_role_policy = data.aws_iam_policy_document.api_gateway_can_assume_policy.json
+}
+
+resource "aws_lambda_alias" "authorizer_alias" {
+  name             = "${var.environment}-authorizer-alias-lambda-active"
+  description      = "Alias pointing at active version of Lambda"
+  function_name    = aws_lambda_function.authorizer.arn
+  function_version = aws_lambda_function.authorizer.version
 }
 
 resource "aws_cloudwatch_log_group" "lambda_log_group" {
@@ -153,6 +163,7 @@ resource "aws_api_gateway_deployment" "deployment" {
       module.update_phone_number.method_trigger_value,
       module.send_otp_notification.integration_trigger_value,
       module.send_otp_notification.method_trigger_value,
+      aws_lambda_alias.authorizer_alias.function_version
     ]))
   }
 

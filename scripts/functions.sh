@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
 
 DOCKER_BASE=docker-compose
+declare -a task_timings
+
+function record_timings() {
+  if [ "$4" = "true" ]; then
+    total=$(printf '\t%s' "===================================")
+    task_timings+=("$total");
+  fi;
+  message=$(printf '\t%ss \t\t%s' "$(($3 - $2))" "$1")
+  task_timings+=("$message")
+}
+
 function wait_for_docker_services() {
   RUNNING=0
   LOOP_COUNT=0
@@ -19,7 +30,9 @@ function wait_for_docker_services() {
 }
 
 function start_docker_services() {
+  start_docker_services_start_seconds=$SECONDS
   ${DOCKER_BASE} up --build -d --no-deps --quiet-pull "$@"
+  record_timings "start_docker_services" $start_docker_services_start_seconds $SECONDS false
 }
 
 function stop_docker_services() {
@@ -27,16 +40,21 @@ function stop_docker_services() {
 }
 
 function build_docker_service() {
+  build_docker_service_start_seconds=$SECONDS
   ${DOCKER_BASE} build --quiet "$@"
+  record_timings "build_docker_service" $build_docker_service_start_seconds $SECONDS false
 }
 
 function startup_docker() {
+  startup_docker_start_seconds=$SECONDS
   build_docker_service "$@"
   start_docker_services "$@"
   wait_for_docker_services "$@"
+  record_timings "startup_docker" $startup_docker_start_seconds $SECONDS false
 }
 
 function run_terraform() {
+  run_terraform_start_seconds=$SECONDS
   pushd "$1" >/dev/null
   rm -fr .terraform/ *.tfstate
   terraform init -backend-config=localstack.hcl
@@ -44,6 +62,7 @@ function run_terraform() {
   set +e
   terraform apply -var-file=localstack.tfvars -auto-approve > terraform.log
   tf_exit_code=$?
+  record_timings "run_terraform" $run_terraform_start_seconds $SECONDS false
   set -e
   if [ ${tf_exit_code} -eq 0 ]; then
     printf "\nTerraform succeeded.\n"
@@ -93,6 +112,7 @@ startup() {
 }
 
 run-integration-tests() {
+  run_integration_tests_start_seconds=$SECONDS
   pushd ci/terraform/oidc >/dev/null
   export API_GATEWAY_ID="$(terraform output -raw api_gateway_root_id)"
   export TOKEN_SIGNING_KEY_ALIAS="$(terraform output -raw token_signing_key_alias)"
@@ -104,6 +124,7 @@ run-integration-tests() {
   else
     ./gradlew integration-tests:test
   fi
+  record_timings "run-integration-tests" $run_integration_tests_start_seconds $SECONDS false
 }
 
 run-account-management-integration-tests() {

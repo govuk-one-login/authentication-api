@@ -33,12 +33,9 @@ import static org.mockito.Mockito.when;
 class TokenValidationServiceTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final RedisConnectionService redisConnectionService =
-            mock(RedisConnectionService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
     private final TokenValidationService tokenValidationService =
-            new TokenValidationService(
-                    configurationService, redisConnectionService, kmsConnectionService);
+            new TokenValidationService(configurationService, kmsConnectionService);
     private static final Subject SUBJECT = new Subject("some-subject");
     private static final List<String> SCOPES = List.of("openid", "email", "phone");
     private static final String CLIENT_ID = "client-id";
@@ -127,7 +124,7 @@ class TokenValidationServiceTest {
 
     private SignedJWT createSignedAccessToken(JWSSigner signer) {
 
-        return TokenGeneratorHelper.generateAccessToken(
+        return TokenGeneratorHelper.generateSignedToken(
                 CLIENT_ID, BASE_URL, SCOPES, signer, SUBJECT, KEY_ID);
     }
 }

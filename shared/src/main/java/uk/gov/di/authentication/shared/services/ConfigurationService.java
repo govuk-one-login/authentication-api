@@ -9,7 +9,7 @@ public class ConfigurationService {
     // Please keep the method names in alphabetical order so we can find stuff more easily.
 
     public long getAccessTokenExpiry() {
-        return Long.parseLong(System.getenv().getOrDefault("ACCESS_TOKEN_EXPIRY", "300"));
+        return Long.parseLong(System.getenv().getOrDefault("ACCESS_TOKEN_EXPIRY", "180"));
     }
 
     public long getAuthCodeExpiry() {

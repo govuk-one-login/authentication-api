@@ -15,7 +15,6 @@ import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
 import java.util.List;
@@ -45,9 +44,7 @@ public class AuthoriseAccessTokenHandler
         configurationService = new ConfigurationService();
         tokenValidationService =
                 new TokenValidationService(
-                        configurationService,
-                        new RedisConnectionService(configurationService),
-                        new KmsConnectionService(configurationService));
+                        configurationService, new KmsConnectionService(configurationService));
         dynamoService = new DynamoService(configurationService);
     }
 

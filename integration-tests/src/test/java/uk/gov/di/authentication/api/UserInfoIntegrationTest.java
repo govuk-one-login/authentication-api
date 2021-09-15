@@ -58,7 +58,7 @@ public class UserInfoIntegrationTest extends IntegrationTestEndpoints {
         SignedJWT signedJWT = KmsHelper.signAccessToken(claimsSet);
         AccessToken accessToken = new BearerAccessToken(signedJWT.serialize());
         Subject subject = new Subject();
-        RedisHelper.addAccessTokenToRedis(accessToken.toJSONString(), subject.toString(), 300L);
+        RedisHelper.addToRedis(accessToken.toJSONString(), subject.toString(), 300L);
         DynamoHelper.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD, subject);
         DynamoHelper.addPhoneNumber(TEST_EMAIL_ADDRESS, TEST_PHONE_NUMBER);
         DynamoHelper.setPhoneNumberVerified(TEST_EMAIL_ADDRESS, true);

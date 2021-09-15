@@ -146,10 +146,10 @@ public class RedisHelper {
         }
     }
 
-    public static void addAccessTokenToRedis(String accessToken, String subject, Long expiry) {
+    public static void addToRedis(String key, String value, Long expiry) {
         RedisConnectionService redis =
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD);
-        redis.saveWithExpiry(accessToken, subject, expiry);
+        redis.saveWithExpiry(key, value, expiry);
     }
 
     public static void flushData() {

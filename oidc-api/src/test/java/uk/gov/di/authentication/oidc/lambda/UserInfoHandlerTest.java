@@ -76,7 +76,7 @@ public class UserInfoHandlerTest {
         scopes.add("email");
         scopes.add("phone");
         SignedJWT signedAccessToken =
-                TokenGeneratorHelper.generateAccessToken(
+                TokenGeneratorHelper.generateSignedToken(
                         "client-id",
                         "issuer-url",
                         scopes,
