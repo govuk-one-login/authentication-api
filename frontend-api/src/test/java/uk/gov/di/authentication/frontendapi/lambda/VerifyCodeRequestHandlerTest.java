@@ -70,7 +70,8 @@ class VerifyCodeRequestHandlerTest {
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final ValidationService validationService = mock(ValidationService.class);
-    private final StateMachine<SessionState, SessionAction, UserProfile> stateMachine = mock(StateMachine.class);
+    private final StateMachine<SessionState, SessionAction, UserProfile> stateMachine =
+            mock(StateMachine.class);
     private final Session session =
             new Session("session-id")
                     .setEmailAddress(TEST_EMAIL_ADDRESS)
@@ -87,19 +88,42 @@ class VerifyCodeRequestHandlerTest {
                         configurationService,
                         validationService,
                         stateMachine);
-        when(stateMachine.transition(eq(VERIFY_EMAIL_CODE_SENT),eq(USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE))).thenReturn(EMAIL_CODE_VERIFIED);
-        when(stateMachine.transition(eq(VERIFY_EMAIL_CODE_SENT),eq(USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE))).thenReturn(EMAIL_CODE_NOT_VALID);
-        when(stateMachine.transition(eq(EMAIL_CODE_NOT_VALID),eq(USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES))).thenReturn(EMAIL_CODE_MAX_RETRIES_REACHED);
+        when(stateMachine.transition(
+                        eq(VERIFY_EMAIL_CODE_SENT), eq(USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE)))
+                .thenReturn(EMAIL_CODE_VERIFIED);
+        when(stateMachine.transition(
+                        eq(VERIFY_EMAIL_CODE_SENT),
+                        eq(USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE)))
+                .thenReturn(EMAIL_CODE_NOT_VALID);
+        when(stateMachine.transition(
+                        eq(EMAIL_CODE_NOT_VALID),
+                        eq(USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES)))
+                .thenReturn(EMAIL_CODE_MAX_RETRIES_REACHED);
 
-        when(stateMachine.transition(eq(VERIFY_PHONE_NUMBER_CODE_SENT),eq(USER_ENTERED_VALID_PHONE_VERIFICATION_CODE))).thenReturn(PHONE_NUMBER_CODE_VERIFIED);
-        when(stateMachine.transition(eq(VERIFY_PHONE_NUMBER_CODE_SENT),eq(USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE))).thenReturn(PHONE_NUMBER_CODE_NOT_VALID);
-        when(stateMachine.transition(eq(PHONE_NUMBER_CODE_NOT_VALID),eq(USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES))).thenReturn(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED);
+        when(stateMachine.transition(
+                        eq(VERIFY_PHONE_NUMBER_CODE_SENT),
+                        eq(USER_ENTERED_VALID_PHONE_VERIFICATION_CODE)))
+                .thenReturn(PHONE_NUMBER_CODE_VERIFIED);
+        when(stateMachine.transition(
+                        eq(VERIFY_PHONE_NUMBER_CODE_SENT),
+                        eq(USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE)))
+                .thenReturn(PHONE_NUMBER_CODE_NOT_VALID);
+        when(stateMachine.transition(
+                        eq(PHONE_NUMBER_CODE_NOT_VALID),
+                        eq(USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES)))
+                .thenReturn(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED);
 
-        when(stateMachine.transition(eq(MFA_SMS_CODE_SENT),eq(USER_ENTERED_VALID_MFA_CODE))).thenReturn(MFA_CODE_VERIFIED);
-        when(stateMachine.transition(eq(MFA_SMS_CODE_SENT),eq(USER_ENTERED_INVALID_MFA_CODE))).thenReturn(MFA_CODE_NOT_VALID);
-        when(stateMachine.transition(eq(MFA_CODE_NOT_VALID),eq(USER_ENTERED_VALID_MFA_CODE))).thenReturn(MFA_CODE_VERIFIED);
-        when(stateMachine.transition(eq(MFA_CODE_NOT_VALID),eq(USER_ENTERED_INVALID_MFA_CODE))).thenReturn(MFA_CODE_NOT_VALID);
-        when(stateMachine.transition(eq(MFA_CODE_NOT_VALID),eq(USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES))).thenReturn(MFA_CODE_MAX_RETRIES_REACHED);
+        when(stateMachine.transition(eq(MFA_SMS_CODE_SENT), eq(USER_ENTERED_VALID_MFA_CODE)))
+                .thenReturn(MFA_CODE_VERIFIED);
+        when(stateMachine.transition(eq(MFA_SMS_CODE_SENT), eq(USER_ENTERED_INVALID_MFA_CODE)))
+                .thenReturn(MFA_CODE_NOT_VALID);
+        when(stateMachine.transition(eq(MFA_CODE_NOT_VALID), eq(USER_ENTERED_VALID_MFA_CODE)))
+                .thenReturn(MFA_CODE_VERIFIED);
+        when(stateMachine.transition(eq(MFA_CODE_NOT_VALID), eq(USER_ENTERED_INVALID_MFA_CODE)))
+                .thenReturn(MFA_CODE_NOT_VALID);
+        when(stateMachine.transition(
+                        eq(MFA_CODE_NOT_VALID), eq(USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES)))
+                .thenReturn(MFA_CODE_MAX_RETRIES_REACHED);
     }
 
     @Test
@@ -382,7 +406,8 @@ class VerifyCodeRequestHandlerTest {
         when(validationService.validateEmailVerificationCode(
                         eq(Optional.of(CODE)), eq(CODE), any(Session.class), eq(5)))
                 .thenReturn(USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE);
-        when(stateMachine.transition(eq(NEW),eq(USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE))).thenThrow(new StateMachine.InvalidStateTransitionException());
+        when(stateMachine.transition(eq(NEW), eq(USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE)))
+                .thenThrow(new StateMachine.InvalidStateTransitionException());
 
         APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, VERIFY_EMAIL.toString());
 

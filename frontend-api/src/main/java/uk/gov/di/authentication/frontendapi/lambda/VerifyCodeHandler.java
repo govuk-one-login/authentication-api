@@ -52,7 +52,8 @@ public class VerifyCodeHandler
             CodeStorageService codeStorageService,
             DynamoService dynamoService,
             ConfigurationService configurationService,
-            ValidationService validationService, StateMachine<SessionState, SessionAction, UserProfile> stateMachine) {
+            ValidationService validationService,
+            StateMachine<SessionState, SessionAction, UserProfile> stateMachine) {
         this.sessionService = sessionService;
         this.codeStorageService = codeStorageService;
         this.dynamoService = dynamoService;
