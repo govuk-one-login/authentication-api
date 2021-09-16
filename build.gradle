@@ -55,7 +55,7 @@ subprojects {
         lambda_tests "com.amazonaws:aws-lambda-java-tests:1.1.0"
 
         lettuce "org.apache.commons:commons-pool2:2.11.1",
-                "io.lettuce:lettuce-core:6.1.4.RELEASE"
+                "io.lettuce:lettuce-core:6.1.5.RELEASE"
 
         logging_runtime "org.apache.logging.log4j:log4j-slf4j18-impl:2.13.0",
                 "com.amazonaws:aws-lambda-java-log4j2:1.2.0"
