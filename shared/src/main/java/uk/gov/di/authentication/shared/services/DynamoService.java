@@ -161,6 +161,15 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
+    public Optional<UserProfile> getUserProfileFromEmail(String email) {
+        UserCredentials userCredentials = userCredentialsMapper.load(UserCredentials.class, email);
+        if (userCredentials == null) {
+            return Optional.empty();
+        }
+        return Optional.of(getUserProfileFromSubject(userCredentials.getSubjectID()));
+    }
+
+    @Override
     public Optional<List<ClientConsent>> getUserConsents(String email) {
         return Optional.ofNullable(
                 userProfileMapper.load(UserProfile.class, email).getClientConsent());

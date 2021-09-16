@@ -37,4 +37,6 @@ public interface AuthenticationService {
     void updatePassword(String email, String newPassword);
 
     void removeAccount(String email);
+
+    Optional<UserProfile> getUserProfileFromEmail(String email);
 }

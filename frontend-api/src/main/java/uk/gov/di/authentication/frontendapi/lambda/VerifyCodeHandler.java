@@ -97,6 +97,10 @@ public class VerifyCodeHandler
                                 VerifyCodeRequest codeRequest =
                                         objectMapper.readValue(
                                                 input.getBody(), VerifyCodeRequest.class);
+                                Optional<UserProfile> userProfile =
+                                        dynamoService.getUserProfileFromEmail(
+                                                session.get().getEmailAddress());
+
                                 switch (codeRequest.getNotificationType()) {
                                     case VERIFY_EMAIL:
                                         if (codeStorageService.isCodeBlockedForSession(
@@ -108,7 +112,8 @@ public class VerifyCodeHandler
                                                                     stateMachine.transition(
                                                                             session.get()
                                                                                     .getState(),
-                                                                            USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES)));
+                                                                            USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES,
+                                                                            userProfile)));
                                         } else {
                                             Optional<String> emailCode =
                                                     codeStorageService.getOtpCode(
@@ -128,7 +133,8 @@ public class VerifyCodeHandler
                                                                                             session
                                                                                                     .get(),
                                                                                             configurationService
-                                                                                                    .getCodeMaxRetries()))));
+                                                                                                    .getCodeMaxRetries()),
+                                                                            userProfile)));
                                             processCodeSessionState(
                                                     session.get(),
                                                     codeRequest.getNotificationType());
@@ -144,7 +150,8 @@ public class VerifyCodeHandler
                                                                     stateMachine.transition(
                                                                             session.get()
                                                                                     .getState(),
-                                                                            USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES)));
+                                                                            USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES,
+                                                                            userProfile)));
                                         } else {
                                             Optional<String> phoneNumberCode =
                                                     codeStorageService.getOtpCode(
@@ -164,7 +171,8 @@ public class VerifyCodeHandler
                                                                                             session
                                                                                                     .get(),
                                                                                             configurationService
-                                                                                                    .getCodeMaxRetries()))));
+                                                                                                    .getCodeMaxRetries()),
+                                                                            userProfile)));
                                             processCodeSessionState(
                                                     session.get(),
                                                     codeRequest.getNotificationType());
@@ -180,12 +188,14 @@ public class VerifyCodeHandler
                                                                     stateMachine.transition(
                                                                             session.get()
                                                                                     .getState(),
-                                                                            USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES)));
+                                                                            USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES,
+                                                                            userProfile)));
                                         } else {
                                             Optional<String> mfaCode =
                                                     codeStorageService.getOtpCode(
                                                             session.get().getEmailAddress(),
                                                             codeRequest.getNotificationType());
+
                                             sessionService.save(
                                                     session.get()
                                                             .setState(
@@ -200,7 +210,8 @@ public class VerifyCodeHandler
                                                                                             session
                                                                                                     .get(),
                                                                                             configurationService
-                                                                                                    .getCodeMaxRetries()))));
+                                                                                                    .getCodeMaxRetries()),
+                                                                            userProfile)));
                                             processCodeSessionState(
                                                     session.get(),
                                                     codeRequest.getNotificationType());
@@ -246,7 +257,8 @@ public class VerifyCodeHandler
             codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
             dynamoService.updatePhoneNumberVerifiedStatus(session.getEmailAddress(), true);
         } else if (session.getState().equals(SessionState.EMAIL_CODE_VERIFIED)
-                || session.getState().equals(SessionState.MFA_CODE_VERIFIED)) {
+                || session.getState().equals(SessionState.MFA_CODE_VERIFIED)
+                || session.getState().equals(SessionState.UPDATED_TERMS_AND_CONDITIONS)) {
             codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
         } else if (session.getState().equals(SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED)
                 || session.getState().equals(SessionState.EMAIL_CODE_MAX_RETRIES_REACHED)
