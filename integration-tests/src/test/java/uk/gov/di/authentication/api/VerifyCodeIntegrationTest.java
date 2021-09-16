@@ -226,20 +226,53 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
     }
 
     @Test
-    public void shouldCallVerifyCodeEndpointToVerifyMfaCodeAndReturn200() throws IOException {
+    public void shouldReturnStateOfMfaCodeVerifiedWhenUserHasAcceptedCurrentTermsAndConditions()
+            throws IOException {
         String sessionId = RedisHelper.createSession();
         RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
         RedisHelper.setSessionState(sessionId, SessionState.MFA_SMS_CODE_SENT);
+        DynamoHelper.signUp(EMAIL_ADDRESS, "password");
+        DynamoHelper.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
+
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
         headers.add("X-API-Key", API_KEY);
 
-        String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
+        String code = RedisHelper.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code);
 
         Response response = RequestHelper.request(VERIFY_CODE_ENDPOINT, codeRequest, headers);
 
         assertEquals(200, response.getStatus());
+
+        BaseAPIResponse codeResponse =
+                objectMapper.readValue(response.readEntity(String.class), BaseAPIResponse.class);
+        assertEquals(SessionState.MFA_CODE_VERIFIED, codeResponse.getSessionState());
+    }
+
+    @Test
+    public void shouldReturnStateOfUpdatedTermsAndConditionsWhenUserHasNotAcceptedCurrentVersion()
+            throws IOException {
+        String sessionId = RedisHelper.createSession();
+        RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        RedisHelper.setSessionState(sessionId, SessionState.MFA_SMS_CODE_SENT);
+        DynamoHelper.signUp(EMAIL_ADDRESS, "password");
+        DynamoHelper.updateTermsAndConditions(EMAIL_ADDRESS, "0.1");
+
+        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
+        headers.add("Session-Id", sessionId);
+        headers.add("X-API-Key", API_KEY);
+
+        String code = RedisHelper.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
+        VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code);
+
+        Response response = RequestHelper.request(VERIFY_CODE_ENDPOINT, codeRequest, headers);
+
+        assertEquals(200, response.getStatus());
+
+        BaseAPIResponse codeResponse =
+                objectMapper.readValue(response.readEntity(String.class), BaseAPIResponse.class);
+        assertEquals(SessionState.UPDATED_TERMS_AND_CONDITIONS, codeResponse.getSessionState());
     }
 
     @Test

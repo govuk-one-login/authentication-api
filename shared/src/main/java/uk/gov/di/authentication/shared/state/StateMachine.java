@@ -67,6 +67,13 @@ public class StateMachine<T, A, C> {
     }
 
     public T transition(T from, A action, Optional<C> context) {
+        if (context.isEmpty()
+                && states.getOrDefault(from, emptyList()).stream()
+                                .filter(t -> t.getAction().equals(action))
+                                .count()
+                        > 1) {
+            throw handleNoTransitionContext(from, action);
+        }
         T to =
                 states.getOrDefault(from, emptyList()).stream()
                         .filter(
@@ -116,7 +123,7 @@ public class StateMachine<T, A, C> {
                         on(USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES)
                                 .then(EMAIL_CODE_MAX_RETRIES_REACHED))
                 .when(EMAIL_CODE_MAX_RETRIES_REACHED)
-                .deadEnd()
+                .finalState()
                 .when(EMAIL_CODE_VERIFIED)
                 .allow(
                         on(USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE).then(EMAIL_CODE_NOT_VALID),
@@ -144,7 +151,7 @@ public class StateMachine<T, A, C> {
                         on(USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES)
                                 .then(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED))
                 .when(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED)
-                .deadEnd()
+                .finalState()
                 .when(AUTHENTICATION_REQUIRED)
                 .allow(
                         on(USER_ENTERED_VALID_CREDENTIALS).then(LOGGED_IN),
@@ -154,7 +161,13 @@ public class StateMachine<T, A, C> {
                 .when(MFA_SMS_CODE_SENT)
                 .allow(
                         on(SYSTEM_HAS_SENT_MFA_CODE).then(MFA_SMS_CODE_SENT),
-                        on(USER_ENTERED_VALID_MFA_CODE).then(MFA_CODE_VERIFIED),
+                        on(USER_ENTERED_VALID_MFA_CODE)
+                                .then(UPDATED_TERMS_AND_CONDITIONS)
+                                .ifCondition(
+                                        userHasNotAcceptedTermsAndConditionsVersion(
+                                                configurationService
+                                                        .getTermsAndConditionsVersion())),
+                        on(USER_ENTERED_VALID_MFA_CODE).then(MFA_CODE_VERIFIED).byDefault(),
                         on(USER_ENTERED_INVALID_MFA_CODE).then(MFA_CODE_NOT_VALID))
                 .when(MFA_CODE_NOT_VALID)
                 .allow(
@@ -169,7 +182,7 @@ public class StateMachine<T, A, C> {
                         on(USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES)
                                 .then(MFA_CODE_MAX_RETRIES_REACHED))
                 .when(MFA_CODE_MAX_RETRIES_REACHED)
-                .deadEnd()
+                .finalState()
                 .when(MFA_CODE_VERIFIED)
                 .allow(on(SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE).then(AUTHENTICATED))
                 .when(AUTHENTICATED)
@@ -178,6 +191,8 @@ public class StateMachine<T, A, C> {
     }
 
     public static class InvalidStateTransitionException extends RuntimeException {}
+
+    public static class NoTransitionContextProvidedException extends RuntimeException {}
 
     public static <T, A, C> Builder<T, A, C> builder() {
         return new Builder<>();
@@ -218,7 +233,7 @@ public class StateMachine<T, A, C> {
             this.state = state;
         }
 
-        public Builder<T, A, C> deadEnd() {
+        public Builder<T, A, C> finalState() {
             stateMachineBuilder.addStateRule(state, Collections.emptyList());
             return stateMachineBuilder;
         }
@@ -227,5 +242,13 @@ public class StateMachine<T, A, C> {
     private InvalidStateTransitionException handleBadStateTransition(T from, A action) {
         LOGGER.error("Session attempted invalid transition from {} on action {}", from, action);
         return new InvalidStateTransitionException();
+    }
+
+    private NoTransitionContextProvidedException handleNoTransitionContext(T from, A action) {
+        LOGGER.error(
+                "More than one transition defined from {} on action {} but no context was provided",
+                from,
+                action);
+        return new NoTransitionContextProvidedException();
     }
 }

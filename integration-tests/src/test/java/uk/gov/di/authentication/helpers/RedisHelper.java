@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.services.AuthorisationCodeService.AUTH_CODE_PREFIX;
@@ -133,6 +134,17 @@ public class RedisHelper {
             var code = new CodeGeneratorService().sixDigitCode();
             new CodeStorageService(redis)
                     .saveOtpCode(email, code, codeExpiryTime, VERIFY_PHONE_NUMBER);
+
+            return code;
+        }
+    }
+
+    public static String generateAndSaveMfaCode(String email, long codeExpiryTime) {
+        try (RedisConnectionService redis =
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
+
+            var code = new CodeGeneratorService().sixDigitCode();
+            new CodeStorageService(redis).saveOtpCode(email, code, codeExpiryTime, MFA_SMS);
 
             return code;
         }

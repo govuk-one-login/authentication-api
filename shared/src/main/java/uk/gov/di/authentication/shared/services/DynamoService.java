@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
+import static java.util.Objects.nonNull;
 
 public class DynamoService implements AuthenticationService {
 
@@ -162,11 +163,15 @@ public class DynamoService implements AuthenticationService {
 
     @Override
     public Optional<UserProfile> getUserProfileFromEmail(String email) {
-        UserCredentials userCredentials = userCredentialsMapper.load(UserCredentials.class, email);
-        if (userCredentials == null) {
-            return Optional.empty();
+        if (nonNull(email) && !email.isBlank()) {
+            UserCredentials userCredentials =
+                    userCredentialsMapper.load(UserCredentials.class, email);
+
+            if (nonNull(userCredentials)) {
+                return Optional.of(getUserProfileFromSubject(userCredentials.getSubjectID()));
+            }
         }
-        return Optional.of(getUserProfileFromSubject(userCredentials.getSubjectID()));
+        return Optional.empty();
     }
 
     @Override
