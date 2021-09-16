@@ -20,6 +20,7 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_IS
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_MFA_CODE;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_PHONE_VERIFICATION_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ACCEPTS_TERMS_AND_CONDITIONS;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_A_NEW_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES;
@@ -34,6 +35,7 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_MFA_CODE;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_PHONE_VERIFICATION_CODE;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_CREATED_A_PASSWORD;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_REJECTS_TERMS_AND_CONDITIONS;
 import static uk.gov.di.authentication.shared.entity.SessionState.ADDED_UNVERIFIED_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
@@ -51,6 +53,8 @@ import static uk.gov.di.authentication.shared.entity.SessionState.PHONE_NUMBER_C
 import static uk.gov.di.authentication.shared.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
 import static uk.gov.di.authentication.shared.entity.SessionState.TWO_FACTOR_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS;
+import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS_ACCEPTED;
+import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS_REJECTED;
 import static uk.gov.di.authentication.shared.entity.SessionState.USER_NOT_FOUND;
 import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
 import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_PHONE_NUMBER_CODE_SENT;
@@ -185,6 +189,16 @@ public class StateMachine<T, A, C> {
                 .finalState()
                 .when(MFA_CODE_VERIFIED)
                 .allow(on(SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE).then(AUTHENTICATED))
+                .when(UPDATED_TERMS_AND_CONDITIONS)
+                .allow(
+                        on(USER_ACCEPTS_TERMS_AND_CONDITIONS)
+                                .then(UPDATED_TERMS_AND_CONDITIONS_ACCEPTED),
+                        on(USER_REJECTS_TERMS_AND_CONDITIONS)
+                                .then(UPDATED_TERMS_AND_CONDITIONS_REJECTED))
+                .when(UPDATED_TERMS_AND_CONDITIONS_ACCEPTED)
+                .allow(on(SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE).then(AUTHENTICATED))
+                .when(UPDATED_TERMS_AND_CONDITIONS_REJECTED)
+                .finalState()
                 .when(AUTHENTICATED)
                 .allow(on(SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE).then(AUTHENTICATED))
                 .build();
