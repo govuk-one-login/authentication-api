@@ -60,6 +60,8 @@ locals {
     environment = var.environment
     application = "oidc-api"
   }
+
+  request_tracing_allowed = contains(["build", "sandpit"], var.environment)
 }
 
 data "aws_caller_identity" "current" {}

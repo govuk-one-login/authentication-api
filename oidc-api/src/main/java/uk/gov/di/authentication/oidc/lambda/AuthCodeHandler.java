@@ -146,6 +146,7 @@ public class AuthCodeHandler
                                                         ResponseHeaders.LOCATION,
                                                         errorResponse.toURI().toString()));
                             }
+
                             try {
                                 if (!authorizationService.isClientRedirectUriValid(
                                         authenticationRequest.getClientID(),

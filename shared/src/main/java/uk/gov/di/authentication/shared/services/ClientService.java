@@ -19,7 +19,9 @@ public interface ClientService {
             List<String> scopes,
             String publicKey,
             List<String> postLogoutRedirectUris,
-            String serviceType);
+            String serviceType,
+            String sectorIdentifierUri,
+            String subjectType);
 
     Optional<ClientRegistry> getClient(String clientId);
 

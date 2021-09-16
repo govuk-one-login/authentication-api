@@ -18,6 +18,8 @@ import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.Issuer;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
+import com.nimbusds.oauth2.sdk.token.RefreshToken;
+import com.nimbusds.oauth2.sdk.token.Token;
 import com.nimbusds.openid.connect.sdk.validators.IDTokenValidator;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -33,16 +35,12 @@ import java.security.interfaces.ECPublicKey;
 public class TokenValidationService {
 
     private final ConfigurationService configService;
-    private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
     private static final Logger LOGGER = LoggerFactory.getLogger(TokenValidationService.class);
 
     public TokenValidationService(
-            ConfigurationService configService,
-            RedisConnectionService redisConnectionService,
-            KmsConnectionService kmsConnectionService) {
+            ConfigurationService configService, KmsConnectionService kmsConnectionService) {
         this.configService = configService;
-        this.redisConnectionService = redisConnectionService;
         this.kmsConnectionService = kmsConnectionService;
     }
 
@@ -75,15 +73,24 @@ public class TokenValidationService {
     }
 
     public boolean validateAccessTokenSignature(AccessToken accessToken) {
+        LOGGER.info("Validating Access Token signature");
+        return validateTokenSignature(accessToken);
+    }
+
+    public boolean validateRefreshTokenSignature(RefreshToken refreshToken) {
+        LOGGER.info("Validating Refresh Token signature");
+        return validateTokenSignature(refreshToken);
+    }
+
+    private boolean validateTokenSignature(Token token) {
         boolean isVerified;
         try {
-            LOGGER.info("Validating Access Token signature");
             LOGGER.info("TokenSigningKeyID: " + configService.getTokenSigningKeyAlias());
-            SignedJWT signedJwt = SignedJWT.parse(accessToken.getValue());
+            SignedJWT signedJwt = SignedJWT.parse(token.getValue());
             JWSVerifier verifier = new ECDSAVerifier(getPublicJwk().toECKey());
             isVerified = signedJwt.verify(verifier);
         } catch (JOSEException | java.text.ParseException e) {
-            LOGGER.error("Unable to validate Signature of Access token", e);
+            LOGGER.error("Unable to validate Signature of Token", e);
             return false;
         }
         return isVerified;

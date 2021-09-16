@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import org.apache.commons.validator.routines.UrlValidator;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
@@ -81,7 +82,10 @@ public class ClientRegistrationHandler
                                         clientRegistrationRequest.getScopes(),
                                         clientRegistrationRequest.getPublicKey(),
                                         clientRegistrationRequest.getPostLogoutRedirectUris(),
-                                        clientRegistrationRequest.getServiceType());
+                                        clientRegistrationRequest.getServiceType(),
+                                        sanitiseUrl(
+                                                clientRegistrationRequest.getSectorIdentifierUri()),
+                                        clientRegistrationRequest.getSubjectType());
 
                                 ClientRegistrationResponse clientRegistrationResponse =
                                         new ClientRegistrationResponse(
@@ -104,5 +108,9 @@ public class ClientRegistrationHandler
                                         OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString());
                             }
                         });
+    }
+
+    private String sanitiseUrl(String url) {
+        return new UrlValidator().isValid(url) ? url : null;
     }
 }

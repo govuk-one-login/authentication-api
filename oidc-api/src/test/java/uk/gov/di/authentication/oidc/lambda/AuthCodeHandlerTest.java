@@ -51,7 +51,6 @@ import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEv
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthCodeHandlerTest {
-
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "client-session-id";
     private static final String COOKIE = "Cookie";

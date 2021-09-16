@@ -66,5 +66,8 @@ resource "aws_dynamodb_table_item" "stub_rp_client" {
     ServiceType = {
       S = "MANDATORY"
     }
+    SubjectType = {
+      S = "public"
+    }
   })
 }

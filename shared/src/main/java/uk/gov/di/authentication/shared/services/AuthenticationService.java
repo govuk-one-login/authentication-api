@@ -22,6 +22,8 @@ public interface AuthenticationService {
 
     void updateConsent(String email, ClientConsent clientConsent);
 
+    UserProfile getUserProfileByEmail(String email);
+
     Optional<List<ClientConsent>> getUserConsents(String email);
 
     void updatePhoneNumberVerifiedStatus(String email, boolean verifiedStatus);

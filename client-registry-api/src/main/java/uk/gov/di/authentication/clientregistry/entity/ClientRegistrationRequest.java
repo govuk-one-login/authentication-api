@@ -29,6 +29,12 @@ public class ClientRegistrationRequest {
     @JsonProperty("service_type")
     private String serviceType;
 
+    @JsonProperty("sector_identifier_uri")
+    private String sectorIdentifierUri;
+
+    @JsonProperty("subject_type")
+    private String subjectType;
+
     public ClientRegistrationRequest(
             @JsonProperty(required = true, value = "client_name") String clientName,
             @JsonProperty(required = true, value = "redirect_uris") List<String> redirectUris,
@@ -36,7 +42,10 @@ public class ClientRegistrationRequest {
             @JsonProperty(required = true, value = "public_key") String publicKey,
             @JsonProperty(required = true, value = "scopes") List<String> scopes,
             @JsonProperty(value = "post_logout_redirect_uris") List<String> postLogoutRedirectUris,
-            @JsonProperty(required = true, value = "service_type") String serviceType) {
+            @JsonProperty(required = true, value = "service_type") String serviceType,
+            @JsonProperty(required = true, value = "sector_identifier_uri")
+                    String sectorIdentifierUri,
+            @JsonProperty(required = true, value = "subject_type") String subjectType) {
         this.clientName = clientName;
         this.redirectUris = redirectUris;
         this.contacts = contacts;
@@ -46,6 +55,8 @@ public class ClientRegistrationRequest {
             this.postLogoutRedirectUris = postLogoutRedirectUris;
         }
         this.serviceType = serviceType;
+        this.sectorIdentifierUri = sectorIdentifierUri;
+        this.subjectType = subjectType;
     }
 
     public String getClientName() {
@@ -74,5 +85,13 @@ public class ClientRegistrationRequest {
 
     public String getServiceType() {
         return serviceType;
+    }
+
+    public String getSectorIdentifierUri() {
+        return sectorIdentifierUri;
+    }
+
+    public String getSubjectType() {
+        return subjectType;
     }
 }

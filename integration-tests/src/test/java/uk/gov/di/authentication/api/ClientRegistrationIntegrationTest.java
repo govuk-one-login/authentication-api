@@ -34,7 +34,9 @@ public class ClientRegistrationIntegrationTest extends IntegrationTestEndpoints 
                         VALID_PUBLIC_CERT,
                         singletonList("openid"),
                         singletonList("http://localhost/post-redirect-logout"),
-                        String.valueOf(ServiceType.MANDATORY));
+                        String.valueOf(ServiceType.MANDATORY),
+                        "https://test.com",
+                        "public");
 
         Response response =
                 ClientBuilder.newClient()

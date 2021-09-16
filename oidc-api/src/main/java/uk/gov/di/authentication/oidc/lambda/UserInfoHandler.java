@@ -57,9 +57,7 @@ public class UserInfoHandler
         redisConnectionService = new RedisConnectionService(configurationService);
         this.tokenValidationService =
                 new TokenValidationService(
-                        configurationService,
-                        redisConnectionService,
-                        new KmsConnectionService(configurationService));
+                        configurationService, new KmsConnectionService(configurationService));
     }
 
     @Override

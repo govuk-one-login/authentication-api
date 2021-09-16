@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.shared.services;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 public class ConfigurationService {
@@ -8,7 +9,7 @@ public class ConfigurationService {
     // Please keep the method names in alphabetical order so we can find stuff more easily.
 
     public long getAccessTokenExpiry() {
-        return Long.parseLong(System.getenv().getOrDefault("ACCESS_TOKEN_EXPIRY", "300"));
+        return Long.parseLong(System.getenv().getOrDefault("ACCESS_TOKEN_EXPIRY", "180"));
     }
 
     public long getAuthCodeExpiry() {
@@ -122,5 +123,9 @@ public class ConfigurationService {
 
     public int getWarmupDelayMillis() {
         return Integer.parseInt(System.getenv().getOrDefault("WARMER_DELAY", "75"));
+    }
+
+    public byte[] getSalt() {
+        return System.getenv().getOrDefault("SALT", "random").getBytes(StandardCharsets.UTF_8);
     }
 }

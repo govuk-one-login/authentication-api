@@ -4,18 +4,23 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -25,8 +30,12 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenService;
+import uk.gov.di.authentication.shared.services.TokenValidationService;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -43,25 +52,32 @@ public class TokenHandler
 
     private final ClientService clientService;
     private final TokenService tokenService;
-    private final AuthenticationService authenticationService;
+    private final DynamoService dynamoService;
     private final ConfigurationService configurationService;
     private final AuthorisationCodeService authorisationCodeService;
     private final ClientSessionService clientSessionService;
+    private final TokenValidationService tokenValidationService;
+    private final RedisConnectionService redisConnectionService;
     private static final String TOKEN_PATH = "/token";
+    private static final String REFRESH_TOKEN_PREFIX = "REFRESH";
 
     public TokenHandler(
             ClientService clientService,
             TokenService tokenService,
-            AuthenticationService authenticationService,
+            DynamoService dynamoService,
             ConfigurationService configurationService,
             AuthorisationCodeService authorisationCodeService,
-            ClientSessionService clientSessionService) {
+            ClientSessionService clientSessionService,
+            TokenValidationService tokenValidationService,
+            RedisConnectionService redisConnectionService) {
         this.clientService = clientService;
         this.tokenService = tokenService;
-        this.authenticationService = authenticationService;
+        this.dynamoService = dynamoService;
         this.configurationService = configurationService;
         this.authorisationCodeService = authorisationCodeService;
         this.clientSessionService = clientSessionService;
+        this.tokenValidationService = tokenValidationService;
+        this.redisConnectionService = redisConnectionService;
     }
 
     public TokenHandler() {
@@ -76,13 +92,13 @@ public class TokenHandler
                         configurationService,
                         new RedisConnectionService(configurationService),
                         new KmsConnectionService(configurationService));
-        this.authenticationService =
-                new DynamoService(
-                        configurationService.getAwsRegion(),
-                        configurationService.getEnvironment(),
-                        configurationService.getDynamoEndpointUri());
+        this.dynamoService = new DynamoService(configurationService);
         this.authorisationCodeService = new AuthorisationCodeService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
+        this.tokenValidationService =
+                new TokenValidationService(
+                        configurationService, new KmsConnectionService(configurationService));
+        this.redisConnectionService = new RedisConnectionService(configurationService);
     }
 
     @Override
@@ -144,6 +160,14 @@ public class TokenHandler
                                                 .toJSONString());
                             }
 
+                            if (requestBody
+                                    .get("grant_type")
+                                    .equals(GrantType.REFRESH_TOKEN.getValue())) {
+                                return processRefreshTokenRequest(
+                                        requestBody,
+                                        client.getScopes(),
+                                        new RefreshToken(requestBody.get("refresh_token")));
+                            }
                             AuthCodeExchangeData authCodeExchangeData;
                             try {
                                 authCodeExchangeData =
@@ -184,7 +208,10 @@ public class TokenHandler
                                         OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
                             }
                             Subject subject =
-                                    authenticationService.getSubjectFromEmail(
+                                    getSubjectByEmailAndClient(
+                                            authCodeExchangeData.getEmail(), client);
+                            Subject internalSubject =
+                                    dynamoService.getSubjectFromEmail(
                                             authCodeExchangeData.getEmail());
                             Map<String, Object> additionalTokenClaims = new HashMap<>();
                             if (authRequest.getNonce() != null) {
@@ -193,7 +220,7 @@ public class TokenHandler
                             OIDCTokenResponse tokenResponse =
                                     tokenService.generateTokenResponse(
                                             clientID,
-                                            subject,
+                                            internalSubject,
                                             authRequest.getScope().toStringList(),
                                             additionalTokenClaims);
 
@@ -208,5 +235,95 @@ public class TokenHandler
                             return generateApiGatewayProxyResponse(
                                     200, tokenResponse.toJSONObject().toJSONString());
                         });
+    }
+
+    private Subject getSubjectByEmailAndClient(String email, ClientRegistry client) {
+        UserProfile userProfile = dynamoService.getUserProfileByEmail(email);
+
+        if (client.getSubjectType().equalsIgnoreCase("public")) {
+            return new Subject(userProfile.getPublicSubjectID());
+        } else {
+            String uri =
+                    client.getSectorIdentifierUri() != null
+                            ? client.getSectorIdentifierUri()
+                            : returnHost(client);
+            return new Subject(
+                    ClientSubjectHelper.pairwiseIdentifier(userProfile.getSubjectID(), uri));
+        }
+    }
+
+    private String returnHost(ClientRegistry clientRegistry) {
+        String redirectUri = null;
+
+        if (clientRegistry.getRedirectUrls().stream().findFirst().isPresent()) {
+            redirectUri = clientRegistry.getRedirectUrls().stream().findFirst().get();
+            try {
+                String hostname = new URI(redirectUri).getHost();
+                if (hostname != null)
+                    return hostname.startsWith("www.") ? hostname.substring(4) : hostname;
+            } catch (URISyntaxException e) {
+                LOG.info("Not a valid URI {} - Exception {}", redirectUri, e);
+            }
+        }
+
+        return redirectUri;
+    }
+
+    private APIGatewayProxyResponseEvent processRefreshTokenRequest(
+            Map<String, String> requestBody,
+            List<String> clientScopes,
+            RefreshToken currentRefreshToken) {
+        boolean refreshTokenSignatureValid =
+                tokenValidationService.validateRefreshTokenSignature(currentRefreshToken);
+        if (!refreshTokenSignatureValid) {
+            return generateApiGatewayProxyResponse(
+                    400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
+        }
+        Subject subject;
+        List<String> scopes;
+        try {
+            SignedJWT signedJwt = SignedJWT.parse(currentRefreshToken.getValue());
+            subject = new Subject(signedJwt.getJWTClaimsSet().getSubject());
+            scopes = (List<String>) signedJwt.getJWTClaimsSet().getClaim("scope");
+        } catch (java.text.ParseException e) {
+            LOG.error("Unable to parse RefreshToken", e);
+            return generateApiGatewayProxyResponse(
+                    400,
+                    new ErrorObject(OAuth2Error.INVALID_GRANT_CODE, "Invalid Refresh token")
+                            .toJSONObject()
+                            .toJSONString());
+        }
+        if (!clientScopes.containsAll(scopes)) {
+            return generateApiGatewayProxyResponse(
+                    400, OAuth2Error.INVALID_SCOPE.toJSONObject().toJSONString());
+        }
+        if (!scopes.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
+            return generateApiGatewayProxyResponse(
+                    400, OAuth2Error.INVALID_SCOPE.toJSONObject().toJSONString());
+        }
+        String clientId = requestBody.get("client_id");
+        String redisKey = REFRESH_TOKEN_PREFIX + "." + clientId + "." + subject.getValue();
+        Optional<String> refreshToken =
+                Optional.ofNullable(redisConnectionService.getValue(redisKey));
+        if (refreshToken.isEmpty()) {
+            LOG.error("Refresh token not found with given key");
+            return generateApiGatewayProxyResponse(
+                    400,
+                    new ErrorObject(OAuth2Error.INVALID_GRANT_CODE, "Invalid Refresh token")
+                            .toJSONObject()
+                            .toJSONString());
+        }
+        if (!new RefreshToken(refreshToken.get()).equals(currentRefreshToken)) {
+            LOG.error("Refresh token found does not match Refresh token in request");
+            return generateApiGatewayProxyResponse(
+                    400,
+                    new ErrorObject(OAuth2Error.INVALID_GRANT_CODE, "Invalid Refresh token")
+                            .toJSONObject()
+                            .toJSONString());
+        }
+        redisConnectionService.deleteValue(redisKey);
+        OIDCTokenResponse tokenResponse =
+                tokenService.generateRefreshTokenResponse(clientId, subject, scopes);
+        return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
     }
 }

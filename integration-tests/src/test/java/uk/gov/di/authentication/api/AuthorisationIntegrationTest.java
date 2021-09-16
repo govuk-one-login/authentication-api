@@ -275,6 +275,8 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
                 scopes,
                 Base64.getMimeEncoder().encodeToString(KEY_PAIR.getPublic().getEncoded()),
                 singletonList("http://localhost/post-redirect-logout"),
-                String.valueOf(ServiceType.MANDATORY));
+                String.valueOf(ServiceType.MANDATORY),
+                "https://test.com",
+                "public");
     }
 }
