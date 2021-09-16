@@ -3,6 +3,8 @@ package uk.gov.di.authentication.shared.services;
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;
 import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -34,7 +36,7 @@ import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.di.authentication.shared.entity.ValidScopes;
+import uk.gov.di.authentication.shared.entity.TokenStore;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 
 import java.nio.ByteBuffer;
@@ -45,7 +47,6 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
@@ -61,7 +62,8 @@ public class TokenService {
     private final KmsConnectionService kmsConnectionService;
     private static final JWSAlgorithm TOKEN_ALGORITHM = JWSAlgorithm.ES256;
     private static final Logger LOGGER = LoggerFactory.getLogger(TokenService.class);
-    private static final String REFRESH_TOKEN_PREFIX = "REFRESH";
+    private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
+    private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
     private static final List<String> ALLOWED_GRANTS =
             List.of(GrantType.AUTHORIZATION_CODE.getValue(), GrantType.REFRESH_TOKEN.getValue());
 
@@ -76,15 +78,18 @@ public class TokenService {
 
     public OIDCTokenResponse generateTokenResponse(
             String clientID,
-            Subject subject,
+            Subject internalSubject,
             List<String> scopes,
-            Map<String, Object> additionalTokenClaims) {
-        AccessToken accessToken = generateAndStoreAccessToken(clientID, subject, scopes);
+            Map<String, Object> additionalTokenClaims,
+            Subject publicSubject) {
+        AccessToken accessToken =
+                generateAndStoreAccessToken(clientID, internalSubject, scopes, publicSubject);
         AccessTokenHash accessTokenHash = AccessTokenHash.compute(accessToken, TOKEN_ALGORITHM);
         SignedJWT idToken =
-                generateIDToken(clientID, subject, additionalTokenClaims, accessTokenHash);
+                generateIDToken(clientID, publicSubject, additionalTokenClaims, accessTokenHash);
         if (scopes.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
-            RefreshToken refreshToken = generateAndStoreRefreshToken(clientID, subject, scopes);
+            RefreshToken refreshToken =
+                    generateAndStoreRefreshToken(clientID, internalSubject, scopes, publicSubject);
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, refreshToken));
         } else {
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, null));
@@ -92,9 +97,11 @@ public class TokenService {
     }
 
     public OIDCTokenResponse generateRefreshTokenResponse(
-            String clientID, Subject subject, List<String> scopes) {
-        AccessToken accessToken = generateAndStoreAccessToken(clientID, subject, scopes);
-        RefreshToken refreshToken = generateAndStoreRefreshToken(clientID, subject, scopes);
+            String clientID, Subject internalSubject, List<String> scopes, Subject publicSubject) {
+        AccessToken accessToken =
+                generateAndStoreAccessToken(clientID, internalSubject, scopes, publicSubject);
+        RefreshToken refreshToken =
+                generateAndStoreRefreshToken(clientID, internalSubject, scopes, publicSubject);
         return new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
     }
 
@@ -162,20 +169,6 @@ public class TokenService {
                     new ErrorObject(
                             OAuth2Error.INVALID_REQUEST_CODE, "Request is missing refresh token"));
         }
-        if (!requestBody.containsKey("scope")) {
-            return Optional.of(
-                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request is missing scope"));
-        }
-        List<String> scopes = Arrays.asList(requestBody.get("scope").split(" "));
-        for (String scope : scopes) {
-            if (ValidScopes.getAllValidScopes().stream().noneMatch((t) -> t.equals(scope))) {
-                return Optional.of(OAuth2Error.INVALID_SCOPE);
-            }
-        }
-        if (!scopes.contains(OIDCScopeValue.OPENID.getValue())) {
-            return Optional.of(
-                    new ErrorObject(OAuth2Error.INVALID_SCOPE_CODE, "openid scope is missing"));
-        }
         try {
             RefreshToken refreshToken = new RefreshToken(requestBody.get("refresh_token"));
         } catch (IllegalArgumentException e) {
@@ -188,7 +181,7 @@ public class TokenService {
 
     private SignedJWT generateIDToken(
             String clientId,
-            Subject subject,
+            Subject publicSubject,
             Map<String, Object> additionalTokenClaims,
             AccessTokenHash accessTokenHash) {
         LOGGER.info("Generating IdToken for ClientId: {}", clientId);
@@ -197,7 +190,7 @@ public class TokenService {
         IDTokenClaimsSet idTokenClaims =
                 new IDTokenClaimsSet(
                         new Issuer(configService.getBaseURL().get()),
-                        subject,
+                        publicSubject,
                         List.of(new Audience(clientId)),
                         expiryDate,
                         new Date());
@@ -212,7 +205,7 @@ public class TokenService {
     }
 
     private AccessToken generateAndStoreAccessToken(
-            String clientId, Subject subject, List<String> scopes) {
+            String clientId, Subject internalSubject, List<String> scopes, Subject publicSubject) {
         LOGGER.info("Generating AccessToken for ClientId: {}", clientId);
         LocalDateTime localDateTime =
                 LocalDateTime.now().plusMinutes(configService.getAccessTokenExpiry());
@@ -229,21 +222,29 @@ public class TokenService {
                                                 .atZone(ZoneId.systemDefault())
                                                 .toInstant()))
                         .claim("client_id", clientId)
-                        .subject(subject.getValue())
+                        .subject(publicSubject.getValue())
                         .jwtID(UUID.randomUUID().toString())
                         .build();
         SignedJWT signedJWT = generateSignedJWT(claimsSet);
         AccessToken accessToken = new BearerAccessToken(signedJWT.serialize());
 
-        redisConnectionService.saveWithExpiry(
-                accessToken.toJSONString(),
-                subject.toString(),
-                configService.getAccessTokenExpiry());
+        try {
+            redisConnectionService.saveWithExpiry(
+                    ACCESS_TOKEN_PREFIX + clientId + "." + publicSubject.getValue(),
+                    new ObjectMapper()
+                            .writeValueAsString(
+                                    new TokenStore(
+                                            accessToken.getValue(), internalSubject.getValue())),
+                    configService.getAccessTokenExpiry());
+        } catch (JsonProcessingException e) {
+            LOGGER.error("Unable to save access token to Redis", e);
+            throw new RuntimeException(e);
+        }
         return accessToken;
     }
 
     private RefreshToken generateAndStoreRefreshToken(
-            String clientId, Subject subject, List<String> scopes) {
+            String clientId, Subject internalSubject, List<String> scopes, Subject publicSubject) {
         LOGGER.info("Generating RefreshToken for ClientId: {}", clientId);
         LocalDateTime localDateTime =
                 LocalDateTime.now().plusMinutes(configService.getSessionExpiry());
@@ -259,14 +260,24 @@ public class TokenService {
                                                 .atZone(ZoneId.systemDefault())
                                                 .toInstant()))
                         .claim("client_id", clientId)
-                        .subject(subject.getValue())
+                        .subject(publicSubject.getValue())
                         .jwtID(UUID.randomUUID().toString())
                         .build();
         SignedJWT signedJWT = generateSignedJWT(claimsSet);
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
-        String redisKey = REFRESH_TOKEN_PREFIX + "." + clientId + "." + subject.getValue();
-        redisConnectionService.saveWithExpiry(
-                redisKey, refreshToken.getValue(), configService.getAccessTokenExpiry());
+        try {
+            String tokenStoreString =
+                    new ObjectMapper()
+                            .writeValueAsString(
+                                    new TokenStore(
+                                            refreshToken.getValue(), internalSubject.getValue()));
+            String redisKey = REFRESH_TOKEN_PREFIX + clientId + "." + publicSubject.getValue();
+            redisConnectionService.saveWithExpiry(
+                    redisKey, tokenStoreString, configService.getAccessTokenExpiry());
+        } catch (JsonProcessingException e) {
+            LOGGER.error("Unable to create new TokenStore with RefreshToken", e);
+            throw new RuntimeException(e);
+        }
         return refreshToken;
     }
 

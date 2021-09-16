@@ -2,24 +2,24 @@ package uk.gov.di.authentication.shared.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class AccessTokenStore {
+public class TokenStore {
 
-    @JsonProperty("access_token")
-    private String accessToken;
+    @JsonProperty("token")
+    private String token;
 
     @JsonProperty("internal_subject_id")
     private String internalSubjectId;
 
-    public AccessTokenStore(
-            @JsonProperty(required = true, value = "access_token") String accessToken,
+    public TokenStore(
+            @JsonProperty(required = true, value = "token") String token,
             @JsonProperty(required = true, value = "internal_subject_id")
                     String internalSubjectId) {
-        this.accessToken = accessToken;
+        this.token = token;
         this.internalSubjectId = internalSubjectId;
     }
 
-    public String getAccessToken() {
-        return accessToken;
+    public String getToken() {
+        return token;
     }
 
     public String getInternalSubjectId() {

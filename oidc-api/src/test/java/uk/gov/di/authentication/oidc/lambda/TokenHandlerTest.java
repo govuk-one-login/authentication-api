@@ -3,6 +3,8 @@ package uk.gov.di.authentication.oidc.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.crypto.ECDSASigner;
@@ -33,6 +35,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.TokenStore;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
@@ -64,7 +67,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -80,16 +82,16 @@ public class TokenHandlerTest {
 
     private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String PHONE_NUMBER = "01234567890";
-    private static final Subject SUBJECT = new Subject();
     private static final String REDIRECT_URI = "http://localhost/redirect";
-    private static final Subject TEST_SUBJECT = new Subject();
+    private static final Subject INTERNAL_SUBJECT = new Subject();
+    private static final Subject PUBLIC_SUBJECT = new Subject();
     private static final String CLIENT_ID = "test-id";
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
     private static final String BASE_URI = "http://localhost";
     private static final String TOKEN_URI = "http://localhost/token";
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
-    private static final String REFRESH_TOKEN_PREFIX = "REFRESH";
+    private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private final Context context = mock(Context.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -126,7 +128,7 @@ public class TokenHandlerTest {
         SignedJWT signedJWT =
                 generateIDToken(
                         CLIENT_ID,
-                        TEST_SUBJECT,
+                        PUBLIC_SUBJECT,
                         "issuer-url",
                         new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate());
         BearerAccessToken accessToken = new BearerAccessToken();
@@ -153,10 +155,14 @@ public class TokenHandlerTest {
                 .thenReturn(
                         new ClientSession(
                                 generateAuthRequest().toParameters(), LocalDateTime.now()));
-        when(dynamoService.getSubjectFromEmail(eq(TEST_EMAIL))).thenReturn(TEST_SUBJECT);
+        when(dynamoService.getSubjectFromEmail(eq(TEST_EMAIL))).thenReturn(INTERNAL_SUBJECT);
         when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
-                        eq(CLIENT_ID), any(Subject.class), eq(SCOPES.toStringList()), anyMap()))
+                        eq(CLIENT_ID),
+                        eq(INTERNAL_SUBJECT),
+                        eq(SCOPES.toStringList()),
+                        anyMap(),
+                        eq(PUBLIC_SUBJECT)))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result = generateApiGatewayRequest(privateKeyJWT, authCode);
@@ -166,7 +172,8 @@ public class TokenHandlerTest {
     }
 
     @Test
-    public void shouldReturn200ForSuccessfulRefreshTokenRequest() throws JOSEException {
+    public void shouldReturn200ForSuccessfulRefreshTokenRequest()
+            throws JOSEException, JsonProcessingException {
         SignedJWT signedRefreshToken = createSignedRefreshToken();
         KeyPair keyPair = generateRsaKeyPair();
         BearerAccessToken accessToken = new BearerAccessToken();
@@ -182,10 +189,16 @@ public class TokenHandlerTest {
                         anyString(), eq(clientRegistry.getPublicKey()), eq(BASE_URI)))
                 .thenReturn(Optional.empty());
         when(tokenValidationService.validateRefreshTokenSignature(refreshToken)).thenReturn(true);
-        String redisKey = REFRESH_TOKEN_PREFIX + "." + CLIENT_ID + "." + TEST_SUBJECT.getValue();
-        when(redisConnectionService.getValue(redisKey)).thenReturn(refreshToken.getValue());
+        TokenStore tokenStore =
+                new TokenStore(refreshToken.getValue(), INTERNAL_SUBJECT.getValue());
+        String redisKey = REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT.getValue();
+        String tokenStoreString = new ObjectMapper().writeValueAsString(tokenStore);
+        when(redisConnectionService.getValue(redisKey)).thenReturn(tokenStoreString);
         when(tokenService.generateRefreshTokenResponse(
-                        eq(CLIENT_ID), eq(TEST_SUBJECT), eq(SCOPES.toStringList())))
+                        eq(CLIENT_ID),
+                        eq(INTERNAL_SUBJECT),
+                        eq(SCOPES.toStringList()),
+                        eq(PUBLIC_SUBJECT)))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
@@ -350,10 +363,10 @@ public class TokenHandlerTest {
                 .setEmailVerified(true)
                 .setPhoneNumber(PHONE_NUMBER)
                 .setPhoneNumberVerified(true)
-                .setSubjectID(SUBJECT.toString())
+                .setSubjectID(INTERNAL_SUBJECT.getValue())
                 .setCreated(LocalDateTime.now().toString())
                 .setUpdated(LocalDateTime.now().toString())
-                .setPublicSubjectID(SUBJECT.toString());
+                .setPublicSubjectID(PUBLIC_SUBJECT.getValue());
     }
 
     private SignedJWT createSignedRefreshToken() throws JOSEException {
@@ -364,7 +377,7 @@ public class TokenHandlerTest {
                         .generate();
         ECDSASigner signer = new ECDSASigner(ecSigningKey);
         return TokenGeneratorHelper.generateSignedToken(
-                CLIENT_ID, BASE_URI, SCOPES.toStringList(), signer, TEST_SUBJECT, "KEY_ID");
+                CLIENT_ID, BASE_URI, SCOPES.toStringList(), signer, PUBLIC_SUBJECT, "KEY_ID");
     }
 
     private PrivateKeyJWT generatePrivateKeyJWT(PrivateKey privateKey) throws JOSEException {

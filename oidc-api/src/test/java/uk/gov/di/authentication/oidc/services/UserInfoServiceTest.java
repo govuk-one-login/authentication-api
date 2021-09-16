@@ -18,8 +18,8 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.TokenStore;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UserInfoValidationException;
 import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
@@ -85,7 +85,7 @@ class UserInfoServiceTest {
                 .thenReturn(
                         new ObjectMapper()
                                 .writeValueAsString(
-                                        new AccessTokenStore(
+                                        new TokenStore(
                                                 accessToken.getValue(),
                                                 INTERNAL_SUBJECT.getValue())));
         when(authenticationService.getUserProfileFromSubject(INTERNAL_SUBJECT.getValue()))
@@ -187,7 +187,7 @@ class UserInfoServiceTest {
                 .thenReturn(
                         new ObjectMapper()
                                 .writeValueAsString(
-                                        new AccessTokenStore(
+                                        new TokenStore(
                                                 createSignedAccessToken().getValue(),
                                                 INTERNAL_SUBJECT.getValue())));
 

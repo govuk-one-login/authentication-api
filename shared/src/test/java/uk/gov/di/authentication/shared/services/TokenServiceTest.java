@@ -2,6 +2,8 @@ package uk.gov.di.authentication.shared.services;
 
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSSigner;
@@ -26,6 +28,7 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.entity.TokenStore;
 import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
 
 import java.net.URI;
@@ -61,7 +64,8 @@ public class TokenServiceTest {
             mock(RedisConnectionService.class);
     private final TokenService tokenService =
             new TokenService(configurationService, redisConnectionService, kmsConnectionService);
-    private static final Subject SUBJECT = new Subject("some-subject");
+    private static final Subject PUBLIC_SUBJECT = new Subject("public-subject");
+    private static final Subject INTERNAL_SUBJECT = new Subject("internal-subject");
     private static final List<String> SCOPES = List.of("openid", "email", "phone");
     private static final List<String> SCOPES_OFFLINE_ACCESS =
             List.of("openid", "email", "phone", "offline_access");
@@ -70,7 +74,8 @@ public class TokenServiceTest {
     private static final String REDIRECT_URI = "http://localhost/redirect";
     private static final String BASE_URL = "http://example.com";
     private static final String KEY_ID = "14342354354353";
-    private static final String REFRESH_TOKEN_PREFIX = "REFRESH";
+    private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
+    private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
 
     @BeforeEach
     public void setUp() {
@@ -79,7 +84,8 @@ public class TokenServiceTest {
     }
 
     @Test
-    public void shouldGenerateTokenResponseWithRefreshToken() throws ParseException, JOSEException {
+    public void shouldGenerateTokenResponseWithRefreshToken()
+            throws ParseException, JOSEException, JsonProcessingException {
         Nonce nonce = new Nonce();
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
@@ -89,23 +95,37 @@ public class TokenServiceTest {
         additionalTokenClaims.put("nonce", nonce);
         OIDCTokenResponse tokenResponse =
                 tokenService.generateTokenResponse(
-                        CLIENT_ID, SUBJECT, SCOPES_OFFLINE_ACCESS, additionalTokenClaims);
+                        CLIENT_ID,
+                        INTERNAL_SUBJECT,
+                        SCOPES_OFFLINE_ACCESS,
+                        additionalTokenClaims,
+                        PUBLIC_SUBJECT);
 
         assertEquals(
                 BASE_URL, tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getIssuer());
         assertEquals(
-                SUBJECT.getValue(),
+                PUBLIC_SUBJECT.getValue(),
                 tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("sub"));
         assertNotNull(tokenResponse.getOIDCTokens().getRefreshToken());
+        String accessTokenKey = ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT;
+        TokenStore accessTokenStore =
+                new TokenStore(
+                        tokenResponse.getOIDCTokens().getAccessToken().getValue(),
+                        INTERNAL_SUBJECT.getValue());
         verify(redisConnectionService)
                 .saveWithExpiry(
-                        tokenResponse.getOIDCTokens().getAccessToken().toJSONString(),
-                        SUBJECT.toString(),
+                        accessTokenKey,
+                        new ObjectMapper().writeValueAsString(accessTokenStore),
                         300L);
+        String refreshTokenKey = REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT;
+        TokenStore refreshTokenStore =
+                new TokenStore(
+                        tokenResponse.getOIDCTokens().getRefreshToken().getValue(),
+                        INTERNAL_SUBJECT.getValue());
         verify(redisConnectionService)
                 .saveWithExpiry(
-                        REFRESH_TOKEN_PREFIX + "." + CLIENT_ID + "." + SUBJECT,
-                        tokenResponse.getOIDCTokens().getRefreshToken().getValue(),
+                        refreshTokenKey,
+                        new ObjectMapper().writeValueAsString(refreshTokenStore),
                         300L);
         assertEquals(
                 nonce.getValue(),
@@ -114,7 +134,7 @@ public class TokenServiceTest {
 
     @Test
     public void shouldGenerateTokenResponseWithoutRefreshTokenWhenOfflineAccessScopeIsMissing()
-            throws ParseException, JOSEException {
+            throws ParseException, JOSEException, JsonProcessingException {
         Nonce nonce = new Nonce();
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
@@ -124,18 +144,23 @@ public class TokenServiceTest {
         additionalTokenClaims.put("nonce", nonce);
         OIDCTokenResponse tokenResponse =
                 tokenService.generateTokenResponse(
-                        CLIENT_ID, SUBJECT, SCOPES, additionalTokenClaims);
+                        CLIENT_ID, INTERNAL_SUBJECT, SCOPES, additionalTokenClaims, PUBLIC_SUBJECT);
 
         assertEquals(
                 BASE_URL, tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getIssuer());
         assertEquals(
-                SUBJECT.getValue(),
+                PUBLIC_SUBJECT.getValue(),
                 tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("sub"));
         assertNull(tokenResponse.getOIDCTokens().getRefreshToken());
+        String accessTokenKey = ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT;
+        TokenStore accessTokenStore =
+                new TokenStore(
+                        tokenResponse.getOIDCTokens().getAccessToken().getValue(),
+                        INTERNAL_SUBJECT.getValue());
         verify(redisConnectionService)
                 .saveWithExpiry(
-                        tokenResponse.getOIDCTokens().getAccessToken().toJSONString(),
-                        SUBJECT.toString(),
+                        accessTokenKey,
+                        new ObjectMapper().writeValueAsString(accessTokenStore),
                         300L);
         assertEquals(
                 nonce.getValue(),
@@ -333,7 +358,8 @@ public class TokenServiceTest {
     }
 
     private SignedJWT createSignedIdToken(JWSSigner signer) {
-        return TokenGeneratorHelper.generateIDToken(CLIENT_ID, SUBJECT, BASE_URL, signer, KEY_ID);
+        return TokenGeneratorHelper.generateIDToken(
+                CLIENT_ID, PUBLIC_SUBJECT, BASE_URL, signer, KEY_ID);
     }
 
     private void createSignedAccessToken() throws JOSEException {
@@ -345,7 +371,12 @@ public class TokenServiceTest {
         ECDSASigner signer = new ECDSASigner(ecSigningKey);
         SignedJWT signedJWT =
                 TokenGeneratorHelper.generateSignedToken(
-                        CLIENT_ID, BASE_URL, SCOPES, signer, SUBJECT, ecSigningKey.getKeyID());
+                        CLIENT_ID,
+                        BASE_URL,
+                        SCOPES,
+                        signer,
+                        PUBLIC_SUBJECT,
+                        ecSigningKey.getKeyID());
         SignResult accessTokenResult = new SignResult();
         byte[] accessTokenSignatureDer =
                 ECDSA.transcodeSignatureToDER(signedJWT.getSignature().decode());

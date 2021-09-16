@@ -4,6 +4,8 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.GrantType;
@@ -19,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.TokenStore;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
@@ -59,7 +62,7 @@ public class TokenHandler
     private final TokenValidationService tokenValidationService;
     private final RedisConnectionService redisConnectionService;
     private static final String TOKEN_PATH = "/token";
-    private static final String REFRESH_TOKEN_PREFIX = "REFRESH";
+    private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
 
     public TokenHandler(
             ClientService clientService,
@@ -207,7 +210,7 @@ public class TokenHandler
                                         400,
                                         OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
                             }
-                            Subject subject =
+                            Subject publicSubject =
                                     getSubjectByEmailAndClient(
                                             authCodeExchangeData.getEmail(), client);
                             Subject internalSubject =
@@ -222,7 +225,8 @@ public class TokenHandler
                                             clientID,
                                             internalSubject,
                                             authRequest.getScope().toStringList(),
-                                            additionalTokenClaims);
+                                            additionalTokenClaims,
+                                            publicSubject);
 
                             clientSessionService.saveClientSession(
                                     authCodeExchangeData.getClientSessionId(),
@@ -279,11 +283,11 @@ public class TokenHandler
             return generateApiGatewayProxyResponse(
                     400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
         }
-        Subject subject;
+        Subject publicSubject;
         List<String> scopes;
         try {
             SignedJWT signedJwt = SignedJWT.parse(currentRefreshToken.getValue());
-            subject = new Subject(signedJwt.getJWTClaimsSet().getSubject());
+            publicSubject = new Subject(signedJwt.getJWTClaimsSet().getSubject());
             scopes = (List<String>) signedJwt.getJWTClaimsSet().getClaim("scope");
         } catch (java.text.ParseException e) {
             LOG.error("Unable to parse RefreshToken", e);
@@ -302,10 +306,13 @@ public class TokenHandler
                     400, OAuth2Error.INVALID_SCOPE.toJSONObject().toJSONString());
         }
         String clientId = requestBody.get("client_id");
-        String redisKey = REFRESH_TOKEN_PREFIX + "." + clientId + "." + subject.getValue();
+        String redisKey = REFRESH_TOKEN_PREFIX + clientId + "." + publicSubject.getValue();
         Optional<String> refreshToken =
                 Optional.ofNullable(redisConnectionService.getValue(redisKey));
-        if (refreshToken.isEmpty()) {
+        TokenStore tokenStore;
+        try {
+            tokenStore = new ObjectMapper().readValue(refreshToken.get(), TokenStore.class);
+        } catch (JsonProcessingException | NoSuchElementException | IllegalArgumentException e) {
             LOG.error("Refresh token not found with given key");
             return generateApiGatewayProxyResponse(
                     400,
@@ -313,7 +320,7 @@ public class TokenHandler
                             .toJSONObject()
                             .toJSONString());
         }
-        if (!new RefreshToken(refreshToken.get()).equals(currentRefreshToken)) {
+        if (!new RefreshToken(tokenStore.getToken()).equals(currentRefreshToken)) {
             LOG.error("Refresh token found does not match Refresh token in request");
             return generateApiGatewayProxyResponse(
                     400,
@@ -323,7 +330,11 @@ public class TokenHandler
         }
         redisConnectionService.deleteValue(redisKey);
         OIDCTokenResponse tokenResponse =
-                tokenService.generateRefreshTokenResponse(clientId, subject, scopes);
+                tokenService.generateRefreshTokenResponse(
+                        clientId,
+                        new Subject(tokenStore.getInternalSubjectId()),
+                        scopes,
+                        publicSubject);
         return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
     }
 }

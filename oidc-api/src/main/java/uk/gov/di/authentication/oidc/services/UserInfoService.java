@@ -11,8 +11,8 @@ import com.nimbusds.oauth2.sdk.token.BearerTokenError;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.TokenStore;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.exceptions.UserInfoValidationException;
@@ -79,13 +79,13 @@ public class UserInfoService {
                 throw new UserInfoValidationException("Invalid Scopes", OAuth2Error.INVALID_SCOPE);
             }
             String subject = signedJWT.getJWTClaimsSet().getSubject();
-            Optional<AccessTokenStore> accessTokenStore = getAccessTokenStore(clientID, subject);
+            Optional<TokenStore> accessTokenStore = getAccessTokenStore(clientID, subject);
             if (accessTokenStore.isEmpty()) {
                 LOGGER.error("Access Token Store is empty");
                 throw new UserInfoValidationException(
                         "Invalid Access Token", BearerTokenError.INVALID_TOKEN);
             }
-            if (!accessTokenStore.get().getAccessToken().equals(accessToken.getValue())) {
+            if (!accessTokenStore.get().getToken().equals(accessToken.getValue())) {
                 LOGGER.error(
                         "Access Token in Access Token Store is different to Access Token sent in request");
                 throw new UserInfoValidationException(
@@ -117,16 +117,15 @@ public class UserInfoService {
         return userInfo;
     }
 
-    private Optional<AccessTokenStore> getAccessTokenStore(String clientId, String subjectId) {
+    private Optional<TokenStore> getAccessTokenStore(String clientId, String subjectId) {
         String result =
                 redisConnectionService.getValue(ACCESS_TOKEN_PREFIX + clientId + "." + subjectId);
         try {
-            return Optional.of(new ObjectMapper().readValue(result, AccessTokenStore.class));
+            return Optional.ofNullable(new ObjectMapper().readValue(result, TokenStore.class));
         } catch (JsonProcessingException | IllegalArgumentException e) {
             LOGGER.error("Error getting AccessToken from Redis");
             return Optional.empty();
         }
-        //        TODO - delete access token after use
     }
 
     private void deleteAccessTokenStore(String clientId, String subjectId) {
