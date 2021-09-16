@@ -24,11 +24,18 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.ValidationService;
 import uk.gov.di.authentication.shared.state.StateMachine;
 
+import java.util.List;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES;
+import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_MAX_RETRIES_REACHED;
+import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_VERIFIED;
+import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_MAX_RETRIES_REACHED;
+import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_VERIFIED;
+import static uk.gov.di.authentication.shared.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
+import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
@@ -256,13 +263,14 @@ public class VerifyCodeHandler
         if (session.getState().equals(SessionState.PHONE_NUMBER_CODE_VERIFIED)) {
             codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
             dynamoService.updatePhoneNumberVerifiedStatus(session.getEmailAddress(), true);
-        } else if (session.getState().equals(SessionState.EMAIL_CODE_VERIFIED)
-                || session.getState().equals(SessionState.MFA_CODE_VERIFIED)
-                || session.getState().equals(SessionState.UPDATED_TERMS_AND_CONDITIONS)) {
+        } else if (List.of(EMAIL_CODE_VERIFIED, MFA_CODE_VERIFIED, UPDATED_TERMS_AND_CONDITIONS)
+                .contains(session.getState())) {
             codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
-        } else if (session.getState().equals(SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED)
-                || session.getState().equals(SessionState.EMAIL_CODE_MAX_RETRIES_REACHED)
-                || session.getState().equals(SessionState.MFA_CODE_MAX_RETRIES_REACHED)) {
+        } else if (List.of(
+                        PHONE_NUMBER_CODE_MAX_RETRIES_REACHED,
+                        EMAIL_CODE_MAX_RETRIES_REACHED,
+                        MFA_CODE_MAX_RETRIES_REACHED)
+                .contains(session.getState())) {
             blockCodeForSessionAndResetCount(session);
         }
     }
