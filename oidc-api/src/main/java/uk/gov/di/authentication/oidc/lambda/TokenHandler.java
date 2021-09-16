@@ -210,6 +210,9 @@ public class TokenHandler
                             Subject subject =
                                     getSubjectByEmailAndClient(
                                             authCodeExchangeData.getEmail(), client);
+                            Subject internalSubject =
+                                    dynamoService.getSubjectFromEmail(
+                                            authCodeExchangeData.getEmail());
                             Map<String, Object> additionalTokenClaims = new HashMap<>();
                             if (authRequest.getNonce() != null) {
                                 additionalTokenClaims.put("nonce", authRequest.getNonce());
@@ -217,7 +220,7 @@ public class TokenHandler
                             OIDCTokenResponse tokenResponse =
                                     tokenService.generateTokenResponse(
                                             clientID,
-                                            subject,
+                                            internalSubject,
                                             authRequest.getScope().toStringList(),
                                             additionalTokenClaims);
 
