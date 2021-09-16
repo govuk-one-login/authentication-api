@@ -34,6 +34,7 @@ import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -61,6 +62,7 @@ import java.util.Optional;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
@@ -120,16 +122,7 @@ public class TokenHandlerTest {
     @Test
     public void shouldReturn200ForSuccessfulTokenRequest() throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
-        UserProfile userProfile =
-                new UserProfile()
-                        .setEmail(TEST_EMAIL)
-                        .setEmailVerified(true)
-                        .setPhoneNumber(PHONE_NUMBER)
-                        .setPhoneNumberVerified(true)
-                        .setSubjectID(SUBJECT.toString())
-                        .setCreated(LocalDateTime.now().toString())
-                        .setUpdated(LocalDateTime.now().toString())
-                        .setPublicSubjectID(SUBJECT.toString());
+        UserProfile userProfile = generateUserProfile();
         SignedJWT signedJWT =
                 generateIDToken(
                         CLIENT_ID,
@@ -299,6 +292,70 @@ public class TokenHandlerTest {
         assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
     }
 
+    @Test
+    public void sameSectorWithMultipleClientsReturnSameIDForPairwise() {
+        KeyPair keyPair = generateRsaKeyPair();
+        UserProfile userProfile = generateUserProfile();
+
+        ClientRegistry clientRegistry1 =
+                generateClientRegistryPairwise(
+                        keyPair, "test-client-id-1", "pairwise", "https://test.com");
+        ClientRegistry clientRegistry2 =
+                generateClientRegistryPairwise(
+                        keyPair, "test-client-id-2", "pairwise", "https://test.com");
+
+        Subject subject1 =
+                new Subject(
+                        ClientSubjectHelper.pairwiseIdentifier(
+                                userProfile.getSubjectID(),
+                                clientRegistry1.getSectorIdentifierUri()));
+        Subject subject2 =
+                new Subject(
+                        ClientSubjectHelper.pairwiseIdentifier(
+                                userProfile.getSubjectID(),
+                                clientRegistry2.getSectorIdentifierUri()));
+
+        assertEquals(subject1, subject2);
+    }
+
+    @Test
+    public void differentSectorWithMultipleClientsReturnSameIDForPairwise() {
+        KeyPair keyPair = generateRsaKeyPair();
+        UserProfile userProfile = generateUserProfile();
+
+        ClientRegistry clientRegistry1 =
+                generateClientRegistryPairwise(
+                        keyPair, "test-client-id-1", "pairwise", "https://test.com");
+        ClientRegistry clientRegistry2 =
+                generateClientRegistryPairwise(
+                        keyPair, "test-client-id-2", "pairwise", "https://not-test.com");
+
+        Subject subject1 =
+                new Subject(
+                        ClientSubjectHelper.pairwiseIdentifier(
+                                userProfile.getSubjectID(),
+                                clientRegistry1.getSectorIdentifierUri()));
+        Subject subject2 =
+                new Subject(
+                        ClientSubjectHelper.pairwiseIdentifier(
+                                userProfile.getSubjectID(),
+                                clientRegistry2.getSectorIdentifierUri()));
+
+        assertNotEquals(subject1, subject2);
+    }
+
+    private UserProfile generateUserProfile() {
+        return new UserProfile()
+                .setEmail(TEST_EMAIL)
+                .setEmailVerified(true)
+                .setPhoneNumber(PHONE_NUMBER)
+                .setPhoneNumberVerified(true)
+                .setSubjectID(SUBJECT.toString())
+                .setCreated(LocalDateTime.now().toString())
+                .setUpdated(LocalDateTime.now().toString())
+                .setPublicSubjectID(SUBJECT.toString());
+    }
+
     private SignedJWT createSignedRefreshToken() throws JOSEException {
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256)
@@ -331,6 +388,20 @@ public class TokenHandlerTest {
                         Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()))
                 .setSectorIdentifierUri("https://test.com")
                 .setSubjectType("public");
+    }
+
+    private ClientRegistry generateClientRegistryPairwise(
+            KeyPair keyPair, String clientID, String subectType, String sector) {
+        return new ClientRegistry()
+                .setClientID(clientID)
+                .setClientName("test-client")
+                .setRedirectUrls(singletonList(REDIRECT_URI))
+                .setScopes(SCOPES.toStringList())
+                .setContacts(singletonList(TEST_EMAIL))
+                .setPublicKey(
+                        Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()))
+                .setSectorIdentifierUri(sector)
+                .setSubjectType(subectType);
     }
 
     private APIGatewayProxyResponseEvent generateApiGatewayRequest(

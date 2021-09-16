@@ -30,6 +30,7 @@ public class ClientSubjectHelper {
 
             return sb.toString();
         } catch (NoSuchAlgorithmException e) {
+            LOGGER.error("Failed to hash", e);
             throw new RuntimeException(e);
         }
     }
