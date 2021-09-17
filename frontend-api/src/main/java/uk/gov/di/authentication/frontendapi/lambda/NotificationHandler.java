@@ -86,9 +86,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             Map<String, Object> resetPasswordPersonalisation = new HashMap<>();
                             resetPasswordPersonalisation.put(
                                     "reset-password-link",
-                                    configService.getFrontendBaseUrl()
-                                            + configService.getResetPasswordRoute()
-                                            + notifyRequest.getCode());
+                                    buildResetPasswordLink(notifyRequest.getCode()));
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     resetPasswordPersonalisation,
@@ -113,5 +111,13 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             }
         }
         return null;
+    }
+
+    private String buildResetPasswordLink(String code) {
+        return configService.getFrontendBaseUrl()
+                + configService.getResetPasswordRoute()
+                + code
+                + "."
+                + System.currentTimeMillis();
     }
 }
