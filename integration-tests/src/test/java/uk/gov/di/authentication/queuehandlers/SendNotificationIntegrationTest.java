@@ -16,7 +16,7 @@ import java.util.Optional;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.endsWith;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -119,7 +119,7 @@ public class SendNotificationIntegrationTest {
 
         JsonNode request = objectMapper.readTree(notifyStub.getLastRequest().getEntity());
         JsonNode personalisation = request.get("personalisation");
-        assertThat(personalisation.get("reset-password-link").asText(), endsWith(code));
+        assertThat(personalisation.get("reset-password-link").asText(), containsString(code));
         assertThat(
                 personalisation.get("reset-password-link").asText(),
                 startsWith("http://localhost:3000/reset-password?code="));
