@@ -25,7 +25,9 @@ public enum ErrorResponse {
     ERROR_1017(1017, "Invalid transition in user journey"),
     ERROR_1018(1018, "Client-Session-Id is missing or invalid"),
     ERROR_1019(1019, "Email addresses are the same"),
-    ERROR_1020(1020, "Invalid OTP code");
+    ERROR_1020(1020, "Invalid OTP code"),
+    ERROR_1021(1021, "Invalid Password reset code");
+    ;
 
     @JsonProperty("code")
     private int code;

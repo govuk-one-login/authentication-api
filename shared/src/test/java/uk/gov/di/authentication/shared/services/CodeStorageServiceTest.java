@@ -12,12 +12,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 
 class CodeStorageServiceTest {
 
     private static final String TEST_EMAIL = "test@test.com";
     private static final String CODE = "123456";
+    private static final String SUBJECT = "some-subject";
     private static final String SESSION_ID = "session-id-1234";
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
@@ -32,6 +34,7 @@ class CodeStorageServiceTest {
     private static final String REDIS_BLOCKED_KEY =
             "code-blocked:f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a"
                     + SESSION_ID;
+    private static final String RESET_PASSWORD_KEY = "reset-password-code:" + CODE;
     private static final long CODE_EXPIRY_TIME = 900;
     private static final long AUTH_CODE_EXPIRY_TIME = 300;
     private static final String CODE_BLOCKED_VALUE = "blocked";
@@ -41,6 +44,30 @@ class CodeStorageServiceTest {
         codeStorageService.saveOtpCode(TEST_EMAIL, CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
 
         verify(redisConnectionService).saveWithExpiry(REDIS_EMAIL_KEY, CODE, CODE_EXPIRY_TIME);
+    }
+
+    @Test
+    public void shouldCallRedisWithValidResetPasswordCodeAndSubject() {
+        codeStorageService.savePasswordResetCode(SUBJECT, CODE, CODE_EXPIRY_TIME, RESET_PASSWORD);
+
+        verify(redisConnectionService)
+                .saveWithExpiry(RESET_PASSWORD_KEY, SUBJECT, CODE_EXPIRY_TIME);
+    }
+
+    @Test
+    public void shouldRetrievePasswordResetSubject() {
+        when(redisConnectionService.getValue(RESET_PASSWORD_KEY)).thenReturn(SUBJECT);
+
+        String subject = codeStorageService.getSubjectWithPasswordResetCode(CODE).get();
+
+        assertThat(subject, is(SUBJECT));
+    }
+
+    @Test
+    public void shouldCallRedisToDeletePasswordResetSubject() {
+        codeStorageService.deleteSubjectWithPasswordResetCode(CODE);
+
+        verify(redisConnectionService).deleteValue(RESET_PASSWORD_KEY);
     }
 
     @Test

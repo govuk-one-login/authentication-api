@@ -11,6 +11,9 @@ import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordWithCodeRequest;
 import uk.gov.di.authentication.frontendapi.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.NotificationType;
+import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -69,7 +72,8 @@ public class ResetPasswordHandler
                             try {
                                 ResetPasswordWithCodeRequest resetPasswordWithCodeRequest =
                                         objectMapper.readValue(
-                                                input.getBody(), ResetPasswordWithCodeRequest.class);
+                                                input.getBody(),
+                                                ResetPasswordWithCodeRequest.class);
                                 Optional<ErrorResponse> errorResponse =
                                         validationService.validatePassword(
                                                 resetPasswordWithCodeRequest.getPassword());
@@ -77,6 +81,26 @@ public class ResetPasswordHandler
                                     return generateApiGatewayProxyErrorResponse(
                                             400, errorResponse.get());
                                 }
+                                Optional<String> subject =
+                                        codeStorageService.getSubjectWithPasswordResetCode(
+                                                resetPasswordWithCodeRequest.getCode());
+                                if (subject.isEmpty()) {
+                                    return generateApiGatewayProxyErrorResponse(
+                                            400, ErrorResponse.ERROR_1021);
+                                }
+                                codeStorageService.deleteSubjectWithPasswordResetCode(
+                                        resetPasswordWithCodeRequest.getCode());
+                                UserCredentials userCredentials =
+                                        authenticationService.getUserCredentialsFromSubject(
+                                                subject.get());
+                                authenticationService.updatePassword(
+                                        userCredentials.getEmail(),
+                                        resetPasswordWithCodeRequest.getPassword());
+                                NotifyRequest notifyRequest =
+                                        new NotifyRequest(
+                                                userCredentials.getEmail(),
+                                                NotificationType.PASSWORD_RESET_CONFIRMATION);
+                                sqsClient.send(serialiseRequest(notifyRequest));
                             } catch (JsonProcessingException e) {
                                 LOGGER.error("Incorrect parameters in ResetPassword request");
                                 return generateApiGatewayProxyErrorResponse(
@@ -84,5 +108,9 @@ public class ResetPasswordHandler
                             }
                             return generateApiGatewayProxyResponse(200, "");
                         });
+    }
+
+    private String serialiseRequest(Object request) throws JsonProcessingException {
+        return objectMapper.writeValueAsString(request);
     }
 }

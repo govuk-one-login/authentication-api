@@ -169,6 +169,21 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
+    public UserCredentials getUserCredentialsFromSubject(String subject) {
+        Map<String, AttributeValue> eav = new HashMap<>();
+        eav.put(":val1", new AttributeValue().withS(subject));
+
+        DynamoDBQueryExpression<UserCredentials> queryExpression =
+                new DynamoDBQueryExpression<UserCredentials>()
+                        .withIndexName("SubjectIDIndex")
+                        .withKeyConditionExpression("SubjectID= :val1")
+                        .withExpressionAttributeValues(eav)
+                        .withConsistentRead(false);
+
+        return getUserCredentials(queryExpression);
+    }
+
+    @Override
     public Optional<UserProfile> getUserProfileFromEmail(String email) {
         if (nonNull(email) && !email.isBlank()) {
             UserCredentials userCredentials =
@@ -219,6 +234,19 @@ public class DynamoService implements AuthenticationService {
     private UserProfile getUserProfile(DynamoDBQueryExpression<UserProfile> queryExpression) {
         QueryResultPage<UserProfile> scanPage =
                 userProfileMapper.queryPage(UserProfile.class, queryExpression);
+        if (scanPage.getResults().isEmpty() || scanPage.getResults().size() > 1) {
+            throw new RuntimeException(
+                    format(
+                            "Invalid number of query expressions returned: %s",
+                            scanPage.getResults().size()));
+        }
+        return scanPage.getResults().get(0);
+    }
+
+    private UserCredentials getUserCredentials(
+            DynamoDBQueryExpression<UserCredentials> queryExpression) {
+        QueryResultPage<UserCredentials> scanPage =
+                userCredentialsMapper.queryPage(UserCredentials.class, queryExpression);
         if (scanPage.getResults().isEmpty() || scanPage.getResults().size() > 1) {
             throw new RuntimeException(
                     format(

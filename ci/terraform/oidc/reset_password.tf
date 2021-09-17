@@ -7,15 +7,17 @@ module "reset_password" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT              = var.environment
-    BASE_URL                 = var.api_base_url
-    EVENTS_SNS_TOPIC_ARN     = aws_sns_topic.events.arn
+    BASE_URL                 = local.api_base_url
+    DYNAMO_ENDPOINT          = var.use_localstack ? var.lambda_dynamo_endpoint : null
     LOCALSTACK_ENDPOINT      = var.use_localstack ? var.localstack_endpoint : null
+    EMAIL_QUEUE_URL          = aws_sqs_queue.email_queue.id
+    ENVIRONMENT              = var.environment
+    EVENTS_SNS_TOPIC_ARN     = aws_sns_topic.events.arn
     REDIS_HOST               = var.use_localstack ? var.external_redis_host : aws_elasticache_replication_group.sessions_store[0].primary_endpoint_address
     REDIS_PORT               = var.use_localstack ? var.external_redis_port : aws_elasticache_replication_group.sessions_store[0].port
     REDIS_PASSWORD           = var.use_localstack ? var.external_redis_password : random_password.redis_password.result
     REDIS_TLS                = var.redis_use_tls
-    DYNAMO_ENDPOINT          = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    SQS_ENDPOINT             = var.use_localstack ? "http://localhost:45678/" : null
     TERMS_CONDITIONS_VERSION = var.terms_and_conditions
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.ResetPasswordHandler::handleRequest"
@@ -27,7 +29,7 @@ module "reset_password" {
   lambda_zip_file           = var.frontend_api_lambda_zip_file
   security_group_id         = aws_vpc.authentication.default_security_group_id
   subnet_id                 = aws_subnet.authentication.*.id
-  lambda_role_arn           = aws_iam_role.lambda_iam_role.arn
+  lambda_role_arn           = aws_iam_role.dynamo_sqs_lambda_iam_role.arn
   logging_endpoint_enabled  = var.logging_endpoint_enabled
   logging_endpoint_arn      = var.logging_endpoint_arn
   default_tags              = local.default_tags

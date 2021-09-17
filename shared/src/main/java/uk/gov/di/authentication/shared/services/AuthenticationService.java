@@ -2,6 +2,7 @@ package uk.gov.di.authentication.shared.services;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 
 import java.util.List;
@@ -39,6 +40,8 @@ public interface AuthenticationService {
     void updatePassword(String email, String newPassword);
 
     void removeAccount(String email);
+
+    UserCredentials getUserCredentialsFromSubject(String subject);
 
     Optional<UserProfile> getUserProfileFromEmail(String email);
 }

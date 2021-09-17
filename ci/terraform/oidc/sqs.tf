@@ -131,14 +131,15 @@ resource "aws_lambda_function" "email_sqs_lambda" {
   }
   environment {
     variables = {
-      VERIFY_EMAIL_TEMPLATE_ID        = "b7dbb02f-941b-4d72-ad64-84cbe5d77c2e"
-      VERIFY_PHONE_NUMBER_TEMPLATE_ID = "7dd388f1-e029-4fe7-92ff-18496dcb53e9"
-      MFA_SMS_TEMPLATE_ID             = "7dd388f1-e029-4fe7-92ff-18496dcb53e9"
-      RESET_PASSWORD_TEMPLATE_ID      = "0aaf3ae8-1825-4528-af95-3093eb13fda0"
-      FRONTEND_BASE_URL               = local.frontend_base_url
-      RESET_PASSWORD_ROUTE            = var.reset_password_route
-      NOTIFY_API_KEY                  = var.notify_api_key
-      NOTIFY_URL                      = var.notify_url
+      VERIFY_EMAIL_TEMPLATE_ID                = "b7dbb02f-941b-4d72-ad64-84cbe5d77c2e"
+      VERIFY_PHONE_NUMBER_TEMPLATE_ID         = "7dd388f1-e029-4fe7-92ff-18496dcb53e9"
+      MFA_SMS_TEMPLATE_ID                     = "7dd388f1-e029-4fe7-92ff-18496dcb53e9"
+      RESET_PASSWORD_TEMPLATE_ID              = "0aaf3ae8-1825-4528-af95-3093eb13fda0"
+      PASSWORD_RESET_CONFIRMATION_TEMPLATE_ID = "052d4e96-e6ca-4da2-b657-5649f28bd6c0"
+      FRONTEND_BASE_URL                       = local.frontend_base_url
+      RESET_PASSWORD_ROUTE                    = var.reset_password_route
+      NOTIFY_API_KEY                          = var.notify_api_key
+      NOTIFY_URL                              = var.notify_url
     }
   }
 
