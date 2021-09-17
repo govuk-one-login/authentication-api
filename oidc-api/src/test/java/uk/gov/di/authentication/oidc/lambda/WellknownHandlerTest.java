@@ -16,8 +16,7 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -36,6 +35,7 @@ class WellknownHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         URI expectedRegistrationURI = URI.create("http://localhost:8080/connect/register");
+        String expectedTrustMarkURI = "http://localhost:8080/trustmark";
 
         assertThat(result, hasStatus(200));
         assertEquals(
@@ -47,6 +47,11 @@ class WellknownHandlerTest {
         assertEquals(
                 expectedRegistrationURI,
                 OIDCProviderMetadata.parse(result.getBody()).getRegistrationEndpointURI());
+        assertEquals(
+                expectedTrustMarkURI,
+                OIDCProviderMetadata.parse(result.getBody())
+                        .getCustomParameters()
+                        .get("trustmarks"));
     }
 
     @Test

@@ -32,7 +32,7 @@ public class WellknownHandler
 
     private final ConfigurationService configService;
     private final String baseUrl;
-    private final OIDCProviderMetadata providerMetadata;
+    private OIDCProviderMetadata providerMetadata;
 
     public WellknownHandler(ConfigurationService configService) {
         this.configService = configService;
@@ -104,6 +104,8 @@ public class WellknownHandler
                                 providerMetadata.setServiceDocsURI(new URI("http://TBA"));
                                 providerMetadata.setEndSessionEndpointURI(
                                         buildURI("/logout", baseUrl));
+                                providerMetadata.setCustomParameter(
+                                        "trustmarks", buildURI("/trustmark", baseUrl).toString());
 
                                 return generateApiGatewayProxyResponse(
                                         200, providerMetadata.toString());
