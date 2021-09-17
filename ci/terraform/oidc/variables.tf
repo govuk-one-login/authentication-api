@@ -144,3 +144,20 @@ variable "keep_lambdas_warm" {
   default = true
   type    = bool
 }
+
+variable "frontend_base_url" {
+  type    = string
+  default = ""
+}
+
+variable "dns_state_bucket" {
+  type = string
+}
+
+variable "dns_state_key" {
+  type = string
+}
+
+variable "dns_state_role" {
+  type = string
+}
