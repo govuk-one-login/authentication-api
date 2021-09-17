@@ -69,6 +69,10 @@ public class ConfigurationService {
         return System.getenv("EVENTS_SNS_TOPIC_ARN");
     }
 
+    public String getFrontendBaseUrl() {
+        return System.getenv().getOrDefault("FRONTEND_BASE_URL", "");
+    }
+
     public Optional<String> getLocalstackEndpointUri() {
         return Optional.ofNullable(System.getenv("LOCALSTACK_ENDPOINT"));
     }
@@ -99,6 +103,10 @@ public class ConfigurationService {
 
     public boolean getUseRedisTLS() {
         return Boolean.parseBoolean(System.getenv().getOrDefault("REDIS_TLS", "false"));
+    }
+
+    public String getResetPasswordRoute() {
+        return System.getenv().getOrDefault("RESET_PASSWORD_ROUTE", "");
     }
 
     public String getSessionCookieAttributes() {

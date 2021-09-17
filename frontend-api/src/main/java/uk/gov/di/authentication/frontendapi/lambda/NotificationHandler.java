@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
+import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 
@@ -80,6 +81,18 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                     notifyRequest.getDestination(),
                                     mfaPersonalisation,
                                     notificationService.getNotificationTemplateId(MFA_SMS));
+                            break;
+                        case RESET_PASSWORD:
+                            Map<String, Object> resetPasswordPersonalisation = new HashMap<>();
+                            resetPasswordPersonalisation.put(
+                                    "reset-password-link",
+                                    configService.getFrontendBaseUrl()
+                                            + configService.getResetPasswordRoute()
+                                            + notifyRequest.getCode());
+                            notificationService.sendEmail(
+                                    notifyRequest.getDestination(),
+                                    resetPasswordPersonalisation,
+                                    notificationService.getNotificationTemplateId(RESET_PASSWORD));
                             break;
                     }
                 } catch (NotificationClientException e) {

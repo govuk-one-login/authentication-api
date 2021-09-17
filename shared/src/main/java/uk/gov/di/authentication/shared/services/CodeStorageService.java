@@ -19,6 +19,7 @@ public class CodeStorageService {
     private static final String MFA_KEY_PREFIX = "mfa-code:";
     private static final String CODE_BLOCKED_KEY_PREFIX = "code-blocked:";
     private static final String CODE_BLOCKED_VALUE = "blocked";
+    private static final String RESET_PASSWORD_KEY_PREFIX = "reset-password-code:";
 
     public CodeStorageService(RedisConnectionService redisConnectionService) {
         this.redisConnectionService = redisConnectionService;
@@ -44,6 +45,17 @@ public class CodeStorageService {
         String key = prefix + hashedEmailAddress;
         try {
             redisConnectionService.saveWithExpiry(key, code, codeExpiryTime);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void savePasswordResetCode(
+            String subjectId, String code, long codeExpiryTime, NotificationType notificationType) {
+        String prefix = getPrefixForNotificationType(notificationType);
+        String key = prefix + code;
+        try {
+            redisConnectionService.saveWithExpiry(key, subjectId, codeExpiryTime);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -93,6 +105,8 @@ public class CodeStorageService {
                 return PHONE_NUMBER_KEY_PREFIX;
             case MFA_SMS:
                 return MFA_KEY_PREFIX;
+            case RESET_PASSWORD:
+                return RESET_PASSWORD_KEY_PREFIX;
         }
         throw new RuntimeException(
                 String.format("No redis prefix key configured for %s", notificationType));

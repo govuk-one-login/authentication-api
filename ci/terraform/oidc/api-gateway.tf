@@ -157,6 +157,8 @@ resource "aws_api_gateway_deployment" "deployment" {
       module.userinfo.method_trigger_value,
       module.verify_code.integration_trigger_value,
       module.verify_code.method_trigger_value,
+      module.reset-password-request.integration_trigger_value,
+      module.reset-password-request.method_trigger_value
     ]))
   }
 
@@ -181,6 +183,7 @@ resource "aws_api_gateway_deployment" "deployment" {
     module.userexists,
     module.userinfo,
     module.verify_code,
+    module.reset-password-request
   ]
 }
 

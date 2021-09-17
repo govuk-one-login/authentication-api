@@ -118,6 +118,7 @@ run-integration-tests() {
   export TOKEN_SIGNING_KEY_ALIAS="$(terraform output -raw token_signing_key_alias)"
   export BASE_URL="$(terraform output -raw base_url)"
   export API_KEY="$(terraform output -raw frontend_api_key)"
+  export RESET_PASSWORD_URL="http://localhost:3000/reset-password?code="
   popd >/dev/null
   if [[ -z ${IN_GITHUB_ACTIONS+x} ||  ${IN_GITHUB_ACTIONS} -eq 0 ]]; then
     ./gradlew --no-daemon integration-tests:test
