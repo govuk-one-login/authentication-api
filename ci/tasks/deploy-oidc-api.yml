@@ -10,6 +10,9 @@ params:
   DEPLOYER_ROLE_ARN: ((deployer-role-arn-non-prod))
   DEPLOY_ENVIRONMENT: build
   NOTIFY_API_KEY: ((build-notify-api-key))
+  DNS_DEPLOYER_ROLE_ARN: ((deployer-role-arn-production))
+  DNS_STATE_BUCKET: ((dns-state-bucket))
+  DNS_STATE_KEY: ((dns-state-key))
 inputs:
   - name: api-src
   - name: oidc-api-release
@@ -42,5 +45,8 @@ run:
         -var 'logging_endpoint_enabled=true' \
         -var 'logging_endpoint_arn=arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod' \
         -var-file ${DEPLOY_ENVIRONMENT}-stub-clients.tfvars \
+        -var "dns_state_bucket=${DNS_STATE_BUCKET}" \
+        -var "dns_state_key=${DNS_STATE_KEY}" \
+        -var "dns_state_role=${DNS_DEPLOYER_ROLE_ARN}" \
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-terraform-outputs.json

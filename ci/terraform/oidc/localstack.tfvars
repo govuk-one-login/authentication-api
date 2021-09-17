@@ -6,3 +6,6 @@ redis_use_tls             = "false"
 external_redis_password   = "redis"
 api_deployment_stage_name = "local"
 keep_lambdas_warm         = false
+dns_state_bucket          = null
+dns_state_key             = null
+dns_state_role            = null
