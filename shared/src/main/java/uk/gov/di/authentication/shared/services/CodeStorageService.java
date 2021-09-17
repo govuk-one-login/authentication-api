@@ -62,7 +62,8 @@ public class CodeStorageService {
     }
 
     public Optional<String> getSubjectWithPasswordResetCode(String code) {
-        return Optional.of(redisConnectionService.getValue(RESET_PASSWORD_KEY_PREFIX + code));
+        return Optional.ofNullable(
+                redisConnectionService.getValue(RESET_PASSWORD_KEY_PREFIX + code));
     }
 
     public void deleteSubjectWithPasswordResetCode(String code) {
