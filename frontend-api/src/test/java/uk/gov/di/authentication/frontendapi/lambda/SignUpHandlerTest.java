@@ -12,8 +12,10 @@ import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.ValidationService;
 
@@ -41,6 +43,7 @@ class SignUpHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ValidationService validationService = mock(ValidationService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private SignUpHandler handler;
 
     private final Session session =
@@ -48,7 +51,13 @@ class SignUpHandlerTest {
 
     @BeforeEach
     public void setUp() {
-        handler = new SignUpHandler(authenticationService, validationService, sessionService);
+        when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
+        handler =
+                new SignUpHandler(
+                        authenticationService,
+                        validationService,
+                        sessionService,
+                        configurationService);
     }
 
     @Test
@@ -64,7 +73,11 @@ class SignUpHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         verify(authenticationService)
-                .signUp(eq("joe.bloggs@test.com"), eq(password), any(Subject.class));
+                .signUp(
+                        eq("joe.bloggs@test.com"),
+                        eq(password),
+                        any(Subject.class),
+                        any(TermsAndConditions.class));
         verify(sessionService)
                 .save(
                         argThat(

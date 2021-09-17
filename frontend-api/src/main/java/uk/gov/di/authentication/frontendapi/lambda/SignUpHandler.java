@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -23,6 +24,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.ValidationService;
 import uk.gov.di.authentication.shared.state.StateMachine;
 
+import java.time.Instant;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_CREATED_A_PASSWORD;
@@ -39,6 +41,7 @@ public class SignUpHandler
     private final AuthenticationService authenticationService;
     private final ValidationService validationService;
     private final SessionService sessionService;
+    private final ConfigurationService configurationService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final StateMachine<SessionState, SessionAction, UserProfile> stateMachine =
             userJourneyStateMachine();
@@ -46,14 +49,16 @@ public class SignUpHandler
     public SignUpHandler(
             AuthenticationService authenticationService,
             ValidationService validationService,
-            SessionService sessionService) {
+            SessionService sessionService,
+            ConfigurationService configurationService) {
         this.authenticationService = authenticationService;
         this.validationService = validationService;
         this.sessionService = sessionService;
+        this.configurationService = configurationService;
     }
 
     public SignUpHandler() {
-        ConfigurationService configurationService = new ConfigurationService();
+        this.configurationService = new ConfigurationService();
         this.authenticationService =
                 new DynamoService(
                         configurationService.getAwsRegion(),
@@ -106,7 +111,11 @@ public class SignUpHandler
                                     authenticationService.signUp(
                                             signupRequest.getEmail(),
                                             signupRequest.getPassword(),
-                                            new Subject());
+                                            new Subject(),
+                                            new TermsAndConditions(
+                                                    String.valueOf(Instant.now().getEpochSecond()),
+                                                    configurationService
+                                                            .getTermsAndConditionsVersion()));
 
                                     sessionService.save(
                                             session.get()

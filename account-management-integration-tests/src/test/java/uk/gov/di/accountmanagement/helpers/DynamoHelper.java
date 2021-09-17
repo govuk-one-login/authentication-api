@@ -8,9 +8,11 @@ import com.amazonaws.services.dynamodbv2.model.ScanRequest;
 import com.amazonaws.services.dynamodbv2.model.ScanResult;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
+import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -35,7 +37,9 @@ public class DynamoHelper {
     }
 
     public static void signUp(String email, String password, Subject subject) {
-        DYNAMO_SERVICE.signUp(email, password, subject);
+        TermsAndConditions termsAndConditions =
+                new TermsAndConditions("1.0", String.valueOf(Instant.now().getEpochSecond()));
+        DYNAMO_SERVICE.signUp(email, password, subject, termsAndConditions);
     }
 
     public static void addPhoneNumber(String email, String phoneNumber) {
