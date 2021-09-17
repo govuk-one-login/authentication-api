@@ -76,7 +76,8 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
-    public void signUp(String email, String password, Subject subject) {
+    public void signUp(
+            String email, String password, Subject subject, TermsAndConditions termsAndConditions) {
         String dateTime = LocalDateTime.now().toString();
         String hashedPassword = hashPassword(password);
         UserCredentials userCredentials =
@@ -94,7 +95,8 @@ public class DynamoService implements AuthenticationService {
                         .setEmailVerified(true)
                         .setCreated(dateTime)
                         .setUpdated(dateTime)
-                        .setPublicSubjectID((new Subject()).toString());
+                        .setPublicSubjectID((new Subject()).toString())
+                        .setTermsAndConditions(termsAndConditions);
         userCredentialsMapper.save(userCredentials);
         userProfileMapper.save(userProfile);
     }
