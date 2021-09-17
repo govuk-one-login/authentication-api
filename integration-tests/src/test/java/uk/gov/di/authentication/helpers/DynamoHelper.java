@@ -59,6 +59,10 @@ public class DynamoHelper {
         return DYNAMO_SERVICE.getUserConsents(email);
     }
 
+    public static void updateTermsAndConditions(String email, String version) {
+        DYNAMO_SERVICE.updateTermsAndConditions(email, version);
+    }
+
     public static void registerClient(
             String clientID,
             String clientName,

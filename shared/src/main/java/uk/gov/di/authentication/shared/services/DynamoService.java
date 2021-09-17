@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
+import static java.util.Objects.nonNull;
 
 public class DynamoService implements AuthenticationService {
 
@@ -165,6 +166,19 @@ public class DynamoService implements AuthenticationService {
     public void removeAccount(String email) {
         userProfileMapper.delete(userProfileMapper.load(UserProfile.class, email));
         userCredentialsMapper.delete(userCredentialsMapper.load(UserCredentials.class, email));
+    }
+
+    @Override
+    public Optional<UserProfile> getUserProfileFromEmail(String email) {
+        if (nonNull(email) && !email.isBlank()) {
+            UserCredentials userCredentials =
+                    userCredentialsMapper.load(UserCredentials.class, email);
+
+            if (nonNull(userCredentials)) {
+                return Optional.of(getUserProfileFromSubject(userCredentials.getSubjectID()));
+            }
+        }
+        return Optional.empty();
     }
 
     @Override

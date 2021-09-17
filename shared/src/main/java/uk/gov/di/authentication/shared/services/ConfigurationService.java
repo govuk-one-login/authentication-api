@@ -6,6 +6,15 @@ import java.util.Optional;
 
 public class ConfigurationService {
 
+    private static ConfigurationService configurationService;
+
+    public static ConfigurationService getInstance() {
+        if (configurationService == null) {
+            configurationService = new ConfigurationService();
+        }
+        return configurationService;
+    }
+
     // Please keep the method names in alphabetical order so we can find stuff more easily.
 
     public long getAccessTokenExpiry() {
