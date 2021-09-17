@@ -4,60 +4,54 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.token.AccessToken;
-import com.nimbusds.oauth2.sdk.token.AccessTokenType;
 import com.nimbusds.openid.connect.sdk.UserInfoErrorResponse;
+import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.oidc.services.UserInfoService;
+import uk.gov.di.authentication.shared.exceptions.UserInfoValidationException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
-import java.util.Map;
-import java.util.Optional;
-
-import static com.nimbusds.oauth2.sdk.token.BearerTokenError.INVALID_TOKEN;
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.MISSING_TOKEN;
-import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.validateScopesAndRetrieveUserInfo;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class UserInfoHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(UserInfoHandler.class);
-
-    private final RedisConnectionService redisConnectionService;
     private final ConfigurationService configurationService;
-    private final AuthenticationService authenticationService;
-    private final TokenValidationService tokenValidationService;
+    private final UserInfoService userInfoService;
 
     public UserInfoHandler(
-            ConfigurationService configurationService,
-            AuthenticationService authenticationService,
-            RedisConnectionService redisConnectionService,
-            TokenValidationService tokenValidationService) {
+            ConfigurationService configurationService, UserInfoService userInfoService) {
         this.configurationService = configurationService;
-        this.authenticationService = authenticationService;
-        this.redisConnectionService = redisConnectionService;
-        this.tokenValidationService = tokenValidationService;
+        this.userInfoService = userInfoService;
     }
 
     public UserInfoHandler() {
         configurationService = new ConfigurationService();
-        authenticationService =
-                new DynamoService(
-                        configurationService.getAwsRegion(),
-                        configurationService.getEnvironment(),
-                        configurationService.getDynamoEndpointUri());
-        redisConnectionService = new RedisConnectionService(configurationService);
-        this.tokenValidationService =
-                new TokenValidationService(
-                        configurationService, new KmsConnectionService(configurationService));
+        RedisConnectionService redisConnectionService =
+                new RedisConnectionService(configurationService);
+        userInfoService =
+                new UserInfoService(
+                        redisConnectionService,
+                        new DynamoService(
+                                configurationService.getAwsRegion(),
+                                configurationService.getEnvironment(),
+                                configurationService.getDynamoEndpointUri()),
+                        new TokenValidationService(
+                                configurationService,
+                                new KmsConnectionService(configurationService)),
+                        new DynamoClientService(
+                                configurationService.getAwsRegion(),
+                                configurationService.getEnvironment(),
+                                configurationService.getDynamoEndpointUri()));
     }
 
     @Override
@@ -66,6 +60,7 @@ public class UserInfoHandler
         return isWarming(input)
                 .orElseGet(
                         () -> {
+                            LOGGER.info("Request received to the UserInfoHandler");
                             if (input.getHeaders() == null
                                     || !input.getHeaders().containsKey("Authorization")
                                     || input.getHeaders().get("Authorization").isEmpty()) {
@@ -77,59 +72,25 @@ public class UserInfoHandler
                                                 .toHTTPResponse()
                                                 .getHeaderMap());
                             }
-                            AccessToken accessToken;
+                            UserInfo userInfo;
                             try {
-                                accessToken =
-                                        AccessToken.parse(
-                                                input.getHeaders().get("Authorization"),
-                                                AccessTokenType.BEARER);
-                            } catch (Exception e) {
+                                userInfo =
+                                        userInfoService.processUserInfoRequest(
+                                                input.getHeaders().get("Authorization"));
+                            } catch (UserInfoValidationException e) {
                                 LOGGER.error(
-                                        format(
-                                                "Unable to parse AccessToken with headers: %s.\n\n Exception thrown: %s",
-                                                input.getHeaders(), e));
+                                        "UserInfoValidationException. Sending back UserInfoErrorResponse",
+                                        e);
                                 return generateApiGatewayProxyResponse(
                                         401,
                                         "",
-                                        new UserInfoErrorResponse(INVALID_TOKEN)
+                                        new UserInfoErrorResponse(e.getError())
                                                 .toHTTPResponse()
                                                 .getHeaderMap());
                             }
-                            if (!tokenValidationService.validateAccessTokenSignature(accessToken)) {
-                                LOGGER.error("Unable to validate AccessToken signature");
-                                return generateApiGatewayProxyResponse(
-                                        401,
-                                        "",
-                                        new UserInfoErrorResponse(INVALID_TOKEN)
-                                                .toHTTPResponse()
-                                                .getHeaderMap());
-                            }
-                            Optional<String> subjectFromAccessToken =
-                                    getSubjectWithAccessToken(accessToken);
-
-                            return subjectFromAccessToken
-                                    .map(
-                                            t ->
-                                                    validateScopesAndRetrieveUserInfo(
-                                                            t,
-                                                            accessToken,
-                                                            authenticationService,
-                                                            input.getHeaders()))
-                                    .orElse(generateErrorResponse(input.getHeaders()));
+                            LOGGER.info(
+                                    "Successfully processed UserInfo request. Sending back UserInfo response");
+                            return generateApiGatewayProxyResponse(200, userInfo.toJSONString());
                         });
-    }
-
-    private APIGatewayProxyResponseEvent generateErrorResponse(Map<String, String> headers) {
-        LOGGER.error(
-                format(
-                        "Encountered an error while validating scope and retrieving user info for AccessToken with headers: %s.",
-                        headers));
-
-        return generateApiGatewayProxyResponse(
-                401, "", new UserInfoErrorResponse(INVALID_TOKEN).toHTTPResponse().getHeaderMap());
-    }
-
-    private Optional<String> getSubjectWithAccessToken(AccessToken token) {
-        return Optional.ofNullable(redisConnectionService.getValue(token.toJSONString()));
     }
 }

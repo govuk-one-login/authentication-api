@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.api;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -34,6 +36,7 @@ import uk.gov.di.authentication.helpers.KeyPairHelper;
 import uk.gov.di.authentication.helpers.KmsHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.entity.TokenStore;
 
 import java.net.URI;
 import java.security.KeyPair;
@@ -59,6 +62,7 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
     private static final String TOKEN_ENDPOINT = "/token";
     private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String CLIENT_ID = "test-id";
+    private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final String REDIRECT_URI = "http://localhost/redirect";
 
     @Test
@@ -68,7 +72,7 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
-        setUpDynamo(keyPair, scope);
+        setUpDynamo(keyPair, scope, new Subject());
         Response response = generateTokenRequest(keyPair, scope);
 
         assertEquals(200, response.getStatus());
@@ -90,7 +94,7 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
             throws JOSEException, ParseException {
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         Scope scope = new Scope(OIDCScopeValue.OPENID.getValue());
-        setUpDynamo(keyPair, scope);
+        setUpDynamo(keyPair, scope, new Subject());
         Response response = generateTokenRequest(keyPair, scope);
 
         assertEquals(200, response.getStatus());
@@ -108,14 +112,22 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
     }
 
     @Test
-    public void shouldCallTokenResourceWithRefreshTokenGrantAndReturn200() throws JOSEException {
-        Scope scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
-        Subject subject = new Subject();
+    public void shouldCallTokenResourceWithRefreshTokenGrantAndReturn200()
+            throws JOSEException, ParseException, JsonProcessingException {
+        Scope scope =
+                new Scope(
+                        OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
+        Subject publicSubject = new Subject();
+        Subject internalSubject = new Subject();
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-        setUpDynamo(keyPair, scope);
-        SignedJWT signedJWT = generateSignedRefreshToken(scope, subject);
+        setUpDynamo(keyPair, scope, internalSubject);
+        SignedJWT signedJWT = generateSignedRefreshToken(scope, publicSubject);
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
-        RedisHelper.addToRedis(CLIENT_ID + ":" + subject.getValue(), refreshToken.getValue(), 900L);
+        TokenStore tokenStore = new TokenStore(refreshToken.getValue(), internalSubject.getValue());
+        RedisHelper.addToRedis(
+                REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + publicSubject.getValue(),
+                new ObjectMapper().writeValueAsString(tokenStore),
+                900L);
         PrivateKey privateKey = keyPair.getPrivate();
         PrivateKeyJWT privateKeyJWT =
                 new PrivateKeyJWT(
@@ -143,7 +155,6 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
         // running inside localstack which causes the Caused by:
         // java.security.NoSuchAlgorithmException: EC KeyFactory not available error.
         //        assertEquals(200, response.getStatus());
-        //        assertEquals(200, response.getStatus());
         //        JSONObject jsonResponse =
         // JSONObjectUtils.parse(response.readEntity(String.class));
         //        assertNotNull(
@@ -158,7 +169,7 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
         //                        .getBearerAccessToken());
     }
 
-    private SignedJWT generateSignedRefreshToken(Scope scope, Subject subject) {
+    private SignedJWT generateSignedRefreshToken(Scope scope, Subject publicSubject) {
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(60);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
         JWTClaimsSet claimsSet =
@@ -172,13 +183,13 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
                                                 .atZone(ZoneId.systemDefault())
                                                 .toInstant()))
                         .claim("client_id", CLIENT_ID)
-                        .subject(subject.getValue())
+                        .subject(publicSubject.getValue())
                         .jwtID(UUID.randomUUID().toString())
                         .build();
         return KmsHelper.signAccessToken(claimsSet);
     }
 
-    private void setUpDynamo(KeyPair keyPair, Scope scope) {
+    private void setUpDynamo(KeyPair keyPair, Scope scope, Subject internalSubject) {
         DynamoHelper.registerClient(
                 CLIENT_ID,
                 "test-client",
@@ -190,7 +201,7 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public");
-        DynamoHelper.signUp(TEST_EMAIL, "password-1");
+        DynamoHelper.signUp(TEST_EMAIL, "password-1", internalSubject);
     }
 
     private AuthenticationRequest generateAuthRequest(Scope scope) {
