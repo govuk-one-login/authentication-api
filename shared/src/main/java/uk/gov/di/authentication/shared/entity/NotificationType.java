@@ -4,5 +4,6 @@ public enum NotificationType {
     VERIFY_EMAIL,
     VERIFY_PHONE_NUMBER,
     MFA_SMS,
-    RESET_PASSWORD
+    RESET_PASSWORD,
+    PASSWORD_RESET_CONFIRMATION
 }

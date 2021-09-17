@@ -14,10 +14,12 @@ import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
+import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
@@ -93,6 +95,13 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                     notifyRequest.getDestination(),
                                     resetPasswordPersonalisation,
                                     notificationService.getNotificationTemplateId(RESET_PASSWORD));
+                            break;
+                        case PASSWORD_RESET_CONFIRMATION:
+                            notificationService.sendEmail(
+                                    notifyRequest.getDestination(),
+                                    Collections.emptyMap(),
+                                    notificationService.getNotificationTemplateId(
+                                            PASSWORD_RESET_CONFIRMATION));
                             break;
                     }
                 } catch (NotificationClientException e) {

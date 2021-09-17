@@ -34,6 +34,8 @@ public class NotificationService {
                 return System.getenv("MFA_SMS_TEMPLATE_ID");
             case RESET_PASSWORD:
                 return System.getenv("RESET_PASSWORD_TEMPLATE_ID");
+            case PASSWORD_RESET_CONFIRMATION:
+                return System.getenv("PASSWORD_RESET_CONFIRMATION_TEMPLATE_ID");
             default:
                 throw new RuntimeException("NotificationType template ID does not exist");
         }

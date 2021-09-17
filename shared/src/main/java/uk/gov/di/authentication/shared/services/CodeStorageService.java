@@ -61,6 +61,18 @@ public class CodeStorageService {
         }
     }
 
+    public Optional<String> getSubjectWithPasswordResetCode(String code) {
+        return Optional.of(redisConnectionService.getValue(RESET_PASSWORD_KEY_PREFIX + code));
+    }
+
+    public void deleteSubjectWithPasswordResetCode(String code) {
+        long numberOfKeysRemoved =
+                redisConnectionService.deleteValue(RESET_PASSWORD_KEY_PREFIX + code);
+        if (numberOfKeysRemoved == 0) {
+            LOGGER.info(format("No key was deleted for code: %s", code));
+        }
+    }
+
     public boolean isCodeBlockedForSession(String emailAddress, String sessionId) {
         return redisConnectionService.getValue(
                         CODE_BLOCKED_KEY_PREFIX

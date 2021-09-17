@@ -13,6 +13,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.service.notify.NotificationClientException;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 
@@ -58,6 +60,23 @@ public class NotificationHandlerTest {
         personalisation.put("email-address", notifyRequest.getDestination());
 
         verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, TEMPLATE_ID);
+    }
+
+    @Test
+    public void shouldSuccessfullyProcessResetPasswordConfirmationFromSQSQueue()
+            throws JsonProcessingException, NotificationClientException {
+        when(notificationService.getNotificationTemplateId(PASSWORD_RESET_CONFIRMATION))
+                .thenReturn(TEMPLATE_ID);
+
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_EMAIL_ADDRESS, PASSWORD_RESET_CONFIRMATION);
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        verify(notificationService)
+                .sendEmail(TEST_EMAIL_ADDRESS, Collections.emptyMap(), TEMPLATE_ID);
     }
 
     @Test
