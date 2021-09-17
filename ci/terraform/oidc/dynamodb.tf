@@ -100,6 +100,7 @@ data "aws_iam_policy_document" "dynamo_policy_document" {
       aws_dynamodb_table.user_credentials_table.arn,
       aws_dynamodb_table.user_profile_table.arn,
       "${aws_dynamodb_table.user_profile_table.arn}/index/*",
+      "${aws_dynamodb_table.user_credentials_table.arn}/index/*",
       aws_dynamodb_table.client_registry_table.arn,
     ]
   }
