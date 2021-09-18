@@ -113,9 +113,10 @@ public class SignUpHandler
                                             signupRequest.getPassword(),
                                             new Subject(),
                                             new TermsAndConditions(
-                                                    String.valueOf(Instant.now().getEpochSecond()),
                                                     configurationService
-                                                            .getTermsAndConditionsVersion()));
+                                                            .getTermsAndConditionsVersion(),
+                                                    String.valueOf(
+                                                            Instant.now().getEpochSecond())));
 
                                     sessionService.save(
                                             session.get()
