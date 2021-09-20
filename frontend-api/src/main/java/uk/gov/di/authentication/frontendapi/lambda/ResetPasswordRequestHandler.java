@@ -34,6 +34,7 @@ import java.util.Optional;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1017;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_RESET_PASSWORD_LINK;
+import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_RESET_PASSWORD_LINK_TOO_MANY_TIMES;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
@@ -96,13 +97,13 @@ public class ResetPasswordRequestHandler
                             Optional<Session> session =
                                     sessionService.getSessionFromRequestHeaders(input.getHeaders());
                             if (session.isEmpty()) {
+                                LOGGER.error("Session is empty");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1000);
-                            } else {
-                                LOGGER.info(
-                                        "ResetPasswordRequestHandler processing request for session {}",
-                                        session.get().getSessionId());
                             }
+                            LOGGER.info(
+                                    "ResetPasswordRequestHandler processing request for session {}",
+                                    session.get().getSessionId());
                             try {
                                 ResetPasswordRequest resetPasswordRequest =
                                         objectMapper.readValue(
@@ -110,16 +111,11 @@ public class ResetPasswordRequestHandler
                                 if (!session.get()
                                         .validateSession(resetPasswordRequest.getEmail())) {
                                     LOGGER.info(
-                                            "Invalid session. Email {}",
-                                            resetPasswordRequest.getEmail());
+                                            "Invalid session. SessionId {}",
+                                            session.get().getSessionId());
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1000);
                                 }
-                                SessionState nextState =
-                                        stateMachine.transition(
-                                                session.get().getState(),
-                                                SYSTEM_HAS_SENT_RESET_PASSWORD_LINK);
-
                                 Optional<ErrorResponse> emailErrorResponse =
                                         validationService.validateEmailAddress(
                                                 resetPasswordRequest.getEmail());
@@ -130,11 +126,19 @@ public class ResetPasswordRequestHandler
                                     return generateApiGatewayProxyErrorResponse(
                                             400, emailErrorResponse.get());
                                 }
-                                return handleNotificationRequest(
+
+                                Optional<ErrorResponse> errorResponse =
+                                        validatePasswordResetCount(
+                                                resetPasswordRequest.getEmail(), session.get());
+                                if (errorResponse.isPresent()) {
+                                    return generateApiGatewayProxyErrorResponse(
+                                            400, errorResponse.get());
+                                }
+                                return processPasswordResetRequest(
                                         resetPasswordRequest.getEmail(),
                                         NotificationType.RESET_PASSWORD,
-                                        session.get(),
-                                        nextState);
+                                        session.get());
+
                             } catch (SdkClientException ex) {
                                 LOGGER.error("Error sending message to queue", ex);
                                 return generateApiGatewayProxyResponse(
@@ -149,29 +153,45 @@ public class ResetPasswordRequestHandler
                         });
     }
 
-    private APIGatewayProxyResponseEvent handleNotificationRequest(
-            String email,
-            NotificationType notificationType,
-            Session session,
-            SessionState nextState)
+    private APIGatewayProxyResponseEvent processPasswordResetRequest(
+            String email, NotificationType notificationType, Session session)
             throws JsonProcessingException {
-
+        SessionState nextState =
+                stateMachine.transition(session.getState(), SYSTEM_HAS_SENT_RESET_PASSWORD_LINK);
         String subjectId = authenticationService.getSubjectFromEmail(email).getValue();
         String code = codeGeneratorService.twentyByteEncodedRandomCode();
         NotifyRequest notifyRequest = new NotifyRequest(email, notificationType, code);
-
         codeStorageService.savePasswordResetCode(
                 subjectId,
                 code,
                 configurationService.getCodeExpiry(),
                 NotificationType.RESET_PASSWORD);
-        sessionService.save(session.setState(nextState));
-
+        sessionService.save(session.setState(nextState).incrementPasswordResetCount());
         sqsClient.send(serialiseRequest(notifyRequest));
         LOGGER.info(
                 "ResetPasswordRequestHandler successfully processed request for session {}",
                 session.getSessionId());
         return generateApiGatewayProxyResponse(200, new BaseAPIResponse(session.getState()));
+    }
+
+    private Optional<ErrorResponse> validatePasswordResetCount(String email, Session session) {
+        if (codeStorageService.isPasswordResetBlockedForSession(email, session.getSessionId())) {
+            LOGGER.info("User cannot request another password reset");
+            return Optional.of(ErrorResponse.ERROR_1023);
+        } else if (session.getPasswordResetCount() > configurationService.getCodeMaxRetries()) {
+            LOGGER.info("User has requested too many password resets");
+            codeStorageService.savePasswordResetBlockedForSession(
+                    session.getEmailAddress(),
+                    session.getSessionId(),
+                    configurationService.getCodeExpiry());
+            sessionService.save(session.resetPasswordResetCount());
+            SessionState nextState =
+                    stateMachine.transition(
+                            session.getState(), SYSTEM_HAS_SENT_RESET_PASSWORD_LINK_TOO_MANY_TIMES);
+            sessionService.save(session.setState(nextState));
+            return Optional.of(ErrorResponse.ERROR_1022);
+        }
+        return Optional.empty();
     }
 
     private String serialiseRequest(Object request) throws JsonProcessingException {
