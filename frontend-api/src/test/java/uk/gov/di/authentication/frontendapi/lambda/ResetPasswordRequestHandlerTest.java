@@ -45,6 +45,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
+import static uk.gov.di.authentication.shared.entity.SessionState.RESET_PASSWORD_LINK_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.shared.entity.SessionState.RESET_PASSWORD_LINK_SENT;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -82,6 +83,7 @@ class ResetPasswordRequestHandlerTest {
     void setup() {
         when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
         when(codeGeneratorService.twentyByteEncodedRandomCode()).thenReturn(TEST_SIX_DIGIT_CODE);
+        when(configurationService.getCodeMaxRetries()).thenReturn(5);
     }
 
     @Test
@@ -198,6 +200,62 @@ class ResetPasswordRequestHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1017));
+    }
+
+    @Test
+    public void shouldReturn400IfUserHasExceededPasswordResetCount() {
+        Subject subject = new Subject("subject_1");
+        String sessionId = "1233455677";
+        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
+                .thenReturn(Optional.empty());
+        when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
+        Session session = mock(Session.class);
+        when(session.getState()).thenReturn(RESET_PASSWORD_LINK_SENT);
+        when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
+        when(session.getSessionId()).thenReturn(sessionId);
+        when(session.validateSession(TEST_EMAIL_ADDRESS)).thenReturn(true);
+        when(session.getPasswordResetCount()).thenReturn(6);
+
+        when(sessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(session));
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", sessionId));
+        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(400, result.getStatusCode());
+        verify(codeStorageService)
+                .savePasswordResetBlockedForSession(TEST_EMAIL_ADDRESS, sessionId, 900);
+        verify(session).resetPasswordResetCount();
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1022));
+    }
+
+    @Test
+    public void shouldReturn400IfUserIsBlockedFromRequestingAnyMorePasswordResets() {
+        Subject subject = new Subject("subject_1");
+        String sessionId = "1233455677";
+        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
+                .thenReturn(Optional.empty());
+        when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
+        Session session = mock(Session.class);
+        when(session.getState()).thenReturn(RESET_PASSWORD_LINK_MAX_RETRIES_REACHED);
+        when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
+        when(session.getSessionId()).thenReturn(sessionId);
+        when(session.validateSession(TEST_EMAIL_ADDRESS)).thenReturn(true);
+        when(session.getPasswordResetCount()).thenReturn(0);
+        when(codeStorageService.isPasswordResetBlockedForSession(TEST_EMAIL_ADDRESS, sessionId))
+                .thenReturn(true);
+        when(sessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(session));
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", sessionId));
+        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1023));
     }
 
     private void usingValidSession() {

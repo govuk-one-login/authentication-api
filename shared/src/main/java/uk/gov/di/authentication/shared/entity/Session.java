@@ -25,6 +25,9 @@ public class Session {
     @JsonProperty("retry_count")
     private int retryCount;
 
+    @JsonProperty("password_reset_count")
+    private int passwordResetCount;
+
     public Session(String sessionId) {
         this.sessionId = sessionId;
         this.state = NEW;
@@ -93,6 +96,20 @@ public class Session {
 
     public Session resetRetryCount() {
         this.retryCount = 0;
+        return this;
+    }
+
+    public int getPasswordResetCount() {
+        return passwordResetCount;
+    }
+
+    public Session incrementPasswordResetCount() {
+        this.passwordResetCount = passwordResetCount + 1;
+        return this;
+    }
+
+    public Session resetPasswordResetCount() {
+        this.passwordResetCount = 0;
         return this;
     }
 }

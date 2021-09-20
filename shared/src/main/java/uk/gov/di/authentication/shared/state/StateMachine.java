@@ -72,7 +72,13 @@ public class StateMachine<T, A, C> {
                 .when(NEW)
                 .allow(on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND))
                 .when(RESET_PASSWORD_LINK_SENT)
-                .allow(on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND))
+                .allow(
+                        on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND),
+                        on(SYSTEM_HAS_SENT_RESET_PASSWORD_LINK_TOO_MANY_TIMES)
+                                .then(RESET_PASSWORD_LINK_MAX_RETRIES_REACHED),
+                        on(SYSTEM_HAS_SENT_RESET_PASSWORD_LINK).then(RESET_PASSWORD_LINK_SENT))
+                .when(RESET_PASSWORD_LINK_MAX_RETRIES_REACHED)
+                .allow(on(SYSTEM_HAS_SENT_RESET_PASSWORD_LINK).then(RESET_PASSWORD_LINK_SENT))
                 .when(USER_NOT_FOUND)
                 .allow(
                         on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND),
