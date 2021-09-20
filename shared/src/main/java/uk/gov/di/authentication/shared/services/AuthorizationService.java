@@ -96,23 +96,26 @@ public class AuthorizationService {
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "Request is missing state parameter"));
         }
+
         List<String> vtr = authRequest.getCustomParameter("vtr");
+        List<String> authenticationValues =
+                List.of(
+                        AuthenticationValues.LOW_LEVEL.getValue(),
+                        AuthenticationValues.MEDIUM_LEVEL.getValue(),
+                        AuthenticationValues.HIGH_LEVEL.getValue(),
+                        AuthenticationValues.VERY_HIGH_LEVEL.getValue());
+
         if (vtr != null) {
-            List<String> authenticationValues =
-                    List.of(
-                            AuthenticationValues.LOW_LEVEL.getValue(),
-                            AuthenticationValues.MEDIUM_LEVEL.getValue(),
-                            AuthenticationValues.HIGH_LEVEL.getValue(),
-                            AuthenticationValues.VERY_HIGH_LEVEL.getValue());
             for (String v : vtr) {
-                if (!authenticationValues.contains(v)) {
+                if (!authenticationValues.contains(v)
+                        || !client.get().getVectorsOfTrust().equals(v)) {
                     return Optional.of(
                             new ErrorObject(
-                                    OAuth2Error.INVALID_REQUEST_CODE,
-                                    "Request is missing nonce parameter"));
+                                    OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
                 }
             }
         }
+
         return Optional.empty();
     }
 

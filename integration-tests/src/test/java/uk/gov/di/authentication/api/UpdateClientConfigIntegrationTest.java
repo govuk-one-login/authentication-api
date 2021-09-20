@@ -11,6 +11,7 @@ import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.helpers.DynamoHelper;
+import uk.gov.di.authentication.shared.entity.AuthenticationValues;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 
@@ -37,7 +38,8 @@ public class UpdateClientConfigIntegrationTest extends IntegrationTestEndpoints 
                 singletonList("http://localhost/post-redirect-logout"),
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public");
+                "public",
+                AuthenticationValues.VERY_HIGH_LEVEL.getValue());
 
         UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
         updateRequest.setClientName("new-client-name");

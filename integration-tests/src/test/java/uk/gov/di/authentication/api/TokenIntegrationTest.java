@@ -35,6 +35,7 @@ import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.KeyPairHelper;
 import uk.gov.di.authentication.helpers.KmsHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
+import uk.gov.di.authentication.shared.entity.AuthenticationValues;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.TokenStore;
 
@@ -200,7 +201,8 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
                 singletonList("http://localhost/post-logout-redirect"),
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public");
+                "public",
+                AuthenticationValues.VERY_HIGH_LEVEL.getValue());
         DynamoHelper.signUp(TEST_EMAIL, "password-1", internalSubject);
     }
 
