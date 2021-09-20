@@ -127,7 +127,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
     private String buildResetPasswordLink(String code) {
         LocalDateTime localDateTime =
-                LocalDateTime.now().plusMinutes(configService.getCodeExpiry());
+                LocalDateTime.now().plusSeconds(configService.getCodeExpiry());
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         return configService.getFrontendBaseUrl()
                 + configService.getResetPasswordRoute()

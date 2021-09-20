@@ -208,7 +208,7 @@ public class TokenService {
             String clientId, Subject internalSubject, List<String> scopes, Subject publicSubject) {
         LOGGER.info("Generating AccessToken for ClientId: {}", clientId);
         LocalDateTime localDateTime =
-                LocalDateTime.now().plusMinutes(configService.getAccessTokenExpiry());
+                LocalDateTime.now().plusSeconds(configService.getAccessTokenExpiry());
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
 
         JWTClaimsSet claimsSet =
@@ -247,7 +247,7 @@ public class TokenService {
             String clientId, Subject internalSubject, List<String> scopes, Subject publicSubject) {
         LOGGER.info("Generating RefreshToken for ClientId: {}", clientId);
         LocalDateTime localDateTime =
-                LocalDateTime.now().plusMinutes(configService.getSessionExpiry());
+                LocalDateTime.now().plusSeconds(configService.getSessionExpiry());
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
         JWTClaimsSet claimsSet =
                 new JWTClaimsSet.Builder()
