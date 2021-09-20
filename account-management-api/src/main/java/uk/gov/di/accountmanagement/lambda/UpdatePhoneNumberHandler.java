@@ -15,6 +15,7 @@ import uk.gov.di.accountmanagement.entity.UpdatePhoneNumberRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -93,13 +94,14 @@ public class UpdatePhoneNumberHandler
                                     return generateApiGatewayProxyErrorResponse(
                                             400, phoneValidationErrors.get());
                                 }
-                                Subject subjectFromEmail =
-                                        dynamoService.getSubjectFromEmail(
+                                UserProfile userProfile =
+                                        dynamoService.getUserProfileByEmail(
                                                 updatePhoneNumberRequest.getEmail());
                                 Map<String, Object> authorizerParams =
                                         input.getRequestContext().getAuthorizer();
                                 RequestBodyHelper.validatePrincipal(
-                                        subjectFromEmail, authorizerParams);
+                                        new Subject(userProfile.getPublicSubjectID()),
+                                        authorizerParams);
                                 dynamoService.updatePhoneNumber(
                                         updatePhoneNumberRequest.getEmail(),
                                         updatePhoneNumberRequest.getPhoneNumber());

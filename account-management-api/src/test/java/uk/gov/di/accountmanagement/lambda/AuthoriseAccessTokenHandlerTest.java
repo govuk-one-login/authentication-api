@@ -16,6 +16,7 @@ import uk.gov.di.accountmanagement.entity.AuthPolicy;
 import uk.gov.di.accountmanagement.entity.TokenAuthorizerContext;
 import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
@@ -35,10 +36,12 @@ class AuthoriseAccessTokenHandlerTest {
             mock(TokenValidationService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final DynamoClientService clientService = mock(DynamoClientService.class);
     private AuthoriseAccessTokenHandler handler;
     private final Context context = mock(Context.class);
     private static final String KEY_ID = "14342354354353";
     private static final String TOKEN_TYPE = "TOKEN";
+    private static final String CLIENT_ID = "client-id";
     private static final String METHOD_ARN =
             "arn:aws:execute-api:eu-west-2:123456789012:ymy8tbxw7b/*/POST/";
     private static final List<String> SCOPES = List.of("openid", "email", "phone", "am");
@@ -50,7 +53,10 @@ class AuthoriseAccessTokenHandlerTest {
     public void setUp() {
         handler =
                 new AuthoriseAccessTokenHandler(
-                        tokenValidationServicen, configurationService, dynamoService);
+                        tokenValidationServicen,
+                        configurationService,
+                        dynamoService,
+                        clientService);
     }
 
     @Test
@@ -62,6 +68,7 @@ class AuthoriseAccessTokenHandlerTest {
                         TOKEN_TYPE, signedAccessToken.toAuthorizationHeader(), METHOD_ARN);
         when(tokenValidationServicen.validateAccessTokenSignature(signedAccessToken))
                 .thenReturn(true);
+        when(clientService.isValidClient(CLIENT_ID)).thenReturn(true);
         AuthPolicy authPolicy = handler.handleRequest(tokenAuthorizerContext, context);
 
         assertThat(authPolicy.getPrincipalId(), equalTo(SUBJECT.getValue()));
@@ -124,7 +131,7 @@ class AuthoriseAccessTokenHandlerTest {
     }
 
     @Test
-    public void shouldThrowExceptionWhenAccessTokenHasNotBeenSigned() throws JOSEException {
+    public void shouldThrowExceptionWhenAccessTokenHasNotBeenSigned() {
         TokenAuthorizerContext tokenAuthorizerContext =
                 new TokenAuthorizerContext(
                         TOKEN_TYPE, new BearerAccessToken().toAuthorizationHeader(), METHOD_ARN);
@@ -161,6 +168,6 @@ class AuthoriseAccessTokenHandlerTest {
         ECKey ecJWK = new ECKeyGenerator(Curve.P_256).keyID(KEY_ID).generate();
         JWSSigner signer = new ECDSASigner(ecJWK);
         return TokenGeneratorHelper.generateSignedToken(
-                "client-id", "http://example.com", scopes, signer, SUBJECT, "14342354354353");
+                CLIENT_ID, "http://example.com", scopes, signer, SUBJECT, "14342354354353");
     }
 }

@@ -14,6 +14,7 @@ import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdatePasswordRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -64,14 +65,15 @@ public class UpdatePasswordHandler
                                         objectMapper.readValue(
                                                 input.getBody(), UpdatePasswordRequest.class);
 
-                                Subject subjectFromEmail =
-                                        dynamoService.getSubjectFromEmail(
+                                UserProfile userProfile =
+                                        dynamoService.getUserProfileByEmail(
                                                 updatePasswordRequest.getEmail());
                                 Map<String, Object> authorizerParams =
                                         input.getRequestContext().getAuthorizer();
 
                                 RequestBodyHelper.validatePrincipal(
-                                        subjectFromEmail, authorizerParams);
+                                        new Subject(userProfile.getPublicSubjectID()),
+                                        authorizerParams);
 
                                 dynamoService.updatePassword(
                                         updatePasswordRequest.getEmail(),

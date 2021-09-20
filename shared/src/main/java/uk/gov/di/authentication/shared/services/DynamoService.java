@@ -233,6 +233,21 @@ public class DynamoService implements AuthenticationService {
         return getUserProfile(queryExpression);
     }
 
+    @Override
+    public UserProfile getUserProfileFromPublicSubject(String subject) {
+        Map<String, AttributeValue> eav = new HashMap<>();
+        eav.put(":val1", new AttributeValue().withS(subject));
+
+        DynamoDBQueryExpression<UserProfile> queryExpression =
+                new DynamoDBQueryExpression<UserProfile>()
+                        .withIndexName("PublicSubjectIDIndex")
+                        .withKeyConditionExpression("PublicSubjectID= :val1")
+                        .withExpressionAttributeValues(eav)
+                        .withConsistentRead(false);
+
+        return getUserProfile(queryExpression);
+    }
+
     private UserProfile getUserProfile(DynamoDBQueryExpression<UserProfile> queryExpression) {
         QueryResultPage<UserProfile> scanPage =
                 userProfileMapper.queryPage(UserProfile.class, queryExpression);

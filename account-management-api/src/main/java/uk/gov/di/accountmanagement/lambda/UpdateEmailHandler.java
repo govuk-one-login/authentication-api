@@ -15,6 +15,7 @@ import uk.gov.di.accountmanagement.entity.UpdateEmailRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -104,13 +105,14 @@ public class UpdateEmailHandler
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1009);
                                 }
-                                Subject subjectFromEmail =
-                                        dynamoService.getSubjectFromEmail(
+                                UserProfile userProfile =
+                                        dynamoService.getUserProfileByEmail(
                                                 updateInfoRequest.getExistingEmailAddress());
                                 Map<String, Object> authorizerParams =
                                         input.getRequestContext().getAuthorizer();
                                 RequestBodyHelper.validatePrincipal(
-                                        subjectFromEmail, authorizerParams);
+                                        new Subject(userProfile.getPublicSubjectID()),
+                                        authorizerParams);
                                 dynamoService.updateEmail(
                                         updateInfoRequest.getExistingEmailAddress(),
                                         updateInfoRequest.getReplacementEmailAddress());

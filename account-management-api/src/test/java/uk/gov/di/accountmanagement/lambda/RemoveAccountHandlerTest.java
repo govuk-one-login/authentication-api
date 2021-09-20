@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 
 import java.util.HashMap;
@@ -40,7 +41,8 @@ class RemoveAccountHandlerTest {
 
     @Test
     public void shouldReturn200IfAccountRemovalIsSuccessful() throws JsonProcessingException {
-        when(authenticationService.getSubjectFromEmail(EMAIL)).thenReturn(SUBJECT);
+        UserProfile userProfile = new UserProfile().setPublicSubjectID(SUBJECT.getValue());
+        when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
                 new APIGatewayProxyRequestEvent.ProxyRequestContext();
         Map<String, Object> authorizerParams = new HashMap<>();

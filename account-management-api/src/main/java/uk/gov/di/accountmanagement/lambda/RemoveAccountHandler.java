@@ -14,6 +14,8 @@ import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.RemoveAccountRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -22,7 +24,6 @@ import java.util.Map;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.authentication.shared.helpers.RequestBodyHelper.validatePrincipal;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class RemoveAccountHandler
@@ -68,11 +69,13 @@ public class RemoveAccountHandler
 
                                 String email = removeAccountRequest.getEmail();
 
-                                Subject subjectFromEmail =
-                                        authenticationService.getSubjectFromEmail(email);
+                                UserProfile userProfile =
+                                        authenticationService.getUserProfileByEmail(email);
                                 Map<String, Object> authorizerParams =
                                         input.getRequestContext().getAuthorizer();
-                                validatePrincipal(subjectFromEmail, authorizerParams);
+                                RequestBodyHelper.validatePrincipal(
+                                        new Subject(userProfile.getPublicSubjectID()),
+                                        authorizerParams);
 
                                 authenticationService.removeAccount(email);
                                 LOGGER.info("User account removed. Adding message to SQS queue");

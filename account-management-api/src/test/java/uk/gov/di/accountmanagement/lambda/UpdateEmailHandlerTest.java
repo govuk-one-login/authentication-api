@@ -12,6 +12,7 @@ import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.ValidationService;
 
@@ -54,7 +55,8 @@ class UpdateEmailHandlerTest {
 
     @Test
     public void shouldReturn200ForValidUpdateEmailRequest() throws JsonProcessingException {
-        when(dynamoService.getSubjectFromEmail(EXISTING_EMAIL_ADDRESS)).thenReturn(SUBJECT);
+        UserProfile userProfile = new UserProfile().setPublicSubjectID(SUBJECT.getValue());
+        when(dynamoService.getUserProfileByEmail(EXISTING_EMAIL_ADDRESS)).thenReturn(userProfile);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
                 format(
