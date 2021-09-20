@@ -41,9 +41,20 @@ resource "aws_dynamodb_table" "user_profile_table" {
     type = "S"
   }
 
+  attribute {
+    name = "PublicSubjectID"
+    type = "S"
+  }
+
   global_secondary_index {
     name            = "SubjectIDIndex"
     hash_key        = "SubjectID"
+    projection_type = "ALL"
+  }
+
+  global_secondary_index {
+    name            = "PublicSubjectIDIndex"
+    hash_key        = "PublicSubjectID"
     projection_type = "ALL"
   }
 

@@ -35,6 +35,8 @@ public interface AuthenticationService {
 
     UserProfile getUserProfileFromSubject(String subject);
 
+    UserProfile getUserProfileFromPublicSubject(String subject);
+
     void updateTermsAndConditions(String email, String version);
 
     void updateEmail(String currentEmail, String newEmail);

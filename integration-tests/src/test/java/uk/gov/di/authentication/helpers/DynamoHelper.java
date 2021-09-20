@@ -51,6 +51,10 @@ public class DynamoHelper {
         DYNAMO_SERVICE.signUp(email, password, subject, termsAndConditions);
     }
 
+    public static UserProfile getByPublicSubject(String subject) {
+        return DYNAMO_SERVICE.getUserProfileFromPublicSubject(subject);
+    }
+
     public static void addPhoneNumber(String email, String phoneNumber) {
         DYNAMO_SERVICE.updatePhoneNumber(email, phoneNumber);
     }

@@ -13,6 +13,7 @@ import uk.gov.di.accountmanagement.entity.AuthPolicy;
 import uk.gov.di.accountmanagement.entity.TokenAuthorizerContext;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
@@ -30,14 +31,17 @@ public class AuthoriseAccessTokenHandler
     private final TokenValidationService tokenValidationService;
     private final ConfigurationService configurationService;
     private final DynamoService dynamoService;
+    private final DynamoClientService clientService;
 
     public AuthoriseAccessTokenHandler(
             TokenValidationService tokenValidationService,
             ConfigurationService configurationService,
-            DynamoService dynamoService) {
+            DynamoService dynamoService,
+            DynamoClientService clientService) {
         this.tokenValidationService = tokenValidationService;
         this.configurationService = configurationService;
         this.dynamoService = dynamoService;
+        this.clientService = clientService;
     }
 
     public AuthoriseAccessTokenHandler() {
@@ -46,6 +50,11 @@ public class AuthoriseAccessTokenHandler
                 new TokenValidationService(
                         configurationService, new KmsConnectionService(configurationService));
         dynamoService = new DynamoService(configurationService);
+        clientService =
+                new DynamoClientService(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEnvironment(),
+                        configurationService.getDynamoEndpointUri());
     }
 
     @Override
@@ -83,14 +92,24 @@ public class AuthoriseAccessTokenHandler
                     throw new RuntimeException("Unauthorized");
                 }
                 LOGGER.info("Successfully validated Access Token scope");
-
+                String clientId = claimsSet.getStringClaim("client_id");
+                if (clientId == null) {
+                    LOGGER.error("Access Token client_id is missing");
+                    throw new RuntimeException("Unauthorized");
+                }
+                if (!clientService.isValidClient(clientId)) {
+                    LOGGER.error(
+                            "Access Token client_id does not exist in Dynamo. ClientId {}",
+                            clientId);
+                    throw new RuntimeException("Unauthorized");
+                }
                 String subject = claimsSet.getSubject();
                 if (subject == null) {
                     LOGGER.error("Access Token subject is missing");
                     throw new RuntimeException("Unauthorized");
                 }
                 try {
-                    dynamoService.getUserProfileFromSubject(subject);
+                    dynamoService.getUserProfileFromPublicSubject(subject);
                 } catch (Exception e) {
                     LOGGER.error(
                             "Unable to retrieve UserProfile from Dynamo with given SubjectID: {}",

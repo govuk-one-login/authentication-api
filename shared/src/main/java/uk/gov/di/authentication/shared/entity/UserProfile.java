@@ -120,7 +120,9 @@ public class UserProfile {
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "PublicSubjectID")
+    @DynamoDBIndexHashKey(
+            globalSecondaryIndexName = "PublicSubjectIDIndex",
+            attributeName = "PublicSubjectID")
     public String getPublicSubjectID() {
         return publicSubjectID;
     }
