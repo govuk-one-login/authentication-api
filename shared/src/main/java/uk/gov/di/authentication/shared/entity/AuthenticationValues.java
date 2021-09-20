@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.oidc.entity;
+package uk.gov.di.authentication.shared.entity;
 
 public enum AuthenticationValues {
     LOW_LEVEL("Cl"),

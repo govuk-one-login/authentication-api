@@ -11,6 +11,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.shared.entity.AuthenticationValues;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
@@ -94,6 +95,23 @@ public class AuthorizationService {
                     new ErrorObject(
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "Request is missing state parameter"));
+        }
+        List<String> vtr = authRequest.getCustomParameter("vtr");
+        if (vtr != null) {
+            List<String> authenticationValues =
+                    List.of(
+                            AuthenticationValues.LOW_LEVEL.getValue(),
+                            AuthenticationValues.MEDIUM_LEVEL.getValue(),
+                            AuthenticationValues.HIGH_LEVEL.getValue(),
+                            AuthenticationValues.VERY_HIGH_LEVEL.getValue());
+            for (String v : vtr) {
+                if (!authenticationValues.contains(v)) {
+                    return Optional.of(
+                            new ErrorObject(
+                                    OAuth2Error.INVALID_REQUEST_CODE,
+                                    "Request is missing nonce parameter"));
+                }
+            }
         }
         return Optional.empty();
     }

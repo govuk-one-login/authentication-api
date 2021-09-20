@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.oidc.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import uk.gov.di.authentication.shared.entity.AuthenticationValues;
 
 import java.util.List;
 
