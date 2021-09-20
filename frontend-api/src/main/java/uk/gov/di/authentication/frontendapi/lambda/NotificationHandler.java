@@ -14,7 +14,10 @@ import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -123,10 +126,13 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     }
 
     private String buildResetPasswordLink(String code) {
+        LocalDateTime localDateTime =
+                LocalDateTime.now().plusMinutes(configService.getCodeExpiry());
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         return configService.getFrontendBaseUrl()
                 + configService.getResetPasswordRoute()
                 + code
                 + "."
-                + System.currentTimeMillis();
+                + expiryDate.toInstant().toEpochMilli();
     }
 }
