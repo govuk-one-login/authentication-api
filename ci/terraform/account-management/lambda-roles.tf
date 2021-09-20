@@ -152,6 +152,10 @@ data "aws_dynamodb_table" "user_profile_table" {
   name = "${var.environment}-user-profile"
 }
 
+data "aws_dynamodb_table" "client_registry_table" {
+  name = "${var.environment}-client-registry"
+}
+
 data "aws_iam_policy_document" "dynamo_policy_document" {
   count = var.use_localstack ? 0 : 1
   statement {
@@ -168,6 +172,7 @@ data "aws_iam_policy_document" "dynamo_policy_document" {
     resources = [
       data.aws_dynamodb_table.user_credentials_table.arn,
       data.aws_dynamodb_table.user_profile_table.arn,
+      data.aws_dynamodb_table.client_registry_table.arn,
       "${data.aws_dynamodb_table.user_profile_table.arn}/index/*",
     ]
   }
