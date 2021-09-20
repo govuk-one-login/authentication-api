@@ -78,6 +78,9 @@ public class ResetPasswordHandler
                                         validationService.validatePassword(
                                                 resetPasswordWithCodeRequest.getPassword());
                                 if (errorResponse.isPresent()) {
+                                    LOGGER.error(
+                                            "Password did not pass validation because: {}",
+                                            errorResponse.get().getMessage());
                                     return generateApiGatewayProxyErrorResponse(
                                             400, errorResponse.get());
                                 }
@@ -85,6 +88,7 @@ public class ResetPasswordHandler
                                         codeStorageService.getSubjectWithPasswordResetCode(
                                                 resetPasswordWithCodeRequest.getCode());
                                 if (subject.isEmpty()) {
+                                    LOGGER.error("Subject is not found in Redis");
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1021);
                                 }
@@ -100,12 +104,14 @@ public class ResetPasswordHandler
                                         new NotifyRequest(
                                                 userCredentials.getEmail(),
                                                 NotificationType.PASSWORD_RESET_CONFIRMATION);
+                                LOGGER.info("Placing message on queue");
                                 sqsClient.send(serialiseRequest(notifyRequest));
                             } catch (JsonProcessingException e) {
                                 LOGGER.error("Incorrect parameters in ResetPassword request");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1001);
                             }
+                            LOGGER.info("Generating successful response");
                             return generateApiGatewayProxyResponse(200, "");
                         });
     }
