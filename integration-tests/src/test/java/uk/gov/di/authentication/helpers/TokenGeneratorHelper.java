@@ -24,7 +24,7 @@ public class TokenGeneratorHelper {
     public static SignedJWT generateIDToken(
             String clientId, Subject subject, String issuerUrl, RSAKey signingKey) {
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         IDTokenClaimsSet idTokenClaims =
                 new IDTokenClaimsSet(
                         new Issuer(issuerUrl),
@@ -50,7 +50,7 @@ public class TokenGeneratorHelper {
             String clientId, String issuerUrl, List<String> scopes, RSAKey signingKey) {
 
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
 
         JWTClaimsSet claimsSet =
                 new JWTClaimsSet.Builder()
@@ -58,10 +58,7 @@ public class TokenGeneratorHelper {
                         .issuer(issuerUrl)
                         .expirationTime(expiryDate)
                         .issueTime(
-                                Date.from(
-                                        LocalDateTime.now()
-                                                .atZone(ZoneId.systemDefault())
-                                                .toInstant()))
+                                Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()))
                         .claim("client_id", clientId)
                         .jwtID(UUID.randomUUID().toString())
                         .build();

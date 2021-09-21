@@ -2,7 +2,9 @@ package uk.gov.di.authentication.oidc.services;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.jose.proc.BadJOSEException;
 import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
@@ -22,6 +24,8 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
 import java.text.ParseException;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 
@@ -61,6 +65,18 @@ public class UserInfoService {
         try {
             signedJWT = SignedJWT.parse(accessToken.getValue());
 
+            DefaultJWTClaimsVerifier defaultJWTClaimsVerifier =
+                    new DefaultJWTClaimsVerifier(
+                            null,
+                            new HashSet<>(
+                                    Arrays.asList("sub", "iat", "exp", "client_id", "scope")));
+            try {
+                defaultJWTClaimsVerifier.verify(signedJWT.getJWTClaimsSet(), null);
+            } catch (BadJOSEException e) {
+                LOGGER.error("Access Token was unabled to be processed", e);
+                throw new UserInfoValidationException(
+                        "Invalid Access Token", BearerTokenError.INVALID_TOKEN);
+            }
             if (!tokenValidationService.validateAccessTokenSignature(accessToken)) {
                 LOGGER.error("Unable to validate AccessToken signature");
                 throw new UserInfoValidationException(

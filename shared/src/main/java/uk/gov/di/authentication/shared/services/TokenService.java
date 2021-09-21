@@ -186,7 +186,7 @@ public class TokenService {
             AccessTokenHash accessTokenHash) {
         LOGGER.info("Generating IdToken for ClientId: {}", clientId);
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         IDTokenClaimsSet idTokenClaims =
                 new IDTokenClaimsSet(
                         new Issuer(configService.getBaseURL().get()),
@@ -209,7 +209,7 @@ public class TokenService {
         LOGGER.info("Generating AccessToken for ClientId: {}", clientId);
         LocalDateTime localDateTime =
                 LocalDateTime.now().plusSeconds(configService.getAccessTokenExpiry());
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
 
         JWTClaimsSet claimsSet =
                 new JWTClaimsSet.Builder()
@@ -217,10 +217,7 @@ public class TokenService {
                         .issuer(configService.getBaseURL().get())
                         .expirationTime(expiryDate)
                         .issueTime(
-                                Date.from(
-                                        LocalDateTime.now()
-                                                .atZone(ZoneId.systemDefault())
-                                                .toInstant()))
+                                Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()))
                         .claim("client_id", clientId)
                         .subject(publicSubject.getValue())
                         .jwtID(UUID.randomUUID().toString())
@@ -248,17 +245,14 @@ public class TokenService {
         LOGGER.info("Generating RefreshToken for ClientId: {}", clientId);
         LocalDateTime localDateTime =
                 LocalDateTime.now().plusSeconds(configService.getSessionExpiry());
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         JWTClaimsSet claimsSet =
                 new JWTClaimsSet.Builder()
                         .claim("scope", scopes)
                         .issuer(configService.getBaseURL().get())
                         .expirationTime(expiryDate)
                         .issueTime(
-                                Date.from(
-                                        LocalDateTime.now()
-                                                .atZone(ZoneId.systemDefault())
-                                                .toInstant()))
+                                Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()))
                         .claim("client_id", clientId)
                         .subject(publicSubject.getValue())
                         .jwtID(UUID.randomUUID().toString())

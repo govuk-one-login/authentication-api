@@ -171,17 +171,14 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
 
     private SignedJWT generateSignedRefreshToken(Scope scope, Subject publicSubject) {
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(60);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         JWTClaimsSet claimsSet =
                 new JWTClaimsSet.Builder()
                         .claim("scope", scope.toStringList())
                         .issuer("issuer-id")
                         .expirationTime(expiryDate)
                         .issueTime(
-                                Date.from(
-                                        LocalDateTime.now()
-                                                .atZone(ZoneId.systemDefault())
-                                                .toInstant()))
+                                Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()))
                         .claim("client_id", CLIENT_ID)
                         .subject(publicSubject.getValue())
                         .jwtID(UUID.randomUUID().toString())

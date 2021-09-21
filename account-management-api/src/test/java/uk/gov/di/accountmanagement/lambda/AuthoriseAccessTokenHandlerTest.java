@@ -20,6 +20,9 @@ import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -73,6 +76,23 @@ class AuthoriseAccessTokenHandlerTest {
 
         assertThat(authPolicy.getPrincipalId(), equalTo(SUBJECT.getValue()));
         assertNotNull(authPolicy.getPolicyDocument().get("Statement"));
+    }
+
+    @Test
+    public void shouldThrowExceptionWhenAccessTokenHasExpired() throws JOSEException {
+        BearerAccessToken signedAccessToken =
+                new BearerAccessToken(createSignedExpiredAccessToken(SCOPES).serialize());
+        TokenAuthorizerContext tokenAuthorizerContext =
+                new TokenAuthorizerContext(
+                        TOKEN_TYPE, signedAccessToken.toAuthorizationHeader(), METHOD_ARN);
+
+        RuntimeException exception =
+                assertThrows(
+                        RuntimeException.class,
+                        () -> handler.handleRequest(tokenAuthorizerContext, context),
+                        "Expected to throw exception");
+
+        assertEquals("Unauthorized", exception.getMessage());
     }
 
     @Test
@@ -169,5 +189,20 @@ class AuthoriseAccessTokenHandlerTest {
         JWSSigner signer = new ECDSASigner(ecJWK);
         return TokenGeneratorHelper.generateSignedToken(
                 CLIENT_ID, "http://example.com", scopes, signer, SUBJECT, "14342354354353");
+    }
+
+    private SignedJWT createSignedExpiredAccessToken(List<String> scopes) throws JOSEException {
+        LocalDateTime localDateTime = LocalDateTime.now().minusMinutes(2);
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        ECKey ecJWK = new ECKeyGenerator(Curve.P_256).keyID(KEY_ID).generate();
+        JWSSigner signer = new ECDSASigner(ecJWK);
+        return TokenGeneratorHelper.generateSignedToken(
+                CLIENT_ID,
+                "http://example.com",
+                scopes,
+                signer,
+                SUBJECT,
+                "14342354354353",
+                expiryDate);
     }
 }

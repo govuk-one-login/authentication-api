@@ -29,6 +29,8 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -116,6 +118,21 @@ class UserInfoServiceTest {
         assertEquals(
                 userInfoValidationException.getMessage(),
                 "Unable to validate AccessToken signature");
+        assertEquals(userInfoValidationException.getError(), BearerTokenError.INVALID_TOKEN);
+    }
+
+    @Test
+    public void shouldThrowExceptionWhenTokenHasExpired() throws JOSEException {
+        accessToken = createSignedExpiredAccessToken();
+        UserInfoValidationException userInfoValidationException =
+                assertThrows(
+                        UserInfoValidationException.class,
+                        () ->
+                                userInfoService.processUserInfoRequest(
+                                        accessToken.toAuthorizationHeader()),
+                        "Expected to throw UserInfoValidationException");
+
+        assertEquals(userInfoValidationException.getMessage(), "Invalid Access Token");
         assertEquals(userInfoValidationException.getError(), BearerTokenError.INVALID_TOKEN);
     }
 
@@ -225,6 +242,27 @@ class UserInfoServiceTest {
         SignedJWT signedJWT =
                 TokenGeneratorHelper.generateSignedToken(
                         CLIENT_ID, BASE_URL, SCOPES, signer, SUBJECT, ecSigningKey.getKeyID());
+        return new BearerAccessToken(signedJWT.serialize());
+    }
+
+    private AccessToken createSignedExpiredAccessToken() throws JOSEException {
+        LocalDateTime localDateTime = LocalDateTime.now().minusMinutes(2);
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        ECKey ecSigningKey =
+                new ECKeyGenerator(Curve.P_256)
+                        .keyID(KEY_ID)
+                        .algorithm(JWSAlgorithm.ES256)
+                        .generate();
+        ECDSASigner signer = new ECDSASigner(ecSigningKey);
+        SignedJWT signedJWT =
+                TokenGeneratorHelper.generateSignedToken(
+                        CLIENT_ID,
+                        BASE_URL,
+                        SCOPES,
+                        signer,
+                        SUBJECT,
+                        ecSigningKey.getKeyID(),
+                        expiryDate);
         return new BearerAccessToken(signedJWT.serialize());
     }
 
