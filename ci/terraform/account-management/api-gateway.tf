@@ -96,6 +96,14 @@ resource "aws_lambda_function" "authorizer" {
   }
 }
 
+resource "aws_cloudwatch_log_subscription_filter" "authorizer_log_subscription" {
+  count           = var.logging_endpoint_enabled ? 1 : 0
+  name            = "authorizer-log-subscription"
+  log_group_name  = aws_cloudwatch_log_group.lambda_log_group[0].name
+  filter_pattern  = ""
+  destination_arn = var.logging_endpoint_arn
+}
+
 resource "aws_iam_role" "invocation_role" {
   name = "${var.environment}-api_gateway_auth_invocation"
   path = "/"
