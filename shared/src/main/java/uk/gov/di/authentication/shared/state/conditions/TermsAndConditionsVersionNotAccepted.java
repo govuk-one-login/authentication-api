@@ -1,11 +1,11 @@
 package uk.gov.di.authentication.shared.state.conditions;
 
-import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.state.Condition;
+import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
 
-public class TermsAndConditionsVersionNotAccepted implements Condition<UserProfile> {
+public class TermsAndConditionsVersionNotAccepted implements Condition<UserContext> {
 
     private final String latestVersion;
 
@@ -14,10 +14,18 @@ public class TermsAndConditionsVersionNotAccepted implements Condition<UserProfi
     }
 
     @Override
-    public boolean isMet(Optional<UserProfile> context) {
+    public boolean isMet(Optional<UserContext> context) {
         if (latestVersion == null) return false;
-        return context.map(u -> !latestVersion.equals(u.getTermsAndConditions().getVersion()))
-                .orElse(true);
+        return context.map(
+                        c ->
+                                c.getUserProfile()
+                                        .map(
+                                                u ->
+                                                        !latestVersion.equals(
+                                                                u.getTermsAndConditions()
+                                                                        .getVersion()))
+                                        .orElseThrow())
+                .orElseThrow();
     }
 
     public static TermsAndConditionsVersionNotAccepted userHasNotAcceptedTermsAndConditionsVersion(

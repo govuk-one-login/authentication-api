@@ -17,7 +17,6 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
-import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper.SessionCookieIds;
@@ -27,6 +26,7 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.StateMachine;
+import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.List;
 import java.util.Map;
@@ -45,7 +45,7 @@ public class AuthCodeHandler
     private final ConfigurationService configurationService;
     private final AuthorizationService authorizationService;
     private final ClientSessionService clientSessionService;
-    private final StateMachine<SessionState, SessionAction, UserProfile> stateMachine =
+    private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             userJourneyStateMachine();
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthCodeHandler.class);

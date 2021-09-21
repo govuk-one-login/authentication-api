@@ -16,13 +16,13 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
-import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.ValidationService;
 import uk.gov.di.authentication.shared.state.StateMachine;
+import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -43,7 +43,7 @@ public class SignUpHandler
     private final SessionService sessionService;
     private final ConfigurationService configurationService;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final StateMachine<SessionState, SessionAction, UserProfile> stateMachine =
+    private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             userJourneyStateMachine();
 
     public SignUpHandler(
