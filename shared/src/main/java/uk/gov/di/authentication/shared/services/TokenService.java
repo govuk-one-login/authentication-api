@@ -39,6 +39,8 @@ import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.entity.TokenStore;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
@@ -81,12 +83,14 @@ public class TokenService {
             Subject internalSubject,
             List<String> scopes,
             Map<String, Object> additionalTokenClaims,
-            Subject publicSubject) {
+            Subject publicSubject,
+            String vot) {
         AccessToken accessToken =
                 generateAndStoreAccessToken(clientID, internalSubject, scopes, publicSubject);
         AccessTokenHash accessTokenHash = AccessTokenHash.compute(accessToken, TOKEN_ALGORITHM);
         SignedJWT idToken =
-                generateIDToken(clientID, publicSubject, additionalTokenClaims, accessTokenHash);
+                generateIDToken(
+                        clientID, publicSubject, additionalTokenClaims, accessTokenHash, vot);
         if (scopes.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
             RefreshToken refreshToken =
                     generateAndStoreRefreshToken(clientID, internalSubject, scopes, publicSubject);
@@ -183,8 +187,16 @@ public class TokenService {
             String clientId,
             Subject publicSubject,
             Map<String, Object> additionalTokenClaims,
-            AccessTokenHash accessTokenHash) {
+            AccessTokenHash accessTokenHash,
+            String vot) {
         LOGGER.info("Generating IdToken for ClientId: {}", clientId);
+        URI trustMarkUri;
+        try {
+            trustMarkUri = new URI(configService.getBaseURL().get() + "/trustmark");
+        } catch (URISyntaxException e) {
+            LOGGER.error("Unable to build trustmarkUri");
+            throw new RuntimeException(e);
+        }
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         IDTokenClaimsSet idTokenClaims =
@@ -196,6 +208,8 @@ public class TokenService {
                         new Date());
         idTokenClaims.setAccessTokenHash(accessTokenHash);
         idTokenClaims.putAll(additionalTokenClaims);
+        idTokenClaims.setClaim("vot", vot);
+        idTokenClaims.setClaim("vtm", trustMarkUri);
         try {
             return generateSignedJWT(idTokenClaims.toJWTClaimsSet());
         } catch (com.nimbusds.oauth2.sdk.ParseException e) {

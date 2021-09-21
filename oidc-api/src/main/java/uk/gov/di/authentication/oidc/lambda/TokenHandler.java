@@ -220,13 +220,15 @@ public class TokenHandler
                             if (authRequest.getNonce() != null) {
                                 additionalTokenClaims.put("nonce", authRequest.getNonce());
                             }
+                            String vot = client.getVectorsOfTrust();
                             OIDCTokenResponse tokenResponse =
                                     tokenService.generateTokenResponse(
                                             clientID,
                                             internalSubject,
                                             authRequest.getScope().toStringList(),
                                             additionalTokenClaims,
-                                            publicSubject);
+                                            publicSubject,
+                                            vot);
 
                             clientSessionService.saveClientSession(
                                     authCodeExchangeData.getClientSessionId(),
