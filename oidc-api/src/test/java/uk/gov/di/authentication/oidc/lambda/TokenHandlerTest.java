@@ -33,6 +33,7 @@ import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
+import uk.gov.di.authentication.shared.entity.AuthenticationValues;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.TokenStore;
@@ -67,7 +68,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -91,7 +91,9 @@ public class TokenHandlerTest {
     private static final String BASE_URI = "http://localhost";
     private static final String TOKEN_URI = "http://localhost/token";
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
+    private static final Nonce NONCE = new Nonce();
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
+    private static final String VOT = AuthenticationValues.MEDIUM_LEVEL.getValue();
     private final Context context = mock(Context.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -158,11 +160,12 @@ public class TokenHandlerTest {
         when(dynamoService.getSubjectFromEmail(eq(TEST_EMAIL))).thenReturn(INTERNAL_SUBJECT);
         when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
-                        eq(CLIENT_ID),
-                        eq(INTERNAL_SUBJECT),
-                        eq(SCOPES.toStringList()),
-                        anyMap(),
-                        eq(PUBLIC_SUBJECT)))
+                        CLIENT_ID,
+                        INTERNAL_SUBJECT,
+                        SCOPES.toStringList(),
+                        Map.of("nonce", NONCE),
+                        PUBLIC_SUBJECT,
+                        VOT))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result = generateApiGatewayRequest(privateKeyJWT, authCode);
@@ -400,7 +403,8 @@ public class TokenHandlerTest {
                 .setPublicKey(
                         Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()))
                 .setSectorIdentifierUri("https://test.com")
-                .setSubjectType("public");
+                .setSubjectType("public")
+                .setVectorsOfTrust(VOT);
     }
 
     private ClientRegistry generateClientRegistryPairwise(
@@ -462,7 +466,7 @@ public class TokenHandlerTest {
                         new ClientID(CLIENT_ID),
                         URI.create(REDIRECT_URI))
                 .state(state)
-                .nonce(new Nonce())
+                .nonce(NONCE)
                 .build();
     }
 

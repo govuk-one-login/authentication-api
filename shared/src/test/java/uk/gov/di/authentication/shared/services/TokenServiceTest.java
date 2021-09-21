@@ -28,6 +28,7 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.entity.AuthenticationValues;
 import uk.gov.di.authentication.shared.entity.TokenStore;
 import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
 
@@ -67,6 +68,7 @@ public class TokenServiceTest {
     private static final Subject PUBLIC_SUBJECT = new Subject("public-subject");
     private static final Subject INTERNAL_SUBJECT = new Subject("internal-subject");
     private static final List<String> SCOPES = List.of("openid", "email", "phone");
+    private static final String VOT = AuthenticationValues.MEDIUM_LEVEL.getValue();
     private static final List<String> SCOPES_OFFLINE_ACCESS =
             List.of("openid", "email", "phone", "offline_access");
     private static final String CLIENT_ID = "client-id";
@@ -100,7 +102,8 @@ public class TokenServiceTest {
                         INTERNAL_SUBJECT,
                         SCOPES_OFFLINE_ACCESS,
                         additionalTokenClaims,
-                        PUBLIC_SUBJECT);
+                        PUBLIC_SUBJECT,
+                        VOT);
 
         assertEquals(
                 BASE_URL, tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getIssuer());
@@ -145,7 +148,12 @@ public class TokenServiceTest {
         additionalTokenClaims.put("nonce", nonce);
         OIDCTokenResponse tokenResponse =
                 tokenService.generateTokenResponse(
-                        CLIENT_ID, INTERNAL_SUBJECT, SCOPES, additionalTokenClaims, PUBLIC_SUBJECT);
+                        CLIENT_ID,
+                        INTERNAL_SUBJECT,
+                        SCOPES,
+                        additionalTokenClaims,
+                        PUBLIC_SUBJECT,
+                        VOT);
 
         assertEquals(
                 BASE_URL, tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getIssuer());
