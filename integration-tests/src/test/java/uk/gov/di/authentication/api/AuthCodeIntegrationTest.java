@@ -84,7 +84,7 @@ public class AuthCodeIntegrationTest extends IntegrationTestEndpoints {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",
-                AuthenticationValues.VERY_HIGH_LEVEL.getValue());
+                AuthenticationValues.MEDIUM_LEVEL.getValue());
     }
 
     private String buildCookieString(String sessionID, String clientSessionID) {

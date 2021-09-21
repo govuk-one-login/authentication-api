@@ -202,7 +202,7 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",
-                AuthenticationValues.VERY_HIGH_LEVEL.getValue());
+                AuthenticationValues.MEDIUM_LEVEL.getValue());
         DynamoHelper.signUp(TEST_EMAIL, "password-1", internalSubject);
     }
 

@@ -76,7 +76,7 @@ public class LogoutIntegrationTest extends IntegrationTestEndpoints {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",
-                AuthenticationValues.VERY_HIGH_LEVEL.getValue());
+                AuthenticationValues.MEDIUM_LEVEL.getValue());
         Client client = ClientBuilder.newClient();
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add(COOKIE, buildCookieString(sessionId, clientSessionId));

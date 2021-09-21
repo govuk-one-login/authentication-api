@@ -37,7 +37,7 @@ class ClientConfigValidationServiceTest {
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 "public",
-                                AuthenticationValues.VERY_HIGH_LEVEL.getValue()));
+                                AuthenticationValues.MEDIUM_LEVEL.getValue()));
         assertThat(errorResponse, equalTo(Optional.empty()));
     }
 
@@ -53,7 +53,7 @@ class ClientConfigValidationServiceTest {
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 "public",
-                                AuthenticationValues.VERY_HIGH_LEVEL.getValue()));
+                                AuthenticationValues.MEDIUM_LEVEL.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_POST_LOGOUT_URI)));
     }
 
@@ -69,7 +69,7 @@ class ClientConfigValidationServiceTest {
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 "public",
-                                AuthenticationValues.VERY_HIGH_LEVEL.getValue()));
+                                AuthenticationValues.MEDIUM_LEVEL.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(RegistrationError.INVALID_REDIRECT_URI)));
     }
 
@@ -85,7 +85,7 @@ class ClientConfigValidationServiceTest {
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 "public",
-                                AuthenticationValues.VERY_HIGH_LEVEL.getValue()));
+                                AuthenticationValues.MEDIUM_LEVEL.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_PUBLIC_KEY)));
     }
 
@@ -101,7 +101,7 @@ class ClientConfigValidationServiceTest {
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 "public",
-                                AuthenticationValues.VERY_HIGH_LEVEL.getValue()));
+                                AuthenticationValues.MEDIUM_LEVEL.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
     }
 
@@ -117,7 +117,7 @@ class ClientConfigValidationServiceTest {
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 "public",
-                                AuthenticationValues.VERY_HIGH_LEVEL.getValue()));
+                                AuthenticationValues.MEDIUM_LEVEL.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
     }
 

@@ -39,7 +39,7 @@ public class UpdateClientConfigIntegrationTest extends IntegrationTestEndpoints 
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",
-                AuthenticationValues.VERY_HIGH_LEVEL.getValue());
+                AuthenticationValues.MEDIUM_LEVEL.getValue());
 
         UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
         updateRequest.setClientName("new-client-name");

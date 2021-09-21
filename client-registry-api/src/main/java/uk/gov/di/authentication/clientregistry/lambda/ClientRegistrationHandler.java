@@ -119,7 +119,7 @@ public class ClientRegistrationHandler
 
         if (clientRegistrationRequest.getVectorsOfTrust() == null)
             clientRegistrationRequest.setVectorsOfTrust(
-                    AuthenticationValues.VERY_HIGH_LEVEL.getValue());
+                    AuthenticationValues.MEDIUM_LEVEL.getValue());
 
         List<String> authenticationValues =
                 List.of(
@@ -130,7 +130,7 @@ public class ClientRegistrationHandler
 
         if (!authenticationValues.contains(clientRegistrationRequest.getVectorsOfTrust()))
             clientRegistrationRequest.setVectorsOfTrust(
-                    AuthenticationValues.VERY_HIGH_LEVEL.getValue());
+                    AuthenticationValues.MEDIUM_LEVEL.getValue());
 
         return clientRegistrationRequest;
     }

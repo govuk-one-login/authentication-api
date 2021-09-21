@@ -38,7 +38,7 @@ public class ClientRegistrationIntegrationTest extends IntegrationTestEndpoints 
                         String.valueOf(ServiceType.MANDATORY),
                         "https://test.com",
                         "public",
-                        AuthenticationValues.VERY_HIGH_LEVEL.getValue());
+                        AuthenticationValues.MEDIUM_LEVEL.getValue());
 
         Response response =
                 ClientBuilder.newClient()
