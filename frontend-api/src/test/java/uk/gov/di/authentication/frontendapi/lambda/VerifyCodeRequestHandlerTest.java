@@ -152,8 +152,7 @@ class VerifyCodeRequestHandlerTest {
     }
 
     private ArgumentMatcher<UserContext> isContextWithUserProfile(UserProfile userProfile) {
-        return userContext ->
-                userContext.getUserProfile().map(p -> p.equals(userProfile)).orElse(false);
+        return userContext -> userContext.getUserProfile().filter(userProfile::equals).isPresent();
     }
 
     @Test
