@@ -267,7 +267,7 @@ public class TokenService {
                                             refreshToken.getValue(), internalSubject.getValue()));
             String redisKey = REFRESH_TOKEN_PREFIX + clientId + "." + publicSubject.getValue();
             redisConnectionService.saveWithExpiry(
-                    redisKey, tokenStoreString, configService.getAccessTokenExpiry());
+                    redisKey, tokenStoreString, configService.getSessionExpiry());
         } catch (JsonProcessingException e) {
             LOGGER.error("Unable to create new TokenStore with RefreshToken", e);
             throw new RuntimeException(e);

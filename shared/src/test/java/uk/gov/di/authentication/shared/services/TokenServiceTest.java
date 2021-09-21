@@ -81,6 +81,8 @@ public class TokenServiceTest {
     public void setUp() {
         Optional<String> baseUrl = Optional.of(BASE_URL);
         when(configurationService.getBaseURL()).thenReturn(baseUrl);
+        when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
+        when(configurationService.getSessionExpiry()).thenReturn(300L);
     }
 
     @Test
@@ -88,7 +90,6 @@ public class TokenServiceTest {
             throws ParseException, JOSEException, JsonProcessingException {
         Nonce nonce = new Nonce();
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
-        when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
         createSignedIdToken();
         createSignedAccessToken();
         Map<String, Object> additionalTokenClaims = new HashMap<>();
