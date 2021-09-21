@@ -7,6 +7,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatcher;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -19,6 +20,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.ValidationService;
 import uk.gov.di.authentication.shared.state.StateMachine;
+import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Map;
 import java.util.Optional;
@@ -27,6 +29,7 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -71,7 +74,7 @@ class VerifyCodeRequestHandlerTest {
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final ValidationService validationService = mock(ValidationService.class);
-    private final StateMachine<SessionState, SessionAction, UserProfile> stateMachine =
+    private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             mock(StateMachine.class);
     private final UserProfile userProfile = mock(UserProfile.class);
     private final Session session =
@@ -97,55 +100,59 @@ class VerifyCodeRequestHandlerTest {
         when(stateMachine.transition(
                         eq(VERIFY_EMAIL_CODE_SENT),
                         eq(USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE),
-                        eq(Optional.of(userProfile))))
+                        argThat(isContextWithUserProfile(userProfile))))
                 .thenReturn(EMAIL_CODE_VERIFIED);
         when(stateMachine.transition(
                         eq(VERIFY_EMAIL_CODE_SENT),
                         eq(USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE),
-                        eq(Optional.of(userProfile))))
+                        argThat(isContextWithUserProfile(userProfile))))
                 .thenReturn(EMAIL_CODE_NOT_VALID);
         when(stateMachine.transition(
                         eq(EMAIL_CODE_NOT_VALID),
                         eq(USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES),
-                        eq(Optional.of(userProfile))))
+                        argThat(isContextWithUserProfile(userProfile))))
                 .thenReturn(EMAIL_CODE_MAX_RETRIES_REACHED);
 
         when(stateMachine.transition(
                         eq(VERIFY_PHONE_NUMBER_CODE_SENT),
                         eq(USER_ENTERED_VALID_PHONE_VERIFICATION_CODE),
-                        eq(Optional.of(userProfile))))
+                        argThat(isContextWithUserProfile(userProfile))))
                 .thenReturn(PHONE_NUMBER_CODE_VERIFIED);
         when(stateMachine.transition(
                         eq(VERIFY_PHONE_NUMBER_CODE_SENT),
                         eq(USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE),
-                        eq(Optional.of(userProfile))))
+                        argThat(isContextWithUserProfile(userProfile))))
                 .thenReturn(PHONE_NUMBER_CODE_NOT_VALID);
         when(stateMachine.transition(
                         eq(PHONE_NUMBER_CODE_NOT_VALID),
                         eq(USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES),
-                        eq(Optional.of(userProfile))))
+                        argThat(isContextWithUserProfile(userProfile))))
                 .thenReturn(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED);
 
         when(stateMachine.transition(
                         eq(MFA_SMS_CODE_SENT),
                         eq(USER_ENTERED_INVALID_MFA_CODE),
-                        eq(Optional.of(userProfile))))
+                        argThat(isContextWithUserProfile(userProfile))))
                 .thenReturn(MFA_CODE_NOT_VALID);
         when(stateMachine.transition(
                         eq(MFA_CODE_NOT_VALID),
                         eq(USER_ENTERED_VALID_MFA_CODE),
-                        eq(Optional.of(userProfile))))
+                        argThat(isContextWithUserProfile(userProfile))))
                 .thenReturn(MFA_CODE_VERIFIED);
         when(stateMachine.transition(
                         eq(MFA_CODE_NOT_VALID),
                         eq(USER_ENTERED_INVALID_MFA_CODE),
-                        eq(Optional.of(userProfile))))
+                        argThat(isContextWithUserProfile(userProfile))))
                 .thenReturn(MFA_CODE_NOT_VALID);
         when(stateMachine.transition(
                         eq(MFA_CODE_NOT_VALID),
                         eq(USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES),
-                        eq(Optional.of(userProfile))))
+                        argThat(isContextWithUserProfile(userProfile))))
                 .thenReturn(MFA_CODE_MAX_RETRIES_REACHED);
+    }
+
+    private ArgumentMatcher<UserContext> isContextWithUserProfile(UserProfile userProfile) {
+        return userContext -> userContext.getUserProfile().filter(userProfile::equals).isPresent();
     }
 
     @Test
@@ -355,7 +362,7 @@ class VerifyCodeRequestHandlerTest {
         when(stateMachine.transition(
                         eq(MFA_SMS_CODE_SENT),
                         eq(USER_ENTERED_VALID_MFA_CODE),
-                        eq(Optional.of(userProfile))))
+                        argThat(isContextWithUserProfile(userProfile))))
                 .thenReturn(MFA_CODE_VERIFIED);
 
         APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, MFA_SMS.toString());
@@ -382,7 +389,7 @@ class VerifyCodeRequestHandlerTest {
         when(stateMachine.transition(
                         eq(MFA_SMS_CODE_SENT),
                         eq(USER_ENTERED_VALID_MFA_CODE),
-                        eq(Optional.of(userProfile))))
+                        argThat(isContextWithUserProfile(userProfile))))
                 .thenReturn(UPDATED_TERMS_AND_CONDITIONS);
 
         APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, MFA_SMS.toString());
@@ -465,7 +472,7 @@ class VerifyCodeRequestHandlerTest {
         when(stateMachine.transition(
                         eq(NEW),
                         eq(USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE),
-                        eq(Optional.of(userProfile))))
+                        argThat(isContextWithUserProfile(userProfile))))
                 .thenThrow(new StateMachine.InvalidStateTransitionException());
 
         APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, VERIFY_EMAIL.toString());

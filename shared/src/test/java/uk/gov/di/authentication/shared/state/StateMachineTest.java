@@ -65,14 +65,13 @@ public class StateMachineTest {
     @Test
     public void returnsCorrectNextStateForConditionalTransition() {
         assertThat(
-                stateMachine.transition(STATE_3, CONDITIONAL_MOVE, Optional.of(Boolean.TRUE)),
-                equalTo(STATE_4));
+                stateMachine.transition(STATE_3, CONDITIONAL_MOVE, Boolean.TRUE), equalTo(STATE_4));
     }
 
     @Test
     public void returnsDefaultNextStateForConditionalTransitionWhenNoOtherConditionMatches() {
         assertThat(
-                stateMachine.transition(STATE_3, CONDITIONAL_MOVE, Optional.of(Boolean.FALSE)),
+                stateMachine.transition(STATE_3, CONDITIONAL_MOVE, Boolean.FALSE),
                 equalTo(STATE_5));
     }
 

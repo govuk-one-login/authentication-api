@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
-import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Arrays;
@@ -16,8 +15,52 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.util.Collections.emptyList;
-import static uk.gov.di.authentication.shared.entity.SessionAction.*;
-import static uk.gov.di.authentication.shared.entity.SessionState.*;
+import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_MFA_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_PHONE_VERIFICATION_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_RESET_PASSWORD_LINK;
+import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_RESET_PASSWORD_LINK_TOO_MANY_TIMES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ACCEPTS_TERMS_AND_CONDITIONS;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_A_NEW_PHONE_NUMBER;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_MFA_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_REGISTERED_EMAIL_ADDRESS;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_CREDENTIALS;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_MFA_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_PHONE_VERIFICATION_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_CREATED_A_PASSWORD;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_REJECTS_TERMS_AND_CONDITIONS;
+import static uk.gov.di.authentication.shared.entity.SessionState.ADDED_UNVERIFIED_PHONE_NUMBER;
+import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
+import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
+import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_MAX_RETRIES_REACHED;
+import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_NOT_VALID;
+import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_VERIFIED;
+import static uk.gov.di.authentication.shared.entity.SessionState.LOGGED_IN;
+import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_MAX_RETRIES_REACHED;
+import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_NOT_VALID;
+import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_VERIFIED;
+import static uk.gov.di.authentication.shared.entity.SessionState.MFA_SMS_CODE_SENT;
+import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
+import static uk.gov.di.authentication.shared.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
+import static uk.gov.di.authentication.shared.entity.SessionState.PHONE_NUMBER_CODE_NOT_VALID;
+import static uk.gov.di.authentication.shared.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
+import static uk.gov.di.authentication.shared.entity.SessionState.RESET_PASSWORD_LINK_MAX_RETRIES_REACHED;
+import static uk.gov.di.authentication.shared.entity.SessionState.RESET_PASSWORD_LINK_SENT;
+import static uk.gov.di.authentication.shared.entity.SessionState.TWO_FACTOR_REQUIRED;
+import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS;
+import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS_ACCEPTED;
+import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS_REJECTED;
+import static uk.gov.di.authentication.shared.entity.SessionState.USER_NOT_FOUND;
+import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
+import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_PHONE_NUMBER_CODE_SENT;
 import static uk.gov.di.authentication.shared.state.conditions.TermsAndConditionsVersionNotAccepted.userHasNotAcceptedTermsAndConditionsVersion;
 
 public class StateMachine<T, A, C> {
@@ -30,7 +73,7 @@ public class StateMachine<T, A, C> {
         this.states = Collections.unmodifiableMap(states);
     }
 
-    public T transition(T from, A action, Optional<C> context) {
+    private T transition(T from, A action, Optional<C> context) {
         if (context.isEmpty()
                 && states.getOrDefault(from, emptyList()).stream()
                                 .filter(t -> t.getAction().equals(action))
@@ -53,22 +96,26 @@ public class StateMachine<T, A, C> {
         return to;
     }
 
+    public T transition(T from, A action, C context) {
+        return transition(from, action, Optional.of(context));
+    }
+
     public T transition(T from, A action) {
         return transition(from, action, Optional.empty());
     }
 
-    public static Transition.Builder<SessionState, SessionAction, UserProfile> on(
+    public static Transition.Builder<SessionState, SessionAction, UserContext> on(
             SessionAction action) {
-        return Transition.<SessionState, SessionAction, UserProfile>builder().on(action);
+        return Transition.<SessionState, SessionAction, UserContext>builder().on(action);
     }
 
-    public static StateMachine<SessionState, SessionAction, UserProfile> userJourneyStateMachine() {
+    public static StateMachine<SessionState, SessionAction, UserContext> userJourneyStateMachine() {
         return userJourneyStateMachine(ConfigurationService.getInstance());
     }
 
-    public static StateMachine<SessionState, SessionAction, UserProfile> userJourneyStateMachine(
+    public static StateMachine<SessionState, SessionAction, UserContext> userJourneyStateMachine(
             ConfigurationService configurationService) {
-        return StateMachine.<SessionState, SessionAction, UserProfile>builder()
+        return StateMachine.<SessionState, SessionAction, UserContext>builder()
                 .when(NEW)
                 .allow(on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND))
                 .when(RESET_PASSWORD_LINK_SENT)
