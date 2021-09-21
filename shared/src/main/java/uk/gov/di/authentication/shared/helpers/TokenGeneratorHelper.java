@@ -27,7 +27,7 @@ public class TokenGeneratorHelper {
     public static SignedJWT generateIDToken(
             String clientId, Subject subject, String issuerUrl, RSAKey signingKey) {
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         IDTokenClaimsSet idTokenClaims =
                 new IDTokenClaimsSet(
                         new Issuer(issuerUrl),
@@ -63,7 +63,7 @@ public class TokenGeneratorHelper {
     public static SignedJWT generateIDToken(
             String clientId, Subject subject, String issuerUrl, JWSSigner signer, String keyId) {
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         IDTokenClaimsSet idTokenClaims =
                 new IDTokenClaimsSet(
                         new Issuer(issuerUrl),
@@ -92,7 +92,19 @@ public class TokenGeneratorHelper {
             String keyId) {
 
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+
+        return generateSignedToken(clientId, issuerUrl, scopes, signer, subject, keyId, expiryDate);
+    }
+
+    public static SignedJWT generateSignedToken(
+            String clientId,
+            String issuerUrl,
+            List<String> scopes,
+            JWSSigner signer,
+            Subject subject,
+            String keyId,
+            Date expiryDate) {
 
         JWTClaimsSet claimsSet =
                 new JWTClaimsSet.Builder()
@@ -100,10 +112,7 @@ public class TokenGeneratorHelper {
                         .issuer(issuerUrl)
                         .expirationTime(expiryDate)
                         .issueTime(
-                                Date.from(
-                                        LocalDateTime.now()
-                                                .atZone(ZoneId.systemDefault())
-                                                .toInstant()))
+                                Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()))
                         .claim("client_id", clientId)
                         .subject(subject.getValue())
                         .jwtID(UUID.randomUUID().toString())

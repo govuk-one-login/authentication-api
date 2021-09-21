@@ -2,8 +2,10 @@ package uk.gov.di.accountmanagement.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.nimbusds.jose.proc.BadJOSEException;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.AccessTokenType;
@@ -18,6 +20,8 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 
 import static java.lang.Thread.sleep;
@@ -75,8 +79,20 @@ public class AuthoriseAccessTokenHandler
                 String token = input.getAuthorizationToken();
 
                 AccessToken accessToken = AccessToken.parse(token, AccessTokenType.BEARER);
-                JWTClaimsSet claimsSet = SignedJWT.parse(accessToken.getValue()).getJWTClaimsSet();
+                SignedJWT signedAccessToken = SignedJWT.parse(accessToken.getValue());
+                JWTClaimsSet claimsSet = signedAccessToken.getJWTClaimsSet();
+                DefaultJWTClaimsVerifier defaultJWTClaimsVerifier =
+                        new DefaultJWTClaimsVerifier(
+                                null,
+                                new HashSet<>(
+                                        Arrays.asList("sub", "iat", "exp", "client_id", "scope")));
 
+                try {
+                    defaultJWTClaimsVerifier.verify(claimsSet, null);
+                } catch (BadJOSEException e) {
+                    LOGGER.error("Access Token was unabled to be processed", e);
+                    throw new RuntimeException("Unauthorized");
+                }
                 boolean isAccessTokenSignatureValid =
                         tokenValidationService.validateAccessTokenSignature(accessToken);
                 if (!isAccessTokenSignatureValid) {
@@ -86,17 +102,12 @@ public class AuthoriseAccessTokenHandler
                 LOGGER.info("Successfully validated Access Token signature");
 
                 List<String> scopeList = claimsSet.getStringListClaim("scope");
-                if (scopeList == null
-                        || !scopeList.contains(CustomScopeValue.ACCOUNT_MANAGEMENT.getValue())) {
+                if (!scopeList.contains(CustomScopeValue.ACCOUNT_MANAGEMENT.getValue())) {
                     LOGGER.error("Access Token scope is not valid");
                     throw new RuntimeException("Unauthorized");
                 }
                 LOGGER.info("Successfully validated Access Token scope");
                 String clientId = claimsSet.getStringClaim("client_id");
-                if (clientId == null) {
-                    LOGGER.error("Access Token client_id is missing");
-                    throw new RuntimeException("Unauthorized");
-                }
                 if (!clientService.isValidClient(clientId)) {
                     LOGGER.error(
                             "Access Token client_id does not exist in Dynamo. ClientId {}",

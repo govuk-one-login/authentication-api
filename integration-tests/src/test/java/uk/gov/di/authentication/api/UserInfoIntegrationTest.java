@@ -48,7 +48,7 @@ public class UserInfoIntegrationTest extends IntegrationTestEndpoints {
         Subject internalSubject = new Subject();
         Subject publicSubject = new Subject();
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(10);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         List<String> scopes = new ArrayList<>();
         scopes.add("email");
         scopes.add("phone");
@@ -59,10 +59,7 @@ public class UserInfoIntegrationTest extends IntegrationTestEndpoints {
                         .issuer("issuer-id")
                         .expirationTime(expiryDate)
                         .issueTime(
-                                Date.from(
-                                        LocalDateTime.now()
-                                                .atZone(ZoneId.systemDefault())
-                                                .toInstant()))
+                                Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()))
                         .claim("client_id", "client-id-one")
                         .subject(publicSubject.getValue())
                         .jwtID(UUID.randomUUID().toString())

@@ -47,7 +47,7 @@ public class LogoutIntegrationTest extends IntegrationTestEndpoints {
         String sessionId = "session-id";
         String clientSessionId = "client-session-id";
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(10);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         IDTokenClaimsSet idTokenClaims =
                 new IDTokenClaimsSet(
                         new Issuer(BASE_URL),
