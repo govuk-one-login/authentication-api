@@ -4,6 +4,7 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.client.RegistrationError;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
+import uk.gov.di.authentication.shared.entity.AuthenticationValues;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 
 import java.util.List;
@@ -35,7 +36,8 @@ class ClientConfigValidationServiceTest {
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
-                                "public"));
+                                "public",
+                                AuthenticationValues.MEDIUM_LEVEL.getValue()));
         assertThat(errorResponse, equalTo(Optional.empty()));
     }
 
@@ -50,7 +52,8 @@ class ClientConfigValidationServiceTest {
                                 singletonList("invalid-logout-uri"),
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
-                                "public"));
+                                "public",
+                                AuthenticationValues.MEDIUM_LEVEL.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_POST_LOGOUT_URI)));
     }
 
@@ -65,7 +68,8 @@ class ClientConfigValidationServiceTest {
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
-                                "public"));
+                                "public",
+                                AuthenticationValues.MEDIUM_LEVEL.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(RegistrationError.INVALID_REDIRECT_URI)));
     }
 
@@ -80,7 +84,8 @@ class ClientConfigValidationServiceTest {
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
-                                "public"));
+                                "public",
+                                AuthenticationValues.MEDIUM_LEVEL.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_PUBLIC_KEY)));
     }
 
@@ -95,7 +100,8 @@ class ClientConfigValidationServiceTest {
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
-                                "public"));
+                                "public",
+                                AuthenticationValues.MEDIUM_LEVEL.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
     }
 
@@ -110,7 +116,8 @@ class ClientConfigValidationServiceTest {
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
-                                "public"));
+                                "public",
+                                AuthenticationValues.MEDIUM_LEVEL.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
     }
 
@@ -193,7 +200,8 @@ class ClientConfigValidationServiceTest {
             List<String> postLogoutUris,
             String serviceType,
             String sectorIdentifierUri,
-            String subjectType) {
+            String subjectType,
+            String vectorsOfTrust) {
         return new ClientRegistrationRequest(
                 "The test client",
                 redirectUri,
@@ -203,7 +211,8 @@ class ClientConfigValidationServiceTest {
                 postLogoutUris,
                 serviceType,
                 sectorIdentifierUri,
-                subjectType);
+                subjectType,
+                vectorsOfTrust);
     }
 
     private UpdateClientConfigRequest generateClientUpdateRequest(

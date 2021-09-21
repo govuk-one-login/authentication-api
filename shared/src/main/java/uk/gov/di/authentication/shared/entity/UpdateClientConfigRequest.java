@@ -30,6 +30,9 @@ public class UpdateClientConfigRequest {
     @JsonProperty("service_type")
     private String serviceType;
 
+    @JsonProperty("vectors_of_trust")
+    private String vectorsOfTrust;
+
     public UpdateClientConfigRequest() {}
 
     public String getClientId() {
@@ -62,6 +65,10 @@ public class UpdateClientConfigRequest {
 
     public String getServiceType() {
         return serviceType;
+    }
+
+    public String getVectorsOfTrust() {
+        return vectorsOfTrust;
     }
 
     public UpdateClientConfigRequest setClientId(String clientId) {
@@ -102,6 +109,11 @@ public class UpdateClientConfigRequest {
 
     public UpdateClientConfigRequest setServiceType(String serviceType) {
         this.serviceType = serviceType;
+        return this;
+    }
+
+    public UpdateClientConfigRequest setVectorsOfTrust(String vectorsOfTrust) {
+        this.vectorsOfTrust = vectorsOfTrust;
         return this;
     }
 }

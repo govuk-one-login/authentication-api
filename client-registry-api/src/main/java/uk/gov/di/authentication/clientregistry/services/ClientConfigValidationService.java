@@ -3,6 +3,7 @@ package uk.gov.di.authentication.clientregistry.services;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.client.RegistrationError;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
+import uk.gov.di.authentication.shared.entity.AuthenticationValues;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 
@@ -27,6 +28,8 @@ public class ClientConfigValidationService {
             new ErrorObject("invalid_client_metadata", "Invalid Public Key");
     public static final ErrorObject INVALID_SERVICE_TYPE =
             new ErrorObject("invalid_client_metadata", "Invalid Service Type");
+    public static final ErrorObject INVALID_VECTOR_OF_TRUST =
+            new ErrorObject("invalid_client_metadata", "Invalid Vector of Trust");
 
     public Optional<ErrorObject> validateClientRegistrationConfig(
             ClientRegistrationRequest registrationRequest) {
@@ -77,7 +80,23 @@ public class ClientConfigValidationService {
                 .orElse(true)) {
             return Optional.of(INVALID_SERVICE_TYPE);
         }
+        if (!Optional.ofNullable(registrationRequest.getVectorsOfTrust())
+                .map(this::validateVectorsOfTrust)
+                .orElse(true)) {
+            return Optional.of(INVALID_VECTOR_OF_TRUST);
+        }
         return Optional.empty();
+    }
+
+    private boolean validateVectorsOfTrust(String vtr) {
+        List<String> authenticationValues =
+                List.of(
+                        AuthenticationValues.LOW_LEVEL.getValue(),
+                        AuthenticationValues.MEDIUM_LEVEL.getValue(),
+                        AuthenticationValues.HIGH_LEVEL.getValue(),
+                        AuthenticationValues.VERY_HIGH_LEVEL.getValue());
+
+        return !authenticationValues.contains(vtr);
     }
 
     private boolean areUrisValid(List<String> uris) {
