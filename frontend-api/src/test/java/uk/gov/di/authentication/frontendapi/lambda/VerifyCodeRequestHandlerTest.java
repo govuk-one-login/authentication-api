@@ -14,9 +14,11 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.ClientService;
+import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.ValidationService;
 import uk.gov.di.authentication.shared.state.StateMachine;
@@ -71,7 +73,6 @@ class VerifyCodeRequestHandlerTest {
     private final Context context = mock(Context.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
-    private final DynamoService dynamoService = mock(DynamoService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final ValidationService validationService = mock(ValidationService.class);
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
@@ -81,20 +82,26 @@ class VerifyCodeRequestHandlerTest {
             new Session("session-id")
                     .setEmailAddress(TEST_EMAIL_ADDRESS)
                     .setState(VERIFY_EMAIL_CODE_SENT);
+    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
+    private final ClientService clientService = mock(ClientService.class);
+    private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+
     private VerifyCodeHandler handler;
 
     @BeforeEach
     public void setup() {
         handler =
                 new VerifyCodeHandler(
-                        sessionService,
-                        codeStorageService,
-                        dynamoService,
                         configurationService,
+                        sessionService,
+                        clientSessionService,
+                        clientService,
+                        authenticationService,
+                        codeStorageService,
                         validationService,
                         stateMachine);
 
-        when(dynamoService.getUserProfileFromEmail(eq(TEST_EMAIL_ADDRESS)))
+        when(authenticationService.getUserProfileFromEmail(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.of(userProfile));
 
         when(stateMachine.transition(
@@ -186,7 +193,7 @@ class VerifyCodeRequestHandlerTest {
                 makeCallWithCode(CODE, VERIFY_PHONE_NUMBER.toString());
 
         verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER);
-        verify(dynamoService).updatePhoneNumberVerifiedStatus(TEST_EMAIL_ADDRESS, true);
+        verify(authenticationService).updatePhoneNumberVerifiedStatus(TEST_EMAIL_ADDRESS, true);
         assertThat(result, hasStatus(200));
         BaseAPIResponse codeResponse =
                 new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
@@ -229,7 +236,8 @@ class VerifyCodeRequestHandlerTest {
                 new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
         assertThat(result, hasStatus(200));
         assertThat(codeResponse.getSessionState(), equalTo(PHONE_NUMBER_CODE_NOT_VALID));
-        verify(dynamoService, never()).updatePhoneNumberVerifiedStatus(TEST_EMAIL_ADDRESS, true);
+        verify(authenticationService, never())
+                .updatePhoneNumberVerifiedStatus(TEST_EMAIL_ADDRESS, true);
     }
 
     @Test
@@ -283,7 +291,8 @@ class VerifyCodeRequestHandlerTest {
         assertThat(result, hasStatus(200));
         assertThat(codeResponse.getSessionState(), equalTo(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED));
         assertThat(session.getRetryCount(), equalTo(0));
-        verify(dynamoService, never()).updatePhoneNumberVerifiedStatus(TEST_EMAIL_ADDRESS, true);
+        verify(authenticationService, never())
+                .updatePhoneNumberVerifiedStatus(TEST_EMAIL_ADDRESS, true);
         verify(codeStorageService)
                 .saveCodeBlockedForSession(TEST_EMAIL_ADDRESS, session.getSessionId(), 900);
     }
