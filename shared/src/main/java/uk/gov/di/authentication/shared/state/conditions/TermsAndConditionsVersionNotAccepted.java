@@ -18,7 +18,7 @@ public class TermsAndConditionsVersionNotAccepted implements Condition<UserConte
     @Override
     public boolean isMet(Optional<UserContext> context) {
         if (latestVersion == null) return false;
-        return context.flatMap(UserContext::getUserProfile)
+        return !context.flatMap(UserContext::getUserProfile)
                 .map(UserProfile::getTermsAndConditions)
                 .map(TermsAndConditions::getVersion)
                 .map(latestVersion::equals)
