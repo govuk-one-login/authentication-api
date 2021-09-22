@@ -13,6 +13,9 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.ClientService;
+import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.Map;
@@ -37,14 +40,24 @@ class LoginHandlerTest {
     private static final String PHONE_NUMBER = "01234567890";
     private LoginHandler handler;
     private final Context context = mock(Context.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
+    private final ClientService clientService = mock(ClientService.class);
+
     private final Session session =
             new Session(IdGenerator.generate()).setState(AUTHENTICATION_REQUIRED);
 
     @BeforeEach
     public void setUp() {
-        handler = new LoginHandler(sessionService, authenticationService);
+        handler =
+                new LoginHandler(
+                        configurationService,
+                        sessionService,
+                        authenticationService,
+                        clientSessionService,
+                        clientService);
     }
 
     @Test
