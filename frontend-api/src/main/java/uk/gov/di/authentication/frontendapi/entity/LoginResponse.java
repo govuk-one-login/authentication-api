@@ -10,8 +10,7 @@ public class LoginResponse extends BaseAPIResponse {
     private String redactedPhoneNumber;
 
     public LoginResponse(
-            @JsonProperty(value = "redactedPhoneNumber")
-                    String redactedPhoneNumber,
+            @JsonProperty(value = "redactedPhoneNumber") String redactedPhoneNumber,
             @JsonProperty(required = true, value = "sessionState") SessionState sessionState) {
         super(sessionState);
         this.redactedPhoneNumber = redactedPhoneNumber;
