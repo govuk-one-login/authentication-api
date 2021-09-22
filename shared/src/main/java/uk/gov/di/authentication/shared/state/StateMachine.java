@@ -61,6 +61,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_
 import static uk.gov.di.authentication.shared.entity.SessionState.USER_NOT_FOUND;
 import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
 import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_PHONE_NUMBER_CODE_SENT;
+import static uk.gov.di.authentication.shared.state.conditions.ClientDoesNotRequireMfa.clientDoesNotRequireMfa;
 import static uk.gov.di.authentication.shared.state.conditions.TermsAndConditionsVersionNotAccepted.userHasNotAcceptedTermsAndConditionsVersion;
 
 public class StateMachine<T, A, C> {
@@ -175,6 +176,9 @@ public class StateMachine<T, A, C> {
                 .finalState()
                 .when(AUTHENTICATION_REQUIRED)
                 .allow(
+                        on(USER_ENTERED_VALID_CREDENTIALS)
+                                .ifCondition(clientDoesNotRequireMfa())
+                                .then(AUTHENTICATED),
                         on(USER_ENTERED_VALID_CREDENTIALS).then(LOGGED_IN),
                         on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND),
                         on(SYSTEM_HAS_SENT_RESET_PASSWORD_LINK).then(RESET_PASSWORD_LINK_SENT))

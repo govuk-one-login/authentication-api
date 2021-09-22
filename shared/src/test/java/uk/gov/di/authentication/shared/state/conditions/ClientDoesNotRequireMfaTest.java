@@ -14,7 +14,6 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.AuthenticationValues.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.AuthenticationValues.MEDIUM_LEVEL;
 
-
 class ClientDoesNotRequireMfaTest {
     private final ClientDoesNotRequireMfa condition = new ClientDoesNotRequireMfa();
     private UserContext userContext = mock(UserContext.class);
