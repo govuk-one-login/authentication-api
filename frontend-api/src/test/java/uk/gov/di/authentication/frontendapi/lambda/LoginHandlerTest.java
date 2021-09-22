@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
@@ -27,9 +28,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
-import static uk.gov.di.authentication.shared.entity.SessionState.LOGGED_IN;
-import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
+import static uk.gov.di.authentication.shared.entity.SessionState.*;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -42,6 +41,7 @@ class LoginHandlerTest {
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+    private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
@@ -57,7 +57,8 @@ class LoginHandlerTest {
                         sessionService,
                         authenticationService,
                         clientSessionService,
-                        clientService);
+                        clientService,
+                        codeStorageService);
     }
 
     @Test
@@ -79,6 +80,53 @@ class LoginHandlerTest {
         assertThat(
                 response.getRedactedPhoneNumber(),
                 equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+    }
+
+    @Test
+    public void stateChangesToAccountLockedAfter5Attempts() throws JsonProcessingException {
+        when(authenticationService.userExists(EMAIL)).thenReturn(true);
+        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
+        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
+        when(codeStorageService.hasEnteredPasswordIncorrectBefore(EMAIL)).thenReturn(true);
+        when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(5);
+
+        usingValidSession();
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+
+        LoginResponse response =
+                new ObjectMapper().readValue(result.getBody(), LoginResponse.class);
+        assertThat(response.getSessionState(), equalTo(ACCOUNT_TEMPORARILY_LOCKED));
+    }
+
+    @Test
+    public void incorrectPasswordCountRemovesUponLogin() throws JsonProcessingException {
+        when(authenticationService.userExists(EMAIL)).thenReturn(true);
+        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
+        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
+        when(codeStorageService.hasEnteredPasswordIncorrectBefore(EMAIL)).thenReturn(true);
+        when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(4);
+
+        usingValidSession();
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
+        when(codeStorageService.hasEnteredPasswordIncorrectBefore(EMAIL)).thenReturn(true);
+
+        APIGatewayProxyResponseEvent result2 = handler.handleRequest(event, context);
+
+        assertThat(result2, hasStatus(200));
+
+        LoginResponse response =
+                new ObjectMapper().readValue(result2.getBody(), LoginResponse.class);
+        assertThat(response.getSessionState(), equalTo(LOGGED_IN));
     }
 
     @Test

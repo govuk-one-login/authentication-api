@@ -18,14 +18,17 @@ import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
 
-import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_CREDENTIALS;
+import static uk.gov.di.authentication.shared.entity.SessionAction.*;
+import static uk.gov.di.authentication.shared.entity.SessionState.ACCOUNT_TEMPORARILY_LOCKED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
@@ -34,7 +37,8 @@ public class LoginHandler extends BaseFrontendHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LoginHandler.class);
-
+    private final CodeStorageService codeStorageService;
+    private static final int MAX_INCORRECT_PASSWORD_ATTEMPTS = 5;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             userJourneyStateMachine();
@@ -44,17 +48,22 @@ public class LoginHandler extends BaseFrontendHandler
             SessionService sessionService,
             AuthenticationService authenticationService,
             ClientSessionService clientSessionService,
-            ClientService clientService) {
+            ClientService clientService,
+            CodeStorageService codeStorageService) {
         super(
                 configurationService,
                 sessionService,
                 clientSessionService,
                 clientService,
                 authenticationService);
+        this.codeStorageService = codeStorageService;
     }
 
     public LoginHandler() {
         super(ConfigurationService.getInstance());
+        this.codeStorageService =
+                new CodeStorageService(
+                        new RedisConnectionService(ConfigurationService.getInstance()));
     }
 
     @Override
@@ -70,22 +79,64 @@ public class LoginHandler extends BaseFrontendHandler
         }
 
         try {
-            var nextState =
-                    stateMachine.transition(
-                            session.get().getState(), USER_ENTERED_VALID_CREDENTIALS, userContext);
             LoginRequest loginRequest = objectMapper.readValue(input.getBody(), LoginRequest.class);
             boolean userHasAccount = authenticationService.userExists(loginRequest.getEmail());
             if (!userHasAccount) {
                 LOGGER.error("The user does not have an account");
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
             }
+
+            SessionState currentState = session.get().getState();
+            boolean keyExists =
+                    codeStorageService.hasEnteredPasswordIncorrectBefore(loginRequest.getEmail());
+
+            if (!keyExists && currentState.equals(ACCOUNT_TEMPORARILY_LOCKED)) {
+                var nextState =
+                        stateMachine.transition(
+                                session.get().getState(), ACCOUNT_LOCK_EXPIRED, userContext);
+                sessionService.save(session.get().setState(nextState));
+            }
+
             boolean hasValidCredentials =
                     authenticationService.login(
                             loginRequest.getEmail(), loginRequest.getPassword());
+
+            boolean hasEnteredPasswordIncorrectBefore =
+                    codeStorageService.hasEnteredPasswordIncorrectBefore(loginRequest.getEmail());
+
             if (!hasValidCredentials) {
+                if (hasEnteredPasswordIncorrectBefore) {
+                    int count =
+                            codeStorageService.getIncorrectPasswordCount(loginRequest.getEmail());
+
+                    if (count >= MAX_INCORRECT_PASSWORD_ATTEMPTS) {
+                        if (!session.get().getState().equals(ACCOUNT_TEMPORARILY_LOCKED)) {
+                            var nextState =
+                                    stateMachine.transition(
+                                            session.get().getState(),
+                                            USER_ENTERED_INVALID_PASSWORD_TOO_MANY_TIMES,
+                                            userContext);
+                            sessionService.save(session.get().setState(nextState));
+                        }
+
+                        return generateApiGatewayProxyResponse(
+                                200, new LoginResponse(null, session.get().getState()));
+                    } else {
+                        codeStorageService.increaseIncorrectPasswordCount(
+                                loginRequest.getEmail(), count);
+                    }
+                } else {
+                    codeStorageService.createIncorrectPasswordCount(loginRequest.getEmail());
+                }
+
                 LOGGER.error("Invalid login credentials entered");
                 return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
             }
+
+            if (hasEnteredPasswordIncorrectBefore) {
+                codeStorageService.deleteIncorrectPasswordCount(loginRequest.getEmail());
+            }
+
             String phoneNumber =
                     authenticationService.getPhoneNumber(loginRequest.getEmail()).orElse(null);
 
@@ -94,7 +145,12 @@ public class LoginHandler extends BaseFrontendHandler
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1014);
             }
             String concatPhoneNumber = RedactPhoneNumberHelper.redactPhoneNumber(phoneNumber);
+
+            var nextState =
+                    stateMachine.transition(
+                            session.get().getState(), USER_ENTERED_VALID_CREDENTIALS, userContext);
             sessionService.save(session.get().setState(nextState));
+
             LOGGER.info(
                     "User has successfully Logged in. Generating successful LoginResponse for session with ID {}",
                     session.get().getSessionId());
