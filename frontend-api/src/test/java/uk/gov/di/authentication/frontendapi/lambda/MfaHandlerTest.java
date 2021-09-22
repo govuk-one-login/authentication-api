@@ -23,12 +23,15 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
+import static uk.gov.di.authentication.shared.entity.SessionState.MFA_SMS_CODE_SENT;
+import static uk.gov.di.authentication.shared.entity.SessionState.MFA_SMS_MAX_CODES_SENT;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -53,6 +56,8 @@ public class MfaHandlerTest {
 
     @BeforeEach
     public void setUp() {
+        when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
+        when(configurationService.getCodeMaxRetries()).thenReturn(5);
         handler =
                 new MfaHandler(
                         configurationService,
@@ -69,7 +74,6 @@ public class MfaHandlerTest {
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(PHONE_NUMBER));
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
-        when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
         NotifyRequest notifyRequest = new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -108,7 +112,7 @@ public class MfaHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserTransitionsFromWrongState() throws JsonProcessingException {
+    public void shouldReturn400IfUserTransitionsFromWrongState() {
         session.setState(SessionState.NEW);
 
         usingValidSession();
@@ -116,7 +120,6 @@ public class MfaHandlerTest {
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(PHONE_NUMBER));
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
-        when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -128,6 +131,47 @@ public class MfaHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1017));
+    }
+
+    @Test
+    public void shouldReturn400IfUserHasReachedTheMfaCodeRequestLimit() {
+        usingValidSession();
+        session.setState(MFA_SMS_CODE_SENT);
+        session.incrementCodeRequestCount();
+        session.incrementCodeRequestCount();
+        session.incrementCodeRequestCount();
+        session.incrementCodeRequestCount();
+        session.incrementCodeRequestCount();
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1024));
+        verify(codeStorageService)
+                .saveCodeRequestBlockedForSession(
+                        TEST_EMAIL_ADDRESS, session.getSessionId(), CODE_EXPIRY_TIME);
+    }
+
+    @Test
+    public void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreMfaCodes() {
+        usingValidSession();
+        session.setState(MFA_SMS_MAX_CODES_SENT);
+        when(codeStorageService.isCodeRequestBlockedForSession(
+                        TEST_EMAIL_ADDRESS, session.getSessionId()))
+                .thenReturn(true);
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1025));
     }
 
     private void usingValidSession() {
