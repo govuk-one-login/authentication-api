@@ -38,7 +38,6 @@ public class LoginHandler extends BaseFrontendHandler
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LoginHandler.class);
     private final CodeStorageService codeStorageService;
-    private static final int MAX_INCORRECT_PASSWORD_ATTEMPTS = 5;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             userJourneyStateMachine();
@@ -109,7 +108,7 @@ public class LoginHandler extends BaseFrontendHandler
                     int count =
                             codeStorageService.getIncorrectPasswordCount(loginRequest.getEmail());
 
-                    if (count >= MAX_INCORRECT_PASSWORD_ATTEMPTS) {
+                    if (count >= configurationService.getMaxPasswordRetries()) {
                         if (!session.get().getState().equals(ACCOUNT_TEMPORARILY_LOCKED)) {
                             var nextState =
                                     stateMachine.transition(

@@ -45,6 +45,10 @@ public class ConfigurationService {
         return Integer.parseInt(System.getenv().getOrDefault("CODE_MAX_RETRIES", "5"));
     }
 
+    public int getMaxPasswordRetries() {
+        return Integer.parseInt(System.getenv().getOrDefault("PASSWORD_MAX_RETRIES", "5"));
+    }
+
     public URI getDefaultLogoutURI() {
         return URI.create(System.getenv("DEFAULT_LOGOUT_URI"));
     }
