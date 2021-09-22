@@ -84,6 +84,7 @@ class LoginHandlerTest {
 
     @Test
     public void stateChangesToAccountLockedAfter5Attempts() throws JsonProcessingException {
+        when(configurationService.getMaxPasswordRetries()).thenReturn(5);
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
@@ -105,6 +106,7 @@ class LoginHandlerTest {
 
     @Test
     public void incorrectPasswordCountRemovesUponLogin() throws JsonProcessingException {
+        when(configurationService.getMaxPasswordRetries()).thenReturn(5);
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
