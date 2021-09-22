@@ -167,7 +167,7 @@ public class AuthorisationHandler
         String clientSessionID =
                 clientSessionService.generateClientSession(
                         new ClientSession(authRequestParameters, LocalDateTime.now()));
-        updateSessionId(session, authenticationRequest.getClientID(), clientSessionID);
+        session = updateSessionId(session, authenticationRequest.getClientID(), clientSessionID);
         return redirect(session, clientSessionID, redirectURI);
     }
 
@@ -177,9 +177,14 @@ public class AuthorisationHandler
                 .orElse(Boolean.FALSE);
     }
 
-    private void updateSessionId(Session session, ClientID clientId, String clientSessionID) {
+    private Session updateSessionId(Session session, ClientID clientId, String clientSessionID) {
         String oldSessionId = session.getSessionId();
-        sessionService.updateSessionId(session);
+        if (!session.getState().equals(SessionState.AUTHENTICATED)) {
+            session = sessionService.createSession();
+            sessionService.deleteSessionFromRedis(oldSessionId);
+        } else {
+            sessionService.updateSessionId(session);
+        }
         session.addClientSession(clientSessionID);
         LOGGER.info(
                 "Updated session id from {} to {} for client {} - client session id = {}",
@@ -190,6 +195,7 @@ public class AuthorisationHandler
 
         sessionService.save(session);
         LOGGER.info("Session saved successfully {}", session.getSessionId());
+        return session;
     }
 
     private APIGatewayProxyResponseEvent createSessionAndRedirect(

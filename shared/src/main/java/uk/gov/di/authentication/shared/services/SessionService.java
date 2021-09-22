@@ -56,7 +56,6 @@ public class SessionService {
 
     public void updateSessionId(Session session) {
         try {
-
             String oldSessionId = session.getSessionId();
             session.setSessionId(IdGenerator.generate());
             save(session);
