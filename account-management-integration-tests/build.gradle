@@ -11,7 +11,7 @@ repositories {
 
 dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit}",
-            "com.nimbusds:nimbus-jose-jwt:9.13",
+            "com.nimbusds:nimbus-jose-jwt:9.14",
             "com.nimbusds:oauth2-oidc-sdk:9.15",
             "org.glassfish.jersey.core:jersey-client:${dependencyVersions.glassfish_version}",
             "org.glassfish.jersey.inject:jersey-hk2:${dependencyVersions.glassfish_version}",
