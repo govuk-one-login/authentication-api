@@ -25,11 +25,13 @@ import java.net.URI;
 import java.util.Map;
 import java.util.Optional;
 
+import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -37,6 +39,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR;
+import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_NOT_VALID;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
@@ -185,6 +188,34 @@ class AuthorisationHandlerTest {
     }
 
     @Test
+    void shouldCreateNewSessionWhenStateIsNotAuthenticated() {
+        final URI loginUrl = URI.create("http://example.com");
+        final Session session = new Session("a-session-id");
+        final Session newSession = new Session("new-session-id");
+        session.setState(MFA_CODE_NOT_VALID);
+
+        when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
+                .thenReturn(Optional.empty());
+        when(configService.getLoginURI()).thenReturn(loginUrl);
+        when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
+        when(configService.getSessionCookieMaxAge()).thenReturn(1800);
+        when(clientSessionService.generateClientSession(any(ClientSession.class)))
+                .thenReturn("client-session-id");
+        when(configService.getDomainName()).thenReturn(domainName);
+        when(sessionService.getSessionFromSessionCookie(any())).thenReturn(Optional.of(session));
+        when(sessionService.createSession()).thenReturn(newSession);
+
+        APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent());
+        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+
+        assertThat(response, hasStatus(302));
+        assertEquals(loginUrl.getAuthority(), uri.getAuthority());
+        assertNotNull(response.getHeaders().get("Set-Cookie"));
+        verify(sessionService).deleteSessionFromRedis(session.getSessionId());
+        verify(sessionService).createSession();
+    }
+
+    @Test
     void shouldSkipLoginWhenPromptParamAbsentAndLoggedIn() {
         final URI loginUrl = URI.create("http://example.com");
         final URI authCodeUri = URI.create("/auth-code");
@@ -276,17 +307,23 @@ class AuthorisationHandlerTest {
     void shouldDoLoginWhenPromptParamLoginAndLoggedIn() {
         final URI loginUrl = URI.create("http://example.com");
         final Session session = new Session("a-session-id");
+        final Session newSession = new Session("new-session-id");
+        String expectedCookieString =
+                format(
+                        "gs=%s.client-session-id; Max-Age=1800; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                        newSession.getSessionId());
 
         whenLoggedIn(session, loginUrl);
+        when(sessionService.createSession()).thenReturn(newSession);
 
         APIGatewayProxyResponseEvent response = makeHandlerRequest(withPromptRequestEvent("login"));
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
         assertThat(response, hasStatus(302));
         assertEquals(loginUrl.getAuthority(), uri.getAuthority());
-        assertEquals(EXPECTED_COOKIE_STRING, response.getHeaders().get("Set-Cookie"));
-        verify(sessionService).save(eq(session));
-        assertEquals(SessionState.AUTHENTICATION_REQUIRED, session.getState());
+        assertEquals(expectedCookieString, response.getHeaders().get("Set-Cookie"));
+        verify(sessionService).save(eq(newSession));
+        assertEquals(SessionState.NEW, newSession.getState());
     }
 
     @Test
@@ -414,18 +451,23 @@ class AuthorisationHandlerTest {
     void shouldDoLoginWhenPromptParamAbsentAndNotLoggedInBecauseSessionNotAuthenticated() {
         final URI loginUrl = URI.create("http://example.com");
         final Session session = new Session("a-session-id");
-
         whenLoggedIn(session, loginUrl);
         session.setState(SessionState.AUTHENTICATION_REQUIRED);
+        final Session newSession = new Session("new-session-id-");
+        when(sessionService.createSession()).thenReturn(newSession);
+        String expectedCookieString =
+                format(
+                        "gs=%s.client-session-id; Max-Age=1800; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                        newSession.getSessionId());
 
         APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent());
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
         assertThat(response, hasStatus(302));
         assertEquals(loginUrl.getAuthority(), uri.getAuthority());
-        assertEquals(EXPECTED_COOKIE_STRING, response.getHeaders().get("Set-Cookie"));
-        verify(sessionService).save(eq(session));
-        assertEquals(SessionState.AUTHENTICATION_REQUIRED, session.getState());
+        assertEquals(expectedCookieString, response.getHeaders().get("Set-Cookie"));
+        verify(sessionService).save(eq(newSession));
+        assertEquals(SessionState.NEW, newSession.getState());
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
