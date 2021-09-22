@@ -22,9 +22,60 @@ public class CodeStorageService {
     private static final String PASSWORD_RESET_BLOCKED_KEY_PREFIX = "password-reset-blocked:";
     private static final String CODE_BLOCKED_VALUE = "blocked";
     private static final String RESET_PASSWORD_KEY_PREFIX = "reset-password-code:";
+    private static final String MULTIPLE_INCORRECT_PASSWORDS_PREFIX =
+            "multiple-incorrect-passwords:";
 
     public CodeStorageService(RedisConnectionService redisConnectionService) {
         this.redisConnectionService = redisConnectionService;
+    }
+
+    public void increaseIncorrectPasswordCount(String email, int count) {
+        String encodedHash = HashHelper.hashSha256String(email);
+        String key = MULTIPLE_INCORRECT_PASSWORDS_PREFIX + encodedHash;
+
+        int newCount = count + 1;
+
+        try {
+            redisConnectionService.saveWithExpiry(key, String.valueOf(newCount), 900L);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public int getIncorrectPasswordCount(String email) {
+        String count =
+                redisConnectionService.getValue(
+                        MULTIPLE_INCORRECT_PASSWORDS_PREFIX + HashHelper.hashSha256String(email));
+
+        return Integer.parseInt(count);
+    }
+
+    public void createIncorrectPasswordCount(String email) {
+        String encodedHash = HashHelper.hashSha256String(email);
+        String key = MULTIPLE_INCORRECT_PASSWORDS_PREFIX + encodedHash;
+        String initialValue = "1";
+
+        try {
+            redisConnectionService.saveWithExpiry(key, initialValue, 900L);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void deleteIncorrectPasswordCount(String email) {
+        String encodedHash = HashHelper.hashSha256String(email);
+        String key = MULTIPLE_INCORRECT_PASSWORDS_PREFIX + encodedHash;
+
+        try {
+            redisConnectionService.deleteValue(key);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public boolean hasEnteredPasswordIncorrectBefore(String emailAddress) {
+        return redisConnectionService.keyExists(
+                MULTIPLE_INCORRECT_PASSWORDS_PREFIX + HashHelper.hashSha256String(emailAddress));
     }
 
     public void saveCodeBlockedForSession(String email, String sessionId, long codeBlockedTime) {
