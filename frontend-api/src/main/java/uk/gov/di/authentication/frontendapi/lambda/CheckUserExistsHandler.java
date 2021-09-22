@@ -8,8 +8,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.frontendapi.entity.BaseFrontendRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
-import uk.gov.di.authentication.frontendapi.entity.UserWithEmailRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
@@ -84,9 +84,9 @@ public class CheckUserExistsHandler
                                                             session.get().getState(),
                                                             USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS));
 
-                                    UserWithEmailRequest userExistsRequest =
+                                    BaseFrontendRequest userExistsRequest =
                                             objectMapper.readValue(
-                                                    input.getBody(), UserWithEmailRequest.class);
+                                                    input.getBody(), BaseFrontendRequest.class);
                                     String emailAddress = userExistsRequest.getEmail();
                                     Optional<ErrorResponse> errorResponse =
                                             validationService.validateEmailAddress(emailAddress);

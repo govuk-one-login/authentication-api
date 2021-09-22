@@ -8,7 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.di.authentication.frontendapi.entity.UserWithEmailRequest;
+import uk.gov.di.authentication.frontendapi.entity.BaseFrontendRequest;
 import uk.gov.di.authentication.frontendapi.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
@@ -110,9 +110,9 @@ public class MfaHandler
                                         stateMachine.transition(
                                                 session.getState(), SYSTEM_HAS_SENT_MFA_CODE);
 
-                                UserWithEmailRequest userWithEmailRequest =
+                                BaseFrontendRequest userWithEmailRequest =
                                         objectMapper.readValue(
-                                                input.getBody(), UserWithEmailRequest.class);
+                                                input.getBody(), BaseFrontendRequest.class);
                                 boolean codeRequestValid =
                                         validateCodeRequestAttempts(
                                                 userWithEmailRequest.getEmail(), session);

@@ -2,9 +2,8 @@ package uk.gov.di.authentication.frontendapi.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class UpdateProfileRequest {
+public class UpdateProfileRequest extends BaseFrontendRequest {
 
-    private String email;
     private UpdateProfileType updateProfileType;
     private String profileInformation;
 
@@ -14,7 +13,7 @@ public class UpdateProfileRequest {
                     UpdateProfileType updateProfileType,
             @JsonProperty(required = true, value = "profileInformation")
                     String profileInformation) {
-        this.email = email;
+        super(email);
         this.updateProfileType = updateProfileType;
         this.profileInformation = profileInformation;
     }

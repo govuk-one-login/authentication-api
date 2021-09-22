@@ -5,8 +5,8 @@ import jakarta.ws.rs.core.MultivaluedHashMap;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.frontendapi.entity.BaseFrontendRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
-import uk.gov.di.authentication.frontendapi.entity.UserWithEmailRequest;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.helpers.RequestHelper;
@@ -37,7 +37,7 @@ public class UserExistsIntegrationTest extends IntegrationTestEndpoints {
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
         headers.add("X-API-Key", API_KEY);
-        UserWithEmailRequest request = new UserWithEmailRequest(emailAddress);
+        BaseFrontendRequest request = new BaseFrontendRequest(emailAddress);
 
         Response response = RequestHelper.request(USEREXISTS_ENDPOINT, request, headers);
 
@@ -59,7 +59,7 @@ public class UserExistsIntegrationTest extends IntegrationTestEndpoints {
         headers.add("Session-Id", sessionId);
         headers.add("X-API-Key", API_KEY);
         RedisHelper.setSessionState(sessionId, SessionState.NEW);
-        UserWithEmailRequest request = new UserWithEmailRequest(emailAddress);
+        BaseFrontendRequest request = new BaseFrontendRequest(emailAddress);
         Response response = RequestHelper.request(USEREXISTS_ENDPOINT, request, headers);
 
         assertEquals(200, response.getStatus());
@@ -79,7 +79,7 @@ public class UserExistsIntegrationTest extends IntegrationTestEndpoints {
         headers.add("Session-Id", sessionId);
         headers.add("X-API-Key", API_KEY);
         RedisHelper.setSessionState(sessionId, SessionState.AUTHENTICATED);
-        UserWithEmailRequest request = new UserWithEmailRequest(emailAddress);
+        BaseFrontendRequest request = new BaseFrontendRequest(emailAddress);
         Response response = RequestHelper.request(USEREXISTS_ENDPOINT, request, headers);
 
         assertEquals(400, response.getStatus());

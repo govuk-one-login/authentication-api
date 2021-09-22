@@ -8,7 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.di.authentication.frontendapi.entity.UserWithEmailRequest;
+import uk.gov.di.authentication.frontendapi.entity.BaseFrontendRequest;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -27,11 +27,12 @@ import java.util.Optional;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
-public abstract class BaseFrontendHandler
+public abstract class BaseFrontendHandler<T>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LoggerFactory.getLogger(BaseFrontendHandler.class);
     private static final String CLIENT_ID = "client_id";
+    private final Class<T> clazz;
     protected final ConfigurationService configurationService;
     protected final SessionService sessionService;
     protected final ClientSessionService clientSessionService;
@@ -40,11 +41,13 @@ public abstract class BaseFrontendHandler
     protected final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
 
     protected BaseFrontendHandler(
+            Class<T> clazz,
             ConfigurationService configurationService,
             SessionService sessionService,
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService) {
+        this.clazz = clazz;
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
@@ -52,7 +55,8 @@ public abstract class BaseFrontendHandler
         this.authenticationService = authenticationService;
     }
 
-    protected BaseFrontendHandler(ConfigurationService configurationService) {
+    protected BaseFrontendHandler(Class<T> clazz, ConfigurationService configurationService) {
+        this.clazz = clazz;
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
@@ -75,7 +79,10 @@ public abstract class BaseFrontendHandler
     }
 
     public abstract APIGatewayProxyResponseEvent handleRequestWithUserContext(
-            APIGatewayProxyRequestEvent input, Context context, UserContext userContext);
+            APIGatewayProxyRequestEvent input,
+            Context context,
+            final T request,
+            final UserContext userContext);
 
     private APIGatewayProxyResponseEvent validateAndHandleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
@@ -86,6 +93,16 @@ public abstract class BaseFrontendHandler
             LOG.error("Session cannot be found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         }
+        final T request;
+        try {
+            request = objectMapper.readValue(input.getBody(), clazz);
+        } catch (JsonProcessingException e) {
+            LOG.error(
+                    "Request is missing parameters. The body present in request: {}",
+                    input.getBody());
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        }
+
         UserContext.Builder userContextBuilder = UserContext.builder(session.get());
 
         clientSession
@@ -104,20 +121,14 @@ public abstract class BaseFrontendHandler
                                         .withUserProfile(userProfile)
                                         .withUserAuthenticated(true),
                         () -> {
-                            try {
-                                UserWithEmailRequest request =
-                                        objectMapper.readValue(
-                                                input.getBody(), UserWithEmailRequest.class);
+                            if (request instanceof BaseFrontendRequest)
                                 userContextBuilder
                                         .withUserProfile(
                                                 authenticationService.getUserProfileFromEmail(
-                                                        request.getEmail()))
+                                                        ((BaseFrontendRequest) request).getEmail()))
                                         .withUserAuthenticated(false);
-                            } catch (JsonProcessingException e) {
-                                LOG.warn("Request didn't contain an e-mail address");
-                            }
                         });
 
-        return handleRequestWithUserContext(input, context, userContextBuilder.build());
+        return handleRequestWithUserContext(input, context, request, userContextBuilder.build());
     }
 }

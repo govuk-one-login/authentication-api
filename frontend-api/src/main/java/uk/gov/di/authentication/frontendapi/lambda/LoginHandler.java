@@ -13,7 +13,6 @@ import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -26,16 +25,16 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.UserContext;
 
-import java.util.Optional;
-
-import static uk.gov.di.authentication.shared.entity.SessionAction.*;
+import static uk.gov.di.authentication.shared.entity.SessionAction.ACCOUNT_LOCK_EXPIRED;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_PASSWORD_TOO_MANY_TIMES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_CREDENTIALS;
 import static uk.gov.di.authentication.shared.entity.SessionState.ACCOUNT_TEMPORARILY_LOCKED;
 import static uk.gov.di.authentication.shared.entity.SessionState.TWO_FACTOR_REQUIRED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
-public class LoginHandler extends BaseFrontendHandler
+public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LoginHandler.class);
@@ -52,6 +51,7 @@ public class LoginHandler extends BaseFrontendHandler
             ClientService clientService,
             CodeStorageService codeStorageService) {
         super(
+                LoginRequest.class,
                 configurationService,
                 sessionService,
                 clientSessionService,
@@ -61,7 +61,7 @@ public class LoginHandler extends BaseFrontendHandler
     }
 
     public LoginHandler() {
-        super(ConfigurationService.getInstance());
+        super(LoginRequest.class, ConfigurationService.getInstance());
         this.codeStorageService =
                 new CodeStorageService(
                         new RedisConnectionService(ConfigurationService.getInstance()));
@@ -69,33 +69,32 @@ public class LoginHandler extends BaseFrontendHandler
 
     @Override
     public APIGatewayProxyResponseEvent handleRequestWithUserContext(
-            APIGatewayProxyRequestEvent input, Context context, UserContext userContext) {
+            APIGatewayProxyRequestEvent input,
+            Context context,
+            LoginRequest request,
+            UserContext userContext) {
         LOGGER.info("Request received to the LoginHandler");
-        Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
-        if (session.isEmpty()) {
-            LOGGER.error("Unable to find session");
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-        } else {
-            LOGGER.info("LoginHandler processing session with ID {}", session.get().getSessionId());
-        }
 
         try {
             LoginRequest loginRequest = objectMapper.readValue(input.getBody(), LoginRequest.class);
             boolean userHasAccount = authenticationService.userExists(loginRequest.getEmail());
+
             if (!userHasAccount) {
                 LOGGER.error("The user does not have an account");
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
             }
 
-            SessionState currentState = session.get().getState();
+            SessionState currentState = userContext.getSession().getState();
             boolean keyExists =
                     codeStorageService.hasEnteredPasswordIncorrectBefore(loginRequest.getEmail());
 
             if (!keyExists && currentState.equals(ACCOUNT_TEMPORARILY_LOCKED)) {
                 var nextState =
                         stateMachine.transition(
-                                session.get().getState(), ACCOUNT_LOCK_EXPIRED, userContext);
-                sessionService.save(session.get().setState(nextState));
+                                userContext.getSession().getState(),
+                                ACCOUNT_LOCK_EXPIRED,
+                                userContext);
+                sessionService.save(userContext.getSession().setState(nextState));
             }
 
             boolean hasValidCredentials =
@@ -111,17 +110,20 @@ public class LoginHandler extends BaseFrontendHandler
                             codeStorageService.getIncorrectPasswordCount(loginRequest.getEmail());
 
                     if (count >= configurationService.getMaxPasswordRetries()) {
-                        if (!session.get().getState().equals(ACCOUNT_TEMPORARILY_LOCKED)) {
+                        if (!userContext
+                                .getSession()
+                                .getState()
+                                .equals(ACCOUNT_TEMPORARILY_LOCKED)) {
                             var nextState =
                                     stateMachine.transition(
-                                            session.get().getState(),
+                                            userContext.getSession().getState(),
                                             USER_ENTERED_INVALID_PASSWORD_TOO_MANY_TIMES,
                                             userContext);
-                            sessionService.save(session.get().setState(nextState));
+                            sessionService.save(userContext.getSession().setState(nextState));
                         }
 
                         return generateApiGatewayProxyResponse(
-                                200, new LoginResponse(null, session.get().getState()));
+                                200, new LoginResponse(null, userContext.getSession().getState()));
                     } else {
                         codeStorageService.increaseIncorrectPasswordCount(
                                 loginRequest.getEmail(), count);
@@ -140,11 +142,13 @@ public class LoginHandler extends BaseFrontendHandler
 
             var nextState =
                     stateMachine.transition(
-                            session.get().getState(), USER_ENTERED_VALID_CREDENTIALS, userContext);
-            sessionService.save(session.get().setState(nextState));
+                            userContext.getSession().getState(),
+                            USER_ENTERED_VALID_CREDENTIALS,
+                            userContext);
+            sessionService.save(userContext.getSession().setState(nextState));
             if (nextState.equals(TWO_FACTOR_REQUIRED)) {
                 return generateApiGatewayProxyResponse(
-                        200, new BaseAPIResponse(session.get().getState()));
+                        200, new BaseAPIResponse(userContext.getSession().getState()));
             }
             String phoneNumber =
                     authenticationService.getPhoneNumber(loginRequest.getEmail()).orElseThrow();
@@ -153,9 +157,9 @@ public class LoginHandler extends BaseFrontendHandler
 
             LOGGER.info(
                     "User has successfully Logged in. Generating successful LoginResponse for session with ID {}",
-                    session.get().getSessionId());
+                    userContext.getSession().getSessionId());
             return generateApiGatewayProxyResponse(
-                    200, new LoginResponse(concatPhoneNumber, session.get().getState()));
+                    200, new LoginResponse(concatPhoneNumber, userContext.getSession().getState()));
         } catch (JsonProcessingException e) {
             LOGGER.error(
                     "Request is missing parameters. The body present in request: {}",

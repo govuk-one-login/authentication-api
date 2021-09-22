@@ -2,15 +2,14 @@ package uk.gov.di.authentication.frontendapi.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class SignupRequest {
+public class SignupRequest extends BaseFrontendRequest {
 
-    private String email;
     private String password;
 
     public SignupRequest(
             @JsonProperty(required = true, value = "email") String email,
             @JsonProperty(required = true, value = "password") String password) {
-        this.email = email;
+        super(email);
         this.password = password;
     }
 
