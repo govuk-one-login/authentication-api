@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.frontendapi.entity.UserWithEmailRequest;
 import uk.gov.di.authentication.frontendapi.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
@@ -25,12 +26,15 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.Optional;
+
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1000;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1014;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1017;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_MFA_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_TOO_MANY_MFA_CODES;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
@@ -111,6 +115,13 @@ public class MfaHandler
                                 UserWithEmailRequest userWithEmailRequest =
                                         objectMapper.readValue(
                                                 input.getBody(), UserWithEmailRequest.class);
+                                Optional<ErrorResponse> codeRequestError =
+                                        validateCodeRequestAttempts(
+                                                userWithEmailRequest.getEmail(), session);
+                                if (codeRequestError.isPresent()) {
+                                    return generateApiGatewayProxyErrorResponse(
+                                            400, codeRequestError.get());
+                                }
                                 if (!session.validateSession(userWithEmailRequest.getEmail())) {
                                     LOGGER.error(
                                             "Email in session does not match Email in Request");
@@ -131,7 +142,8 @@ public class MfaHandler
                                         code,
                                         configurationService.getCodeExpiry(),
                                         MFA_SMS);
-                                sessionService.save(session.setState(nextState));
+                                sessionService.save(
+                                        session.setState(nextState).incrementCodeRequestCount());
                                 NotifyRequest notifyRequest =
                                         new NotifyRequest(phoneNumber, MFA_SMS, code);
                                 sqsClient.send(objectMapper.writeValueAsString(notifyRequest));
@@ -152,5 +164,22 @@ public class MfaHandler
                                 return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
                             }
                         });
+    }
+
+    private Optional<ErrorResponse> validateCodeRequestAttempts(String email, Session session) {
+        if (session.getCodeRequestCount() == configurationService.getCodeMaxRetries()) {
+            LOGGER.error("User has requested too many OTP codes");
+            codeStorageService.saveCodeRequestBlockedForSession(
+                    email, session.getSessionId(), configurationService.getCodeExpiry());
+            SessionState nextState =
+                    stateMachine.transition(session.getState(), SYSTEM_HAS_SENT_TOO_MANY_MFA_CODES);
+            sessionService.save(session.setState(nextState).resetCodeRequestCount());
+            return Optional.of(ErrorResponse.ERROR_1024);
+        }
+        if (codeStorageService.isCodeRequestBlockedForSession(email, session.getSessionId())) {
+            LOGGER.error("User is blocked from requesting any OTP codes");
+            return Optional.of(ErrorResponse.ERROR_1025);
+        }
+        return Optional.empty();
     }
 }

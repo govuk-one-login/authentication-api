@@ -82,6 +82,7 @@ class SendNotificationHandlerTest {
     void setup() {
         when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
         when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);
+        when(configurationService.getCodeMaxRetries()).thenReturn(5);
     }
 
     @Test
@@ -271,8 +272,6 @@ class SendNotificationHandlerTest {
 
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
-        NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_SIX_DIGIT_CODE);
 
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -306,6 +305,94 @@ class SendNotificationHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1017));
     }
 
+    @Test
+    public void shouldReturn400IfUserHasReachedTheEmailCodeRequestLimit() {
+        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
+                .thenReturn(Optional.empty());
+        session.setState(VERIFY_EMAIL_CODE_SENT);
+        maxOutCodeRequestCount();
+        usingValidSession();
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                        TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1024));
+        verify(codeStorageService)
+                .saveCodeRequestBlockedForSession(
+                        TEST_EMAIL_ADDRESS, session.getSessionId(), CODE_EXPIRY_TIME);
+        verify(codeStorageService, never())
+                .saveOtpCode(
+                        TEST_EMAIL_ADDRESS, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
+    }
+
+    @Test
+    public void shouldReturn400IfUserHasReachedThePhoneCodeRequestLimit() {
+        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
+                .thenReturn(Optional.empty());
+        session.setState(SessionState.VERIFY_PHONE_NUMBER_CODE_SENT);
+        maxOutCodeRequestCount();
+        usingValidSession();
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1024));
+        verify(codeStorageService)
+                .saveCodeRequestBlockedForSession(
+                        TEST_EMAIL_ADDRESS, session.getSessionId(), CODE_EXPIRY_TIME);
+        verify(codeStorageService, never())
+                .saveOtpCode(
+                        TEST_EMAIL_ADDRESS,
+                        TEST_SIX_DIGIT_CODE,
+                        CODE_EXPIRY_TIME,
+                        VERIFY_PHONE_NUMBER);
+    }
+
+    @Test
+    public void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreOtpCodes() {
+        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
+                .thenReturn(Optional.empty());
+        when(codeStorageService.isCodeRequestBlockedForSession(
+                        TEST_EMAIL_ADDRESS, session.getSessionId()))
+                .thenReturn(true);
+        session.setState(SessionState.EMAIL_MAX_CODES_SENT);
+        usingValidSession();
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                        TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1025));
+    }
+
+    private void maxOutCodeRequestCount() {
+        session.incrementCodeRequestCount();
+        session.incrementCodeRequestCount();
+        session.incrementCodeRequestCount();
+        session.incrementCodeRequestCount();
+        session.incrementCodeRequestCount();
+    }
+
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
@@ -313,6 +400,7 @@ class SendNotificationHandlerTest {
 
     private boolean isSessionWithEmailSent(Session session) {
         return session.getState().equals(VERIFY_EMAIL_CODE_SENT)
-                && session.getEmailAddress().equals(TEST_EMAIL_ADDRESS);
+                && session.getEmailAddress().equals(TEST_EMAIL_ADDRESS)
+                && session.getCodeRequestCount() == 1;
     }
 }

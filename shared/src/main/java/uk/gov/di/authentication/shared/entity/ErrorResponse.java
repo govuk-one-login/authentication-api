@@ -28,7 +28,9 @@ public enum ErrorResponse {
     ERROR_1020(1020, "Invalid OTP code"),
     ERROR_1021(1021, "Invalid Password reset code"),
     ERROR_1022(1022, "User has requested too many password resets"),
-    ERROR_1023(1023, "User cannot request another password reset");
+    ERROR_1023(1023, "User cannot request another password reset"),
+    ERROR_1024(1024, "User has requested too many OTP codes"),
+    ERROR_1025(1025, "User cannot request another OTP code");
 
     @JsonProperty("code")
     private int code;
