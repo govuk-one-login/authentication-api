@@ -31,6 +31,7 @@ public abstract class BaseFrontendHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LoggerFactory.getLogger(BaseFrontendHandler.class);
+    private static final String CLIENT_ID = "client_id";
     protected final ConfigurationService configurationService;
     protected final SessionService sessionService;
     protected final ClientSessionService clientSessionService;
@@ -81,48 +82,40 @@ public abstract class BaseFrontendHandler
         Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
         Optional<ClientSession> clientSession =
                 clientSessionService.getClientSessionFromRequestHeaders(input.getHeaders());
-        if (session.isPresent()) {
-            UserContext.Builder userContextBuilder = UserContext.builder(session.get());
-            clientSession.ifPresent(
-                    cs ->
-                            userContextBuilder.withClient(
-                                    clientService.getClient(
-                                            cs.getAuthRequestParams().get("client_id").stream()
-                                                    .findFirst()
-                                                    .orElseThrow())));
-            session.ifPresent(
-                    s ->
-                            userContextBuilder.withUserProfile(
-                                    authenticationService.getUserProfileFromEmail(
-                                            s.getEmailAddress())));
-            ;
-            session.map(Session::getEmailAddress)
-                    .ifPresentOrElse(
-                            email ->
-                                    userContextBuilder
-                                            .withUserProfile(
-                                                    authenticationService.getUserProfileFromEmail(
-                                                            email))
-                                            .withUserAuthenticated(true),
-                            () -> {
-                                try {
-                                    UserWithEmailRequest request =
-                                            objectMapper.readValue(
-                                                    input.getBody(), UserWithEmailRequest.class);
-                                    userContextBuilder
-                                            .withUserProfile(
-                                                    authenticationService.getUserProfileFromEmail(
-                                                            request.getEmail()))
-                                            .withUserAuthenticated(false);
-                                } catch (JsonProcessingException e) {
-                                    LOG.warn("Request didn't contain an e-mail address");
-                                }
-                            });
-
-            return handleRequestWithUserContext(input, context, userContextBuilder.build());
-        } else {
+        if (session.isEmpty()) {
             LOG.error("Session cannot be found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         }
+        UserContext.Builder userContextBuilder = UserContext.builder(session.get());
+
+        clientSession
+                .map(ClientSession::getAuthRequestParams)
+                .map(m -> m.get(CLIENT_ID))
+                .flatMap(v -> v.stream().findFirst())
+                .ifPresent(c -> userContextBuilder.withClient(clientService.getClient(c)));
+
+        session.map(Session::getEmailAddress)
+                .map(authenticationService::getUserProfileFromEmail)
+                .ifPresentOrElse(
+                        userProfile ->
+                                userContextBuilder
+                                        .withUserProfile(userProfile)
+                                        .withUserAuthenticated(true),
+                        () -> {
+                            try {
+                                UserWithEmailRequest request =
+                                        objectMapper.readValue(
+                                                input.getBody(), UserWithEmailRequest.class);
+                                userContextBuilder
+                                        .withUserProfile(
+                                                authenticationService.getUserProfileFromEmail(
+                                                        request.getEmail()))
+                                        .withUserAuthenticated(false);
+                            } catch (JsonProcessingException e) {
+                                LOG.warn("Request didn't contain an e-mail address");
+                            }
+                        });
+
+        return handleRequestWithUserContext(input, context, userContextBuilder.build());
     }
 }
