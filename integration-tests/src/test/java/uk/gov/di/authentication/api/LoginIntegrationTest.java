@@ -38,6 +38,7 @@ import static uk.gov.di.authentication.shared.entity.AuthenticationValues.VERY_H
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.LOGGED_IN;
+import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS;
 
 public class LoginIntegrationTest extends IntegrationTestEndpoints {
 
@@ -46,18 +47,24 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
     private static final String REDIRECT_URI = "http://localhost/redirect";
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     public static final String TEST_CLIENT_NAME = "test-client-name";
+    private static final String CURRENT_TERMS_AND_CONDITIONS = "1.0";
+    private static final String OLD_TERMS_AND_CONDITIONS = "0.1";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @ParameterizedTest
     @MethodSource("vectorOfTrustEndStates")
     public void shouldReturnCorrectStateForClientsTrustLevel(
-            AuthenticationValues level, SessionState expectedState) throws IOException {
+            AuthenticationValues level,
+            String termsAndConditionsVersion,
+            SessionState expectedState)
+            throws IOException {
         String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         String password = "password-1";
         String phoneNumber = "01234567890";
         DynamoHelper.signUp(email, password);
         DynamoHelper.addPhoneNumber(email, phoneNumber);
+        DynamoHelper.updateTermsAndConditions(email, termsAndConditionsVersion);
         String sessionId = RedisHelper.createSession();
         RedisHelper.setSessionState(sessionId, AUTHENTICATION_REQUIRED);
 
@@ -102,11 +109,16 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
 
     private static Stream<Arguments> vectorOfTrustEndStates() {
         return Stream.of(
-                Arguments.of(null, LOGGED_IN),
-                Arguments.of(LOW_LEVEL, AUTHENTICATED),
-                Arguments.of(MEDIUM_LEVEL, LOGGED_IN),
-                Arguments.of(HIGH_LEVEL, LOGGED_IN),
-                Arguments.of(VERY_HIGH_LEVEL, LOGGED_IN));
+                Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, LOGGED_IN),
+                Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTHENTICATED),
+                Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, LOGGED_IN),
+                Arguments.of(HIGH_LEVEL, CURRENT_TERMS_AND_CONDITIONS, LOGGED_IN),
+                Arguments.of(VERY_HIGH_LEVEL, CURRENT_TERMS_AND_CONDITIONS, LOGGED_IN),
+                Arguments.of(null, OLD_TERMS_AND_CONDITIONS, LOGGED_IN),
+                Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, UPDATED_TERMS_AND_CONDITIONS),
+                Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, LOGGED_IN),
+                Arguments.of(HIGH_LEVEL, OLD_TERMS_AND_CONDITIONS, LOGGED_IN),
+                Arguments.of(VERY_HIGH_LEVEL, OLD_TERMS_AND_CONDITIONS, LOGGED_IN));
     }
 
     @Test

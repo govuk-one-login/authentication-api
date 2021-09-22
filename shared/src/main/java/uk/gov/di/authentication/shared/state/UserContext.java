@@ -9,12 +9,17 @@ import java.util.Optional;
 public class UserContext {
     private final Session session;
     private final Optional<UserProfile> userProfile;
+    private final boolean userAuthenticated;
     private final Optional<ClientRegistry> client;
 
     protected UserContext(
-            Session session, Optional<UserProfile> userProfile, Optional<ClientRegistry> client) {
+            Session session,
+            Optional<UserProfile> userProfile,
+            boolean userAuthenticated,
+            Optional<ClientRegistry> client) {
         this.session = session;
         this.userProfile = userProfile;
+        this.userAuthenticated = userAuthenticated;
         this.client = client;
     }
 
@@ -24,6 +29,10 @@ public class UserContext {
 
     public Optional<UserProfile> getUserProfile() {
         return userProfile;
+    }
+
+    public boolean isUserAuthenticated() {
+        return userAuthenticated;
     }
 
     public Optional<ClientRegistry> getClient() {
@@ -37,6 +46,7 @@ public class UserContext {
     public static class Builder {
         private Session session;
         private Optional<UserProfile> userProfile = Optional.empty();
+        private boolean userAuthenticated = false;
         private Optional<ClientRegistry> client = Optional.empty();
 
         protected Builder(Session session) {
@@ -52,6 +62,11 @@ public class UserContext {
             return this;
         }
 
+        public Builder withUserAuthenticated(boolean userAuthenticated) {
+            this.userAuthenticated = userAuthenticated;
+            return this;
+        }
+
         public Builder withClient(ClientRegistry client) {
             return withClient(Optional.of(client));
         }
@@ -62,7 +77,7 @@ public class UserContext {
         }
 
         public UserContext build() {
-            return new UserContext(session, userProfile, client);
+            return new UserContext(session, userProfile, userAuthenticated, client);
         }
     }
 }
