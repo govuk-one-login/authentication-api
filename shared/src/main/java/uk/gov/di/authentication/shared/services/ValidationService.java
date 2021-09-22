@@ -85,6 +85,7 @@ public class ValidationService {
                 return USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE;
             }
         }
+        session.resetCodeRequestCount();
         return USER_ENTERED_VALID_PHONE_VERIFICATION_CODE;
     }
 
@@ -98,6 +99,7 @@ public class ValidationService {
                 return USER_ENTERED_INVALID_MFA_CODE;
             }
         }
+        session.resetCodeRequestCount();
         return USER_ENTERED_VALID_MFA_CODE;
     }
 
@@ -111,6 +113,7 @@ public class ValidationService {
                 return USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE;
             }
         }
+        session.resetCodeRequestCount();
         return USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE;
     }
 }

@@ -28,6 +28,9 @@ public class Session {
     @JsonProperty("password_reset_count")
     private int passwordResetCount;
 
+    @JsonProperty("code_request_count")
+    private int codeRequestCount;
+
     public Session(String sessionId) {
         this.sessionId = sessionId;
         this.state = NEW;
@@ -110,6 +113,20 @@ public class Session {
 
     public Session resetPasswordResetCount() {
         this.passwordResetCount = 0;
+        return this;
+    }
+
+    public int getCodeRequestCount() {
+        return codeRequestCount;
+    }
+
+    public Session incrementCodeRequestCount() {
+        this.codeRequestCount = codeRequestCount + 1;
+        return this;
+    }
+
+    public Session resetCodeRequestCount() {
+        this.codeRequestCount = 0;
         return this;
     }
 }

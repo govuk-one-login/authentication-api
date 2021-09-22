@@ -18,6 +18,7 @@ public class CodeStorageService {
     private static final String PHONE_NUMBER_KEY_PREFIX = "phone-number-code:";
     private static final String MFA_KEY_PREFIX = "mfa-code:";
     private static final String CODE_BLOCKED_KEY_PREFIX = "code-blocked:";
+    private static final String CODE_REQUEST_BLOCKED_KEY_PREFIX = "code-request-blocked:";
     private static final String PASSWORD_RESET_BLOCKED_KEY_PREFIX = "password-reset-blocked:";
     private static final String CODE_BLOCKED_VALUE = "blocked";
     private static final String RESET_PASSWORD_KEY_PREFIX = "reset-password-code:";
@@ -34,6 +35,25 @@ public class CodeStorageService {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public void saveCodeRequestBlockedForSession(
+            String email, String sessionId, long codeBlockedTime) {
+        String encodedHash = HashHelper.hashSha256String(email);
+        String key = CODE_REQUEST_BLOCKED_KEY_PREFIX + encodedHash + sessionId;
+        try {
+            redisConnectionService.saveWithExpiry(key, CODE_BLOCKED_VALUE, codeBlockedTime);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public boolean isCodeRequestBlockedForSession(String emailAddress, String sessionId) {
+        return redisConnectionService.getValue(
+                        CODE_REQUEST_BLOCKED_KEY_PREFIX
+                                + HashHelper.hashSha256String(emailAddress)
+                                + sessionId)
+                != null;
     }
 
     public void savePasswordResetBlockedForSession(
