@@ -63,6 +63,7 @@ class SendNotificationHandlerTest {
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final Context context = mock(Context.class);
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final Session session =
             new Session(IdGenerator.generate())
@@ -306,7 +307,8 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserHasReachedTheEmailCodeRequestLimit() {
+    public void shouldReturn400IfUserHasReachedTheEmailCodeRequestLimit()
+            throws JsonProcessingException {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
         session.setState(VERIFY_EMAIL_CODE_SENT);
@@ -323,7 +325,9 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1024));
+        BaseAPIResponse codeResponse =
+                objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
+        assertEquals(SessionState.EMAIL_MAX_CODES_SENT, codeResponse.getSessionState());
         verify(codeStorageService)
                 .saveCodeRequestBlockedForSession(
                         TEST_EMAIL_ADDRESS, session.getSessionId(), CODE_EXPIRY_TIME);
@@ -333,7 +337,8 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserHasReachedThePhoneCodeRequestLimit() {
+    public void shouldReturn400IfUserHasReachedThePhoneCodeRequestLimit()
+            throws JsonProcessingException {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
         session.setState(SessionState.VERIFY_PHONE_NUMBER_CODE_SENT);
@@ -350,7 +355,9 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1024));
+        BaseAPIResponse codeResponse =
+                objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
+        assertEquals(SessionState.PHONE_NUMBER_MAX_CODES_SENT, codeResponse.getSessionState());
         verify(codeStorageService)
                 .saveCodeRequestBlockedForSession(
                         TEST_EMAIL_ADDRESS, session.getSessionId(), CODE_EXPIRY_TIME);
@@ -363,7 +370,8 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreOtpCodes() {
+    public void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreOtpCodes()
+            throws JsonProcessingException {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
         when(codeStorageService.isCodeRequestBlockedForSession(
@@ -382,7 +390,9 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1025));
+        BaseAPIResponse codeResponse =
+                objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
+        assertEquals(SessionState.EMAIL_CODE_REQUESTS_BLOCKED, codeResponse.getSessionState());
     }
 
     private void maxOutCodeRequestCount() {
