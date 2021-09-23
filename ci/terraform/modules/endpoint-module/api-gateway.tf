@@ -1,4 +1,5 @@
 resource "aws_api_gateway_resource" "endpoint_resource" {
+  count       = var.create_endpoint ? 1 : 0
   rest_api_id = var.rest_api_id
   parent_id   = var.root_resource_id
   path_part   = var.path_part
@@ -6,7 +7,7 @@ resource "aws_api_gateway_resource" "endpoint_resource" {
 
 resource "aws_api_gateway_method" "endpoint_method" {
   rest_api_id = var.rest_api_id
-  resource_id = aws_api_gateway_resource.endpoint_resource.id
+  resource_id = var.create_endpoint ? aws_api_gateway_resource.endpoint_resource[0].id : var.root_resource_id
   http_method = var.endpoint_method
 
   authorization = var.authorizer_id == null ? "NONE" : "CUSTOM"
@@ -21,7 +22,7 @@ resource "aws_api_gateway_method" "endpoint_method" {
 
 resource "aws_api_gateway_integration" "endpoint_integration" {
   rest_api_id        = var.rest_api_id
-  resource_id        = aws_api_gateway_resource.endpoint_resource.id
+  resource_id        = var.create_endpoint ? aws_api_gateway_resource.endpoint_resource[0].id : var.root_resource_id
   http_method        = aws_api_gateway_method.endpoint_method.http_method
   request_parameters = var.integration_request_parameters
 
