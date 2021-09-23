@@ -49,7 +49,7 @@ class ResetPasswordHandlerTest {
     }
 
     @Test
-    public void shouldReturn200ForSuccessfulRequest() throws JsonProcessingException {
+    public void shouldReturn204ForSuccessfulRequest() throws JsonProcessingException {
         when(codeStorageService.getSubjectWithPasswordResetCode(CODE))
                 .thenReturn(Optional.of(SUBJECT));
         when(authenticationService.getUserCredentialsFromSubject(SUBJECT))
@@ -60,7 +60,7 @@ class ResetPasswordHandlerTest {
         event.setBody(format("{ \"code\": \"%s\", \"password\": \"%s\"}", CODE, NEW_PASSWORD));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        assertThat(result, hasStatus(200));
+        assertThat(result, hasStatus(204));
         verify(sqsClient, times(1)).send(new ObjectMapper().writeValueAsString(notifyRequest));
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
         verify(codeStorageService, times(1)).deleteSubjectWithPasswordResetCode(CODE);

@@ -23,7 +23,7 @@ public class UpdateEmailIntegrationTest {
     private static final Subject SUBJECT = new Subject();
 
     @Test
-    public void shouldCallLoginEndpointAndReturn200WhenLoginIsSuccessful() {
+    public void shouldCallLoginEndpointAndReturn204WhenLoginIsSuccessful() {
         DynamoHelper.signUp(EXISTING_EMAIL_ADDRESS, "password-1", SUBJECT);
 
         Response response =
@@ -42,6 +42,6 @@ public class UpdateEmailIntegrationTest {
         //        TODO: This test does not work currently as the api gateway doesn't pass on the
         // authorizer property to the requestContext. We have to do this manually as the authorizer
         // is not supported in the free version of Localstack.
-        //        assertEquals(200, response.getStatus());
+        //        assertEquals(204, response.getStatus());
     }
 }

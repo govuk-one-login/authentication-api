@@ -26,6 +26,7 @@ import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class SendOtpNotificationHandler
@@ -149,7 +150,7 @@ public class SendOtpNotificationHandler
                 sendNotificationRequest.getNotificationType());
         sqsClient.send(serialiseRequest(notifyRequest));
         LOGGER.info("Generating successful API response");
-        return generateApiGatewayProxyResponse(200, "");
+        return generateEmptySuccessApiGatewayResponse();
     }
 
     private String serialiseRequest(Object request) throws JsonProcessingException {

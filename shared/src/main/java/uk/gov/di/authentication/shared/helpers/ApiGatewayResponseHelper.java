@@ -36,6 +36,10 @@ public class ApiGatewayResponseHelper {
         return generateApiGatewayProxyResponse(statusCode, body, null);
     }
 
+    public static APIGatewayProxyResponseEvent generateEmptySuccessApiGatewayResponse() {
+        return generateApiGatewayProxyResponse(204, "", null);
+    }
+
     public static APIGatewayProxyResponseEvent generateApiGatewayProxyResponse(
             int statusCode, String body, Map<String, List<String>> multiValueHeaders) {
         APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent =

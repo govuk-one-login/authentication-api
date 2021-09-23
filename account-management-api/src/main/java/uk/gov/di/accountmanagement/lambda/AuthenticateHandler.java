@@ -15,7 +15,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
-import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class AuthenticateHandler
@@ -69,7 +69,7 @@ public class AuthenticateHandler
                                 }
                                 LOGGER.info(
                                         "User has successfully Logged in. Generating successful AuthenticateResponse");
-                                return generateApiGatewayProxyResponse(200, "");
+                                return generateEmptySuccessApiGatewayResponse();
                             } catch (JsonProcessingException e) {
                                 LOGGER.error(
                                         "Request is missing parameters. The body present in request: {}",
