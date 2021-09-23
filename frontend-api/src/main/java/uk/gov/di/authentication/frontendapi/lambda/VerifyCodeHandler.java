@@ -95,22 +95,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler
 
             var session = userContext.getSession();
 
-            var blockedCodeBehaviour =
-                    Map.ofEntries(
-                            entry(
-                                    VERIFY_EMAIL,
-                                    USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES),
-                            entry(
-                                    VERIFY_PHONE_NUMBER,
-                                    USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES),
-                            entry(MFA_SMS, USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES));
-
             if (isCodeBlockedForSession(session)) {
                 sessionService.save(
                         session.setState(
                                 stateMachine.transition(
                                         session.getState(),
-                                        blockedCodeBehaviour.get(codeRequest.getNotificationType()),
+                                        blockedCodeBehaviour(codeRequest),
                                         userContext)));
                 return generateSuccessResponse(session);
             }
@@ -177,6 +167,18 @@ public class VerifyCodeHandler extends BaseFrontendHandler
                 "Encountered unexpected error while processing session {}",
                 userContext.getSession().getSessionId());
         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
+    }
+
+    private SessionAction blockedCodeBehaviour(VerifyCodeRequest codeRequest) {
+        return Map.ofEntries(
+                        entry(
+                                VERIFY_EMAIL,
+                                USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES),
+                        entry(
+                                VERIFY_PHONE_NUMBER,
+                                USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES),
+                        entry(MFA_SMS, USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES))
+                .get(codeRequest.getNotificationType());
     }
 
     private boolean isCodeBlockedForSession(Session session) {
