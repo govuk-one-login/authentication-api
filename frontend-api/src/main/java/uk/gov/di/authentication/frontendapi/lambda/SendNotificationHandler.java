@@ -36,6 +36,8 @@ import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1017;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_TOO_MANY_EMAIL_VERIFICATION_CODES;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_TOO_MANY_PHONE_VERIFICATION_CODES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_EMAIL_VERIFICATION_CODES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_PHONE_VERIFICATION_CODES;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
@@ -113,14 +115,14 @@ public class SendNotificationHandler
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1000);
                                 }
-                                Optional<ErrorResponse> codeRequestError =
-                                        validateCodeRequestAttempts(
+                                boolean codeRequestValid =
+                                        isCodeRequestAttemptValid(
                                                 sendNotificationRequest.getEmail(),
                                                 session.get(),
                                                 sendNotificationRequest.getNotificationType());
-                                if (codeRequestError.isPresent()) {
-                                    return generateApiGatewayProxyErrorResponse(
-                                            400, codeRequestError.get());
+                                if (!codeRequestValid) {
+                                    return generateApiGatewayProxyResponse(
+                                            400, new BaseAPIResponse(session.get().getState()));
                                 }
                                 SessionState nextState;
                                 switch (sendNotificationRequest.getNotificationType()) {
@@ -215,7 +217,7 @@ public class SendNotificationHandler
         return generateApiGatewayProxyResponse(200, new BaseAPIResponse(session.getState()));
     }
 
-    private Optional<ErrorResponse> validateCodeRequestAttempts(
+    private boolean isCodeRequestAttemptValid(
             String email, Session session, NotificationType notificationType) {
         if (session.getCodeRequestCount() == configurationService.getCodeMaxRetries()) {
             LOGGER.error(
@@ -225,25 +227,43 @@ public class SendNotificationHandler
             SessionState nextState =
                     stateMachine.transition(
                             session.getState(),
-                            getSessionActionForMaxCodeRequests(notificationType));
+                            getSessionActionForCodeRequestLimitReached(notificationType));
             sessionService.save(session.setState(nextState).resetCodeRequestCount());
-            return Optional.of(ErrorResponse.ERROR_1024);
+            return false;
         }
         if (codeStorageService.isCodeRequestBlockedForSession(email, session.getSessionId())) {
             LOGGER.error(
                     "User is blocked from requesting any OTP codes for session {}",
                     session.getSessionId());
-            return Optional.of(ErrorResponse.ERROR_1025);
+            SessionState nextState =
+                    stateMachine.transition(
+                            session.getState(),
+                            getSessionActionForMaxCodeRequests(notificationType));
+            sessionService.save(session.setState(nextState));
+            return false;
         }
-        return Optional.empty();
+        return true;
     }
 
-    private SessionAction getSessionActionForMaxCodeRequests(NotificationType notificationType) {
+    private SessionAction getSessionActionForCodeRequestLimitReached(
+            NotificationType notificationType) {
         switch (notificationType) {
             case VERIFY_EMAIL:
                 return SYSTEM_HAS_SENT_TOO_MANY_EMAIL_VERIFICATION_CODES;
             case VERIFY_PHONE_NUMBER:
                 return SYSTEM_HAS_SENT_TOO_MANY_PHONE_VERIFICATION_CODES;
+            default:
+                LOGGER.error("Invalid NotificationType sent");
+                throw new RuntimeException("Invalid NotificationType sent");
+        }
+    }
+
+    private SessionAction getSessionActionForMaxCodeRequests(NotificationType notificationType) {
+        switch (notificationType) {
+            case VERIFY_EMAIL:
+                return SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_EMAIL_VERIFICATION_CODES;
+            case VERIFY_PHONE_NUMBER:
+                return SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_PHONE_VERIFICATION_CODES;
             default:
                 LOGGER.error("Invalid NotificationType sent");
                 throw new RuntimeException("Invalid NotificationType sent");

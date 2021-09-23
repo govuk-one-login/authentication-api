@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
-import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class UpdatePhoneNumberHandler
@@ -114,7 +114,7 @@ public class UpdatePhoneNumberHandler
                                 sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
                                 LOGGER.info(
                                         "Message successfully added to queue. Generating successful gateway response");
-                                return generateApiGatewayProxyResponse(200, "");
+                                return generateEmptySuccessApiGatewayResponse();
                             } catch (JsonProcessingException | IllegalArgumentException e) {
                                 LOGGER.error(
                                         "UpdatePhoneNumber request is missing or contains invalid parameters.",

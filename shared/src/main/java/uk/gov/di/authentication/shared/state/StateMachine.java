@@ -25,6 +25,9 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SE
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_TOO_MANY_EMAIL_VERIFICATION_CODES;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_TOO_MANY_MFA_CODES;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_TOO_MANY_PHONE_VERIFICATION_CODES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_EMAIL_VERIFICATION_CODES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_MFA_VERIFICATION_CODES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_PHONE_VERIFICATION_CODES;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ACCEPTS_TERMS_AND_CONDITIONS;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_A_NEW_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE;
@@ -48,17 +51,20 @@ import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_NOT_VALID;
+import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_REQUESTS_BLOCKED;
 import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_VERIFIED;
 import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_MAX_CODES_SENT;
 import static uk.gov.di.authentication.shared.entity.SessionState.LOGGED_IN;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_NOT_VALID;
+import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_REQUESTS_BLOCKED;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_VERIFIED;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_SMS_CODE_SENT;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_SMS_MAX_CODES_SENT;
 import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
 import static uk.gov.di.authentication.shared.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.shared.entity.SessionState.PHONE_NUMBER_CODE_NOT_VALID;
+import static uk.gov.di.authentication.shared.entity.SessionState.PHONE_NUMBER_CODE_REQUESTS_BLOCKED;
 import static uk.gov.di.authentication.shared.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
 import static uk.gov.di.authentication.shared.entity.SessionState.PHONE_NUMBER_MAX_CODES_SENT;
 import static uk.gov.di.authentication.shared.entity.SessionState.RESET_PASSWORD_LINK_MAX_RETRIES_REACHED;
@@ -151,6 +157,11 @@ public class StateMachine<T, A, C> {
                                 .then(EMAIL_MAX_CODES_SENT),
                         on(USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE).then(EMAIL_CODE_NOT_VALID))
                 .when(EMAIL_MAX_CODES_SENT)
+                .allow(
+                        on(SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE).then(VERIFY_EMAIL_CODE_SENT),
+                        on(SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_EMAIL_VERIFICATION_CODES)
+                                .then(EMAIL_CODE_REQUESTS_BLOCKED))
+                .when(EMAIL_CODE_REQUESTS_BLOCKED)
                 .allow(on(SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE).then(VERIFY_EMAIL_CODE_SENT))
                 .when(EMAIL_CODE_NOT_VALID)
                 .allow(
@@ -179,6 +190,12 @@ public class StateMachine<T, A, C> {
                         on(USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE)
                                 .then(PHONE_NUMBER_CODE_NOT_VALID))
                 .when(PHONE_NUMBER_MAX_CODES_SENT)
+                .allow(
+                        on(SYSTEM_HAS_SENT_PHONE_VERIFICATION_CODE)
+                                .then(VERIFY_PHONE_NUMBER_CODE_SENT),
+                        on(SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_PHONE_VERIFICATION_CODES)
+                                .then(PHONE_NUMBER_CODE_REQUESTS_BLOCKED))
+                .when(PHONE_NUMBER_CODE_REQUESTS_BLOCKED)
                 .allow(
                         on(SYSTEM_HAS_SENT_PHONE_VERIFICATION_CODE)
                                 .then(VERIFY_PHONE_NUMBER_CODE_SENT))
@@ -230,6 +247,11 @@ public class StateMachine<T, A, C> {
                         on(USER_ENTERED_VALID_MFA_CODE).then(MFA_CODE_VERIFIED).byDefault(),
                         on(USER_ENTERED_INVALID_MFA_CODE).then(MFA_CODE_NOT_VALID))
                 .when(MFA_SMS_MAX_CODES_SENT)
+                .allow(
+                        on(SYSTEM_HAS_SENT_MFA_CODE).then(MFA_SMS_CODE_SENT),
+                        on(SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_MFA_VERIFICATION_CODES)
+                                .then(MFA_CODE_REQUESTS_BLOCKED))
+                .when(MFA_CODE_REQUESTS_BLOCKED)
                 .allow(on(SYSTEM_HAS_SENT_MFA_CODE).then(MFA_SMS_CODE_SENT))
                 .when(MFA_CODE_NOT_VALID)
                 .allow(

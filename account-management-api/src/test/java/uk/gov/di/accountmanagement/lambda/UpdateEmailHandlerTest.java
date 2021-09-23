@@ -54,7 +54,7 @@ class UpdateEmailHandlerTest {
     }
 
     @Test
-    public void shouldReturn200ForValidUpdateEmailRequest() throws JsonProcessingException {
+    public void shouldReturn204ForValidUpdateEmailRequest() throws JsonProcessingException {
         UserProfile userProfile = new UserProfile().setPublicSubjectID(SUBJECT.getValue());
         when(dynamoService.getUserProfileByEmail(EXISTING_EMAIL_ADDRESS)).thenReturn(userProfile);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -76,7 +76,7 @@ class UpdateEmailHandlerTest {
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        assertThat(result, hasStatus(200));
+        assertThat(result, hasStatus(204));
         verify(dynamoService).updateEmail(EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS);
         NotifyRequest notifyRequest = new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED);
         verify(sqsClient).send(new ObjectMapper().writeValueAsString(notifyRequest));

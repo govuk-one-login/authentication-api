@@ -46,7 +46,7 @@ public class ResetPasswordIntegrationTest {
     }
 
     @Test
-    public void shouldUpdatePasswordAndReturn200() throws JsonProcessingException {
+    public void shouldUpdatePasswordAndReturn204() throws JsonProcessingException {
         String subject = "new-subject";
         ResetPasswordWithCodeRequest requestBody = new ResetPasswordWithCodeRequest(CODE, PASSWORD);
         DynamoHelper.signUp(EMAIL_ADDRESS, "password-1", new Subject(subject));
@@ -61,6 +61,6 @@ public class ResetPasswordIntegrationTest {
                         .post(Entity.entity(requestBody, MediaType.APPLICATION_JSON));
         notifyStub.waitForRequest(60);
 
-        assertEquals(200, response.getStatus());
+        assertEquals(204, response.getStatus());
     }
 }

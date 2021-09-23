@@ -54,7 +54,7 @@ class UpdatePhoneNumberHandlerTest {
     }
 
     @Test
-    public void shouldReturn200ForValidUpdatePhoneNumberRequest() throws JsonProcessingException {
+    public void shouldReturn204ForValidUpdatePhoneNumberRequest() throws JsonProcessingException {
         UserProfile userProfile = new UserProfile().setPublicSubjectID(SUBJECT.getValue());
         when(dynamoService.getUserProfileByEmail(EMAIL_ADDRESS)).thenReturn(userProfile);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -74,7 +74,7 @@ class UpdatePhoneNumberHandlerTest {
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        assertThat(result, hasStatus(200));
+        assertThat(result, hasStatus(204));
         verify(dynamoService).updatePhoneNumber(EMAIL_ADDRESS, PHONE_NUMBER);
         NotifyRequest notifyRequest = new NotifyRequest(EMAIL_ADDRESS, PHONE_NUMBER_UPDATED);
         verify(sqsClient).send(new ObjectMapper().writeValueAsString(notifyRequest));

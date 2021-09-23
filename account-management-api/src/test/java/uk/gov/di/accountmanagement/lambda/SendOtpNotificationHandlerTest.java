@@ -68,7 +68,7 @@ class SendOtpNotificationHandlerTest {
     }
 
     @Test
-    void shouldReturn200AndPutMessageOnQueueForAValidEmailRequest() throws JsonProcessingException {
+    void shouldReturn204AndPutMessageOnQueueForAValidEmailRequest() throws JsonProcessingException {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
         NotifyRequest notifyRequest =
@@ -84,7 +84,7 @@ class SendOtpNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        assertEquals(200, result.getStatusCode());
+        assertEquals(204, result.getStatusCode());
 
         verify(awsSqsClient).send(serialisedRequest);
         verify(codeStorageService)
@@ -93,7 +93,7 @@ class SendOtpNotificationHandlerTest {
     }
 
     @Test
-    void shouldReturn200AndPutMessageOnQueueForAValidPhoneRequest() throws JsonProcessingException {
+    void shouldReturn204AndPutMessageOnQueueForAValidPhoneRequest() throws JsonProcessingException {
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, TEST_SIX_DIGIT_CODE);
         ObjectMapper objectMapper = new ObjectMapper();
@@ -107,7 +107,7 @@ class SendOtpNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        assertEquals(200, result.getStatusCode());
+        assertEquals(204, result.getStatusCode());
 
         verify(awsSqsClient).send(serialisedRequest);
         verify(codeStorageService)

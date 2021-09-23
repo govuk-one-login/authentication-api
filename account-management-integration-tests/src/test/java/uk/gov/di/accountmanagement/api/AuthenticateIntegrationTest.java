@@ -14,7 +14,7 @@ public class AuthenticateIntegrationTest extends IntegrationTestEndpoints {
     private static final String LOGIN_ENDPOINT = "/authenticate";
 
     @Test
-    public void shouldCallLoginEndpointAndReturn200WhenLoginIsSuccessful() {
+    public void shouldCallLoginEndpointAndReturn204WhenLoginIsSuccessful() {
         String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         String password = "password-1";
         DynamoHelper.signUp(email, password);
@@ -23,7 +23,7 @@ public class AuthenticateIntegrationTest extends IntegrationTestEndpoints {
                 RequestHelper.buildRequest(
                         LOGIN_ENDPOINT, new AuthenticateRequest(email, password));
 
-        assertEquals(200, response.getStatus());
+        assertEquals(204, response.getStatus());
     }
 
     @Test

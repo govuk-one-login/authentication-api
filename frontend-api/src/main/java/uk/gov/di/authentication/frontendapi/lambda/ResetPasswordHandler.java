@@ -24,7 +24,7 @@ import uk.gov.di.authentication.shared.services.ValidationService;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
-import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class ResetPasswordHandler
@@ -112,7 +112,7 @@ public class ResetPasswordHandler
                                         400, ErrorResponse.ERROR_1001);
                             }
                             LOGGER.info("Generating successful response");
-                            return generateApiGatewayProxyResponse(200, "");
+                            return generateEmptySuccessApiGatewayResponse();
                         });
     }
 

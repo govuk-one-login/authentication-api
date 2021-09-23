@@ -3,7 +3,6 @@ package uk.gov.di.accountmanagement.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -33,7 +32,7 @@ class AuthenticateHandlerTest {
     }
 
     @Test
-    public void shouldReturn200IfLoginIsSuccessful() throws JsonProcessingException {
+    public void shouldReturn204IfLoginIsSuccessful() {
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
@@ -41,7 +40,7 @@ class AuthenticateHandlerTest {
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        assertThat(result, hasStatus(200));
+        assertThat(result, hasStatus(204));
     }
 
     @Test

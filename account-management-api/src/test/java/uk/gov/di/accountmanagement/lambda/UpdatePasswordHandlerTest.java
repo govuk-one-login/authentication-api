@@ -43,7 +43,7 @@ class UpdatePasswordHandlerTest {
     }
 
     @Test
-    public void shouldReturn200ForValidRequest() throws JsonProcessingException {
+    public void shouldReturn204ForValidRequest() throws JsonProcessingException {
         UserProfile userProfile = new UserProfile().setPublicSubjectID(SUBJECT.getValue());
         when(dynamoService.getUserProfileByEmail(EXISTING_EMAIL_ADDRESS)).thenReturn(userProfile);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -60,7 +60,7 @@ class UpdatePasswordHandlerTest {
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        assertThat(result, hasStatus(200));
+        assertThat(result, hasStatus(204));
         verify(dynamoService).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
         NotifyRequest notifyRequest =
                 new NotifyRequest(EXISTING_EMAIL_ADDRESS, NotificationType.PASSWORD_UPDATED);

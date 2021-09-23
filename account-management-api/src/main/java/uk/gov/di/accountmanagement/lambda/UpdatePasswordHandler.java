@@ -22,7 +22,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import java.util.Map;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
-import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class UpdatePasswordHandler
@@ -88,7 +88,7 @@ public class UpdatePasswordHandler
                                 sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
                                 LOGGER.info(
                                         "Message successfully added to queue. Generating successful gateway response");
-                                return generateApiGatewayProxyResponse(200, "");
+                                return generateEmptySuccessApiGatewayResponse();
 
                             } catch (JsonProcessingException | IllegalArgumentException e) {
                                 LOGGER.error(
