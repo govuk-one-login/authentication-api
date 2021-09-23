@@ -3,7 +3,7 @@ module "update" {
 
   path_part                      = "{clientId}"
   endpoint_name                  = "update-client-info"
-  endpoint_method                = "POST"
+  endpoint_method                = "PUT"
   method_request_parameters      = { "method.request.path.clientId" = true }
   integration_request_parameters = { "integration.request.path.clientId" = "method.request.path.clientId" }
 
@@ -17,7 +17,7 @@ module "update" {
   handler_function_name = "uk.gov.di.authentication.clientregistry.lambda.UpdateClientConfigHandler::handleRequest"
 
   rest_api_id               = aws_api_gateway_rest_api.di_authentication_api.id
-  root_resource_id          = aws_api_gateway_resource.clients_resource.id
+  root_resource_id          = aws_api_gateway_resource.register_resource.id
   execution_arn             = aws_api_gateway_rest_api.di_authentication_api.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.client_registry_api_lambda_zip_file
@@ -38,6 +38,7 @@ module "update" {
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_api,
     aws_api_gateway_resource.connect_resource,
+    aws_api_gateway_resource.register_resource,
     aws_api_gateway_resource.wellknown_resource,
     aws_vpc.authentication,
     aws_subnet.authentication,
