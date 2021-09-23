@@ -88,113 +88,91 @@ public class VerifyCodeHandler extends BaseFrontendHandler
             VerifyCodeRequest codeRequest =
                     objectMapper.readValue(input.getBody(), VerifyCodeRequest.class);
 
+            var session = userContext.getSession();
+
             switch (codeRequest.getNotificationType()) {
                 case VERIFY_EMAIL:
                     if (codeStorageService.isCodeBlockedForSession(
-                            userContext.getSession().getEmailAddress(),
-                            userContext.getSession().getSessionId())) {
+                            session.getEmailAddress(), session.getSessionId())) {
                         sessionService.save(
-                                userContext
-                                        .getSession()
-                                        .setState(
-                                                stateMachine.transition(
-                                                        userContext.getSession().getState(),
-                                                        USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES,
-                                                        userContext)));
+                                session.setState(
+                                        stateMachine.transition(
+                                                session.getState(),
+                                                USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES,
+                                                userContext)));
                     } else {
                         Optional<String> emailCode =
                                 codeStorageService.getOtpCode(
-                                        userContext.getSession().getEmailAddress(),
+                                        session.getEmailAddress(),
                                         codeRequest.getNotificationType());
                         sessionService.save(
-                                userContext
-                                        .getSession()
-                                        .setState(
-                                                stateMachine.transition(
-                                                        userContext.getSession().getState(),
-                                                        validationService
-                                                                .validateEmailVerificationCode(
-                                                                        emailCode,
-                                                                        codeRequest.getCode(),
-                                                                        userContext.getSession(),
-                                                                        configurationService
-                                                                                .getCodeMaxRetries()),
-                                                        userContext)));
-                        processCodeSessionState(
-                                userContext.getSession(), codeRequest.getNotificationType());
+                                session.setState(
+                                        stateMachine.transition(
+                                                session.getState(),
+                                                validationService.validateEmailVerificationCode(
+                                                        emailCode,
+                                                        codeRequest.getCode(),
+                                                        session,
+                                                        configurationService.getCodeMaxRetries()),
+                                                userContext)));
+                        processCodeSessionState(session, codeRequest.getNotificationType());
                     }
-                    return generateSuccessResponse(userContext.getSession());
+                    return generateSuccessResponse(session);
                 case VERIFY_PHONE_NUMBER:
                     if (codeStorageService.isCodeBlockedForSession(
-                            userContext.getSession().getEmailAddress(),
-                            userContext.getSession().getSessionId())) {
+                            session.getEmailAddress(), session.getSessionId())) {
                         sessionService.save(
-                                userContext
-                                        .getSession()
-                                        .setState(
-                                                stateMachine.transition(
-                                                        userContext.getSession().getState(),
-                                                        USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES,
-                                                        userContext)));
+                                session.setState(
+                                        stateMachine.transition(
+                                                session.getState(),
+                                                USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES,
+                                                userContext)));
                     } else {
                         Optional<String> phoneNumberCode =
                                 codeStorageService.getOtpCode(
-                                        userContext.getSession().getEmailAddress(),
+                                        session.getEmailAddress(),
                                         codeRequest.getNotificationType());
                         sessionService.save(
-                                userContext
-                                        .getSession()
-                                        .setState(
-                                                stateMachine.transition(
-                                                        userContext.getSession().getState(),
-                                                        validationService
-                                                                .validatePhoneVerificationCode(
-                                                                        phoneNumberCode,
-                                                                        codeRequest.getCode(),
-                                                                        userContext.getSession(),
-                                                                        configurationService
-                                                                                .getCodeMaxRetries()),
-                                                        userContext)));
-                        processCodeSessionState(
-                                userContext.getSession(), codeRequest.getNotificationType());
+                                session.setState(
+                                        stateMachine.transition(
+                                                session.getState(),
+                                                validationService.validatePhoneVerificationCode(
+                                                        phoneNumberCode,
+                                                        codeRequest.getCode(),
+                                                        session,
+                                                        configurationService.getCodeMaxRetries()),
+                                                userContext)));
+                        processCodeSessionState(session, codeRequest.getNotificationType());
                     }
-                    return generateSuccessResponse(userContext.getSession());
+                    return generateSuccessResponse(session);
                 case MFA_SMS:
                     if (codeStorageService.isCodeBlockedForSession(
-                            userContext.getSession().getEmailAddress(),
-                            userContext.getSession().getSessionId())) {
+                            session.getEmailAddress(), session.getSessionId())) {
                         sessionService.save(
-                                userContext
-                                        .getSession()
-                                        .setState(
-                                                stateMachine.transition(
-                                                        userContext.getSession().getState(),
-                                                        USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES,
-                                                        userContext)));
+                                session.setState(
+                                        stateMachine.transition(
+                                                session.getState(),
+                                                USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES,
+                                                userContext)));
                     } else {
                         Optional<String> mfaCode =
                                 codeStorageService.getOtpCode(
-                                        userContext.getSession().getEmailAddress(),
+                                        session.getEmailAddress(),
                                         codeRequest.getNotificationType());
 
                         sessionService.save(
-                                userContext
-                                        .getSession()
-                                        .setState(
-                                                stateMachine.transition(
-                                                        userContext.getSession().getState(),
-                                                        validationService
-                                                                .validateMfaVerificationCode(
-                                                                        mfaCode,
-                                                                        codeRequest.getCode(),
-                                                                        userContext.getSession(),
-                                                                        configurationService
-                                                                                .getCodeMaxRetries()),
-                                                        userContext)));
-                        processCodeSessionState(
-                                userContext.getSession(), codeRequest.getNotificationType());
+                                session.setState(
+                                        stateMachine.transition(
+                                                session.getState(),
+                                                validationService.validateMfaVerificationCode(
+                                                        mfaCode,
+                                                        codeRequest.getCode(),
+                                                        session,
+                                                        configurationService.getCodeMaxRetries()),
+                                                userContext)));
+                        processCodeSessionState(session, codeRequest.getNotificationType());
                     }
-                    return generateSuccessResponse(userContext.getSession());
+                    return generateSuccessResponse(session);
             }
         } catch (JsonProcessingException e) {
             LOG.error("Error parsing request", e);
