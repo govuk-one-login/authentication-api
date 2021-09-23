@@ -33,6 +33,7 @@ import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1011;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1017;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_TOO_MANY_EMAIL_VERIFICATION_CODES;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_TOO_MANY_PHONE_VERIFICATION_CODES;
@@ -135,8 +136,7 @@ public class SendNotificationHandler
                                                         sendNotificationRequest.getEmail());
                                         if (emailErrorResponse.isPresent()) {
                                             LOGGER.error(
-                                                    "Session: {} encountered emailErrorResponse: {}",
-                                                    session.get().getSessionId(),
+                                                    "Encountered emailErrorResponse: {}",
                                                     emailErrorResponse.get());
                                             return generateApiGatewayProxyErrorResponse(
                                                     400, emailErrorResponse.get());
@@ -154,9 +154,7 @@ public class SendNotificationHandler
                                                                 .SYSTEM_HAS_SENT_PHONE_VERIFICATION_CODE);
 
                                         if (sendNotificationRequest.getPhoneNumber() == null) {
-                                            LOGGER.error(
-                                                    "No phone number provided for session {}",
-                                                    session.get().getSessionId());
+                                            LOGGER.error("No phone number provided");
                                             return generateApiGatewayProxyResponse(400, ERROR_1011);
                                         }
                                         String phoneNumber =
@@ -202,24 +200,37 @@ public class SendNotificationHandler
 
         String code = codeGeneratorService.sixDigitCode();
         NotifyRequest notifyRequest = new NotifyRequest(destination, notificationType, code);
-        codeStorageService.saveOtpCode(
-                session.getEmailAddress(),
-                code,
-                configurationService.getCodeExpiry(),
-                notificationType);
-        sessionService.save(session.setState(nextState).incrementCodeRequestCount());
-        sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+
+        switch (notificationType) {
+            case VERIFY_EMAIL:
+                codeStorageService.saveOtpCode(
+                        destination, code, configurationService.getCodeExpiry(), VERIFY_EMAIL);
+                sessionService.save(session.setState(nextState).incrementCodeRequestCount());
+                break;
+            case VERIFY_PHONE_NUMBER:
+                codeStorageService.saveOtpCode(
+                        session.getEmailAddress(),
+                        code,
+                        configurationService.getCodeExpiry(),
+                        NotificationType.VERIFY_PHONE_NUMBER);
+                sessionService.save(session.setState(nextState).incrementCodeRequestCount());
+                break;
+        }
+        sqsClient.send(serialiseRequest(notifyRequest));
         LOGGER.info(
                 "SendNotificationHandler successfully processed request for session {}",
                 session.getSessionId());
         return generateApiGatewayProxyResponse(200, new BaseAPIResponse(session.getState()));
     }
 
+    private String serialiseRequest(Object request) throws JsonProcessingException {
+        return objectMapper.writeValueAsString(request);
+    }
+
     private Optional<ErrorResponse> validateCodeRequestAttempts(
             String email, Session session, NotificationType notificationType) {
         if (session.getCodeRequestCount() == configurationService.getCodeMaxRetries()) {
-            LOGGER.error(
-                    "User has requested too many OTP codes for session {}", session.getSessionId());
+            LOGGER.error("User has requested too many OTP codes");
             codeStorageService.saveCodeRequestBlockedForSession(
                     email, session.getSessionId(), configurationService.getCodeExpiry());
             SessionState nextState =
@@ -230,9 +241,7 @@ public class SendNotificationHandler
             return Optional.of(ErrorResponse.ERROR_1024);
         }
         if (codeStorageService.isCodeRequestBlockedForSession(email, session.getSessionId())) {
-            LOGGER.error(
-                    "User is blocked from requesting any OTP codes for session {}",
-                    session.getSessionId());
+            LOGGER.error("User is blocked from requesting any OTP codes");
             return Optional.of(ErrorResponse.ERROR_1025);
         }
         return Optional.empty();
