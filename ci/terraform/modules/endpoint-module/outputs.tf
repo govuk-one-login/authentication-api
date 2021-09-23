@@ -1,5 +1,5 @@
 output "resource_id" {
-  value = aws_api_gateway_resource.endpoint_resource.id
+  value = var.create_endpoint ? aws_api_gateway_resource.endpoint_resource[0].id : var.root_resource_id
 }
 
 output "integration_trigger_value" {

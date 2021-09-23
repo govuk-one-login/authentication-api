@@ -14,8 +14,9 @@ module "register" {
   }
   handler_function_name = "uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler::handleRequest"
 
+  create_endpoint           = false
   rest_api_id               = aws_api_gateway_rest_api.di_authentication_api.id
-  root_resource_id          = aws_api_gateway_resource.connect_resource.id
+  root_resource_id          = aws_api_gateway_resource.register_resource.id
   execution_arn             = aws_api_gateway_rest_api.di_authentication_api.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.client_registry_api_lambda_zip_file
@@ -36,8 +37,8 @@ module "register" {
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_api,
     aws_api_gateway_resource.connect_resource,
-    aws_api_gateway_resource.register_resource,
     aws_api_gateway_resource.wellknown_resource,
+    aws_api_gateway_resource.register_resource,
     aws_vpc.authentication,
     aws_subnet.authentication,
     aws_elasticache_replication_group.sessions_store,

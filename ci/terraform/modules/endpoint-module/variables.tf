@@ -11,6 +11,11 @@ variable "method_request_parameters" {
   default = {}
 }
 
+variable "create_endpoint" {
+  type    = bool
+  default = true
+}
+
 variable "api_key_required" {
   type    = bool
   default = false
