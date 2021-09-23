@@ -194,6 +194,8 @@ public class StateMachine<T, A, C> {
                                 .then(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED))
                 .when(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED)
                 .finalState()
+                .when(ACCOUNT_TEMPORARILY_LOCKED)
+                .allow(on(SYSTEM_HAS_SENT_RESET_PASSWORD_LINK).then(RESET_PASSWORD_LINK_SENT))
                 .when(AUTHENTICATION_REQUIRED)
                 .allow(
                         on(USER_ENTERED_VALID_CREDENTIALS)
