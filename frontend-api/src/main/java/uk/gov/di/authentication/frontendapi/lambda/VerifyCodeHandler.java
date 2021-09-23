@@ -108,47 +108,29 @@ public class VerifyCodeHandler extends BaseFrontendHandler
                     codeStorageService.getOtpCode(
                             session.getEmailAddress(), codeRequest.getNotificationType());
 
-            switch (codeRequest.getNotificationType()) {
-                case VERIFY_EMAIL:
-                    sessionService.save(
-                            session.setState(
-                                    stateMachine.transition(
-                                            session.getState(),
-                                            validationService.validateEmailVerificationCode(
-                                                    code,
-                                                    codeRequest.getCode(),
-                                                    session,
-                                                    configurationService.getCodeMaxRetries()),
-                                            userContext)));
-                    processCodeSessionState(session, codeRequest.getNotificationType());
-                    return generateSuccessResponse(session);
-                case VERIFY_PHONE_NUMBER:
-                    sessionService.save(
-                            session.setState(
-                                    stateMachine.transition(
-                                            session.getState(),
-                                            validationService.validatePhoneVerificationCode(
-                                                    code,
-                                                    codeRequest.getCode(),
-                                                    session,
-                                                    configurationService.getCodeMaxRetries()),
-                                            userContext)));
-                    processCodeSessionState(session, codeRequest.getNotificationType());
-                    return generateSuccessResponse(session);
-                case MFA_SMS:
-                    sessionService.save(
-                            session.setState(
-                                    stateMachine.transition(
-                                            session.getState(),
-                                            validationService.validateMfaVerificationCode(
-                                                    code,
-                                                    codeRequest.getCode(),
-                                                    session,
-                                                    configurationService.getCodeMaxRetries()),
-                                            userContext)));
-                    processCodeSessionState(session, codeRequest.getNotificationType());
-                    return generateSuccessResponse(session);
+            var validationAction =
+                    validationService.validateVerificationCode(
+                            codeRequest.getNotificationType(),
+                            code,
+                            codeRequest.getCode(),
+                            session,
+                            configurationService.getCodeMaxRetries());
+
+            if (validationAction == null) {
+                LOG.error(
+                        "Encountered unexpected error while processing session {}",
+                        userContext.getSession().getSessionId());
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
             }
+
+            sessionService.save(
+                    session.setState(
+                            stateMachine.transition(
+                                    session.getState(), validationAction, userContext)));
+
+            processCodeSessionState(session, codeRequest.getNotificationType());
+            return generateSuccessResponse(session);
+
         } catch (JsonProcessingException e) {
             LOG.error("Error parsing request", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
@@ -156,10 +138,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler
             LOG.error("Invalid transition in user journey", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         }
-        LOG.error(
-                "Encountered unexpected error while processing session {}",
-                userContext.getSession().getSessionId());
-        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
     }
 
     private SessionAction blockedCodeBehaviour(VerifyCodeRequest codeRequest) {
