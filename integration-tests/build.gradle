@@ -11,15 +11,10 @@ repositories {
 
 dependencies {
     testImplementation configurations.tests,
-            "com.nimbusds:nimbus-jose-jwt:9.14",
-            "com.nimbusds:oauth2-oidc-sdk:9.15",
-            "org.glassfish.jersey.core:jersey-client:${dependencyVersions.glassfish_version}",
-            "org.glassfish.jersey.inject:jersey-hk2:${dependencyVersions.glassfish_version}",
-            "org.glassfish.jersey.media:jersey-media-json-jackson:${dependencyVersions.glassfish_version}",
+            configurations.glassfish,
+            configurations.nimbus,
             "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.12.5",
-            "org.eclipse.jetty:jetty-server:11.0.6",
             "software.amazon.awssdk:sqs:2.17.43",
-            "org.awaitility:awaitility:4.1.0",
             "com.amazonaws:aws-java-sdk-dynamodb:1.12.68",
             "org.bouncycastle:bcpkix-jdk15on:1.69",
             "io.lettuce:lettuce-core:6.1.5.RELEASE",
@@ -27,7 +22,8 @@ dependencies {
             project(":frontend-api"),
             project(":account-management-api"),
             project(":oidc-api"),
-            project(":shared")
+            project(":shared"),
+            project(":shared-test")
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
 }
 

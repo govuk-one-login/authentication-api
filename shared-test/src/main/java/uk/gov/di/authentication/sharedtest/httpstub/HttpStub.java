@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.helpers.httpstub;
+package uk.gov.di.authentication.sharedtest.httpstub;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

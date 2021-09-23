@@ -1,4 +1,4 @@
-package uk.gov.di.accountmanagement.helpers.httpstub;
+package uk.gov.di.authentication.sharedtest.httpstub;
 
 import org.eclipse.jetty.server.Request;
 

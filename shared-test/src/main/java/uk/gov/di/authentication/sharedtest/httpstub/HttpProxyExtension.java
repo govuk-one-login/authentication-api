@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.helpers.httpstub;
+package uk.gov.di.authentication.sharedtest.httpstub;
 
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
