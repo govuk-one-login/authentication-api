@@ -92,8 +92,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler
 
             switch (codeRequest.getNotificationType()) {
                 case VERIFY_EMAIL:
-                    if (codeStorageService.isCodeBlockedForSession(
-                            session.getEmailAddress(), session.getSessionId())) {
+                    if (isCodeBlockedForSession(session)) {
                         sessionService.save(
                                 session.setState(
                                         stateMachine.transition(
@@ -119,8 +118,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler
                     }
                     return generateSuccessResponse(session);
                 case VERIFY_PHONE_NUMBER:
-                    if (codeStorageService.isCodeBlockedForSession(
-                            session.getEmailAddress(), session.getSessionId())) {
+                    if (isCodeBlockedForSession(session)) {
                         sessionService.save(
                                 session.setState(
                                         stateMachine.transition(
@@ -146,8 +144,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler
                     }
                     return generateSuccessResponse(session);
                 case MFA_SMS:
-                    if (codeStorageService.isCodeBlockedForSession(
-                            session.getEmailAddress(), session.getSessionId())) {
+                    if (isCodeBlockedForSession(session)) {
                         sessionService.save(
                                 session.setState(
                                         stateMachine.transition(
@@ -185,6 +182,11 @@ public class VerifyCodeHandler extends BaseFrontendHandler
                 "Encountered unexpected error while processing session {}",
                 userContext.getSession().getSessionId());
         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
+    }
+
+    private boolean isCodeBlockedForSession(Session session) {
+        return codeStorageService.isCodeBlockedForSession(
+                session.getEmailAddress(), session.getSessionId());
     }
 
     private APIGatewayProxyResponseEvent generateSuccessResponse(Session session)
