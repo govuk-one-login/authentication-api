@@ -66,14 +66,14 @@ fi
 
 if [ ${RUN_INTEGRATION} -eq 1 ] || [ ${TF_ACCOUNT_MANAGEMENT} -eq 1 ]; then
   startup
-
+  build_and_test_exit_code=0
   if [[ ${RUN_INTEGRATION} -eq 1 ]]; then
       set +e
       run-integration-tests
       build_and_test_exit_code=$?
       set -e
   fi
-  if [[ ${TF_ACCOUNT_MANAGEMENT} -eq 1 ]]; then
+  if [[ ${build_and_test_exit_code} -eq 0 && ${TF_ACCOUNT_MANAGEMENT} -eq 1 ]]; then
       set +e
       run-account-management-integration-tests
       build_and_test_exit_code=$?

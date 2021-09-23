@@ -1,4 +1,4 @@
-package uk.gov.di.accountmanagement.helpers.httpstub;
+package uk.gov.di.authentication.sharedtest.httpstub;
 
 import jakarta.ws.rs.core.UriBuilder;
 import org.junit.jupiter.api.extension.AfterAllCallback;
@@ -47,23 +47,6 @@ public class HttpStubExtension implements AfterAllCallback {
                         trustStorePath,
                         trustStorePassword);
         httpStub.start();
-    }
-
-    public static HttpStubExtension httpStubExtensionWithValidSslCert() {
-        return new HttpStubExtension("deploy/keys/server_auth.ks", "puppet");
-    }
-
-    public static HttpStubExtension httpStubExtensionWithClientAuth() {
-        return new HttpStubExtension(
-                true,
-                "deploy/keys/server_auth.ks",
-                "puppet",
-                "deploy/keys/server_auth.ks",
-                "puppet");
-    }
-
-    public static HttpStubExtension httpStubExtensionWithInvalidSslCert() {
-        return new HttpStubExtension("deploy/keys/invalid_server_ssl_auth.ks", "puppet");
     }
 
     public int getHttpPort() {

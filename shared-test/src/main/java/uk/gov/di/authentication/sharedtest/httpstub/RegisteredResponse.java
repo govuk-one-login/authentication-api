@@ -1,4 +1,4 @@
-package uk.gov.di.accountmanagement.helpers.httpstub;
+package uk.gov.di.authentication.sharedtest.httpstub;
 
 class RegisteredResponse {
     private final int status;

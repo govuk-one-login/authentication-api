@@ -82,7 +82,7 @@ function funky_success() {
 }
 
 function funky_started() {
-  tput setaf 2g
+  tput setaf 2
   cat scripts/started.txt
   tput sgr0
 }
@@ -122,10 +122,13 @@ run-integration-tests() {
   popd >/dev/null
   if [[ -z ${IN_GITHUB_ACTIONS+x} ||  ${IN_GITHUB_ACTIONS} -eq 0 ]]; then
     ./gradlew --no-daemon integration-tests:test
+    EXIT_CODE=$?
   else
     ./gradlew integration-tests:test
+    EXIT_CODE=$?
   fi
   record_timings "run-integration-tests" $run_integration_tests_start_seconds $SECONDS false
+  return ${EXIT_CODE}
 }
 
 run-account-management-integration-tests() {
@@ -135,7 +138,10 @@ run-account-management-integration-tests() {
   popd >/dev/null
   if [[ -z ${IN_GITHUB_ACTIONS+x} ||  ${IN_GITHUB_ACTIONS} -eq 0 ]]; then
     ./gradlew --no-daemon account-management-integration-tests:test
+    EXIT_CODE=$?
   else
     ./gradlew account-management-integration-tests:test
+    EXIT_CODE=$?
   fi
+  return ${EXIT_CODE}
 }
