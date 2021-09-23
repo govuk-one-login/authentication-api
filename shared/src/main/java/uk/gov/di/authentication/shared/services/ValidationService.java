@@ -3,6 +3,7 @@ package uk.gov.di.authentication.shared.services;
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 
@@ -115,5 +116,50 @@ public class ValidationService {
         }
         session.resetCodeRequestCount();
         return USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE;
+    }
+
+    public SessionAction validateVerificationCode(
+            NotificationType type,
+            Optional<String> code,
+            String input,
+            Session session,
+            int maxRetries) {
+
+        if (code.filter(input::equals).isPresent()) {
+            session.resetCodeRequestCount();
+
+            switch (type) {
+                case MFA_SMS:
+                    return USER_ENTERED_VALID_MFA_CODE;
+                case VERIFY_EMAIL:
+                    return USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE;
+                case VERIFY_PHONE_NUMBER:
+                    return USER_ENTERED_VALID_PHONE_VERIFICATION_CODE;
+            }
+        }
+
+        session.incrementRetryCount();
+
+        if (session.getRetryCount() > maxRetries) {
+            switch (type) {
+                case MFA_SMS:
+                    return USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES;
+                case VERIFY_EMAIL:
+                    return USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES;
+                case VERIFY_PHONE_NUMBER:
+                    return USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES;
+            }
+        }
+
+        switch (type) {
+            case MFA_SMS:
+                return USER_ENTERED_INVALID_MFA_CODE;
+            case VERIFY_EMAIL:
+                return USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE;
+            case VERIFY_PHONE_NUMBER:
+                return USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE;
+        }
+
+        return null;
     }
 }
