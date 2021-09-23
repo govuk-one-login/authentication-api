@@ -167,8 +167,12 @@ class VerifyCodeRequestHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
                 .thenReturn(Optional.of(CODE));
-        when(validationService.validateEmailVerificationCode(
-                        eq(Optional.of(CODE)), eq(CODE), any(Session.class), eq(5)))
+        when(validationService.validateVerificationCode(
+                        eq(VERIFY_EMAIL),
+                        eq(Optional.of(CODE)),
+                        eq(CODE),
+                        any(Session.class),
+                        eq(5)))
                 .thenReturn(USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE);
         APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, VERIFY_EMAIL.toString());
 
@@ -183,8 +187,13 @@ class VerifyCodeRequestHandlerTest {
     public void shouldReturn200ForValidVerifyPhoneNumberRequest() throws JsonProcessingException {
         session.setState(VERIFY_PHONE_NUMBER_CODE_SENT);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(validationService.validatePhoneVerificationCode(
-                        eq(Optional.of(CODE)), eq(CODE), any(Session.class), eq(5)))
+
+        when(validationService.validateVerificationCode(
+                        eq(VERIFY_PHONE_NUMBER),
+                        eq(Optional.of(CODE)),
+                        eq(CODE),
+                        any(Session.class),
+                        eq(5)))
                 .thenReturn(USER_ENTERED_VALID_PHONE_VERIFICATION_CODE);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(CODE));
@@ -206,8 +215,12 @@ class VerifyCodeRequestHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
                 .thenReturn(Optional.of(CODE));
-        when(validationService.validateEmailVerificationCode(
-                        eq(Optional.of(CODE)), eq("123457"), any(Session.class), eq(5)))
+        when(validationService.validateVerificationCode(
+                        eq(VERIFY_EMAIL),
+                        eq(Optional.of(CODE)),
+                        eq("123457"),
+                        any(Session.class),
+                        eq(5)))
                 .thenReturn(USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE);
 
         APIGatewayProxyResponseEvent result = makeCallWithCode("123457", VERIFY_EMAIL.toString());
@@ -223,8 +236,13 @@ class VerifyCodeRequestHandlerTest {
             throws JsonProcessingException {
         session.setState(VERIFY_PHONE_NUMBER_CODE_SENT);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(validationService.validatePhoneVerificationCode(
-                        eq(Optional.of(CODE)), eq(CODE), any(Session.class), eq(5)))
+
+        when(validationService.validateVerificationCode(
+                        eq(VERIFY_PHONE_NUMBER),
+                        eq(Optional.of(CODE)),
+                        eq(CODE),
+                        any(Session.class),
+                        eq(5)))
                 .thenReturn(USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(CODE));
@@ -277,8 +295,13 @@ class VerifyCodeRequestHandlerTest {
         session.setState(PHONE_NUMBER_CODE_NOT_VALID);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(configurationService.getCodeExpiry()).thenReturn(900L);
-        when(validationService.validatePhoneVerificationCode(
-                        eq(Optional.of(CODE)), eq(USER_INPUT), any(Session.class), eq(5)))
+
+        when(validationService.validateVerificationCode(
+                        eq(VERIFY_PHONE_NUMBER),
+                        eq(Optional.of(CODE)),
+                        eq(USER_INPUT),
+                        any(Session.class),
+                        eq(5)))
                 .thenReturn(USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(CODE));
@@ -324,8 +347,12 @@ class VerifyCodeRequestHandlerTest {
         final String USER_INPUT = "123456";
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(configurationService.getCodeExpiry()).thenReturn(900L);
-        when(validationService.validateEmailVerificationCode(
-                        eq(Optional.of(CODE)), eq(USER_INPUT), any(Session.class), eq(5)))
+        when(validationService.validateVerificationCode(
+                        eq(VERIFY_EMAIL),
+                        eq(Optional.of(CODE)),
+                        eq(USER_INPUT),
+                        any(Session.class),
+                        eq(5)))
                 .thenReturn(USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
                 .thenReturn(Optional.of(CODE));
@@ -364,8 +391,8 @@ class VerifyCodeRequestHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
                 .thenReturn(Optional.of(CODE));
-        when(validationService.validateMfaVerificationCode(
-                        eq(Optional.of(CODE)), eq(CODE), any(Session.class), eq(5)))
+        when(validationService.validateVerificationCode(
+                        eq(MFA_SMS), eq(Optional.of(CODE)), eq(CODE), any(Session.class), eq(5)))
                 .thenReturn(USER_ENTERED_VALID_MFA_CODE);
 
         when(stateMachine.transition(
@@ -391,8 +418,8 @@ class VerifyCodeRequestHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
                 .thenReturn(Optional.of(CODE));
-        when(validationService.validateMfaVerificationCode(
-                        eq(Optional.of(CODE)), eq(CODE), any(Session.class), eq(5)))
+        when(validationService.validateVerificationCode(
+                        eq(MFA_SMS), eq(Optional.of(CODE)), eq(CODE), any(Session.class), eq(5)))
                 .thenReturn(USER_ENTERED_VALID_MFA_CODE);
 
         when(stateMachine.transition(
@@ -417,8 +444,12 @@ class VerifyCodeRequestHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
                 .thenReturn(Optional.of(CODE));
-        when(validationService.validateMfaVerificationCode(
-                        eq(Optional.of(CODE)), eq("123457"), any(Session.class), eq(5)))
+        when(validationService.validateVerificationCode(
+                        eq(MFA_SMS),
+                        eq(Optional.of(CODE)),
+                        eq("123457"),
+                        any(Session.class),
+                        eq(5)))
                 .thenReturn(USER_ENTERED_INVALID_MFA_CODE);
 
         APIGatewayProxyResponseEvent result = makeCallWithCode("123457", MFA_SMS.toString());
@@ -436,8 +467,12 @@ class VerifyCodeRequestHandlerTest {
         final String USER_INPUT = "123456";
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(configurationService.getCodeExpiry()).thenReturn(900L);
-        when(validationService.validateMfaVerificationCode(
-                        eq(Optional.of(CODE)), eq(USER_INPUT), any(Session.class), eq(5)))
+        when(validationService.validateVerificationCode(
+                        eq(MFA_SMS),
+                        eq(Optional.of(CODE)),
+                        eq(USER_INPUT),
+                        any(Session.class),
+                        eq(5)))
                 .thenReturn(USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
                 .thenReturn(Optional.of(CODE));
@@ -475,8 +510,12 @@ class VerifyCodeRequestHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
                 .thenReturn(Optional.of(CODE));
-        when(validationService.validateEmailVerificationCode(
-                        eq(Optional.of(CODE)), eq(CODE), any(Session.class), eq(5)))
+        when(validationService.validateVerificationCode(
+                        eq(VERIFY_EMAIL),
+                        eq(Optional.of(CODE)),
+                        eq(CODE),
+                        any(Session.class),
+                        eq(5)))
                 .thenReturn(USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE);
         when(stateMachine.transition(
                         eq(NEW),
