@@ -99,16 +99,10 @@ resource "aws_api_gateway_resource" "connect_resource" {
   path_part   = "connect"
 }
 
-resource "aws_api_gateway_resource" "oidc_resource" {
+resource "aws_api_gateway_resource" "register_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
-  path_part   = "oidc"
-}
-
-resource "aws_api_gateway_resource" "clients_resource" {
-  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  parent_id   = aws_api_gateway_resource.oidc_resource.id
-  path_part   = "clients"
+  parent_id   = aws_api_gateway_resource.connect_resource.id
+  path_part   = "register"
 }
 
 data "aws_region" "current" {
