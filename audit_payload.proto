@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package uk.gov.di.audit;
+
+message SignedAuditEvent {
+  bytes signature = 1;
+  bytes payload = 2;
+}
+
+message AuditEvent {
+  string event_id = 1;
+  string request_id = 2;
+  string session_id = 3;
+  string client_id = 4;
+  string timestamp = 5;
+  string event_name = 6;
+
+  User user = 7;
+  map<string, string> platform = 8;
+  map<string, string> extensions = 9;
+
+  message User {
+    string id = 1;
+    string email = 2;
+    string ip_address = 3;
+  }
+}
