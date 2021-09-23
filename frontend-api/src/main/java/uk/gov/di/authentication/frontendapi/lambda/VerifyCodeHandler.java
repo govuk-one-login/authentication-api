@@ -28,7 +28,6 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import static java.util.Map.entry;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
@@ -105,17 +104,18 @@ public class VerifyCodeHandler extends BaseFrontendHandler
                 return generateSuccessResponse(session);
             }
 
+            var code =
+                    codeStorageService.getOtpCode(
+                            session.getEmailAddress(), codeRequest.getNotificationType());
+
             switch (codeRequest.getNotificationType()) {
                 case VERIFY_EMAIL:
-                    Optional<String> emailCode =
-                            codeStorageService.getOtpCode(
-                                    session.getEmailAddress(), codeRequest.getNotificationType());
                     sessionService.save(
                             session.setState(
                                     stateMachine.transition(
                                             session.getState(),
                                             validationService.validateEmailVerificationCode(
-                                                    emailCode,
+                                                    code,
                                                     codeRequest.getCode(),
                                                     session,
                                                     configurationService.getCodeMaxRetries()),
@@ -123,15 +123,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler
                     processCodeSessionState(session, codeRequest.getNotificationType());
                     return generateSuccessResponse(session);
                 case VERIFY_PHONE_NUMBER:
-                    Optional<String> phoneNumberCode =
-                            codeStorageService.getOtpCode(
-                                    session.getEmailAddress(), codeRequest.getNotificationType());
                     sessionService.save(
                             session.setState(
                                     stateMachine.transition(
                                             session.getState(),
                                             validationService.validatePhoneVerificationCode(
-                                                    phoneNumberCode,
+                                                    code,
                                                     codeRequest.getCode(),
                                                     session,
                                                     configurationService.getCodeMaxRetries()),
@@ -139,16 +136,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler
                     processCodeSessionState(session, codeRequest.getNotificationType());
                     return generateSuccessResponse(session);
                 case MFA_SMS:
-                    Optional<String> mfaCode =
-                            codeStorageService.getOtpCode(
-                                    session.getEmailAddress(), codeRequest.getNotificationType());
-
                     sessionService.save(
                             session.setState(
                                     stateMachine.transition(
                                             session.getState(),
                                             validationService.validateMfaVerificationCode(
-                                                    mfaCode,
+                                                    code,
                                                     codeRequest.getCode(),
                                                     session,
                                                     configurationService.getCodeMaxRetries()),
