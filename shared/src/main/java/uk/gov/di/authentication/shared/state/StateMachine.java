@@ -26,6 +26,7 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SE
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_TOO_MANY_MFA_CODES;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_TOO_MANY_PHONE_VERIFICATION_CODES;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_EMAIL_VERIFICATION_CODES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_MFA_VERIFICATION_CODES;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_PHONE_VERIFICATION_CODES;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ACCEPTS_TERMS_AND_CONDITIONS;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_A_NEW_PHONE_NUMBER;
@@ -56,6 +57,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_MAX_CODE
 import static uk.gov.di.authentication.shared.entity.SessionState.LOGGED_IN;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_NOT_VALID;
+import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_REQUESTS_BLOCKED;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_VERIFIED;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_SMS_CODE_SENT;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_SMS_MAX_CODES_SENT;
@@ -245,6 +247,11 @@ public class StateMachine<T, A, C> {
                         on(USER_ENTERED_VALID_MFA_CODE).then(MFA_CODE_VERIFIED).byDefault(),
                         on(USER_ENTERED_INVALID_MFA_CODE).then(MFA_CODE_NOT_VALID))
                 .when(MFA_SMS_MAX_CODES_SENT)
+                .allow(
+                        on(SYSTEM_HAS_SENT_MFA_CODE).then(MFA_SMS_CODE_SENT),
+                        on(SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_MFA_VERIFICATION_CODES)
+                                .then(MFA_CODE_REQUESTS_BLOCKED))
+                .when(MFA_CODE_REQUESTS_BLOCKED)
                 .allow(on(SYSTEM_HAS_SENT_MFA_CODE).then(MFA_SMS_CODE_SENT))
                 .when(MFA_CODE_NOT_VALID)
                 .allow(

@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.services.AwsSqsClient;
+import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -49,6 +50,7 @@ public class MfaHandlerTest {
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final Session session =
             new Session("a-session-id")
                     .setEmailAddress(TEST_EMAIL_ADDRESS)
@@ -134,7 +136,8 @@ public class MfaHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserHasReachedTheMfaCodeRequestLimit() {
+    public void shouldReturn400IfUserHasReachedTheMfaCodeRequestLimit()
+            throws JsonProcessingException {
         usingValidSession();
         session.setState(MFA_SMS_CODE_SENT);
         session.incrementCodeRequestCount();
@@ -150,14 +153,17 @@ public class MfaHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1024));
+        BaseAPIResponse codeResponse =
+                objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
+        assertEquals(SessionState.MFA_SMS_MAX_CODES_SENT, codeResponse.getSessionState());
         verify(codeStorageService)
                 .saveCodeRequestBlockedForSession(
                         TEST_EMAIL_ADDRESS, session.getSessionId(), CODE_EXPIRY_TIME);
     }
 
     @Test
-    public void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreMfaCodes() {
+    public void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreMfaCodes()
+            throws JsonProcessingException {
         usingValidSession();
         session.setState(MFA_SMS_MAX_CODES_SENT);
         when(codeStorageService.isCodeRequestBlockedForSession(
@@ -171,7 +177,9 @@ public class MfaHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1025));
+        BaseAPIResponse codeResponse =
+                objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
+        assertEquals(SessionState.MFA_CODE_REQUESTS_BLOCKED, codeResponse.getSessionState());
     }
 
     private void usingValidSession() {
