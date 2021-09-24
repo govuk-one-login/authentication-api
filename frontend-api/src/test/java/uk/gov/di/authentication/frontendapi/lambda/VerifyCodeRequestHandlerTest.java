@@ -333,7 +333,7 @@ class VerifyCodeRequestHandlerTest {
 
         BaseAPIResponse codeResponse =
                 new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
-        assertThat(result, hasStatus(200));
+        assertThat(result, hasStatus(400));
         assertThat(codeResponse.getSessionState(), equalTo(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED));
         verify(codeStorageService, never())
                 .getOtpCode(session.getEmailAddress(), VERIFY_PHONE_NUMBER);
@@ -380,7 +380,7 @@ class VerifyCodeRequestHandlerTest {
 
         BaseAPIResponse codeResponse =
                 new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
-        assertThat(result, hasStatus(200));
+        assertThat(result, hasStatus(400));
         assertThat(codeResponse.getSessionState(), equalTo(EMAIL_CODE_MAX_RETRIES_REACHED));
     }
 
@@ -499,7 +499,7 @@ class VerifyCodeRequestHandlerTest {
 
         BaseAPIResponse codeResponse =
                 new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
-        assertThat(result, hasStatus(200));
+        assertThat(result, hasStatus(400));
         assertThat(codeResponse.getSessionState(), equalTo(MFA_CODE_MAX_RETRIES_REACHED));
         verify(codeStorageService, never()).getOtpCode(session.getEmailAddress(), MFA_SMS);
     }

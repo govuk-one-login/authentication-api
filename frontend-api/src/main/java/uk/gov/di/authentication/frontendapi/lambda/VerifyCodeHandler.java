@@ -101,7 +101,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler
                                         session.getState(),
                                         blockedCodeBehaviour(codeRequest),
                                         userContext)));
-                return generateSuccessResponse(session);
+                return generateResponse(session);
             }
 
             var code =
@@ -164,6 +164,15 @@ public class VerifyCodeHandler extends BaseFrontendHandler
                 session.getSessionId());
 
         return generateApiGatewayProxyResponse(200, new BaseAPIResponse(session.getState()));
+    }
+
+    private APIGatewayProxyResponseEvent generateResponse(Session session)
+            throws JsonProcessingException {
+        LOG.info(
+                "VerifyCodeHandler failed to process request for session {}",
+                session.getSessionId());
+
+        return generateApiGatewayProxyResponse(400, new BaseAPIResponse(session.getState()));
     }
 
     private void blockCodeForSessionAndResetCount(Session session) {
