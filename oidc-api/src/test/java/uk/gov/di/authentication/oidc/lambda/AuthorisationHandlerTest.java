@@ -53,7 +53,7 @@ class AuthorisationHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
 
     private static final String EXPECTED_COOKIE_STRING =
-            "gs=a-session-id.client-session-id; Max-Age=1800; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
+            "gs=a-session-id.client-session-id; Max-Age=3600; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
 
     final String domainName = "auth.ida.digital.cabinet-office.gov.uk";
 
@@ -86,7 +86,7 @@ class AuthorisationHandlerTest {
         when(configService.getDomainName()).thenReturn(domainName);
         when(sessionService.createSession()).thenReturn(session);
         when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
-        when(configService.getSessionCookieMaxAge()).thenReturn(1800);
+        when(configService.getSessionCookieMaxAge()).thenReturn(3600);
         when(clientSessionService.generateClientSession(any(ClientSession.class)))
                 .thenReturn("client-session-id");
 
@@ -101,7 +101,7 @@ class AuthorisationHandlerTest {
         APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
         final String expectedCookieString =
-                "gs=a-session-id.client-session-id; Max-Age=1800; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
+                "gs=a-session-id.client-session-id; Max-Age=3600; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
 
         assertThat(response, hasStatus(302));
         assertEquals(loginUrl.getAuthority(), uri.getAuthority());
@@ -172,7 +172,7 @@ class AuthorisationHandlerTest {
         when(configService.getLoginURI()).thenReturn(loginUrl);
         when(sessionService.createSession()).thenReturn(session);
         when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
-        when(configService.getSessionCookieMaxAge()).thenReturn(1800);
+        when(configService.getSessionCookieMaxAge()).thenReturn(3600);
         when(clientSessionService.generateClientSession(any(ClientSession.class)))
                 .thenReturn("client-session-id");
         when(configService.getDomainName()).thenReturn(domainName);
@@ -198,7 +198,7 @@ class AuthorisationHandlerTest {
                 .thenReturn(Optional.empty());
         when(configService.getLoginURI()).thenReturn(loginUrl);
         when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
-        when(configService.getSessionCookieMaxAge()).thenReturn(1800);
+        when(configService.getSessionCookieMaxAge()).thenReturn(3600);
         when(clientSessionService.generateClientSession(any(ClientSession.class)))
                 .thenReturn("client-session-id");
         when(configService.getDomainName()).thenReturn(domainName);
@@ -286,7 +286,7 @@ class AuthorisationHandlerTest {
         when(configService.getLoginURI()).thenReturn(loginUrl);
         when(sessionService.createSession()).thenReturn(session);
         when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
-        when(configService.getSessionCookieMaxAge()).thenReturn(1800);
+        when(configService.getSessionCookieMaxAge()).thenReturn(3600);
         when(clientSessionService.generateClientSession(any(ClientSession.class)))
                 .thenReturn("client-session-id");
         when(configService.getDomainName()).thenReturn(domainName);
@@ -310,7 +310,7 @@ class AuthorisationHandlerTest {
         final Session newSession = new Session("new-session-id");
         String expectedCookieString =
                 format(
-                        "gs=%s.client-session-id; Max-Age=1800; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                        "gs=%s.client-session-id; Max-Age=3600; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
                         newSession.getSessionId());
 
         whenLoggedIn(session, loginUrl);
@@ -432,7 +432,7 @@ class AuthorisationHandlerTest {
         when(sessionService.getSessionFromSessionCookie(any())).thenReturn(Optional.empty());
         when(sessionService.createSession()).thenReturn(session);
         when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
-        when(configService.getSessionCookieMaxAge()).thenReturn(1800);
+        when(configService.getSessionCookieMaxAge()).thenReturn(3600);
         when(clientSessionService.generateClientSession(any(ClientSession.class)))
                 .thenReturn("client-session-id");
         when(configService.getDomainName()).thenReturn(domainName);
@@ -457,7 +457,7 @@ class AuthorisationHandlerTest {
         when(sessionService.createSession()).thenReturn(newSession);
         String expectedCookieString =
                 format(
-                        "gs=%s.client-session-id; Max-Age=1800; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                        "gs=%s.client-session-id; Max-Age=3600; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
                         newSession.getSessionId());
 
         APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent());
@@ -510,7 +510,7 @@ class AuthorisationHandlerTest {
         when(configService.getLoginURI()).thenReturn(loginUrl);
         when(sessionService.getSessionFromSessionCookie(any())).thenReturn(Optional.of(session));
         when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
-        when(configService.getSessionCookieMaxAge()).thenReturn(1800);
+        when(configService.getSessionCookieMaxAge()).thenReturn(3600);
         when(clientSessionService.generateClientSession(any(ClientSession.class)))
                 .thenReturn("client-session-id");
         when(configService.getDomainName()).thenReturn(domainName);

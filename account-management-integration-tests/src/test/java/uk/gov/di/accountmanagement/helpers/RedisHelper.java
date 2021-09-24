@@ -40,7 +40,7 @@ public class RedisHelper {
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
             Session session = new Session(sessionId);
             redis.saveWithExpiry(
-                    session.getSessionId(), OBJECT_MAPPER.writeValueAsString(session), 1800);
+                    session.getSessionId(), OBJECT_MAPPER.writeValueAsString(session), 3600);
             return session.getSessionId();
         }
     }
@@ -59,12 +59,12 @@ public class RedisHelper {
             Session session = OBJECT_MAPPER.readValue(redis.getValue(sessionId), Session.class);
             session.addClientSession(clientSessionId);
             redis.saveWithExpiry(
-                    session.getSessionId(), OBJECT_MAPPER.writeValueAsString(session), 1800);
+                    session.getSessionId(), OBJECT_MAPPER.writeValueAsString(session), 3600);
             redis.saveWithExpiry(
                     CLIENT_SESSION_PREFIX.concat(clientSessionId),
                     OBJECT_MAPPER.writeValueAsString(
                             new ClientSession(authRequest, LocalDateTime.now())),
-                    1800);
+                    3600);
 
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -83,7 +83,7 @@ public class RedisHelper {
             redis.saveWithExpiry(
                     CLIENT_SESSION_PREFIX.concat(clientSessionId),
                     OBJECT_MAPPER.writeValueAsString(clientSession),
-                    1800);
+                    3600);
 
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -96,7 +96,7 @@ public class RedisHelper {
             Session session = OBJECT_MAPPER.readValue(redis.getValue(sessionId), Session.class);
             session.setEmailAddress(emailAddress);
             redis.saveWithExpiry(
-                    session.getSessionId(), OBJECT_MAPPER.writeValueAsString(session), 1800);
+                    session.getSessionId(), OBJECT_MAPPER.writeValueAsString(session), 3600);
 
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -109,7 +109,7 @@ public class RedisHelper {
             Session session = OBJECT_MAPPER.readValue(redis.getValue(sessionId), Session.class);
             session.setState(state);
             redis.saveWithExpiry(
-                    session.getSessionId(), OBJECT_MAPPER.writeValueAsString(session), 1800);
+                    session.getSessionId(), OBJECT_MAPPER.writeValueAsString(session), 3600);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

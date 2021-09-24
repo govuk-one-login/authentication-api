@@ -87,6 +87,6 @@ public class CookieHelper {
     public static String buildCookieString(String clientSessionId) {
         return format(
                 "%s=%s.%s; Max-Age=%d; %s",
-                "gs", SESSION_ID, clientSessionId, 1800, "Secure; HttpOnly;");
+                "gs", SESSION_ID, clientSessionId, 3600, "Secure; HttpOnly;");
     }
 }

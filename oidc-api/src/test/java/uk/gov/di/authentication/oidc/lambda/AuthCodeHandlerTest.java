@@ -249,6 +249,6 @@ class AuthCodeHandlerTest {
     private String buildCookieString() {
         return format(
                 "%s=%s.%s; Max-Age=%d; %s",
-                "gs", SESSION_ID, CLIENT_SESSION_ID, 1800, "Secure; HttpOnly;");
+                "gs", SESSION_ID, CLIENT_SESSION_ID, 3600, "Secure; HttpOnly;");
     }
 }
