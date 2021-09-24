@@ -154,7 +154,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
 
         Response response = RequestHelper.request(VERIFY_CODE_ENDPOINT, codeRequest, headers);
 
-        assertEquals(200, response.getStatus());
+        assertEquals(400, response.getStatus());
 
         BaseAPIResponse codeResponse =
                 objectMapper.readValue(response.readEntity(String.class), BaseAPIResponse.class);
@@ -176,7 +176,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
 
         Response response = RequestHelper.request(VERIFY_CODE_ENDPOINT, codeRequest, headers);
 
-        assertEquals(200, response.getStatus());
+        assertEquals(400, response.getStatus());
 
         BaseAPIResponse codeResponse =
                 objectMapper.readValue(response.readEntity(String.class), BaseAPIResponse.class);
