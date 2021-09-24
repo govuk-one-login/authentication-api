@@ -44,7 +44,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
     }
 
     @Test
-    public void shouldCallVerifyCodeEndpointAndReturn200WitUpdatedStateWhenEmailCodeHasExpired()
+    public void shouldCallVerifyCodeEndpointAndReturn400WitUpdatedStateWhenEmailCodeHasExpired()
             throws IOException, InterruptedException {
         String sessionId = RedisHelper.createSession();
         RedisHelper.setSessionState(sessionId, SessionState.VERIFY_EMAIL_CODE_SENT);
@@ -60,14 +60,14 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
 
         Response response = RequestHelper.request(VERIFY_CODE_ENDPOINT, codeRequest, headers);
 
-        assertEquals(200, response.getStatus());
+        assertEquals(400, response.getStatus());
         BaseAPIResponse codeResponse =
                 objectMapper.readValue(response.readEntity(String.class), BaseAPIResponse.class);
         assertEquals(SessionState.EMAIL_CODE_NOT_VALID, codeResponse.getSessionState());
     }
 
     @Test
-    public void shouldReturn200WithNewStateWhenUserTriesEmailCodeThatTheyHaveAlreadyUsed()
+    public void shouldReturn400WithNewStateWhenUserTriesEmailCodeThatTheyHaveAlreadyUsed()
             throws IOException {
         String sessionId = RedisHelper.createSession();
         RedisHelper.setSessionState(sessionId, SessionState.VERIFY_EMAIL_CODE_SENT);
@@ -87,7 +87,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
 
         Response response2 = RequestHelper.request(VERIFY_CODE_ENDPOINT, codeRequest, headers);
 
-        assertEquals(200, response2.getStatus());
+        assertEquals(400, response2.getStatus());
 
         BaseAPIResponse codeResponse =
                 objectMapper.readValue(response2.readEntity(String.class), BaseAPIResponse.class);
@@ -115,7 +115,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
 
     @Test
     public void
-            shouldCallVerifyCodeEndpointAndReturn200WitUpdatedStateWhenPhoneNumberCodeHasExpired()
+            shouldCallVerifyCodeEndpointAndReturn400WitUpdatedStateWhenPhoneNumberCodeHasExpired()
                     throws IOException, InterruptedException {
         String sessionId = RedisHelper.createSession();
         RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
@@ -132,7 +132,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
 
         Response response = RequestHelper.request(VERIFY_CODE_ENDPOINT, codeRequest, headers);
 
-        assertEquals(200, response.getStatus());
+        assertEquals(400, response.getStatus());
 
         BaseAPIResponse codeResponse =
                 objectMapper.readValue(response.readEntity(String.class), BaseAPIResponse.class);
