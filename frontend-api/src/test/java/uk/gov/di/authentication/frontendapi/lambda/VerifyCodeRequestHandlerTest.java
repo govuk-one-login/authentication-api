@@ -227,7 +227,7 @@ class VerifyCodeRequestHandlerTest {
 
         BaseAPIResponse codeResponse =
                 new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
-        assertThat(result, hasStatus(200));
+        assertThat(result, hasStatus(400));
         assertThat(codeResponse.getSessionState(), equalTo(EMAIL_CODE_NOT_VALID));
     }
 
@@ -252,7 +252,7 @@ class VerifyCodeRequestHandlerTest {
 
         BaseAPIResponse codeResponse =
                 new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
-        assertThat(result, hasStatus(200));
+        assertThat(result, hasStatus(400));
         assertThat(codeResponse.getSessionState(), equalTo(PHONE_NUMBER_CODE_NOT_VALID));
         verify(authenticationService, never())
                 .updatePhoneNumberVerifiedStatus(TEST_EMAIL_ADDRESS, true);
@@ -311,7 +311,7 @@ class VerifyCodeRequestHandlerTest {
 
         BaseAPIResponse codeResponse =
                 new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
-        assertThat(result, hasStatus(200));
+        assertThat(result, hasStatus(400));
         assertThat(codeResponse.getSessionState(), equalTo(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED));
         assertThat(session.getRetryCount(), equalTo(0));
         verify(authenticationService, never())
@@ -361,7 +361,7 @@ class VerifyCodeRequestHandlerTest {
 
         BaseAPIResponse codeResponse =
                 new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
-        assertThat(result, hasStatus(200));
+        assertThat(result, hasStatus(400));
         assertThat(codeResponse.getSessionState(), equalTo(EMAIL_CODE_MAX_RETRIES_REACHED));
         assertThat(session.getRetryCount(), equalTo(0));
         verify(codeStorageService)
@@ -456,7 +456,7 @@ class VerifyCodeRequestHandlerTest {
 
         BaseAPIResponse codeResponse =
                 new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
-        assertThat(result, hasStatus(200));
+        assertThat(result, hasStatus(400));
         assertThat(codeResponse.getSessionState(), equalTo(MFA_CODE_NOT_VALID));
     }
 
@@ -481,7 +481,7 @@ class VerifyCodeRequestHandlerTest {
 
         BaseAPIResponse codeResponse =
                 new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
-        assertThat(result, hasStatus(200));
+        assertThat(result, hasStatus(400));
         assertThat(codeResponse.getSessionState(), equalTo(MFA_CODE_MAX_RETRIES_REACHED));
         assertThat(session.getRetryCount(), equalTo(0));
         verify(codeStorageService)

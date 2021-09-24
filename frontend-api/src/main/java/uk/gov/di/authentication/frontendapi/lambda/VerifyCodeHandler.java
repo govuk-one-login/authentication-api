@@ -33,9 +33,7 @@ import static java.util.Map.entry;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
-import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES;
-import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES;
-import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.*;
 import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_VERIFIED;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_MAX_RETRIES_REACHED;
@@ -129,6 +127,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler
                                     session.getState(), validationAction, userContext)));
 
             processCodeSessionState(session, codeRequest.getNotificationType());
+
+            if (isSessionActionBadRequest(validationAction)) return generateResponse(session);
+
             return generateSuccessResponse(session);
 
         } catch (JsonProcessingException e) {
@@ -138,6 +139,19 @@ public class VerifyCodeHandler extends BaseFrontendHandler
             LOG.error("Invalid transition in user journey", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         }
+    }
+
+    private boolean isSessionActionBadRequest(SessionAction sessionAction) {
+        List<SessionAction> badRequestActions =
+                List.of(
+                        USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES,
+                        USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES,
+                        USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES,
+                        USER_ENTERED_INVALID_MFA_CODE,
+                        USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE,
+                        USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE);
+
+        return badRequestActions.contains(sessionAction);
     }
 
     private SessionAction blockedCodeBehaviour(VerifyCodeRequest codeRequest) {
