@@ -27,8 +27,12 @@ import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
+import static java.util.Map.entry;
+import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES;
@@ -88,114 +92,45 @@ public class VerifyCodeHandler extends BaseFrontendHandler
             VerifyCodeRequest codeRequest =
                     objectMapper.readValue(input.getBody(), VerifyCodeRequest.class);
 
-            switch (codeRequest.getNotificationType()) {
-                case VERIFY_EMAIL:
-                    if (codeStorageService.isCodeBlockedForSession(
-                            userContext.getSession().getEmailAddress(),
-                            userContext.getSession().getSessionId())) {
-                        sessionService.save(
-                                userContext
-                                        .getSession()
-                                        .setState(
-                                                stateMachine.transition(
-                                                        userContext.getSession().getState(),
-                                                        USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES,
-                                                        userContext)));
-                    } else {
-                        Optional<String> emailCode =
-                                codeStorageService.getOtpCode(
-                                        userContext.getSession().getEmailAddress(),
-                                        codeRequest.getNotificationType());
-                        sessionService.save(
-                                userContext
-                                        .getSession()
-                                        .setState(
-                                                stateMachine.transition(
-                                                        userContext.getSession().getState(),
-                                                        validationService
-                                                                .validateEmailVerificationCode(
-                                                                        emailCode,
-                                                                        codeRequest.getCode(),
-                                                                        userContext.getSession(),
-                                                                        configurationService
-                                                                                .getCodeMaxRetries()),
-                                                        userContext)));
-                        processCodeSessionState(
-                                userContext.getSession(), codeRequest.getNotificationType());
-                    }
-                    return generateSuccessResponse(userContext.getSession());
-                case VERIFY_PHONE_NUMBER:
-                    if (codeStorageService.isCodeBlockedForSession(
-                            userContext.getSession().getEmailAddress(),
-                            userContext.getSession().getSessionId())) {
-                        sessionService.save(
-                                userContext
-                                        .getSession()
-                                        .setState(
-                                                stateMachine.transition(
-                                                        userContext.getSession().getState(),
-                                                        USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES,
-                                                        userContext)));
-                    } else {
-                        Optional<String> phoneNumberCode =
-                                codeStorageService.getOtpCode(
-                                        userContext.getSession().getEmailAddress(),
-                                        codeRequest.getNotificationType());
-                        sessionService.save(
-                                userContext
-                                        .getSession()
-                                        .setState(
-                                                stateMachine.transition(
-                                                        userContext.getSession().getState(),
-                                                        validationService
-                                                                .validatePhoneVerificationCode(
-                                                                        phoneNumberCode,
-                                                                        codeRequest.getCode(),
-                                                                        userContext.getSession(),
-                                                                        configurationService
-                                                                                .getCodeMaxRetries()),
-                                                        userContext)));
-                        processCodeSessionState(
-                                userContext.getSession(), codeRequest.getNotificationType());
-                    }
-                    return generateSuccessResponse(userContext.getSession());
-                case MFA_SMS:
-                    if (codeStorageService.isCodeBlockedForSession(
-                            userContext.getSession().getEmailAddress(),
-                            userContext.getSession().getSessionId())) {
-                        sessionService.save(
-                                userContext
-                                        .getSession()
-                                        .setState(
-                                                stateMachine.transition(
-                                                        userContext.getSession().getState(),
-                                                        USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES,
-                                                        userContext)));
-                    } else {
-                        Optional<String> mfaCode =
-                                codeStorageService.getOtpCode(
-                                        userContext.getSession().getEmailAddress(),
-                                        codeRequest.getNotificationType());
+            var session = userContext.getSession();
 
-                        sessionService.save(
-                                userContext
-                                        .getSession()
-                                        .setState(
-                                                stateMachine.transition(
-                                                        userContext.getSession().getState(),
-                                                        validationService
-                                                                .validateMfaVerificationCode(
-                                                                        mfaCode,
-                                                                        codeRequest.getCode(),
-                                                                        userContext.getSession(),
-                                                                        configurationService
-                                                                                .getCodeMaxRetries()),
-                                                        userContext)));
-                        processCodeSessionState(
-                                userContext.getSession(), codeRequest.getNotificationType());
-                    }
-                    return generateSuccessResponse(userContext.getSession());
+            if (isCodeBlockedForSession(session)) {
+                sessionService.save(
+                        session.setState(
+                                stateMachine.transition(
+                                        session.getState(),
+                                        blockedCodeBehaviour(codeRequest),
+                                        userContext)));
+                return generateSuccessResponse(session);
             }
+
+            var code =
+                    codeStorageService.getOtpCode(
+                            session.getEmailAddress(), codeRequest.getNotificationType());
+
+            var validationAction =
+                    validationService.validateVerificationCode(
+                            codeRequest.getNotificationType(),
+                            code,
+                            codeRequest.getCode(),
+                            session,
+                            configurationService.getCodeMaxRetries());
+
+            if (validationAction == null) {
+                LOG.error(
+                        "Encountered unexpected error while processing session {}",
+                        userContext.getSession().getSessionId());
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
+            }
+
+            sessionService.save(
+                    session.setState(
+                            stateMachine.transition(
+                                    session.getState(), validationAction, userContext)));
+
+            processCodeSessionState(session, codeRequest.getNotificationType());
+            return generateSuccessResponse(session);
+
         } catch (JsonProcessingException e) {
             LOG.error("Error parsing request", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
@@ -203,10 +138,23 @@ public class VerifyCodeHandler extends BaseFrontendHandler
             LOG.error("Invalid transition in user journey", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         }
-        LOG.error(
-                "Encountered unexpected error while processing session {}",
-                userContext.getSession().getSessionId());
-        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
+    }
+
+    private SessionAction blockedCodeBehaviour(VerifyCodeRequest codeRequest) {
+        return Map.ofEntries(
+                        entry(
+                                VERIFY_EMAIL,
+                                USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES),
+                        entry(
+                                VERIFY_PHONE_NUMBER,
+                                USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES),
+                        entry(MFA_SMS, USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES))
+                .get(codeRequest.getNotificationType());
+    }
+
+    private boolean isCodeBlockedForSession(Session session) {
+        return codeStorageService.isCodeBlockedForSession(
+                session.getEmailAddress(), session.getSessionId());
     }
 
     private APIGatewayProxyResponseEvent generateSuccessResponse(Session session)

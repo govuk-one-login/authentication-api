@@ -11,6 +11,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 
 public class ValidationServiceTest {
 
@@ -120,16 +123,20 @@ public class ValidationServiceTest {
     public void shouldReturnCorrectStateWhenPhoneCodeMatchesStored() {
         assertEquals(
                 SessionAction.USER_ENTERED_VALID_PHONE_VERIFICATION_CODE,
-                validationService.validatePhoneVerificationCode(
-                        Optional.of("123456"), "123456", mock(Session.class), 5));
+                validationService.validateVerificationCode(
+                        VERIFY_PHONE_NUMBER,
+                        Optional.of("123456"),
+                        "123456",
+                        mock(Session.class),
+                        5));
     }
 
     @Test
     public void shouldReturnCorrectStateWhenStoredPhoneCodeIsEmpty() {
         assertEquals(
                 SessionAction.USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE,
-                validationService.validatePhoneVerificationCode(
-                        Optional.empty(), "123456", mock(Session.class), 5));
+                validationService.validateVerificationCode(
+                        VERIFY_PHONE_NUMBER, Optional.empty(), "123456", mock(Session.class), 5));
     }
 
     @Test
@@ -139,8 +146,8 @@ public class ValidationServiceTest {
         when(session.getRetryCount()).thenReturn(1);
         assertEquals(
                 SessionAction.USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE,
-                validationService.validatePhoneVerificationCode(
-                        Optional.of("654321"), "123456", session, 5));
+                validationService.validateVerificationCode(
+                        VERIFY_PHONE_NUMBER, Optional.of("654321"), "123456", session, 5));
     }
 
     @Test
@@ -150,24 +157,24 @@ public class ValidationServiceTest {
         when(session.getRetryCount()).thenReturn(6);
         assertEquals(
                 SessionAction.USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES,
-                validationService.validatePhoneVerificationCode(
-                        Optional.of("654321"), "123456", session, 5));
+                validationService.validateVerificationCode(
+                        VERIFY_PHONE_NUMBER, Optional.of("654321"), "123456", session, 5));
     }
 
     @Test
     public void shouldReturnCorrectStateWhenEmailCodeMatchesStored() {
         assertEquals(
                 SessionAction.USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE,
-                validationService.validateEmailVerificationCode(
-                        Optional.of("123456"), "123456", mock(Session.class), 5));
+                validationService.validateVerificationCode(
+                        VERIFY_EMAIL, Optional.of("123456"), "123456", mock(Session.class), 5));
     }
 
     @Test
     public void shouldReturnCorrectStateWhenStoredEmailCodeIsEmpty() {
         assertEquals(
                 SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE,
-                validationService.validateEmailVerificationCode(
-                        Optional.empty(), "123456", mock(Session.class), 5));
+                validationService.validateVerificationCode(
+                        VERIFY_EMAIL, Optional.empty(), "123456", mock(Session.class), 5));
     }
 
     @Test
@@ -177,8 +184,8 @@ public class ValidationServiceTest {
         when(session.getRetryCount()).thenReturn(1);
         assertEquals(
                 SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE,
-                validationService.validateEmailVerificationCode(
-                        Optional.of("654321"), "123456", session, 5));
+                validationService.validateVerificationCode(
+                        VERIFY_EMAIL, Optional.of("654321"), "123456", session, 5));
     }
 
     @Test
@@ -188,24 +195,24 @@ public class ValidationServiceTest {
         when(session.getRetryCount()).thenReturn(6);
         assertEquals(
                 SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES,
-                validationService.validateEmailVerificationCode(
-                        Optional.of("654321"), "123456", session, 5));
+                validationService.validateVerificationCode(
+                        VERIFY_EMAIL, Optional.of("654321"), "123456", session, 5));
     }
 
     @Test
     public void shouldReturnCorrectStateWhenMfaCodeMatchesStored() {
         assertEquals(
                 SessionAction.USER_ENTERED_VALID_MFA_CODE,
-                validationService.validateMfaVerificationCode(
-                        Optional.of("123456"), "123456", mock(Session.class), 5));
+                validationService.validateVerificationCode(
+                        MFA_SMS, Optional.of("123456"), "123456", mock(Session.class), 5));
     }
 
     @Test
     public void shouldReturnCorrectStateWhenStoredMfaCodeIsEmpty() {
         assertEquals(
                 SessionAction.USER_ENTERED_INVALID_MFA_CODE,
-                validationService.validateMfaVerificationCode(
-                        Optional.empty(), "123456", mock(Session.class), 5));
+                validationService.validateVerificationCode(
+                        MFA_SMS, Optional.empty(), "123456", mock(Session.class), 5));
     }
 
     @Test
@@ -215,8 +222,8 @@ public class ValidationServiceTest {
         when(session.getRetryCount()).thenReturn(1);
         assertEquals(
                 SessionAction.USER_ENTERED_INVALID_MFA_CODE,
-                validationService.validateMfaVerificationCode(
-                        Optional.of("654321"), "123456", session, 5));
+                validationService.validateVerificationCode(
+                        MFA_SMS, Optional.of("654321"), "123456", session, 5));
     }
 
     @Test
@@ -226,8 +233,8 @@ public class ValidationServiceTest {
         when(session.getRetryCount()).thenReturn(6);
         assertEquals(
                 SessionAction.USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES,
-                validationService.validateMfaVerificationCode(
-                        Optional.of("654321"), "123456", session, 5));
+                validationService.validateVerificationCode(
+                        MFA_SMS, Optional.of("654321"), "123456", session, 5));
     }
 
     @Test
