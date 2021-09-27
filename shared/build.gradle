@@ -21,7 +21,7 @@ dependencies {
             configurations.hamcrest,
             "com.amazonaws:aws-java-sdk-sns:${dependencyVersions.aws_sdk_version}",
             "com.googlecode.libphonenumber:libphonenumber:8.12.32",
-            "com.google.protobuf:protobuf-java:3.17.3"
+            "com.google.protobuf:protobuf-java:3.18.0"
 
     testImplementation configurations.tests,
             configurations.lambda_tests
