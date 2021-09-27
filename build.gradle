@@ -16,7 +16,7 @@ ext {
         nimbusds_jwt_version: "9.14",
         junit: "5.8.1",
         jackson_version: "2.12.5",
-        glassfish_version: "3.0.2",
+        glassfish_version: "3.0.3",
     ]
 }
 
