@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
-import uk.gov.di.authentication.shared.entity.AuthenticationValues;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 
@@ -68,7 +68,7 @@ class ClientRegistrationHandlerTest {
         List<String> redirectUris = List.of("http://localhost:8080/redirect-uri");
         List<String> contacts = List.of("joe.bloggs@test.com");
         String serviceType = String.valueOf(MANDATORY);
-        String vectorsOfTrust = AuthenticationValues.MEDIUM_LEVEL.getValue();
+        String vectorsOfTrust = CredentialTrustLevel.MEDIUM_LEVEL.getValue();
         when(configValidationService.validateClientRegistrationConfig(
                         any(ClientRegistrationRequest.class)))
                 .thenReturn(Optional.empty());

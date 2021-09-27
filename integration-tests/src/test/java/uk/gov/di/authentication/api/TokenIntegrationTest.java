@@ -35,7 +35,7 @@ import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.KeyPairHelper;
 import uk.gov.di.authentication.helpers.KmsHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
-import uk.gov.di.authentication.shared.entity.AuthenticationValues;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.TokenStore;
 
@@ -199,7 +199,7 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",
-                AuthenticationValues.MEDIUM_LEVEL.getValue());
+                CredentialTrustLevel.MEDIUM_LEVEL.getValue());
         DynamoHelper.signUp(TEST_EMAIL, "password-1", internalSubject);
     }
 

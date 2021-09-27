@@ -11,9 +11,9 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.di.authentication.shared.entity.AuthenticationValues;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 
 import java.net.URI;
@@ -96,26 +96,15 @@ public class AuthorizationService {
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "Request is missing state parameter"));
         }
-
         List<String> vtr = authRequest.getCustomParameter("vtr");
-        List<String> authenticationValues =
-                List.of(
-                        AuthenticationValues.LOW_LEVEL.getValue(),
-                        AuthenticationValues.MEDIUM_LEVEL.getValue(),
-                        AuthenticationValues.HIGH_LEVEL.getValue(),
-                        AuthenticationValues.VERY_HIGH_LEVEL.getValue());
-
         if (vtr != null) {
-            for (String v : vtr) {
-                if (!authenticationValues.contains(v)
-                        || !client.get().getVectorsOfTrust().equals(v)) {
-                    return Optional.of(
-                            new ErrorObject(
-                                    OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
-                }
+            try {
+                VectorOfTrust vectorOfTrust = VectorOfTrust.parse(vtr);
+            } catch (IllegalArgumentException e) {
+                return Optional.of(
+                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
             }
         }
-
         return Optional.empty();
     }
 
