@@ -31,6 +31,9 @@ public class Session {
     @JsonProperty("code_request_count")
     private int codeRequestCount;
 
+    @JsonProperty("current_credential_strength")
+    private AuthenticationValues currentCredentialStrength;
+
     public Session(String sessionId) {
         this.sessionId = sessionId;
         this.state = NEW;
@@ -127,6 +130,15 @@ public class Session {
 
     public Session resetCodeRequestCount() {
         this.codeRequestCount = 0;
+        return this;
+    }
+
+    public AuthenticationValues getCurrentCredentialStrength() {
+        return currentCredentialStrength;
+    }
+
+    public Session setCurrentCredentialStrength(AuthenticationValues currentCredentialStrength) {
+        this.currentCredentialStrength = currentCredentialStrength;
         return this;
     }
 }
