@@ -78,6 +78,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_EMAIL_C
 import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_PHONE_NUMBER_CODE_SENT;
 import static uk.gov.di.authentication.shared.state.conditions.AggregateCondition.and;
 import static uk.gov.di.authentication.shared.state.conditions.ClientDoesNotRequireMfa.clientDoesNotRequireMfa;
+import static uk.gov.di.authentication.shared.state.conditions.PhoneNumberUnverified.phoneNumberUnverified;
 import static uk.gov.di.authentication.shared.state.conditions.TermsAndConditionsVersionNotAccepted.userHasNotAcceptedTermsAndConditionsVersion;
 
 public class StateMachine<T, A, C> {
@@ -215,6 +216,9 @@ public class StateMachine<T, A, C> {
                 .allow(on(SYSTEM_HAS_SENT_RESET_PASSWORD_LINK).then(RESET_PASSWORD_LINK_SENT))
                 .when(AUTHENTICATION_REQUIRED)
                 .allow(
+                        on(USER_ENTERED_VALID_CREDENTIALS)
+                                .ifCondition(phoneNumberUnverified())
+                                .then(TWO_FACTOR_REQUIRED),
                         on(USER_ENTERED_VALID_CREDENTIALS)
                                 .ifCondition(
                                         and(

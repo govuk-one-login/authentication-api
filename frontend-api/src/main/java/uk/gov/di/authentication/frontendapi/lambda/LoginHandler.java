@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.frontendapi.entity.LoginRequest;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
+import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
@@ -29,6 +30,7 @@ import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.entity.SessionAction.*;
 import static uk.gov.di.authentication.shared.entity.SessionState.ACCOUNT_TEMPORARILY_LOCKED;
+import static uk.gov.di.authentication.shared.entity.SessionState.TWO_FACTOR_REQUIRED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
@@ -136,19 +138,18 @@ public class LoginHandler extends BaseFrontendHandler
                 codeStorageService.deleteIncorrectPasswordCount(loginRequest.getEmail());
             }
 
-            String phoneNumber =
-                    authenticationService.getPhoneNumber(loginRequest.getEmail()).orElse(null);
-
-            if (phoneNumber == null) {
-                LOGGER.error("No Phone Number has been registered for this user");
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1014);
-            }
-            String concatPhoneNumber = RedactPhoneNumberHelper.redactPhoneNumber(phoneNumber);
-
             var nextState =
                     stateMachine.transition(
                             session.get().getState(), USER_ENTERED_VALID_CREDENTIALS, userContext);
             sessionService.save(session.get().setState(nextState));
+            if (nextState.equals(TWO_FACTOR_REQUIRED)) {
+                return generateApiGatewayProxyResponse(
+                        200, new BaseAPIResponse(session.get().getState()));
+            }
+            String phoneNumber =
+                    authenticationService.getPhoneNumber(loginRequest.getEmail()).orElseThrow();
+
+            String concatPhoneNumber = RedactPhoneNumberHelper.redactPhoneNumber(phoneNumber);
 
             LOGGER.info(
                     "User has successfully Logged in. Generating successful LoginResponse for session with ID {}",
