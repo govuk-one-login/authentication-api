@@ -10,7 +10,7 @@ import uk.gov.di.authentication.oidc.entity.TrustMarkResponse;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
-import java.util.List;
+import java.util.Arrays;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
@@ -49,10 +49,6 @@ public class TrustMarkHandler
         return new TrustMarkResponse(
                 configurationService.getBaseURL().orElseThrow(),
                 configurationService.getBaseURL().orElseThrow(),
-                List.of(
-                        CredentialTrustLevel.LOW_LEVEL,
-                        CredentialTrustLevel.MEDIUM_LEVEL,
-                        CredentialTrustLevel.HIGH_LEVEL,
-                        CredentialTrustLevel.VERY_HIGH_LEVEL));
+                Arrays.asList(CredentialTrustLevel.values()));
     }
 }
