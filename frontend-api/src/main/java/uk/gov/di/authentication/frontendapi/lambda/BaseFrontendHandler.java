@@ -94,6 +94,8 @@ public abstract class BaseFrontendHandler
                 .flatMap(v -> v.stream().findFirst())
                 .ifPresent(c -> userContextBuilder.withClient(clientService.getClient(c)));
 
+        clientSession.ifPresent(userContextBuilder::withClientSession);
+
         session.map(Session::getEmailAddress)
                 .map(authenticationService::getUserProfileFromEmail)
                 .ifPresentOrElse(
