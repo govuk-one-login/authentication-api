@@ -27,4 +27,8 @@ public enum CredentialTrustLevel {
                                 new IllegalArgumentException(
                                         value + " is not a valid CredentialTrustLevel"));
     }
+
+    public static CredentialTrustLevel getDefault() {
+        return MEDIUM_LEVEL;
+    }
 }

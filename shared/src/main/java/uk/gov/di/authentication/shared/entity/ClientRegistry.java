@@ -132,4 +132,8 @@ public class ClientRegistry {
         this.vectorsOfTrust = vectorsOfTrust;
         return this;
     }
+
+    public VectorOfTrust calculateEffectiveVectorOfTrust() {
+        return VectorOfTrust.parse(getVectorsOfTrust(), CredentialTrustLevel.getDefault());
+    }
 }

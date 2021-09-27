@@ -3,9 +3,9 @@ package uk.gov.di.authentication.clientregistry.services;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.client.RegistrationError;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -50,6 +50,11 @@ public class ClientConfigValidationService {
         if (!isValidServiceType(registrationRequest.getServiceType())) {
             return Optional.of(INVALID_SERVICE_TYPE);
         }
+        if (!Optional.ofNullable(registrationRequest.getVectorsOfTrust())
+                .map(this::validateVectorsOfTrust)
+                .orElse(true)) {
+            return Optional.of(INVALID_VECTOR_OF_TRUST);
+        }
         return Optional.empty();
     }
 
@@ -89,14 +94,12 @@ public class ClientConfigValidationService {
     }
 
     private boolean validateVectorsOfTrust(String vtr) {
-        List<String> authenticationValues =
-                List.of(
-                        CredentialTrustLevel.LOW_LEVEL.getValue(),
-                        CredentialTrustLevel.MEDIUM_LEVEL.getValue(),
-                        CredentialTrustLevel.HIGH_LEVEL.getValue(),
-                        CredentialTrustLevel.VERY_HIGH_LEVEL.getValue());
-
-        return !authenticationValues.contains(vtr);
+        try {
+            VectorOfTrust.parse(vtr);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 
     private boolean areUrisValid(List<String> uris) {

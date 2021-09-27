@@ -2,6 +2,7 @@ package uk.gov.di.authentication.shared.entity;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 public class VectorOfTrust {
 
@@ -19,13 +20,19 @@ public class VectorOfTrust {
         return parse(String.join(".", vtr), null);
     }
 
+    public static final VectorOfTrust parse(String vtr) {
+        return parse(vtr, null);
+    }
+
     public static final VectorOfTrust parse(
             String vtr, CredentialTrustLevel defaultCredentialsTrustLevel) {
-        List<String> vectors = Arrays.asList(vtr.split("\\."));
         CredentialTrustLevel credentialTrustLevel = defaultCredentialsTrustLevel;
-        for (String vector : vectors) {
-            if (vector.startsWith(("C"))) {
-                credentialTrustLevel = CredentialTrustLevel.parseByValue(vector);
+        if (Objects.nonNull(vtr)) {
+            List<String> vectors = Arrays.asList(vtr.split("\\."));
+            for (String vector : vectors) {
+                if (vector.startsWith(("C"))) {
+                    credentialTrustLevel = CredentialTrustLevel.parseByValue(vector);
+                }
             }
         }
         return new VectorOfTrust(credentialTrustLevel);

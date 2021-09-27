@@ -12,13 +12,11 @@ import org.apache.commons.validator.routines.UrlValidator;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 
-import java.util.List;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_ERROR;
@@ -75,7 +73,6 @@ public class ClientRegistrationHandler
                                     return generateApiGatewayProxyResponse(
                                             400, errorResponse.get().toJSONObject().toJSONString());
                                 }
-                                validateVectorsOfTrust(clientRegistrationRequest);
                                 String clientID = clientService.generateClientID().toString();
                                 clientService.addClient(
                                         clientID,
@@ -112,27 +109,6 @@ public class ClientRegistrationHandler
                                         OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString());
                             }
                         });
-    }
-
-    private ClientRegistrationRequest validateVectorsOfTrust(
-            ClientRegistrationRequest clientRegistrationRequest) {
-
-        if (clientRegistrationRequest.getVectorsOfTrust() == null)
-            clientRegistrationRequest.setVectorsOfTrust(
-                    CredentialTrustLevel.MEDIUM_LEVEL.getValue());
-
-        List<String> authenticationValues =
-                List.of(
-                        CredentialTrustLevel.LOW_LEVEL.getValue(),
-                        CredentialTrustLevel.MEDIUM_LEVEL.getValue(),
-                        CredentialTrustLevel.HIGH_LEVEL.getValue(),
-                        CredentialTrustLevel.VERY_HIGH_LEVEL.getValue());
-
-        if (!authenticationValues.contains(clientRegistrationRequest.getVectorsOfTrust()))
-            clientRegistrationRequest.setVectorsOfTrust(
-                    CredentialTrustLevel.MEDIUM_LEVEL.getValue());
-
-        return clientRegistrationRequest;
     }
 
     private String sanitiseUrl(String url) {
