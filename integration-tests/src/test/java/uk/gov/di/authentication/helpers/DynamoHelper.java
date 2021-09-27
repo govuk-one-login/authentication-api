@@ -57,6 +57,7 @@ public class DynamoHelper {
 
     public static void addPhoneNumber(String email, String phoneNumber) {
         DYNAMO_SERVICE.updatePhoneNumber(email, phoneNumber);
+        DYNAMO_SERVICE.updatePhoneNumberVerifiedStatus(email, true);
     }
 
     public static void setPhoneNumberVerified(String email, boolean isVerified) {

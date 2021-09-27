@@ -192,7 +192,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserTransitionsFromWrongState() throws JsonProcessingException {
+    public void shouldReturn400IfUserTransitionsFromWrongState() {
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
