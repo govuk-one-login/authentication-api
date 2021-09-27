@@ -19,7 +19,7 @@ import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.helpers.RequestHelper;
-import uk.gov.di.authentication.shared.entity.AuthenticationValues;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.SessionState;
 
@@ -31,10 +31,10 @@ import java.util.stream.Stream;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.helpers.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
-import static uk.gov.di.authentication.shared.entity.AuthenticationValues.HIGH_LEVEL;
-import static uk.gov.di.authentication.shared.entity.AuthenticationValues.LOW_LEVEL;
-import static uk.gov.di.authentication.shared.entity.AuthenticationValues.MEDIUM_LEVEL;
-import static uk.gov.di.authentication.shared.entity.AuthenticationValues.VERY_HIGH_LEVEL;
+import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.HIGH_LEVEL;
+import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
+import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
+import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.VERY_HIGH_LEVEL;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.LOGGED_IN;
@@ -55,7 +55,7 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
     @ParameterizedTest
     @MethodSource("vectorOfTrustEndStates")
     public void shouldReturnCorrectStateForClientsTrustLevel(
-            AuthenticationValues level,
+            CredentialTrustLevel level,
             String termsAndConditionsVersion,
             SessionState expectedState)
             throws IOException {

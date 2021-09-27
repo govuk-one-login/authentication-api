@@ -6,7 +6,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
 
-import static uk.gov.di.authentication.shared.entity.AuthenticationValues.LOW_LEVEL;
+import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 
 public class ClientDoesNotRequireMfa implements Condition<UserContext> {
     @Override

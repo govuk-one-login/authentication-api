@@ -11,8 +11,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.shared.entity.AuthenticationValues.LOW_LEVEL;
-import static uk.gov.di.authentication.shared.entity.AuthenticationValues.MEDIUM_LEVEL;
+import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
+import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 
 class ClientDoesNotRequireMfaTest {
     private final ClientDoesNotRequireMfa condition = new ClientDoesNotRequireMfa();

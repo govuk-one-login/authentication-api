@@ -11,7 +11,7 @@ import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.helpers.DynamoHelper;
-import uk.gov.di.authentication.shared.entity.AuthenticationValues;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 
@@ -39,7 +39,7 @@ public class UpdateClientConfigIntegrationTest extends IntegrationTestEndpoints 
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",
-                AuthenticationValues.MEDIUM_LEVEL.getValue());
+                CredentialTrustLevel.MEDIUM_LEVEL.getValue());
 
         UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
         updateRequest.setClientName("new-client-name");

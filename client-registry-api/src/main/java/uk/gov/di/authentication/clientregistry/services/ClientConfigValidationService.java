@@ -3,7 +3,7 @@ package uk.gov.di.authentication.clientregistry.services;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.client.RegistrationError;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
-import uk.gov.di.authentication.shared.entity.AuthenticationValues;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 
@@ -91,10 +91,10 @@ public class ClientConfigValidationService {
     private boolean validateVectorsOfTrust(String vtr) {
         List<String> authenticationValues =
                 List.of(
-                        AuthenticationValues.LOW_LEVEL.getValue(),
-                        AuthenticationValues.MEDIUM_LEVEL.getValue(),
-                        AuthenticationValues.HIGH_LEVEL.getValue(),
-                        AuthenticationValues.VERY_HIGH_LEVEL.getValue());
+                        CredentialTrustLevel.LOW_LEVEL.getValue(),
+                        CredentialTrustLevel.MEDIUM_LEVEL.getValue(),
+                        CredentialTrustLevel.HIGH_LEVEL.getValue(),
+                        CredentialTrustLevel.VERY_HIGH_LEVEL.getValue());
 
         return !authenticationValues.contains(vtr);
     }

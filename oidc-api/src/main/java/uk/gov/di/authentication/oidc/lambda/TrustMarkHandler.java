@@ -7,7 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import uk.gov.di.authentication.oidc.entity.TrustMarkResponse;
-import uk.gov.di.authentication.shared.entity.AuthenticationValues;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.List;
@@ -50,9 +50,9 @@ public class TrustMarkHandler
                 configurationService.getBaseURL().orElseThrow(),
                 configurationService.getBaseURL().orElseThrow(),
                 List.of(
-                        AuthenticationValues.LOW_LEVEL,
-                        AuthenticationValues.MEDIUM_LEVEL,
-                        AuthenticationValues.HIGH_LEVEL,
-                        AuthenticationValues.VERY_HIGH_LEVEL));
+                        CredentialTrustLevel.LOW_LEVEL,
+                        CredentialTrustLevel.MEDIUM_LEVEL,
+                        CredentialTrustLevel.HIGH_LEVEL,
+                        CredentialTrustLevel.VERY_HIGH_LEVEL));
     }
 }

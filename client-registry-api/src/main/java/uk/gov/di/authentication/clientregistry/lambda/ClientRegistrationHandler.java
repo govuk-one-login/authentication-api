@@ -12,7 +12,7 @@ import org.apache.commons.validator.routines.UrlValidator;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
-import uk.gov.di.authentication.shared.entity.AuthenticationValues;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -119,18 +119,18 @@ public class ClientRegistrationHandler
 
         if (clientRegistrationRequest.getVectorsOfTrust() == null)
             clientRegistrationRequest.setVectorsOfTrust(
-                    AuthenticationValues.MEDIUM_LEVEL.getValue());
+                    CredentialTrustLevel.MEDIUM_LEVEL.getValue());
 
         List<String> authenticationValues =
                 List.of(
-                        AuthenticationValues.LOW_LEVEL.getValue(),
-                        AuthenticationValues.MEDIUM_LEVEL.getValue(),
-                        AuthenticationValues.HIGH_LEVEL.getValue(),
-                        AuthenticationValues.VERY_HIGH_LEVEL.getValue());
+                        CredentialTrustLevel.LOW_LEVEL.getValue(),
+                        CredentialTrustLevel.MEDIUM_LEVEL.getValue(),
+                        CredentialTrustLevel.HIGH_LEVEL.getValue(),
+                        CredentialTrustLevel.VERY_HIGH_LEVEL.getValue());
 
         if (!authenticationValues.contains(clientRegistrationRequest.getVectorsOfTrust()))
             clientRegistrationRequest.setVectorsOfTrust(
-                    AuthenticationValues.MEDIUM_LEVEL.getValue());
+                    CredentialTrustLevel.MEDIUM_LEVEL.getValue());
 
         return clientRegistrationRequest;
     }

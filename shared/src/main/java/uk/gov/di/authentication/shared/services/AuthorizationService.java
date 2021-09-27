@@ -11,7 +11,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.di.authentication.shared.entity.AuthenticationValues;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
@@ -100,10 +100,10 @@ public class AuthorizationService {
         List<String> vtr = authRequest.getCustomParameter("vtr");
         List<String> authenticationValues =
                 List.of(
-                        AuthenticationValues.LOW_LEVEL.getValue(),
-                        AuthenticationValues.MEDIUM_LEVEL.getValue(),
-                        AuthenticationValues.HIGH_LEVEL.getValue(),
-                        AuthenticationValues.VERY_HIGH_LEVEL.getValue());
+                        CredentialTrustLevel.LOW_LEVEL.getValue(),
+                        CredentialTrustLevel.MEDIUM_LEVEL.getValue(),
+                        CredentialTrustLevel.HIGH_LEVEL.getValue(),
+                        CredentialTrustLevel.VERY_HIGH_LEVEL.getValue());
 
         if (vtr != null) {
             for (String v : vtr) {

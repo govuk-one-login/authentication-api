@@ -1,6 +1,6 @@
 package uk.gov.di.authentication.shared.entity;
 
-public enum AuthenticationValues {
+public enum CredentialTrustLevel {
     LOW_LEVEL("Cl"),
     MEDIUM_LEVEL("Cm"),
     HIGH_LEVEL("Ch"),
@@ -8,7 +8,7 @@ public enum AuthenticationValues {
 
     private String value;
 
-    AuthenticationValues(String value) {
+    CredentialTrustLevel(String value) {
         this.value = value;
     }
 

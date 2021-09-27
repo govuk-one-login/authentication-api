@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.entity.TrustMarkResponse;
-import uk.gov.di.authentication.shared.entity.AuthenticationValues;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.List;
@@ -40,10 +40,10 @@ class TrustMarkHandlerTest {
                         configurationService.getBaseURL().orElseThrow(),
                         configurationService.getBaseURL().orElseThrow(),
                         List.of(
-                                AuthenticationValues.LOW_LEVEL,
-                                AuthenticationValues.MEDIUM_LEVEL,
-                                AuthenticationValues.HIGH_LEVEL,
-                                AuthenticationValues.VERY_HIGH_LEVEL));
+                                CredentialTrustLevel.LOW_LEVEL,
+                                CredentialTrustLevel.MEDIUM_LEVEL,
+                                CredentialTrustLevel.HIGH_LEVEL,
+                                CredentialTrustLevel.VERY_HIGH_LEVEL));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
