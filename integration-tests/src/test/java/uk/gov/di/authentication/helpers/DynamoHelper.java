@@ -51,6 +51,10 @@ public class DynamoHelper {
         DYNAMO_SERVICE.signUp(email, password, subject, termsAndConditions);
     }
 
+    public static void updateConsent(String email, ClientConsent clientConsent) {
+        DYNAMO_SERVICE.updateConsent(email, clientConsent);
+    }
+
     public static UserProfile getByPublicSubject(String subject) {
         return DYNAMO_SERVICE.getUserProfileFromPublicSubject(subject);
     }
