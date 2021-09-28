@@ -11,12 +11,12 @@ module "userinfo" {
     BASE_URL                = local.api_base_url
     EVENTS_SNS_TOPIC_ARN    = aws_sns_topic.events.arn
     LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
-    REDIS_HOST              = var.use_localstack ? var.external_redis_host : aws_elasticache_replication_group.sessions_store[0].primary_endpoint_address
-    REDIS_PORT              = var.use_localstack ? var.external_redis_port : aws_elasticache_replication_group.sessions_store[0].port
-    REDIS_PASSWORD          = var.use_localstack ? var.external_redis_password : random_password.redis_password.result
+    REDIS_HOST              = local.external_redis_host
+    REDIS_PORT              = local.external_redis_port
+    REDIS_PASSWORD          = local.external_redis_password
     REDIS_TLS               = var.redis_use_tls
     DYNAMO_ENDPOINT         = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    TOKEN_SIGNING_KEY_ALIAS = aws_kms_alias.id_token_signing_key_alias.name
+    TOKEN_SIGNING_KEY_ALIAS = local.id_token_signing_key_alias_name
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.UserInfoHandler::handleRequest"
 
@@ -25,9 +25,9 @@ module "userinfo" {
   execution_arn             = aws_api_gateway_rest_api.di_authentication_api.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.oidc_api_lambda_zip_file
-  security_group_id         = aws_vpc.authentication.default_security_group_id
-  subnet_id                 = aws_subnet.authentication.*.id
-  lambda_role_arn           = aws_iam_role.lambda_iam_role.arn
+  security_group_id         = local.authentication_security_group_id
+  subnet_id                 = lcoal.authentication_subnet_ids
+  lambda_role_arn           = local.lambda_iam_role_arn
   logging_endpoint_enabled  = var.logging_endpoint_enabled
   logging_endpoint_arn      = var.logging_endpoint_arn
   default_tags              = local.default_tags
@@ -42,8 +42,5 @@ module "userinfo" {
     aws_api_gateway_rest_api.di_authentication_api,
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
-    aws_vpc.authentication,
-    aws_subnet.authentication,
-    aws_elasticache_replication_group.sessions_store,
   ]
 }
