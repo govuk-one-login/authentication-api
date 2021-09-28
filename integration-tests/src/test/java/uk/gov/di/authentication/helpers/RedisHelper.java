@@ -8,6 +8,7 @@ import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
 import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
@@ -108,10 +109,16 @@ public class RedisHelper {
     }
 
     public static void setSessionState(String sessionId, SessionState state) {
+        setSessionState(sessionId, state, null);
+    }
+
+    public static void setSessionState(
+            String sessionId, SessionState state, CredentialTrustLevel credentialTrustLevel) {
         try (RedisConnectionService redis =
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
             Session session = OBJECT_MAPPER.readValue(redis.getValue(sessionId), Session.class);
             session.setState(state);
+            session.setCurrentCredentialStrength(credentialTrustLevel);
             redis.saveWithExpiry(
                     session.getSessionId(), OBJECT_MAPPER.writeValueAsString(session), 3600);
         } catch (IOException e) {
