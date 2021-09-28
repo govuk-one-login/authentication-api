@@ -10,9 +10,9 @@ module "send_notification" {
     EMAIL_QUEUE_URL      = aws_sqs_queue.email_queue.id
     EVENTS_SNS_TOPIC_ARN = aws_sns_topic.events.arn
     LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
-    REDIS_HOST           = var.use_localstack ? var.external_redis_host : aws_elasticache_replication_group.sessions_store[0].primary_endpoint_address
-    REDIS_PORT           = var.use_localstack ? var.external_redis_port : aws_elasticache_replication_group.sessions_store[0].port
-    REDIS_PASSWORD       = var.use_localstack ? var.external_redis_password : random_password.redis_password.result
+    REDIS_HOST           = local.external_redis_host
+    REDIS_PORT           = local.external_redis_port
+    REDIS_PASSWORD       = local.external_redis_password
     REDIS_TLS            = var.redis_use_tls
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.SendNotificationHandler::handleRequest"
@@ -22,9 +22,9 @@ module "send_notification" {
   execution_arn             = aws_api_gateway_rest_api.di_authentication_api.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.frontend_api_lambda_zip_file
-  security_group_id         = aws_vpc.authentication.default_security_group_id
-  subnet_id                 = aws_subnet.authentication.*.id
-  lambda_role_arn           = aws_iam_role.sqs_lambda_iam_role.arn
+  security_group_id         = local.authentication_security_group_id
+  subnet_id                 = local.authentication_subnet_ids
+  lambda_role_arn           = local.sqs_lambda_iam_role_arn
   logging_endpoint_enabled  = var.logging_endpoint_enabled
   logging_endpoint_arn      = var.logging_endpoint_arn
   default_tags              = local.default_tags
@@ -40,9 +40,6 @@ module "send_notification" {
     aws_api_gateway_rest_api.di_authentication_api,
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
-    aws_vpc.authentication,
-    aws_subnet.authentication,
     aws_sqs_queue.email_queue,
-    aws_elasticache_replication_group.sessions_store,
   ]
 }

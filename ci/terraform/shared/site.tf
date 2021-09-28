@@ -54,7 +54,7 @@ locals {
   // Using a local rather than the default_tags option on the AWS provider, as the latter has known issues which produce errors on apply.
   default_tags = {
     environment = var.environment
-    application = "oidc-api"
+    application = "shared"
   }
 
   request_tracing_allowed = contains(["build", "sandpit"], var.environment)
