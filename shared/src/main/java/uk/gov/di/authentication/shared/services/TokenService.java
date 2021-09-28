@@ -16,6 +16,7 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.auth.Secret;
@@ -36,7 +37,9 @@ import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.TokenStore;
+import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 
 import java.net.URI;
@@ -55,7 +58,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class TokenService {
 
@@ -81,19 +86,24 @@ public class TokenService {
     public OIDCTokenResponse generateTokenResponse(
             String clientID,
             Subject internalSubject,
-            List<String> scopes,
+            Scope authRequestScopes,
             Map<String, Object> additionalTokenClaims,
             Subject publicSubject,
-            String vot) {
+            String vot,
+            List<ClientConsent> clientConsents) {
+        List<String> scopesForToken =
+                calculateScopesForToken(clientConsents, clientID, authRequestScopes);
         AccessToken accessToken =
-                generateAndStoreAccessToken(clientID, internalSubject, scopes, publicSubject);
+                generateAndStoreAccessToken(
+                        clientID, internalSubject, scopesForToken, publicSubject);
         AccessTokenHash accessTokenHash = AccessTokenHash.compute(accessToken, TOKEN_ALGORITHM);
         SignedJWT idToken =
                 generateIDToken(
                         clientID, publicSubject, additionalTokenClaims, accessTokenHash, vot);
-        if (scopes.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
+        if (authRequestScopes.toStringList().contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
             RefreshToken refreshToken =
-                    generateAndStoreRefreshToken(clientID, internalSubject, scopes, publicSubject);
+                    generateAndStoreRefreshToken(
+                            clientID, internalSubject, scopesForToken, publicSubject);
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, refreshToken));
         } else {
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, null));
@@ -165,6 +175,26 @@ public class TokenService {
             return Optional.of(OAuth2Error.INVALID_CLIENT);
         }
         return Optional.empty();
+    }
+
+    private List<String> calculateScopesForToken(
+            List<ClientConsent> clientConsents, String clientID, Scope authRequestScopes) {
+        ClientConsent clientConsent =
+                clientConsents.stream()
+                        .filter(consent -> consent.getClientId().equals(clientID))
+                        .findFirst()
+                        .orElse(null);
+        if (clientConsent == null) {
+            LOGGER.error("Client consent is empty for user");
+            throw new RuntimeException("Client consent is empty for user");
+        }
+        Set<String> claimsFromAuthnRequest =
+                ValidScopes.getClaimsForListOfScopes(authRequestScopes.toStringList());
+        Set<String> claims =
+                clientConsent.getClaims().stream()
+                        .filter(t -> claimsFromAuthnRequest.stream().anyMatch(t::equals))
+                        .collect(Collectors.toSet());
+        return ValidScopes.getScopesForListOfClaims(claims);
     }
 
     private Optional<ErrorObject> validateRefreshRequestParams(Map<String, String> requestBody) {
