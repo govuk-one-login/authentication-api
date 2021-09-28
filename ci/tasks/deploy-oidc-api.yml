@@ -5,7 +5,7 @@ image_resource:
     repository: hashicorp/terraform
     tag: 1.0.4
     username: ((docker-hub-username))
-    password: ((docker-hub-password))    
+    password: ((docker-hub-password))
 params:
   DEPLOYER_ROLE_ARN: ((deployer-role-arn-non-prod))
   DEPLOY_ENVIRONMENT: build
@@ -19,6 +19,7 @@ inputs:
   - name: frontend-api-release
   - name: client-registry-api-release
   - name: lambda-warmer-release
+  - name: shared-terraform-outputs
 outputs:
   - name: terraform-outputs
 run:
@@ -44,9 +45,22 @@ run:
         -var "environment=${DEPLOY_ENVIRONMENT}" \
         -var 'logging_endpoint_enabled=true' \
         -var 'logging_endpoint_arn=arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod' \
-        -var-file ${DEPLOY_ENVIRONMENT}-stub-clients.tfvars \
         -var "dns_state_bucket=${DNS_STATE_BUCKET}" \
         -var "dns_state_key=${DNS_STATE_KEY}" \
         -var "dns_state_role=${DNS_DEPLOYER_ROLE_ARN}" \
+        -var "external_redis_host=$(jq -r .redis_host.value < shared-terraform-outputs/terraform-outputs/${DEPLOY_ENVIRONMENT}-shared-terraform-outputs.json)" \
+        -var "external_redis_port=$(jq -r .redis_port.value < shared-terraform-outputs/terraform-outputs/${DEPLOY_ENVIRONMENT}-shared-terraform-outputs.json)" \
+        -var "external_redis_password=$(jq -r .redis_password.value < shared-terraform-outputs/terraform-outputs/${DEPLOY_ENVIRONMENT}-shared-terraform-outputs.json)" \
+        -var "authentication_security_group_id=$(jq -r .authentication_security_group_id.value < shared-terraform-outputs/terraform-outputs/${DEPLOY_ENVIRONMENT}-shared-terraform-outputs.json)" \
+        -var "authentication_subnet_ids=$(jq -r .authentication_subnet_ids.value < shared-terraform-outputs/terraform-outputs/${DEPLOY_ENVIRONMENT}-shared-terraform-outputs.json)" \
+        -var "lambda_iam_role_arn=$(jq -r .lambda_iam_role_arn.value < shared-terraform-outputs/terraform-outputs/${DEPLOY_ENVIRONMENT}-shared-terraform-outputs.json)" \
+        -var "lambda_iam_role_name=$(jq -r .lambda_iam_role_name.value < shared-terraform-outputs/terraform-outputs/${DEPLOY_ENVIRONMENT}-shared-terraform-outputs.json)" \
+        -var "dynamo_sqs_lambda_iam_role_arn=$(jq -r .dynamo_sqs_lambda_iam_role_arn.value < shared-terraform-outputs/terraform-outputs/${DEPLOY_ENVIRONMENT}-shared-terraform-outputs.json)" \
+        -var "dynamo_sqs_lambda_iam_role_name=$(jq -r .dynamo_sqs_lambda_iam_role_name.value < shared-terraform-outputs/terraform-outputs/${DEPLOY_ENVIRONMENT}-shared-terraform-outputs.json)" \
+        -var "sqs_lambda_iam_role_arn=$(jq -r .sqs_lambda_iam_role_arn.value < shared-terraform-outputs/terraform-outputs/${DEPLOY_ENVIRONMENT}-shared-terraform-outputs.json)" \
+        -var "sqs_lambda_iam_role_name=$(jq -r .sqs_lambda_iam_role_name.value < shared-terraform-outputs/terraform-outputs/${DEPLOY_ENVIRONMENT}-shared-terraform-outputs.json)" \
+        -var "email_lambda_iam_role_arn=$(jq -r .email_lambda_iam_role_arn.value < shared-terraform-outputs/terraform-outputs/${DEPLOY_ENVIRONMENT}-shared-terraform-outputs.json)" \
+        -var "token_lambda_iam_role_arn=$(jq -r .token_lambda_iam_role_arn.value < shared-terraform-outputs/terraform-outputs/${DEPLOY_ENVIRONMENT}-shared-terraform-outputs.json)" \
+        -var "id_token_signing_key_alias_name=$(jq -r .id_token_signing_key_alias_name.value < shared-terraform-outputs/terraform-outputs/${DEPLOY_ENVIRONMENT}-shared-terraform-outputs.json)" \
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-terraform-outputs.json

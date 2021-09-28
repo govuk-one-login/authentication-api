@@ -13,9 +13,9 @@ module "reset_password" {
     EMAIL_QUEUE_URL          = aws_sqs_queue.email_queue.id
     ENVIRONMENT              = var.environment
     EVENTS_SNS_TOPIC_ARN     = aws_sns_topic.events.arn
-    REDIS_HOST               = var.use_localstack ? var.external_redis_host : aws_elasticache_replication_group.sessions_store[0].primary_endpoint_address
-    REDIS_PORT               = var.use_localstack ? var.external_redis_port : aws_elasticache_replication_group.sessions_store[0].port
-    REDIS_PASSWORD           = var.use_localstack ? var.external_redis_password : random_password.redis_password.result
+    REDIS_HOST               = var.external_redis_host
+    REDIS_PORT               = var.external_redis_port
+    REDIS_PASSWORD           = var.external_redis_password
     REDIS_TLS                = var.redis_use_tls
     SQS_ENDPOINT             = var.use_localstack ? "http://localhost:45678/" : null
     TERMS_CONDITIONS_VERSION = var.terms_and_conditions
@@ -27,9 +27,9 @@ module "reset_password" {
   execution_arn             = aws_api_gateway_rest_api.di_authentication_api.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.frontend_api_lambda_zip_file
-  security_group_id         = aws_vpc.authentication.default_security_group_id
-  subnet_id                 = aws_subnet.authentication.*.id
-  lambda_role_arn           = aws_iam_role.dynamo_sqs_lambda_iam_role.arn
+  security_group_id         = var.authentication_security_group_id
+  subnet_id                 = var.authentication_subnet_ids
+  lambda_role_arn           = var.dynamo_sqs_lambda_iam_role_arn
   logging_endpoint_enabled  = var.logging_endpoint_enabled
   logging_endpoint_arn      = var.logging_endpoint_arn
   default_tags              = local.default_tags
@@ -45,8 +45,5 @@ module "reset_password" {
     aws_api_gateway_rest_api.di_authentication_api,
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
-    aws_vpc.authentication,
-    aws_subnet.authentication,
-    aws_elasticache_replication_group.sessions_store,
   ]
 }
