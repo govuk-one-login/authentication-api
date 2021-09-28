@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -71,6 +72,7 @@ public class ClientInfoIntegrationTest extends IntegrationTestEndpoints {
                                 new ClientID(CLIENT_ID),
                                 URI.create("http://localhost/redirect"))
                         .nonce(new Nonce())
+                        .state(new State())
                         .build();
         RedisHelper.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
 
@@ -96,8 +98,7 @@ public class ClientInfoIntegrationTest extends IntegrationTestEndpoints {
         assertEquals(CLIENT_ID, clientInfoResponse.getClientId());
         assertEquals(TEST_CLIENT_NAME, clientInfoResponse.getClientName());
         assertThat(clientInfoResponse.getScopes(), hasItem("openid"));
-        assertThat(clientInfoResponse.getScopes(), hasItem("email"));
-        assertThat(clientInfoResponse.getScopes(), hasSize(2));
+        assertThat(clientInfoResponse.getScopes(), hasSize(1));
     }
 
     private void registerClient(KeyPair keyPair) {
