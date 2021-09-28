@@ -18,9 +18,9 @@ module "openid_configuration_discovery" {
   execution_arn             = aws_api_gateway_rest_api.di_authentication_api.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.oidc_api_lambda_zip_file
-  security_group_id         = aws_vpc.authentication.default_security_group_id
-  subnet_id                 = aws_subnet.authentication.*.id
-  lambda_role_arn           = aws_iam_role.lambda_iam_role.arn
+  security_group_id         = local.authentication_security_group_id
+  subnet_id                 = lcoal.authentication_subnet_ids
+  lambda_role_arn           = local.lambda_iam_role_arn
   logging_endpoint_enabled  = var.logging_endpoint_enabled
   logging_endpoint_arn      = var.logging_endpoint_arn
   default_tags              = local.default_tags
@@ -35,8 +35,5 @@ module "openid_configuration_discovery" {
     aws_api_gateway_rest_api.di_authentication_api,
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
-    aws_vpc.authentication,
-    aws_subnet.authentication,
-    aws_elasticache_replication_group.sessions_store,
   ]
 }
