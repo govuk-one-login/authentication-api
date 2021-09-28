@@ -166,3 +166,59 @@ variable "dns_state_key" {
 variable "dns_state_role" {
   type = string
 }
+
+variable "shared_state_bucket" {
+  type = string
+}
+
+variable "shared_state_key" {
+  type = string
+}
+
+variable "shared_state_role" {
+  type = string
+}
+
+variable "authentication_security_group_id" {
+  type = string
+}
+
+variable "authentication_subnet_ids" {
+  type = list(string)
+}
+
+variable "lambda_iam_role_arn" {
+  type = string
+}
+
+variable "lambda_iam_role_name" {
+  type = string
+}
+
+variable "dynamo_sqs_lambda_iam_role_arn" {
+  type = string
+}
+
+variable "dynamo_sqs_lambda_iam_role_name" {
+  type = string
+}
+
+variable "sqs_lambda_iam_role_arn" {
+  type = string
+}
+
+variable "sqs_lambda_iam_role_name" {
+  type = string
+}
+
+variable "email_lambda_iam_role_arn" {
+  type = string
+}
+
+variable "token_lambda_iam_role_arn" {
+  type = string
+}
+
+variable "id_token_signing_key_alias_name" {
+  type = string
+}
