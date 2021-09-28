@@ -135,7 +135,9 @@ public class StateMachine<T, A, C> {
             ConfigurationService configurationService) {
         return StateMachine.<SessionState, SessionAction, UserContext>builder()
                 .when(NEW)
-                .allow(on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND))
+                .allow(
+                        on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND),
+                        on(SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE).then(VERIFY_EMAIL_CODE_SENT))
                 .when(RESET_PASSWORD_LINK_SENT)
                 .allow(
                         on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND),

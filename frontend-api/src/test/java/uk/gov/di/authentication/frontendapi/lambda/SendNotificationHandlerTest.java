@@ -268,7 +268,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserTransitionsToHelperFromWrongState() {
+    public void shouldReturn200IfUserTransitionsToVerifyEmailCodeSentFromNewState() {
         session.setState(NEW);
 
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
@@ -283,8 +283,8 @@ class SendNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1017));
+        assertThat(result, hasStatus(200));
+        assertThat(VERIFY_EMAIL_CODE_SENT, equalTo(session.getState()));
     }
 
     @Test
