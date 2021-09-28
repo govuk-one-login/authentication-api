@@ -1,55 +1,11 @@
-variable "oidc_api_lambda_zip_file" {
-  default     = "../../../oidc-api/build/distributions/oidc-api.zip"
-  description = "Location of the OIDC API Lambda ZIP file"
-  type        = string
-}
-
-variable "frontend_api_lambda_zip_file" {
-  default     = "../../../frontend-api/build/distributions/frontend-api.zip"
-  description = "Location of the Frontend API Lambda ZIP file"
-  type        = string
-}
-
-variable "client_registry_api_lambda_zip_file" {
-  default     = "../../../client-registry-api/build/distributions/client-registry-api.zip"
-  description = "Location of the client registry API Lambda ZIP file"
-  type        = string
-}
-
-variable "lambda_warmer_zip_file" {
-  default     = "../../../lambda-warmer/build/distributions/lambda-warmer.zip"
-  description = "Location of the Lambda Warmer ZIP file"
-  type        = string
-}
-
 variable "deployer_role_arn" {
   default     = ""
   description = "The name of the AWS role to assume, leave blank when running locally"
   type        = string
 }
 
-variable "notify_api_key" {
-  description = "The API key required to communicate with Notify"
-  type        = string
-}
-
-variable "notify_url" {
-  type    = string
-  default = null
-}
-
 variable "environment" {
   type = string
-}
-
-variable "api_deployment_stage_name" {
-  type    = string
-  default = "test"
-}
-
-variable "api_base_url" {
-  type    = string
-  default = "http://localhost:8080"
 }
 
 variable "aws_endpoint" {
@@ -98,7 +54,6 @@ variable "localstack_endpoint" {
   default = "http://localhost:45678/"
 }
 
-
 variable "redis_use_tls" {
   type    = string
   default = "true"
@@ -143,70 +98,4 @@ variable "aws_region" {
 variable "keep_lambdas_warm" {
   default = true
   type    = bool
-}
-
-variable "reset_password_route" {
-  type    = string
-  default = "/reset-password?code="
-}
-
-variable "frontend_base_url" {
-  type    = string
-  default = ""
-}
-
-variable "dns_state_bucket" {
-  type = string
-}
-
-variable "dns_state_key" {
-  type = string
-}
-
-variable "dns_state_role" {
-  type = string
-}
-
-variable "authentication_security_group_id" {
-  type = string
-}
-
-variable "authentication_subnet_ids" {
-  type = list(string)
-}
-
-variable "lambda_iam_role_arn" {
-  type = string
-}
-
-variable "lambda_iam_role_name" {
-  type = string
-}
-
-variable "dynamo_sqs_lambda_iam_role_arn" {
-  type = string
-}
-
-variable "dynamo_sqs_lambda_iam_role_name" {
-  type = string
-}
-
-variable "sqs_lambda_iam_role_arn" {
-  type = string
-}
-
-variable "sqs_lambda_iam_role_name" {
-  type = string
-}
-
-variable "email_lambda_iam_role_arn" {
-  type = string
-}
-
-variable "token_lambda_iam_role_arn" {
-  type = string
-}
-
-variable "id_token_signing_key_alias_name" {
-  type = string
 }

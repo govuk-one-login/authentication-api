@@ -1,31 +1,3 @@
-resource "aws_iam_role" "email_lambda_iam_role" {
-  name = "${var.environment}-email-notification-sqs-lambda-role"
-
-  assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_policy.json
-
-  tags = local.default_tags
-}
-
-resource "aws_iam_role_policy_attachment" "emaiL_lambda_logging_policy" {
-  role       = aws_iam_role.email_lambda_iam_role.name
-  policy_arn = aws_iam_policy.endpoint_logging_policy.arn
-
-  depends_on = [
-    aws_iam_role.email_lambda_iam_role,
-    aws_iam_policy.endpoint_logging_policy,
-  ]
-}
-
-resource "aws_iam_role_policy_attachment" "email_lambda_networking_policy" {
-  role       = aws_iam_role.email_lambda_iam_role.name
-  policy_arn = aws_iam_policy.endpoint_networking_policy.arn
-
-  depends_on = [
-    aws_iam_role.email_lambda_iam_role,
-    aws_iam_policy.endpoint_networking_policy,
-  ]
-}
-
 resource "aws_sqs_queue" "email_queue" {
   name                      = "${var.environment}-email-notification-queue"
   delay_seconds             = 10
@@ -50,7 +22,7 @@ data "aws_iam_policy_document" "email_queue_policy_document" {
 
     principals {
       type        = "AWS"
-      identifiers = [aws_iam_role.sqs_lambda_iam_role.arn, aws_iam_role.dynamo_sqs_lambda_iam_role.arn]
+      identifiers = [var.sqs_lambda_iam_role_arn, var.dynamo_sqs_lambda_iam_role_arn]
     }
 
     actions = [
@@ -70,7 +42,7 @@ data "aws_iam_policy_document" "email_queue_policy_document" {
 
     principals {
       type        = "AWS"
-      identifiers = [aws_iam_role.email_lambda_iam_role.arn]
+      identifiers = [var.email_lambda_iam_role_arn]
     }
 
     actions = [
@@ -85,10 +57,7 @@ data "aws_iam_policy_document" "email_queue_policy_document" {
   }
 
   depends_on = [
-    time_sleep.wait_60_seconds,
-    aws_iam_role.email_lambda_iam_role,
-    aws_iam_role.sqs_lambda_iam_role,
-    aws_iam_role.dynamo_sqs_lambda_iam_role,
+    time_sleep.wait_60_seconds
   ]
 }
 
@@ -109,15 +78,14 @@ resource "aws_lambda_event_source_mapping" "lambda_sqs_mapping" {
   depends_on = [
     aws_sqs_queue.email_queue,
     aws_sqs_queue_policy.email_queue_policy,
-    aws_lambda_function.email_sqs_lambda,
-    aws_iam_role.lambda_iam_role,
+    aws_lambda_function.email_sqs_lambda
   ]
 }
 
 resource "aws_lambda_function" "email_sqs_lambda" {
   filename      = var.frontend_api_lambda_zip_file
   function_name = "${var.environment}-email-notification-sqs-lambda"
-  role          = aws_iam_role.email_lambda_iam_role.arn
+  role          = var.email_lambda_iam_role_arn
   handler       = "uk.gov.di.authentication.frontendapi.lambda.NotificationHandler::handleRequest"
   timeout       = 30
   memory_size   = 512
@@ -126,8 +94,8 @@ resource "aws_lambda_function" "email_sqs_lambda" {
 
   source_code_hash = filebase64sha256(var.frontend_api_lambda_zip_file)
   vpc_config {
-    security_group_ids = [aws_vpc.authentication.default_security_group_id]
-    subnet_ids         = aws_subnet.authentication.*.id
+    security_group_ids = [var.authentication_security_group_id]
+    subnet_ids         = var.authentication_subnet_ids
   }
   environment {
     variables = {
@@ -144,8 +112,4 @@ resource "aws_lambda_function" "email_sqs_lambda" {
   }
 
   tags = local.default_tags
-
-  depends_on = [
-    aws_iam_role.lambda_iam_role,
-  ]
 }
