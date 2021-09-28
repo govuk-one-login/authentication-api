@@ -3,11 +3,14 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import com.nimbusds.openid.connect.sdk.Nonce;
@@ -15,18 +18,21 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.AuthorizationService;
+import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -40,6 +46,7 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
@@ -56,6 +63,7 @@ import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableE
 import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_REQUEST_ERROR;
 import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_TERMS_CONDS_ACCEPTANCE_UPDATED;
+import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_ADDED;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.buildCookieString;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -78,6 +86,7 @@ class UpdateProfileHandlerTest {
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuthorizationService authorizationService = mock(AuthorizationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final AuthorisationCodeService authorisationCodeService =
             mock(AuthorisationCodeService.class);
@@ -99,7 +108,9 @@ class UpdateProfileHandlerTest {
                         sessionService,
                         clientSessionService,
                         configurationService,
-                        auditService);
+                        auditService,
+                        clientService,
+                        stateMachine);
     }
 
     @AfterEach
@@ -149,7 +160,9 @@ class UpdateProfileHandlerTest {
     }
 
     @Test
-    public void shouldReturn200WhenUpdatingProfileWithConsent() throws ClientNotFoundException {
+    public void shouldReturn200WhenUpdatingProfileWithConsent()
+            throws ClientNotFoundException, JsonProcessingException {
+        session.setState(SessionState.CONSENT_REQUIRED);
         when(authenticationService.userExists(eq(TEST_EMAIL_ADDRESS))).thenReturn(false);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -166,7 +179,8 @@ class UpdateProfileHandlerTest {
                         authRequest.getState(),
                         null,
                         null);
-
+        when(authenticationService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(generateUserProfile()));
         when(authorizationService.isClientRedirectUriValid(eq(clientID), eq(REDIRECT_URI)))
                 .thenReturn(true);
         when(authorisationCodeService.generateAuthorisationCode(
@@ -190,6 +204,9 @@ class UpdateProfileHandlerTest {
         assertThat(result, hasStatus(200));
 
         verify(auditService).submitAuditEvent(ACCOUNT_MANAGEMENT_CONSENT_UPDATED);
+        BaseAPIResponse codeResponse =
+                new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
+        assertThat(codeResponse.getSessionState(), equalTo(CONSENT_ADDED));
     }
 
     @Test
@@ -262,5 +279,15 @@ class UpdateProfileHandlerTest {
         verify(auditService).submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_RECEIVED);
 
         return response;
+    }
+
+    private UserProfile generateUserProfile() {
+        return new UserProfile()
+                .setEmail(TEST_EMAIL_ADDRESS)
+                .setEmailVerified(true)
+                .setPhoneNumber(PHONE_NUMBER)
+                .setEmailVerified(true)
+                .setPublicSubjectID(new Subject().getValue())
+                .setSubjectID(new Subject().getValue());
     }
 }
