@@ -5,7 +5,7 @@ image_resource:
     repository: hashicorp/terraform
     tag: 1.0.4
     username: ((docker-hub-username))
-    password: ((docker-hub-password))    
+    password: ((docker-hub-password))
 params:
   DEPLOYER_ROLE_ARN: ((deployer-role-arn-non-prod))
   DEPLOY_ENVIRONMENT: build
@@ -19,6 +19,7 @@ inputs:
   - name: frontend-api-release
   - name: client-registry-api-release
   - name: lambda-warmer-release
+  - name: shared-terraform-outputs
 outputs:
   - name: terraform-outputs
 run:
@@ -44,9 +45,11 @@ run:
         -var "environment=${DEPLOY_ENVIRONMENT}" \
         -var 'logging_endpoint_enabled=true' \
         -var 'logging_endpoint_arn=arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod' \
-        -var-file ${DEPLOY_ENVIRONMENT}-stub-clients.tfvars \
         -var "dns_state_bucket=${DNS_STATE_BUCKET}" \
         -var "dns_state_key=${DNS_STATE_KEY}" \
         -var "dns_state_role=${DNS_DEPLOYER_ROLE_ARN}" \
+        -var "shared_state_bucket=digital-identity-dev-tfstate" \
+        -var "shared_state_key=${DEPLOY_ENVIRONMENT}-shared-terraform.tfstate" \
+        -var "shared_state_role=${DEPLOYER_ROLE_ARN}" \
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-terraform-outputs.json

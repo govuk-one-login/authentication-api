@@ -17,19 +17,21 @@ function usage() {
     -i  run the integration tests
     -g  running in GitHub actions
     -t  terraform all modules
+    -s  run against sandpit
 USAGE
 }
 RUN_UNIT=0
 RUN_INTEGRATION=0
 IN_GITHUB_ACTIONS=0
 TF_ACCOUNT_MANAGEMENT=0
+SANDPIT=0
 
 if [[ $# -eq 0 ]] || [[ ( $# -eq 1 && ${1} == "-l" ) ]]; then
   RUN_UNIT=1
   RUN_INTEGRATION=1
 fi
 
-while getopts "uigt" opt; do
+while getopts "uigts" opt; do
   case ${opt} in
     u)
       RUN_UNIT=1
@@ -42,6 +44,9 @@ while getopts "uigt" opt; do
       ;;
     t)
       TF_ACCOUNT_MANAGEMENT=1
+      ;;
+    s)
+      SANDPIT=1
       ;;
     *)
       usage
