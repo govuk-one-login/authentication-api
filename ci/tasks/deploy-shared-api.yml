@@ -10,16 +10,11 @@ params:
   DEPLOYER_ROLE_ARN: ((deployer-role-arn-non-prod))
   DEPLOY_ENVIRONMENT: build
   NOTIFY_API_KEY: ((build-notify-api-key))
-  DNS_DEPLOYER_ROLE_ARN: ((deployer-role-arn-production))
-  DNS_STATE_BUCKET: ((dns-state-bucket))
-  DNS_STATE_KEY: ((dns-state-key))
 inputs:
   - name: api-src
   - name: oidc-api-release
   - name: frontend-api-release
   - name: client-registry-api-release
-  - name: lambda-warmer-release
-  - name: shared-terraform-outputs
 outputs:
   - name: terraform-outputs
 run:
@@ -27,27 +22,19 @@ run:
   args:
     - -euc
     - |
-      cd "api-src/ci/terraform/oidc"
+      cd "api-src/ci/terraform/shared"
       terraform init -input=false \
         -backend-config "role_arn=${DEPLOYER_ROLE_ARN}" \
         -backend-config "bucket=digital-identity-dev-tfstate" \
-        -backend-config "key=${DEPLOY_ENVIRONMENT}-terraform.tfstate" \
+        -backend-config "key=${DEPLOY_ENVIRONMENT}-shared-terraform.tfstate" \
         -backend-config "encrypt=true" \
         -backend-config "region=eu-west-2"
 
       terraform apply -auto-approve \
-        -var 'oidc_api_lambda_zip_file=../../../../oidc-api-release/oidc-api.zip' \
-        -var 'frontend_api_lambda_zip_file=../../../../frontend-api-release/frontend-api.zip' \
-        -var 'client_registry_api_lambda_zip_file=../../../../client-registry-api-release/client-registry-api.zip' \
-        -var 'lambda_warmer_zip_file=../../../../lambda-warmer-release/lambda-warmer.zip' \
         -var "deployer_role_arn=${DEPLOYER_ROLE_ARN}" \
-        -var "notify_api_key=${NOTIFY_API_KEY}" \
         -var "environment=${DEPLOY_ENVIRONMENT}" \
         -var 'logging_endpoint_enabled=true' \
         -var 'logging_endpoint_arn=arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod' \
-        -var "dns_state_bucket=${DNS_STATE_BUCKET}" \
-        -var "dns_state_key=${DNS_STATE_KEY}" \
-        -var "dns_state_role=${DNS_DEPLOYER_ROLE_ARN}" \
-        -var "shared_state_bucket=digital-identity-dev-tfstate" \
+        -var-file ${DEPLOY_ENVIRONMENT}-stub-clients.tfvars \
 
-      terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-terraform-outputs.json
+      terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-shared-terraform-outputs.json

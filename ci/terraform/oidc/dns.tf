@@ -8,7 +8,6 @@ data "terraform_remote_state" "dns" {
     region   = var.aws_region
   }
 }
-
 locals {
   frontend_base_url = var.use_localstack ? var.frontend_base_url : lookup(data.terraform_remote_state.dns[0].outputs, "${var.environment}_frontend_url", "")
 }

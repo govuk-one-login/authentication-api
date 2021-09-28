@@ -1,5 +1,5 @@
 bucket       = "terraform-state"
-key          = "local-oidc-terraform.tfstate"
+key          = "local-shared-terraform.tfstate"
 region       = "eu-west-2"
 endpoint     = "http://localhost:45678"
 iam_endpoint = "http://localhost:45678"
