@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.AuthorizationService;
@@ -243,7 +244,9 @@ class AuthCodeHandlerTest {
     private void generateValidSession(Map<String, List<String>> authRequest) {
         when(sessionService.readSessionFromRedis(SESSION_ID)).thenReturn(Optional.of(session));
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(new ClientSession(authRequest, LocalDateTime.now()));
+                .thenReturn(
+                        new ClientSession(
+                                authRequest, LocalDateTime.now(), mock(VectorOfTrust.class)));
     }
 
     private String buildCookieString() {

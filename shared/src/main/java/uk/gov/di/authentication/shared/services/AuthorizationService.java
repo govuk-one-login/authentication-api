@@ -24,6 +24,7 @@ import static java.lang.String.format;
 
 public class AuthorizationService {
 
+    public static final String VTR = "vtr";
     private final DynamoClientService dynamoClientService;
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthorizationService.class);
 
@@ -96,7 +97,7 @@ public class AuthorizationService {
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "Request is missing state parameter"));
         }
-        List<String> vtr = authRequest.getCustomParameter("vtr");
+        List<String> vtr = authRequest.getCustomParameter(VTR);
         if (vtr != null) {
             try {
                 VectorOfTrust vectorOfTrust = VectorOfTrust.parse(vtr);
@@ -121,6 +122,17 @@ public class AuthorizationService {
     public AuthenticationErrorResponse generateAuthenticationErrorResponse(
             URI redirectUri, State state, ResponseMode responseMode, ErrorObject errorObject) {
         return new AuthenticationErrorResponse(redirectUri, errorObject, state, responseMode);
+    }
+
+    public VectorOfTrust getEffectiveVectorOfTrust(AuthenticationRequest authenticationRequest) {
+        VectorOfTrust clientDefaults =
+                dynamoClientService
+                        .getClient(authenticationRequest.getClientID().getValue())
+                        .map(ClientRegistry::calculateEffectiveVectorOfTrust)
+                        .get();
+        List<String> vtr = authenticationRequest.getCustomParameter(VTR);
+
+        return VectorOfTrust.parse(authenticationRequest.getCustomParameter(VTR), clientDefaults);
     }
 
     private boolean areScopesValid(List<String> scopes) {

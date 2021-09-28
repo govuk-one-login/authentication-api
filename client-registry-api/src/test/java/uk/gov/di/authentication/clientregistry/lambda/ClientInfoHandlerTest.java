@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -140,6 +141,7 @@ public class ClientInfoHandlerTest {
                         .state(state)
                         .nonce(new Nonce())
                         .build();
-        return Optional.of(new ClientSession(authRequest.toParameters(), null));
+        return Optional.of(
+                new ClientSession(authRequest.toParameters(), null, mock(VectorOfTrust.class)));
     }
 }

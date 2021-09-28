@@ -10,6 +10,7 @@ import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -63,7 +64,8 @@ public class RedisHelper {
             redis.saveWithExpiry(
                     CLIENT_SESSION_PREFIX.concat(clientSessionId),
                     OBJECT_MAPPER.writeValueAsString(
-                            new ClientSession(authRequest, LocalDateTime.now())),
+                            new ClientSession(
+                                    authRequest, LocalDateTime.now(), VectorOfTrust.getDefaults())),
                     3600);
 
         } catch (IOException e) {
@@ -181,7 +183,8 @@ public class RedisHelper {
             redis.saveWithExpiry(
                     CLIENT_SESSION_PREFIX.concat(clientSessionId),
                     OBJECT_MAPPER.writeValueAsString(
-                            new ClientSession(authRequest, LocalDateTime.now())),
+                            new ClientSession(
+                                    authRequest, LocalDateTime.now(), VectorOfTrust.getDefaults())),
                     300);
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -195,7 +198,8 @@ public class RedisHelper {
             redis.saveWithExpiry(
                     CLIENT_SESSION_PREFIX.concat(clientSessionId),
                     OBJECT_MAPPER.writeValueAsString(
-                            new ClientSession(authRequest, LocalDateTime.now())),
+                            new ClientSession(
+                                    authRequest, LocalDateTime.now(), VectorOfTrust.getDefaults())),
                     300);
         } catch (IOException e) {
             throw new RuntimeException(e);

@@ -43,6 +43,7 @@ public class AuthorisationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthorisationHandler.class);
+    public static final String VTR = "vtr";
 
     private final SessionService sessionService;
     private final ConfigurationService configurationService;
@@ -155,6 +156,7 @@ public class AuthorisationHandler
                         () ->
                                 createSessionAndRedirect(
                                         authRequestParameters,
+                                        authenticationRequest,
                                         authenticationRequest.getClientID(),
                                         configurationService.getLoginURI()));
     }
@@ -166,7 +168,11 @@ public class AuthorisationHandler
             URI redirectURI) {
         String clientSessionID =
                 clientSessionService.generateClientSession(
-                        new ClientSession(authRequestParameters, LocalDateTime.now()));
+                        new ClientSession(
+                                authRequestParameters,
+                                LocalDateTime.now(),
+                                authorizationService.getEffectiveVectorOfTrust(
+                                        authenticationRequest)));
         session = updateSessionId(session, authenticationRequest.getClientID(), clientSessionID);
         return redirect(session, clientSessionID, redirectURI);
     }
@@ -199,12 +205,19 @@ public class AuthorisationHandler
     }
 
     private APIGatewayProxyResponseEvent createSessionAndRedirect(
-            Map<String, List<String>> authRequest, ClientID clientId, URI redirectURI) {
+            Map<String, List<String>> authRequest,
+            AuthenticationRequest authenticationRequest,
+            ClientID clientId,
+            URI redirectURI) {
         Session session = sessionService.createSession();
 
         String clientSessionID =
                 clientSessionService.generateClientSession(
-                        new ClientSession(authRequest, LocalDateTime.now()));
+                        new ClientSession(
+                                authRequest,
+                                LocalDateTime.now(),
+                                authorizationService.getEffectiveVectorOfTrust(
+                                        authenticationRequest)));
         session.addClientSession(clientSessionID);
         LOGGER.info(
                 "Created session {} for client {} - client session id = {}",
