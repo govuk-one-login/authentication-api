@@ -35,21 +35,21 @@ resource "aws_iam_policy" "lambda_sns_policy" {
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_sns" {
-  role       = aws_iam_role.lambda_iam_role.name
+  role       = local.lambda_iam_role_name
   policy_arn = aws_iam_policy.lambda_sns_policy.arn
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_sns_token" {
-  role       = aws_iam_role.token_lambda_iam_role.name
+  role       = local.lambda_iam_role_name
   policy_arn = aws_iam_policy.lambda_sns_policy.arn
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_sns_sqs" {
-  role       = aws_iam_role.sqs_lambda_iam_role.name
+  role       = local.sqs_lambda_iam_role_name
   policy_arn = aws_iam_policy.lambda_sns_policy.arn
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_sns_dynamo" {
-  role       = aws_iam_role.dynamo_sqs_lambda_iam_role.name
+  role       = local.dynamo_sqs_lambda_iam_role_name
   policy_arn = aws_iam_policy.lambda_sns_policy.arn
 }
