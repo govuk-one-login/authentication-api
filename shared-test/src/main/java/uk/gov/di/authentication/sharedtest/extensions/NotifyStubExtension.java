@@ -40,16 +40,15 @@ public class NotifyStubExtension extends HttpStubExtension {
                         + "  }"
                         + "}");
         register(
-                "/v2/notifications/email",
+                "/v2/notifications/sms",
                 201,
                 "application/json",
                 "{"
                         + "  \"id\": \"740e5834-3a29-46b4-9a6f-16142fde533a\","
                         + "  \"reference\": \"STRING\","
                         + "  \"content\": {"
-                        + "    \"subject\": \"SUBJECT TEXT\","
                         + "    \"body\": \"MESSAGE TEXT\",\n"
-                        + "    \"from_email\": \"SENDER EMAIL\""
+                        + "    \"from_number\": \"SENDER\""
                         + "  },"
                         + "  \"uri\": \"http://localhost:8888/v2/notifications/a-message-id\","
                         + "  \"template\": {"
