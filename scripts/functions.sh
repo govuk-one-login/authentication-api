@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 DOCKER_BASE=docker-compose
+TF_COMMAND=apply
 declare -a task_timings
 
 function record_timings() {
@@ -57,12 +58,12 @@ function run_terraform() {
   run_terraform_start_seconds=$SECONDS
   pushd "$1" >/dev/null
   rm -fr .terraform/ *.tfstate
-  terraform init -backend-config=localstack.hcl
+  terraform init -backend-config=$TERRAFORM_BACKEND_CONFIG
   printf "\nRunning terraform -> %s apply quietly (output redirected to terraform.log)...\n" "$1"
   set +e
-  terraform apply -var-file=localstack.tfvars -auto-approve > terraform.log
+  terraform $TF_COMMAND -var-file=$TERRAFORM_VAR_FILE -auto-approve > terraform.log
   tf_exit_code=$?
-  record_timings "run_terraform" $run_terraform_start_seconds $SECONDS false
+  record_timings "run_terraform '$1'" $run_terraform_start_seconds $SECONDS false
   set -e
   if [ ${tf_exit_code} -eq 0 ]; then
     printf "\nTerraform succeeded.\n"
@@ -90,16 +91,28 @@ function funky_started() {
 startup() {
   export TF_VAR_notify_url="http://notify.internal:8888"
   export TF_VAR_notify_api_key="my_test_key-$(uuidgen)-$(uuidgen)"
-  export AWS_ACCESS_KEY_ID="mock-access-key"
-  export AWS_SECRET_ACCESS_KEY="mock-secret-key"
   export STUB_RELYING_PARTY_REDIRECT_URI="https://di-auth-stub-relying-party-build.london.cloudapps.digital/"
   export LOGIN_URI="http://localhost:3000/"
 
   stop_docker_services aws redis dynamodb
   printf "\nStarting di-authentication-api...\n"
   ./gradlew clean build -x test
-  printf "\nStarting Docker services...\n"
-  startup_docker aws redis dynamodb
+
+  if [[ ! -z ${SANDPIT+x} && ${SANDPIT} -eq 1 ]]; then
+    printf "\nRunning against sandpit, AWS credentials are required.\n"
+    export TERRAFORM_BACKEND_CONFIG=sandpit.hcl
+    export TERRAFORM_VAR_FILE=sandpit.tfvars
+  else
+    printf "\nRunning against localstack.  Starting Docker services...\n"
+    startup_docker aws redis dynamodb
+    export AWS_ACCESS_KEY_ID="mock-access-key"
+    export AWS_SECRET_ACCESS_KEY="mock-secret-key"
+    export TERRAFORM_BACKEND_CONFIG=localstack.hcl
+    export TERRAFORM_VAR_FILE=localstack.tfvars
+  fi
+
+  run_terraform ci/terraform/shared
+  export_tf_shared_output ci/terraform/shared
   run_terraform ci/terraform/oidc
   if [[ ! -z ${TF_ACCOUNT_MANAGEMENT+x} && ${TF_ACCOUNT_MANAGEMENT} -eq 1 ]]; then
     run_terraform ci/terraform/account-management
@@ -109,6 +122,29 @@ startup() {
   else
     printf "\nServices Started!\n"
   fi
+}
+
+export_tf_shared_output() {
+  export_tf_shared_output_start_seconds=$SECONDS
+  pushd "$1" >/dev/null
+  terraform output -json > shared-outputs.json
+  export TF_VAR_external_redis_host="$(jq -r .redis_host.value < shared-outputs.json)"
+  export TF_VAR_external_redis_port="$(jq -r .redis_port.value < shared-outputs.json)"
+  export TF_VAR_external_redis_password="$(jq -r .redis_password.value < shared-outputs.json)"
+  export TF_VAR_authentication_security_group_id="$(jq -r .authentication_security_group_id.value < shared-outputs.json)"
+  export TF_VAR_authentication_subnet_ids="$(jq -r .authentication_subnet_ids.value < shared-outputs.json)"
+  export TF_VAR_lambda_iam_role_arn="$(jq -r .lambda_iam_role_arn.value < shared-outputs.json)"
+  export TF_VAR_lambda_iam_role_name="$(jq -r .lambda_iam_role_name.value < shared-outputs.json)"
+  export TF_VAR_dynamo_sqs_lambda_iam_role_arn="$(jq -r .dynamo_sqs_lambda_iam_role_arn.value < shared-outputs.json)"
+  export TF_VAR_dynamo_sqs_lambda_iam_role_name="$(jq -r .dynamo_sqs_lambda_iam_role_name.value < shared-outputs.json)"
+  export TF_VAR_sqs_lambda_iam_role_arn="$(jq -r .sqs_lambda_iam_role_arn.value < shared-outputs.json)"
+  export TF_VAR_sqs_lambda_iam_role_name="$(jq -r .sqs_lambda_iam_role_name.value < shared-outputs.json)"
+  export TF_VAR_email_lambda_iam_role_arn="$(jq -r .email_lambda_iam_role_arn.value < shared-outputs.json)"
+  export TF_VAR_token_lambda_iam_role_arn="$(jq -r .token_lambda_iam_role_arn.value < shared-outputs.json)"
+  export TF_VAR_id_token_signing_key_alias_name="$(jq -r .id_token_signing_key_alias_name.value < shared-outputs.json)"
+  rm -f shared-outputs.json
+  popd >/dev/null
+  record_timings "export_tf_shared_output" $export_tf_shared_output_start_seconds $SECONDS false
 }
 
 run-integration-tests() {
