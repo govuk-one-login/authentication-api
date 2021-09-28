@@ -165,3 +165,31 @@ resource "aws_iam_role_policy_attachment" "token_lambda_networking" {
   role       = aws_iam_role.token_lambda_iam_role.name
   policy_arn = aws_iam_policy.endpoint_networking_policy.arn
 }
+
+resource "aws_iam_role" "email_lambda_iam_role" {
+  name = "${var.environment}-email-notification-sqs-lambda-role"
+
+  assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_policy.json
+
+  tags = local.default_tags
+}
+
+resource "aws_iam_role_policy_attachment" "emaiL_lambda_logging_policy" {
+  role       = aws_iam_role.email_lambda_iam_role.name
+  policy_arn = aws_iam_policy.endpoint_logging_policy.arn
+
+  depends_on = [
+    aws_iam_role.email_lambda_iam_role,
+    aws_iam_policy.endpoint_logging_policy,
+  ]
+}
+
+resource "aws_iam_role_policy_attachment" "email_lambda_networking_policy" {
+  role       = aws_iam_role.email_lambda_iam_role.name
+  policy_arn = aws_iam_policy.endpoint_networking_policy.arn
+
+  depends_on = [
+    aws_iam_role.email_lambda_iam_role,
+    aws_iam_policy.endpoint_networking_policy,
+  ]
+}
