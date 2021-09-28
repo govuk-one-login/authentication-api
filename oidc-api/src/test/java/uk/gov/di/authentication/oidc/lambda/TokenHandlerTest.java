@@ -38,6 +38,7 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.TokenStore;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
@@ -156,7 +157,9 @@ public class TokenHandlerTest {
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(
                         new ClientSession(
-                                generateAuthRequest().toParameters(), LocalDateTime.now()));
+                                generateAuthRequest().toParameters(),
+                                LocalDateTime.now(),
+                                mock(VectorOfTrust.class)));
         when(dynamoService.getSubjectFromEmail(eq(TEST_EMAIL))).thenReturn(INTERNAL_SUBJECT);
         when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
@@ -300,7 +303,9 @@ public class TokenHandlerTest {
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(
                         new ClientSession(
-                                generateAuthRequest().toParameters(), LocalDateTime.now()));
+                                generateAuthRequest().toParameters(),
+                                LocalDateTime.now(),
+                                mock(VectorOfTrust.class)));
 
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(privateKeyJWT, authCode, "http://invalid-redirect-uri");

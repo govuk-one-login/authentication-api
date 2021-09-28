@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -248,7 +249,8 @@ class UpdateProfileHandlerTest {
                         .nonce(new Nonce())
                         .build();
         ClientSession clientSession =
-                new ClientSession(authRequest.toParameters(), LocalDateTime.now());
+                new ClientSession(
+                        authRequest.toParameters(), LocalDateTime.now(), mock(VectorOfTrust.class));
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
         return authRequest;

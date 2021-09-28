@@ -18,6 +18,7 @@ import uk.gov.di.authentication.oidc.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -274,7 +275,8 @@ class LogoutHandlerTest {
                                 List.of("code"),
                                 "state",
                                 List.of("some-state")),
-                        LocalDateTime.now());
+                        LocalDateTime.now(),
+                        mock(VectorOfTrust.class));
         clientSession.setIdTokenHint(idToken.serialize());
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID)).thenReturn(clientSession);
     }
