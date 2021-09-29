@@ -37,16 +37,15 @@ import java.time.ZoneId;
 import java.util.Optional;
 import java.util.Set;
 
-import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
 import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_CONSENT_UPDATED;
 import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_PHONE_NUMBER_UPDATED;
 import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_REQUEST_ERROR;
 import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_TERMS_CONDS_ACCEPTANCE_UPDATED;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ACCEPTS_TERMS_AND_CONDITIONS;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_A_NEW_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_ACTIONED_CONSENT;
 import static uk.gov.di.authentication.shared.entity.SessionState.ADDED_UNVERIFIED_PHONE_NUMBER;
-import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
@@ -215,12 +214,16 @@ public class UpdateProfileHandler extends BaseFrontendHandler
                                                     configurationService
                                                             .getTermsAndConditionsVersion());
 
-                                            sessionService.save(
-                                                    session.setState(UPDATED_TERMS_AND_CONDITIONS));
+                                            var nextState =
+                                                    stateMachine.transition(
+                                                            session.getState(),
+                                                            USER_ACCEPTS_TERMS_AND_CONDITIONS,
+                                                            userContext);
+                                            sessionService.save(session.setState(nextState));
 
                                             LOGGER.info(
                                                     "Updated terms and conditions. Session state {}",
-                                                    UPDATE_TERMS_CONDS);
+                                                    nextState);
 
                                             return generateSuccessResponse(session);
                                         }
