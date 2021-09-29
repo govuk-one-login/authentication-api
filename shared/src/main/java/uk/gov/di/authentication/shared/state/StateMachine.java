@@ -238,6 +238,10 @@ public class StateMachine<T, A, C> {
                                                                 .getTermsAndConditionsVersion())))
                                 .then(UPDATED_TERMS_AND_CONDITIONS),
                         on(USER_ENTERED_VALID_CREDENTIALS)
+                                .ifCondition(
+                                        and(clientDoesNotRequireMfa(), userHasNotGivenConsent()))
+                                .then(CONSENT_REQUIRED),
+                        on(USER_ENTERED_VALID_CREDENTIALS)
                                 .ifCondition(clientDoesNotRequireMfa())
                                 .then(AUTHENTICATED),
                         on(USER_ENTERED_VALID_CREDENTIALS).then(LOGGED_IN),

@@ -35,8 +35,8 @@ import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.HIGH_L
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.VERY_HIGH_LEVEL;
-import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
+import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.LOGGED_IN;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS;
 
@@ -110,7 +110,7 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
     private static Stream<Arguments> vectorOfTrustEndStates() {
         return Stream.of(
                 Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, LOGGED_IN),
-                Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTHENTICATED),
+                Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, CONSENT_REQUIRED),
                 Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, LOGGED_IN),
                 Arguments.of(HIGH_LEVEL, CURRENT_TERMS_AND_CONDITIONS, LOGGED_IN),
                 Arguments.of(VERY_HIGH_LEVEL, CURRENT_TERMS_AND_CONDITIONS, LOGGED_IN),
