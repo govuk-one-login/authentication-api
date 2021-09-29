@@ -68,9 +68,9 @@ import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableE
 import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_TERMS_CONDS_ACCEPTANCE_UPDATED;
 import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_ADDED;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.buildCookieString;
-import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
-import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class UpdateProfileHandlerTest {
 

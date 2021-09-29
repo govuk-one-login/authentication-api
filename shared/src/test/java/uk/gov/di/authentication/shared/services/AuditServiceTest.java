@@ -16,10 +16,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasEventName;
-import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasTimestamp;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.AuditServiceTest.TestEvents.TEST_EVENT_ONE;
+import static uk.gov.di.authentication.sharedtest.matchers.AuditMessageMatcher.hasEventName;
+import static uk.gov.di.authentication.sharedtest.matchers.AuditMessageMatcher.hasTimestamp;
 
 class AuditServiceTest {
 

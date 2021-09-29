@@ -28,9 +28,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.entity.NotificationType.EMAIL_UPDATED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
-import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
-import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
-import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class UpdateEmailHandlerTest {
 

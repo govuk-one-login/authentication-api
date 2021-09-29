@@ -24,7 +24,8 @@ dependencies {
             "com.google.protobuf:protobuf-java:3.18.0"
 
     testImplementation configurations.tests,
-            configurations.lambda_tests
+            configurations.lambda_tests,
+            project(":shared-test")
     testRuntimeOnly configurations.test_runtime
 }
 
