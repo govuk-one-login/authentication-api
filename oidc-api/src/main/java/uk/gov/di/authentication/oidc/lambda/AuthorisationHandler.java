@@ -13,20 +13,25 @@ import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCError;
 import com.nimbusds.openid.connect.sdk.Prompt;
+import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthorizationService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.state.StateMachine;
+import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -34,10 +39,12 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
-import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class AuthorisationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -50,18 +57,21 @@ public class AuthorisationHandler
     private final ClientSessionService clientSessionService;
     private final AuthorizationService authorizationService;
     private final AuditService auditService;
+    private final StateMachine<SessionState, SessionAction, UserContext> stateMachine;
 
     public AuthorisationHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
             ClientSessionService clientSessionService,
             AuthorizationService authorizationService,
-            AuditService auditService) {
+            AuditService auditService,
+            StateMachine<SessionState, SessionAction, UserContext> stateMachine) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
         this.authorizationService = authorizationService;
         this.auditService = auditService;
+        this.stateMachine = stateMachine;
     }
 
     public AuthorisationHandler() {
@@ -70,6 +80,7 @@ public class AuthorisationHandler
         this.clientSessionService = new ClientSessionService(configurationService);
         this.authorizationService = new AuthorizationService(configurationService);
         this.auditService = new AuditService();
+        this.stateMachine = userJourneyStateMachine();
     }
 
     @Override
@@ -123,6 +134,7 @@ public class AuthorisationHandler
             Map<String, List<String>> authRequestParameters,
             Optional<Session> existingSession,
             AuthenticationRequest authenticationRequest) {
+        final SessionAction sessionAction;
         if (authenticationRequest.getPrompt() != null) {
             if (authenticationRequest.getPrompt().contains(Prompt.Type.CONSENT)
                     || authenticationRequest.getPrompt().contains(Prompt.Type.SELECT_ACCOUNT)) {
@@ -135,23 +147,22 @@ public class AuthorisationHandler
             }
             if (authenticationRequest.getPrompt().contains(Prompt.Type.LOGIN)
                     && isUserAuthenticated(existingSession)) {
-                existingSession.ifPresent(session -> session.setState(AUTHENTICATION_REQUIRED));
+                sessionAction = USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED;
+            } else {
+                sessionAction = USER_HAS_STARTED_A_NEW_JOURNEY;
             }
+        } else {
+            sessionAction = USER_HAS_STARTED_A_NEW_JOURNEY;
         }
 
         return existingSession
                 .map(
-                        session -> {
-                            URI redirectUri = configurationService.getAuthCodeURI();
-                            if (!session.getState().equals(AUTHENTICATED)) {
-                                redirectUri = configurationService.getLoginURI();
-                            }
-                            return updateSessionAndRedirect(
-                                    authRequestParameters,
-                                    authenticationRequest,
-                                    session,
-                                    redirectUri);
-                        })
+                        session ->
+                                updateSessionAndRedirect(
+                                        authRequestParameters,
+                                        authenticationRequest,
+                                        session,
+                                        sessionAction))
                 .orElseGet(
                         () ->
                                 createSessionAndRedirect(
@@ -165,7 +176,23 @@ public class AuthorisationHandler
             Map<String, List<String>> authRequestParameters,
             AuthenticationRequest authenticationRequest,
             Session session,
-            URI redirectURI) {
+            SessionAction sessionAction) {
+        UserContext userContext = UserContext.builder(session).build();
+        SessionState nextState =
+                stateMachine.transition(session.getState(), sessionAction, userContext);
+        URI redirectUri;
+        if (nextState == AUTHENTICATED) {
+            redirectUri = configurationService.getAuthCodeURI();
+        } else {
+            try {
+                redirectUri =
+                        new URIBuilder(configurationService.getLoginURI())
+                                .addParameter("interrupt", nextState.toString())
+                                .build();
+            } catch (URISyntaxException e) {
+                throw new RuntimeException("Error constructing redirect URI", e);
+            }
+        }
         String clientSessionID =
                 clientSessionService.generateClientSession(
                         new ClientSession(
@@ -173,8 +200,10 @@ public class AuthorisationHandler
                                 LocalDateTime.now(),
                                 authorizationService.getEffectiveVectorOfTrust(
                                         authenticationRequest)));
-        session = updateSessionId(session, authenticationRequest.getClientID(), clientSessionID);
-        return redirect(session, clientSessionID, redirectURI);
+        session =
+                updateSessionId(
+                        session, authenticationRequest.getClientID(), clientSessionID, nextState);
+        return redirect(session, clientSessionID, redirectUri);
     }
 
     private boolean isUserAuthenticated(Optional<Session> existingSession) {
@@ -183,23 +212,19 @@ public class AuthorisationHandler
                 .orElse(Boolean.FALSE);
     }
 
-    private Session updateSessionId(Session session, ClientID clientId, String clientSessionID) {
+    private Session updateSessionId(
+            Session session, ClientID clientId, String clientSessionID, SessionState nextState) {
         String oldSessionId = session.getSessionId();
-        if (!session.getState().equals(SessionState.AUTHENTICATED)) {
-            session = sessionService.createSession();
-            sessionService.deleteSessionFromRedis(oldSessionId);
-        } else {
-            sessionService.updateSessionId(session);
-        }
+        sessionService.updateSessionId(session);
         session.addClientSession(clientSessionID);
         LOGGER.info(
-                "Updated session id from {} to {} for client {} - client session id = {}",
+                "Updated session id from {} to {} for client {} - client session id = {} - new",
                 oldSessionId,
                 session.getSessionId(),
                 clientId.getValue(),
                 clientSessionID);
 
-        sessionService.save(session);
+        sessionService.save(session.setState(nextState));
         LOGGER.info("Session saved successfully {}", session.getSessionId());
         return session;
     }
