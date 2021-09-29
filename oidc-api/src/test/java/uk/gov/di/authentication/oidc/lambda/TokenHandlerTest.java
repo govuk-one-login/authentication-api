@@ -33,11 +33,13 @@ import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
+import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.TokenStore;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
@@ -57,12 +59,14 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -160,15 +164,15 @@ public class TokenHandlerTest {
                                 generateAuthRequest().toParameters(),
                                 LocalDateTime.now(),
                                 mock(VectorOfTrust.class)));
-        when(dynamoService.getSubjectFromEmail(eq(TEST_EMAIL))).thenReturn(INTERNAL_SUBJECT);
         when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
                         INTERNAL_SUBJECT,
-                        SCOPES.toStringList(),
+                        SCOPES,
                         Map.of("nonce", NONCE),
                         PUBLIC_SUBJECT,
-                        VOT))
+                        VOT,
+                        userProfile.getClientConsent()))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result = generateApiGatewayRequest(privateKeyJWT, authCode);
@@ -366,6 +370,7 @@ public class TokenHandlerTest {
     }
 
     private UserProfile generateUserProfile() {
+        Set<String> claims = ValidScopes.getClaimsForListOfScopes(SCOPES.toStringList());
         return new UserProfile()
                 .setEmail(TEST_EMAIL)
                 .setEmailVerified(true)
@@ -374,7 +379,10 @@ public class TokenHandlerTest {
                 .setSubjectID(INTERNAL_SUBJECT.getValue())
                 .setCreated(LocalDateTime.now().toString())
                 .setUpdated(LocalDateTime.now().toString())
-                .setPublicSubjectID(PUBLIC_SUBJECT.getValue());
+                .setPublicSubjectID(PUBLIC_SUBJECT.getValue())
+                .setClientConsent(
+                        new ClientConsent(
+                                CLIENT_ID, claims, LocalDateTime.now(ZoneId.of("UTC")).toString()));
     }
 
     private SignedJWT createSignedRefreshToken() throws JOSEException {

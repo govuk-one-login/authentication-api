@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.shared.state;
 
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 
@@ -11,16 +12,19 @@ public class UserContext {
     private final Optional<UserProfile> userProfile;
     private final boolean userAuthenticated;
     private final Optional<ClientRegistry> client;
+    private final ClientSession clientSession;
 
     protected UserContext(
             Session session,
             Optional<UserProfile> userProfile,
             boolean userAuthenticated,
-            Optional<ClientRegistry> client) {
+            Optional<ClientRegistry> client,
+            ClientSession clientSession) {
         this.session = session;
         this.userProfile = userProfile;
         this.userAuthenticated = userAuthenticated;
         this.client = client;
+        this.clientSession = clientSession;
     }
 
     public Session getSession() {
@@ -39,6 +43,10 @@ public class UserContext {
         return client;
     }
 
+    public ClientSession getClientSession() {
+        return clientSession;
+    }
+
     public static Builder builder(Session session) {
         return new Builder(session);
     }
@@ -48,6 +56,7 @@ public class UserContext {
         private Optional<UserProfile> userProfile = Optional.empty();
         private boolean userAuthenticated = false;
         private Optional<ClientRegistry> client = Optional.empty();
+        private ClientSession clientSession = null;
 
         protected Builder(Session session) {
             this.session = session;
@@ -76,8 +85,13 @@ public class UserContext {
             return this;
         }
 
+        public Builder withClientSession(ClientSession clientSession) {
+            this.clientSession = clientSession;
+            return this;
+        }
+
         public UserContext build() {
-            return new UserContext(session, userProfile, userAuthenticated, client);
+            return new UserContext(session, userProfile, userAuthenticated, client, clientSession);
         }
     }
 }

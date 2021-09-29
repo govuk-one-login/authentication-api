@@ -43,12 +43,15 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_MFA_CODE;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_PHONE_VERIFICATION_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_ACTIONED_CONSENT;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_CREATED_A_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_REJECTS_TERMS_AND_CONDITIONS;
 import static uk.gov.di.authentication.shared.entity.SessionState.ACCOUNT_TEMPORARILY_LOCKED;
 import static uk.gov.di.authentication.shared.entity.SessionState.ADDED_UNVERIFIED_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
+import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_ADDED;
+import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_NOT_VALID;
 import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_REQUESTS_BLOCKED;
@@ -78,6 +81,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_EMAIL_C
 import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_PHONE_NUMBER_CODE_SENT;
 import static uk.gov.di.authentication.shared.state.conditions.AggregateCondition.and;
 import static uk.gov.di.authentication.shared.state.conditions.ClientDoesNotRequireMfa.clientDoesNotRequireMfa;
+import static uk.gov.di.authentication.shared.state.conditions.ConsentNotGiven.userHasNotGivenConsent;
 import static uk.gov.di.authentication.shared.state.conditions.PhoneNumberUnverified.phoneNumberUnverified;
 import static uk.gov.di.authentication.shared.state.conditions.TermsAndConditionsVersionNotAccepted.userHasNotAcceptedTermsAndConditionsVersion;
 
@@ -188,6 +192,9 @@ public class StateMachine<T, A, C> {
                 .when(VERIFY_PHONE_NUMBER_CODE_SENT)
                 .allow(
                         on(USER_ENTERED_VALID_PHONE_VERIFICATION_CODE)
+                                .then(CONSENT_REQUIRED)
+                                .ifCondition(userHasNotGivenConsent()),
+                        on(USER_ENTERED_VALID_PHONE_VERIFICATION_CODE)
                                 .then(PHONE_NUMBER_CODE_VERIFIED),
                         on(SYSTEM_HAS_SENT_TOO_MANY_PHONE_VERIFICATION_CODES)
                                 .then(PHONE_NUMBER_MAX_CODES_SENT),
@@ -268,6 +275,9 @@ public class StateMachine<T, A, C> {
                                         userHasNotAcceptedTermsAndConditionsVersion(
                                                 configurationService
                                                         .getTermsAndConditionsVersion())),
+                        on(USER_ENTERED_VALID_MFA_CODE)
+                                .then(CONSENT_REQUIRED)
+                                .ifCondition(userHasNotGivenConsent()),
                         on(USER_ENTERED_VALID_MFA_CODE).then(MFA_CODE_VERIFIED).byDefault(),
                         on(USER_ENTERED_INVALID_MFA_CODE).then(MFA_CODE_NOT_VALID),
                         on(USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES)
@@ -279,10 +289,17 @@ public class StateMachine<T, A, C> {
                 .when(UPDATED_TERMS_AND_CONDITIONS)
                 .allow(
                         on(USER_ACCEPTS_TERMS_AND_CONDITIONS)
+                                .then(CONSENT_REQUIRED)
+                                .ifCondition(userHasNotGivenConsent()),
+                        on(USER_ACCEPTS_TERMS_AND_CONDITIONS)
                                 .then(UPDATED_TERMS_AND_CONDITIONS_ACCEPTED),
                         on(USER_REJECTS_TERMS_AND_CONDITIONS)
                                 .then(UPDATED_TERMS_AND_CONDITIONS_REJECTED))
                 .when(UPDATED_TERMS_AND_CONDITIONS_ACCEPTED)
+                .allow(on(SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE).then(AUTHENTICATED))
+                .when(CONSENT_REQUIRED)
+                .allow(on(USER_HAS_ACTIONED_CONSENT).then(CONSENT_ADDED))
+                .when(CONSENT_ADDED)
                 .allow(on(SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE).then(AUTHENTICATED))
                 .when(UPDATED_TERMS_AND_CONDITIONS_REJECTED)
                 .finalState()

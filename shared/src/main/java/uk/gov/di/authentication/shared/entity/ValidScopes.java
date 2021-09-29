@@ -4,6 +4,7 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.Identifier;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -42,9 +43,30 @@ public class ValidScopes {
     public static Set<String> getClaimsForListOfScopes(List<String> scopes) {
         Set<String> claims = new HashSet<>();
         for (String scope : scopes) {
+            if (scope.equals(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
+                break;
+            }
             claims.addAll(ValidScopes.getClaimsForScope(scope));
         }
         return claims;
+    }
+
+    public static List<String> getScopesForListOfClaims(Set<String> claims) {
+        List<String> scopesToReturn = new ArrayList<>();
+        for (OIDCScopeValue scope : allowedOIDCScopes) {
+            if (scope.equals(OIDCScopeValue.OFFLINE_ACCESS)) {
+                break;
+            }
+            if (claims.containsAll(scope.getClaimNames())) {
+                scopesToReturn.add(scope.getValue());
+            }
+        }
+        for (CustomScopeValue scope : allowedCustomScopes) {
+            if (claims.containsAll(scope.getClaimNames())) {
+                scopesToReturn.add(scope.getValue());
+            }
+        }
+        return scopesToReturn;
     }
 
     public static List<String> getAllValidScopes() {

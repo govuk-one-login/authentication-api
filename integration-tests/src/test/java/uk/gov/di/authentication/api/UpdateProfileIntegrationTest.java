@@ -59,7 +59,7 @@ public class UpdateProfileIntegrationTest extends IntegrationTestEndpoints {
         String sessionId = RedisHelper.createSession();
         String clientSessionId = IdGenerator.generate();
         RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
-        RedisHelper.setSessionState(sessionId, SessionState.TWO_FACTOR_REQUIRED);
+        RedisHelper.setSessionState(sessionId, SessionState.CONSENT_REQUIRED);
         RedisHelper.createClientSession(clientSessionId, generateAuthRequest().toParameters());
         DynamoHelper.signUp(EMAIL_ADDRESS, "password-1");
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();

@@ -86,25 +86,15 @@ public class ClientInfoHandler
                                 Map<String, List<String>> authRequest =
                                         clientSession.get().getAuthRequestParams();
 
-                                String clientID =
-                                        AuthenticationRequest.parse(authRequest)
-                                                .getClientID()
-                                                .getValue();
-                                String state = null;
-                                if (AuthenticationRequest.parse(authRequest).getState() != null) {
-                                    state =
-                                            AuthenticationRequest.parse(authRequest)
-                                                    .getState()
-                                                    .getValue();
-                                }
-                                String redirectUri = null;
-                                if (AuthenticationRequest.parse(authRequest).getRedirectionURI()
-                                        != null) {
-                                    redirectUri =
-                                            AuthenticationRequest.parse(authRequest)
-                                                    .getRedirectionURI()
-                                                    .toString();
-                                }
+                                AuthenticationRequest authenticationRequest =
+                                        AuthenticationRequest.parse(authRequest);
+                                String clientID = authenticationRequest.getClientID().getValue();
+                                String state = authenticationRequest.getState().getValue();
+                                String redirectUri =
+                                        authenticationRequest.getRedirectionURI().toString();
+
+                                List<String> scopes =
+                                        authenticationRequest.getScope().toStringList();
 
                                 Optional<ClientRegistry> optionalClientRegistry =
                                         clientService.getClient(clientID);
@@ -122,7 +112,7 @@ public class ClientInfoHandler
                                         new ClientInfoResponse(
                                                 clientRegistry.getClientID(),
                                                 clientRegistry.getClientName(),
-                                                clientRegistry.getScopes(),
+                                                scopes,
                                                 redirectUri,
                                                 clientRegistry.getServiceType(),
                                                 state);
@@ -131,7 +121,7 @@ public class ClientInfoHandler
                                         "Found Client Info for ClientID: {} ClientName {} Scopes {} Redirect Uri {} Service Type {} State {}",
                                         clientRegistry.getClientID(),
                                         clientRegistry.getClientName(),
-                                        clientRegistry.getScopes(),
+                                        scopes,
                                         redirectUri,
                                         clientRegistry.getServiceType(),
                                         state);
@@ -139,6 +129,7 @@ public class ClientInfoHandler
                                 return generateApiGatewayProxyResponse(200, clientInfoResponse);
 
                             } catch (ParseException | JsonProcessingException e) {
+                                LOGGER.error("Error when calling ClientInfo", e);
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1001);
                             }

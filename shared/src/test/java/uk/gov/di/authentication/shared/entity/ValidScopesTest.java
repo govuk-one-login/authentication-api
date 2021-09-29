@@ -1,9 +1,11 @@
 package uk.gov.di.authentication.shared.entity;
 
 import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
@@ -25,6 +27,11 @@ class ValidScopesTest {
                 ValidScopes.getClaimsForListOfScopes(List.of("email")),
                 containsInAnyOrder("email", "email_verified"));
         assertEquals(ValidScopes.getClaimsForListOfScopes(List.of("email")).size(), 2);
+    }
+
+    @Test
+    void shouldNotReturnAnyClaimsForOfflineAccessScope() {
+        assertEquals(ValidScopes.getClaimsForListOfScopes(List.of("offline_access")).size(), 0);
     }
 
     @Test
@@ -54,7 +61,8 @@ class ValidScopesTest {
     @Test
     void shouldReturnCorrectClaimsForAllOIDCAndCustomScopes() {
         assertThat(
-                ValidScopes.getClaimsForListOfScopes(List.of("openid", "email", "phone", "am")),
+                ValidScopes.getClaimsForListOfScopes(
+                        List.of("openid", "email", "phone", "am", "offline_access")),
                 containsInAnyOrder(
                         "sub",
                         "email",
@@ -64,7 +72,8 @@ class ValidScopesTest {
                         "read",
                         "write"));
         assertEquals(
-                ValidScopes.getClaimsForListOfScopes(List.of("openid", "email", "phone", "am"))
+                ValidScopes.getClaimsForListOfScopes(
+                                List.of("openid", "email", "phone", "am", "offline_access"))
                         .size(),
                 7);
     }
@@ -94,5 +103,31 @@ class ValidScopesTest {
     void shouldReturnOIDCScopesForWellKnown() {
         Scope scope = ValidScopes.getScopesForWellKnownHandler();
         assertEquals(scope.toString(), "openid,email,phone,offline_access");
+    }
+
+    @Test
+    void shouldReturnScopesForListOfValidClaims() {
+        Set<String> claims =
+                Set.of(
+                        "sub",
+                        "email",
+                        "email_verified",
+                        "phone_number",
+                        "phone_number_verified",
+                        "read",
+                        "write");
+
+        assertEquals(ValidScopes.getScopesForListOfClaims(claims).size(), 4);
+    }
+
+    @Test
+    void shouldNotReturnEmailScopesWhenAllEmailsClaimsAreNotGiven() {
+        Set<String> claims =
+                Set.of("sub", "email", "phone_number", "phone_number_verified", "read", "write");
+
+        assertEquals(ValidScopes.getScopesForListOfClaims(claims).size(), 3);
+        assertFalse(
+                ValidScopes.getScopesForListOfClaims(claims)
+                        .contains(OIDCScopeValue.EMAIL.getValue()));
     }
 }

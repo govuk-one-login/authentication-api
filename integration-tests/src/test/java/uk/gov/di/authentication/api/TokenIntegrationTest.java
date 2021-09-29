@@ -35,9 +35,11 @@ import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.KeyPairHelper;
 import uk.gov.di.authentication.helpers.KmsHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
+import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.TokenStore;
+import uk.gov.di.authentication.shared.entity.ValidScopes;
 
 import java.net.URI;
 import java.security.KeyPair;
@@ -51,6 +53,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static java.util.Collections.singletonList;
@@ -91,7 +94,7 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
     }
 
     @Test
-    public void shouldCallTokenResourceAndReturnAccessWithoutOfflineAccessScope()
+    public void shouldCallTokenResourceAndOnlyReturnAccessTokenWithoutOfflineAccessScope()
             throws JOSEException, ParseException {
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         Scope scope = new Scope(OIDCScopeValue.OPENID.getValue());
@@ -114,7 +117,7 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
 
     @Test
     public void shouldCallTokenResourceWithRefreshTokenGrantAndReturn200()
-            throws JOSEException, ParseException, JsonProcessingException {
+            throws JOSEException, JsonProcessingException {
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
@@ -201,6 +204,11 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
                 "public",
                 CredentialTrustLevel.MEDIUM_LEVEL.getValue());
         DynamoHelper.signUp(TEST_EMAIL, "password-1", internalSubject);
+        Set<String> claims = ValidScopes.getClaimsForListOfScopes(scope.toStringList());
+        ClientConsent clientConsent =
+                new ClientConsent(
+                        CLIENT_ID, claims, LocalDateTime.now(ZoneId.of("UTC")).toString());
+        DynamoHelper.updateConsent(TEST_EMAIL, clientConsent);
     }
 
     private AuthenticationRequest generateAuthRequest(Scope scope) {

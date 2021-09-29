@@ -28,8 +28,10 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.TokenStore;
+import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
 
 import java.net.URI;
@@ -39,12 +41,15 @@ import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -67,10 +72,15 @@ public class TokenServiceTest {
             new TokenService(configurationService, redisConnectionService, kmsConnectionService);
     private static final Subject PUBLIC_SUBJECT = new Subject("public-subject");
     private static final Subject INTERNAL_SUBJECT = new Subject("internal-subject");
-    private static final List<String> SCOPES = List.of("openid", "email", "phone");
+    private static final Scope SCOPES =
+            new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
     private static final String VOT = CredentialTrustLevel.MEDIUM_LEVEL.getValue();
-    private static final List<String> SCOPES_OFFLINE_ACCESS =
-            List.of("openid", "email", "phone", "offline_access");
+    private static final Scope SCOPES_OFFLINE_ACCESS =
+            new Scope(
+                    OIDCScopeValue.OPENID,
+                    OIDCScopeValue.EMAIL,
+                    OIDCScopeValue.PHONE,
+                    OIDCScopeValue.OFFLINE_ACCESS);
     private static final String CLIENT_ID = "client-id";
     private static final String AUTH_CODE = new AuthorizationCode().toString();
     private static final String REDIRECT_URI = "http://localhost/redirect";
@@ -96,6 +106,9 @@ public class TokenServiceTest {
         createSignedAccessToken();
         Map<String, Object> additionalTokenClaims = new HashMap<>();
         additionalTokenClaims.put("nonce", nonce);
+        Set<String> claimsForListOfScopes =
+                ValidScopes.getClaimsForListOfScopes(SCOPES_OFFLINE_ACCESS.toStringList());
+
         OIDCTokenResponse tokenResponse =
                 tokenService.generateTokenResponse(
                         CLIENT_ID,
@@ -103,7 +116,12 @@ public class TokenServiceTest {
                         SCOPES_OFFLINE_ACCESS,
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
-                        VOT);
+                        VOT,
+                        Collections.singletonList(
+                                new ClientConsent(
+                                        CLIENT_ID,
+                                        claimsForListOfScopes,
+                                        LocalDateTime.now(ZoneId.of("UTC")).toString())));
 
         assertEquals(
                 BASE_URL, tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getIssuer());
@@ -146,6 +164,8 @@ public class TokenServiceTest {
         createSignedAccessToken();
         Map<String, Object> additionalTokenClaims = new HashMap<>();
         additionalTokenClaims.put("nonce", nonce);
+        Set<String> claimsForListOfScopes =
+                ValidScopes.getClaimsForListOfScopes(SCOPES.toStringList());
         OIDCTokenResponse tokenResponse =
                 tokenService.generateTokenResponse(
                         CLIENT_ID,
@@ -153,7 +173,12 @@ public class TokenServiceTest {
                         SCOPES,
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
-                        VOT);
+                        VOT,
+                        Collections.singletonList(
+                                new ClientConsent(
+                                        CLIENT_ID,
+                                        claimsForListOfScopes,
+                                        LocalDateTime.now(ZoneId.of("UTC")).toString())));
 
         assertEquals(
                 BASE_URL, tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getIssuer());
@@ -335,6 +360,44 @@ public class TokenServiceTest {
         assertTrue(errorObject.isPresent());
     }
 
+    //    @Test
+    //    public void shouldIgnoreScopesThatUserHasNotConsentedTo() {
+    //        Scope scopesInAuthRequest =
+    //                new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
+    //        Scope scopesConsentedTo = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
+    //        Set<String> claims =
+    // ValidScopes.getClaimsForListOfScopes(scopesConsentedTo.toStringList());
+    //        ClientConsent clientConsent =
+    //                new ClientConsent(
+    //                        CLIENT_ID, claims, LocalDateTime.now(ZoneId.of("UTC")).toString());
+    //        List<String> scopes =
+    //                tokenService.calculateScopesForToken(
+    //                        Collections.singletonList(clientConsent), CLIENT_ID,
+    // scopesInAuthRequest);
+    //
+    //        assertFalse(scopes.contains(OIDCScopeValue.PHONE.getValue()));
+    //        assertTrue(scopes.containsAll(scopesConsentedTo.toStringList()));
+    //    }
+    //
+    //    @Test
+    //    public void shouldReturnAllScopesWhenUserHasConsentedToAll() {
+    //        Scope scopesInAuthRequest =
+    //                new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
+    //        Scope scopesConsentedTo =
+    //                new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
+    //        Set<String> claims =
+    // ValidScopes.getClaimsForListOfScopes(scopesConsentedTo.toStringList());
+    //        ClientConsent clientConsent =
+    //                new ClientConsent(
+    //                        CLIENT_ID, claims, LocalDateTime.now(ZoneId.of("UTC")).toString());
+    //        List<String> scopes =
+    //                tokenService.calculateScopesForToken(
+    //                        Collections.singletonList(clientConsent), CLIENT_ID,
+    // scopesInAuthRequest);
+    //
+    //        assertTrue(scopes.containsAll(scopesConsentedTo.toStringList()));
+    //    }
+
     private String generateSerialisedPrivateKeyJWT(KeyPair keyPair) throws JOSEException {
         PrivateKeyJWT privateKeyJWT =
                 new PrivateKeyJWT(
@@ -382,7 +445,7 @@ public class TokenServiceTest {
                 TokenGeneratorHelper.generateSignedToken(
                         CLIENT_ID,
                         BASE_URL,
-                        SCOPES,
+                        SCOPES.toStringList(),
                         signer,
                         PUBLIC_SUBJECT,
                         ecSigningKey.getKeyID());

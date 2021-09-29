@@ -210,25 +210,25 @@ public class TokenHandler
                                         400,
                                         OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
                             }
-                            Subject publicSubject =
-                                    getSubjectByEmailAndClient(
-                                            authCodeExchangeData.getEmail(), client);
-                            Subject internalSubject =
-                                    dynamoService.getSubjectFromEmail(
+                            UserProfile userProfile =
+                                    dynamoService.getUserProfileByEmail(
                                             authCodeExchangeData.getEmail());
+                            Subject publicSubject = getSubjectByEmailAndClient(userProfile, client);
                             Map<String, Object> additionalTokenClaims = new HashMap<>();
                             if (authRequest.getNonce() != null) {
                                 additionalTokenClaims.put("nonce", authRequest.getNonce());
                             }
                             String vot = client.getVectorsOfTrust();
+
                             OIDCTokenResponse tokenResponse =
                                     tokenService.generateTokenResponse(
                                             clientID,
-                                            internalSubject,
-                                            authRequest.getScope().toStringList(),
+                                            new Subject(userProfile.getSubjectID()),
+                                            authRequest.getScope(),
                                             additionalTokenClaims,
                                             publicSubject,
-                                            vot);
+                                            vot,
+                                            userProfile.getClientConsent());
 
                             clientSessionService.saveClientSession(
                                     authCodeExchangeData.getClientSessionId(),
@@ -243,9 +243,7 @@ public class TokenHandler
                         });
     }
 
-    private Subject getSubjectByEmailAndClient(String email, ClientRegistry client) {
-        UserProfile userProfile = dynamoService.getUserProfileByEmail(email);
-
+    private Subject getSubjectByEmailAndClient(UserProfile userProfile, ClientRegistry client) {
         if (client.getSubjectType().equalsIgnoreCase("public")) {
             return new Subject(userProfile.getPublicSubjectID());
         } else {

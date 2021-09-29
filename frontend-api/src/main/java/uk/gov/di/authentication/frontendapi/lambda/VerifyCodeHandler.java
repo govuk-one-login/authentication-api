@@ -34,11 +34,13 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.entity.SessionAction.*;
+import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_VERIFIED;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_VERIFIED;
 import static uk.gov.di.authentication.shared.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
+import static uk.gov.di.authentication.shared.entity.SessionState.PHONE_NUMBER_CODE_VERIFIED;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -198,10 +200,16 @@ public class VerifyCodeHandler extends BaseFrontendHandler
     }
 
     private void processCodeSessionState(Session session, NotificationType notificationType) {
-        if (session.getState().equals(SessionState.PHONE_NUMBER_CODE_VERIFIED)) {
+        if (notificationType.equals(VERIFY_PHONE_NUMBER)
+                && List.of(PHONE_NUMBER_CODE_VERIFIED, CONSENT_REQUIRED)
+                        .contains(session.getState())) {
             codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
             authenticationService.updatePhoneNumberVerifiedStatus(session.getEmailAddress(), true);
-        } else if (List.of(EMAIL_CODE_VERIFIED, MFA_CODE_VERIFIED, UPDATED_TERMS_AND_CONDITIONS)
+        } else if (List.of(
+                        EMAIL_CODE_VERIFIED,
+                        MFA_CODE_VERIFIED,
+                        UPDATED_TERMS_AND_CONDITIONS,
+                        CONSENT_REQUIRED)
                 .contains(session.getState())) {
             codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
         } else if (List.of(
