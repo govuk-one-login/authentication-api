@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.shared.services;
 
-import uk.gov.di.audit.AuditPayload;
+import uk.gov.di.audit.AuditPayload.AuditEvent;
+import uk.gov.di.audit.AuditPayload.SignedAuditEvent;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 
 import java.time.Clock;
@@ -28,12 +29,12 @@ public class AuditService {
     String generateLogLine(AuditableEvent eventEnum, MetadataPair... metadataPairs) {
         var timestamp = clock.instant().toString();
 
-        var eventBuilder = AuditPayload.AuditEvent.newBuilder();
+        var eventBuilder = AuditEvent.newBuilder();
         eventBuilder.setEventName(eventEnum.toString());
         eventBuilder.setTimestamp(timestamp);
         // TODO - Extract other values from the metadataPairs argument.
 
-        var signedEventBuilder = AuditPayload.SignedAuditEvent.newBuilder();
+        var signedEventBuilder = SignedAuditEvent.newBuilder();
         signedEventBuilder.setPayload(eventBuilder.build().toByteString());
         // TODO - We need to sign the event at this point, but we don't yet have the infrastructure
         // in place to do that.

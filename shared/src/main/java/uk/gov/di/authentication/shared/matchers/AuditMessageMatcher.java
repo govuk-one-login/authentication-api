@@ -2,7 +2,8 @@ package uk.gov.di.authentication.shared.matchers;
 
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
-import uk.gov.di.audit.AuditPayload;
+import uk.gov.di.audit.AuditPayload.AuditEvent;
+import uk.gov.di.audit.AuditPayload.SignedAuditEvent;
 
 import java.nio.charset.StandardCharsets;
 import java.util.function.Function;
@@ -13,24 +14,18 @@ public class AuditMessageMatcher<T> extends TypeSafeDiagnosingMatcher<String> {
     private final Function<String, T> mapper;
     private final T expected;
 
-    private AuditMessageMatcher(
-            String name, Function<AuditPayload.AuditEvent, T> mapper, T expected) {
+    private AuditMessageMatcher(String name, Function<AuditEvent, T> mapper, T expected) {
         this.name = name;
+        this.mapper = input -> mapper.apply(deserialiseAuditEvent(input));
         this.expected = expected;
-
-        Function<String, AuditPayload.AuditEvent>
-                annoyingInterimVariableBecauseFPIsANightmareInJava = this::deserialiseAuditEvent;
-        this.mapper = annoyingInterimVariableBecauseFPIsANightmareInJava.andThen(mapper);
     }
 
     public static AuditMessageMatcher<String> hasEventName(String eventName) {
-        return new AuditMessageMatcher<>(
-                "event name", AuditPayload.AuditEvent::getEventName, eventName);
+        return new AuditMessageMatcher<>("event name", AuditEvent::getEventName, eventName);
     }
 
     public static AuditMessageMatcher<String> hasTimestamp(String timestampAsString) {
-        return new AuditMessageMatcher<>(
-                "timestamp", AuditPayload.AuditEvent::getTimestamp, timestampAsString);
+        return new AuditMessageMatcher<>("timestamp", AuditEvent::getTimestamp, timestampAsString);
     }
 
     @Override
@@ -56,13 +51,12 @@ public class AuditMessageMatcher<T> extends TypeSafeDiagnosingMatcher<String> {
         return "an audit message with " + name + ": " + value;
     }
 
-    private AuditPayload.AuditEvent deserialiseAuditEvent(String serialisedMessage) {
+    private AuditEvent deserialiseAuditEvent(String serialisedMessage) {
         try {
             var signedAuditEvent =
-                    AuditPayload.SignedAuditEvent.parseFrom(
-                            serialisedMessage.getBytes(StandardCharsets.UTF_8));
+                    SignedAuditEvent.parseFrom(serialisedMessage.getBytes(StandardCharsets.UTF_8));
 
-            return AuditPayload.AuditEvent.parseFrom(signedAuditEvent.getPayload());
+            return AuditEvent.parseFrom(signedAuditEvent.getPayload());
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
