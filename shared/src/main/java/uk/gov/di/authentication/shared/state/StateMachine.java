@@ -136,6 +136,7 @@ public class StateMachine<T, A, C> {
         return StateMachine.<SessionState, SessionAction, UserContext>builder()
                 .when(NEW)
                 .allow(
+                        on(USER_ENTERED_REGISTERED_EMAIL_ADDRESS).then(AUTHENTICATION_REQUIRED),
                         on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND),
                         on(SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE).then(VERIFY_EMAIL_CODE_SENT))
                 .when(RESET_PASSWORD_LINK_SENT)
@@ -155,6 +156,7 @@ public class StateMachine<T, A, C> {
                         on(SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE).then(VERIFY_EMAIL_CODE_SENT))
                 .when(VERIFY_EMAIL_CODE_SENT)
                 .allow(
+                        on(USER_ENTERED_REGISTERED_EMAIL_ADDRESS).then(AUTHENTICATION_REQUIRED),
                         on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(NEW),
                         on(USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE).then(EMAIL_CODE_VERIFIED),
                         on(SYSTEM_HAS_SENT_TOO_MANY_EMAIL_VERIFICATION_CODES)
