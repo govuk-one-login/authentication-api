@@ -20,17 +20,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.AuthorizationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -41,8 +42,10 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -77,6 +80,9 @@ class UpdateProfileHandlerTest {
     private static final boolean CONSENT_VALUE = true;
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "client-session-id";
+    private static final String CLIENT_ID = "client-id";
+    private static final Scope SCOPES =
+            new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
     private static final String COOKIE = "Cookie";
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private final Context context = mock(Context.class);
@@ -86,10 +92,9 @@ class UpdateProfileHandlerTest {
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuthorizationService authorizationService = mock(AuthorizationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
-    private final AuthorisationCodeService authorisationCodeService =
-            mock(AuthorisationCodeService.class);
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             userJourneyStateMachine();
 
@@ -120,7 +125,6 @@ class UpdateProfileHandlerTest {
 
     @Test
     public void shouldReturn200WhenUpdatingPhoneNumber() {
-        when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(false);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -139,7 +143,7 @@ class UpdateProfileHandlerTest {
 
     @Test
     public void shouldReturn200WhenUpdatingTermsAndConditions() {
-        when(authenticationService.userExists(eq(TEST_EMAIL_ADDRESS))).thenReturn(false);
+        session.setState(SessionState.UPDATED_TERMS_AND_CONDITIONS);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -149,6 +153,13 @@ class UpdateProfileHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         UPDATE_TERMS_CONDS,
                         UPDATED_TERMS_AND_CONDITIONS_VALUE));
+        when(authenticationService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(generateUserProfileWithConsent()));
+        when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
+        when(clientRegistry.getClientID()).thenReturn(CLIENT_ID);
+        generateValidClientSessionAndAuthRequest(new ClientID(CLIENT_ID));
+
+        generateValidClientSessionAndAuthRequest(new ClientID(CLIENT_ID));
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
         verify(authenticationService)
@@ -163,7 +174,6 @@ class UpdateProfileHandlerTest {
     public void shouldReturn200WhenUpdatingProfileWithConsent()
             throws ClientNotFoundException, JsonProcessingException {
         session.setState(SessionState.CONSENT_REQUIRED);
-        when(authenticationService.userExists(eq(TEST_EMAIL_ADDRESS))).thenReturn(false);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         ClientID clientID = new ClientID();
@@ -180,12 +190,9 @@ class UpdateProfileHandlerTest {
                         null,
                         null);
         when(authenticationService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(generateUserProfile()));
+                .thenReturn(Optional.of(generateUserProfileWithoutConsent()));
         when(authorizationService.isClientRedirectUriValid(eq(clientID), eq(REDIRECT_URI)))
                 .thenReturn(true);
-        when(authorisationCodeService.generateAuthorisationCode(
-                        eq(CLIENT_SESSION_ID), eq(TEST_EMAIL_ADDRESS)))
-                .thenReturn(authorizationCode);
         when(authorizationService.generateSuccessfulAuthResponse(
                         any(AuthenticationRequest.class), any(AuthorizationCode.class)))
                 .thenReturn(authSuccessResponse);
@@ -211,7 +218,6 @@ class UpdateProfileHandlerTest {
 
     @Test
     public void shouldReturn400WhenRequestIsMissingParameters() {
-        when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(false);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -233,8 +239,6 @@ class UpdateProfileHandlerTest {
     @Test
     public void shouldReturn400IfUserTransitionsFromWrongState() {
         session.setState(SessionState.NEW);
-
-        when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(false);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -257,11 +261,9 @@ class UpdateProfileHandlerTest {
 
     private AuthenticationRequest generateValidClientSessionAndAuthRequest(ClientID clientID) {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
         State state = new State();
         AuthenticationRequest authRequest =
-                new AuthenticationRequest.Builder(responseType, scope, clientID, REDIRECT_URI)
+                new AuthenticationRequest.Builder(responseType, SCOPES, clientID, REDIRECT_URI)
                         .state(state)
                         .nonce(new Nonce())
                         .build();
@@ -281,7 +283,7 @@ class UpdateProfileHandlerTest {
         return response;
     }
 
-    private UserProfile generateUserProfile() {
+    private UserProfile generateUserProfileWithoutConsent() {
         return new UserProfile()
                 .setEmail(TEST_EMAIL_ADDRESS)
                 .setEmailVerified(true)
@@ -289,5 +291,19 @@ class UpdateProfileHandlerTest {
                 .setEmailVerified(true)
                 .setPublicSubjectID(new Subject().getValue())
                 .setSubjectID(new Subject().getValue());
+    }
+
+    private UserProfile generateUserProfileWithConsent() {
+        Set<String> claims = ValidScopes.getClaimsForListOfScopes(SCOPES.toStringList());
+        return new UserProfile()
+                .setEmail(TEST_EMAIL_ADDRESS)
+                .setEmailVerified(true)
+                .setPhoneNumber(PHONE_NUMBER)
+                .setEmailVerified(true)
+                .setPublicSubjectID(new Subject().getValue())
+                .setSubjectID(new Subject().getValue())
+                .setClientConsent(
+                        new ClientConsent(
+                                CLIENT_ID, claims, LocalDateTime.now(ZoneId.of("UTC")).toString()));
     }
 }
