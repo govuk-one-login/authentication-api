@@ -1,20 +1,23 @@
 package uk.gov.di.authentication.shared.services;
 
+import uk.gov.di.audit.AuditPayload;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 
-import java.util.Arrays;
+import java.time.Clock;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 public class AuditService {
 
+    private final Clock clock;
     private final SnsService snsService;
 
-    public AuditService(SnsService snsService) {
+    public AuditService(Clock clock, SnsService snsService) {
+        this.clock = clock;
         this.snsService = snsService;
     }
 
     public AuditService() {
+        this.clock = Clock.systemUTC();
         this.snsService = new SnsService(new ConfigurationService());
     }
 
@@ -22,19 +25,20 @@ public class AuditService {
         snsService.publishAuditMessage(generateLogLine(event, metadataPairs));
     }
 
-    String generateLogLine(AuditableEvent event, MetadataPair... metadataPairs) {
-        var baseLogLine = "Emitting audit event - " + event;
+    String generateLogLine(AuditableEvent eventEnum, MetadataPair... metadataPairs) {
+        var timestamp = clock.instant().toString();
 
-        if (metadataPairs.length == 0) {
-            return baseLogLine;
-        }
+        var eventBuilder = AuditPayload.AuditEvent.newBuilder();
+        eventBuilder.setEventName(eventEnum.toString());
+        eventBuilder.setTimestamp(timestamp);
+        // TODO - Extract other values from the metadataPairs argument.
 
-        var keyValuePairs =
-                Arrays.stream(metadataPairs)
-                        .map(MetadataPair::toString)
-                        .collect(Collectors.joining(", "));
+        var signedEventBuilder = AuditPayload.SignedAuditEvent.newBuilder();
+        signedEventBuilder.setPayload(eventBuilder.build().toByteString());
+        // TODO - We need to sign the event at this point, but we don't yet have the infrastructure
+        // in place to do that.
 
-        return baseLogLine + " => " + keyValuePairs;
+        return new String(signedEventBuilder.build().toByteArray());
     }
 
     public static class MetadataPair {
