@@ -42,6 +42,7 @@ import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
+import static uk.gov.di.authentication.shared.entity.SessionState.INTERRUPT_STATES;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
@@ -192,10 +193,11 @@ public class AuthorisationHandler
             redirectUri = configurationService.getAuthCodeURI();
         } else {
             try {
-                redirectUri =
-                        new URIBuilder(configurationService.getLoginURI())
-                                .addParameter("interrupt", nextState.toString())
-                                .build();
+                URIBuilder redirectUriBuilder = new URIBuilder(configurationService.getLoginURI());
+                if (INTERRUPT_STATES.contains(nextState)) {
+                    redirectUriBuilder.addParameter("interrupt", nextState.toString());
+                }
+                redirectUri = redirectUriBuilder.build();
             } catch (URISyntaxException e) {
                 throw new RuntimeException("Error constructing redirect URI", e);
             }

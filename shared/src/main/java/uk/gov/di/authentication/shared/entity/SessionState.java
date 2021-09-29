@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.shared.entity;
 
+import java.util.List;
+
 public enum SessionState {
     NEW,
     USER_NOT_FOUND,
@@ -33,5 +35,7 @@ public enum SessionState {
     CONSENT_REQUIRED,
     CONSENT_ADDED,
     ACCOUNT_TEMPORARILY_LOCKED,
-    UPLIFT_REQUIRED_CM
+    UPLIFT_REQUIRED_CM;
+
+    public static List<SessionState> INTERRUPT_STATES = List.of(UPLIFT_REQUIRED_CM);
 }
