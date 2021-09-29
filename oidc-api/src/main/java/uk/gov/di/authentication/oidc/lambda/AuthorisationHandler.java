@@ -177,7 +177,14 @@ public class AuthorisationHandler
             AuthenticationRequest authenticationRequest,
             Session session,
             SessionAction sessionAction) {
-        UserContext userContext = UserContext.builder(session).build();
+        ClientSession clientSession =
+                new ClientSession(
+                        authRequestParameters,
+                        LocalDateTime.now(),
+                        authorizationService.getEffectiveVectorOfTrust(authenticationRequest));
+        String clientSessionID = clientSessionService.generateClientSession(clientSession);
+        UserContext userContext =
+                UserContext.builder(session).withClientSession(clientSession).build();
         SessionState nextState =
                 stateMachine.transition(session.getState(), sessionAction, userContext);
         URI redirectUri;
@@ -193,13 +200,7 @@ public class AuthorisationHandler
                 throw new RuntimeException("Error constructing redirect URI", e);
             }
         }
-        String clientSessionID =
-                clientSessionService.generateClientSession(
-                        new ClientSession(
-                                authRequestParameters,
-                                LocalDateTime.now(),
-                                authorizationService.getEffectiveVectorOfTrust(
-                                        authenticationRequest)));
+
         session =
                 updateSessionId(
                         session, authenticationRequest.getClientID(), clientSessionID, nextState);

@@ -126,6 +126,15 @@ public class RedisHelper {
         }
     }
 
+    public static Session getSession(String sessionId) {
+        try (RedisConnectionService redis =
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
+            return OBJECT_MAPPER.readValue(redis.getValue(sessionId), Session.class);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public static String generateAndSaveEmailCode(String email, long codeExpiryTime) {
         try (RedisConnectionService redis =
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
