@@ -24,7 +24,8 @@ import uk.gov.di.authentication.shared.services.ValidationService;
 import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.UserContext;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_CREATED_A_PASSWORD;
@@ -115,8 +116,8 @@ public class SignUpHandler
                                             new TermsAndConditions(
                                                     configurationService
                                                             .getTermsAndConditionsVersion(),
-                                                    String.valueOf(
-                                                            Instant.now().getEpochSecond())));
+                                                    LocalDateTime.now(ZoneId.of("UTC"))
+                                                            .toString()));
 
                                     sessionService.save(
                                             session.get()

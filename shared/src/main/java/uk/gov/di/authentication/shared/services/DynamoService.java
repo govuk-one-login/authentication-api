@@ -16,8 +16,8 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.Argon2Helper;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -136,8 +136,8 @@ public class DynamoService implements AuthenticationService {
 
     @Override
     public void updateTermsAndConditions(String email, String version) {
-        String epochTime = String.valueOf(Instant.now().getEpochSecond());
-        TermsAndConditions termsAndConditions = new TermsAndConditions(version, epochTime);
+        TermsAndConditions termsAndConditions =
+                new TermsAndConditions(version, LocalDateTime.now(ZoneId.of("UTC")).toString());
 
         userProfileMapper.save(
                 userProfileMapper

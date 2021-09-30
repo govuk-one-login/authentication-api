@@ -300,6 +300,9 @@ public class StateMachine<T, A, C> {
                                         userHasNotAcceptedTermsAndConditionsVersion(
                                                 configurationService
                                                         .getTermsAndConditionsVersion())),
+                        on(USER_ENTERED_VALID_MFA_CODE)
+                                .then(CONSENT_REQUIRED)
+                                .ifCondition(userHasNotGivenConsent()),
                         on(USER_ENTERED_VALID_MFA_CODE).then(MFA_CODE_VERIFIED).byDefault(),
                         on(USER_ENTERED_INVALID_MFA_CODE).then(MFA_CODE_NOT_VALID),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
@@ -364,6 +367,15 @@ public class StateMachine<T, A, C> {
                         on(USER_HAS_STARTED_A_NEW_JOURNEY)
                                 .ifCondition(and(upliftRequired(), requestedLevelOfTrustIsCm()))
                                 .then(UPLIFT_REQUIRED_CM),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY)
+                                .then(UPDATED_TERMS_AND_CONDITIONS)
+                                .ifCondition(
+                                        userHasNotAcceptedTermsAndConditionsVersion(
+                                                configurationService
+                                                        .getTermsAndConditionsVersion())),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY)
+                                .then(CONSENT_REQUIRED)
+                                .ifCondition(userHasNotGivenConsent()),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(AUTHENTICATED),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED)
                                 .then(AUTHENTICATION_REQUIRED))

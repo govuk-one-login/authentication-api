@@ -57,6 +57,7 @@ class AuthorisationHandlerTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuthorizationService authorizationService = mock(AuthorizationService.class);
+    private final UserContext userContext = mock(UserContext.class);
     private final AuditService auditService = mock(AuditService.class);
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             mock(StateMachine.class);
@@ -225,6 +226,8 @@ class AuthorisationHandlerTest {
 
         whenLoggedIn(session, loginUrl);
         when(configService.getAuthCodeURI()).thenReturn(authCodeUri);
+        when(authorizationService.buildUserContext(eq(session), any(ClientSession.class)))
+                .thenReturn(userContext);
 
         APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent());
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
@@ -264,6 +267,8 @@ class AuthorisationHandlerTest {
 
         whenLoggedIn(session, loginUrl);
         when(configService.getAuthCodeURI()).thenReturn(authCodeUri);
+        when(authorizationService.buildUserContext(eq(session), any(ClientSession.class)))
+                .thenReturn(userContext);
 
         APIGatewayProxyResponseEvent response = makeHandlerRequest(withPromptRequestEvent("none"));
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
@@ -314,6 +319,8 @@ class AuthorisationHandlerTest {
                         session.getSessionId());
 
         whenLoggedIn(session, loginUrl);
+        when(authorizationService.buildUserContext(eq(session), any(ClientSession.class)))
+                .thenReturn(userContext);
 
         APIGatewayProxyResponseEvent response = makeHandlerRequest(withPromptRequestEvent("login"));
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
@@ -455,7 +462,8 @@ class AuthorisationHandlerTest {
                 format(
                         "gs=%s.client-session-id; Max-Age=3600; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
                         session.getSessionId());
-
+        when(authorizationService.buildUserContext(eq(session), any(ClientSession.class)))
+                .thenReturn(userContext);
         APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent());
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 

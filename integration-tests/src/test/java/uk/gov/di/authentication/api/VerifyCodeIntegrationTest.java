@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -119,7 +120,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         scope.add(OIDCScopeValue.EMAIL);
-        setUpTestWithoutClientConsent(sessionId, scope);
+        setUpTestWithoutClientConsent(sessionId, scope, SessionState.VERIFY_PHONE_NUMBER_CODE_SENT);
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
         headers.add("X-API-Key", API_KEY);
@@ -148,7 +149,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         scope.add(OIDCScopeValue.EMAIL);
-        setUpTestWithoutClientConsent(sessionId, scope);
+        setUpTestWithoutClientConsent(sessionId, scope, SessionState.VERIFY_PHONE_NUMBER_CODE_SENT);
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
         headers.add("X-API-Key", API_KEY);
@@ -281,13 +282,22 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
     public void shouldReturnStateOfMfaCodeVerifiedWhenUserHasAcceptedCurrentTermsAndConditions()
             throws IOException {
         String sessionId = RedisHelper.createSession();
-        RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
-        RedisHelper.setSessionState(sessionId, SessionState.MFA_SMS_CODE_SENT);
-        DynamoHelper.signUp(EMAIL_ADDRESS, "password");
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        scope.add(OIDCScopeValue.EMAIL);
+        scope.add(OIDCScopeValue.PHONE);
+        setUpTestWithoutClientConsent(sessionId, scope, SessionState.MFA_SMS_CODE_SENT);
         DynamoHelper.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
+        ClientConsent clientConsent =
+                new ClientConsent(
+                        CLIENT_ID,
+                        ValidScopes.getClaimsForListOfScopes(scope.toStringList()),
+                        LocalDateTime.now().toString());
+        DynamoHelper.updateConsent(EMAIL_ADDRESS, clientConsent);
 
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
+        headers.add("Client-Session-Id", CLIENT_SESSION_ID);
         headers.add("X-API-Key", API_KEY);
 
         String code = RedisHelper.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
@@ -347,9 +357,10 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
                 response.readEntity(String.class));
     }
 
-    private void setUpTestWithoutClientConsent(String sessionId, Scope scope) {
+    private void setUpTestWithoutClientConsent(
+            String sessionId, Scope scope, SessionState sessionState) {
         RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
-        RedisHelper.setSessionState(sessionId, SessionState.VERIFY_PHONE_NUMBER_CODE_SENT);
+        RedisHelper.setSessionState(sessionId, sessionState);
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE,
@@ -357,6 +368,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
                                 new ClientID(CLIENT_ID),
                                 URI.create(REDIRECT_URI))
                         .nonce(new Nonce())
+                        .state(new State())
                         .build();
         RedisHelper.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
         DynamoHelper.registerClient(

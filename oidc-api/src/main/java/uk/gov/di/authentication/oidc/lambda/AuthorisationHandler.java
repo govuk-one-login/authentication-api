@@ -51,7 +51,6 @@ public class AuthorisationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthorisationHandler.class);
-    public static final String VTR = "vtr";
 
     private final SessionService sessionService;
     private final ConfigurationService configurationService;
@@ -184,8 +183,7 @@ public class AuthorisationHandler
                         LocalDateTime.now(),
                         authorizationService.getEffectiveVectorOfTrust(authenticationRequest));
         String clientSessionID = clientSessionService.generateClientSession(clientSession);
-        UserContext userContext =
-                UserContext.builder(session).withClientSession(clientSession).build();
+        UserContext userContext = authorizationService.buildUserContext(session, clientSession);
         SessionState nextState =
                 stateMachine.transition(session.getState(), sessionAction, userContext);
         URI redirectUri;

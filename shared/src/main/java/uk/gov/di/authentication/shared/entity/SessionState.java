@@ -37,5 +37,6 @@ public enum SessionState {
     ACCOUNT_TEMPORARILY_LOCKED,
     UPLIFT_REQUIRED_CM;
 
-    public static List<SessionState> INTERRUPT_STATES = List.of(UPLIFT_REQUIRED_CM);
+    public static List<SessionState> INTERRUPT_STATES =
+            List.of(UPLIFT_REQUIRED_CM, CONSENT_REQUIRED, UPDATED_TERMS_AND_CONDITIONS);
 }

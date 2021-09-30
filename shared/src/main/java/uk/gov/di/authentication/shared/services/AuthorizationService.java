@@ -12,12 +12,17 @@ import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -25,11 +30,15 @@ import static java.lang.String.format;
 public class AuthorizationService {
 
     public static final String VTR = "vtr";
+    private static final String CLIENT_ID = "client_id";
     private final DynamoClientService dynamoClientService;
+    private final DynamoService dynamoService;
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthorizationService.class);
 
-    public AuthorizationService(DynamoClientService dynamoClientService) {
+    public AuthorizationService(
+            DynamoClientService dynamoClientService, DynamoService dynamoService) {
         this.dynamoClientService = dynamoClientService;
+        this.dynamoService = dynamoService;
     }
 
     public AuthorizationService(ConfigurationService configurationService) {
@@ -37,7 +46,8 @@ public class AuthorizationService {
                 new DynamoClientService(
                         configurationService.getAwsRegion(),
                         configurationService.getEnvironment(),
-                        configurationService.getDynamoEndpointUri()));
+                        configurationService.getDynamoEndpointUri()),
+                new DynamoService(configurationService));
     }
 
     public boolean isClientRedirectUriValid(ClientID clientID, URI redirectURI)
@@ -130,9 +140,30 @@ public class AuthorizationService {
                         .getClient(authenticationRequest.getClientID().getValue())
                         .map(ClientRegistry::calculateEffectiveVectorOfTrust)
                         .get();
-        List<String> vtr = authenticationRequest.getCustomParameter(VTR);
 
         return VectorOfTrust.parse(authenticationRequest.getCustomParameter(VTR), clientDefaults);
+    }
+
+    public UserContext buildUserContext(Session session, ClientSession clientSession) {
+        UserContext.Builder builder = UserContext.builder(session).withClientSession(clientSession);
+        UserContext userContext;
+        try {
+            String clientId =
+                    clientSession.getAuthRequestParams().get(CLIENT_ID).stream()
+                            .findFirst()
+                            .orElseThrow();
+            ClientRegistry clientRegistry = dynamoClientService.getClient(clientId).orElseThrow();
+            if (session.getEmailAddress() != null) {
+                UserProfile userProfile =
+                        dynamoService.getUserProfileByEmail(session.getEmailAddress());
+                builder.withUserProfile(userProfile);
+            }
+            userContext = builder.withClient(clientRegistry).build();
+        } catch (NoSuchElementException e) {
+            LOGGER.error("Error creating UserContext", e);
+            throw new RuntimeException("Error when creating UserContext", e);
+        }
+        return userContext;
     }
 
     private boolean areScopesValid(List<String> scopes) {
