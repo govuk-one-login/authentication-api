@@ -17,6 +17,9 @@ import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.ClientService;
+import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -62,6 +65,10 @@ class SendNotificationHandlerTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
+    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
+    private final ClientService clientService = mock(ClientService.class);
+    private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+
     private final Context context = mock(Context.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -73,9 +80,12 @@ class SendNotificationHandlerTest {
     private final SendNotificationHandler handler =
             new SendNotificationHandler(
                     configurationService,
+                    sessionService,
+                    clientSessionService,
+                    clientService,
+                    authenticationService,
                     validationService,
                     awsSqsClient,
-                    sessionService,
                     codeGeneratorService,
                     codeStorageService);
 
