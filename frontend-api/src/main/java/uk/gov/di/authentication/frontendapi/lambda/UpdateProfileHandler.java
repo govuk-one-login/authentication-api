@@ -5,7 +5,6 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -59,7 +58,6 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
     private final SessionService sessionService;
     private final ConfigurationService configurationService;
     private final AuditService auditService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine;
 
     protected UpdateProfileHandler(
@@ -98,13 +96,21 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
     }
 
     @Override
+    public void onRequestReceived() {
+        auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_RECEIVED);
+    }
+
+    @Override
+    public void onRequestValidationError() {
+        auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_ERROR);
+    }
+
+    @Override
     public APIGatewayProxyResponseEvent handleRequestWithUserContext(
             APIGatewayProxyRequestEvent input,
             Context context,
             UpdateProfileRequest request,
             UserContext userContext) {
-        auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_RECEIVED);
-
         Session session = userContext.getSession();
 
         LOGGER.info(
@@ -255,7 +261,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(ErrorResponse errorResponse) {
-        auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_ERROR);
+        onRequestValidationError();
         return generateApiGatewayProxyErrorResponse(400, errorResponse);
     }
 }

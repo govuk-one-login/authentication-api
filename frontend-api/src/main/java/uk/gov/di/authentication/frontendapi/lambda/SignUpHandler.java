@@ -65,7 +65,10 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
     @Override
     public APIGatewayProxyResponseEvent handleRequestWithUserContext(
-            APIGatewayProxyRequestEvent input, Context context, SignupRequest request, UserContext userContext) {
+            APIGatewayProxyRequestEvent input,
+            Context context,
+            SignupRequest request,
+            UserContext userContext) {
         try {
             var nextState =
                     stateMachine.transition(

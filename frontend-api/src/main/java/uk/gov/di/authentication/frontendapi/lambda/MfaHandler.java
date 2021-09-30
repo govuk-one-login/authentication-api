@@ -60,7 +60,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             ClientService clientService,
             AuthenticationService authenticationService,
             AwsSqsClient sqsClient) {
-        super(MfaRequest.class,
+        super(
+                MfaRequest.class,
                 configurationService,
                 sessionService,
                 clientSessionService,
@@ -72,8 +73,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
     }
 
     public MfaHandler() {
-        super(MfaRequest.class,
-                ConfigurationService.getInstance());
+        super(MfaRequest.class, ConfigurationService.getInstance());
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
@@ -86,15 +86,17 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
 
     @Override
     public APIGatewayProxyResponseEvent handleRequestWithUserContext(
-            APIGatewayProxyRequestEvent input, Context context, MfaRequest request, UserContext userContext) {
+            APIGatewayProxyRequestEvent input,
+            Context context,
+            MfaRequest request,
+            UserContext userContext) {
         try {
             var nextState =
                     stateMachine.transition(
                             userContext.getSession().getState(), SYSTEM_HAS_SENT_MFA_CODE);
 
             BaseFrontendRequest userWithEmailRequest =
-                    objectMapper.readValue(
-                            input.getBody(), BaseFrontendRequest.class);
+                    objectMapper.readValue(input.getBody(), BaseFrontendRequest.class);
             boolean codeRequestValid =
                     validateCodeRequestAttempts(
                             userWithEmailRequest.getEmail(), userContext.getSession());
@@ -103,8 +105,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         400, new BaseAPIResponse(userContext.getSession().getState()));
             }
             if (!userContext.getSession().validateSession(userWithEmailRequest.getEmail())) {
-                LOGGER.error(
-                        "Email in session does not match Email in Request");
+                LOGGER.error("Email in session does not match Email in Request");
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1000);
             }
             String phoneNumber =
@@ -124,8 +125,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     MFA_SMS);
             sessionService.save(
                     userContext.getSession().setState(nextState).incrementCodeRequestCount());
-            NotifyRequest notifyRequest =
-                    new NotifyRequest(phoneNumber, MFA_SMS, code);
+            NotifyRequest notifyRequest = new NotifyRequest(phoneNumber, MFA_SMS, code);
             sqsClient.send(objectMapper.writeValueAsString(notifyRequest));
 
             LOGGER.info(
@@ -135,9 +135,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             return generateApiGatewayProxyResponse(
                     200, new BaseAPIResponse(userContext.getSession().getState()));
         } catch (JsonProcessingException e) {
-            LOGGER.error(
-                    "Request is missing parameters. Request Body: {}",
-                    input.getBody());
+            LOGGER.error("Request is missing parameters. Request Body: {}", input.getBody());
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
             LOGGER.error("Invalid transition in user journey", e);

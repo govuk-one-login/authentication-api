@@ -78,6 +78,10 @@ public abstract class BaseFrontendHandler<T>
         return isWarming(input).orElseGet(() -> validateAndHandleRequest(input, context));
     }
 
+    public void onRequestReceived() {}
+
+    public void onRequestValidationError() {}
+
     public abstract APIGatewayProxyResponseEvent handleRequestWithUserContext(
             APIGatewayProxyRequestEvent input,
             Context context,
@@ -86,6 +90,7 @@ public abstract class BaseFrontendHandler<T>
 
     private APIGatewayProxyResponseEvent validateAndHandleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        onRequestReceived();
         Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
         Optional<ClientSession> clientSession =
                 clientSessionService.getClientSessionFromRequestHeaders(input.getHeaders());
@@ -100,6 +105,7 @@ public abstract class BaseFrontendHandler<T>
             LOG.error(
                     "Request is missing parameters. The body present in request: {}",
                     input.getBody());
+            onRequestValidationError();
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
 

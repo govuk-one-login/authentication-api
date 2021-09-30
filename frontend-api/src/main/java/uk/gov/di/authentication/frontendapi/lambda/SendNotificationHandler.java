@@ -97,21 +97,21 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
     @Override
     public APIGatewayProxyResponseEvent handleRequestWithUserContext(
-            APIGatewayProxyRequestEvent input, Context context, SendNotificationRequest request, UserContext userContext) {
+            APIGatewayProxyRequestEvent input,
+            Context context,
+            SendNotificationRequest request,
+            UserContext userContext) {
         try {
-            if (!userContext.getSession()
-                    .validateSession(request.getEmail())) {
-                LOGGER.info(
-                        "Invalid session. Email {}",
-                        request.getEmail());
-                return generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.ERROR_1000);
+            if (!userContext.getSession().validateSession(request.getEmail())) {
+                LOGGER.info("Invalid session. Email {}", request.getEmail());
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
             boolean codeRequestValid =
                     isCodeRequestAttemptValid(
                             request.getEmail(),
                             userContext.getSession(),
-                            request.getNotificationType(), userContext);
+                            request.getNotificationType(),
+                            userContext);
             if (!codeRequestValid) {
                 return generateApiGatewayProxyResponse(
                         400, new BaseAPIResponse(userContext.getSession().getState()));
@@ -122,18 +122,17 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                     nextState =
                             stateMachine.transition(
                                     userContext.getSession().getState(),
-                                    SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE, userContext);
+                                    SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE,
+                                    userContext);
 
                     Optional<ErrorResponse> emailErrorResponse =
-                            validationService.validateEmailAddress(
-                                    request.getEmail());
+                            validationService.validateEmailAddress(request.getEmail());
                     if (emailErrorResponse.isPresent()) {
                         LOGGER.error(
                                 "Session: {} encountered emailErrorResponse: {}",
                                 userContext.getSession().getSessionId(),
                                 emailErrorResponse.get());
-                        return generateApiGatewayProxyErrorResponse(
-                                400, emailErrorResponse.get());
+                        return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
                     }
                     return handleNotificationRequest(
                             request.getEmail(),
@@ -153,14 +152,11 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                                 userContext.getSession().getSessionId());
                         return generateApiGatewayProxyResponse(400, ERROR_1011);
                     }
-                    String phoneNumber =
-                            removeWhitespaceFromPhoneNumber(
-                                    request.getPhoneNumber());
+                    String phoneNumber = removeWhitespaceFromPhoneNumber(request.getPhoneNumber());
                     Optional<ErrorResponse> errorResponse =
                             validationService.validatePhoneNumber(phoneNumber);
                     if (errorResponse.isPresent()) {
-                        return generateApiGatewayProxyErrorResponse(
-                                400, errorResponse.get());
+                        return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
                     }
                     return handleNotificationRequest(
                             phoneNumber,
@@ -171,8 +167,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
         } catch (SdkClientException ex) {
             LOGGER.error("Error sending message to queue", ex);
-            return generateApiGatewayProxyResponse(
-                    500, "Error sending message to queue");
+            return generateApiGatewayProxyResponse(500, "Error sending message to queue");
         } catch (JsonProcessingException e) {
             LOGGER.error("Error parsing request", e);
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
@@ -209,7 +204,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
     }
 
     private boolean isCodeRequestAttemptValid(
-            String email, Session session, NotificationType notificationType, UserContext userContext) {
+            String email,
+            Session session,
+            NotificationType notificationType,
+            UserContext userContext) {
         if (session.getCodeRequestCount() == configurationService.getCodeMaxRetries()) {
             LOGGER.error(
                     "User has requested too many OTP codes for session {}", session.getSessionId());
