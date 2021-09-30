@@ -17,8 +17,12 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.oidc.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionState;
@@ -31,23 +35,26 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URI;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
+import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -64,13 +71,16 @@ class AuthCodeHandlerTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final Context context = mock(Context.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
+    private final ClientSession clientSession = mock(ClientSession.class);
+    private final VectorOfTrust vectorOfTrust = mock(VectorOfTrust.class);
     private AuthCodeHandler handler;
 
     private final Session session =
             new Session(SESSION_ID)
                     .addClientSession(CLIENT_SESSION_ID)
                     .setEmailAddress(EMAIL)
-                    .setState(SessionState.MFA_CODE_VERIFIED);
+                    .setState(SessionState.MFA_CODE_VERIFIED)
+                    .setCurrentCredentialStrength(MEDIUM_LEVEL);
 
     @BeforeEach
     public void setUp() {
@@ -83,12 +93,27 @@ class AuthCodeHandlerTest {
                         clientSessionService);
     }
 
-    @Test
-    public void shouldGenerateSuccessfulAuthResponse() throws ClientNotFoundException {
+    private static Stream<Arguments> upliftTestParameters() {
+        return Stream.of(
+                arguments(null, LOW_LEVEL, LOW_LEVEL),
+                arguments(LOW_LEVEL, LOW_LEVEL, LOW_LEVEL),
+                arguments(MEDIUM_LEVEL, MEDIUM_LEVEL, MEDIUM_LEVEL),
+                arguments(LOW_LEVEL, MEDIUM_LEVEL, MEDIUM_LEVEL),
+                arguments(MEDIUM_LEVEL, LOW_LEVEL, MEDIUM_LEVEL));
+    }
+
+    @ParameterizedTest
+    @MethodSource("upliftTestParameters")
+    public void shouldGenerateSuccessfulAuthResponseAndUpliftAsNecessary(
+            CredentialTrustLevel initialLevel,
+            CredentialTrustLevel requestedLevel,
+            CredentialTrustLevel finalLevel)
+            throws ClientNotFoundException {
         ClientID clientID = new ClientID();
         AuthorizationCode authorizationCode = new AuthorizationCode();
         AuthenticationRequest authRequest =
-                generateValidSessionAndAuthRequest(clientID, new State());
+                generateValidSessionAndAuthRequest(clientID, new State(), requestedLevel);
+        session.setCurrentCredentialStrength(initialLevel);
         AuthenticationSuccessResponse authSuccessResponse =
                 new AuthenticationSuccessResponse(
                         authRequest.getRedirectionURI(),
@@ -115,6 +140,8 @@ class AuthCodeHandlerTest {
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 equalTo(authSuccessResponse.toURI().toString()));
+
+        assertThat(session.getCurrentCredentialStrength(), equalTo(finalLevel));
     }
 
     @Test
@@ -131,7 +158,7 @@ class AuthCodeHandlerTest {
     public void shouldGenerateErrorResponseWhenRedirectUriIsInvalid()
             throws ClientNotFoundException {
         ClientID clientID = new ClientID();
-        generateValidSessionAndAuthRequest(clientID, new State());
+        generateValidSessionAndAuthRequest(clientID, new State(), MEDIUM_LEVEL);
         when(authorizationService.isClientRedirectUriValid(eq(new ClientID()), eq(REDIRECT_URI)))
                 .thenReturn(false);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -152,7 +179,7 @@ class AuthCodeHandlerTest {
                         any(AuthenticationRequest.class), eq(OAuth2Error.INVALID_CLIENT)))
                 .thenReturn(authenticationErrorResponse);
         ClientID clientID = new ClientID();
-        generateValidSessionAndAuthRequest(clientID, state);
+        generateValidSessionAndAuthRequest(clientID, state, MEDIUM_LEVEL);
         doThrow(ClientNotFoundException.class)
                 .when(authorizationService)
                 .isClientRedirectUriValid(eq(clientID), eq(REDIRECT_URI));
@@ -181,7 +208,7 @@ class AuthCodeHandlerTest {
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put("redirect_uri", singletonList("http://localhost/redirect"));
         customParams.put("client_id", singletonList(new ClientID().toString()));
-        generateValidSession(customParams);
+        generateValidSession(customParams, MEDIUM_LEVEL);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
@@ -199,7 +226,7 @@ class AuthCodeHandlerTest {
         ClientID clientID = new ClientID();
         AuthorizationCode authorizationCode = new AuthorizationCode();
         AuthenticationRequest authRequest =
-                generateValidSessionAndAuthRequest(clientID, new State());
+                generateValidSessionAndAuthRequest(clientID, new State(), MEDIUM_LEVEL);
         AuthenticationSuccessResponse authSuccessResponse =
                 new AuthenticationSuccessResponse(
                         authRequest.getRedirectionURI(),
@@ -227,7 +254,7 @@ class AuthCodeHandlerTest {
     }
 
     private AuthenticationRequest generateValidSessionAndAuthRequest(
-            ClientID clientID, State state) {
+            ClientID clientID, State state, CredentialTrustLevel requestedLevel) {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope();
         Nonce nonce = new Nonce();
@@ -237,16 +264,18 @@ class AuthCodeHandlerTest {
                         .state(state)
                         .nonce(nonce)
                         .build();
-        generateValidSession(authRequest.toParameters());
+        generateValidSession(authRequest.toParameters(), requestedLevel);
         return authRequest;
     }
 
-    private void generateValidSession(Map<String, List<String>> authRequest) {
+    private void generateValidSession(
+            Map<String, List<String>> authRequest, CredentialTrustLevel requestedLevel) {
         when(sessionService.readSessionFromRedis(SESSION_ID)).thenReturn(Optional.of(session));
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(
-                        new ClientSession(
-                                authRequest, LocalDateTime.now(), mock(VectorOfTrust.class)));
+        when(vectorOfTrust.getCredentialTrustLevel()).thenReturn(requestedLevel);
+        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vectorOfTrust);
+        when(clientSession.getAuthRequestParams()).thenReturn(authRequest);
+        when(clientSessionService.getClientSession(eq(CLIENT_SESSION_ID)))
+                .thenReturn(clientSession);
     }
 
     private String buildCookieString() {

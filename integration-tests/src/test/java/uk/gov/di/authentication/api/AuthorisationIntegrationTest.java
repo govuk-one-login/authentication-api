@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
+import java.net.URI;
 import java.security.KeyPair;
 import java.util.Base64;
 import java.util.List;
@@ -32,10 +33,16 @@ import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
+import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
+import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
+import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
+import static uk.gov.di.authentication.shared.entity.SessionState.UPLIFT_REQUIRED_CM;
 
 public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
 
@@ -140,7 +147,7 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
 
     @Test
     public void shouldRedirectToLoginWhenSessionFromCookieIsNotAuthenticated() throws Exception {
-        String sessionId = givenAnExistingSession(SessionState.AUTHENTICATION_REQUIRED);
+        String sessionId = givenAnExistingSession(AUTHENTICATION_REQUIRED);
 
         Response response =
                 doAuthorisationRequest(
@@ -160,7 +167,7 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
     @Test
     public void shouldIssueAuthorisationCodeWhenSessionFromCookieIsAuthenticated()
             throws Exception {
-        String sessionId = givenAnExistingSession(SessionState.AUTHENTICATED);
+        String sessionId = givenAnExistingSession(AUTHENTICATED);
 
         Response response =
                 doAuthorisationRequest(
@@ -191,7 +198,7 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
 
     @Test
     public void shouldNotPromptForLoginWhenPromptNoneAndUserAuthenticated() throws Exception {
-        String sessionId = givenAnExistingSession(SessionState.AUTHENTICATED);
+        String sessionId = givenAnExistingSession(AUTHENTICATED);
 
         Response response =
                 doAuthorisationRequest(
@@ -210,7 +217,7 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
 
     @Test
     public void shouldPromptForLoginWhenPromptLoginAndUserAuthenticated() throws Exception {
-        String sessionId = givenAnExistingSession(SessionState.AUTHENTICATED);
+        String sessionId = givenAnExistingSession(AUTHENTICATED);
 
         Response response =
                 doAuthorisationRequest(
@@ -225,17 +232,40 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(configurationService.getLoginURI().toString()));
-        /*
-           TODO:
-               In this scenario the session state would be set to AUTHENTICATION_REQUIRED.
-               At present there is no way to retrieve the state in an integration test.
-               A further assertion should be added when possible.
-        */
+        String newSessionId = response.getCookies().get("gs").getValue().split("\\.")[0];
+        assertThat(
+                RedisHelper.getSession(newSessionId).getState(), equalTo(AUTHENTICATION_REQUIRED));
+    }
+
+    @Test
+    public void shouldRequireUpliftWhenHighCredentialLevelOfTrustRequested() throws Exception {
+        String sessionId = givenAnExistingSession(AUTHENTICATED, LOW_LEVEL);
+
+        Response response =
+                doAuthorisationRequest(
+                        Optional.of(CLIENT_ID),
+                        Optional.of(new Cookie("gs", format("%s.456", sessionId))),
+                        Optional.empty(),
+                        "openid");
+
+        assertEquals(302, response.getStatus());
+        assertNotNull(response.getCookies().get("gs"));
+        assertThat(response.getCookies().get("gs").getValue(), not(startsWith(sessionId)));
+        String redirectUri = getHeaderValueByParamName(response, ResponseHeaders.LOCATION);
+        assertThat(redirectUri, startsWith(configurationService.getLoginURI().toString()));
+        assertThat(URI.create(redirectUri).getQuery(), equalTo("interrupt=UPLIFT_REQUIRED_CM"));
+        String newSessionId = response.getCookies().get("gs").getValue().split("\\.")[0];
+        assertThat(RedisHelper.getSession(newSessionId).getState(), equalTo(UPLIFT_REQUIRED_CM));
     }
 
     private String givenAnExistingSession(SessionState initialState) throws Exception {
+        return givenAnExistingSession(initialState, MEDIUM_LEVEL);
+    }
+
+    private String givenAnExistingSession(
+            SessionState initialState, CredentialTrustLevel credentialTrustLevel) throws Exception {
         String sessionId = RedisHelper.createSession();
-        RedisHelper.setSessionState(sessionId, initialState);
+        RedisHelper.setSessionState(sessionId, initialState, credentialTrustLevel);
         return sessionId;
     }
 
@@ -279,6 +309,6 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",
-                CredentialTrustLevel.MEDIUM_LEVEL.getValue());
+                MEDIUM_LEVEL.getValue());
     }
 }

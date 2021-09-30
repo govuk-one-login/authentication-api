@@ -14,12 +14,15 @@ import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthorizationService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.state.StateMachine;
+import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
 import java.util.Map;
@@ -31,7 +34,6 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -39,7 +41,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED;
+import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
+import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_NOT_VALID;
+import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
@@ -51,7 +58,8 @@ class AuthorisationHandlerTest {
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuthorizationService authorizationService = mock(AuthorizationService.class);
     private final AuditService auditService = mock(AuditService.class);
-
+    private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
+            mock(StateMachine.class);
     private static final String EXPECTED_COOKIE_STRING =
             "gs=a-session-id.client-session-id; Max-Age=3600; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
 
@@ -67,7 +75,28 @@ class AuthorisationHandlerTest {
                         sessionService,
                         clientSessionService,
                         authorizationService,
-                        auditService);
+                        auditService,
+                        stateMachine);
+        when(stateMachine.transition(
+                        eq(AUTHENTICATED),
+                        eq(USER_HAS_STARTED_A_NEW_JOURNEY),
+                        any(UserContext.class)))
+                .thenReturn(AUTHENTICATED);
+        when(stateMachine.transition(
+                        eq(MFA_CODE_NOT_VALID),
+                        eq(USER_HAS_STARTED_A_NEW_JOURNEY),
+                        any(UserContext.class)))
+                .thenReturn(MFA_CODE_NOT_VALID);
+        when(stateMachine.transition(
+                        eq(AUTHENTICATED),
+                        eq(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED),
+                        any(UserContext.class)))
+                .thenReturn(NEW);
+        when(stateMachine.transition(
+                        eq(AUTHENTICATION_REQUIRED),
+                        eq(USER_HAS_STARTED_A_NEW_JOURNEY),
+                        any(UserContext.class)))
+                .thenReturn(NEW);
     }
 
     @AfterEach
@@ -188,34 +217,6 @@ class AuthorisationHandlerTest {
     }
 
     @Test
-    void shouldCreateNewSessionWhenStateIsNotAuthenticated() {
-        final URI loginUrl = URI.create("http://example.com");
-        final Session session = new Session("a-session-id");
-        final Session newSession = new Session("new-session-id");
-        session.setState(MFA_CODE_NOT_VALID);
-
-        when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
-                .thenReturn(Optional.empty());
-        when(configService.getLoginURI()).thenReturn(loginUrl);
-        when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
-        when(configService.getSessionCookieMaxAge()).thenReturn(3600);
-        when(clientSessionService.generateClientSession(any(ClientSession.class)))
-                .thenReturn("client-session-id");
-        when(configService.getDomainName()).thenReturn(domainName);
-        when(sessionService.getSessionFromSessionCookie(any())).thenReturn(Optional.of(session));
-        when(sessionService.createSession()).thenReturn(newSession);
-
-        APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent());
-        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
-
-        assertThat(response, hasStatus(302));
-        assertEquals(loginUrl.getAuthority(), uri.getAuthority());
-        assertNotNull(response.getHeaders().get("Set-Cookie"));
-        verify(sessionService).deleteSessionFromRedis(session.getSessionId());
-        verify(sessionService).createSession();
-    }
-
-    @Test
     void shouldSkipLoginWhenPromptParamAbsentAndLoggedIn() {
         final URI loginUrl = URI.create("http://example.com");
         final URI authCodeUri = URI.create("/auth-code");
@@ -307,14 +308,12 @@ class AuthorisationHandlerTest {
     void shouldDoLoginWhenPromptParamLoginAndLoggedIn() {
         final URI loginUrl = URI.create("http://example.com");
         final Session session = new Session("a-session-id");
-        final Session newSession = new Session("new-session-id");
         String expectedCookieString =
                 format(
                         "gs=%s.client-session-id; Max-Age=3600; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
-                        newSession.getSessionId());
+                        session.getSessionId());
 
         whenLoggedIn(session, loginUrl);
-        when(sessionService.createSession()).thenReturn(newSession);
 
         APIGatewayProxyResponseEvent response = makeHandlerRequest(withPromptRequestEvent("login"));
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
@@ -322,8 +321,7 @@ class AuthorisationHandlerTest {
         assertThat(response, hasStatus(302));
         assertEquals(loginUrl.getAuthority(), uri.getAuthority());
         assertEquals(expectedCookieString, response.getHeaders().get("Set-Cookie"));
-        verify(sessionService).save(eq(newSession));
-        assertEquals(SessionState.NEW, newSession.getState());
+        assertEquals(SessionState.NEW, session.getState());
     }
 
     @Test
@@ -453,12 +451,10 @@ class AuthorisationHandlerTest {
         final Session session = new Session("a-session-id");
         whenLoggedIn(session, loginUrl);
         session.setState(SessionState.AUTHENTICATION_REQUIRED);
-        final Session newSession = new Session("new-session-id-");
-        when(sessionService.createSession()).thenReturn(newSession);
         String expectedCookieString =
                 format(
                         "gs=%s.client-session-id; Max-Age=3600; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
-                        newSession.getSessionId());
+                        session.getSessionId());
 
         APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent());
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
@@ -466,8 +462,8 @@ class AuthorisationHandlerTest {
         assertThat(response, hasStatus(302));
         assertEquals(loginUrl.getAuthority(), uri.getAuthority());
         assertEquals(expectedCookieString, response.getHeaders().get("Set-Cookie"));
-        verify(sessionService).save(eq(newSession));
-        assertEquals(SessionState.NEW, newSession.getState());
+        verify(sessionService).save(eq(session));
+        assertEquals(SessionState.NEW, session.getState());
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {

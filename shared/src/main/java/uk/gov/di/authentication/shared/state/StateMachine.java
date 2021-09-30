@@ -45,6 +45,8 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_PHONE_VERIFICATION_CODE;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_ACTIONED_CONSENT;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_CREATED_A_PASSWORD;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.ACCOUNT_TEMPORARILY_LOCKED;
 import static uk.gov.di.authentication.shared.entity.SessionState.ADDED_UNVERIFIED_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
@@ -74,13 +76,16 @@ import static uk.gov.di.authentication.shared.entity.SessionState.RESET_PASSWORD
 import static uk.gov.di.authentication.shared.entity.SessionState.TWO_FACTOR_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS_ACCEPTED;
+import static uk.gov.di.authentication.shared.entity.SessionState.UPLIFT_REQUIRED_CM;
 import static uk.gov.di.authentication.shared.entity.SessionState.USER_NOT_FOUND;
 import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
 import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_PHONE_NUMBER_CODE_SENT;
 import static uk.gov.di.authentication.shared.state.conditions.AggregateCondition.and;
 import static uk.gov.di.authentication.shared.state.conditions.ClientDoesNotRequireMfa.clientDoesNotRequireMfa;
 import static uk.gov.di.authentication.shared.state.conditions.ConsentNotGiven.userHasNotGivenConsent;
+import static uk.gov.di.authentication.shared.state.conditions.CredentialTrustUpliftRequired.upliftRequired;
 import static uk.gov.di.authentication.shared.state.conditions.PhoneNumberUnverified.phoneNumberUnverified;
+import static uk.gov.di.authentication.shared.state.conditions.RequestedLevelOfTrustEquals.requestedLevelOfTrustIsCm;
 import static uk.gov.di.authentication.shared.state.conditions.TermsAndConditionsVersionNotAccepted.userHasNotAcceptedTermsAndConditionsVersion;
 
 public class StateMachine<T, A, C> {
@@ -140,7 +145,9 @@ public class StateMachine<T, A, C> {
                 .allow(
                         on(USER_ENTERED_REGISTERED_EMAIL_ADDRESS).then(AUTHENTICATION_REQUIRED),
                         on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND),
-                        on(SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE).then(VERIFY_EMAIL_CODE_SENT))
+                        on(SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE).then(VERIFY_EMAIL_CODE_SENT),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(RESET_PASSWORD_LINK_SENT)
                 .allow(
                         on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND),
@@ -150,12 +157,16 @@ public class StateMachine<T, A, C> {
                 .when(RESET_PASSWORD_LINK_MAX_RETRIES_REACHED)
                 .allow(
                         on(SYSTEM_HAS_SENT_RESET_PASSWORD_LINK).then(RESET_PASSWORD_LINK_SENT),
-                        on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND))
+                        on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(USER_NOT_FOUND)
                 .allow(
                         on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND),
                         on(USER_ENTERED_REGISTERED_EMAIL_ADDRESS).then(AUTHENTICATION_REQUIRED),
-                        on(SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE).then(VERIFY_EMAIL_CODE_SENT))
+                        on(SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE).then(VERIFY_EMAIL_CODE_SENT),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(VERIFY_EMAIL_CODE_SENT)
                 .allow(
                         on(USER_ENTERED_REGISTERED_EMAIL_ADDRESS).then(AUTHENTICATION_REQUIRED),
@@ -163,12 +174,16 @@ public class StateMachine<T, A, C> {
                         on(USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE).then(EMAIL_CODE_VERIFIED),
                         on(SYSTEM_HAS_SENT_TOO_MANY_EMAIL_VERIFICATION_CODES)
                                 .then(EMAIL_MAX_CODES_SENT),
-                        on(USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE).then(EMAIL_CODE_NOT_VALID))
+                        on(USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE).then(EMAIL_CODE_NOT_VALID),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(EMAIL_MAX_CODES_SENT)
                 .allow(
                         on(SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE).then(VERIFY_EMAIL_CODE_SENT),
                         on(SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_EMAIL_VERIFICATION_CODES)
-                                .then(EMAIL_CODE_REQUESTS_BLOCKED))
+                                .then(EMAIL_CODE_REQUESTS_BLOCKED),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(EMAIL_CODE_REQUESTS_BLOCKED)
                 .allow(on(SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE).then(VERIFY_EMAIL_CODE_SENT))
                 .when(EMAIL_CODE_NOT_VALID)
@@ -176,19 +191,28 @@ public class StateMachine<T, A, C> {
                         on(USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE).then(EMAIL_CODE_VERIFIED),
                         on(USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE).then(EMAIL_CODE_NOT_VALID),
                         on(USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES)
-                                .then(EMAIL_CODE_MAX_RETRIES_REACHED))
+                                .then(EMAIL_CODE_MAX_RETRIES_REACHED),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(EMAIL_CODE_MAX_RETRIES_REACHED)
                 .finalState()
                 .when(EMAIL_CODE_VERIFIED)
                 .allow(
                         on(USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE).then(EMAIL_CODE_NOT_VALID),
-                        on(USER_HAS_CREATED_A_PASSWORD).then(TWO_FACTOR_REQUIRED))
+                        on(USER_HAS_CREATED_A_PASSWORD).then(TWO_FACTOR_REQUIRED),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(TWO_FACTOR_REQUIRED)
-                .allow(on(USER_ENTERED_A_NEW_PHONE_NUMBER).then(ADDED_UNVERIFIED_PHONE_NUMBER))
+                .allow(
+                        on(USER_ENTERED_A_NEW_PHONE_NUMBER).then(ADDED_UNVERIFIED_PHONE_NUMBER),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(ADDED_UNVERIFIED_PHONE_NUMBER)
                 .allow(
                         on(SYSTEM_HAS_SENT_PHONE_VERIFICATION_CODE)
-                                .then(VERIFY_PHONE_NUMBER_CODE_SENT))
+                                .then(VERIFY_PHONE_NUMBER_CODE_SENT),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(VERIFY_PHONE_NUMBER_CODE_SENT)
                 .allow(
                         on(USER_ENTERED_VALID_PHONE_VERIFICATION_CODE)
@@ -199,19 +223,26 @@ public class StateMachine<T, A, C> {
                         on(SYSTEM_HAS_SENT_TOO_MANY_PHONE_VERIFICATION_CODES)
                                 .then(PHONE_NUMBER_MAX_CODES_SENT),
                         on(USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE)
-                                .then(PHONE_NUMBER_CODE_NOT_VALID))
+                                .then(PHONE_NUMBER_CODE_NOT_VALID),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(PHONE_NUMBER_MAX_CODES_SENT)
                 .allow(
                         on(SYSTEM_HAS_SENT_PHONE_VERIFICATION_CODE)
                                 .then(VERIFY_PHONE_NUMBER_CODE_SENT),
                         on(SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_PHONE_VERIFICATION_CODES)
-                                .then(PHONE_NUMBER_CODE_REQUESTS_BLOCKED))
+                                .then(PHONE_NUMBER_CODE_REQUESTS_BLOCKED),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(PHONE_NUMBER_CODE_REQUESTS_BLOCKED)
                 .allow(
                         on(SYSTEM_HAS_SENT_PHONE_VERIFICATION_CODE)
                                 .then(VERIFY_PHONE_NUMBER_CODE_SENT))
                 .when(PHONE_NUMBER_CODE_VERIFIED)
-                .allow(on(SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE).then(AUTHENTICATED))
+                .allow(
+                        on(SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE).then(AUTHENTICATED),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(PHONE_NUMBER_CODE_NOT_VALID)
                 .allow(
                         on(USER_ENTERED_VALID_PHONE_VERIFICATION_CODE)
@@ -219,7 +250,9 @@ public class StateMachine<T, A, C> {
                         on(USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE)
                                 .then(PHONE_NUMBER_CODE_NOT_VALID),
                         on(USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES)
-                                .then(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED))
+                                .then(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED)
                 .finalState()
                 .when(ACCOUNT_TEMPORARILY_LOCKED)
@@ -249,9 +282,14 @@ public class StateMachine<T, A, C> {
                         on(SYSTEM_HAS_SENT_RESET_PASSWORD_LINK).then(RESET_PASSWORD_LINK_SENT),
                         on(USER_ENTERED_INVALID_PASSWORD_TOO_MANY_TIMES)
                                 .then(ACCOUNT_TEMPORARILY_LOCKED),
-                        on(ACCOUNT_LOCK_EXPIRED).then(AUTHENTICATION_REQUIRED))
+                        on(ACCOUNT_LOCK_EXPIRED).then(AUTHENTICATION_REQUIRED),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(LOGGED_IN)
-                .allow(on(SYSTEM_HAS_SENT_MFA_CODE).then(MFA_SMS_CODE_SENT))
+                .allow(
+                        on(SYSTEM_HAS_SENT_MFA_CODE).then(MFA_SMS_CODE_SENT),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(MFA_SMS_CODE_SENT)
                 .allow(
                         on(SYSTEM_HAS_SENT_MFA_CODE).then(MFA_SMS_CODE_SENT),
@@ -263,12 +301,16 @@ public class StateMachine<T, A, C> {
                                                 configurationService
                                                         .getTermsAndConditionsVersion())),
                         on(USER_ENTERED_VALID_MFA_CODE).then(MFA_CODE_VERIFIED).byDefault(),
-                        on(USER_ENTERED_INVALID_MFA_CODE).then(MFA_CODE_NOT_VALID))
+                        on(USER_ENTERED_INVALID_MFA_CODE).then(MFA_CODE_NOT_VALID),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(MFA_SMS_MAX_CODES_SENT)
                 .allow(
                         on(SYSTEM_HAS_SENT_MFA_CODE).then(MFA_SMS_CODE_SENT),
                         on(SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_MFA_VERIFICATION_CODES)
-                                .then(MFA_CODE_REQUESTS_BLOCKED))
+                                .then(MFA_CODE_REQUESTS_BLOCKED),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(MFA_CODE_REQUESTS_BLOCKED)
                 .allow(on(SYSTEM_HAS_SENT_MFA_CODE).then(MFA_SMS_CODE_SENT))
                 .when(MFA_CODE_NOT_VALID)
@@ -285,7 +327,9 @@ public class StateMachine<T, A, C> {
                         on(USER_ENTERED_VALID_MFA_CODE).then(MFA_CODE_VERIFIED).byDefault(),
                         on(USER_ENTERED_INVALID_MFA_CODE).then(MFA_CODE_NOT_VALID),
                         on(USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES)
-                                .then(MFA_CODE_MAX_RETRIES_REACHED))
+                                .then(MFA_CODE_MAX_RETRIES_REACHED),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(MFA_CODE_MAX_RETRIES_REACHED)
                 .finalState()
                 .when(MFA_CODE_VERIFIED)
@@ -296,15 +340,35 @@ public class StateMachine<T, A, C> {
                                 .then(CONSENT_REQUIRED)
                                 .ifCondition(userHasNotGivenConsent()),
                         on(USER_ACCEPTS_TERMS_AND_CONDITIONS)
-                                .then(UPDATED_TERMS_AND_CONDITIONS_ACCEPTED))
+                                .then(UPDATED_TERMS_AND_CONDITIONS_ACCEPTED),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(UPDATED_TERMS_AND_CONDITIONS_ACCEPTED)
-                .allow(on(SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE).then(AUTHENTICATED))
+                .allow(
+                        on(SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE).then(AUTHENTICATED),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(CONSENT_REQUIRED)
-                .allow(on(USER_HAS_ACTIONED_CONSENT).then(CONSENT_ADDED))
+                .allow(
+                        on(USER_HAS_ACTIONED_CONSENT).then(CONSENT_ADDED),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(CONSENT_ADDED)
-                .allow(on(SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE).then(AUTHENTICATED))
+                .allow(
+                        on(SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE).then(AUTHENTICATED),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(AUTHENTICATED)
-                .allow(on(SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE).then(AUTHENTICATED))
+                .allow(
+                        on(SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE).then(AUTHENTICATED),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY)
+                                .ifCondition(and(upliftRequired(), requestedLevelOfTrustIsCm()))
+                                .then(UPLIFT_REQUIRED_CM),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(AUTHENTICATED),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED)
+                                .then(AUTHENTICATION_REQUIRED))
+                .when(UPLIFT_REQUIRED_CM)
+                .allow(on(SYSTEM_HAS_SENT_MFA_CODE).then(MFA_SMS_CODE_SENT))
                 .build();
     }
 

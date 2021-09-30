@@ -17,6 +17,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper.SessionCookieIds;
@@ -32,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import static java.util.Objects.isNull;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
@@ -171,7 +173,19 @@ public class AuthCodeHandler
                                                         ResponseHeaders.LOCATION,
                                                         errorResponse.toURI().toString()));
                             }
-
+                            VectorOfTrust requestedVectorOfTrust =
+                                    clientSessionService
+                                            .getClientSession(sessionCookieIds.getClientSessionId())
+                                            .getEffectiveVectorOfTrust();
+                            if (isNull(session.getCurrentCredentialStrength())
+                                    || requestedVectorOfTrust
+                                                    .getCredentialTrustLevel()
+                                                    .compareTo(
+                                                            session.getCurrentCredentialStrength())
+                                            > 0) {
+                                session.setCurrentCredentialStrength(
+                                        requestedVectorOfTrust.getCredentialTrustLevel());
+                            }
                             AuthorizationCode authCode =
                                     authorisationCodeService.generateAuthorisationCode(
                                             sessionCookieIds.getClientSessionId(),
