@@ -33,6 +33,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_SMS_CODE_SENT;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_SMS_MAX_CODES_SENT;
+import static uk.gov.di.authentication.shared.entity.SessionState.UPLIFT_REQUIRED_CM;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -73,6 +74,26 @@ public class MfaHandlerTest {
     @Test
     public void shouldReturn200ForSuccessfulMfaRequest() throws JsonProcessingException {
         usingValidSession();
+        when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(PHONE_NUMBER));
+        when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
+        NotifyRequest notifyRequest = new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE);
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        verify(sqsClient).send(new ObjectMapper().writeValueAsString(notifyRequest));
+        verify(codeStorageService).saveOtpCode(TEST_EMAIL_ADDRESS, CODE, CODE_EXPIRY_TIME, MFA_SMS);
+        assertThat(result, hasStatus(200));
+    }
+
+    @Test
+    public void shouldAllowMfaRequestDuringUplift() throws JsonProcessingException {
+        usingValidSession();
+        session.setState(UPLIFT_REQUIRED_CM);
+
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(PHONE_NUMBER));
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);

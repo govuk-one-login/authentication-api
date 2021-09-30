@@ -367,6 +367,8 @@ public class StateMachine<T, A, C> {
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(AUTHENTICATED),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED)
                                 .then(AUTHENTICATION_REQUIRED))
+                .when(UPLIFT_REQUIRED_CM)
+                .allow(on(SYSTEM_HAS_SENT_MFA_CODE).then(MFA_SMS_CODE_SENT))
                 .build();
     }
 
