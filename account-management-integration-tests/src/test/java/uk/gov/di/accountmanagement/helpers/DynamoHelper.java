@@ -12,7 +12,8 @@ import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,7 +39,7 @@ public class DynamoHelper {
 
     public static void signUp(String email, String password, Subject subject) {
         TermsAndConditions termsAndConditions =
-                new TermsAndConditions("1.0", String.valueOf(Instant.now().getEpochSecond()));
+                new TermsAndConditions("1.0", LocalDateTime.now(ZoneId.of("UTC")).toString());
         DYNAMO_SERVICE.signUp(email, password, subject, termsAndConditions);
     }
 

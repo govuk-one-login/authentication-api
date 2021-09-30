@@ -115,6 +115,7 @@ public class UserProfile {
         if (this.clientConsent == null) {
             this.clientConsent = List.of(consent);
         } else {
+            this.clientConsent.removeIf(t -> t.getClientId().equals(consent.getClientId()));
             this.clientConsent.add(consent);
         }
         return this;

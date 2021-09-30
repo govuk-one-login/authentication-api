@@ -1,8 +1,10 @@
 package uk.gov.di.authentication.api;
 
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCError;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.ClientBuilder;
 import jakarta.ws.rs.client.Invocation;
@@ -16,16 +18,21 @@ import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.KeyPairHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.oidc.entity.ResponseHeaders;
+import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.net.URI;
 import java.security.KeyPair;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static com.nimbusds.openid.connect.sdk.Prompt.Type.LOGIN;
 import static com.nimbusds.openid.connect.sdk.Prompt.Type.NONE;
@@ -42,6 +49,7 @@ import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LE
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
+import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPLIFT_REQUIRED_CM;
 
 public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
@@ -51,6 +59,8 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
     private static final String CLIENT_ID = "test-client";
     private static final String AM_CLIENT_ID = "am-test-client";
     private static final String INVALID_CLIENT_ID = "invalid-test-client";
+    private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
+    private static final String TEST_PASSWORD = "password";
     private static final KeyPair KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
 
     private static final ConfigurationService configurationService = new ConfigurationService();
@@ -148,6 +158,8 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
     @Test
     public void shouldRedirectToLoginWhenSessionFromCookieIsNotAuthenticated() throws Exception {
         String sessionId = givenAnExistingSession(AUTHENTICATION_REQUIRED);
+        RedisHelper.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        registerUserWithConsentedScope(Optional.empty());
 
         Response response =
                 doAuthorisationRequest(
@@ -168,6 +180,8 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
     public void shouldIssueAuthorisationCodeWhenSessionFromCookieIsAuthenticated()
             throws Exception {
         String sessionId = givenAnExistingSession(AUTHENTICATED);
+        RedisHelper.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        registerUserWithConsentedScope(Optional.of(new Scope(OIDCScopeValue.OPENID)));
 
         Response response =
                 doAuthorisationRequest(
@@ -199,13 +213,15 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
     @Test
     public void shouldNotPromptForLoginWhenPromptNoneAndUserAuthenticated() throws Exception {
         String sessionId = givenAnExistingSession(AUTHENTICATED);
+        RedisHelper.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        registerUserWithConsentedScope(Optional.of(new Scope(OIDCScopeValue.OPENID)));
 
         Response response =
                 doAuthorisationRequest(
                         Optional.of(CLIENT_ID),
                         Optional.of(new Cookie("gs", format("%s.456", sessionId))),
                         Optional.of(NONE.toString()),
-                        "openid");
+                        OIDCScopeValue.OPENID.getValue());
 
         assertEquals(302, response.getStatus());
         assertNotNull(response.getCookies().get("gs"));
@@ -218,6 +234,8 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
     @Test
     public void shouldPromptForLoginWhenPromptLoginAndUserAuthenticated() throws Exception {
         String sessionId = givenAnExistingSession(AUTHENTICATED);
+        RedisHelper.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        registerUserWithConsentedScope(Optional.empty());
 
         Response response =
                 doAuthorisationRequest(
@@ -240,6 +258,8 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
     @Test
     public void shouldRequireUpliftWhenHighCredentialLevelOfTrustRequested() throws Exception {
         String sessionId = givenAnExistingSession(AUTHENTICATED, LOW_LEVEL);
+        RedisHelper.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        registerUserWithConsentedScope(Optional.empty());
 
         Response response =
                 doAuthorisationRequest(
@@ -256,6 +276,29 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
         assertThat(URI.create(redirectUri).getQuery(), equalTo("interrupt=UPLIFT_REQUIRED_CM"));
         String newSessionId = response.getCookies().get("gs").getValue().split("\\.")[0];
         assertThat(RedisHelper.getSession(newSessionId).getState(), equalTo(UPLIFT_REQUIRED_CM));
+    }
+
+    @Test
+    public void shouldRequireConsentWhenUserAuthenticatedAndConsentIsNotGiven() throws Exception {
+        String sessionId = givenAnExistingSession(AUTHENTICATED);
+        RedisHelper.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        registerUserWithConsentedScope(Optional.empty());
+
+        Response response =
+                doAuthorisationRequest(
+                        Optional.of(CLIENT_ID),
+                        Optional.of(new Cookie("gs", format("%s.456", sessionId))),
+                        Optional.of(NONE.toString()),
+                        OIDCScopeValue.OPENID.getValue());
+
+        assertEquals(302, response.getStatus());
+        assertNotNull(response.getCookies().get("gs"));
+        assertThat(response.getCookies().get("gs").getValue(), not(startsWith(sessionId)));
+        String redirectUri = getHeaderValueByParamName(response, ResponseHeaders.LOCATION);
+        assertThat(redirectUri, startsWith(configurationService.getLoginURI().toString()));
+        assertThat(URI.create(redirectUri).getQuery(), equalTo("interrupt=CONSENT_REQUIRED"));
+        String newSessionId = response.getCookies().get("gs").getValue().split("\\.")[0];
+        assertThat(RedisHelper.getSession(newSessionId).getState(), equalTo(CONSENT_REQUIRED));
     }
 
     private String givenAnExistingSession(SessionState initialState) throws Exception {
@@ -295,6 +338,20 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
 
     private String getHeaderValueByParamName(Response response, String paramName) {
         return response.getHeaders().get(paramName).get(0).toString();
+    }
+
+    private void registerUserWithConsentedScope(Optional<Scope> consentedScope) {
+        DynamoHelper.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD);
+        consentedScope.ifPresent(
+                scope -> {
+                    Set<String> claims = ValidScopes.getClaimsForListOfScopes(scope.toStringList());
+                    ClientConsent clientConsent =
+                            new ClientConsent(
+                                    CLIENT_ID,
+                                    claims,
+                                    LocalDateTime.now(ZoneId.of("UTC")).toString());
+                    DynamoHelper.updateConsent(TEST_EMAIL_ADDRESS, clientConsent);
+                });
     }
 
     private void registerClient(String clientId, String clientName, List<String> scopes) {

@@ -16,10 +16,16 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
+import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,6 +33,7 @@ import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -38,10 +45,11 @@ class AuthorizationServiceTest {
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private AuthorizationService authorizationService;
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
+    private final DynamoService dynamoService = mock(DynamoService.class);
 
     @BeforeEach
     void setUp() {
-        authorizationService = new AuthorizationService(dynamoClientService);
+        authorizationService = new AuthorizationService(dynamoClientService, dynamoService);
     }
 
     @Test
@@ -291,6 +299,39 @@ class AuthorizationServiceTest {
         assertThat(
                 exception.getMessage(),
                 equalTo(format("Invalid Redirect in request %s", redirectURi)));
+    }
+
+    @Test
+    void shouldCreateUserContextFromSessionAndClientSession() {
+        String email = "joe.bloggs@example.com";
+        Session session = new Session("a-session-id");
+        session.setEmailAddress(email);
+        ClientID clientId = new ClientID("client-id");
+        when(dynamoClientService.getClient(clientId.getValue()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), clientId.getValue())));
+        when(dynamoService.getUserProfileByEmail(email)).thenReturn(mock(UserProfile.class));
+        Scope scopes =
+                new Scope(
+                        OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
+        AuthenticationRequest authRequest =
+                new AuthenticationRequest.Builder(
+                                new ResponseType(ResponseType.Value.CODE),
+                                scopes,
+                                clientId,
+                                REDIRECT_URI)
+                        .state(new State())
+                        .nonce(new Nonce())
+                        .build();
+        ClientSession clientSession =
+                new ClientSession(
+                        authRequest.toParameters(), LocalDateTime.now(), mock(VectorOfTrust.class));
+        UserContext userContext = authorizationService.buildUserContext(session, clientSession);
+
+        assertEquals(userContext.getSession(), session);
+        assertEquals(userContext.getClientSession(), clientSession);
     }
 
     private ClientRegistry generateClientRegistry(String redirectURI, String clientID) {
