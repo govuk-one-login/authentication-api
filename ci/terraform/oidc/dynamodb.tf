@@ -23,7 +23,12 @@ resource "aws_dynamodb_table" "user_credentials_table" {
     enabled = true
   }
 
+  point_in_time_recovery {
+    enabled = !var.use_localstack
+  }
+
   tags = local.default_tags
+
 }
 
 resource "aws_dynamodb_table" "user_profile_table" {
@@ -62,6 +67,10 @@ resource "aws_dynamodb_table" "user_profile_table" {
     enabled = true
   }
 
+  point_in_time_recovery {
+    enabled = !var.use_localstack
+  }
+
   tags = local.default_tags
 }
 
@@ -84,6 +93,10 @@ resource "aws_dynamodb_table" "client_registry_table" {
     name            = "ClientNameIndex"
     hash_key        = "ClientName"
     projection_type = "ALL"
+  }
+
+  point_in_time_recovery {
+    enabled = !var.use_localstack
   }
 
   tags = local.default_tags
