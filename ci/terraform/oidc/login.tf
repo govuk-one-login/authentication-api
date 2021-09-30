@@ -8,7 +8,7 @@ module "login" {
 
   handler_environment_variables = {
     ENVIRONMENT              = var.environment
-    BASE_URL                 = local.api_base_url
+    BASE_URL                 = local.frontend_api_base_url
     EVENTS_SNS_TOPIC_ARN     = aws_sns_topic.events.arn
     LOCALSTACK_ENDPOINT      = var.use_localstack ? var.localstack_endpoint : null
     REDIS_HOST               = local.external_redis_host
@@ -20,9 +20,9 @@ module "login" {
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.LoginHandler::handleRequest"
 
-  rest_api_id               = aws_api_gateway_rest_api.di_authentication_api.id
-  root_resource_id          = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
-  execution_arn             = aws_api_gateway_rest_api.di_authentication_api.execution_arn
+  rest_api_id               = aws_api_gateway_rest_api.di_authentication_frontend_api.id
+  root_resource_id          = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id
+  execution_arn             = aws_api_gateway_rest_api.di_authentication_frontend_api.execution_arn
   api_deployment_stage_name = var.api_deployment_stage_name
   lambda_zip_file           = var.frontend_api_lambda_zip_file
   security_group_id         = local.authentication_security_group_id

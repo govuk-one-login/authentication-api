@@ -20,7 +20,7 @@ import uk.gov.di.authentication.sharedtest.extensions.NotifyStubExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.api.IntegrationTestEndpoints.API_KEY;
-import static uk.gov.di.authentication.api.IntegrationTestEndpoints.ROOT_RESOURCE_URL;
+import static uk.gov.di.authentication.api.IntegrationTestEndpoints.FRONTEND_ROOT_RESOURCE_URL;
 
 public class ResetPasswordIntegrationTest {
 
@@ -55,7 +55,7 @@ public class ResetPasswordIntegrationTest {
         headers.add("X-API-Key", API_KEY);
         Response response =
                 ClientBuilder.newClient()
-                        .target(ROOT_RESOURCE_URL + RESET_PASSWORD_ENDPOINT)
+                        .target(FRONTEND_ROOT_RESOURCE_URL + RESET_PASSWORD_ENDPOINT)
                         .request(MediaType.APPLICATION_JSON)
                         .headers(headers)
                         .post(Entity.entity(requestBody, MediaType.APPLICATION_JSON));
