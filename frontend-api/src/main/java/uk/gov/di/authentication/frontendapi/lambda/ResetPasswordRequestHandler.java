@@ -5,7 +5,6 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.exception.SdkClientException;
@@ -15,14 +14,14 @@ import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.ClientService;
+import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.ValidationService;
@@ -37,127 +36,106 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SE
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_RESET_PASSWORD_LINK_TOO_MANY_TIMES;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
-public class ResetPasswordRequestHandler
+public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswordRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ResetPasswordRequestHandler.class);
 
-    private final ConfigurationService configurationService;
     private final ValidationService validationService;
     private final AwsSqsClient sqsClient;
-    private final SessionService sessionService;
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
-    private final AuthenticationService authenticationService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             userJourneyStateMachine();
 
     public ResetPasswordRequestHandler(
             ConfigurationService configurationService,
+            SessionService sessionService,
+            ClientSessionService clientSessionService,
+            ClientService clientService,
+            AuthenticationService authenticationService,
             ValidationService validationService,
             AwsSqsClient sqsClient,
-            SessionService sessionService,
             CodeGeneratorService codeGeneratorService,
-            CodeStorageService codeStorageService,
-            AuthenticationService authenticationService) {
-        this.configurationService = configurationService;
+            CodeStorageService codeStorageService) {
+        super(
+                ResetPasswordRequest.class,
+                configurationService,
+                sessionService,
+                clientSessionService,
+                clientService,
+                authenticationService);
         this.validationService = validationService;
         this.sqsClient = sqsClient;
-        this.sessionService = sessionService;
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
-        this.authenticationService = authenticationService;
     }
 
     public ResetPasswordRequestHandler() {
-        this.configurationService = new ConfigurationService();
+        super(ResetPasswordRequest.class, ConfigurationService.getInstance());
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
         this.validationService = new ValidationService();
-        sessionService = new SessionService(configurationService);
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
-        this.authenticationService = new DynamoService(configurationService);
     }
 
     @Override
-    public APIGatewayProxyResponseEvent handleRequest(
-            APIGatewayProxyRequestEvent input, Context context) {
-        return isWarming(input)
-                .orElseGet(
-                        () -> {
-                            Optional<Session> session =
-                                    sessionService.getSessionFromRequestHeaders(input.getHeaders());
-                            if (session.isEmpty()) {
-                                LOGGER.error("Session is empty");
-                                return generateApiGatewayProxyErrorResponse(
-                                        400, ErrorResponse.ERROR_1000);
-                            }
-                            LOGGER.info(
-                                    "ResetPasswordRequestHandler processing request for session {}",
-                                    session.get().getSessionId());
-                            try {
-                                ResetPasswordRequest resetPasswordRequest =
-                                        objectMapper.readValue(
-                                                input.getBody(), ResetPasswordRequest.class);
-                                if (!session.get()
-                                        .validateSession(resetPasswordRequest.getEmail())) {
-                                    LOGGER.info(
-                                            "Invalid session. SessionId {}",
-                                            session.get().getSessionId());
-                                    return generateApiGatewayProxyErrorResponse(
-                                            400, ErrorResponse.ERROR_1000);
-                                }
-                                Optional<ErrorResponse> emailErrorResponse =
-                                        validationService.validateEmailAddress(
-                                                resetPasswordRequest.getEmail());
-                                if (emailErrorResponse.isPresent()) {
-                                    LOGGER.error(
-                                            "Encountered emailErrorResponse: {}",
-                                            emailErrorResponse.get());
-                                    return generateApiGatewayProxyErrorResponse(
-                                            400, emailErrorResponse.get());
-                                }
+    public APIGatewayProxyResponseEvent handleRequestWithUserContext(
+            APIGatewayProxyRequestEvent input,
+            Context context,
+            ResetPasswordRequest request,
+            UserContext userContext) {
+        LOGGER.info(
+                "ResetPasswordRequestHandler processing request for session {}",
+                userContext.getSession().getSessionId());
+        try {
+            if (!userContext.getSession().validateSession(request.getEmail())) {
+                LOGGER.info(
+                        "Invalid session. SessionId {}", userContext.getSession().getSessionId());
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+            }
+            Optional<ErrorResponse> emailErrorResponse =
+                    validationService.validateEmailAddress(request.getEmail());
+            if (emailErrorResponse.isPresent()) {
+                LOGGER.error("Encountered emailErrorResponse: {}", emailErrorResponse.get());
+                return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
+            }
 
-                                Optional<ErrorResponse> errorResponse =
-                                        validatePasswordResetCount(
-                                                resetPasswordRequest.getEmail(), session.get());
-                                if (errorResponse.isPresent()) {
-                                    return generateApiGatewayProxyErrorResponse(
-                                            400, errorResponse.get());
-                                }
-                                return processPasswordResetRequest(
-                                        resetPasswordRequest.getEmail(),
-                                        NotificationType.RESET_PASSWORD,
-                                        session.get());
+            Optional<ErrorResponse> errorResponse =
+                    validatePasswordResetCount(request.getEmail(), userContext);
+            if (errorResponse.isPresent()) {
+                return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
+            }
+            return processPasswordResetRequest(
+                    request.getEmail(), NotificationType.RESET_PASSWORD, userContext);
 
-                            } catch (SdkClientException ex) {
-                                LOGGER.error("Error sending message to queue", ex);
-                                return generateApiGatewayProxyResponse(
-                                        500, "Error sending message to queue");
-                            } catch (JsonProcessingException e) {
-                                LOGGER.error("Error parsing request", e);
-                                return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
-                            } catch (StateMachine.InvalidStateTransitionException e) {
-                                LOGGER.error("Invalid transition in user journey", e);
-                                return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
-                            }
-                        });
+        } catch (SdkClientException ex) {
+            LOGGER.error("Error sending message to queue", ex);
+            return generateApiGatewayProxyResponse(500, "Error sending message to queue");
+        } catch (JsonProcessingException e) {
+            LOGGER.error("Error parsing request", e);
+            return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
+        } catch (StateMachine.InvalidStateTransitionException e) {
+            LOGGER.error("Invalid transition in user journey", e);
+            return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
+        }
     }
 
     private APIGatewayProxyResponseEvent processPasswordResetRequest(
-            String email, NotificationType notificationType, Session session)
+            String email, NotificationType notificationType, UserContext userContext)
             throws JsonProcessingException {
         SessionState nextState =
-                stateMachine.transition(session.getState(), SYSTEM_HAS_SENT_RESET_PASSWORD_LINK);
+                stateMachine.transition(
+                        userContext.getSession().getState(),
+                        SYSTEM_HAS_SENT_RESET_PASSWORD_LINK,
+                        userContext);
         String subjectId = authenticationService.getSubjectFromEmail(email).getValue();
         String code = codeGeneratorService.twentyByteEncodedRandomCode();
         NotifyRequest notifyRequest = new NotifyRequest(email, notificationType, code);
@@ -166,29 +144,36 @@ public class ResetPasswordRequestHandler
                 code,
                 configurationService.getCodeExpiry(),
                 NotificationType.RESET_PASSWORD);
-        sessionService.save(session.setState(nextState).incrementPasswordResetCount());
+        sessionService.save(
+                userContext.getSession().setState(nextState).incrementPasswordResetCount());
         sqsClient.send(serialiseRequest(notifyRequest));
         LOGGER.info(
                 "ResetPasswordRequestHandler successfully processed request for session {}",
-                session.getSessionId());
-        return generateApiGatewayProxyResponse(200, new BaseAPIResponse(session.getState()));
+                userContext.getSession().getSessionId());
+        return generateApiGatewayProxyResponse(
+                200, new BaseAPIResponse(userContext.getSession().getState()));
     }
 
-    private Optional<ErrorResponse> validatePasswordResetCount(String email, Session session) {
-        if (codeStorageService.isPasswordResetBlockedForSession(email, session.getSessionId())) {
+    private Optional<ErrorResponse> validatePasswordResetCount(
+            String email, UserContext userContext) {
+        if (codeStorageService.isPasswordResetBlockedForSession(
+                email, userContext.getSession().getSessionId())) {
             LOGGER.info("User cannot request another password reset");
             return Optional.of(ErrorResponse.ERROR_1023);
-        } else if (session.getPasswordResetCount() > configurationService.getCodeMaxRetries()) {
+        } else if (userContext.getSession().getPasswordResetCount()
+                > configurationService.getCodeMaxRetries()) {
             LOGGER.info("User has requested too many password resets");
             codeStorageService.savePasswordResetBlockedForSession(
-                    session.getEmailAddress(),
-                    session.getSessionId(),
+                    userContext.getSession().getEmailAddress(),
+                    userContext.getSession().getSessionId(),
                     configurationService.getCodeExpiry());
-            sessionService.save(session.resetPasswordResetCount());
+            sessionService.save(userContext.getSession().resetPasswordResetCount());
             SessionState nextState =
                     stateMachine.transition(
-                            session.getState(), SYSTEM_HAS_SENT_RESET_PASSWORD_LINK_TOO_MANY_TIMES);
-            sessionService.save(session.setState(nextState));
+                            userContext.getSession().getState(),
+                            SYSTEM_HAS_SENT_RESET_PASSWORD_LINK_TOO_MANY_TIMES,
+                            userContext);
+            sessionService.save(userContext.getSession().setState(nextState));
             return Optional.of(ErrorResponse.ERROR_1022);
         }
         return Optional.empty();

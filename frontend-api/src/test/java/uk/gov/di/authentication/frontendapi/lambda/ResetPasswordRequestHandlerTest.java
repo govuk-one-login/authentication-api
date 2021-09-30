@@ -18,6 +18,8 @@ import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.ClientService;
+import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -62,22 +64,25 @@ class ResetPasswordRequestHandlerTest {
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
+    private final ClientService clientService = mock(ClientService.class);
     private final Context context = mock(Context.class);
 
     private final Session session =
             new Session(IdGenerator.generate())
                     .setEmailAddress(TEST_EMAIL_ADDRESS)
                     .setState(AUTHENTICATION_REQUIRED);
-
     private final ResetPasswordRequestHandler handler =
             new ResetPasswordRequestHandler(
                     configurationService,
+                    sessionService,
+                    clientSessionService,
+                    clientService,
+                    authenticationService,
                     validationService,
                     awsSqsClient,
-                    sessionService,
                     codeGeneratorService,
-                    codeStorageService,
-                    authenticationService);
+                    codeStorageService);
 
     @BeforeEach
     void setup() {
