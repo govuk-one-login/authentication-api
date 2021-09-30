@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.shared.matchers;
+package uk.gov.di.authentication.sharedtest.matchers;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
