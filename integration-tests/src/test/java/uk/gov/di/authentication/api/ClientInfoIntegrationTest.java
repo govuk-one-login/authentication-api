@@ -14,7 +14,7 @@ import jakarta.ws.rs.core.MultivaluedHashMap;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.clientregistry.entity.ClientInfoResponse;
+import uk.gov.di.authentication.frontendapi.entity.ClientInfoResponse;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.KeyPairHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
@@ -50,10 +50,10 @@ public class ClientInfoIntegrationTest extends IntegrationTestEndpoints {
 
         Client client = ClientBuilder.newClient();
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
-        headers.add("X-API-Key", API_KEY);
+        headers.add("X-API-Key", FRONTEND_API_KEY);
 
         Response response =
-                client.target(ROOT_RESOURCE_URL + CLIENTINFO_ENDPOINT)
+                client.target(FRONTEND_ROOT_RESOURCE_URL + CLIENTINFO_ENDPOINT)
                         .request()
                         .headers(headers)
                         .get();
@@ -81,11 +81,11 @@ public class ClientInfoIntegrationTest extends IntegrationTestEndpoints {
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
         headers.add("Client-Session-Id", CLIENT_SESSION_ID);
-        headers.add("X-API-Key", API_KEY);
+        headers.add("X-API-Key", FRONTEND_API_KEY);
 
         Client client = ClientBuilder.newClient();
         Response response =
-                client.target(ROOT_RESOURCE_URL + CLIENTINFO_ENDPOINT)
+                client.target(FRONTEND_ROOT_RESOURCE_URL + CLIENTINFO_ENDPOINT)
                         .request()
                         .headers(headers)
                         .get();
