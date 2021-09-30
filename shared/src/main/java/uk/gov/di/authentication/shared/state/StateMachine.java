@@ -354,7 +354,16 @@ public class StateMachine<T, A, C> {
                 .when(CONSENT_REQUIRED)
                 .allow(
                         on(USER_HAS_ACTIONED_CONSENT).then(CONSENT_ADDED),
-                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY)
+                                .then(UPDATED_TERMS_AND_CONDITIONS)
+                                .ifCondition(
+                                        userHasNotAcceptedTermsAndConditionsVersion(
+                                                configurationService
+                                                        .getTermsAndConditionsVersion())),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY)
+                                .then(CONSENT_REQUIRED)
+                                .ifCondition(userHasNotGivenConsent()),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(AUTHENTICATED),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(CONSENT_ADDED)
                 .allow(
