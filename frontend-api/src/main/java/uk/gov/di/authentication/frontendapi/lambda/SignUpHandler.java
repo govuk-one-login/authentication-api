@@ -72,38 +72,30 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
         try {
             var nextState =
                     stateMachine.transition(
-                            userContext.getSession().getState(),
-                            USER_HAS_CREATED_A_PASSWORD);
+                            userContext.getSession().getState(), USER_HAS_CREATED_A_PASSWORD);
 
             SignupRequest signupRequest =
-                    objectMapper.readValue(
-                            input.getBody(), SignupRequest.class);
+                    objectMapper.readValue(input.getBody(), SignupRequest.class);
 
             Optional<ErrorResponse> passwordValidationErrors =
-                    validationService.validatePassword(
-                            signupRequest.getPassword());
+                    validationService.validatePassword(signupRequest.getPassword());
 
             if (passwordValidationErrors.isEmpty()) {
-                if (authenticationService.userExists(
-                        signupRequest.getEmail())) {
-                    LOG.error(
-                            "User with email {} already exists",
-                            signupRequest.getEmail());
-                    return generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.ERROR_1009);
+                if (authenticationService.userExists(signupRequest.getEmail())) {
+                    LOG.error("User with email {} already exists", signupRequest.getEmail());
+                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
                 }
                 authenticationService.signUp(
                         signupRequest.getEmail(),
                         signupRequest.getPassword(),
                         new Subject(),
                         new TermsAndConditions(
-                                configurationService
-                                        .getTermsAndConditionsVersion(),
-                                LocalDateTime.now(ZoneId.of("UTC"))
-                                        .toString()));
+                                configurationService.getTermsAndConditionsVersion(),
+                                LocalDateTime.now(ZoneId.of("UTC")).toString()));
 
                 sessionService.save(
-                        userContext.getSession()
+                        userContext
+                                .getSession()
                                 .setState(nextState)
                                 .setEmailAddress(signupRequest.getEmail()));
 
@@ -114,17 +106,14 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                 return generateApiGatewayProxyResponse(
                         200, new BaseAPIResponse(userContext.getSession().getState()));
             } else {
-                return generateApiGatewayProxyErrorResponse(
-                        400, passwordValidationErrors.get());
+                return generateApiGatewayProxyErrorResponse(400, passwordValidationErrors.get());
             }
         } catch (JsonProcessingException e) {
             LOG.error("Error parsing request", e);
-            return generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.ERROR_1001);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
             LOG.error("Invalid transition in user journey", e);
-            return generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.ERROR_1017);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         }
     }
 }
