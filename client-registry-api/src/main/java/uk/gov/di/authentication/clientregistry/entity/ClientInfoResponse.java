@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.frontendapi.entity;
+package uk.gov.di.authentication.clientregistry.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

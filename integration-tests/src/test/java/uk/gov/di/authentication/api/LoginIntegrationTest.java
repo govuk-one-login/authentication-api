@@ -95,14 +95,10 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
 
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", FRONTEND_API_KEY);
+        headers.add("X-API-Key", API_KEY);
         headers.add("Client-Session-Id", CLIENT_SESSION_ID);
         Response response =
-                RequestHelper.request(
-                        FRONTEND_ROOT_RESOURCE_URL,
-                        LOGIN_ENDPOINT,
-                        new LoginRequest(email, password),
-                        headers);
+                RequestHelper.request(LOGIN_ENDPOINT, new LoginRequest(email, password), headers);
 
         assertEquals(200, response.getStatus());
 
@@ -135,14 +131,10 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
         RedisHelper.setSessionState(sessionId, AUTHENTICATION_REQUIRED);
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", FRONTEND_API_KEY);
+        headers.add("X-API-Key", API_KEY);
 
         Response response =
-                RequestHelper.request(
-                        FRONTEND_ROOT_RESOURCE_URL,
-                        LOGIN_ENDPOINT,
-                        new LoginRequest(email, password),
-                        headers);
+                RequestHelper.request(LOGIN_ENDPOINT, new LoginRequest(email, password), headers);
 
         assertEquals(401, response.getStatus());
     }

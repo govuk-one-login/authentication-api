@@ -33,11 +33,9 @@ public class SignupIntegrationTest extends IntegrationTestEndpoints {
                 new SignupRequest("joe.bloggs+5@digital.cabinet-office.gov.uk", "password-1");
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", FRONTEND_API_KEY);
+        headers.add("X-API-Key", API_KEY);
 
-        Response response =
-                RequestHelper.request(
-                        FRONTEND_ROOT_RESOURCE_URL, SIGNUP_ENDPOINT, request, headers);
+        Response response = RequestHelper.request(SIGNUP_ENDPOINT, request, headers);
 
         assertEquals(200, response.getStatus());
 
