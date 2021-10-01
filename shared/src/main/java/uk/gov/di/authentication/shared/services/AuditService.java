@@ -37,11 +37,12 @@ public class AuditService {
             MetadataPair... metadataPairs) {
         var timestamp = clock.instant().toString();
 
-        var eventBuilder = AuditEvent.newBuilder();
-        eventBuilder.setEventName(eventEnum.toString());
-        eventBuilder.setTimestamp(timestamp);
-        eventBuilder.setRequestId(requestId);
-        eventBuilder.setSessionId(sessionId);
+        var eventBuilder =
+                AuditEvent.newBuilder()
+                        .setEventName(eventEnum.toString())
+                        .setTimestamp(timestamp)
+                        .setRequestId(requestId)
+                        .setSessionId(sessionId);
         // TODO - Extract other values from the metadataPairs argument.
 
         var signedEventBuilder = SignedAuditEvent.newBuilder();
