@@ -11,6 +11,10 @@ public class CustomScopeValue extends Scope.Value {
     public static final CustomScopeValue ACCOUNT_MANAGEMENT =
             new CustomScopeValue("am", Requirement.OPTIONAL, new String[] {"read", "write"}, true);
 
+    public static final CustomScopeValue GOVUK_ACCOUNT =
+            new CustomScopeValue(
+                    "govuk-account", Requirement.OPTIONAL, new String[] {"read", "write"}, true);
+
     private final String[] claims;
 
     private boolean privateScope = true;

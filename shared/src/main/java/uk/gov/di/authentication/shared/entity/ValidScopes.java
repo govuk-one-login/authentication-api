@@ -22,7 +22,7 @@ public class ValidScopes {
                     OIDCScopeValue.OFFLINE_ACCESS);
 
     private static final List<CustomScopeValue> allowedCustomScopes =
-            List.of(CustomScopeValue.ACCOUNT_MANAGEMENT);
+            List.of(CustomScopeValue.ACCOUNT_MANAGEMENT, CustomScopeValue.GOVUK_ACCOUNT);
 
     private ValidScopes() {}
 

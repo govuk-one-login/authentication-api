@@ -12,7 +12,6 @@ import org.slf4j.LoggerFactory;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.RemoveAccountRequest;
-import uk.gov.di.accountmanagement.entity.RemoveAccountResponse;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -24,7 +23,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import java.util.Map;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
-import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class RemoveAccountHandler
@@ -87,11 +86,7 @@ public class RemoveAccountHandler
                                 LOGGER.info(
                                         "Remove account message successfully added to queue. Generating successful gateway response");
 
-                                return generateApiGatewayProxyResponse(
-                                        200,
-                                        new RemoveAccountResponse(
-                                                userProfile.getSubjectID(),
-                                                userProfile.getLegacySubjectID()));
+                                return generateEmptySuccessApiGatewayResponse();
                             } catch (JsonProcessingException e) {
                                 LOGGER.error(
                                         "RemoveAccountRequest request is missing or contains invalid parameters.",

@@ -48,4 +48,6 @@ public interface AuthenticationService {
     UserCredentials getUserCredentialsFromSubject(String subject);
 
     Optional<UserProfile> getUserProfileFromEmail(String email);
+
+    String getLegacySubjectID(String email);
 }
