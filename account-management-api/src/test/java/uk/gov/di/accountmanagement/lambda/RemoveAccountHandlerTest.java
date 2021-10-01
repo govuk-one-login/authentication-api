@@ -40,7 +40,7 @@ class RemoveAccountHandlerTest {
     }
 
     @Test
-    public void shouldReturn204IfAccountRemovalIsSuccessful() throws JsonProcessingException {
+    public void shouldReturn200IfAccountRemovalIsSuccessful() throws JsonProcessingException {
         UserProfile userProfile = new UserProfile().setPublicSubjectID(SUBJECT.getValue());
         when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
@@ -59,6 +59,6 @@ class RemoveAccountHandlerTest {
         NotifyRequest notifyRequest = new NotifyRequest(EMAIL, DELETE_ACCOUNT);
         verify(sqsClient).send(new ObjectMapper().writeValueAsString(notifyRequest));
 
-        assertThat(result, hasStatus(204));
+        assertThat(result, hasStatus(200));
     }
 }

@@ -18,6 +18,7 @@ public class UserProfile {
     private String updated;
     private TermsAndConditions termsAndConditions;
     private String publicSubjectID;
+    private String legacySubjectID;
 
     public UserProfile() {}
 
@@ -129,6 +130,16 @@ public class UserProfile {
 
     public UserProfile setPublicSubjectID(String publicSubjectID) {
         this.publicSubjectID = publicSubjectID;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "LegacySubjectID")
+    public String getLegacySubjectID() {
+        return legacySubjectID;
+    }
+
+    public UserProfile setLegacySubjectID(String legacySubjectID) {
+        this.legacySubjectID = legacySubjectID;
         return this;
     }
 }
