@@ -90,8 +90,6 @@ data "aws_iam_policy_document" "endpoint_networking_policy" {
       "ec2:DescribeNetworkInterfaces",
       "ec2:CreateNetworkInterface",
       "ec2:DeleteNetworkInterface",
-      "ec2:DescribeInstances",
-      "ec2:AttachNetworkInterface",
     ]
     resources = ["*"]
   }
