@@ -92,6 +92,11 @@ data "aws_iam_policy_document" "endpoint_networking_policy" {
       "ec2:DeleteNetworkInterface",
     ]
     resources = ["*"]
+    condition {
+      test     = "ArnLikeIfExists"
+      variable = "ec2:Vpc"
+      values   = [aws_vpc.authentication.arn]
+    }
   }
 }
 
