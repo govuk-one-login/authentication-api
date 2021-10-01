@@ -59,13 +59,11 @@ public class UpdateProfileIntegrationTest extends IntegrationTestEndpoints {
         setUpTest(sessionId, clientSessionId, SessionState.TWO_FACTOR_REQUIRED);
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", FRONTEND_API_KEY);
+        headers.add("X-API-Key", API_KEY);
         UpdateProfileRequest request =
                 new UpdateProfileRequest(EMAIL_ADDRESS, ADD_PHONE_NUMBER, "0123456789");
 
-        Response response =
-                RequestHelper.request(
-                        FRONTEND_ROOT_RESOURCE_URL, UPDATE_PROFILE_ENDPOINT, request, headers);
+        Response response = RequestHelper.request(UPDATE_PROFILE_ENDPOINT, request, headers);
 
         assertEquals(200, response.getStatus());
         String responseString = response.readEntity(String.class);
@@ -84,14 +82,14 @@ public class UpdateProfileIntegrationTest extends IntegrationTestEndpoints {
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
         headers.add("Client-Session-Id", clientSessionId);
-        headers.add("X-API-Key", FRONTEND_API_KEY);
+        headers.add("X-API-Key", API_KEY);
 
         UpdateProfileRequest request =
                 new UpdateProfileRequest(EMAIL_ADDRESS, CAPTURE_CONSENT, String.valueOf(true));
 
         Response response =
                 ClientBuilder.newClient()
-                        .target(FRONTEND_ROOT_RESOURCE_URL + UPDATE_PROFILE_ENDPOINT)
+                        .target(ROOT_RESOURCE_URL + UPDATE_PROFILE_ENDPOINT)
                         .request(MediaType.APPLICATION_JSON)
                         .headers(headers)
                         .post(Entity.entity(request, MediaType.APPLICATION_JSON));
@@ -120,14 +118,14 @@ public class UpdateProfileIntegrationTest extends IntegrationTestEndpoints {
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
         headers.add("Client-Session-Id", clientSessionId);
-        headers.add("X-API-Key", FRONTEND_API_KEY);
+        headers.add("X-API-Key", API_KEY);
 
         UpdateProfileRequest request =
                 new UpdateProfileRequest(EMAIL_ADDRESS, UPDATE_TERMS_CONDS, String.valueOf(true));
 
         Response response =
                 ClientBuilder.newClient()
-                        .target(FRONTEND_ROOT_RESOURCE_URL + UPDATE_PROFILE_ENDPOINT)
+                        .target(ROOT_RESOURCE_URL + UPDATE_PROFILE_ENDPOINT)
                         .request(MediaType.APPLICATION_JSON)
                         .headers(headers)
                         .post(Entity.entity(request, MediaType.APPLICATION_JSON));

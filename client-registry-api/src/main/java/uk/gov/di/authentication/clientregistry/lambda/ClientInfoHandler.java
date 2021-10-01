@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.frontendapi.lambda;
+package uk.gov.di.authentication.clientregistry.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
@@ -9,7 +9,7 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.di.authentication.frontendapi.entity.ClientInfoResponse;
+import uk.gov.di.authentication.clientregistry.entity.ClientInfoResponse;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
