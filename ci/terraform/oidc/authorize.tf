@@ -7,17 +7,18 @@ module "authorize" {
   environment     = var.environment
 
   handler_environment_variables = {
-    BASE_URL             = local.api_base_url
-    DOMAIN_NAME          = "${var.environment}.${var.service_domain_name}"
-    EVENTS_SNS_TOPIC_ARN = aws_sns_topic.events.arn
-    LOGIN_URI            = var.use_localstack ? "http://localhost:3000/" : "https://front.${var.environment}.${var.service_domain_name}/"
-    LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
-    REDIS_HOST           = local.external_redis_host
-    REDIS_PORT           = local.external_redis_port
-    REDIS_PASSWORD       = local.external_redis_password
-    REDIS_TLS            = var.redis_use_tls
-    ENVIRONMENT          = var.environment
-    DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    BASE_URL                 = local.api_base_url
+    DOMAIN_NAME              = "${var.environment}.${var.service_domain_name}"
+    EVENTS_SNS_TOPIC_ARN     = aws_sns_topic.events.arn
+    LOGIN_URI                = var.use_localstack ? "http://localhost:3000/" : "https://front.${var.environment}.${var.service_domain_name}/"
+    LOCALSTACK_ENDPOINT      = var.use_localstack ? var.localstack_endpoint : null
+    REDIS_HOST               = local.external_redis_host
+    REDIS_PORT               = local.external_redis_port
+    REDIS_PASSWORD           = local.external_redis_password
+    REDIS_TLS                = var.redis_use_tls
+    ENVIRONMENT              = var.environment
+    DYNAMO_ENDPOINT          = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    TERMS_CONDITIONS_VERSION = var.terms_and_conditions
   }
   handler_function_name     = "uk.gov.di.authentication.oidc.lambda.AuthorisationHandler::handleRequest"
   rest_api_id               = aws_api_gateway_rest_api.di_authentication_api.id
