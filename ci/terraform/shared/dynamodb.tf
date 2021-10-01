@@ -20,11 +20,15 @@ resource "aws_dynamodb_table" "user_credentials_table" {
   }
 
   server_side_encryption {
-    enabled = true
+    enabled = !var.use_localstack
   }
 
   point_in_time_recovery {
     enabled = !var.use_localstack
+  }
+
+  lifecycle {
+    prevent_destroy = var.prevent_destroy_of_data
   }
 
   tags = local.default_tags
@@ -64,11 +68,15 @@ resource "aws_dynamodb_table" "user_profile_table" {
   }
 
   server_side_encryption {
-    enabled = true
+    enabled = !var.use_localstack
   }
 
   point_in_time_recovery {
     enabled = !var.use_localstack
+  }
+
+  lifecycle {
+    prevent_destroy = var.prevent_destroy_of_data
   }
 
   tags = local.default_tags
@@ -97,6 +105,14 @@ resource "aws_dynamodb_table" "client_registry_table" {
 
   point_in_time_recovery {
     enabled = !var.use_localstack
+  }
+
+  server_side_encryption {
+    enabled = !var.use_localstack
+  }
+
+  lifecycle {
+    prevent_destroy = var.prevent_destroy_of_data
   }
 
   tags = local.default_tags

@@ -103,3 +103,9 @@ variable "keep_lambdas_warm" {
 variable "redis_node_size" {
   default = "cache.t2.small"
 }
+
+variable "prevent_destroy_of_data" {
+  description = "Prevent destruction of the DynamoDb tables in this environment"
+  type    = bool
+  default = true
+}
