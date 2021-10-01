@@ -22,16 +22,19 @@ public class AuditService {
         this.snsService = new SnsService(new ConfigurationService());
     }
 
-    public void submitAuditEvent(AuditableEvent event, MetadataPair... metadataPairs) {
-        snsService.publishAuditMessage(generateLogLine(event, metadataPairs));
+    public void submitAuditEvent(
+            AuditableEvent event, String requestId, MetadataPair... metadataPairs) {
+        snsService.publishAuditMessage(generateLogLine(event, requestId, metadataPairs));
     }
 
-    String generateLogLine(AuditableEvent eventEnum, MetadataPair... metadataPairs) {
+    String generateLogLine(
+            AuditableEvent eventEnum, String requestId, MetadataPair... metadataPairs) {
         var timestamp = clock.instant().toString();
 
         var eventBuilder = AuditEvent.newBuilder();
         eventBuilder.setEventName(eventEnum.toString());
         eventBuilder.setTimestamp(timestamp);
+        eventBuilder.setRequestId(requestId);
         // TODO - Extract other values from the metadataPairs argument.
 
         var signedEventBuilder = SignedAuditEvent.newBuilder();

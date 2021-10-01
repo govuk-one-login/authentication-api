@@ -97,12 +97,13 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
     @Override
     public void onRequestReceived(Context context) {
-        auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_RECEIVED);
+        auditService.submitAuditEvent(
+                ACCOUNT_MANAGEMENT_REQUEST_RECEIVED, context.getAwsRequestId());
     }
 
     @Override
     public void onRequestValidationError(Context context) {
-        auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_ERROR);
+        auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_ERROR, context.getAwsRequestId());
     }
 
     @Override
@@ -129,7 +130,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                         session.getState(), USER_ENTERED_A_NEW_PHONE_NUMBER);
                         authenticationService.updatePhoneNumber(
                                 request.getEmail(), request.getProfileInformation());
-                        auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_PHONE_NUMBER_UPDATED);
+                        auditService.submitAuditEvent(
+                                ACCOUNT_MANAGEMENT_PHONE_NUMBER_UPDATED, context.getAwsRequestId());
                         sessionService.save(session.setState(nextState));
                         LOGGER.info(
                                 "Phone number updated and session state changed. Session state {}",
@@ -174,7 +176,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
                         sessionService.save(session.setState(nextState));
 
-                        auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_CONSENT_UPDATED);
+                        auditService.submitAuditEvent(
+                                ACCOUNT_MANAGEMENT_CONSENT_UPDATED, context.getAwsRequestId());
 
                         LOGGER.info(
                                 "Consent updated for ClientID {} and session state changed. Session state {}",
@@ -190,7 +193,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                 configurationService.getTermsAndConditionsVersion());
 
                         auditService.submitAuditEvent(
-                                ACCOUNT_MANAGEMENT_TERMS_CONDS_ACCEPTANCE_UPDATED);
+                                ACCOUNT_MANAGEMENT_TERMS_CONDS_ACCEPTANCE_UPDATED,
+                                context.getAwsRequestId());
                         LOGGER.info(
                                 "Updated terms and conditions. Email {} for Version {}",
                                 request.getEmail(),

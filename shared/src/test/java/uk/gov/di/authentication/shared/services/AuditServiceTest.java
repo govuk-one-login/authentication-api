@@ -17,6 +17,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasEventName;
+import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasRequestId;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasTimestamp;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.AuditServiceTest.TestEvents.TEST_EVENT_ONE;
@@ -49,20 +50,22 @@ class AuditServiceTest {
     void shouldLogAuditEvent() {
         var auditService = new AuditService(FIXED_CLOCK, snsService);
 
-        auditService.submitAuditEvent(TEST_EVENT_ONE);
+        auditService.submitAuditEvent(TEST_EVENT_ONE, "request-id");
 
         verify(snsService).publishAuditMessage(messageCaptor.capture());
         var serialisedAuditMessage = messageCaptor.getValue();
 
         assertThat(serialisedAuditMessage, hasTimestamp(FIXED_TIMESTAMP));
         assertThat(serialisedAuditMessage, hasEventName(TEST_EVENT_ONE.toString()));
+        assertThat(serialisedAuditMessage, hasRequestId("request-id"));
     }
 
     @Test
     void shouldLogAuditEventWithMetadataPairsAttached() {
         var auditService = new AuditService(FIXED_CLOCK, snsService);
 
-        auditService.submitAuditEvent(TEST_EVENT_ONE, pair("key", "value"), pair("key2", "value2"));
+        auditService.submitAuditEvent(
+                TEST_EVENT_ONE, "request-id", pair("key", "value"), pair("key2", "value2"));
 
         verify(snsService).publishAuditMessage(messageCaptor.capture());
         var serialisedAuditMessage = messageCaptor.getValue();

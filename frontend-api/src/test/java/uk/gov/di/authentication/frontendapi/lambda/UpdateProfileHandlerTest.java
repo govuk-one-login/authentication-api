@@ -107,6 +107,7 @@ class UpdateProfileHandlerTest {
 
     @BeforeEach
     public void setUp() {
+        when(context.getAwsRequestId()).thenReturn("request-id");
         handler =
                 new UpdateProfileHandler(
                         authenticationService,
@@ -138,7 +139,8 @@ class UpdateProfileHandlerTest {
 
         assertThat(result, hasStatus(200));
 
-        verify(auditService).submitAuditEvent(ACCOUNT_MANAGEMENT_PHONE_NUMBER_UPDATED);
+        verify(auditService)
+                .submitAuditEvent(ACCOUNT_MANAGEMENT_PHONE_NUMBER_UPDATED, "request-id");
     }
 
     @Test
@@ -167,7 +169,8 @@ class UpdateProfileHandlerTest {
 
         assertThat(result, hasStatus(200));
 
-        verify(auditService).submitAuditEvent(ACCOUNT_MANAGEMENT_TERMS_CONDS_ACCEPTANCE_UPDATED);
+        verify(auditService)
+                .submitAuditEvent(ACCOUNT_MANAGEMENT_TERMS_CONDS_ACCEPTANCE_UPDATED, "request-id");
     }
 
     @Test
@@ -210,7 +213,7 @@ class UpdateProfileHandlerTest {
 
         assertThat(result, hasStatus(200));
 
-        verify(auditService).submitAuditEvent(ACCOUNT_MANAGEMENT_CONSENT_UPDATED);
+        verify(auditService).submitAuditEvent(ACCOUNT_MANAGEMENT_CONSENT_UPDATED, "request-id");
         BaseAPIResponse codeResponse =
                 new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
         assertThat(codeResponse.getSessionState(), equalTo(CONSENT_ADDED));
@@ -233,7 +236,7 @@ class UpdateProfileHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
 
-        verify(auditService).submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_ERROR);
+        verify(auditService).submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_ERROR, "request-id");
     }
 
     @Test
@@ -251,7 +254,7 @@ class UpdateProfileHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1017));
 
-        verify(auditService).submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_ERROR);
+        verify(auditService).submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_ERROR, "request-id");
     }
 
     private void usingValidSession() {
@@ -278,7 +281,7 @@ class UpdateProfileHandlerTest {
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
         var response = handler.handleRequest(event, context);
 
-        verify(auditService).submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_RECEIVED);
+        verify(auditService).submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_RECEIVED, "request-id");
 
         return response;
     }

@@ -58,7 +58,8 @@ public class ClientRegistrationHandler
         return isWarming(input)
                 .orElseGet(
                         () -> {
-                            auditService.submitAuditEvent(REGISTER_CLIENT_REQUEST_RECEIVED);
+                            auditService.submitAuditEvent(
+                                    REGISTER_CLIENT_REQUEST_RECEIVED, context.getAwsRequestId());
 
                             try {
                                 ClientRegistrationRequest clientRegistrationRequest =
@@ -68,7 +69,9 @@ public class ClientRegistrationHandler
                                         validationService.validateClientRegistrationConfig(
                                                 clientRegistrationRequest);
                                 if (errorResponse.isPresent()) {
-                                    auditService.submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR);
+                                    auditService.submitAuditEvent(
+                                            REGISTER_CLIENT_REQUEST_ERROR,
+                                            context.getAwsRequestId());
 
                                     return generateApiGatewayProxyResponse(
                                             400, errorResponse.get().toJSONObject().toJSONString());
@@ -102,7 +105,8 @@ public class ClientRegistrationHandler
                                 return generateApiGatewayProxyResponse(
                                         200, clientRegistrationResponse);
                             } catch (JsonProcessingException e) {
-                                auditService.submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR);
+                                auditService.submitAuditEvent(
+                                        REGISTER_CLIENT_REQUEST_ERROR, context.getAwsRequestId());
 
                                 return generateApiGatewayProxyResponse(
                                         400,
