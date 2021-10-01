@@ -10,6 +10,7 @@ params:
   DEPLOYER_ROLE_ARN: ((deployer-role-arn-non-prod))
   DEPLOY_ENVIRONMENT: build
   NOTIFY_API_KEY: ((build-notify-api-key))
+  STATE_BUCKET: digital-identity-dev-tfstate
 inputs:
   - name: api-src
   - name: oidc-api-release
@@ -25,7 +26,7 @@ run:
       cd "api-src/ci/terraform/shared"
       terraform init -input=false \
         -backend-config "role_arn=${DEPLOYER_ROLE_ARN}" \
-        -backend-config "bucket=digital-identity-dev-tfstate" \
+        -backend-config "bucket=${STATE_BUCKET}" \
         -backend-config "key=${DEPLOY_ENVIRONMENT}-shared-terraform.tfstate" \
         -backend-config "encrypt=true" \
         -backend-config "region=eu-west-2"
@@ -36,5 +37,6 @@ run:
         -var 'logging_endpoint_enabled=true' \
         -var 'logging_endpoint_arn=arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod' \
         -var-file ${DEPLOY_ENVIRONMENT}-stub-clients.tfvars \
+        -var-file ${DEPLOY_ENVIRONMENT}-sizing.tfvars \
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-shared-terraform-outputs.json

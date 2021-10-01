@@ -10,6 +10,7 @@ params:
   DEPLOYER_ROLE_ARN: ((deployer-role-arn-non-prod))
   DEPLOY_ENVIRONMENT: build
   NOTIFY_API_KEY: ((build-notify-api-key))
+  STATE_BUCKET: digital-identity-dev-tfstate
 inputs:
   - name: api-src
   - name: api-release
@@ -24,7 +25,7 @@ run:
       cd "api-src/ci/terraform/account-management"
       terraform init -input=false \
         -backend-config "role_arn=${DEPLOYER_ROLE_ARN}" \
-        -backend-config "bucket=digital-identity-dev-tfstate" \
+        -backend-config "bucket=${STATE_BUCKET}" \
         -backend-config "key=${DEPLOY_ENVIRONMENT}-account-managment-api-terraform.tfstate" \
         -backend-config "encrypt=true" \
         -backend-config "region=eu-west-2"
