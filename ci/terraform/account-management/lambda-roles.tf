@@ -90,10 +90,13 @@ data "aws_iam_policy_document" "endpoint_networking_policy" {
       "ec2:DescribeNetworkInterfaces",
       "ec2:CreateNetworkInterface",
       "ec2:DeleteNetworkInterface",
-      "ec2:DescribeInstances",
-      "ec2:AttachNetworkInterface",
     ]
     resources = ["*"]
+    condition {
+      test     = "ArnLikeIfExists"
+      variable = "ec2:Vpc"
+      values   = [aws_vpc.account_management_vpc.arn]
+    }
   }
 }
 
