@@ -3,8 +3,8 @@ resource "aws_dynamodb_table" "user_credentials_table" {
   billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
   hash_key     = "Email"
 
-  read_capacity   = var.provision_dynamo ? var.dynamo_default_read_capacity : null
-  write_capacity  = var.provision_dynamo ? var.dynamo_default_write_capacity : null
+  read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
+  write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
 
   attribute {
     name = "Email"
