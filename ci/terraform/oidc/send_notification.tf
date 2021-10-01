@@ -24,7 +24,7 @@ module "send_notification" {
   lambda_zip_file           = var.frontend_api_lambda_zip_file
   security_group_id         = local.authentication_security_group_id
   subnet_id                 = local.authentication_subnet_ids
-  lambda_role_arn           = local.sqs_lambda_iam_role_arn
+  lambda_role_arn           = local.dynamo_sqs_lambda_iam_role_arn
   logging_endpoint_enabled  = var.logging_endpoint_enabled
   logging_endpoint_arn      = var.logging_endpoint_arn
   default_tags              = local.default_tags
