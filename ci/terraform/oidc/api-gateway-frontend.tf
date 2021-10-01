@@ -28,7 +28,7 @@ resource "aws_api_gateway_usage_plan_key" "di_auth_frontend_usage_plan_key" {
 }
 
 locals {
-  frontend_api_base_url = var.use_localstack ? "${var.aws_endpoint}/restapis/${aws_api_gateway_rest_api.di_authentication_frontend_api.id}/${var.api_deployment_stage_name}/_user_request_" : "https://${aws_api_gateway_rest_api.di_authentication_frontend_api.id}.execute-api.eu-west-2.amazonaws.com/${var.api_deployment_stage_name}"
+  frontend_api_base_url = var.use_localstack ? "${var.aws_endpoint}/restapis/${aws_api_gateway_rest_api.di_authentication_frontend_api.id}/${var.api_deployment_stage_name}/_user_request_" : "https://auth.${var.environment}.${var.service_domain_name}"
 }
 
 resource "aws_api_gateway_deployment" "frontend_deployment" {
@@ -109,6 +109,14 @@ resource "aws_api_gateway_method_settings" "api_gateway_frontend_logging_setting
   depends_on = [
     aws_api_gateway_stage.endpoint_frontend_stage
   ]
+}
+
+resource "aws_api_gateway_base_path_mapping" "frontend_api" {
+  count = var.use_localstack ? 0 : 1
+
+  api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
+  stage_name  = aws_api_gateway_stage.endpoint_frontend_stage.stage_name
+  domain_name = "auth.${var.environment}.${var.service_domain_name}"
 }
 
 module "dashboard_frontend_api" {
