@@ -96,13 +96,15 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
     }
 
     @Override
-    public void onRequestReceived() {
-        auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_RECEIVED);
+    public void onRequestReceived(Context context) {
+        auditService.submitAuditEvent(
+                ACCOUNT_MANAGEMENT_REQUEST_RECEIVED, context.getAwsRequestId(), "");
     }
 
     @Override
-    public void onRequestValidationError() {
-        auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_ERROR);
+    public void onRequestValidationError(Context context) {
+        auditService.submitAuditEvent(
+                ACCOUNT_MANAGEMENT_REQUEST_ERROR, context.getAwsRequestId(), "");
     }
 
     @Override
@@ -119,7 +121,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         try {
             if (!session.validateSession(request.getEmail())) {
                 LOGGER.info("Invalid session. Email {}", request.getEmail());
-                return generateErrorResponse(ErrorResponse.ERROR_1000);
+                return generateErrorResponse(ErrorResponse.ERROR_1000, context);
             }
             switch (request.getUpdateProfileType()) {
                 case ADD_PHONE_NUMBER:
@@ -129,7 +131,10 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                         session.getState(), USER_ENTERED_A_NEW_PHONE_NUMBER);
                         authenticationService.updatePhoneNumber(
                                 request.getEmail(), request.getProfileInformation());
-                        auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_PHONE_NUMBER_UPDATED);
+                        auditService.submitAuditEvent(
+                                ACCOUNT_MANAGEMENT_PHONE_NUMBER_UPDATED,
+                                context.getAwsRequestId(),
+                                session.getSessionId());
                         sessionService.save(session.setState(nextState));
                         LOGGER.info(
                                 "Phone number updated and session state changed. Session state {}",
@@ -142,7 +147,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
                         if (clientSession == null) {
                             LOGGER.info("ClientSession not found");
-                            return generateErrorResponse(ErrorResponse.ERROR_1000);
+                            return generateErrorResponse(ErrorResponse.ERROR_1000, context);
                         }
                         AuthenticationRequest authorizationRequest;
                         try {
@@ -152,7 +157,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                         } catch (ParseException e) {
                             LOGGER.info(
                                     "Cannot retrieve auth request params from client session id.");
-                            return generateErrorResponse(ErrorResponse.ERROR_1001);
+                            return generateErrorResponse(ErrorResponse.ERROR_1001, context);
                         }
                         String clientId = authorizationRequest.getClientID().getValue();
                         Set<String> claimsConsented;
@@ -174,7 +179,10 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
                         sessionService.save(session.setState(nextState));
 
-                        auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_CONSENT_UPDATED);
+                        auditService.submitAuditEvent(
+                                ACCOUNT_MANAGEMENT_CONSENT_UPDATED,
+                                context.getAwsRequestId(),
+                                session.getSessionId());
 
                         LOGGER.info(
                                 "Consent updated for ClientID {} and session state changed. Session state {}",
@@ -190,7 +198,9 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                 configurationService.getTermsAndConditionsVersion());
 
                         auditService.submitAuditEvent(
-                                ACCOUNT_MANAGEMENT_TERMS_CONDS_ACCEPTANCE_UPDATED);
+                                ACCOUNT_MANAGEMENT_TERMS_CONDS_ACCEPTANCE_UPDATED,
+                                context.getAwsRequestId(),
+                                session.getSessionId());
                         LOGGER.info(
                                 "Updated terms and conditions. Email {} for Version {}",
                                 request.getEmail(),
@@ -210,14 +220,14 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             }
         } catch (JsonProcessingException e) {
             LOGGER.error("Error parsing request", e);
-            return generateErrorResponse(ErrorResponse.ERROR_1001);
+            return generateErrorResponse(ErrorResponse.ERROR_1001, context);
         } catch (InvalidStateTransitionException e) {
             LOGGER.error("Invalid transition in user journey", e);
-            return generateErrorResponse(ErrorResponse.ERROR_1017);
+            return generateErrorResponse(ErrorResponse.ERROR_1017, context);
         }
         LOGGER.error(
                 "Encountered unexpected error while processing session {}", session.getSessionId());
-        return generateErrorResponse(ErrorResponse.ERROR_1013);
+        return generateErrorResponse(ErrorResponse.ERROR_1013, context);
     }
 
     private void processAndUpdateClientConsent(
@@ -260,8 +270,9 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         return generateApiGatewayProxyResponse(200, new BaseAPIResponse(session.getState()));
     }
 
-    private APIGatewayProxyResponseEvent generateErrorResponse(ErrorResponse errorResponse) {
-        onRequestValidationError();
+    private APIGatewayProxyResponseEvent generateErrorResponse(
+            ErrorResponse errorResponse, Context context) {
+        onRequestValidationError(context);
         return generateApiGatewayProxyErrorResponse(400, errorResponse);
     }
 }

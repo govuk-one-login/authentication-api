@@ -6,6 +6,7 @@ import uk.gov.di.authentication.shared.domain.AuditableEvent;
 
 import java.time.Clock;
 import java.util.Objects;
+import java.util.Optional;
 
 public class AuditService {
 
@@ -22,16 +23,27 @@ public class AuditService {
         this.snsService = new SnsService(new ConfigurationService());
     }
 
-    public void submitAuditEvent(AuditableEvent event, MetadataPair... metadataPairs) {
-        snsService.publishAuditMessage(generateLogLine(event, metadataPairs));
+    public void submitAuditEvent(
+            AuditableEvent event,
+            String requestId,
+            String sessionId,
+            MetadataPair... metadataPairs) {
+        snsService.publishAuditMessage(generateLogLine(event, requestId, sessionId, metadataPairs));
     }
 
-    String generateLogLine(AuditableEvent eventEnum, MetadataPair... metadataPairs) {
+    String generateLogLine(
+            AuditableEvent eventEnum,
+            String requestId,
+            String sessionId,
+            MetadataPair... metadataPairs) {
         var timestamp = clock.instant().toString();
 
-        var eventBuilder = AuditEvent.newBuilder();
-        eventBuilder.setEventName(eventEnum.toString());
-        eventBuilder.setTimestamp(timestamp);
+        var eventBuilder =
+                AuditEvent.newBuilder()
+                        .setEventName(eventEnum.toString())
+                        .setTimestamp(timestamp)
+                        .setRequestId(Optional.ofNullable(requestId).orElse(""))
+                        .setSessionId(Optional.ofNullable(sessionId).orElse(""));
         // TODO - Extract other values from the metadataPairs argument.
 
         var signedEventBuilder = SignedAuditEvent.newBuilder();

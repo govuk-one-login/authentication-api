@@ -90,7 +90,9 @@ public class AuthorisationHandler
                 .orElseGet(
                         () -> {
                             auditService.submitAuditEvent(
-                                    OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED);
+                                    OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
+                                    context.getAwsRequestId(),
+                                    "");
                             LOGGER.info("Received authentication request");
 
                             Map<String, List<String>> queryStringParameters =
@@ -113,12 +115,13 @@ public class AuthorisationHandler
                                         e.getRedirectionURI(),
                                         e.getState(),
                                         e.getResponseMode(),
-                                        e.getErrorObject());
+                                        e.getErrorObject(),
+                                        context);
                             }
                             Optional<ErrorObject> error =
                                     authorizationService.validateAuthRequest(authRequest);
 
-                            return error.map(e -> generateErrorResponse(authRequest, e))
+                            return error.map(e -> generateErrorResponse(authRequest, e, context))
                                     .orElseGet(
                                             () ->
                                                     getOrCreateSessionAndRedirect(
@@ -126,24 +129,29 @@ public class AuthorisationHandler
                                                             sessionService
                                                                     .getSessionFromSessionCookie(
                                                                             input.getHeaders()),
-                                                            authRequest));
+                                                            authRequest,
+                                                            context));
                         });
     }
 
     private APIGatewayProxyResponseEvent getOrCreateSessionAndRedirect(
             Map<String, List<String>> authRequestParameters,
             Optional<Session> existingSession,
-            AuthenticationRequest authenticationRequest) {
+            AuthenticationRequest authenticationRequest,
+            Context context) {
         final SessionAction sessionAction;
         if (authenticationRequest.getPrompt() != null) {
             if (authenticationRequest.getPrompt().contains(Prompt.Type.CONSENT)
                     || authenticationRequest.getPrompt().contains(Prompt.Type.SELECT_ACCOUNT)) {
                 return generateErrorResponse(
-                        authenticationRequest, OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS);
+                        authenticationRequest,
+                        OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS,
+                        context);
             }
             if (authenticationRequest.getPrompt().contains(Prompt.Type.NONE)
                     && !isUserAuthenticated(existingSession)) {
-                return generateErrorResponse(authenticationRequest, OIDCError.LOGIN_REQUIRED);
+                return generateErrorResponse(
+                        authenticationRequest, OIDCError.LOGIN_REQUIRED, context);
             }
             if (authenticationRequest.getPrompt().contains(Prompt.Type.LOGIN)
                     && isUserAuthenticated(existingSession)) {
@@ -273,20 +281,27 @@ public class AuthorisationHandler
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(
-            AuthenticationRequest authRequest, ErrorObject errorObject) {
+            AuthenticationRequest authRequest, ErrorObject errorObject, Context context) {
 
         return generateErrorResponse(
                 authRequest.getRedirectionURI(),
                 authRequest.getState(),
                 authRequest.getResponseMode(),
-                errorObject);
+                errorObject,
+                context);
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(
-            URI redirectUri, State state, ResponseMode responseMode, ErrorObject errorObject) {
+            URI redirectUri,
+            State state,
+            ResponseMode responseMode,
+            ErrorObject errorObject,
+            Context context) {
 
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR,
+                context.getAwsRequestId(),
+                "",
                 pair("description", errorObject.getDescription()));
 
         LOGGER.error(

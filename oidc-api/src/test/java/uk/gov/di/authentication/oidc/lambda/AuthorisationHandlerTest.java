@@ -70,6 +70,7 @@ class AuthorisationHandlerTest {
 
     @BeforeEach
     public void setUp() {
+        when(context.getAwsRequestId()).thenReturn("request-id");
         handler =
                 new AuthorisationHandler(
                         configService,
@@ -164,6 +165,8 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
+                        "request-id",
+                        "",
                         pair("description", "Invalid request: Missing response_type parameter"));
     }
 
@@ -189,6 +192,8 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
+                        "request-id",
+                        "",
                         pair("description", OAuth2Error.INVALID_SCOPE.getDescription()));
     }
 
@@ -254,6 +259,8 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
+                        "request-id",
+                        "",
                         pair("description", OIDCError.LOGIN_REQUIRED.getDescription()));
     }
 
@@ -345,6 +352,8 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
+                        "request-id",
+                        "",
                         pair(
                                 "description",
                                 "Invalid request: Invalid prompt parameter: Unknown prompt type: unrecognised"));
@@ -364,6 +373,8 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
+                        "request-id",
+                        "",
                         pair(
                                 "description",
                                 "Invalid request: Invalid prompt parameter: Invalid prompt: none login"));
@@ -383,6 +394,8 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
+                        "request-id",
+                        "",
                         pair(
                                 "description",
                                 OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS.getDescription()));
@@ -402,6 +415,8 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
+                        "request-id",
+                        "",
                         pair(
                                 "description",
                                 OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS.getDescription()));
@@ -421,6 +436,8 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
+                        "request-id",
+                        "",
                         pair(
                                 "description",
                                 OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS.getDescription()));
@@ -477,7 +494,9 @@ class AuthorisationHandlerTest {
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
         var response = handler.handleRequest(event, context);
 
-        verify(auditService).submitAuditEvent(OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED);
+        verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED, "request-id", "");
 
         return response;
     }
