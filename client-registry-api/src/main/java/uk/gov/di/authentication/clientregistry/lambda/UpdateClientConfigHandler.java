@@ -62,7 +62,7 @@ public class UpdateClientConfigHandler
                 .orElseGet(
                         () -> {
                             auditService.submitAuditEvent(
-                                    UPDATE_CLIENT_REQUEST_RECEIVED, context.getAwsRequestId());
+                                    UPDATE_CLIENT_REQUEST_RECEIVED, context.getAwsRequestId(), "");
 
                             try {
                                 String clientId = input.getPathParameters().get("clientId");
@@ -72,7 +72,9 @@ public class UpdateClientConfigHandler
                                                 input.getBody(), UpdateClientConfigRequest.class);
                                 if (!clientService.isValidClient(clientId)) {
                                     auditService.submitAuditEvent(
-                                            UPDATE_CLIENT_REQUEST_ERROR, context.getAwsRequestId());
+                                            UPDATE_CLIENT_REQUEST_ERROR,
+                                            context.getAwsRequestId(),
+                                            "");
                                     LOGGER.error("Client with ClientId {} is not valid", clientId);
                                     return generateApiGatewayProxyResponse(
                                             400,
@@ -85,7 +87,9 @@ public class UpdateClientConfigHandler
                                                 updateClientConfigRequest);
                                 if (errorResponse.isPresent()) {
                                     auditService.submitAuditEvent(
-                                            UPDATE_CLIENT_REQUEST_ERROR, context.getAwsRequestId());
+                                            UPDATE_CLIENT_REQUEST_ERROR,
+                                            context.getAwsRequestId(),
+                                            "");
                                     return generateApiGatewayProxyResponse(
                                             400, errorResponse.get().toJSONObject().toJSONString());
                                 }
@@ -106,7 +110,7 @@ public class UpdateClientConfigHandler
                                         200, clientRegistrationResponse);
                             } catch (JsonProcessingException | NullPointerException e) {
                                 auditService.submitAuditEvent(
-                                        UPDATE_CLIENT_REQUEST_ERROR, context.getAwsRequestId());
+                                        UPDATE_CLIENT_REQUEST_ERROR, context.getAwsRequestId(), "");
                                 LOGGER.error(
                                         "Request with path parameters {} is missing request parameters",
                                         input.getPathParameters());

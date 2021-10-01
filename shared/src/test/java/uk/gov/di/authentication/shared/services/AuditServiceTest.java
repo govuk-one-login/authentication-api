@@ -18,6 +18,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasEventName;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasRequestId;
+import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasSessionId;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasTimestamp;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.AuditServiceTest.TestEvents.TEST_EVENT_ONE;
@@ -50,7 +51,7 @@ class AuditServiceTest {
     void shouldLogAuditEvent() {
         var auditService = new AuditService(FIXED_CLOCK, snsService);
 
-        auditService.submitAuditEvent(TEST_EVENT_ONE, "request-id");
+        auditService.submitAuditEvent(TEST_EVENT_ONE, "request-id", "session-id");
 
         verify(snsService).publishAuditMessage(messageCaptor.capture());
         var serialisedAuditMessage = messageCaptor.getValue();
@@ -58,6 +59,7 @@ class AuditServiceTest {
         assertThat(serialisedAuditMessage, hasTimestamp(FIXED_TIMESTAMP));
         assertThat(serialisedAuditMessage, hasEventName(TEST_EVENT_ONE.toString()));
         assertThat(serialisedAuditMessage, hasRequestId("request-id"));
+        assertThat(serialisedAuditMessage, hasSessionId("session-id"));
     }
 
     @Test
@@ -65,7 +67,11 @@ class AuditServiceTest {
         var auditService = new AuditService(FIXED_CLOCK, snsService);
 
         auditService.submitAuditEvent(
-                TEST_EVENT_ONE, "request-id", pair("key", "value"), pair("key2", "value2"));
+                TEST_EVENT_ONE,
+                "request-id",
+                "session-id",
+                pair("key", "value"),
+                pair("key2", "value2"));
 
         verify(snsService).publishAuditMessage(messageCaptor.capture());
         var serialisedAuditMessage = messageCaptor.getValue();

@@ -91,7 +91,8 @@ public class AuthorisationHandler
                         () -> {
                             auditService.submitAuditEvent(
                                     OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
-                                    context.getAwsRequestId());
+                                    context.getAwsRequestId(),
+                                    "");
                             LOGGER.info("Received authentication request");
 
                             Map<String, List<String>> queryStringParameters =
@@ -300,6 +301,7 @@ public class AuthorisationHandler
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR,
                 context.getAwsRequestId(),
+                "",
                 pair("description", errorObject.getDescription()));
 
         LOGGER.error(
