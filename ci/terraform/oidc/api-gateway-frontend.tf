@@ -111,14 +111,6 @@ resource "aws_api_gateway_method_settings" "api_gateway_frontend_logging_setting
   ]
 }
 
-resource "aws_api_gateway_base_path_mapping" "frontend_api" {
-  count = var.use_localstack ? 0 : 1
-
-  api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
-  stage_name  = aws_api_gateway_stage.endpoint_frontend_stage.stage_name
-  domain_name = "api.frontend.${var.environment}.${var.service_domain_name}"
-}
-
 module "dashboard_frontend_api" {
   source           = "../modules/dashboards"
   api_gateway_name = aws_api_gateway_rest_api.di_authentication_frontend_api.name
