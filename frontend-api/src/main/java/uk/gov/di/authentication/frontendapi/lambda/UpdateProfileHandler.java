@@ -96,12 +96,12 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
     }
 
     @Override
-    public void onRequestReceived() {
+    public void onRequestReceived(Context context) {
         auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_RECEIVED);
     }
 
     @Override
-    public void onRequestValidationError() {
+    public void onRequestValidationError(Context context) {
         auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_ERROR);
     }
 
@@ -119,7 +119,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         try {
             if (!session.validateSession(request.getEmail())) {
                 LOGGER.info("Invalid session. Email {}", request.getEmail());
-                return generateErrorResponse(ErrorResponse.ERROR_1000);
+                return generateErrorResponse(ErrorResponse.ERROR_1000, context);
             }
             switch (request.getUpdateProfileType()) {
                 case ADD_PHONE_NUMBER:
@@ -142,7 +142,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
                         if (clientSession == null) {
                             LOGGER.info("ClientSession not found");
-                            return generateErrorResponse(ErrorResponse.ERROR_1000);
+                            return generateErrorResponse(ErrorResponse.ERROR_1000, context);
                         }
                         AuthenticationRequest authorizationRequest;
                         try {
@@ -152,7 +152,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                         } catch (ParseException e) {
                             LOGGER.info(
                                     "Cannot retrieve auth request params from client session id.");
-                            return generateErrorResponse(ErrorResponse.ERROR_1001);
+                            return generateErrorResponse(ErrorResponse.ERROR_1001, context);
                         }
                         String clientId = authorizationRequest.getClientID().getValue();
                         Set<String> claimsConsented;
@@ -210,14 +210,14 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             }
         } catch (JsonProcessingException e) {
             LOGGER.error("Error parsing request", e);
-            return generateErrorResponse(ErrorResponse.ERROR_1001);
+            return generateErrorResponse(ErrorResponse.ERROR_1001, context);
         } catch (InvalidStateTransitionException e) {
             LOGGER.error("Invalid transition in user journey", e);
-            return generateErrorResponse(ErrorResponse.ERROR_1017);
+            return generateErrorResponse(ErrorResponse.ERROR_1017, context);
         }
         LOGGER.error(
                 "Encountered unexpected error while processing session {}", session.getSessionId());
-        return generateErrorResponse(ErrorResponse.ERROR_1013);
+        return generateErrorResponse(ErrorResponse.ERROR_1013, context);
     }
 
     private void processAndUpdateClientConsent(
@@ -260,8 +260,9 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         return generateApiGatewayProxyResponse(200, new BaseAPIResponse(session.getState()));
     }
 
-    private APIGatewayProxyResponseEvent generateErrorResponse(ErrorResponse errorResponse) {
-        onRequestValidationError();
+    private APIGatewayProxyResponseEvent generateErrorResponse(
+            ErrorResponse errorResponse, Context context) {
+        onRequestValidationError(context);
         return generateApiGatewayProxyErrorResponse(400, errorResponse);
     }
 }
