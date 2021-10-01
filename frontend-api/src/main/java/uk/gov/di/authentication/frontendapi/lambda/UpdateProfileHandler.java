@@ -5,7 +5,6 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -48,10 +47,9 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_ACTI
 import static uk.gov.di.authentication.shared.entity.SessionState.ADDED_UNVERIFIED_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
-public class UpdateProfileHandler extends BaseFrontendHandler
+public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(UpdateProfileHandler.class);
@@ -60,7 +58,6 @@ public class UpdateProfileHandler extends BaseFrontendHandler
     private final SessionService sessionService;
     private final ConfigurationService configurationService;
     private final AuditService auditService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine;
 
     protected UpdateProfileHandler(
@@ -72,6 +69,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler
             ClientService clientService,
             StateMachine<SessionState, SessionAction, UserContext> stateMachine) {
         super(
+                UpdateProfileRequest.class,
                 configurationService,
                 sessionService,
                 clientSessionService,
@@ -85,7 +83,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler
     }
 
     public UpdateProfileHandler() {
-        super(ConfigurationService.getInstance());
+        super(UpdateProfileRequest.class, ConfigurationService.getInstance());
         configurationService = new ConfigurationService();
         this.authenticationService =
                 new DynamoService(
@@ -98,148 +96,128 @@ public class UpdateProfileHandler extends BaseFrontendHandler
     }
 
     @Override
+    public void onRequestReceived() {
+        auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_RECEIVED);
+    }
+
+    @Override
+    public void onRequestValidationError() {
+        auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_ERROR);
+    }
+
+    @Override
     public APIGatewayProxyResponseEvent handleRequestWithUserContext(
-            APIGatewayProxyRequestEvent input, Context context, UserContext userContext) {
-        return isWarming(input)
-                .orElseGet(
-                        () -> {
-                            auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_RECEIVED);
+            APIGatewayProxyRequestEvent input,
+            Context context,
+            UpdateProfileRequest request,
+            UserContext userContext) {
+        Session session = userContext.getSession();
 
-                            Session session = userContext.getSession();
+        LOGGER.info(
+                "UpdateProfileHandler processing request for session {}", session.getSessionId());
 
+        try {
+            if (!session.validateSession(request.getEmail())) {
+                LOGGER.info("Invalid session. Email {}", request.getEmail());
+                return generateErrorResponse(ErrorResponse.ERROR_1000);
+            }
+            switch (request.getUpdateProfileType()) {
+                case ADD_PHONE_NUMBER:
+                    {
+                        var nextState =
+                                stateMachine.transition(
+                                        session.getState(), USER_ENTERED_A_NEW_PHONE_NUMBER);
+                        authenticationService.updatePhoneNumber(
+                                request.getEmail(), request.getProfileInformation());
+                        auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_PHONE_NUMBER_UPDATED);
+                        sessionService.save(session.setState(nextState));
+                        LOGGER.info(
+                                "Phone number updated and session state changed. Session state {}",
+                                ADDED_UNVERIFIED_PHONE_NUMBER);
+                        return generateSuccessResponse(session);
+                    }
+                case CAPTURE_CONSENT:
+                    {
+                        ClientSession clientSession = userContext.getClientSession();
+
+                        if (clientSession == null) {
+                            LOGGER.info("ClientSession not found");
+                            return generateErrorResponse(ErrorResponse.ERROR_1000);
+                        }
+                        AuthenticationRequest authorizationRequest;
+                        try {
+                            authorizationRequest =
+                                    AuthenticationRequest.parse(
+                                            clientSession.getAuthRequestParams());
+                        } catch (ParseException e) {
                             LOGGER.info(
-                                    "UpdateProfileHandler processing request for session {}",
-                                    session.getSessionId());
+                                    "Cannot retrieve auth request params from client session id.");
+                            return generateErrorResponse(ErrorResponse.ERROR_1001);
+                        }
+                        String clientId = authorizationRequest.getClientID().getValue();
+                        Set<String> claimsConsented;
 
-                            try {
-                                UpdateProfileRequest profileRequest =
-                                        objectMapper.readValue(
-                                                input.getBody(), UpdateProfileRequest.class);
-                                if (!session.validateSession(profileRequest.getEmail())) {
-                                    LOGGER.info(
-                                            "Invalid session. Email {}", profileRequest.getEmail());
-                                    return generateErrorResponse(ErrorResponse.ERROR_1000);
-                                }
-                                switch (profileRequest.getUpdateProfileType()) {
-                                    case ADD_PHONE_NUMBER:
-                                        {
-                                            var nextState =
-                                                    stateMachine.transition(
-                                                            session.getState(),
-                                                            USER_ENTERED_A_NEW_PHONE_NUMBER);
-                                            authenticationService.updatePhoneNumber(
-                                                    profileRequest.getEmail(),
-                                                    profileRequest.getProfileInformation());
-                                            auditService.submitAuditEvent(
-                                                    ACCOUNT_MANAGEMENT_PHONE_NUMBER_UPDATED);
-                                            sessionService.save(session.setState(nextState));
-                                            LOGGER.info(
-                                                    "Phone number updated and session state changed. Session state {}",
-                                                    ADDED_UNVERIFIED_PHONE_NUMBER);
-                                            return generateSuccessResponse(session);
-                                        }
-                                    case CAPTURE_CONSENT:
-                                        {
-                                            ClientSession clientSession =
-                                                    userContext.getClientSession();
+                        if (!Boolean.parseBoolean(request.getProfileInformation())) {
+                            claimsConsented = OIDCScopeValue.OPENID.getClaimNames();
+                        } else {
+                            claimsConsented =
+                                    ValidScopes.getClaimsForListOfScopes(
+                                            authorizationRequest.getScope().toStringList());
+                        }
 
-                                            if (clientSession == null) {
-                                                LOGGER.info("ClientSession not found");
-                                                return generateErrorResponse(
-                                                        ErrorResponse.ERROR_1000);
-                                            }
-                                            AuthenticationRequest authorizationRequest;
-                                            try {
-                                                authorizationRequest =
-                                                        AuthenticationRequest.parse(
-                                                                clientSession
-                                                                        .getAuthRequestParams());
-                                            } catch (ParseException e) {
-                                                LOGGER.info(
-                                                        "Cannot retrieve auth request params from client session id.");
-                                                return generateErrorResponse(
-                                                        ErrorResponse.ERROR_1001);
-                                            }
-                                            String clientId =
-                                                    authorizationRequest.getClientID().getValue();
-                                            Set<String> claimsConsented;
+                        processAndUpdateClientConsent(
+                                request.getEmail(), userContext, clientId, claimsConsented);
 
-                                            if (!Boolean.parseBoolean(
-                                                    profileRequest.getProfileInformation())) {
-                                                claimsConsented =
-                                                        OIDCScopeValue.OPENID.getClaimNames();
-                                            } else {
-                                                claimsConsented =
-                                                        ValidScopes.getClaimsForListOfScopes(
-                                                                authorizationRequest
-                                                                        .getScope()
-                                                                        .toStringList());
-                                            }
+                        var nextState =
+                                stateMachine.transition(
+                                        session.getState(), USER_HAS_ACTIONED_CONSENT);
 
-                                            processAndUpdateClientConsent(
-                                                    profileRequest.getEmail(),
-                                                    userContext,
-                                                    clientId,
-                                                    claimsConsented);
+                        sessionService.save(session.setState(nextState));
 
-                                            var nextState =
-                                                    stateMachine.transition(
-                                                            session.getState(),
-                                                            USER_HAS_ACTIONED_CONSENT);
+                        auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_CONSENT_UPDATED);
 
-                                            sessionService.save(session.setState(nextState));
+                        LOGGER.info(
+                                "Consent updated for ClientID {} and session state changed. Session state {}",
+                                clientId,
+                                nextState);
 
-                                            auditService.submitAuditEvent(
-                                                    ACCOUNT_MANAGEMENT_CONSENT_UPDATED);
+                        return generateSuccessResponse(session);
+                    }
+                case UPDATE_TERMS_CONDS:
+                    {
+                        authenticationService.updateTermsAndConditions(
+                                request.getEmail(),
+                                configurationService.getTermsAndConditionsVersion());
 
-                                            LOGGER.info(
-                                                    "Consent updated for ClientID {} and session state changed. Session state {}",
-                                                    clientId,
-                                                    nextState);
+                        auditService.submitAuditEvent(
+                                ACCOUNT_MANAGEMENT_TERMS_CONDS_ACCEPTANCE_UPDATED);
+                        LOGGER.info(
+                                "Updated terms and conditions. Email {} for Version {}",
+                                request.getEmail(),
+                                configurationService.getTermsAndConditionsVersion());
 
-                                            return generateSuccessResponse(session);
-                                        }
-                                    case UPDATE_TERMS_CONDS:
-                                        {
-                                            authenticationService.updateTermsAndConditions(
-                                                    profileRequest.getEmail(),
-                                                    configurationService
-                                                            .getTermsAndConditionsVersion());
+                        var nextState =
+                                stateMachine.transition(
+                                        session.getState(),
+                                        USER_ACCEPTS_TERMS_AND_CONDITIONS,
+                                        userContext);
+                        sessionService.save(session.setState(nextState));
 
-                                            auditService.submitAuditEvent(
-                                                    ACCOUNT_MANAGEMENT_TERMS_CONDS_ACCEPTANCE_UPDATED);
-                                            LOGGER.info(
-                                                    "Updated terms and conditions. Email {} for Version {}",
-                                                    profileRequest.getEmail(),
-                                                    configurationService
-                                                            .getTermsAndConditionsVersion());
+                        LOGGER.info("Updated terms and conditions. Session state {}", nextState);
 
-                                            var nextState =
-                                                    stateMachine.transition(
-                                                            session.getState(),
-                                                            USER_ACCEPTS_TERMS_AND_CONDITIONS,
-                                                            userContext);
-                                            sessionService.save(session.setState(nextState));
-
-                                            LOGGER.info(
-                                                    "Updated terms and conditions. Session state {}",
-                                                    nextState);
-
-                                            return generateSuccessResponse(session);
-                                        }
-                                }
-                            } catch (JsonProcessingException e) {
-                                LOGGER.error("Error parsing request", e);
-                                return generateErrorResponse(ErrorResponse.ERROR_1001);
-                            } catch (InvalidStateTransitionException e) {
-                                LOGGER.error("Invalid transition in user journey", e);
-                                return generateErrorResponse(ErrorResponse.ERROR_1017);
-                            }
-                            LOGGER.error(
-                                    "Encountered unexpected error while processing session {}",
-                                    session.getSessionId());
-                            return generateErrorResponse(ErrorResponse.ERROR_1013);
-                        });
+                        return generateSuccessResponse(session);
+                    }
+            }
+        } catch (JsonProcessingException e) {
+            LOGGER.error("Error parsing request", e);
+            return generateErrorResponse(ErrorResponse.ERROR_1001);
+        } catch (InvalidStateTransitionException e) {
+            LOGGER.error("Invalid transition in user journey", e);
+            return generateErrorResponse(ErrorResponse.ERROR_1017);
+        }
+        LOGGER.error(
+                "Encountered unexpected error while processing session {}", session.getSessionId());
+        return generateErrorResponse(ErrorResponse.ERROR_1013);
     }
 
     private void processAndUpdateClientConsent(
@@ -283,7 +261,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(ErrorResponse errorResponse) {
-        auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_ERROR);
+        onRequestValidationError();
         return generateApiGatewayProxyErrorResponse(400, errorResponse);
     }
 }

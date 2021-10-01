@@ -14,6 +14,8 @@ import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.ClientService;
+import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -50,6 +52,8 @@ public class MfaHandlerTest {
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
+    private final ClientService clientService = mock(ClientService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Session session =
@@ -67,6 +71,8 @@ public class MfaHandlerTest {
                         sessionService,
                         codeGeneratorService,
                         codeStorageService,
+                        clientSessionService,
+                        clientService,
                         authenticationService,
                         sqsClient);
     }

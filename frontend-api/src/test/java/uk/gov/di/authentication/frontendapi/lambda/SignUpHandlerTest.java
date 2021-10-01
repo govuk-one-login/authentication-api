@@ -15,6 +15,8 @@ import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.ClientService;
+import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.ValidationService;
@@ -44,6 +46,9 @@ class SignUpHandlerTest {
     private final ValidationService validationService = mock(ValidationService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
+    private final ClientService clientService = mock(ClientService.class);
+
     private SignUpHandler handler;
 
     private final Session session =
@@ -54,10 +59,12 @@ class SignUpHandlerTest {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         handler =
                 new SignUpHandler(
-                        authenticationService,
-                        validationService,
+                        configurationService,
                         sessionService,
-                        configurationService);
+                        clientSessionService,
+                        clientService,
+                        authenticationService,
+                        validationService);
     }
 
     @Test

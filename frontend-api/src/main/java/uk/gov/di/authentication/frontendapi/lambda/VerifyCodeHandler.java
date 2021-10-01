@@ -46,7 +46,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
-public class VerifyCodeHandler extends BaseFrontendHandler
+public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LoggerFactory.getLogger(VerifyCodeHandler.class);
@@ -66,6 +66,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler
             ValidationService validationService,
             StateMachine<SessionState, SessionAction, UserContext> stateMachine) {
         super(
+                VerifyCodeRequest.class,
                 configurationService,
                 sessionService,
                 clientSessionService,
@@ -77,7 +78,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler
     }
 
     public VerifyCodeHandler() {
-        super(ConfigurationService.getInstance());
+        super(VerifyCodeRequest.class, ConfigurationService.getInstance());
         this.codeStorageService =
                 new CodeStorageService(
                         new RedisConnectionService(ConfigurationService.getInstance()));
@@ -87,7 +88,10 @@ public class VerifyCodeHandler extends BaseFrontendHandler
 
     @Override
     public APIGatewayProxyResponseEvent handleRequestWithUserContext(
-            APIGatewayProxyRequestEvent input, Context context, UserContext userContext) {
+            APIGatewayProxyRequestEvent input,
+            Context context,
+            VerifyCodeRequest request,
+            UserContext userContext) {
         try {
             VerifyCodeRequest codeRequest =
                     objectMapper.readValue(input.getBody(), VerifyCodeRequest.class);

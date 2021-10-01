@@ -3,7 +3,7 @@ package uk.gov.di.authentication.frontendapi.entity;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 
-public class SendNotificationRequest extends UserWithEmailRequest {
+public class SendNotificationRequest extends BaseFrontendRequest {
 
     private final NotificationType notificationType;
     private final String phoneNumber;

@@ -2,7 +2,7 @@ package uk.gov.di.authentication.frontendapi.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class LoginRequest extends UserWithEmailRequest {
+public class LoginRequest extends BaseFrontendRequest {
 
     private String password;
 

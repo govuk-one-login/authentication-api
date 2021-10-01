@@ -13,6 +13,9 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.ClientService;
+import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.ValidationService;
 
@@ -36,6 +39,10 @@ class CheckUserExistsHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ValidationService validationService = mock(ValidationService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
+    private final ClientService clientService = mock(ClientService.class);
+
     private CheckUserExistsHandler handler;
     private ObjectMapper objectMapper = new ObjectMapper();
 
@@ -45,7 +52,12 @@ class CheckUserExistsHandlerTest {
     public void setup() {
         handler =
                 new CheckUserExistsHandler(
-                        validationService, authenticationService, sessionService);
+                        configurationService,
+                        sessionService,
+                        clientSessionService,
+                        clientService,
+                        authenticationService,
+                        validationService);
         reset(authenticationService);
     }
 
