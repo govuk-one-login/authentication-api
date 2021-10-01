@@ -104,8 +104,17 @@ variable "redis_node_size" {
   default = "cache.t2.small"
 }
 
-variable "prevent_destroy_of_data" {
-  description = "Prevent destruction of the DynamoDb tables in this environment"
+variable "provision_dynamo" {
   type    = bool
-  default = true
+  default = false
+}
+
+variable "dynamo_default_read_capacity" {
+  type    = number
+  default = 20
+}
+
+variable "dynamo_default_write_capacity" {
+  type    = number
+  default = 20
 }
