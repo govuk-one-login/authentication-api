@@ -9,6 +9,7 @@ image_resource:
 params:
   DEPLOYER_ROLE_ARN: ((deployer-role-arn-non-prod))
   DEPLOY_ENVIRONMENT: build
+  STATE_BUCKET: digital-identity-dev-tfstate
 inputs:
   - name: api-release
 outputs:
@@ -23,7 +24,7 @@ run:
       cd "src/ci/terraform/oidc"
       terraform init -input=false \
         -backend-config "role_arn=${DEPLOYER_ROLE_ARN}" \
-        -backend-config "bucket=digital-identity-dev-tfstate" \
+        -backend-config "bucket=${STATE_BUCKET}" \
         -backend-config "key=${DEPLOY_ENVIRONMENT}-terraform.tfstate" \
         -backend-config "encrypt=true" \
         -backend-config "region=eu-west-2"

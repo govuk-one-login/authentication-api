@@ -13,6 +13,7 @@ params:
   DNS_DEPLOYER_ROLE_ARN: ((deployer-role-arn-production))
   DNS_STATE_BUCKET: ((dns-state-bucket))
   DNS_STATE_KEY: ((dns-state-key))
+  STATE_BUCKET: digital-identity-dev-tfstate
 inputs:
   - name: api-src
   - name: oidc-api-release
@@ -30,7 +31,7 @@ run:
       cd "api-src/ci/terraform/oidc"
       terraform init -input=false \
         -backend-config "role_arn=${DEPLOYER_ROLE_ARN}" \
-        -backend-config "bucket=digital-identity-dev-tfstate" \
+        -backend-config "bucket=${STATE_BUCKET}" \
         -backend-config "key=${DEPLOY_ENVIRONMENT}-terraform.tfstate" \
         -backend-config "encrypt=true" \
         -backend-config "region=eu-west-2"
@@ -48,6 +49,6 @@ run:
         -var "dns_state_bucket=${DNS_STATE_BUCKET}" \
         -var "dns_state_key=${DNS_STATE_KEY}" \
         -var "dns_state_role=${DNS_DEPLOYER_ROLE_ARN}" \
-        -var "shared_state_bucket=digital-identity-dev-tfstate" \
+        -var "shared_state_bucket=${STATE_BUCKET}" \
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-terraform-outputs.json
