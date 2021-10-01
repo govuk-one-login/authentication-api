@@ -6,6 +6,7 @@ import uk.gov.di.authentication.shared.domain.AuditableEvent;
 
 import java.time.Clock;
 import java.util.Objects;
+import java.util.Optional;
 
 public class AuditService {
 
@@ -41,8 +42,8 @@ public class AuditService {
                 AuditEvent.newBuilder()
                         .setEventName(eventEnum.toString())
                         .setTimestamp(timestamp)
-                        .setRequestId(requestId)
-                        .setSessionId(sessionId);
+                        .setRequestId(Optional.ofNullable(requestId).orElse(""))
+                        .setSessionId(Optional.ofNullable(sessionId).orElse(""));
         // TODO - Extract other values from the metadataPairs argument.
 
         var signedEventBuilder = SignedAuditEvent.newBuilder();
