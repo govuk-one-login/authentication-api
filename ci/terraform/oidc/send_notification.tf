@@ -7,6 +7,7 @@ module "send_notification" {
   environment     = var.environment
 
   handler_environment_variables = {
+    ENVIRONMENT          = var.environment
     EMAIL_QUEUE_URL      = aws_sqs_queue.email_queue.id
     EVENTS_SNS_TOPIC_ARN = aws_sns_topic.events.arn
     LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
