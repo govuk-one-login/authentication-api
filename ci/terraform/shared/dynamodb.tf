@@ -20,6 +20,8 @@ resource "aws_dynamodb_table" "user_credentials_table" {
     name            = "SubjectIDIndex"
     hash_key        = "SubjectID"
     projection_type = "ALL"
+    read_capacity   = var.provision_dynamo ? var.dynamo_default_read_capacity : null
+    write_capacity  = var.provision_dynamo ? var.dynamo_default_write_capacity : null
   }
 
   server_side_encryption {
@@ -61,12 +63,16 @@ resource "aws_dynamodb_table" "user_profile_table" {
     name            = "SubjectIDIndex"
     hash_key        = "SubjectID"
     projection_type = "ALL"
+    read_capacity   = var.provision_dynamo ? var.dynamo_default_read_capacity : null
+    write_capacity  = var.provision_dynamo ? var.dynamo_default_write_capacity : null
   }
 
   global_secondary_index {
     name            = "PublicSubjectIDIndex"
     hash_key        = "PublicSubjectID"
     projection_type = "ALL"
+    read_capacity   = var.provision_dynamo ? var.dynamo_default_read_capacity : null
+    write_capacity  = var.provision_dynamo ? var.dynamo_default_write_capacity : null
   }
 
   server_side_encryption {
@@ -103,6 +109,8 @@ resource "aws_dynamodb_table" "client_registry_table" {
     name            = "ClientNameIndex"
     hash_key        = "ClientName"
     projection_type = "ALL"
+    read_capacity   = var.provision_dynamo ? var.dynamo_default_read_capacity : null
+    write_capacity  = var.provision_dynamo ? var.dynamo_default_write_capacity : null
   }
 
   point_in_time_recovery {
