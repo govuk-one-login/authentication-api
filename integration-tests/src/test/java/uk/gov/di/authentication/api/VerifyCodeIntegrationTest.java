@@ -54,11 +54,13 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
 
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", API_KEY);
+        headers.add("X-API-Key", FRONTEND_API_KEY);
         String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, code);
 
-        Response response = RequestHelper.request(VERIFY_CODE_ENDPOINT, codeRequest, headers);
+        Response response =
+                RequestHelper.request(
+                        FRONTEND_ROOT_RESOURCE_URL, VERIFY_CODE_ENDPOINT, codeRequest, headers);
 
         assertEquals(200, response.getStatus());
     }
@@ -76,9 +78,11 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         TimeUnit.SECONDS.sleep(3);
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", API_KEY);
+        headers.add("X-API-Key", FRONTEND_API_KEY);
 
-        Response response = RequestHelper.request(VERIFY_CODE_ENDPOINT, codeRequest, headers);
+        Response response =
+                RequestHelper.request(
+                        FRONTEND_ROOT_RESOURCE_URL, VERIFY_CODE_ENDPOINT, codeRequest, headers);
 
         assertEquals(400, response.getStatus());
         BaseAPIResponse codeResponse =
@@ -96,16 +100,20 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, code);
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", API_KEY);
+        headers.add("X-API-Key", FRONTEND_API_KEY);
 
-        Response response = RequestHelper.request(VERIFY_CODE_ENDPOINT, codeRequest, headers);
+        Response response =
+                RequestHelper.request(
+                        FRONTEND_ROOT_RESOURCE_URL, VERIFY_CODE_ENDPOINT, codeRequest, headers);
 
         assertEquals(200, response.getStatus());
         BaseAPIResponse codeResponse1 =
                 objectMapper.readValue(response.readEntity(String.class), BaseAPIResponse.class);
         assertEquals(SessionState.EMAIL_CODE_VERIFIED, codeResponse1.getSessionState());
 
-        Response response2 = RequestHelper.request(VERIFY_CODE_ENDPOINT, codeRequest, headers);
+        Response response2 =
+                RequestHelper.request(
+                        FRONTEND_ROOT_RESOURCE_URL, VERIFY_CODE_ENDPOINT, codeRequest, headers);
 
         assertEquals(400, response2.getStatus());
 
@@ -123,7 +131,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         setUpTestWithoutClientConsent(sessionId, scope, SessionState.VERIFY_PHONE_NUMBER_CODE_SENT);
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", API_KEY);
+        headers.add("X-API-Key", FRONTEND_API_KEY);
         headers.add("Client-Session-Id", CLIENT_SESSION_ID);
         Set<String> claims = ValidScopes.getClaimsForListOfScopes(scope.toStringList());
         ClientConsent clientConsent =
@@ -134,7 +142,9 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         VerifyCodeRequest codeRequest =
                 new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
 
-        Response response = RequestHelper.request(VERIFY_CODE_ENDPOINT, codeRequest, headers);
+        Response response =
+                RequestHelper.request(
+                        FRONTEND_ROOT_RESOURCE_URL, VERIFY_CODE_ENDPOINT, codeRequest, headers);
 
         assertEquals(200, response.getStatus());
         BaseAPIResponse codeResponse =
@@ -152,13 +162,15 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         setUpTestWithoutClientConsent(sessionId, scope, SessionState.VERIFY_PHONE_NUMBER_CODE_SENT);
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", API_KEY);
+        headers.add("X-API-Key", FRONTEND_API_KEY);
         headers.add("Client-Session-Id", CLIENT_SESSION_ID);
         String code = RedisHelper.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest =
                 new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
 
-        Response response = RequestHelper.request(VERIFY_CODE_ENDPOINT, codeRequest, headers);
+        Response response =
+                RequestHelper.request(
+                        FRONTEND_ROOT_RESOURCE_URL, VERIFY_CODE_ENDPOINT, codeRequest, headers);
 
         assertEquals(200, response.getStatus());
         BaseAPIResponse codeResponse =
@@ -175,7 +187,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         RedisHelper.setSessionState(sessionId, SessionState.VERIFY_PHONE_NUMBER_CODE_SENT);
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", API_KEY);
+        headers.add("X-API-Key", FRONTEND_API_KEY);
 
         String code = RedisHelper.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 2);
         VerifyCodeRequest codeRequest =
@@ -183,7 +195,9 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
 
         TimeUnit.SECONDS.sleep(3);
 
-        Response response = RequestHelper.request(VERIFY_CODE_ENDPOINT, codeRequest, headers);
+        Response response =
+                RequestHelper.request(
+                        FRONTEND_ROOT_RESOURCE_URL, VERIFY_CODE_ENDPOINT, codeRequest, headers);
 
         assertEquals(400, response.getStatus());
 
@@ -200,12 +214,14 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         RedisHelper.blockPhoneCode(EMAIL_ADDRESS, sessionId);
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", API_KEY);
+        headers.add("X-API-Key", FRONTEND_API_KEY);
 
         VerifyCodeRequest codeRequest =
                 new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, "123456");
 
-        Response response = RequestHelper.request(VERIFY_CODE_ENDPOINT, codeRequest, headers);
+        Response response =
+                RequestHelper.request(
+                        FRONTEND_ROOT_RESOURCE_URL, VERIFY_CODE_ENDPOINT, codeRequest, headers);
 
         assertEquals(400, response.getStatus());
 
@@ -223,11 +239,13 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         RedisHelper.blockPhoneCode(EMAIL_ADDRESS, sessionId);
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", API_KEY);
+        headers.add("X-API-Key", FRONTEND_API_KEY);
 
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, "123456");
 
-        Response response = RequestHelper.request(VERIFY_CODE_ENDPOINT, codeRequest, headers);
+        Response response =
+                RequestHelper.request(
+                        FRONTEND_ROOT_RESOURCE_URL, VERIFY_CODE_ENDPOINT, codeRequest, headers);
 
         assertEquals(400, response.getStatus());
 
@@ -243,12 +261,14 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", API_KEY);
+        headers.add("X-API-Key", FRONTEND_API_KEY);
 
         String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, code);
 
-        Response response = RequestHelper.request(VERIFY_CODE_ENDPOINT, codeRequest, headers);
+        Response response =
+                RequestHelper.request(
+                        FRONTEND_ROOT_RESOURCE_URL, VERIFY_CODE_ENDPOINT, codeRequest, headers);
 
         assertEquals(400, response.getStatus());
         assertEquals(
@@ -263,14 +283,16 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", API_KEY);
+        headers.add("X-API-Key", FRONTEND_API_KEY);
 
         String code = RedisHelper.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest =
                 new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
         DynamoHelper.signUp(EMAIL_ADDRESS, "password");
 
-        Response response = RequestHelper.request(VERIFY_CODE_ENDPOINT, codeRequest, headers);
+        Response response =
+                RequestHelper.request(
+                        FRONTEND_ROOT_RESOURCE_URL, VERIFY_CODE_ENDPOINT, codeRequest, headers);
 
         assertEquals(400, response.getStatus());
         assertEquals(
@@ -298,12 +320,14 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
         headers.add("Client-Session-Id", CLIENT_SESSION_ID);
-        headers.add("X-API-Key", API_KEY);
+        headers.add("X-API-Key", FRONTEND_API_KEY);
 
         String code = RedisHelper.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code);
 
-        Response response = RequestHelper.request(VERIFY_CODE_ENDPOINT, codeRequest, headers);
+        Response response =
+                RequestHelper.request(
+                        FRONTEND_ROOT_RESOURCE_URL, VERIFY_CODE_ENDPOINT, codeRequest, headers);
 
         assertEquals(200, response.getStatus());
 
@@ -323,12 +347,14 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
 
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", API_KEY);
+        headers.add("X-API-Key", FRONTEND_API_KEY);
 
         String code = RedisHelper.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code);
 
-        Response response = RequestHelper.request(VERIFY_CODE_ENDPOINT, codeRequest, headers);
+        Response response =
+                RequestHelper.request(
+                        FRONTEND_ROOT_RESOURCE_URL, VERIFY_CODE_ENDPOINT, codeRequest, headers);
 
         assertEquals(200, response.getStatus());
 
@@ -344,12 +370,14 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", API_KEY);
+        headers.add("X-API-Key", FRONTEND_API_KEY);
 
         String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code);
 
-        Response response = RequestHelper.request(VERIFY_CODE_ENDPOINT, codeRequest, headers);
+        Response response =
+                RequestHelper.request(
+                        FRONTEND_ROOT_RESOURCE_URL, VERIFY_CODE_ENDPOINT, codeRequest, headers);
 
         assertEquals(400, response.getStatus());
         assertEquals(
