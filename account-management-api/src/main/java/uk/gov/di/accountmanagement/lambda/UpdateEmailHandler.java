@@ -125,7 +125,6 @@ public class UpdateEmailHandler
                                 sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
                                 LOGGER.info(
                                         "Message successfully added to queue. Generating successful gateway response");
-
                                 return generateEmptySuccessApiGatewayResponse();
                             } catch (JsonProcessingException | IllegalArgumentException e) {
                                 LOGGER.error(

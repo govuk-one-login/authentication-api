@@ -85,7 +85,6 @@ public class RemoveAccountHandler
                                 sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
                                 LOGGER.info(
                                         "Remove account message successfully added to queue. Generating successful gateway response");
-
                                 return generateEmptySuccessApiGatewayResponse();
                             } catch (JsonProcessingException e) {
                                 LOGGER.error(

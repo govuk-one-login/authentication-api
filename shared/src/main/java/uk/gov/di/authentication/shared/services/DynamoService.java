@@ -200,11 +200,6 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
-    public String getLegacySubjectID(String email) {
-        return userProfileMapper.load(UserProfile.class, email).getLegacySubjectID();
-    }
-
-    @Override
     public Optional<List<ClientConsent>> getUserConsents(String email) {
         return Optional.ofNullable(
                 userProfileMapper.load(UserProfile.class, email).getClientConsent());
