@@ -152,7 +152,7 @@ variable "reset_password_route" {
 
 variable "frontend_base_url" {
   type    = string
-  default = ""
+  default = null
 }
 
 variable "dns_state_bucket" {

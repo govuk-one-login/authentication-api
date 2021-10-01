@@ -99,3 +99,22 @@ variable "keep_lambdas_warm" {
   default = true
   type    = bool
 }
+
+variable "redis_node_size" {
+  default = "cache.t2.small"
+}
+
+variable "provision_dynamo" {
+  type    = bool
+  default = false
+}
+
+variable "dynamo_default_read_capacity" {
+  type    = number
+  default = 20
+}
+
+variable "dynamo_default_write_capacity" {
+  type    = number
+  default = 20
+}
