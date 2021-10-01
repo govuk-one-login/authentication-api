@@ -54,10 +54,13 @@ public class ResetPasswordRequestIntegrationTest extends IntegrationTestEndpoint
         RedisHelper.setSessionState(sessionId, AUTHENTICATION_REQUIRED);
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", API_KEY);
+        headers.add("X-API-Key", FRONTEND_API_KEY);
         Response response =
                 RequestHelper.request(
-                        RESET_PASSWORD_ENDPOINT, new ResetPasswordRequest(email), headers);
+                        FRONTEND_ROOT_RESOURCE_URL,
+                        RESET_PASSWORD_ENDPOINT,
+                        new ResetPasswordRequest(email),
+                        headers);
 
         notifyStub.waitForRequest(60);
 
@@ -81,11 +84,14 @@ public class ResetPasswordRequestIntegrationTest extends IntegrationTestEndpoint
         RedisHelper.setSessionState(sessionId, NEW);
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", API_KEY);
+        headers.add("X-API-Key", FRONTEND_API_KEY);
 
         Response response =
                 RequestHelper.request(
-                        RESET_PASSWORD_ENDPOINT, new ResetPasswordRequest(email), headers);
+                        FRONTEND_ROOT_RESOURCE_URL,
+                        RESET_PASSWORD_ENDPOINT,
+                        new ResetPasswordRequest(email),
+                        headers);
 
         assertEquals(400, response.getStatus());
     }

@@ -36,10 +36,12 @@ public class UserExistsIntegrationTest extends IntegrationTestEndpoints {
 
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", API_KEY);
+        headers.add("X-API-Key", FRONTEND_API_KEY);
         BaseFrontendRequest request = new BaseFrontendRequest(emailAddress);
 
-        Response response = RequestHelper.request(USEREXISTS_ENDPOINT, request, headers);
+        Response response =
+                RequestHelper.request(
+                        FRONTEND_ROOT_RESOURCE_URL, USEREXISTS_ENDPOINT, request, headers);
 
         assertEquals(200, response.getStatus());
         String responseString = response.readEntity(String.class);
@@ -57,10 +59,12 @@ public class UserExistsIntegrationTest extends IntegrationTestEndpoints {
         String sessionId = RedisHelper.createSession();
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", API_KEY);
+        headers.add("X-API-Key", FRONTEND_API_KEY);
         RedisHelper.setSessionState(sessionId, SessionState.NEW);
         BaseFrontendRequest request = new BaseFrontendRequest(emailAddress);
-        Response response = RequestHelper.request(USEREXISTS_ENDPOINT, request, headers);
+        Response response =
+                RequestHelper.request(
+                        FRONTEND_ROOT_RESOURCE_URL, USEREXISTS_ENDPOINT, request, headers);
 
         assertEquals(200, response.getStatus());
         String responseString = response.readEntity(String.class);
@@ -77,10 +81,12 @@ public class UserExistsIntegrationTest extends IntegrationTestEndpoints {
         String sessionId = RedisHelper.createSession();
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", API_KEY);
+        headers.add("X-API-Key", FRONTEND_API_KEY);
         RedisHelper.setSessionState(sessionId, SessionState.AUTHENTICATED);
         BaseFrontendRequest request = new BaseFrontendRequest(emailAddress);
-        Response response = RequestHelper.request(USEREXISTS_ENDPOINT, request, headers);
+        Response response =
+                RequestHelper.request(
+                        FRONTEND_ROOT_RESOURCE_URL, USEREXISTS_ENDPOINT, request, headers);
 
         assertEquals(400, response.getStatus());
 
