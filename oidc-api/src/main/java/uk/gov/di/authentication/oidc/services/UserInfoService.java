@@ -126,6 +126,9 @@ public class UserInfoService {
             userInfo.setPhoneNumber(userProfile.getPhoneNumber());
             userInfo.setPhoneNumberVerified(userProfile.isPhoneNumberVerified());
         }
+        if (scopes.contains("govuk-account")) {
+            userInfo.setClaim("legacy_subject_id", userProfile.getLegacySubjectID());
+        }
         return userInfo;
     }
 

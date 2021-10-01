@@ -96,7 +96,8 @@ public class DynamoService implements AuthenticationService {
                         .setCreated(dateTime)
                         .setUpdated(dateTime)
                         .setPublicSubjectID((new Subject()).toString())
-                        .setTermsAndConditions(termsAndConditions);
+                        .setTermsAndConditions(termsAndConditions)
+                        .setLegacySubjectID(null);
         userCredentialsMapper.save(userCredentials);
         userProfileMapper.save(userProfile);
     }

@@ -82,12 +82,12 @@ class ValidScopesTest {
     void shouldReturnAllValidScopesInCorrectOrder() {
         assertThat(
                 ValidScopes.getAllValidScopes(),
-                contains("openid", "email", "phone", "offline_access", "am"));
+                contains("openid", "email", "phone", "offline_access", "am", "govuk-account"));
     }
 
     @Test
     void shouldReturnCorrectNumberOfValidScopes() {
-        assertEquals(ValidScopes.getAllValidScopes().size(), 5);
+        assertEquals(ValidScopes.getAllValidScopes().size(), 6);
     }
 
     @Test
@@ -117,7 +117,7 @@ class ValidScopesTest {
                         "read",
                         "write");
 
-        assertEquals(ValidScopes.getScopesForListOfClaims(claims).size(), 4);
+        assertEquals(ValidScopes.getScopesForListOfClaims(claims).size(), 5);
     }
 
     @Test
@@ -125,7 +125,7 @@ class ValidScopesTest {
         Set<String> claims =
                 Set.of("sub", "email", "phone_number", "phone_number_verified", "read", "write");
 
-        assertEquals(ValidScopes.getScopesForListOfClaims(claims).size(), 3);
+        assertEquals(ValidScopes.getScopesForListOfClaims(claims).size(), 4);
         assertFalse(
                 ValidScopes.getScopesForListOfClaims(claims)
                         .contains(OIDCScopeValue.EMAIL.getValue()));
