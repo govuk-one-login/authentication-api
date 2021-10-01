@@ -26,15 +26,15 @@ import uk.gov.di.authentication.shared.entity.SessionState;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Base64;
+import java.util.List;
 import java.util.stream.Stream;
 
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.helpers.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
-import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.HIGH_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
-import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.VERY_HIGH_LEVEL;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.LOGGED_IN;
@@ -91,7 +91,7 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",
-                level == null ? null : level.getValue());
+                level == null ? emptyList() : List.of(level.getValue()));
 
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
@@ -116,13 +116,9 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
                 Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, LOGGED_IN),
                 Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, CONSENT_REQUIRED),
                 Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, LOGGED_IN),
-                Arguments.of(HIGH_LEVEL, CURRENT_TERMS_AND_CONDITIONS, LOGGED_IN),
-                Arguments.of(VERY_HIGH_LEVEL, CURRENT_TERMS_AND_CONDITIONS, LOGGED_IN),
                 Arguments.of(null, OLD_TERMS_AND_CONDITIONS, LOGGED_IN),
                 Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, UPDATED_TERMS_AND_CONDITIONS),
-                Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, LOGGED_IN),
-                Arguments.of(HIGH_LEVEL, OLD_TERMS_AND_CONDITIONS, LOGGED_IN),
-                Arguments.of(VERY_HIGH_LEVEL, OLD_TERMS_AND_CONDITIONS, LOGGED_IN));
+                Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, LOGGED_IN));
     }
 
     @Test

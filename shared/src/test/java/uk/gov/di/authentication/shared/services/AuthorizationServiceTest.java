@@ -355,6 +355,7 @@ class AuthorizationServiceTest {
                         responseType, scope, new ClientID(clientID), URI.create(redirectUri))
                 .state(state)
                 .nonce(new Nonce())
+                .customParameter("vtr", "Cl.Cm", "Cl")
                 .build();
     }
 }

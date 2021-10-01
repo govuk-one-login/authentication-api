@@ -212,7 +212,7 @@ class ClientConfigValidationServiceTest {
                 serviceType,
                 sectorIdentifierUri,
                 subjectType,
-                vectorsOfTrust);
+                List.of(vectorsOfTrust));
     }
 
     private UpdateClientConfigRequest generateClientUpdateRequest(

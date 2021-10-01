@@ -93,7 +93,7 @@ public class ClientConfigValidationService {
         return Optional.empty();
     }
 
-    private boolean validateVectorsOfTrust(String vtr) {
+    private boolean validateVectorsOfTrust(List<String> vtr) {
         try {
             VectorOfTrust.parse(vtr);
             return true;

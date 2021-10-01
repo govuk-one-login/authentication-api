@@ -78,7 +78,7 @@ public class DynamoHelper {
                 serviceType,
                 sectorIdentifierUri,
                 subjectType,
-                vectorsOfTrust);
+                List.of(vectorsOfTrust));
     }
 
     public static boolean clientExists(String clientID) {

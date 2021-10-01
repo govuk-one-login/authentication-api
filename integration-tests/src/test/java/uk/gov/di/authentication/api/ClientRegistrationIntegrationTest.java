@@ -14,6 +14,8 @@ import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 
+import java.util.List;
+
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -38,7 +40,7 @@ public class ClientRegistrationIntegrationTest extends IntegrationTestEndpoints 
                         String.valueOf(ServiceType.MANDATORY),
                         "https://test.com",
                         "public",
-                        CredentialTrustLevel.MEDIUM_LEVEL.getValue());
+                        List.of(CredentialTrustLevel.MEDIUM_LEVEL.getValue()));
 
         Response response =
                 ClientBuilder.newClient()

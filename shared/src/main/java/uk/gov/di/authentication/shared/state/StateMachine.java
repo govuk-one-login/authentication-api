@@ -85,7 +85,7 @@ import static uk.gov.di.authentication.shared.state.conditions.ClientDoesNotRequ
 import static uk.gov.di.authentication.shared.state.conditions.ConsentNotGiven.userHasNotGivenConsent;
 import static uk.gov.di.authentication.shared.state.conditions.CredentialTrustUpliftRequired.upliftRequired;
 import static uk.gov.di.authentication.shared.state.conditions.PhoneNumberUnverified.phoneNumberUnverified;
-import static uk.gov.di.authentication.shared.state.conditions.RequestedLevelOfTrustEquals.requestedLevelOfTrustIsCm;
+import static uk.gov.di.authentication.shared.state.conditions.RequestedLevelOfTrustEquals.requestedLevelOfTrustIsMedium;
 import static uk.gov.di.authentication.shared.state.conditions.TermsAndConditionsVersionNotAccepted.userHasNotAcceptedTermsAndConditionsVersion;
 
 public class StateMachine<T, A, C> {
@@ -374,7 +374,7 @@ public class StateMachine<T, A, C> {
                 .allow(
                         on(SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE).then(AUTHENTICATED),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY)
-                                .ifCondition(and(upliftRequired(), requestedLevelOfTrustIsCm()))
+                                .ifCondition(and(upliftRequired(), requestedLevelOfTrustIsMedium()))
                                 .then(UPLIFT_REQUIRED_CM),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY)
                                 .then(UPDATED_TERMS_AND_CONDITIONS)

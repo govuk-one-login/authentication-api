@@ -60,7 +60,7 @@ public class DynamoClientService implements ClientService {
             String serviceType,
             String sectorIdentifierUri,
             String subjectType,
-            String vectorsOfTrust) {
+            List<String> vectorsOfTrust) {
         ClientRegistry clientRegistry =
                 new ClientRegistry()
                         .setClientID(clientID)

@@ -22,7 +22,7 @@ public interface ClientService {
             String serviceType,
             String sectorIdentifierUri,
             String subjectType,
-            String vectorsOfTrust);
+            List<String> vectorsOfTrust);
 
     Optional<ClientRegistry> getClient(String clientId);
 

@@ -31,7 +31,7 @@ public class UpdateClientConfigRequest {
     private String serviceType;
 
     @JsonProperty("vectors_of_trust")
-    private String vectorsOfTrust;
+    private List<String> vectorsOfTrust;
 
     public UpdateClientConfigRequest() {}
 
@@ -67,7 +67,7 @@ public class UpdateClientConfigRequest {
         return serviceType;
     }
 
-    public String getVectorsOfTrust() {
+    public List<String> getVectorsOfTrust() {
         return vectorsOfTrust;
     }
 
@@ -112,7 +112,7 @@ public class UpdateClientConfigRequest {
         return this;
     }
 
-    public UpdateClientConfigRequest setVectorsOfTrust(String vectorsOfTrust) {
+    public UpdateClientConfigRequest setVectorsOfTrust(List<String> vectorsOfTrust) {
         this.vectorsOfTrust = vectorsOfTrust;
         return this;
     }

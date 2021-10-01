@@ -218,7 +218,11 @@ public class TokenHandler
                             if (authRequest.getNonce() != null) {
                                 additionalTokenClaims.put("nonce", authRequest.getNonce());
                             }
-                            String vot = client.getVectorsOfTrust();
+                            String vot =
+                                    clientSession
+                                            .getEffectiveVectorOfTrust()
+                                            .getCredentialTrustLevel()
+                                            .getValue();
 
                             OIDCTokenResponse tokenResponse =
                                     tokenService.generateTokenResponse(
