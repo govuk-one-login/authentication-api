@@ -31,5 +31,11 @@ class CredentialTrustLevelTest {
         assertThat(
                 CredentialTrustLevel.retrieveCredentialTrustLevel(List.of("Cl.Cm", "Cl")),
                 equalTo(LOW_LEVEL));
+        assertThat(
+                CredentialTrustLevel.retrieveCredentialTrustLevel(List.of("Cm.Cl")),
+                equalTo(MEDIUM_LEVEL));
+        assertThat(
+                CredentialTrustLevel.retrieveCredentialTrustLevel(List.of("Cm.Cl", "Cl")),
+                equalTo(LOW_LEVEL));
     }
 }

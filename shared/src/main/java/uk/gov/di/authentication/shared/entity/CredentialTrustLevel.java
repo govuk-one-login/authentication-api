@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.shared.entity;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -21,7 +22,20 @@ public enum CredentialTrustLevel {
     public static CredentialTrustLevel retrieveCredentialTrustLevel(List<String> vtrSets) {
 
         return Arrays.stream(values())
-                .filter(c -> vtrSets.stream().anyMatch(c.getValue()::equals))
+                .filter(
+                        tl ->
+                                vtrSets.stream()
+                                        .anyMatch(
+                                                set ->
+                                                        new HashSet<>(
+                                                                        Arrays.asList(
+                                                                                set.split("\\.")))
+                                                                .equals(
+                                                                        new HashSet<>(
+                                                                                Arrays.asList(
+                                                                                        tl.getValue()
+                                                                                                .split(
+                                                                                                        "\\."))))))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Invalid CredentialTrustLevel"));
     }
@@ -29,7 +43,20 @@ public enum CredentialTrustLevel {
     public static List<CredentialTrustLevel> retrieveListOfCredentialTrustLevels(
             List<String> vtrSets) {
         return Arrays.stream(values())
-                .filter(c -> vtrSets.stream().anyMatch(c.getValue()::equals))
+                .filter(
+                        tl ->
+                                vtrSets.stream()
+                                        .anyMatch(
+                                                set ->
+                                                        new HashSet<>(
+                                                                        Arrays.asList(
+                                                                                set.split("\\.")))
+                                                                .equals(
+                                                                        new HashSet<>(
+                                                                                Arrays.asList(
+                                                                                        tl.getValue()
+                                                                                                .split(
+                                                                                                        "\\."))))))
                 .collect(Collectors.toList());
     }
 
