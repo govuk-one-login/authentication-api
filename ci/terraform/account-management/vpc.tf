@@ -3,7 +3,9 @@ resource "aws_vpc" "account_management_vpc" {
   enable_dns_hostnames = true
   enable_dns_support   = true
 
-  tags = local.default_tags
+  tags = merge(local.default_tags, {
+    Name = "${var.environment}-account-management-vpc"
+  })
 }
 
 data "aws_availability_zones" "available" {}
