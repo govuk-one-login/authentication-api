@@ -16,6 +16,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasClientId;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasEventName;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasRequestId;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasSessionId;
@@ -51,7 +52,7 @@ class AuditServiceTest {
     void shouldLogAuditEvent() {
         var auditService = new AuditService(FIXED_CLOCK, snsService);
 
-        auditService.submitAuditEvent(TEST_EVENT_ONE, "request-id", "session-id");
+        auditService.submitAuditEvent(TEST_EVENT_ONE, "request-id", "session-id", "client-id");
 
         verify(snsService).publishAuditMessage(messageCaptor.capture());
         var serialisedAuditMessage = messageCaptor.getValue();
@@ -60,6 +61,7 @@ class AuditServiceTest {
         assertThat(serialisedAuditMessage, hasEventName(TEST_EVENT_ONE.toString()));
         assertThat(serialisedAuditMessage, hasRequestId("request-id"));
         assertThat(serialisedAuditMessage, hasSessionId("session-id"));
+        assertThat(serialisedAuditMessage, hasClientId("client-id"));
     }
 
     @Test
@@ -70,6 +72,7 @@ class AuditServiceTest {
                 TEST_EVENT_ONE,
                 "request-id",
                 "session-id",
+                "client-id",
                 pair("key", "value"),
                 pair("key2", "value2"));
 

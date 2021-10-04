@@ -36,6 +36,10 @@ public class AuditMessageMatcher<T> extends TypeSafeDiagnosingMatcher<String> {
         return new AuditMessageMatcher<>("session ID", AuditEvent::getSessionId, sessionId);
     }
 
+    public static AuditMessageMatcher<String> hasClientId(String clientId) {
+        return new AuditMessageMatcher<>("client ID", AuditEvent::getClientId, clientId);
+    }
+
     @Override
     protected boolean matchesSafely(
             String serialisedAuditMessage, Description mismatchDescription) {

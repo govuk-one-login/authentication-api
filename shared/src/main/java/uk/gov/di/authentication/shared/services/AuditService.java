@@ -27,14 +27,17 @@ public class AuditService {
             AuditableEvent event,
             String requestId,
             String sessionId,
+            String clientId,
             MetadataPair... metadataPairs) {
-        snsService.publishAuditMessage(generateLogLine(event, requestId, sessionId, metadataPairs));
+        snsService.publishAuditMessage(
+                generateLogLine(event, requestId, sessionId, clientId, metadataPairs));
     }
 
     String generateLogLine(
             AuditableEvent eventEnum,
             String requestId,
             String sessionId,
+            String clientId,
             MetadataPair... metadataPairs) {
         var timestamp = clock.instant().toString();
 
@@ -43,7 +46,8 @@ public class AuditService {
                         .setEventName(eventEnum.toString())
                         .setTimestamp(timestamp)
                         .setRequestId(Optional.ofNullable(requestId).orElse(""))
-                        .setSessionId(Optional.ofNullable(sessionId).orElse(""));
+                        .setSessionId(Optional.ofNullable(sessionId).orElse(""))
+                        .setClientId(Optional.ofNullable(clientId).orElse(""));
         // TODO - Extract other values from the metadataPairs argument.
 
         var signedEventBuilder = SignedAuditEvent.newBuilder();
