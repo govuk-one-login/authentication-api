@@ -10,6 +10,7 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import jakarta.ws.rs.core.MultivaluedHashMap;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
+import net.minidev.json.JSONArray;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -31,10 +32,8 @@ import java.util.stream.Stream;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.helpers.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
-import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.HIGH_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
-import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.VERY_HIGH_LEVEL;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.LOGGED_IN;
@@ -46,7 +45,6 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
     private static final String CLIENT_ID = "test-client-id";
     private static final String REDIRECT_URI = "http://localhost/redirect";
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
-    public static final String TEST_CLIENT_NAME = "test-client-name";
     private static final String CURRENT_TERMS_AND_CONDITIONS = "1.0";
     private static final String OLD_TERMS_AND_CONDITIONS = "0.1";
 
@@ -70,14 +68,20 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
 
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
-        AuthenticationRequest authRequest =
+
+        AuthenticationRequest.Builder builder =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE,
                                 scope,
                                 new ClientID(CLIENT_ID),
                                 URI.create(REDIRECT_URI))
-                        .nonce(new Nonce())
-                        .build();
+                        .nonce(new Nonce());
+        if (level != null) {
+            JSONArray jsonArray = new JSONArray();
+            jsonArray.add(level.getValue());
+            builder.customParameter("vtr", jsonArray.toJSONString());
+        }
+        AuthenticationRequest authRequest = builder.build();
         RedisHelper.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
         DynamoHelper.registerClient(
                 CLIENT_ID,
@@ -90,8 +94,7 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
                 singletonList("http://localhost/post-redirect-logout"),
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public",
-                level == null ? null : level.getValue());
+                "public");
 
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
@@ -116,13 +119,9 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
                 Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, LOGGED_IN),
                 Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, CONSENT_REQUIRED),
                 Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, LOGGED_IN),
-                Arguments.of(HIGH_LEVEL, CURRENT_TERMS_AND_CONDITIONS, LOGGED_IN),
-                Arguments.of(VERY_HIGH_LEVEL, CURRENT_TERMS_AND_CONDITIONS, LOGGED_IN),
                 Arguments.of(null, OLD_TERMS_AND_CONDITIONS, LOGGED_IN),
                 Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, UPDATED_TERMS_AND_CONDITIONS),
-                Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, LOGGED_IN),
-                Arguments.of(HIGH_LEVEL, OLD_TERMS_AND_CONDITIONS, LOGGED_IN),
-                Arguments.of(VERY_HIGH_LEVEL, OLD_TERMS_AND_CONDITIONS, LOGGED_IN));
+                Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, LOGGED_IN));
     }
 
     @Test

@@ -27,7 +27,7 @@ public class RequestedLevelOfTrustEquals implements Condition<UserContext> {
                 .orElse(false);
     }
 
-    public static RequestedLevelOfTrustEquals requestedLevelOfTrustIsCm() {
+    public static RequestedLevelOfTrustEquals requestedLevelOfTrustIsMedium() {
         return new RequestedLevelOfTrustEquals(MEDIUM_LEVEL);
     }
 }

@@ -107,14 +107,13 @@ public class AuthorizationService {
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "Request is missing state parameter"));
         }
-        List<String> vtr = authRequest.getCustomParameter(VTR);
-        if (vtr != null) {
-            try {
-                VectorOfTrust vectorOfTrust = VectorOfTrust.parse(vtr);
-            } catch (IllegalArgumentException e) {
-                return Optional.of(
-                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
-            }
+        List<String> authRequestVtr = authRequest.getCustomParameter(VTR);
+        try {
+            VectorOfTrust vectorOfTrust =
+                    VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
+        } catch (IllegalArgumentException e) {
+            return Optional.of(
+                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
         }
         return Optional.empty();
     }
@@ -135,13 +134,8 @@ public class AuthorizationService {
     }
 
     public VectorOfTrust getEffectiveVectorOfTrust(AuthenticationRequest authenticationRequest) {
-        VectorOfTrust clientDefaults =
-                dynamoClientService
-                        .getClient(authenticationRequest.getClientID().getValue())
-                        .map(ClientRegistry::calculateEffectiveVectorOfTrust)
-                        .get();
-
-        return VectorOfTrust.parse(authenticationRequest.getCustomParameter(VTR), clientDefaults);
+        return VectorOfTrust.parseFromAuthRequestAttribute(
+                authenticationRequest.getCustomParameter(VTR));
     }
 
     public UserContext buildUserContext(Session session, ClientSession clientSession) {

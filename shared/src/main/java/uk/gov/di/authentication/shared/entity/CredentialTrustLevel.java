@@ -1,12 +1,12 @@
 package uk.gov.di.authentication.shared.entity;
 
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
 
 public enum CredentialTrustLevel {
     LOW_LEVEL("Cl"),
-    MEDIUM_LEVEL("Cm"),
-    HIGH_LEVEL("Ch"),
-    VERY_HIGH_LEVEL("Cv");
+    MEDIUM_LEVEL("Cl.Cm");
 
     private String value;
 
@@ -18,14 +18,25 @@ public enum CredentialTrustLevel {
         return value;
     }
 
-    public static CredentialTrustLevel parseByValue(String value) {
+    public static CredentialTrustLevel retrieveCredentialTrustLevel(List<String> vtrSets) {
+
         return Arrays.stream(values())
-                .filter(c -> c.getValue().equals(value))
+                .filter(
+                        tl ->
+                                vtrSets.stream()
+                                        .anyMatch(
+                                                set ->
+                                                        new HashSet<>(
+                                                                        Arrays.asList(
+                                                                                set.split("\\.")))
+                                                                .equals(
+                                                                        new HashSet<>(
+                                                                                Arrays.asList(
+                                                                                        tl.getValue()
+                                                                                                .split(
+                                                                                                        "\\."))))))
                 .findFirst()
-                .orElseThrow(
-                        () ->
-                                new IllegalArgumentException(
-                                        value + " is not a valid CredentialTrustLevel"));
+                .orElseThrow(() -> new IllegalArgumentException("Invalid CredentialTrustLevel"));
     }
 
     public static CredentialTrustLevel getDefault() {

@@ -20,7 +20,6 @@ import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.helpers.RequestHelper;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
@@ -166,8 +165,7 @@ public class UpdateProfileIntegrationTest extends IntegrationTestEndpoints {
                 singletonList("http://localhost/post-redirect-logout"),
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public",
-                CredentialTrustLevel.MEDIUM_LEVEL.getValue());
+                "public");
         Set<String> claims = ValidScopes.getClaimsForListOfScopes(scope.toStringList());
         DynamoHelper.signUp(EMAIL_ADDRESS, "password");
         DynamoHelper.updateConsent(

@@ -130,6 +130,8 @@ public class TokenHandlerTest {
 
     @Test
     public void shouldReturn200ForSuccessfulTokenRequest() throws JOSEException {
+        VectorOfTrust vot = mock(VectorOfTrust.class);
+        when(vot.getCredentialTrustLevel()).thenReturn(CredentialTrustLevel.MEDIUM_LEVEL);
         KeyPair keyPair = generateRsaKeyPair();
         UserProfile userProfile = generateUserProfile();
         SignedJWT signedJWT =
@@ -161,9 +163,7 @@ public class TokenHandlerTest {
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(
                         new ClientSession(
-                                generateAuthRequest().toParameters(),
-                                LocalDateTime.now(),
-                                mock(VectorOfTrust.class)));
+                                generateAuthRequest().toParameters(), LocalDateTime.now(), vot));
         when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
@@ -416,8 +416,7 @@ public class TokenHandlerTest {
                 .setPublicKey(
                         Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()))
                 .setSectorIdentifierUri("https://test.com")
-                .setSubjectType("public")
-                .setVectorsOfTrust(VOT);
+                .setSubjectType("public");
     }
 
     private ClientRegistry generateClientRegistryPairwise(

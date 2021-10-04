@@ -12,6 +12,7 @@ import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.state.Condition;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.List;
 import java.util.Optional;
 
 public class ConsentNotGiven implements Condition<UserContext> {
@@ -33,6 +34,8 @@ public class ConsentNotGiven implements Condition<UserContext> {
                                     }
                                 })
                         .orElseThrow();
+
+        List<String> authRequestVtr = authRequest.getCustomParameter("vtr");
 
         String clientID =
                 context.flatMap(UserContext::getClient)

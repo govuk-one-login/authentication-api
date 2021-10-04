@@ -39,11 +39,7 @@ class TrustMarkHandlerTest {
                 new TrustMarkResponse(
                         configurationService.getBaseURL().orElseThrow(),
                         configurationService.getBaseURL().orElseThrow(),
-                        List.of(
-                                CredentialTrustLevel.LOW_LEVEL,
-                                CredentialTrustLevel.MEDIUM_LEVEL,
-                                CredentialTrustLevel.HIGH_LEVEL,
-                                CredentialTrustLevel.VERY_HIGH_LEVEL));
+                        List.of(CredentialTrustLevel.LOW_LEVEL, CredentialTrustLevel.MEDIUM_LEVEL));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);

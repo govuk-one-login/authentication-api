@@ -11,6 +11,7 @@ import jakarta.ws.rs.client.Invocation;
 import jakarta.ws.rs.client.WebTarget;
 import jakarta.ws.rs.core.Cookie;
 import jakarta.ws.rs.core.Response;
+import net.minidev.json.JSONArray;
 import org.glassfish.jersey.client.ClientProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -88,7 +89,11 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
     public void shouldRedirectToLoginWhenNoCookie() {
         Response response =
                 doAuthorisationRequest(
-                        Optional.of(CLIENT_ID), Optional.empty(), Optional.empty(), "openid");
+                        Optional.of(CLIENT_ID),
+                        Optional.empty(),
+                        Optional.empty(),
+                        "openid",
+                        Optional.of("Cl.Cm"));
 
         assertEquals(302, response.getStatus());
         assertThat(
@@ -317,6 +322,15 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
             Optional<Cookie> cookie,
             Optional<String> prompt,
             String scopes) {
+        return doAuthorisationRequest(clientId, cookie, prompt, scopes, Optional.empty());
+    }
+
+    private Response doAuthorisationRequest(
+            Optional<String> clientId,
+            Optional<Cookie> cookie,
+            Optional<String> prompt,
+            String scopes,
+            Optional<String> vtr) {
         Client client = ClientBuilder.newClient();
         Nonce nonce = new Nonce();
         WebTarget webTarget =
@@ -330,6 +344,11 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
                         .property(ClientProperties.FOLLOW_REDIRECTS, Boolean.FALSE);
         if (prompt.isPresent()) {
             webTarget = webTarget.queryParam("prompt", prompt.get());
+        }
+        if (vtr.isPresent()) {
+            JSONArray jsonArray = new JSONArray();
+            jsonArray.add(vtr.get());
+            webTarget = webTarget.queryParam("vtr", jsonArray.toJSONString());
         }
         Invocation.Builder builder = webTarget.request();
         cookie.ifPresent(builder::cookie);
@@ -365,7 +384,6 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
                 singletonList("http://localhost/post-redirect-logout"),
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public",
-                MEDIUM_LEVEL.getValue());
+                "public");
     }
 }

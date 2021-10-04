@@ -35,9 +35,6 @@ public class ClientRegistrationRequest {
     @JsonProperty("subject_type")
     private String subjectType;
 
-    @JsonProperty("vectors_of_trust")
-    private String vectorsOfTrust;
-
     public ClientRegistrationRequest(
             @JsonProperty(required = true, value = "client_name") String clientName,
             @JsonProperty(required = true, value = "redirect_uris") List<String> redirectUris,
@@ -48,8 +45,7 @@ public class ClientRegistrationRequest {
             @JsonProperty(required = true, value = "service_type") String serviceType,
             @JsonProperty(required = true, value = "sector_identifier_uri")
                     String sectorIdentifierUri,
-            @JsonProperty(required = true, value = "subject_type") String subjectType,
-            @JsonProperty(required = false, value = "vectors_of_trust") String vectorsOfTrust) {
+            @JsonProperty(required = true, value = "subject_type") String subjectType) {
         this.clientName = clientName;
         this.redirectUris = redirectUris;
         this.contacts = contacts;
@@ -61,7 +57,6 @@ public class ClientRegistrationRequest {
         this.serviceType = serviceType;
         this.sectorIdentifierUri = sectorIdentifierUri;
         this.subjectType = subjectType;
-        this.vectorsOfTrust = vectorsOfTrust;
     }
 
     public String getClientName() {
@@ -98,13 +93,5 @@ public class ClientRegistrationRequest {
 
     public String getSubjectType() {
         return subjectType;
-    }
-
-    public String getVectorsOfTrust() {
-        return vectorsOfTrust;
-    }
-
-    public void setVectorsOfTrust(String vectorsOfTrust) {
-        this.vectorsOfTrust = vectorsOfTrust;
     }
 }
