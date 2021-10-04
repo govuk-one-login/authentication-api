@@ -365,7 +365,6 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
                 singletonList("http://localhost/post-redirect-logout"),
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public",
-                MEDIUM_LEVEL.getValue());
+                "public");
     }
 }

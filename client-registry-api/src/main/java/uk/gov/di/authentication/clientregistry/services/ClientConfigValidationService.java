@@ -5,7 +5,6 @@ import com.nimbusds.oauth2.sdk.client.RegistrationError;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -28,8 +27,6 @@ public class ClientConfigValidationService {
             new ErrorObject("invalid_client_metadata", "Invalid Public Key");
     public static final ErrorObject INVALID_SERVICE_TYPE =
             new ErrorObject("invalid_client_metadata", "Invalid Service Type");
-    public static final ErrorObject INVALID_VECTOR_OF_TRUST =
-            new ErrorObject("invalid_client_metadata", "Invalid Vector of Trust");
 
     public Optional<ErrorObject> validateClientRegistrationConfig(
             ClientRegistrationRequest registrationRequest) {
@@ -49,11 +46,6 @@ public class ClientConfigValidationService {
         }
         if (!isValidServiceType(registrationRequest.getServiceType())) {
             return Optional.of(INVALID_SERVICE_TYPE);
-        }
-        if (!Optional.ofNullable(registrationRequest.getVectorsOfTrust())
-                .map(this::validateVectorsOfTrust)
-                .orElse(true)) {
-            return Optional.of(INVALID_VECTOR_OF_TRUST);
         }
         return Optional.empty();
     }
@@ -85,21 +77,7 @@ public class ClientConfigValidationService {
                 .orElse(true)) {
             return Optional.of(INVALID_SERVICE_TYPE);
         }
-        if (!Optional.ofNullable(registrationRequest.getVectorsOfTrust())
-                .map(this::validateVectorsOfTrust)
-                .orElse(true)) {
-            return Optional.of(INVALID_VECTOR_OF_TRUST);
-        }
         return Optional.empty();
-    }
-
-    private boolean validateVectorsOfTrust(List<String> vtr) {
-        try {
-            VectorOfTrust.parse(vtr);
-            return true;
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
     }
 
     private boolean areUrisValid(List<String> uris) {

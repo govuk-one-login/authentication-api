@@ -26,10 +26,8 @@ import uk.gov.di.authentication.shared.entity.SessionState;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Base64;
-import java.util.List;
 import java.util.stream.Stream;
 
-import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.helpers.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
@@ -46,7 +44,6 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
     private static final String CLIENT_ID = "test-client-id";
     private static final String REDIRECT_URI = "http://localhost/redirect";
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
-    public static final String TEST_CLIENT_NAME = "test-client-name";
     private static final String CURRENT_TERMS_AND_CONDITIONS = "1.0";
     private static final String OLD_TERMS_AND_CONDITIONS = "0.1";
 
@@ -70,14 +67,18 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
 
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
-        AuthenticationRequest authRequest =
+
+        AuthenticationRequest.Builder builder =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE,
                                 scope,
                                 new ClientID(CLIENT_ID),
                                 URI.create(REDIRECT_URI))
-                        .nonce(new Nonce())
-                        .build();
+                        .nonce(new Nonce());
+        if (level != null) {
+            builder.customParameter("vtr", level.getValue());
+        }
+        AuthenticationRequest authRequest = builder.build();
         RedisHelper.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
         DynamoHelper.registerClient(
                 CLIENT_ID,
@@ -90,8 +91,7 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
                 singletonList("http://localhost/post-redirect-logout"),
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public",
-                level == null ? emptyList() : List.of(level.getValue()));
+                "public");
 
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);

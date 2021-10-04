@@ -18,7 +18,6 @@ import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.helpers.RequestHelper;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
@@ -409,8 +408,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
                 singletonList("http://localhost/post-redirect-logout"),
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public",
-                CredentialTrustLevel.MEDIUM_LEVEL.getValue());
+                "public");
         DynamoHelper.signUp(EMAIL_ADDRESS, "password");
     }
 }

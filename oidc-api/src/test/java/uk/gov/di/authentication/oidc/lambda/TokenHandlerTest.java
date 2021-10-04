@@ -416,8 +416,7 @@ public class TokenHandlerTest {
                 .setPublicKey(
                         Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()))
                 .setSectorIdentifierUri("https://test.com")
-                .setSubjectType("public")
-                .setVectorsOfTrust(singletonList(VOT));
+                .setSubjectType("public");
     }
 
     private ClientRegistry generateClientRegistryPairwise(

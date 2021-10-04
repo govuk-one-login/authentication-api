@@ -17,7 +17,6 @@ import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.KeyPairHelper;
 import uk.gov.di.authentication.helpers.KmsHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.TokenStore;
 
@@ -130,7 +129,6 @@ public class UserInfoIntegrationTest extends IntegrationTestEndpoints {
                 singletonList("http://localhost/post-redirect-logout"),
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public",
-                CredentialTrustLevel.MEDIUM_LEVEL.getValue());
+                "public");
     }
 }

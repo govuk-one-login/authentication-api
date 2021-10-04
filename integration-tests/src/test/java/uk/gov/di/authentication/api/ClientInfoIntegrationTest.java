@@ -18,7 +18,6 @@ import uk.gov.di.authentication.frontendapi.entity.ClientInfoResponse;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.KeyPairHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 
 import java.io.IOException;
@@ -112,7 +111,6 @@ public class ClientInfoIntegrationTest extends IntegrationTestEndpoints {
                 singletonList("http://localhost/post-redirect-logout"),
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public",
-                CredentialTrustLevel.MEDIUM_LEVEL.getValue());
+                "public");
     }
 }

@@ -87,8 +87,7 @@ public class DynamoHelper {
             List<String> postLogoutRedirectUris,
             String serviceType,
             String sectorIdentifierUri,
-            String subjectType,
-            String vectorsOfTrust) {
+            String subjectType) {
         DYNAMO_CLIENT_SERVICE.addClient(
                 clientID,
                 clientName,
@@ -99,34 +98,7 @@ public class DynamoHelper {
                 postLogoutRedirectUris,
                 serviceType,
                 sectorIdentifierUri,
-                subjectType,
-                List.of(vectorsOfTrust));
-    }
-
-    public static void registerClient(
-            String clientID,
-            String clientName,
-            List<String> redirectUris,
-            List<String> contacts,
-            List<String> scopes,
-            String publicKey,
-            List<String> postLogoutRedirectUris,
-            String serviceType,
-            String sectorIdentifierUri,
-            String subjectType,
-            List<String> vectorsOfTrust) {
-        DYNAMO_CLIENT_SERVICE.addClient(
-                clientID,
-                clientName,
-                redirectUris,
-                contacts,
-                scopes,
-                publicKey,
-                postLogoutRedirectUris,
-                serviceType,
-                sectorIdentifierUri,
-                subjectType,
-                vectorsOfTrust);
+                subjectType);
     }
 
     public static boolean clientExists(String clientID) {

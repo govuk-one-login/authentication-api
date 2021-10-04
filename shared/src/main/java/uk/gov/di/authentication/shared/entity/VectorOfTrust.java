@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Objects;
 
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.retrieveCredentialTrustLevel;
-import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.retrieveListOfCredentialTrustLevels;
 
 public class VectorOfTrust {
 
@@ -23,25 +22,6 @@ public class VectorOfTrust {
 
     public CredentialTrustLevel getCredentialTrustLevel() {
         return credentialTrustLevel;
-    }
-
-    public static final VectorOfTrust parse(List<String> authRequestVtr, List<String> clientVtr) {
-        if (Objects.isNull(authRequestVtr)) {
-            return new VectorOfTrust(CredentialTrustLevel.getDefault());
-        }
-        VectorOfTrust vectorOfTrust =
-                new VectorOfTrust(retrieveCredentialTrustLevel(authRequestVtr));
-        if (!Objects.isNull(clientVtr)) {
-            List<CredentialTrustLevel> credentialTrustLevels =
-                    retrieveListOfCredentialTrustLevels(clientVtr);
-            if (credentialTrustLevels.contains(vectorOfTrust.getCredentialTrustLevel())) {
-                return vectorOfTrust;
-            } else {
-                throw new IllegalArgumentException(
-                        vectorOfTrust.getCredentialTrustLevel() + " is not registered with client");
-            }
-        }
-        return new VectorOfTrust(CredentialTrustLevel.getDefault());
     }
 
     public static final VectorOfTrust parse(List<String> vtr) {

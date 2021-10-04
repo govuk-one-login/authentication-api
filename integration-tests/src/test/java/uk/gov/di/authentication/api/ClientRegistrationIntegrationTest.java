@@ -11,10 +11,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.helpers.DynamoHelper;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ServiceType;
-
-import java.util.List;
 
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -39,8 +36,7 @@ public class ClientRegistrationIntegrationTest extends IntegrationTestEndpoints 
                         singletonList("http://localhost/post-redirect-logout"),
                         String.valueOf(ServiceType.MANDATORY),
                         "https://test.com",
-                        "public",
-                        List.of(CredentialTrustLevel.MEDIUM_LEVEL.getValue()));
+                        "public");
 
         Response response =
                 ClientBuilder.newClient()

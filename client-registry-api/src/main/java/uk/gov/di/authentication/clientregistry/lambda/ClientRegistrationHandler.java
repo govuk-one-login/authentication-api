@@ -94,8 +94,7 @@ public class ClientRegistrationHandler
                                         clientRegistrationRequest.getServiceType(),
                                         sanitiseUrl(
                                                 clientRegistrationRequest.getSectorIdentifierUri()),
-                                        clientRegistrationRequest.getSubjectType(),
-                                        clientRegistrationRequest.getVectorsOfTrust());
+                                        clientRegistrationRequest.getSubjectType());
 
                                 ClientRegistrationResponse clientRegistrationResponse =
                                         new ClientRegistrationResponse(

@@ -109,8 +109,7 @@ public class AuthorizationService {
         }
         List<String> authRequestVtr = authRequest.getCustomParameter(VTR);
         try {
-            List<String> clientVtr = client.get().getVectorsOfTrust();
-            VectorOfTrust vectorOfTrust = VectorOfTrust.parse(authRequestVtr, clientVtr);
+            VectorOfTrust vectorOfTrust = VectorOfTrust.parse(authRequestVtr);
         } catch (IllegalArgumentException e) {
             return Optional.of(
                     new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));

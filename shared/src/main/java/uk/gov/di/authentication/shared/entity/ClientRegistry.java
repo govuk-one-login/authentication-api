@@ -19,7 +19,6 @@ public class ClientRegistry {
     private String serviceType;
     private String sectorIdentifierUri;
     private String subjectType;
-    private List<String> vectorsOfTrust;
 
     @DynamoDBHashKey(attributeName = "ClientID")
     public String getClientID() {
@@ -121,19 +120,5 @@ public class ClientRegistry {
     public ClientRegistry setSubjectType(String subjectType) {
         this.subjectType = subjectType;
         return this;
-    }
-
-    @DynamoDBAttribute(attributeName = "VectorsOfTrust")
-    public List<String> getVectorsOfTrust() {
-        return vectorsOfTrust;
-    }
-
-    public ClientRegistry setVectorsOfTrust(List<String> vectorsOfTrust) {
-        this.vectorsOfTrust = vectorsOfTrust;
-        return this;
-    }
-
-    public VectorOfTrust calculateEffectiveVectorOfTrust() {
-        return VectorOfTrust.parse(getVectorsOfTrust());
     }
 }

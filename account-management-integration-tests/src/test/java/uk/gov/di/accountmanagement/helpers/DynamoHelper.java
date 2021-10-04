@@ -7,14 +7,11 @@ import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.ScanRequest;
 import com.amazonaws.services.dynamodbv2.model.ScanResult;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
-import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -26,13 +23,6 @@ public class DynamoHelper {
     private static final DynamoService DYNAMO_SERVICE =
             new DynamoService(REGION, ENVIRONMENT, Optional.of(DYNAMO_ENDPOINT));
 
-    private static final DynamoClientService DYNAMO_CLIENT_SERVICE =
-            new DynamoClientService(REGION, ENVIRONMENT, Optional.of(DYNAMO_ENDPOINT));
-
-    public static boolean userExists(String email) {
-        return DYNAMO_SERVICE.userExists(email);
-    }
-
     public static void signUp(String email, String password) {
         signUp(email, password, new Subject());
     }
@@ -41,48 +31,6 @@ public class DynamoHelper {
         TermsAndConditions termsAndConditions =
                 new TermsAndConditions("1.0", LocalDateTime.now(ZoneId.of("UTC")).toString());
         DYNAMO_SERVICE.signUp(email, password, subject, termsAndConditions);
-    }
-
-    public static void addPhoneNumber(String email, String phoneNumber) {
-        DYNAMO_SERVICE.updatePhoneNumber(email, phoneNumber);
-    }
-
-    public static void setPhoneNumberVerified(String email, boolean isVerified) {
-        DYNAMO_SERVICE.updatePhoneNumberVerifiedStatus(email, isVerified);
-    }
-
-    public static Optional<List<ClientConsent>> getUserConsents(String email) {
-        return DYNAMO_SERVICE.getUserConsents(email);
-    }
-
-    public static void registerClient(
-            String clientID,
-            String clientName,
-            List<String> redirectUris,
-            List<String> contacts,
-            List<String> scopes,
-            String publicKey,
-            List<String> postLogoutRedirectUris,
-            String serviceType,
-            String sectorIdentifierUri,
-            String subjectType,
-            String vectorsOfTrust) {
-        DYNAMO_CLIENT_SERVICE.addClient(
-                clientID,
-                clientName,
-                redirectUris,
-                contacts,
-                scopes,
-                publicKey,
-                postLogoutRedirectUris,
-                serviceType,
-                sectorIdentifierUri,
-                subjectType,
-                List.of(vectorsOfTrust));
-    }
-
-    public static boolean clientExists(String clientID) {
-        return DYNAMO_CLIENT_SERVICE.isValidClient(clientID);
     }
 
     public static void flushData() {

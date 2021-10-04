@@ -59,8 +59,7 @@ public class DynamoClientService implements ClientService {
             List<String> postLogoutRedirectUris,
             String serviceType,
             String sectorIdentifierUri,
-            String subjectType,
-            List<String> vectorsOfTrust) {
+            String subjectType) {
         ClientRegistry clientRegistry =
                 new ClientRegistry()
                         .setClientID(clientID)
@@ -72,8 +71,7 @@ public class DynamoClientService implements ClientService {
                         .setPostLogoutRedirectUrls(postLogoutRedirectUris)
                         .setServiceType(serviceType)
                         .setSectorIdentifierUri(sectorIdentifierUri)
-                        .setSubjectType(subjectType)
-                        .setVectorsOfTrust(vectorsOfTrust);
+                        .setSubjectType(subjectType);
         clientRegistryMapper.save(clientRegistry);
     }
 
@@ -90,8 +88,6 @@ public class DynamoClientService implements ClientService {
         Optional.ofNullable(updateRequest.getPublicKey()).ifPresent(clientRegistry::setPublicKey);
         Optional.ofNullable(updateRequest.getServiceType())
                 .ifPresent(clientRegistry::setServiceType);
-        Optional.ofNullable(updateRequest.getVectorsOfTrust())
-                .ifPresent(clientRegistry::setVectorsOfTrust);
         clientRegistryMapper.save(clientRegistry);
         return clientRegistry;
     }
