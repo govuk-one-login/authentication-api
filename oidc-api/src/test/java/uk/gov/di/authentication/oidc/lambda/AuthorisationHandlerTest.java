@@ -167,6 +167,7 @@ class AuthorisationHandlerTest {
                         AUTHORISATION_REQUEST_ERROR,
                         "request-id",
                         "",
+                        "",
                         pair("description", "Invalid request: Missing response_type parameter"));
     }
 
@@ -193,6 +194,7 @@ class AuthorisationHandlerTest {
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
                         "request-id",
+                        "",
                         "",
                         pair("description", OAuth2Error.INVALID_SCOPE.getDescription()));
     }
@@ -260,6 +262,7 @@ class AuthorisationHandlerTest {
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
                         "request-id",
+                        "",
                         "",
                         pair("description", OIDCError.LOGIN_REQUIRED.getDescription()));
     }
@@ -354,6 +357,7 @@ class AuthorisationHandlerTest {
                         AUTHORISATION_REQUEST_ERROR,
                         "request-id",
                         "",
+                        "",
                         pair(
                                 "description",
                                 "Invalid request: Invalid prompt parameter: Unknown prompt type: unrecognised"));
@@ -374,6 +378,7 @@ class AuthorisationHandlerTest {
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
                         "request-id",
+                        "",
                         "",
                         pair(
                                 "description",
@@ -396,6 +401,7 @@ class AuthorisationHandlerTest {
                         AUTHORISATION_REQUEST_ERROR,
                         "request-id",
                         "",
+                        "",
                         pair(
                                 "description",
                                 OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS.getDescription()));
@@ -417,6 +423,7 @@ class AuthorisationHandlerTest {
                         AUTHORISATION_REQUEST_ERROR,
                         "request-id",
                         "",
+                        "",
                         pair(
                                 "description",
                                 OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS.getDescription()));
@@ -437,6 +444,7 @@ class AuthorisationHandlerTest {
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
                         "request-id",
+                        "",
                         "",
                         pair(
                                 "description",
@@ -496,7 +504,7 @@ class AuthorisationHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED, "request-id", "");
+                        OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED, "request-id", "", "");
 
         return response;
     }

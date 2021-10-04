@@ -61,6 +61,7 @@ public class ClientRegistrationHandler
                             auditService.submitAuditEvent(
                                     REGISTER_CLIENT_REQUEST_RECEIVED,
                                     context.getAwsRequestId(),
+                                    "",
                                     "");
 
                             try {
@@ -74,11 +75,13 @@ public class ClientRegistrationHandler
                                     auditService.submitAuditEvent(
                                             REGISTER_CLIENT_REQUEST_ERROR,
                                             context.getAwsRequestId(),
+                                            "",
                                             "");
 
                                     return generateApiGatewayProxyResponse(
                                             400, errorResponse.get().toJSONObject().toJSONString());
                                 }
+
                                 String clientID = clientService.generateClientID().toString();
                                 clientService.addClient(
                                         clientID,
@@ -111,6 +114,7 @@ public class ClientRegistrationHandler
                                 auditService.submitAuditEvent(
                                         REGISTER_CLIENT_REQUEST_ERROR,
                                         context.getAwsRequestId(),
+                                        "",
                                         "");
 
                                 return generateApiGatewayProxyResponse(
