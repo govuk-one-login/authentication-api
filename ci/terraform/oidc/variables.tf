@@ -38,6 +38,17 @@ variable "notify_url" {
   default = null
 }
 
+variable "notify_template_map" {
+  type = map(string)
+  default = {
+    VERIFY_EMAIL_TEMPLATE_ID                = "b7dbb02f-941b-4d72-ad64-84cbe5d77c2e"
+    VERIFY_PHONE_NUMBER_TEMPLATE_ID         = "7dd388f1-e029-4fe7-92ff-18496dcb53e9"
+    MFA_SMS_TEMPLATE_ID                     = "7dd388f1-e029-4fe7-92ff-18496dcb53e9"
+    RESET_PASSWORD_TEMPLATE_ID              = "0aaf3ae8-1825-4528-af95-3093eb13fda0"
+    PASSWORD_RESET_CONFIRMATION_TEMPLATE_ID = "052d4e96-e6ca-4da2-b657-5649f28bd6c0"
+  }
+}
+
 variable "environment" {
   type = string
 }
