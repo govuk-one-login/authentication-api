@@ -1,9 +1,10 @@
 package uk.gov.di.authentication.shared.entity;
 
+import net.minidev.json.JSONArray;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Collections;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -14,13 +15,18 @@ import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM
 class VectorOfTrustTest {
     @Test
     public void shouldParseValidStringWithSingleVector() {
-        VectorOfTrust vectorOfTrust = VectorOfTrust.parse(List.of("Cl.Cm"));
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.add("Cl.Cm");
+        VectorOfTrust vectorOfTrust =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        Collections.singletonList(jsonArray.toJSONString()));
         assertThat(vectorOfTrust.getCredentialTrustLevel(), equalTo(MEDIUM_LEVEL));
     }
 
     @Test
     public void shouldReturnDefaultVectorWhenEmptyListIsPassedIn() {
-        VectorOfTrust vectorOfTrust = VectorOfTrust.parse(new ArrayList<>());
+        VectorOfTrust vectorOfTrust =
+                VectorOfTrust.parseFromAuthRequestAttribute(new ArrayList<>());
         assertThat(
                 vectorOfTrust.getCredentialTrustLevel(),
                 equalTo(CredentialTrustLevel.getDefault()));
@@ -28,23 +34,51 @@ class VectorOfTrustTest {
 
     @Test
     public void shouldReturnLowestVectorWhenMultipleSetsAreIsPassedIn() {
-        VectorOfTrust vectorOfTrust = VectorOfTrust.parse(List.of("Cl.Cm", "Cl"));
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.add("Cl.Cm");
+        jsonArray.add("Cl");
+        VectorOfTrust vectorOfTrust =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        Collections.singletonList(jsonArray.toJSONString()));
         assertThat(vectorOfTrust.getCredentialTrustLevel(), equalTo(LOW_LEVEL));
     }
 
     @Test
     public void shouldParseValidStringWithMultipleVectors() {
-        VectorOfTrust vectorOfTrust = VectorOfTrust.parse(List.of("Cl"));
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.add("Cl");
+        VectorOfTrust vectorOfTrust =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        Collections.singletonList(jsonArray.toJSONString()));
         assertThat(vectorOfTrust.getCredentialTrustLevel(), equalTo(LOW_LEVEL));
     }
 
     @Test
     public void shouldParseValidStringAndReThrowIfInvalidValueIsPresent() {
-        assertThrows(IllegalArgumentException.class, () -> VectorOfTrust.parse(List.of("Pl.Pb")));
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.add("Pl.Pb");
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        VectorOfTrust.parseFromAuthRequestAttribute(
+                                Collections.singletonList(jsonArray.toJSONString())));
     }
 
     @Test
     public void shouldThrowIfOnlyCmIsPresent() {
-        assertThrows(IllegalArgumentException.class, () -> VectorOfTrust.parse(List.of("Cm")));
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.add("Cm");
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        VectorOfTrust.parseFromAuthRequestAttribute(
+                                Collections.singletonList(jsonArray.toJSONString())));
+    }
+
+    @Test
+    public void shouldThrowIfEmptyListIsPresent() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList("")));
     }
 }

@@ -11,6 +11,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import net.minidev.json.JSONArray;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -276,6 +277,37 @@ class AuthorizationServiceTest {
     }
 
     @Test
+    void shouldReturnErrorWhenInvalidVtrIsIncludedInAuthRequest() {
+        ClientID clientID = new ClientID();
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        when(dynamoClientService.getClient(clientID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), clientID.toString())));
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.add("Cm");
+        AuthenticationRequest authRequest =
+                new AuthenticationRequest.Builder(
+                                responseType, scope, new ClientID(clientID), REDIRECT_URI)
+                        .state(new State())
+                        .nonce(new Nonce())
+                        .customParameter("vtr", jsonArray.toJSONString())
+                        .build();
+        Optional<ErrorObject> errorObject = authorizationService.validateAuthRequest(authRequest);
+
+        assertThat(
+                errorObject,
+                equalTo(
+                        Optional.of(
+                                new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Request vtr not valid"))));
+    }
+
+    @Test
     void shouldThrowExceptionWhenRedirectUriIsInvalidInAuthRequest() {
         ClientID clientID = new ClientID();
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
@@ -350,12 +382,15 @@ class AuthorizationServiceTest {
 
     private AuthenticationRequest generateAuthRequest(
             ClientID clientID, String redirectUri, ResponseType responseType, Scope scope) {
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.add("Cm.Cl");
+        jsonArray.add("Cl");
         State state = new State();
         return new AuthenticationRequest.Builder(
                         responseType, scope, new ClientID(clientID), URI.create(redirectUri))
                 .state(state)
                 .nonce(new Nonce())
-                .customParameter("vtr", "Cl.Cm", "Cl")
+                .customParameter("vtr", jsonArray.toJSONString())
                 .build();
     }
 }

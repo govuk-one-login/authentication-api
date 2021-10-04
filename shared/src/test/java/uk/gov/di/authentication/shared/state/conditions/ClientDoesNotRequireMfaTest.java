@@ -7,6 +7,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import net.minidev.json.JSONArray;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -77,7 +78,12 @@ class ClientDoesNotRequireMfaTest {
                         .state(new State())
                         .nonce(new Nonce());
 
-        credentialTrustLevel.ifPresent(t -> builder.customParameter("vtr", t));
+        credentialTrustLevel.ifPresent(
+                t -> {
+                    JSONArray jsonArray = new JSONArray();
+                    jsonArray.add(t);
+                    builder.customParameter("vtr", jsonArray.toJSONString());
+                });
         return builder.build();
     }
 }

@@ -35,7 +35,7 @@ public class ClientDoesNotRequireMfa implements Condition<UserContext> {
                         .orElseThrow();
 
         List<String> vtr = authRequest.getCustomParameter("vtr");
-        VectorOfTrust vectorOfTrust = VectorOfTrust.parse(vtr);
+        VectorOfTrust vectorOfTrust = VectorOfTrust.parseFromAuthRequestAttribute(vtr);
         if (vectorOfTrust.getCredentialTrustLevel().equals(LOW_LEVEL)) {
             return true;
         } else {

@@ -10,6 +10,7 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import jakarta.ws.rs.core.MultivaluedHashMap;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
+import net.minidev.json.JSONArray;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -76,7 +77,9 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
                                 URI.create(REDIRECT_URI))
                         .nonce(new Nonce());
         if (level != null) {
-            builder.customParameter("vtr", level.getValue());
+            JSONArray jsonArray = new JSONArray();
+            jsonArray.add(level.getValue());
+            builder.customParameter("vtr", jsonArray.toJSONString());
         }
         AuthenticationRequest authRequest = builder.build();
         RedisHelper.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
