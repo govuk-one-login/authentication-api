@@ -3,7 +3,9 @@ resource "aws_vpc" "authentication" {
   enable_dns_hostnames = true
   enable_dns_support   = true
 
-  tags = local.default_tags
+  tags = merge(local.default_tags, {
+    Name = "${var.environment}-shared-vpc"
+  })
 }
 
 data "aws_availability_zones" "available" {}

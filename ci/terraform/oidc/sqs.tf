@@ -113,3 +113,29 @@ resource "aws_lambda_function" "email_sqs_lambda" {
 
   tags = local.default_tags
 }
+
+resource "aws_cloudwatch_log_group" "sqs_lambda_log_group" {
+  count = var.use_localstack ? 0 : 1
+
+  name = "/aws/lambda/${aws_lambda_function.email_sqs_lambda.function_name}"
+  tags = local.default_tags
+
+  depends_on = [
+    aws_lambda_function.email_sqs_lambda
+  ]
+}
+
+resource "aws_cloudwatch_log_subscription_filter" "sqs_lambda_log_subscription" {
+  count           = var.logging_endpoint_enabled ? 1 : 0
+  name            = "${aws_lambda_function.email_sqs_lambda.function_name}-log-subscription"
+  log_group_name  = aws_cloudwatch_log_group.sqs_lambda_log_group[0].name
+  filter_pattern  = ""
+  destination_arn = var.logging_endpoint_arn
+}
+
+resource "aws_lambda_alias" "sqs_lambda_active" {
+  name             = "${aws_lambda_function.email_sqs_lambda.function_name}-active"
+  description      = "Alias pointing at active version of Lambda"
+  function_name    = aws_lambda_function.email_sqs_lambda.arn
+  function_version = aws_lambda_function.email_sqs_lambda.version
+}
