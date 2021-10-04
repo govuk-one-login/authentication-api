@@ -18,7 +18,8 @@ public class CookieHelper {
     public static final String REQUEST_COOKIE_HEADER = "Cookie";
     private static final String SESSION_ID = "a-session-id";
 
-    public static Optional<SessionCookieIds> parseSessionCookie(Map<String, String> headers) {
+    public static Optional<HttpCookie> getHttpCookieFromHeaders(
+            Map<String, String> headers, String cookieName) {
         var cookieHeader = cookieHeader(headers);
 
         if (cookieHeader.isEmpty()) {
@@ -26,12 +27,12 @@ public class CookieHelper {
         }
         String cookies = headers.get(cookieHeader.get());
 
-        LOGGER.debug("Session Cookie: {}", cookies);
+        LOGGER.debug("Cookies: {}", cookies);
 
         String[] cookiesList = cookies.split(";");
         String cookie =
                 Arrays.stream(cookiesList)
-                        .filter(t -> t.trim().startsWith("gs="))
+                        .filter(t -> t.trim().startsWith(cookieName + "="))
                         .findFirst()
                         .orElse(null);
 
@@ -48,8 +49,16 @@ public class CookieHelper {
         if (httpCookie == null) {
             return Optional.empty();
         }
+        return Optional.of(httpCookie);
+    }
 
-        String[] cookieValues = httpCookie.getValue().split("\\.");
+    public static Optional<SessionCookieIds> parseSessionCookie(Map<String, String> headers) {
+        Optional<HttpCookie> httpCookie = getHttpCookieFromHeaders(headers, "gs");
+        if (!httpCookie.isPresent()) {
+            return Optional.empty();
+        }
+
+        String[] cookieValues = httpCookie.get().getValue().split("\\.");
         if (cookieValues.length != 2) {
             return Optional.empty();
         }

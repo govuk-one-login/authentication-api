@@ -29,6 +29,9 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.net.HttpCookie;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -42,6 +45,16 @@ import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStat
 public class AuthCodeHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(AuthCodeHandler.class);
+
+    public static final String COOKIE_PREFERENCES_NAME = "cookies_preferences_set";
+    public static final String COOKIE_CONSENT_ANALYTICS_TRUE = "\"analytics\":true";
+    public static final String COOKIE_CONSENT_ANALYTICS_FALSE = "\"analytics\":false";
+    public static final String COOKIE_CONSENT_ACCEPT = "accept";
+    public static final String COOKIE_CONSENT_REJECT = "reject";
+    public static final String COOKIE_CONSENT_NOT_ENGAGED = "not-engaged";
+    public static final String COOKIE_CONSENT_PARAM_NAME = "cookie_consent";
+
     private final SessionService sessionService;
     private final AuthorisationCodeService authorisationCodeService;
     private final ConfigurationService configurationService;
@@ -49,8 +62,6 @@ public class AuthCodeHandler
     private final ClientSessionService clientSessionService;
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             userJourneyStateMachine();
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(AuthCodeHandler.class);
 
     public AuthCodeHandler(
             SessionService sessionService,
@@ -153,25 +164,11 @@ public class AuthCodeHandler
                                 if (!authorizationService.isClientRedirectUriValid(
                                         authenticationRequest.getClientID(),
                                         authenticationRequest.getRedirectionURI())) {
-                                    LOGGER.error(
-                                            "Invalid client redirect URI ({}) for session {}",
-                                            authenticationRequest.getRedirectionURI(),
-                                            session.getSessionId());
-                                    return generateApiGatewayProxyErrorResponse(
-                                            400, ErrorResponse.ERROR_1016);
+                                    return generateInvalidClientRedirectError(
+                                            session, authenticationRequest.getRedirectionURI());
                                 }
                             } catch (ClientNotFoundException e) {
-                                AuthenticationErrorResponse errorResponse =
-                                        authorizationService.generateAuthenticationErrorResponse(
-                                                authenticationRequest, OAuth2Error.INVALID_CLIENT);
-                                LOGGER.error(
-                                        "Client not found for session {}", session.getSessionId());
-                                return new APIGatewayProxyResponseEvent()
-                                        .withStatusCode(302)
-                                        .withHeaders(
-                                                Map.of(
-                                                        ResponseHeaders.LOCATION,
-                                                        errorResponse.toURI().toString()));
+                                return generateClientNotFoundError(session, authenticationRequest);
                             }
                             VectorOfTrust requestedVectorOfTrust =
                                     clientSessionService
@@ -190,16 +187,72 @@ public class AuthCodeHandler
                                     authorisationCodeService.generateAuthorisationCode(
                                             sessionCookieIds.getClientSessionId(),
                                             session.getEmailAddress());
-                            AuthenticationSuccessResponse authenticationResponse =
-                                    authorizationService.generateSuccessfulAuthResponse(
-                                            authenticationRequest, authCode);
-                            sessionService.save(session.setState(nextState));
-                            return new APIGatewayProxyResponseEvent()
-                                    .withStatusCode(302)
-                                    .withHeaders(
-                                            Map.of(
-                                                    ResponseHeaders.LOCATION,
-                                                    authenticationResponse.toURI().toString()));
+
+                            try {
+                                AuthenticationSuccessResponse authenticationResponse;
+                                if (authorizationService.isClientCookieConsentShared(
+                                        authenticationRequest.getClientID())) {
+                                    authenticationResponse =
+                                            authorizationService.generateSuccessfulAuthResponse(
+                                                    authenticationRequest,
+                                                    authCode,
+                                                    COOKIE_CONSENT_PARAM_NAME,
+                                                    getCookieConsentSharedParamValue(
+                                                            input.getHeaders()));
+                                } else {
+                                    authenticationResponse =
+                                            authorizationService.generateSuccessfulAuthResponse(
+                                                    authenticationRequest, authCode);
+                                }
+                                sessionService.save(session.setState(nextState));
+                                return new APIGatewayProxyResponseEvent()
+                                        .withStatusCode(302)
+                                        .withHeaders(
+                                                Map.of(
+                                                        ResponseHeaders.LOCATION,
+                                                        authenticationResponse.toURI().toString()));
+                            } catch (ClientNotFoundException e) {
+                                return generateClientNotFoundError(session, authenticationRequest);
+                            } catch (URISyntaxException e) {
+                                return generateInvalidClientRedirectError(
+                                        session, authenticationRequest.getRedirectionURI());
+                            }
                         });
+    }
+
+    private APIGatewayProxyResponseEvent generateInvalidClientRedirectError(
+            Session session, URI redirectURI) {
+        LOGGER.error(
+                "Invalid client redirect URI ({}) for session {}",
+                redirectURI,
+                session.getSessionId());
+        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1016);
+    }
+
+    private APIGatewayProxyResponseEvent generateClientNotFoundError(
+            Session session, AuthenticationRequest authenticationRequest) {
+        AuthenticationErrorResponse errorResponse =
+                authorizationService.generateAuthenticationErrorResponse(
+                        authenticationRequest, OAuth2Error.INVALID_CLIENT);
+        LOGGER.error("Client not found for session {}", session.getSessionId());
+        return new APIGatewayProxyResponseEvent()
+                .withStatusCode(302)
+                .withHeaders(Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()));
+    }
+
+    private String getCookieConsentSharedParamValue(Map<String, String> headers) {
+        HttpCookie cookiePreferencesCookie =
+                CookieHelper.getHttpCookieFromHeaders(headers, COOKIE_PREFERENCES_NAME)
+                        .orElse(null);
+        if (cookiePreferencesCookie == null) {
+            return COOKIE_CONSENT_NOT_ENGAGED;
+        }
+        if (cookiePreferencesCookie.getValue().contains(COOKIE_CONSENT_ANALYTICS_TRUE)) {
+            return COOKIE_CONSENT_ACCEPT;
+        } else if (cookiePreferencesCookie.getValue().contains(COOKIE_CONSENT_ANALYTICS_FALSE)) {
+            return COOKIE_CONSENT_REJECT;
+        } else {
+            return COOKIE_CONSENT_NOT_ENGAGED;
+        }
     }
 }

@@ -15,6 +15,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -35,6 +36,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +46,9 @@ import java.util.stream.Stream;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
@@ -53,6 +57,13 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.oidc.lambda.AuthCodeHandler.COOKIE_CONSENT_ACCEPT;
+import static uk.gov.di.authentication.oidc.lambda.AuthCodeHandler.COOKIE_CONSENT_ANALYTICS_FALSE;
+import static uk.gov.di.authentication.oidc.lambda.AuthCodeHandler.COOKIE_CONSENT_ANALYTICS_TRUE;
+import static uk.gov.di.authentication.oidc.lambda.AuthCodeHandler.COOKIE_CONSENT_NOT_ENGAGED;
+import static uk.gov.di.authentication.oidc.lambda.AuthCodeHandler.COOKIE_CONSENT_PARAM_NAME;
+import static uk.gov.di.authentication.oidc.lambda.AuthCodeHandler.COOKIE_CONSENT_REJECT;
+import static uk.gov.di.authentication.oidc.lambda.AuthCodeHandler.COOKIE_PREFERENCES_NAME;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -102,13 +113,33 @@ class AuthCodeHandlerTest {
                 arguments(MEDIUM_LEVEL, LOW_LEVEL, MEDIUM_LEVEL));
     }
 
+    private static Stream<Arguments> cookieConsentTestParameters() {
+        return Stream.of(
+                arguments(
+                        buildCookieStringWithCookieConsent(""),
+                        Boolean.TRUE,
+                        COOKIE_CONSENT_NOT_ENGAGED),
+                arguments(
+                        buildCookieStringWithCookieConsent(null),
+                        Boolean.TRUE,
+                        COOKIE_CONSENT_NOT_ENGAGED),
+                arguments(
+                        buildCookieStringWithCookieConsent(COOKIE_CONSENT_ANALYTICS_TRUE),
+                        Boolean.TRUE,
+                        COOKIE_CONSENT_ACCEPT),
+                arguments(
+                        buildCookieStringWithCookieConsent(COOKIE_CONSENT_ANALYTICS_FALSE),
+                        Boolean.TRUE,
+                        COOKIE_CONSENT_REJECT));
+    }
+
     @ParameterizedTest
     @MethodSource("upliftTestParameters")
     public void shouldGenerateSuccessfulAuthResponseAndUpliftAsNecessary(
             CredentialTrustLevel initialLevel,
             CredentialTrustLevel requestedLevel,
             CredentialTrustLevel finalLevel)
-            throws ClientNotFoundException {
+            throws ClientNotFoundException, URISyntaxException {
         ClientID clientID = new ClientID();
         AuthorizationCode authorizationCode = new AuthorizationCode();
         AuthenticationRequest authRequest =
@@ -122,7 +153,7 @@ class AuthCodeHandlerTest {
                         null,
                         authRequest.getState(),
                         null,
-                        null);
+                        authRequest.getResponseMode());
 
         when(authorizationService.isClientRedirectUriValid(eq(clientID), eq(REDIRECT_URI)))
                 .thenReturn(true);
@@ -141,7 +172,59 @@ class AuthCodeHandlerTest {
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 equalTo(authSuccessResponse.toURI().toString()));
 
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                not(containsString(COOKIE_CONSENT_PARAM_NAME)));
+
         assertThat(session.getCurrentCredentialStrength(), equalTo(finalLevel));
+    }
+
+    @ParameterizedTest
+    @MethodSource("cookieConsentTestParameters")
+    public void shouldGenerateSuccessfulAuthResponseWithConsentParams(
+            String cookieString,
+            boolean clientRegistryCookieConsentValue,
+            String returnedCookieConsentParamValue)
+            throws ClientNotFoundException, URISyntaxException {
+        ClientID clientID = new ClientID();
+        AuthorizationCode authorizationCode = new AuthorizationCode();
+        AuthenticationRequest authRequest =
+                generateValidSessionAndAuthRequest(clientID, new State(), MEDIUM_LEVEL);
+        session.setCurrentCredentialStrength(MEDIUM_LEVEL);
+        AuthenticationSuccessResponse authSuccessResponse =
+                generateSuccessfulAuthResponse(
+                        authRequest,
+                        authorizationCode,
+                        COOKIE_CONSENT_PARAM_NAME,
+                        returnedCookieConsentParamValue);
+
+        when(authorizationService.isClientRedirectUriValid(eq(clientID), eq(REDIRECT_URI)))
+                .thenReturn(true);
+        when(authorizationService.isClientCookieConsentShared(eq(clientID)))
+                .thenReturn(clientRegistryCookieConsentValue);
+        when(authorisationCodeService.generateAuthorisationCode(eq(CLIENT_SESSION_ID), eq(EMAIL)))
+                .thenReturn(authorizationCode);
+        when(authorizationService.generateSuccessfulAuthResponse(
+                        any(AuthenticationRequest.class),
+                        any(AuthorizationCode.class),
+                        any(String.class),
+                        any(String.class)))
+                .thenCallRealMethod();
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of(COOKIE, cookieString));
+        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+
+        assertThat(response, hasStatus(302));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                equalTo(authSuccessResponse.toURI().toString()));
+
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                containsString(COOKIE_CONSENT_PARAM_NAME + "=" + returnedCookieConsentParamValue));
+
+        assertThat(session.getCurrentCredentialStrength(), equalTo(MEDIUM_LEVEL));
     }
 
     @Test
@@ -278,9 +361,31 @@ class AuthCodeHandlerTest {
                 .thenReturn(clientSession);
     }
 
-    private String buildCookieString() {
+    public AuthenticationSuccessResponse generateSuccessfulAuthResponse(
+            AuthenticationRequest authRequest,
+            AuthorizationCode authorizationCode,
+            String additionalParamName,
+            String additionalParamValue)
+            throws URISyntaxException {
+        return new AuthenticationSuccessResponse(
+                new URIBuilder(authRequest.getRedirectionURI())
+                        .addParameter(additionalParamName, additionalParamValue)
+                        .build(),
+                authorizationCode,
+                null,
+                null,
+                authRequest.getState(),
+                null,
+                authRequest.getResponseMode());
+    }
+
+    private static String buildCookieString() {
         return format(
                 "%s=%s.%s; Max-Age=%d; %s",
                 "gs", SESSION_ID, CLIENT_SESSION_ID, 3600, "Secure; HttpOnly;");
+    }
+
+    private static String buildCookieStringWithCookieConsent(String value) {
+        return buildCookieString() + COOKIE_PREFERENCES_NAME + "={" + value + "};";
     }
 }

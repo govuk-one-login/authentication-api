@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.KeyPairHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
+import uk.gov.di.authentication.oidc.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.SessionState;
 
@@ -26,13 +27,15 @@ import java.security.KeyPair;
 import java.util.Base64;
 
 import static java.util.Collections.singletonList;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class AuthCodeIntegrationTest extends IntegrationTestEndpoints {
 
     private static final String AUTH_CODE_ENDPOINT = "/auth-code";
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final String TEST_PASSWORD = "test-pass-01";
     private static final URI REDIRECT_URI =
             URI.create(System.getenv("STUB_RELYING_PARTY_REDIRECT_URI"));
     private static final ClientID CLIENT_ID = new ClientID("test-client");
@@ -57,6 +60,9 @@ public class AuthCodeIntegrationTest extends IntegrationTestEndpoints {
                         .headers(headers)
                         .get();
         assertEquals(302, response.getStatus());
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION).toString(),
+                not(containsString("cookie_consent")));
     }
 
     private AuthenticationRequest generateAuthRequest() {
