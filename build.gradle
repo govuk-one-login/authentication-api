@@ -73,7 +73,7 @@ subprojects {
                 "com.nimbusds:nimbus-jose-jwt:${dependencyVersions.nimbusds_jwt_version}"
 
 
-        sqs "software.amazon.awssdk:sqs:2.17.46"
+        sqs "software.amazon.awssdk:sqs:2.17.51"
 
         tests "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit}",
                 "org.junit.jupiter:junit-jupiter-params:${dependencyVersions.junit}",
