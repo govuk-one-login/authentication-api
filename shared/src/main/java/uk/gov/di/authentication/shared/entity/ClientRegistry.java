@@ -20,6 +20,7 @@ public class ClientRegistry {
     private String sectorIdentifierUri;
     private String subjectType;
     private String vectorsOfTrust;
+    private String cookieConsent;
 
     @DynamoDBHashKey(attributeName = "ClientID")
     public String getClientID() {
@@ -135,5 +136,15 @@ public class ClientRegistry {
 
     public VectorOfTrust calculateEffectiveVectorOfTrust() {
         return VectorOfTrust.parse(getVectorsOfTrust(), CredentialTrustLevel.getDefault());
+    }
+
+    @DynamoDBAttribute(attributeName = "CookieConsent")
+    public String getCookieConsent() {
+        return cookieConsent;
+    }
+
+    public ClientRegistry setCookieConsent(String cookieConsent) {
+        this.cookieConsent = cookieConsent;
+        return this;
     }
 }
