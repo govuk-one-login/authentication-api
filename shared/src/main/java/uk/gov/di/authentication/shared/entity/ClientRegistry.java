@@ -19,6 +19,7 @@ public class ClientRegistry {
     private String serviceType;
     private String sectorIdentifierUri;
     private String subjectType;
+    private boolean cookieConsentShared = false;
     private boolean isInternalService = false;
 
     @DynamoDBHashKey(attributeName = "ClientID")
@@ -120,6 +121,16 @@ public class ClientRegistry {
 
     public ClientRegistry setSubjectType(String subjectType) {
         this.subjectType = subjectType;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "CookieConsentShared")
+    public boolean isCookieConsentShared() {
+        return cookieConsentShared;
+    }
+
+    public ClientRegistry setCookieConsentShared(boolean cookieConsent) {
+        this.cookieConsentShared = cookieConsent;
         return this;
     }
 

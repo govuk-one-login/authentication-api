@@ -9,6 +9,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
+import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -21,6 +22,7 @@ import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -59,10 +61,35 @@ public class AuthorizationService {
         return client.get().getRedirectUrls().contains(redirectURI.toString());
     }
 
+    public boolean isClientCookieConsentShared(ClientID clientID) throws ClientNotFoundException {
+        return dynamoClientService
+                .getClient(clientID.toString())
+                .map(c -> c.isCookieConsentShared())
+                .orElseThrow();
+    }
+
     public AuthenticationSuccessResponse generateSuccessfulAuthResponse(
             AuthenticationRequest authRequest, AuthorizationCode authorizationCode) {
         return new AuthenticationSuccessResponse(
                 authRequest.getRedirectionURI(),
+                authorizationCode,
+                null,
+                null,
+                authRequest.getState(),
+                null,
+                authRequest.getResponseMode());
+    }
+
+    public AuthenticationSuccessResponse generateSuccessfulAuthResponse(
+            AuthenticationRequest authRequest,
+            AuthorizationCode authorizationCode,
+            String additionalParamName,
+            String additionalParamValue)
+            throws URISyntaxException {
+        return new AuthenticationSuccessResponse(
+                new URIBuilder(authRequest.getRedirectionURI())
+                        .addParameter(additionalParamName, additionalParamValue)
+                        .build(),
                 authorizationCode,
                 null,
                 null,
