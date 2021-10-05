@@ -13,6 +13,7 @@ module "reset_password" {
     EMAIL_QUEUE_URL          = aws_sqs_queue.email_queue.id
     ENVIRONMENT              = var.environment
     EVENTS_SNS_TOPIC_ARN     = aws_sns_topic.events.arn
+    AUDIT_SIGNING_KEY_ALIAS  = local.audit_signing_key_alias_name
     REDIS_HOST               = local.external_redis_host
     REDIS_PORT               = local.external_redis_port
     REDIS_PASSWORD           = local.external_redis_password
