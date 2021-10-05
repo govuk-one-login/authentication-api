@@ -30,9 +30,10 @@ resource "aws_lambda_function" "endpoint_lambda" {
 resource "aws_cloudwatch_log_group" "lambda_log_group" {
   count = var.use_localstack ? 0 : 1
 
-  name       = "/aws/lambda/${aws_lambda_function.endpoint_lambda.function_name}"
-  tags       = var.default_tags
-  kms_key_id = var.cloudwatch_key_arn
+  name              = "/aws/lambda/${aws_lambda_function.endpoint_lambda.function_name}"
+  tags              = var.default_tags
+  kms_key_id        = var.cloudwatch_key_arn
+  retention_in_days = var.cloudwatch_log_retention
 
   depends_on = [
     aws_lambda_function.endpoint_lambda

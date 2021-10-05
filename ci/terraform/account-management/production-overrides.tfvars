@@ -6,3 +6,5 @@ notify_template_map = {
   PHONE_NUMBER_UPDATED_TEMPLATE_ID = "beaf3eb2-135c-4517-800b-ca6b5ed85804"
   PASSWORD_UPDATED_TEMPLATE_ID     = "8d4c4948-000a-4de0-a8ba-76c259c1f983"
 }
+
+cloudwatch_log_retention = 5

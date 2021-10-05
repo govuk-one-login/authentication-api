@@ -148,3 +148,8 @@ variable "cloudwatch_key_arn" {
   type        = string
   description = "The ARN of the KMS key to use log encryption"
 }
+
+variable "cloudwatch_log_retention" {
+  type        = number
+  description = "The number of day to retain Cloudwatch logs for"
+}
