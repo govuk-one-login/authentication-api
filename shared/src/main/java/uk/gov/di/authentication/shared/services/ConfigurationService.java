@@ -142,6 +142,10 @@ public class ConfigurationService {
         return System.getenv("TOKEN_SIGNING_KEY_ALIAS");
     }
 
+    public String getAuditSigningKeyAlias() {
+        return System.getenv("AUDIT_SIGNING_KEY_ALIAS");
+    }
+
     public int getWarmupDelayMillis() {
         return Integer.parseInt(System.getenv().getOrDefault("WARMER_DELAY", "75"));
     }

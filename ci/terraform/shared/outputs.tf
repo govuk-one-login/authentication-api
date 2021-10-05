@@ -56,6 +56,10 @@ output "id_token_signing_key_alias_name" {
   value = aws_kms_alias.id_token_signing_key_alias.name
 }
 
+output "audit_signing_key_alias_name" {
+  value = aws_kms_alias.audit_payload_signing_key_alias.name
+}
+
 output "stub_rp_client_credentials" {
   value = [for i, rp in var.stub_rp_clients : {
     client_name = rp.client_name

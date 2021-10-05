@@ -7,15 +7,16 @@ module "userexists" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT          = var.environment
-    BASE_URL             = local.frontend_api_base_url
-    EVENTS_SNS_TOPIC_ARN = aws_sns_topic.events.arn
-    LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
-    REDIS_HOST           = local.external_redis_host
-    REDIS_PORT           = local.external_redis_port
-    REDIS_PASSWORD       = local.external_redis_password
-    REDIS_TLS            = var.redis_use_tls
-    DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    ENVIRONMENT             = var.environment
+    BASE_URL                = local.frontend_api_base_url
+    EVENTS_SNS_TOPIC_ARN    = aws_sns_topic.events.arn
+    AUDIT_SIGNING_KEY_ALIAS = local.audit_signing_key_alias_name
+    LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
+    REDIS_HOST              = local.external_redis_host
+    REDIS_PORT              = local.external_redis_port
+    REDIS_PASSWORD          = local.external_redis_password
+    REDIS_TLS               = var.redis_use_tls
+    DYNAMO_ENDPOINT         = var.use_localstack ? var.lambda_dynamo_endpoint : null
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.CheckUserExistsHandler::handleRequest"
 
