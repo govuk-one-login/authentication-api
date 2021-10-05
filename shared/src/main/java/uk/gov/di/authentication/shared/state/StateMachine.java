@@ -160,9 +160,7 @@ public class StateMachine<T, A, C> {
                 .when(RESET_PASSWORD_LINK_MAX_RETRIES_REACHED)
                 .allow(
                         on(SYSTEM_HAS_SENT_RESET_PASSWORD_LINK).then(RESET_PASSWORD_LINK_SENT),
-                        on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND),
-                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
-                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
+                        on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND))
                 .when(USER_NOT_FOUND)
                 .allow(
                         on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND),
@@ -229,6 +227,7 @@ public class StateMachine<T, A, C> {
                         on(USER_ENTERED_VALID_PHONE_VERIFICATION_CODE)
                                 .then(CONSENT_REQUIRED)
                                 .ifCondition(userHasNotGivenConsent()),
+                        on(USER_ENTERED_A_NEW_PHONE_NUMBER).then(VERIFY_PHONE_NUMBER_CODE_SENT),
                         on(USER_ENTERED_VALID_PHONE_VERIFICATION_CODE)
                                 .then(PHONE_NUMBER_CODE_VERIFIED),
                         on(SYSTEM_HAS_SENT_TOO_MANY_PHONE_VERIFICATION_CODES)
@@ -267,12 +266,11 @@ public class StateMachine<T, A, C> {
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED)
-                .finalState()
-                .when(ACCOUNT_TEMPORARILY_LOCKED)
                 .allow(
-                        on(SYSTEM_HAS_SENT_RESET_PASSWORD_LINK).then(RESET_PASSWORD_LINK_SENT),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
+                .when(ACCOUNT_TEMPORARILY_LOCKED)
+                .allow(on(SYSTEM_HAS_SENT_RESET_PASSWORD_LINK).then(RESET_PASSWORD_LINK_SENT))
                 .when(AUTHENTICATION_REQUIRED)
                 .allow(
                         on(USER_ENTERED_VALID_CREDENTIALS)
