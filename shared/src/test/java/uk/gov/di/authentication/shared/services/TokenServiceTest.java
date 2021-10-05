@@ -121,7 +121,8 @@ public class TokenServiceTest {
                                 new ClientConsent(
                                         CLIENT_ID,
                                         claimsForListOfScopes,
-                                        LocalDateTime.now(ZoneId.of("UTC")).toString())));
+                                        LocalDateTime.now(ZoneId.of("UTC")).toString())),
+                        false);
 
         assertEquals(
                 BASE_URL, tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getIssuer());
@@ -178,7 +179,8 @@ public class TokenServiceTest {
                                 new ClientConsent(
                                         CLIENT_ID,
                                         claimsForListOfScopes,
-                                        LocalDateTime.now(ZoneId.of("UTC")).toString())));
+                                        LocalDateTime.now(ZoneId.of("UTC")).toString())),
+                        false);
 
         assertEquals(
                 BASE_URL, tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getIssuer());
@@ -359,44 +361,6 @@ public class TokenServiceTest {
 
         assertTrue(errorObject.isPresent());
     }
-
-    //    @Test
-    //    public void shouldIgnoreScopesThatUserHasNotConsentedTo() {
-    //        Scope scopesInAuthRequest =
-    //                new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
-    //        Scope scopesConsentedTo = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
-    //        Set<String> claims =
-    // ValidScopes.getClaimsForListOfScopes(scopesConsentedTo.toStringList());
-    //        ClientConsent clientConsent =
-    //                new ClientConsent(
-    //                        CLIENT_ID, claims, LocalDateTime.now(ZoneId.of("UTC")).toString());
-    //        List<String> scopes =
-    //                tokenService.calculateScopesForToken(
-    //                        Collections.singletonList(clientConsent), CLIENT_ID,
-    // scopesInAuthRequest);
-    //
-    //        assertFalse(scopes.contains(OIDCScopeValue.PHONE.getValue()));
-    //        assertTrue(scopes.containsAll(scopesConsentedTo.toStringList()));
-    //    }
-    //
-    //    @Test
-    //    public void shouldReturnAllScopesWhenUserHasConsentedToAll() {
-    //        Scope scopesInAuthRequest =
-    //                new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
-    //        Scope scopesConsentedTo =
-    //                new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
-    //        Set<String> claims =
-    // ValidScopes.getClaimsForListOfScopes(scopesConsentedTo.toStringList());
-    //        ClientConsent clientConsent =
-    //                new ClientConsent(
-    //                        CLIENT_ID, claims, LocalDateTime.now(ZoneId.of("UTC")).toString());
-    //        List<String> scopes =
-    //                tokenService.calculateScopesForToken(
-    //                        Collections.singletonList(clientConsent), CLIENT_ID,
-    // scopesInAuthRequest);
-    //
-    //        assertTrue(scopes.containsAll(scopesConsentedTo.toStringList()));
-    //    }
 
     private String generateSerialisedPrivateKeyJWT(KeyPair keyPair) throws JOSEException {
         PrivateKeyJWT privateKeyJWT =

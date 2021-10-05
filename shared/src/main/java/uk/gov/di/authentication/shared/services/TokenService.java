@@ -90,9 +90,14 @@ public class TokenService {
             Map<String, Object> additionalTokenClaims,
             Subject publicSubject,
             String vot,
-            List<ClientConsent> clientConsents) {
-        List<String> scopesForToken =
-                calculateScopesForToken(clientConsents, clientID, authRequestScopes);
+            List<ClientConsent> clientConsents,
+            boolean isInternalService) {
+        List<String> scopesForToken;
+        if (!isInternalService) {
+            scopesForToken = authRequestScopes.toStringList();
+        } else {
+            scopesForToken = calculateScopesForToken(clientConsents, clientID, authRequestScopes);
+        }
         AccessToken accessToken =
                 generateAndStoreAccessToken(
                         clientID, internalSubject, scopesForToken, publicSubject);

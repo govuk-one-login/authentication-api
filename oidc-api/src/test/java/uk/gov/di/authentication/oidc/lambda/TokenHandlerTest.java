@@ -172,7 +172,8 @@ public class TokenHandlerTest {
                         Map.of("nonce", NONCE),
                         PUBLIC_SUBJECT,
                         VOT,
-                        userProfile.getClientConsent()))
+                        userProfile.getClientConsent(),
+                        clientRegistry.isInternalService()))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result = generateApiGatewayRequest(privateKeyJWT, authCode);
