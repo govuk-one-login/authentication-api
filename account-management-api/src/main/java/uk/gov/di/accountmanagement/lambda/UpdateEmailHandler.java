@@ -79,7 +79,7 @@ public class UpdateEmailHandler
                                                 input.getBody(), UpdateEmailRequest.class);
                                 boolean isValidOtpCode =
                                         codeStorageService.isValidOtpCode(
-                                                updateInfoRequest.getExistingEmailAddress(),
+                                                updateInfoRequest.getReplacementEmailAddress(),
                                                 updateInfoRequest.getOtp(),
                                                 NotificationType.VERIFY_EMAIL);
                                 if (!isValidOtpCode) {

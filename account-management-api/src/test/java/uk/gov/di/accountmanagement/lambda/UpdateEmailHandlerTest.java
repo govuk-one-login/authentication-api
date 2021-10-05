@@ -68,7 +68,7 @@ class UpdateEmailHandlerTest {
         authorizerParams.put("principalId", SUBJECT.getValue());
         proxyRequestContext.setAuthorizer(authorizerParams);
         event.setRequestContext(proxyRequestContext);
-        when(codeStorageService.isValidOtpCode(EXISTING_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
+        when(codeStorageService.isValidOtpCode(NEW_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
                 .thenReturn(true);
         when(validationService.validateEmailAddressUpdate(
                         EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS))
@@ -96,7 +96,7 @@ class UpdateEmailHandlerTest {
         authorizerParams.put("principalId", SUBJECT.getValue());
         proxyRequestContext.setAuthorizer(authorizerParams);
         event.setRequestContext(proxyRequestContext);
-        when(codeStorageService.isValidOtpCode(EXISTING_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
+        when(codeStorageService.isValidOtpCode(NEW_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
                 .thenReturn(true);
         when(validationService.validateEmailAddressUpdate(
                         EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS))
@@ -142,7 +142,7 @@ class UpdateEmailHandlerTest {
         authorizerParams.put("principalId", SUBJECT.getValue());
         proxyRequestContext.setAuthorizer(authorizerParams);
         event.setRequestContext(proxyRequestContext);
-        when(codeStorageService.isValidOtpCode(EXISTING_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
+        when(codeStorageService.isValidOtpCode(INVALID_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
                 .thenReturn(false);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -169,7 +169,7 @@ class UpdateEmailHandlerTest {
         authorizerParams.put("principalId", SUBJECT.getValue());
         proxyRequestContext.setAuthorizer(authorizerParams);
         event.setRequestContext(proxyRequestContext);
-        when(codeStorageService.isValidOtpCode(EXISTING_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
+        when(codeStorageService.isValidOtpCode(INVALID_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
                 .thenReturn(true);
         when(validationService.validateEmailAddressUpdate(
                         EXISTING_EMAIL_ADDRESS, INVALID_EMAIL_ADDRESS))
