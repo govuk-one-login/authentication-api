@@ -38,6 +38,7 @@ run:
         -var 'logging_endpoint_arn=arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod' \
         -var 'lambda_zip_file=../../../../api-release/account-management-api.zip' \
         -var 'lambda_warmer_zip_file=../../../../lambda-warmer-release/lambda-warmer.zip' \
+        -var "shared_state_bucket=${STATE_BUCKET}" \
         -var-file "${DEPLOY_ENVIRONMENT}-overrides.tfvars" \
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-account-managment-api-terraform-outputs.json
