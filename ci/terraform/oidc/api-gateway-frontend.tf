@@ -28,7 +28,7 @@ resource "aws_api_gateway_usage_plan_key" "di_auth_frontend_usage_plan_key" {
 }
 
 locals {
-  frontend_api_base_url = var.use_localstack ? "${var.aws_endpoint}/restapis/${aws_api_gateway_rest_api.di_authentication_frontend_api.id}/${var.api_deployment_stage_name}/_user_request_" : "https://auth.${var.environment}.${var.service_domain_name}"
+  frontend_api_base_url = var.use_localstack ? "${var.aws_endpoint}/restapis/${aws_api_gateway_rest_api.di_authentication_frontend_api.id}/${var.environment}/_user_request_" : "https://auth.${var.environment}.${var.service_domain_name}"
 }
 
 resource "aws_api_gateway_deployment" "frontend_deployment" {
@@ -76,7 +76,7 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
 resource "aws_api_gateway_stage" "endpoint_frontend_stage" {
   deployment_id = aws_api_gateway_deployment.frontend_deployment.id
   rest_api_id   = aws_api_gateway_rest_api.di_authentication_frontend_api.id
-  stage_name    = var.api_deployment_stage_name
+  stage_name    = var.environment
 
   tags = local.default_tags
 
@@ -98,7 +98,7 @@ resource "aws_api_gateway_method_settings" "api_gateway_frontend_logging_setting
   count = var.enable_api_gateway_execution_logging ? 1 : 0
 
   rest_api_id = aws_api_gateway_rest_api.di_authentication_frontend_api.id
-  stage_name  = var.api_deployment_stage_name
+  stage_name  = aws_api_gateway_stage.endpoint_frontend_stage.stage_name
   method_path = "*/*"
 
   settings {

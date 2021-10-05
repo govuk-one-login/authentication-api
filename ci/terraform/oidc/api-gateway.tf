@@ -109,7 +109,7 @@ data "aws_region" "current" {
 }
 
 locals {
-  api_base_url = var.use_localstack ? "${var.aws_endpoint}/restapis/${aws_api_gateway_rest_api.di_authentication_api.id}/${var.api_deployment_stage_name}/_user_request_" : "https://api.${var.environment}.${var.service_domain_name}"
+  api_base_url = var.use_localstack ? "${var.aws_endpoint}/restapis/${aws_api_gateway_rest_api.di_authentication_api.id}/${var.environment}/_user_request_" : "https://api.${var.environment}.${var.service_domain_name}"
 }
 
 resource "aws_api_gateway_deployment" "deployment" {
@@ -162,7 +162,7 @@ resource "aws_api_gateway_deployment" "deployment" {
 resource "aws_api_gateway_stage" "endpoint_stage" {
   deployment_id = aws_api_gateway_deployment.deployment.id
   rest_api_id   = aws_api_gateway_rest_api.di_authentication_api.id
-  stage_name    = var.api_deployment_stage_name
+  stage_name    = var.environment
 
   tags = local.default_tags
 
@@ -189,7 +189,7 @@ resource "aws_api_gateway_method_settings" "api_gateway_logging_settings" {
   count = var.enable_api_gateway_execution_logging ? 1 : 0
 
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  stage_name  = var.api_deployment_stage_name
+  stage_name  = aws_api_gateway_stage.endpoint_stage.stage_name
   method_path = "*/*"
 
   settings {

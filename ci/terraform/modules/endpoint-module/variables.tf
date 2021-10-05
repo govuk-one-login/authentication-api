@@ -63,11 +63,6 @@ variable "environment" {
   type = string
 }
 
-variable "api_deployment_stage_name" {
-  type    = string
-  default = "test"
-}
-
 variable "security_group_id" {
   type        = string
   description = "The id of the security for the lambda"

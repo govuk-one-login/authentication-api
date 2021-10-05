@@ -53,11 +53,6 @@ variable "environment" {
   type = string
 }
 
-variable "api_deployment_stage_name" {
-  type    = string
-  default = "test"
-}
-
 variable "api_base_url" {
   type    = string
   default = "http://localhost:8080"

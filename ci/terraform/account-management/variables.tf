@@ -30,11 +30,6 @@ variable "environment" {
   type = string
 }
 
-variable "api_deployment_stage_name" {
-  type    = string
-  default = "test"
-}
-
 variable "aws_region" {
   default = "eu-west-2"
 }
