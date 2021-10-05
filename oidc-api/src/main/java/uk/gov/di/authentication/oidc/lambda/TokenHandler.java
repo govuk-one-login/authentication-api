@@ -232,7 +232,8 @@ public class TokenHandler
                                             additionalTokenClaims,
                                             publicSubject,
                                             vot,
-                                            userProfile.getClientConsent());
+                                            userProfile.getClientConsent(),
+                                            client.isInternalService());
 
                             clientSessionService.saveClientSession(
                                     authCodeExchangeData.getClientSessionId(),
