@@ -27,6 +27,7 @@ module "send_otp_notification" {
   lambda_role_arn           = aws_iam_role.dynamo_sqs_lambda_iam_role.arn
   logging_endpoint_enabled  = var.logging_endpoint_enabled
   logging_endpoint_arn      = var.logging_endpoint_arn
+  cloudwatch_key_arn        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   default_tags              = local.default_tags
   authorizer_id             = aws_api_gateway_authorizer.di_account_management_api.id
   use_localstack            = var.use_localstack

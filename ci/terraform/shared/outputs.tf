@@ -65,3 +65,7 @@ output "stub_rp_client_credentials" {
   }]
   sensitive = true
 }
+
+output "cloudwatch_encryption_key_arn" {
+  value = aws_kms_key.cloudwatch_log_encryption.arn
+}

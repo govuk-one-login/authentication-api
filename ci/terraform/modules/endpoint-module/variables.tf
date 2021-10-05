@@ -143,3 +143,8 @@ variable "authorizer_id" {
   type    = string
   default = null
 }
+
+variable "cloudwatch_key_arn" {
+  type        = string
+  description = "The ARN of the KMS key to use log encryption"
+}
