@@ -150,7 +150,9 @@ public class AuthorizationService {
             if (session.getEmailAddress() != null) {
                 UserProfile userProfile =
                         dynamoService.getUserProfileByEmail(session.getEmailAddress());
-                builder.withUserProfile(userProfile);
+                if (userProfile != null) {
+                    builder.withUserProfile(userProfile);
+                }
             }
             userContext = builder.withClient(clientRegistry).build();
         } catch (NoSuchElementException e) {
