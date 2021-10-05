@@ -93,7 +93,7 @@ public class TokenService {
             List<ClientConsent> clientConsents,
             boolean isInternalService) {
         List<String> scopesForToken;
-        if (!isInternalService) {
+        if (isInternalService) {
             scopesForToken = authRequestScopes.toStringList();
         } else {
             scopesForToken = calculateScopesForToken(clientConsents, clientID, authRequestScopes);
