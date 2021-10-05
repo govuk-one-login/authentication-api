@@ -189,8 +189,3 @@ resource "aws_kms_key" "cloudwatch_log_encryption" {
 
   tags = local.default_tags
 }
-
-resource "aws_kms_alias" "cloudwatch_key_alias" {
-  name          = "alias/${var.environment}-cloudwatch-log-encryption-alias"
-  target_key_id = aws_kms_key.cloudwatch_log_encryption.key_id
-}
