@@ -1,9 +1,13 @@
 package uk.gov.di.authentication.shared.services;
 
+import com.amazonaws.services.kms.model.SignRequest;
+import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
+import com.google.protobuf.ByteString;
 import uk.gov.di.audit.AuditPayload.AuditEvent;
 import uk.gov.di.audit.AuditPayload.SignedAuditEvent;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 
+import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.util.Objects;
 import java.util.Optional;
@@ -12,15 +16,24 @@ public class AuditService {
 
     private final Clock clock;
     private final SnsService snsService;
+    private final KmsConnectionService kmsConnectionService;
 
-    public AuditService(Clock clock, SnsService snsService) {
+    public AuditService(
+            Clock clock, SnsService snsService, KmsConnectionService kmsConnectionService) {
         this.clock = clock;
         this.snsService = snsService;
+        this.kmsConnectionService = kmsConnectionService;
     }
 
     public AuditService() {
         this.clock = Clock.systemUTC();
-        this.snsService = new SnsService(new ConfigurationService());
+        var configService = new ConfigurationService();
+        this.snsService = new SnsService(configService);
+        this.kmsConnectionService =
+                new KmsConnectionService(
+                        configService.getLocalstackEndpointUri(),
+                        configService.getAwsRegion(),
+                        configService.getAuditSigningKeyAlias());
     }
 
     public void submitAuditEvent(
@@ -41,21 +54,30 @@ public class AuditService {
             MetadataPair... metadataPairs) {
         var timestamp = clock.instant().toString();
 
-        var eventBuilder =
+        var auditEvent =
                 AuditEvent.newBuilder()
                         .setEventName(eventEnum.toString())
                         .setTimestamp(timestamp)
                         .setRequestId(Optional.ofNullable(requestId).orElse(""))
                         .setSessionId(Optional.ofNullable(sessionId).orElse(""))
-                        .setClientId(Optional.ofNullable(clientId).orElse(""));
-        // TODO - Extract other values from the metadataPairs argument.
+                        .setClientId(Optional.ofNullable(clientId).orElse(""))
+                        .build();
 
-        var signedEventBuilder = SignedAuditEvent.newBuilder();
-        signedEventBuilder.setPayload(eventBuilder.build().toByteString());
-        // TODO - We need to sign the event at this point, but we don't yet have the infrastructure
-        // in place to do that.
+        var signedEventBuilder =
+                SignedAuditEvent.newBuilder()
+                        .setSignature(ByteString.copyFrom(signPayload(auditEvent.toByteArray())))
+                        .setPayload(auditEvent.toByteString());
 
         return new String(signedEventBuilder.build().toByteArray());
+    }
+
+    private byte[] signPayload(byte[] payload) {
+        SignRequest signRequest = new SignRequest();
+        signRequest.setKeyId(new ConfigurationService().getAuditSigningKeyAlias());
+        signRequest.setMessage(ByteBuffer.wrap(payload));
+        signRequest.setSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256.toString());
+
+        return kmsConnectionService.sign(signRequest).getSignature().array();
     }
 
     public static class MetadataPair {

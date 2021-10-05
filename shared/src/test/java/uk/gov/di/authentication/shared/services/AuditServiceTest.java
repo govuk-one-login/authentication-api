@@ -1,21 +1,29 @@
 package uk.gov.di.authentication.shared.services;
 
+import com.amazonaws.services.kms.model.SignRequest;
+import com.amazonaws.services.kms.model.SignResult;
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.MockitoAnnotations;
+import uk.gov.di.audit.AuditPayload.SignedAuditEvent;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 
+import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.Is.is;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasClientId;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasEventName;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasRequestId;
@@ -31,6 +39,7 @@ class AuditServiceTest {
             Clock.fixed(Instant.parse(FIXED_TIMESTAMP), ZoneId.of("UTC"));
 
     private final SnsService snsService = mock(SnsService.class);
+    private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
 
     @Captor private ArgumentCaptor<String> messageCaptor;
 
@@ -40,6 +49,8 @@ class AuditServiceTest {
 
     @BeforeEach
     public void beforeEach() {
+        var stubSignature = new SignResult().withSignature(ByteBuffer.wrap("signature".getBytes()));
+        when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(stubSignature);
         MockitoAnnotations.openMocks(this);
     }
 
@@ -50,7 +61,7 @@ class AuditServiceTest {
 
     @Test
     void shouldLogAuditEvent() {
-        var auditService = new AuditService(FIXED_CLOCK, snsService);
+        var auditService = new AuditService(FIXED_CLOCK, snsService, kmsConnectionService);
 
         auditService.submitAuditEvent(TEST_EVENT_ONE, "request-id", "session-id", "client-id");
 
@@ -65,8 +76,27 @@ class AuditServiceTest {
     }
 
     @Test
+    void shouldSignAuditEventPayload() throws InvalidProtocolBufferException {
+        var auditService = new AuditService(FIXED_CLOCK, snsService, kmsConnectionService);
+
+        var signingRequestCaptor = ArgumentCaptor.forClass(SignRequest.class);
+
+        auditService.submitAuditEvent(TEST_EVENT_ONE, "request-id", "session-id", "client-id");
+
+        verify(kmsConnectionService).sign(signingRequestCaptor.capture());
+        verify(snsService).publishAuditMessage(messageCaptor.capture());
+
+        SignedAuditEvent event = SignedAuditEvent.parseFrom(messageCaptor.getValue().getBytes());
+
+        assertThat(
+                event.getPayload().toByteArray(),
+                is(signingRequestCaptor.getValue().getMessage().array()));
+        assertThat(event.getSignature().toByteArray(), is("signature".getBytes()));
+    }
+
+    @Test
     void shouldLogAuditEventWithMetadataPairsAttached() {
-        var auditService = new AuditService(FIXED_CLOCK, snsService);
+        var auditService = new AuditService(FIXED_CLOCK, snsService, kmsConnectionService);
 
         auditService.submitAuditEvent(
                 TEST_EVENT_ONE,
