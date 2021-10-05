@@ -41,6 +41,9 @@ module "reset_password" {
   keep_lambda_warm             = var.keep_lambdas_warm
   warmer_handler_function_name = "uk.gov.di.lambdawarmer.lambda.LambdaWarmerHandler::handleRequest"
   warmer_lambda_zip_file       = var.lambda_warmer_zip_file
+  warmer_handler_environment_variables = {
+    LAMBDA_MIN_CONCURRENCY = var.lambda_min_concurrency
+  }
 
   use_localstack = var.use_localstack
 
