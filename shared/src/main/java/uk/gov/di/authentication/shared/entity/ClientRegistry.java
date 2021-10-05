@@ -19,6 +19,7 @@ public class ClientRegistry {
     private String serviceType;
     private String sectorIdentifierUri;
     private String subjectType;
+    private boolean isInternalService = false;
 
     @DynamoDBHashKey(attributeName = "ClientID")
     public String getClientID() {
@@ -119,6 +120,16 @@ public class ClientRegistry {
 
     public ClientRegistry setSubjectType(String subjectType) {
         this.subjectType = subjectType;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "IsInternalService")
+    public boolean isInternalService() {
+        return isInternalService;
+    }
+
+    public ClientRegistry setInternalService(boolean internalService) {
+        isInternalService = internalService;
         return this;
     }
 }

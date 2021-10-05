@@ -100,7 +100,7 @@ public class TokenService {
         SignedJWT idToken =
                 generateIDToken(
                         clientID, publicSubject, additionalTokenClaims, accessTokenHash, vot);
-        if (authRequestScopes.toStringList().contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
+        if (scopesForToken.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
             RefreshToken refreshToken =
                     generateAndStoreRefreshToken(
                             clientID, internalSubject, scopesForToken, publicSubject);
@@ -194,7 +194,11 @@ public class TokenService {
                 clientConsent.getClaims().stream()
                         .filter(t -> claimsFromAuthnRequest.stream().anyMatch(t::equals))
                         .collect(Collectors.toSet());
-        return ValidScopes.getScopesForListOfClaims(claims);
+        List<String> scopesForIdToken = ValidScopes.getScopesForListOfClaims(claims);
+        if (authRequestScopes.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
+            scopesForIdToken.add(OIDCScopeValue.OFFLINE_ACCESS.getValue());
+        }
+        return scopesForIdToken;
     }
 
     private Optional<ErrorObject> validateRefreshRequestParams(Map<String, String> requestBody) {
