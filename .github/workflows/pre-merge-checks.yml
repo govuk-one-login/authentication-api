@@ -73,7 +73,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       - name: Run Integration Tests
-        run: ./pre-commit.sh -ig
+        run: |
+          ./gradlew --no-daemon :integration-tests:test
       - name: Upload Test Reports
         uses: actions/upload-artifact@v2
         if: failure()
@@ -81,3 +82,8 @@ jobs:
           name: integration-test-reports
           path: integration-tests/build/reports/tests/test/
           retention-days: 5
+      - name: Stop Services
+        if: always()
+        run: |
+          ./gradlew --no-daemon :composeDownForced
+

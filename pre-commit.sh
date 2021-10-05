@@ -70,7 +70,6 @@ if [[ ${RUN_UNIT} -eq 1 ]]; then
 fi
 
 if [ ${RUN_INTEGRATION} -eq 1 ] || [ ${TF_ACCOUNT_MANAGEMENT} -eq 1 ]; then
-  startup
   build_and_test_exit_code=0
   if [[ ${RUN_INTEGRATION} -eq 1 ]]; then
       set +e
@@ -84,7 +83,7 @@ if [ ${RUN_INTEGRATION} -eq 1 ] || [ ${TF_ACCOUNT_MANAGEMENT} -eq 1 ]; then
       build_and_test_exit_code=$?
       set -e
   fi
-  stop_docker_services aws redis dynamodb
+  ./gradlew composeDownForced
 fi
 
 record_timings "auth api pre-commit total" auth_api_pre_commit_start_seconds $SECONDS true

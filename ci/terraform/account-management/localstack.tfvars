@@ -7,3 +7,5 @@ shared_state_bucket   = "terraform-state"
 dns_state_bucket      = null
 dns_state_key         = null
 dns_state_role        = null
+notify_url            = "http://notify.internal:8888"
+notify_api_key        = "test-0123456789-0123456789-0123456789-0123456789-0123456789"
