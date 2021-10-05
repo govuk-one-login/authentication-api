@@ -112,7 +112,10 @@ resource "aws_lambda_function" "email_sqs_lambda" {
 resource "aws_cloudwatch_log_group" "sqs_lambda_log_group" {
   count = var.use_localstack ? 0 : 1
 
-  name = "/aws/lambda/${aws_lambda_function.email_sqs_lambda.function_name}"
+  name              = "/aws/lambda/${aws_lambda_function.email_sqs_lambda.function_name}"
+  kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+  retention_in_days = var.cloudwatch_log_retention
+
   tags = local.default_tags
 
   depends_on = [

@@ -5,3 +5,5 @@ notify_template_map = {
   RESET_PASSWORD_TEMPLATE_ID              = "cc30aac4-4aae-4706-b147-9df40bd2feb8"
   PASSWORD_RESET_CONFIRMATION_TEMPLATE_ID = "99a548c9-b974-4933-9451-c85b3d6b6172"
 }
+
+cloudwatch_log_retention = 5

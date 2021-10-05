@@ -181,3 +181,9 @@ variable "dns_state_role" {
 variable "shared_state_bucket" {
   type = string
 }
+
+variable "cloudwatch_log_retention" {
+  default     = 1
+  type        = number
+  description = "The number of day to retain Cloudwatch logs for"
+}

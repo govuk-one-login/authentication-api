@@ -24,6 +24,8 @@ module "openid_configuration_discovery" {
   lambda_role_arn           = local.lambda_iam_role_arn
   logging_endpoint_enabled  = var.logging_endpoint_enabled
   logging_endpoint_arn      = var.logging_endpoint_arn
+  cloudwatch_key_arn        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+  cloudwatch_log_retention  = var.cloudwatch_log_retention
   default_tags              = local.default_tags
 
   keep_lambda_warm             = var.keep_lambdas_warm

@@ -117,7 +117,10 @@ resource "aws_lambda_function" "warmer_function" {
 resource "aws_cloudwatch_log_group" "warmer_lambda_log_group" {
   count = var.keep_lambda_warm && var.warmer_handler_function_name != null ? 1 : 0
 
-  name = "/aws/lambda/${aws_lambda_function.warmer_function[0].function_name}"
+  name              = "/aws/lambda/${aws_lambda_function.warmer_function[0].function_name}"
+  kms_key_id        = var.cloudwatch_key_arn
+  retention_in_days = var.cloudwatch_log_retention
+
   tags = merge(var.default_tags, {
     lambda = "warmer"
   })

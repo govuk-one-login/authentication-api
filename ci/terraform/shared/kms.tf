@@ -132,3 +132,60 @@ resource "aws_iam_role_policy_attachment" "attach_audit_signing_key_policy_dynam
   role       = aws_iam_role.dynamo_sqs_lambda_iam_role.name
   policy_arn = aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0].arn
 }
+
+# Cloudwatch Log Encryption
+data "aws_partition" "current" {}
+
+data "aws_region" "current" {}
+
+data "aws_iam_policy_document" "cloudwatch" {
+  policy_id = "key-policy-cloudwatch"
+  statement {
+    sid = "Enable IAM User Permissions for root user"
+    actions = [
+      "kms:*",
+    ]
+    effect = "Allow"
+    principals {
+      type = "AWS"
+      identifiers = [
+        format(
+          "arn:%s:iam::%s:root",
+          data.aws_partition.current.partition,
+          data.aws_caller_identity.current.account_id
+        )
+      ]
+    }
+    resources = ["*"]
+  }
+  statement {
+    sid = "AllowCloudWatchLogs"
+    actions = [
+      "kms:Encrypt*",
+      "kms:Decrypt*",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:Describe*"
+    ]
+    effect = "Allow"
+    principals {
+      type = "Service"
+      identifiers = [
+        format(
+          "logs.%s.amazonaws.com",
+          data.aws_region.current.name
+        )
+      ]
+    }
+    resources = ["*"]
+  }
+}
+
+resource "aws_kms_key" "cloudwatch_log_encryption" {
+  description             = "KMS key for Cloudwatch logs"
+  deletion_window_in_days = 30
+  enable_key_rotation     = true
+  policy                  = data.aws_iam_policy_document.cloudwatch.json
+
+  tags = local.default_tags
+}

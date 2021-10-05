@@ -122,3 +122,13 @@ variable "lambda_warmer_zip_file" {
   description = "Location of the Lambda Warmer ZIP file"
   type        = string
 }
+
+variable "shared_state_bucket" {
+  type = string
+}
+
+variable "cloudwatch_log_retention" {
+  default     = 1
+  type        = number
+  description = "The number of day to retain Cloudwatch logs for"
+}
