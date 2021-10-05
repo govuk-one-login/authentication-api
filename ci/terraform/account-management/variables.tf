@@ -132,3 +132,9 @@ variable "cloudwatch_log_retention" {
   type        = number
   description = "The number of day to retain Cloudwatch logs for"
 }
+
+variable "lambda_min_concurrency" {
+  default     = 10
+  type        = number
+  description = "The number of lambda instance to keep 'warm'"
+}
