@@ -159,10 +159,51 @@ resource "aws_api_gateway_deployment" "deployment" {
   ]
 }
 
+resource "aws_cloudwatch_log_group" "oidc_stage_execution_logs" {
+  count = var.use_localstack ? 0 : 1
+
+  name              = "API-Gateway-Execution-Logs_${aws_api_gateway_rest_api.di_authentication_api.id}/${var.environment}"
+  retention_in_days = var.cloudwatch_log_retention
+  kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+}
+
+resource "aws_cloudwatch_log_subscription_filter" "oidc_api_execution_log_subscription" {
+  count           = var.logging_endpoint_enabled ? 1 : 0
+  name            = "${var.environment}-oidc-api-execution-log-subscription"
+  log_group_name  = aws_cloudwatch_log_group.oidc_stage_execution_logs[0].name
+  filter_pattern  = ""
+  destination_arn = var.logging_endpoint_arn
+}
+
+resource "aws_cloudwatch_log_group" "oidc_stage_access_logs" {
+  count = var.use_localstack ? 0 : 1
+
+  name              = "${var.environment}-oidc-api-access-logs"
+  retention_in_days = var.cloudwatch_log_retention
+  kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+}
+
+resource "aws_cloudwatch_log_subscription_filter" "oidc_access_log_subscription" {
+  count           = var.logging_endpoint_enabled ? 1 : 0
+  name            = "${var.environment}-oidc-api-access-logs-subscription"
+  log_group_name  = aws_cloudwatch_log_group.oidc_stage_access_logs[0].name
+  filter_pattern  = ""
+  destination_arn = var.logging_endpoint_arn
+}
+
 resource "aws_api_gateway_stage" "endpoint_stage" {
   deployment_id = aws_api_gateway_deployment.deployment.id
   rest_api_id   = aws_api_gateway_rest_api.di_authentication_api.id
   stage_name    = var.environment
+
+  dynamic "access_log_settings" {
+    for_each = var.use_localstack ? [] : aws_cloudwatch_log_group.oidc_stage_access_logs
+    iterator = log_group
+    content {
+      destination_arn = log_group.value.arn
+      format          = local.access_logging_template
+    }
+  }
 
   tags = local.default_tags
 
@@ -183,6 +224,7 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
 
 resource "aws_api_gateway_account" "api_gateway_logging_role" {
   cloudwatch_role_arn = aws_iam_role.api_gateway_logging_iam_role.arn
+
 }
 
 resource "aws_api_gateway_method_settings" "api_gateway_logging_settings" {
