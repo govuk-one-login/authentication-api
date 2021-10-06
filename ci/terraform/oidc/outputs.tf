@@ -31,3 +31,7 @@ output "frontend_api_key" {
 output "email_queue" {
   value = aws_sqs_queue.email_queue.id
 }
+
+output "analytics_cookie_domain" {
+  value = var.environment == "production" ? "${var.service_domain_name}" : "${var.environment}.${var.service_domain_name}"
+}
