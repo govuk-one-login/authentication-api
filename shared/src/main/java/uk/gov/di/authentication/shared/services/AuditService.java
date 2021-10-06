@@ -45,9 +45,10 @@ public class AuditService {
             String requestId,
             String sessionId,
             String clientId,
+            String email,
             MetadataPair... metadataPairs) {
         snsService.publishAuditMessage(
-                generateLogLine(event, requestId, sessionId, clientId, metadataPairs));
+                generateLogLine(event, requestId, sessionId, clientId, email, metadataPairs));
     }
 
     String generateLogLine(
@@ -55,6 +56,7 @@ public class AuditService {
             String requestId,
             String sessionId,
             String clientId,
+            String email,
             MetadataPair... metadataPairs) {
         var uniqueId = UUID.randomUUID();
         var timestamp = clock.instant().toString();
@@ -67,6 +69,9 @@ public class AuditService {
                         .setRequestId(Optional.ofNullable(requestId).orElse(UNKNOWN))
                         .setSessionId(Optional.ofNullable(sessionId).orElse(UNKNOWN))
                         .setClientId(Optional.ofNullable(clientId).orElse(UNKNOWN))
+                        .setUser(
+                                AuditEvent.User.newBuilder()
+                                        .setEmail(Optional.ofNullable(email).orElse(UNKNOWN)))
                         .build();
 
         var signedEventBuilder =

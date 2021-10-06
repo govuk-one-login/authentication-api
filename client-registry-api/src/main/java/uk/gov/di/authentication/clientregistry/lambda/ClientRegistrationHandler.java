@@ -62,6 +62,7 @@ public class ClientRegistrationHandler
                                     REGISTER_CLIENT_REQUEST_RECEIVED,
                                     context.getAwsRequestId(),
                                     AuditService.UNKNOWN,
+                                    AuditService.UNKNOWN,
                                     AuditService.UNKNOWN);
 
                             try {
@@ -75,6 +76,7 @@ public class ClientRegistrationHandler
                                     auditService.submitAuditEvent(
                                             REGISTER_CLIENT_REQUEST_ERROR,
                                             context.getAwsRequestId(),
+                                            AuditService.UNKNOWN,
                                             AuditService.UNKNOWN,
                                             AuditService.UNKNOWN);
 
@@ -113,6 +115,7 @@ public class ClientRegistrationHandler
                                 auditService.submitAuditEvent(
                                         REGISTER_CLIENT_REQUEST_ERROR,
                                         context.getAwsRequestId(),
+                                        AuditService.UNKNOWN,
                                         AuditService.UNKNOWN,
                                         AuditService.UNKNOWN);
 
