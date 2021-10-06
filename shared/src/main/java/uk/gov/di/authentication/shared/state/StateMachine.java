@@ -171,6 +171,7 @@ public class StateMachine<T, A, C> {
                 .when(VERIFY_EMAIL_CODE_SENT)
                 .allow(
                         on(USER_ENTERED_REGISTERED_EMAIL_ADDRESS).then(AUTHENTICATION_REQUIRED),
+                        on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(NEW),
                         on(USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE).then(EMAIL_CODE_VERIFIED),
                         on(SYSTEM_HAS_SENT_TOO_MANY_EMAIL_VERIFICATION_CODES)
                                 .then(EMAIL_MAX_CODES_SENT),
