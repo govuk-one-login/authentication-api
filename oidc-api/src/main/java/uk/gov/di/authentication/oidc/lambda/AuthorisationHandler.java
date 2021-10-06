@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthorizationService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -39,6 +40,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static uk.gov.di.authentication.oidc.entity.RequestParameters.COOKIE_CONSENT;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
@@ -214,7 +216,9 @@ public class AuthorisationHandler
                 throw new RuntimeException("Error constructing redirect URI", e);
             }
         }
-
+        redirectUri =
+                checkToShareCookieConsent(
+                        authRequestParameters, authenticationRequest, redirectUri);
         session =
                 updateSessionId(
                         session, authenticationRequest.getClientID(), clientSessionID, nextState);
@@ -266,6 +270,7 @@ public class AuthorisationHandler
                 clientSessionID);
         sessionService.save(session);
         LOGGER.info("Session saved successfully {}", session.getSessionId());
+        redirectURI = checkToShareCookieConsent(authRequest, authenticationRequest, redirectURI);
         return redirect(session, clientSessionID, redirectURI);
     }
 
@@ -337,5 +342,33 @@ public class AuthorisationHandler
         return format(
                 "%s=%s.%s; Max-Age=%d; Domain=%s; %s",
                 "gs", session.getSessionId(), clientSessionID, maxAge, domain, attributes);
+    }
+
+    private URI checkToShareCookieConsent(
+            Map<String, List<String>> authRequestParameters,
+            AuthenticationRequest authenticationRequest,
+            URI redirectUri) {
+        if (authRequestParameters.containsKey(COOKIE_CONSENT)) {
+            try {
+                if (authorizationService.isClientCookieConsentShared(
+                                authenticationRequest.getClientID())
+                        && !authRequestParameters.get(COOKIE_CONSENT).isEmpty()) {
+                    LOGGER.info(
+                            "Sharing cookie_consent for client {}",
+                            authenticationRequest.getClientID());
+                    redirectUri =
+                            new URIBuilder(redirectUri)
+                                    .addParameter(
+                                            COOKIE_CONSENT,
+                                            authRequestParameters.get(COOKIE_CONSENT).get(0))
+                                    .build();
+                }
+            } catch (ClientNotFoundException e) {
+                throw new RuntimeException("Client not found", e);
+            } catch (URISyntaxException e) {
+                throw new RuntimeException("Error constructing redirect URI", e);
+            }
+        }
+        return redirectUri;
     }
 }
