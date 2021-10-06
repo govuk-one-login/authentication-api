@@ -74,9 +74,16 @@ public class LogoutHandler
                 .orElseGet(
                         () -> {
                             LOG.info("Logout request received");
-                            Optional<String> state =
-                                    Optional.ofNullable(
-                                            input.getQueryStringParameters().get("state"));
+                            Optional<String> state;
+                            if (input.getQueryStringParameters() == null
+                                    || input.getQueryStringParameters().isEmpty()) {
+                                LOG.info("No query string parameters in request");
+                                state = Optional.empty();
+                            } else {
+                                state =
+                                        Optional.ofNullable(
+                                                input.getQueryStringParameters().get("state"));
+                            }
                             Optional<Session> sessionFromSessionCookie =
                                     sessionService.getSessionFromSessionCookie(input.getHeaders());
                             return sessionFromSessionCookie
@@ -89,18 +96,20 @@ public class LogoutHandler
             Session session, APIGatewayProxyRequestEvent input, Optional<String> state) {
         LOG.info("LogoutHandler processing request for session {}", session.getSessionId());
 
-        Map<String, String> queryStringParameters = input.getQueryStringParameters();
-        Optional<CookieHelper.SessionCookieIds> sessionCookieIds =
-                CookieHelper.parseSessionCookie(input.getHeaders());
+        CookieHelper.SessionCookieIds sessionCookieIds =
+                CookieHelper.parseSessionCookie(input.getHeaders()).get();
 
-        if (!session.getClientSessions().contains(sessionCookieIds.get().getClientSessionId())) {
+        Map<String, String> queryStringParameters = input.getQueryStringParameters();
+
+        if (!session.getClientSessions().contains(sessionCookieIds.getClientSessionId())) {
             LOG.error("Client Session ID does not exist in Session: {}", session.getSessionId());
             throw new RuntimeException(
                     format(
                             "Client Session ID does not exist in Session: %s",
                             session.getSessionId()));
         }
-        if (!queryStringParameters.containsKey("id_token_hint")
+        if (queryStringParameters.get("id_token_hint") == null
+                || !queryStringParameters.containsKey("id_token_hint")
                 || queryStringParameters.get("id_token_hint").isBlank()) {
             LOG.info("Deleting session from redis as no id token");
             sessionService.deleteSessionFromRedis(session.getSessionId());
@@ -177,6 +186,7 @@ public class LogoutHandler
     }
 
     private APIGatewayProxyResponseEvent generateDefaultLogoutResponse(Optional<String> state) {
+        LOG.info("Generating default Logout Response");
         return generateLogoutResponse(configurationService.getDefaultLogoutURI(), state);
     }
 
