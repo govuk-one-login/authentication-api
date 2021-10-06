@@ -1,6 +1,8 @@
 package uk.gov.di.authentication.shared.state;
 
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.entity.SessionAction;
+import uk.gov.di.authentication.shared.entity.SessionState;
 
 import java.util.List;
 import java.util.Optional;
@@ -10,6 +12,7 @@ import static java.util.Map.ofEntries;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static uk.gov.di.authentication.shared.entity.SessionState.MFA_SMS_CODE_SENT;
 import static uk.gov.di.authentication.shared.state.StateMachineTest.Action.CONDITIONAL_MOVE;
 import static uk.gov.di.authentication.shared.state.StateMachineTest.Action.MOVE_TO_2;
 import static uk.gov.di.authentication.shared.state.StateMachineTest.Action.MOVE_TO_3;
@@ -43,7 +46,7 @@ public class StateMachineTest {
                 }
             };
 
-    private final StateMachine<State, Action, Boolean> stateMachine =
+    private final StateMachine<State, Action, Boolean> testStateMachine =
             new StateMachine<>(
                     ofEntries(
                             entry(STATE_1, List.of(new Transition<>(MOVE_TO_2, STATE_2))),
@@ -56,22 +59,26 @@ public class StateMachineTest {
                                             new Transition<>(
                                                     CONDITIONAL_MOVE, STATE_5, new Default<>())))));
 
+    private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
+            StateMachine.userJourneyStateMachine();
+
     @Test
     public void returnsCorrectNextStateForSimpleTransition() {
-        assertThat(stateMachine.transition(STATE_1, MOVE_TO_2), equalTo(STATE_2));
-        assertThat(stateMachine.transition(STATE_2, MOVE_TO_3), equalTo(STATE_3));
+        assertThat(testStateMachine.transition(STATE_1, MOVE_TO_2), equalTo(STATE_2));
+        assertThat(testStateMachine.transition(STATE_2, MOVE_TO_3), equalTo(STATE_3));
     }
 
     @Test
     public void returnsCorrectNextStateForConditionalTransition() {
         assertThat(
-                stateMachine.transition(STATE_3, CONDITIONAL_MOVE, Boolean.TRUE), equalTo(STATE_4));
+                testStateMachine.transition(STATE_3, CONDITIONAL_MOVE, Boolean.TRUE),
+                equalTo(STATE_4));
     }
 
     @Test
     public void returnsDefaultNextStateForConditionalTransitionWhenNoOtherConditionMatches() {
         assertThat(
-                stateMachine.transition(STATE_3, CONDITIONAL_MOVE, Boolean.FALSE),
+                testStateMachine.transition(STATE_3, CONDITIONAL_MOVE, Boolean.FALSE),
                 equalTo(STATE_5));
     }
 
@@ -79,6 +86,14 @@ public class StateMachineTest {
     public void throwsInvalidStateTransitionExceptionForMissingTransition() {
         assertThrows(
                 StateMachine.InvalidStateTransitionException.class,
-                () -> stateMachine.transition(STATE_1, MOVE_TO_3));
+                () -> testStateMachine.transition(STATE_1, MOVE_TO_3));
+    }
+
+    @Test
+    public void returns_MFA_SMS_CODE_SENT_WhenUserEntersPasswordAgain() {
+        final SessionState nextState =
+                stateMachine.transition(
+                        MFA_SMS_CODE_SENT, SessionAction.USER_ENTERED_VALID_CREDENTIALS);
+        assertThat(nextState, equalTo(MFA_SMS_CODE_SENT));
     }
 }

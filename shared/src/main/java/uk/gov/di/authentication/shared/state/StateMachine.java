@@ -310,6 +310,7 @@ public class StateMachine<T, A, C> {
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(MFA_SMS_CODE_SENT)
                 .allow(
+                        on(USER_ENTERED_VALID_CREDENTIALS).then(MFA_SMS_CODE_SENT),
                         on(SYSTEM_HAS_SENT_MFA_CODE).then(MFA_SMS_CODE_SENT),
                         on(SYSTEM_HAS_SENT_TOO_MANY_MFA_CODES).then(MFA_SMS_MAX_CODES_SENT),
                         on(USER_ENTERED_VALID_MFA_CODE)
