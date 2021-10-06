@@ -113,6 +113,7 @@ startup() {
 
   run_terraform ci/terraform/shared
   run_terraform ci/terraform/oidc
+  run_terraform ci/terraform/audit-processors
   if [[ ! -z ${TF_ACCOUNT_MANAGEMENT+x} && ${TF_ACCOUNT_MANAGEMENT} -eq 1 ]]; then
     run_terraform ci/terraform/account-management
   fi
