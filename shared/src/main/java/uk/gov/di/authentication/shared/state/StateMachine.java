@@ -151,7 +151,6 @@ public class StateMachine<T, A, C> {
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(RESET_PASSWORD_LINK_SENT)
                 .allow(
-                        on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND),
                         on(SYSTEM_HAS_SENT_RESET_PASSWORD_LINK_TOO_MANY_TIMES)
                                 .then(RESET_PASSWORD_LINK_MAX_RETRIES_REACHED),
                         on(SYSTEM_HAS_SENT_RESET_PASSWORD_LINK).then(RESET_PASSWORD_LINK_SENT),
@@ -160,7 +159,8 @@ public class StateMachine<T, A, C> {
                 .when(RESET_PASSWORD_LINK_MAX_RETRIES_REACHED)
                 .allow(
                         on(SYSTEM_HAS_SENT_RESET_PASSWORD_LINK).then(RESET_PASSWORD_LINK_SENT),
-                        on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND))
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(USER_NOT_FOUND)
                 .allow(
                         on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND),
@@ -171,7 +171,6 @@ public class StateMachine<T, A, C> {
                 .when(VERIFY_EMAIL_CODE_SENT)
                 .allow(
                         on(USER_ENTERED_REGISTERED_EMAIL_ADDRESS).then(AUTHENTICATION_REQUIRED),
-                        on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(NEW),
                         on(USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE).then(EMAIL_CODE_VERIFIED),
                         on(SYSTEM_HAS_SENT_TOO_MANY_EMAIL_VERIFICATION_CODES)
                                 .then(EMAIL_MAX_CODES_SENT),
@@ -272,7 +271,10 @@ public class StateMachine<T, A, C> {
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(ACCOUNT_TEMPORARILY_LOCKED)
-                .allow(on(SYSTEM_HAS_SENT_RESET_PASSWORD_LINK).then(RESET_PASSWORD_LINK_SENT))
+                .allow(
+                        on(SYSTEM_HAS_SENT_RESET_PASSWORD_LINK).then(RESET_PASSWORD_LINK_SENT),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(AUTHENTICATION_REQUIRED)
                 .allow(
                         on(USER_ENTERED_VALID_CREDENTIALS)
@@ -426,7 +428,9 @@ public class StateMachine<T, A, C> {
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED)
                                 .then(AUTHENTICATION_REQUIRED))
                 .when(UPLIFT_REQUIRED_CM)
-                .allow(on(SYSTEM_HAS_SENT_MFA_CODE).then(MFA_SMS_CODE_SENT))
+                .allow(
+                        on(SYSTEM_HAS_SENT_MFA_CODE).then(MFA_SMS_CODE_SENT),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW))
                 .build();
     }
 
