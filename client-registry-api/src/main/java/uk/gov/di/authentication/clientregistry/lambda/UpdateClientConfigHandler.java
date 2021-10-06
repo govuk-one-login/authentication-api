@@ -64,8 +64,8 @@ public class UpdateClientConfigHandler
                             auditService.submitAuditEvent(
                                     UPDATE_CLIENT_REQUEST_RECEIVED,
                                     context.getAwsRequestId(),
-                                    "",
-                                    "");
+                                    AuditService.UNKNOWN,
+                                    AuditService.UNKNOWN);
                             try {
                                 String clientId = input.getPathParameters().get("clientId");
                                 LOGGER.info("Request received with ClientId {}", clientId);
@@ -77,7 +77,7 @@ public class UpdateClientConfigHandler
                                     auditService.submitAuditEvent(
                                             UPDATE_CLIENT_REQUEST_ERROR,
                                             context.getAwsRequestId(),
-                                            "",
+                                            AuditService.UNKNOWN,
                                             clientId);
                                     LOGGER.error("Client with ClientId {} is not valid", clientId);
                                     return generateApiGatewayProxyResponse(
@@ -93,7 +93,7 @@ public class UpdateClientConfigHandler
                                     auditService.submitAuditEvent(
                                             UPDATE_CLIENT_REQUEST_ERROR,
                                             context.getAwsRequestId(),
-                                            "",
+                                            AuditService.UNKNOWN,
                                             clientId);
                                     return generateApiGatewayProxyResponse(
                                             400, errorResponse.get().toJSONObject().toJSONString());
@@ -117,8 +117,8 @@ public class UpdateClientConfigHandler
                                 auditService.submitAuditEvent(
                                         UPDATE_CLIENT_REQUEST_ERROR,
                                         context.getAwsRequestId(),
-                                        "",
-                                        "");
+                                        AuditService.UNKNOWN,
+                                        AuditService.UNKNOWN);
                                 LOGGER.error(
                                         "Request with path parameters {} is missing request parameters",
                                         input.getPathParameters());

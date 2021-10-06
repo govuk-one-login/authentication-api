@@ -11,8 +11,12 @@ import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 public class AuditService {
+
+    @Deprecated // All audit arguments currently marked as unknown will need to be reviewed later.
+    public static final String UNKNOWN = "";
 
     private final Clock clock;
     private final SnsService snsService;
@@ -52,15 +56,17 @@ public class AuditService {
             String sessionId,
             String clientId,
             MetadataPair... metadataPairs) {
+        var uniqueId = UUID.randomUUID();
         var timestamp = clock.instant().toString();
 
         var auditEvent =
                 AuditEvent.newBuilder()
                         .setEventName(eventEnum.toString())
+                        .setEventId(uniqueId.toString())
                         .setTimestamp(timestamp)
-                        .setRequestId(Optional.ofNullable(requestId).orElse(""))
-                        .setSessionId(Optional.ofNullable(sessionId).orElse(""))
-                        .setClientId(Optional.ofNullable(clientId).orElse(""))
+                        .setRequestId(Optional.ofNullable(requestId).orElse(UNKNOWN))
+                        .setSessionId(Optional.ofNullable(sessionId).orElse(UNKNOWN))
+                        .setClientId(Optional.ofNullable(clientId).orElse(UNKNOWN))
                         .build();
 
         var signedEventBuilder =

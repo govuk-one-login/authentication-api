@@ -61,8 +61,8 @@ public class ClientRegistrationHandler
                             auditService.submitAuditEvent(
                                     REGISTER_CLIENT_REQUEST_RECEIVED,
                                     context.getAwsRequestId(),
-                                    "",
-                                    "");
+                                    AuditService.UNKNOWN,
+                                    AuditService.UNKNOWN);
 
                             try {
                                 ClientRegistrationRequest clientRegistrationRequest =
@@ -75,8 +75,8 @@ public class ClientRegistrationHandler
                                     auditService.submitAuditEvent(
                                             REGISTER_CLIENT_REQUEST_ERROR,
                                             context.getAwsRequestId(),
-                                            "",
-                                            "");
+                                            AuditService.UNKNOWN,
+                                            AuditService.UNKNOWN);
 
                                     return generateApiGatewayProxyResponse(
                                             400, errorResponse.get().toJSONObject().toJSONString());
@@ -113,8 +113,8 @@ public class ClientRegistrationHandler
                                 auditService.submitAuditEvent(
                                         REGISTER_CLIENT_REQUEST_ERROR,
                                         context.getAwsRequestId(),
-                                        "",
-                                        "");
+                                        AuditService.UNKNOWN,
+                                        AuditService.UNKNOWN);
 
                                 return generateApiGatewayProxyResponse(
                                         400,
