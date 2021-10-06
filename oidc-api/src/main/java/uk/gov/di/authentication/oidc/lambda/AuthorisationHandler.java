@@ -193,8 +193,13 @@ public class AuthorisationHandler
                         authorizationService.getEffectiveVectorOfTrust(authenticationRequest));
         String clientSessionID = clientSessionService.generateClientSession(clientSession);
         UserContext userContext = authorizationService.buildUserContext(session, clientSession);
-        SessionState nextState =
-                stateMachine.transition(session.getState(), sessionAction, userContext);
+        SessionState nextState;
+        try {
+            nextState = stateMachine.transition(session.getState(), sessionAction, userContext);
+        } catch (StateMachine.InvalidStateTransitionException e) {
+            LOGGER.error("Invalid state transition in authorize", e);
+            throw new RuntimeException(e);
+        }
         URI redirectUri;
         if (nextState == AUTHENTICATED) {
             redirectUri = configurationService.getAuthCodeURI();
