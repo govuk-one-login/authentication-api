@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCError;
@@ -16,6 +17,7 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthorizationService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -33,6 +35,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -135,6 +138,38 @@ class AuthorisationHandlerTest {
                 "gs=a-session-id.client-session-id; Max-Age=3600; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
 
         assertThat(response, hasStatus(302));
+        assertThat(uri.getQuery(), not(containsString("cookie_consent")));
+        assertEquals(loginUrl.getAuthority(), uri.getAuthority());
+        assertEquals(expectedCookieString, response.getHeaders().get("Set-Cookie"));
+        verify(sessionService).save(eq(session));
+    }
+
+    @Test
+    void shouldDoLoginAndForwardCookieConsent() throws ClientNotFoundException {
+        final URI loginUrl = URI.create("http://example.com");
+        final Session session = new Session("a-session-id");
+
+        when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
+                .thenReturn(Optional.empty());
+        when(authorizationService.isClientCookieConsentShared(eq(new ClientID("test-id"))))
+                .thenReturn(true);
+        when(configService.getLoginURI()).thenReturn(loginUrl);
+        when(configService.getDomainName()).thenReturn(domainName);
+        when(sessionService.createSession()).thenReturn(session);
+        when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
+        when(configService.getSessionCookieMaxAge()).thenReturn(3600);
+        when(clientSessionService.generateClientSession(any(ClientSession.class)))
+                .thenReturn("client-session-id");
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        APIGatewayProxyResponseEvent response =
+                makeHandlerRequest(withCookieConsentRequestEvent("accept"));
+        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+        final String expectedCookieString =
+                "gs=a-session-id.client-session-id; Max-Age=3600; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
+
+        assertThat(response, hasStatus(302));
+        assertThat(uri.getQuery(), containsString("cookie_consent=accept"));
         assertEquals(loginUrl.getAuthority(), uri.getAuthority());
         assertEquals(expectedCookieString, response.getHeaders().get("Set-Cookie"));
         verify(sessionService).save(eq(session));
@@ -519,6 +554,19 @@ class AuthorisationHandlerTest {
                         "response_type", "code",
                         "state", "some-state",
                         "prompt", prompt));
+        return event;
+    }
+
+    private APIGatewayProxyRequestEvent withCookieConsentRequestEvent(String cookieConsent) {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setQueryStringParameters(
+                Map.of(
+                        "client_id", "test-id",
+                        "redirect_uri", "http://localhost:8080",
+                        "scope", "email,openid,profile",
+                        "response_type", "code",
+                        "state", "some-state",
+                        "cookie_consent", cookieConsent));
         return event;
     }
 
