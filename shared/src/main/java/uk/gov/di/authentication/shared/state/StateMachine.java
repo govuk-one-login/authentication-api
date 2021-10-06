@@ -228,6 +228,8 @@ public class StateMachine<T, A, C> {
                                 .then(CONSENT_REQUIRED)
                                 .ifCondition(userHasNotGivenConsent()),
                         on(USER_ENTERED_A_NEW_PHONE_NUMBER).then(VERIFY_PHONE_NUMBER_CODE_SENT),
+                        on(SYSTEM_HAS_SENT_PHONE_VERIFICATION_CODE)
+                                .then(VERIFY_PHONE_NUMBER_CODE_SENT),
                         on(USER_ENTERED_VALID_PHONE_VERIFICATION_CODE)
                                 .then(PHONE_NUMBER_CODE_VERIFIED),
                         on(SYSTEM_HAS_SENT_TOO_MANY_PHONE_VERIFICATION_CODES)

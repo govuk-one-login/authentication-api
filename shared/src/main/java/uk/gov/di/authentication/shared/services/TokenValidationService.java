@@ -47,15 +47,9 @@ public class TokenValidationService {
     public boolean validateIdTokenSignature(String idTokenHint) {
         try {
             LOGGER.info("Validating ID token signature");
-            LOGGER.info("IDTokenHint: " + idTokenHint);
-            LOGGER.info("TokenSigningKeyID: " + configService.getTokenSigningKeyAlias());
             SignedJWT idToken = SignedJWT.parse(idTokenHint);
-            LOGGER.info("ClientID:" + idToken.getJWTClaimsSet().getAudience().get(0));
-            LOGGER.info("Issuer: " + configService.getBaseURL().get());
             JWK publicJwk = getPublicJwk();
-            LOGGER.info("PublicJWK: " + publicJwk.toString());
             JWKSet jwkSet = new JWKSet(publicJwk);
-            LOGGER.info("JWKSET: " + jwkSet);
             IDTokenValidator validator =
                     new IDTokenValidator(
                             new Issuer(configService.getBaseURL().get()),
@@ -69,6 +63,7 @@ public class TokenValidationService {
             LOGGER.error("Unable to validate Signature of ID token", e);
             return false;
         }
+        LOGGER.info("Successfully validated ID token signature");
         return true;
     }
 
