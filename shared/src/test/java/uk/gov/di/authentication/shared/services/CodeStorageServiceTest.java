@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -27,6 +28,8 @@ class CodeStorageServiceTest {
             new CodeStorageService(redisConnectionService);
     private static final String REDIS_EMAIL_KEY =
             "email-code:f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a";
+    private static final String REDIS_INCORRECT_PASSWORDS_KEY =
+            "multiple-incorrect-passwords:f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a";
     private static final String REDIS_PHONE_NUMBER_KEY =
             "phone-number-code:f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a";
     private static final String REDIS_MFA_KEY =
@@ -170,5 +173,44 @@ class CodeStorageServiceTest {
 
         verify(redisConnectionService)
                 .saveWithExpiry(authorizationCode, clientSessionId, AUTH_CODE_EXPIRY_TIME);
+    }
+
+    @Test
+    public void shouldReturn0WhenThereHasBeenNoInvalidPasswordAttempts() {
+        when(redisConnectionService.getValue(REDIS_INCORRECT_PASSWORDS_KEY)).thenReturn(null);
+        assertThat(codeStorageService.getIncorrectPasswordCount(TEST_EMAIL), equalTo(0));
+    }
+
+    @Test
+    public void shouldReturnNumberOfInvalidPasswordAttempts() {
+        when(redisConnectionService.getValue(REDIS_INCORRECT_PASSWORDS_KEY))
+                .thenReturn(String.valueOf(4));
+        assertThat(codeStorageService.getIncorrectPasswordCount(TEST_EMAIL), equalTo(4));
+    }
+
+    @Test
+    public void shouldCreateCountInRedisWhenThereHasBeenNoPreviousIncorrectPasswordAttempt() {
+        when(redisConnectionService.getValue(REDIS_INCORRECT_PASSWORDS_KEY)).thenReturn(null);
+        codeStorageService.increaseIncorrectPasswordCount(TEST_EMAIL);
+
+        verify(redisConnectionService)
+                .saveWithExpiry(REDIS_INCORRECT_PASSWORDS_KEY, String.valueOf(1), CODE_EXPIRY_TIME);
+    }
+
+    @Test
+    public void shouldIncrementCountWhenThereHasBeenPreviousIncorrectPasswordAttempts() {
+        when(redisConnectionService.getValue(REDIS_INCORRECT_PASSWORDS_KEY))
+                .thenReturn(String.valueOf(3));
+        codeStorageService.increaseIncorrectPasswordCount(TEST_EMAIL);
+
+        verify(redisConnectionService)
+                .saveWithExpiry(REDIS_INCORRECT_PASSWORDS_KEY, String.valueOf(4), CODE_EXPIRY_TIME);
+    }
+
+    @Test
+    public void shouldCallRedisToDeleteIncorrectPasswordCount() {
+        codeStorageService.deleteIncorrectPasswordCount(TEST_EMAIL);
+
+        verify(redisConnectionService).deleteValue(REDIS_INCORRECT_PASSWORDS_KEY);
     }
 }
