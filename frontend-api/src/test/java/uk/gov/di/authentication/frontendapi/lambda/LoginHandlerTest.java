@@ -41,6 +41,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.SessionState.ACCOUNT_TEMPORARILY_LOCKED;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.LOGGED_IN;
+import static uk.gov.di.authentication.shared.entity.SessionState.MFA_SMS_CODE_SENT;
 import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -95,6 +96,31 @@ class LoginHandlerTest {
         LoginResponse response =
                 new ObjectMapper().readValue(result.getBody(), LoginResponse.class);
         assertThat(response.getSessionState(), equalTo(LOGGED_IN));
+        assertThat(
+                response.getRedactedPhoneNumber(),
+                equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+    }
+
+    @Test
+    public void shouldReturn200IfPasswordIsEnteredAgain() throws JsonProcessingException {
+        when(authenticationService.userExists(EMAIL)).thenReturn(true);
+        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
+        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
+
+        session.setState(MFA_SMS_CODE_SENT);
+
+        usingValidSession();
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+
+        LoginResponse response =
+                new ObjectMapper().readValue(result.getBody(), LoginResponse.class);
+        assertThat(response.getSessionState(), equalTo(MFA_SMS_CODE_SENT));
         assertThat(
                 response.getRedactedPhoneNumber(),
                 equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
