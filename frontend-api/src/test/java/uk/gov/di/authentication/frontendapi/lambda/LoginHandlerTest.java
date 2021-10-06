@@ -66,6 +66,7 @@ class LoginHandlerTest {
 
     @BeforeEach
     public void setUp() {
+        when(configurationService.getMaxPasswordRetries()).thenReturn(5);
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(clientSession));
         handler =
@@ -127,12 +128,11 @@ class LoginHandlerTest {
     }
 
     @Test
-    public void stateChangesToAccountLockedAfter5Attempts() throws JsonProcessingException {
-        when(configurationService.getMaxPasswordRetries()).thenReturn(5);
+    public void shouldChangeStateToAccountTemporarilyLockedAfter5UnsuccessfulAttempts()
+            throws JsonProcessingException {
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
-        when(codeStorageService.hasEnteredPasswordIncorrectBefore(EMAIL)).thenReturn(true);
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(5);
 
         usingValidSession();
@@ -149,12 +149,31 @@ class LoginHandlerTest {
     }
 
     @Test
-    public void incorrectPasswordCountRemovesUponLogin() throws JsonProcessingException {
-        when(configurationService.getMaxPasswordRetries()).thenReturn(5);
+    public void shouldKeepUserLockedWhenTheyEnterSuccessfulLoginRequestInNewSession()
+            throws JsonProcessingException {
+        when(authenticationService.userExists(EMAIL)).thenReturn(true);
+        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
+        when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(5);
+
+        usingValidSession();
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+
+        LoginResponse response =
+                new ObjectMapper().readValue(result.getBody(), LoginResponse.class);
+        assertThat(response.getSessionState(), equalTo(ACCOUNT_TEMPORARILY_LOCKED));
+    }
+
+    @Test
+    public void shouldRemoveIncorrectPasswordCountRemovesUponSuccessfulLogin()
+            throws JsonProcessingException {
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
-        when(codeStorageService.hasEnteredPasswordIncorrectBefore(EMAIL)).thenReturn(true);
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(4);
 
         usingValidSession();
@@ -164,7 +183,6 @@ class LoginHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
-        when(codeStorageService.hasEnteredPasswordIncorrectBefore(EMAIL)).thenReturn(true);
         when(clientSession.getAuthRequestParams())
                 .thenReturn(generateAuthRequest(Optional.empty()).toParameters());
 

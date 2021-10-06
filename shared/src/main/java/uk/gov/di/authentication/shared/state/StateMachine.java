@@ -274,6 +274,8 @@ public class StateMachine<T, A, C> {
                 .when(ACCOUNT_TEMPORARILY_LOCKED)
                 .allow(
                         on(SYSTEM_HAS_SENT_RESET_PASSWORD_LINK).then(RESET_PASSWORD_LINK_SENT),
+                        on(USER_ENTERED_INVALID_PASSWORD_TOO_MANY_TIMES)
+                                .then(ACCOUNT_TEMPORARILY_LOCKED),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(AUTHENTICATION_REQUIRED)

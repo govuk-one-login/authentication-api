@@ -72,7 +72,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             LoginRequest request,
             UserContext userContext) {
         LOGGER.info("Request received to the LoginHandler");
-
         try {
             LoginRequest loginRequest = objectMapper.readValue(input.getBody(), LoginRequest.class);
             boolean userHasAccount = authenticationService.userExists(loginRequest.getEmail());
@@ -83,10 +82,22 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             }
 
             SessionState currentState = userContext.getSession().getState();
-            boolean keyExists =
-                    codeStorageService.hasEnteredPasswordIncorrectBefore(loginRequest.getEmail());
+            int incorrectPasswordCount =
+                    codeStorageService.getIncorrectPasswordCount(loginRequest.getEmail());
 
-            if (!keyExists && currentState.equals(ACCOUNT_TEMPORARILY_LOCKED)) {
+            if (incorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
+                LOGGER.info("User has exceeded max password retries");
+                var nextState =
+                        stateMachine.transition(
+                                userContext.getSession().getState(),
+                                USER_ENTERED_INVALID_PASSWORD_TOO_MANY_TIMES,
+                                userContext);
+                sessionService.save(userContext.getSession().setState(nextState));
+                return generateApiGatewayProxyResponse(
+                        200, new LoginResponse(null, userContext.getSession().getState()));
+            }
+
+            if (incorrectPasswordCount == 0 && currentState.equals(ACCOUNT_TEMPORARILY_LOCKED)) {
                 var nextState =
                         stateMachine.transition(
                                 userContext.getSession().getState(),
@@ -99,42 +110,13 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     authenticationService.login(
                             loginRequest.getEmail(), loginRequest.getPassword());
 
-            boolean hasEnteredPasswordIncorrectBefore =
-                    codeStorageService.hasEnteredPasswordIncorrectBefore(loginRequest.getEmail());
-
             if (!hasValidCredentials) {
-                if (hasEnteredPasswordIncorrectBefore) {
-                    int count =
-                            codeStorageService.getIncorrectPasswordCount(loginRequest.getEmail());
-
-                    if (count >= configurationService.getMaxPasswordRetries()) {
-                        if (!userContext
-                                .getSession()
-                                .getState()
-                                .equals(ACCOUNT_TEMPORARILY_LOCKED)) {
-                            var nextState =
-                                    stateMachine.transition(
-                                            userContext.getSession().getState(),
-                                            USER_ENTERED_INVALID_PASSWORD_TOO_MANY_TIMES,
-                                            userContext);
-                            sessionService.save(userContext.getSession().setState(nextState));
-                        }
-
-                        return generateApiGatewayProxyResponse(
-                                200, new LoginResponse(null, userContext.getSession().getState()));
-                    } else {
-                        codeStorageService.increaseIncorrectPasswordCount(
-                                loginRequest.getEmail(), count);
-                    }
-                } else {
-                    codeStorageService.createIncorrectPasswordCount(loginRequest.getEmail());
-                }
-
+                codeStorageService.increaseIncorrectPasswordCount(loginRequest.getEmail());
                 LOGGER.error("Invalid login credentials entered");
                 return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
             }
 
-            if (hasEnteredPasswordIncorrectBefore) {
+            if (incorrectPasswordCount != 0) {
                 codeStorageService.deleteIncorrectPasswordCount(loginRequest.getEmail());
             }
 
