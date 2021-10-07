@@ -20,10 +20,12 @@ ext {
         glassfish_version: "3.0.3",
     ]
 
-    fakeAwsCredentialsEnvironment = [
+    terraformEnvironment = project.properties["terraformEnvironment"] ?: "localstack"
+
+    awsCredentialsEnvironment = terraformEnvironment == "localstack" ? [
         AWS_ACCESS_KEY_ID: "mock-access-key",
         AWS_SECRET_ACCESS_KEY: "mock-secret-key",
-    ]
+    ] : [:]
 }
 
 subprojects {
@@ -149,11 +151,8 @@ abstract class Terraform extends DefaultTask {
     @InputDirectory
     abstract DirectoryProperty getTerraformDirectory()
 
-    @InputFile
-    abstract RegularFileProperty getBackendConfiguration()
-
-    @InputFile
-    abstract RegularFileProperty getVariablesFile()
+    @Input
+    abstract Property<String> getEnvironmentName()
 
     @Internal
     Object terraformOutputs
@@ -161,7 +160,7 @@ abstract class Terraform extends DefaultTask {
     @TaskAction
     void apply() {
         def tfEnvironment = [
-            "TF_DATA_DIR": "${project.buildDir}/terraform/${terraformDirectory.get().asFile.name}",
+            "TF_DATA_DIR": "${project.buildDir}/terraform/${environmentName.get()}-${terraformDirectory.get().asFile.name}",
             "TF_IN_AUTOMATION": "1"
         ] + environmentVars.get()
 
@@ -170,7 +169,7 @@ abstract class Terraform extends DefaultTask {
             executable "terraform"
             workingDir terraformDirectory.asFile
             environment tfEnvironment
-            args "init", "-backend-config=${backendConfiguration.getAsFile().get().name}"
+            args "init", "-backend-config=${environmentName.get()}.hcl"
         }
 
         logger.lifecycle("Applying ${terraformDirectory.getAsFile().get().name} Terraform (run gradle with --info to see output)...")
@@ -179,7 +178,7 @@ abstract class Terraform extends DefaultTask {
             executable "terraform"
             workingDir terraformDirectory.asFile
             environment tfEnvironment
-            args "apply", "-auto-approve", "-var-file=${variablesFile.getAsFile().get().name}"
+            args "apply", "-auto-approve", "-var-file=${environmentName.get()}.tfvars"
         }
 
         logger.lifecycle("Getting Terraform Outputs!")
@@ -203,16 +202,18 @@ abstract class Terraform extends DefaultTask {
 
 task sharedTerraform (type: Terraform) {
     terraformDirectory = layout.projectDirectory.dir("ci/terraform/shared")
-    variablesFile = layout.projectDirectory.file("ci/terraform/shared/localstack.tfvars")
-    backendConfiguration = layout.projectDirectory.file("ci/terraform/shared/localstack.hcl")
-    environmentVars = fakeAwsCredentialsEnvironment
+    environmentName = terraformEnvironment
+    environmentVars = awsCredentialsEnvironment
+
+    if (terraformEnvironment == "localstack") {
+        dependsOn "composeUp"
+    }
 }
 
 task oidcTerraform (type: Terraform) {
     terraformDirectory = layout.projectDirectory.dir("ci/terraform/oidc")
-    variablesFile = layout.projectDirectory.file("ci/terraform/oidc/localstack.tfvars")
-    backendConfiguration = layout.projectDirectory.file("ci/terraform/oidc/localstack.hcl")
-    environmentVars = fakeAwsCredentialsEnvironment
+    environmentName = project.properties["terraformEnvironment"] ?: "localstack"
+    environmentVars = awsCredentialsEnvironment
 
     doLast {
         def json = outputs()
@@ -227,11 +228,16 @@ task oidcTerraform (type: Terraform) {
     }
 }
 
+task auditTerraform (type: Terraform) {
+    terraformDirectory = layout.projectDirectory.dir("ci/terraform/audit-processors")
+    environmentName = project.properties["terraformEnvironment"] ?: "localstack"
+    environmentVars = awsCredentialsEnvironment
+}
+
 task acctMgmtTerraform (type: Terraform) {
     terraformDirectory = layout.projectDirectory.dir("ci/terraform/account-management")
-    variablesFile = layout.projectDirectory.file("ci/terraform/oidc/localstack.tfvars")
-    backendConfiguration = layout.projectDirectory.file("ci/terraform/oidc/localstack.hcl")
-    environmentVars = fakeAwsCredentialsEnvironment
+    environmentName = project.properties["terraformEnvironment"] ?: "localstack"
+    environmentVars = awsCredentialsEnvironment
 
     doLast {
         def json = outputs()
@@ -242,6 +248,6 @@ task acctMgmtTerraform (type: Terraform) {
     }
 }
 
-sharedTerraform.dependsOn "composeUp"
 oidcTerraform.dependsOn "sharedTerraform"
+auditTerraform.dependsOn "oidcTerraform"
 acctMgmtTerraform.dependsOn "oidcTerraform"

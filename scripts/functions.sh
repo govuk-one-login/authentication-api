@@ -28,25 +28,6 @@ function funky_started() {
 
 startup() {
   printf "\nStarting di-authentication-api...\n"
-#  if [[ ! -z ${SANDPIT+x} && ${SANDPIT} -eq 1 ]]; then
-#    printf "\nRunning against sandpit, AWS credentials are required.\n"
-#    export TERRAFORM_BACKEND_CONFIG=sandpit.hcl
-#    export TERRAFORM_VAR_FILE=sandpit.tfvars
-#  else
-#    printf "\nRunning against localstack.  Starting Docker services...\n"
-#    startup_docker aws redis dynamodb
-#    export AWS_ACCESS_KEY_ID="mock-access-key"
-#    export AWS_SECRET_ACCESS_KEY="mock-secret-key"
-#    export TERRAFORM_BACKEND_CONFIG=localstack.hcl
-#    export TERRAFORM_VAR_FILE=localstack.tfvars
-#  fi
-#
-#  run_terraform ci/terraform/shared
-#  run_terraform ci/terraform/oidc
-#  run_terraform ci/terraform/audit-processors
-#  if [[ ! -z ${TF_ACCOUNT_MANAGEMENT+x} && ${TF_ACCOUNT_MANAGEMENT} -eq 1 ]]; then
-#    run_terraform ci/terraform/account-management
-#  fi
 
   ./gradlew clean build :account-management-integration-tests:terraformApply -x test
   if [[ -z ${IN_GITHUB_ACTIONS+x} ||  ${IN_GITHUB_ACTIONS} -eq 0 ]]; then
@@ -58,11 +39,19 @@ startup() {
 
 run-integration-tests() {
   run_integration_tests_start_seconds=$SECONDS
+  TEST_ENVIRONMENT=localstack
+  if [[ ! -z ${SANDPIT+x} && ${SANDPIT} -eq 1 ]]; then
+    printf "\nRunning against sandpit, AWS credentials are required.\n"
+    TEST_ENVIRONMENT=sandpit
+  else
+    printf "\nRunning against localstack.  Starting Docker services...\n"
+  fi
+
   if [[ -z ${IN_GITHUB_ACTIONS+x} ||  ${IN_GITHUB_ACTIONS} -eq 0 ]]; then
-    ./gradlew --no-daemon integration-tests:test
+    ./gradlew --no-daemon integration-tests:test -PterraformEnvironment=${TEST_ENVIRONMENT}
     EXIT_CODE=$?
   else
-    ./gradlew integration-tests:test
+    ./gradlew integration-tests:test -PterraformEnvironment=${TEST_ENVIRONMENT}
     EXIT_CODE=$?
   fi
   record_timings "run-integration-tests" $run_integration_tests_start_seconds $SECONDS false
@@ -71,11 +60,18 @@ run-integration-tests() {
 
 run-account-management-integration-tests() {
   run_am_integration_tests_start_seconds=$SECONDS
+  if [[ ! -z ${SANDPIT+x} && ${SANDPIT} -eq 1 ]]; then
+    printf "\nRunning against sandpit, AWS credentials are required.\n"
+    TEST_ENVIRONMENT=sandpit
+  else
+    printf "\nRunning against localstack.  Starting Docker services...\n"
+  fi
+
   if [[ -z ${IN_GITHUB_ACTIONS+x} ||  ${IN_GITHUB_ACTIONS} -eq 0 ]]; then
-    ./gradlew --no-daemon account-management-integration-tests:test
+    ./gradlew --no-daemon account-management-integration-tests:test -PterraformEnvironment=${TEST_ENVIRONMENT}
     EXIT_CODE=$?
   else
-    ./gradlew account-management-integration-tests:test
+    ./gradlew account-management-integration-tests:test -PterraformEnvironment=${TEST_ENVIRONMENT}
     EXIT_CODE=$?
   fi
   record_timings "run-account-management-integration-tests" $run_am_integration_tests_start_seconds $SECONDS false

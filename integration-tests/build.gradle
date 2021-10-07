@@ -42,5 +42,5 @@ test {
     environment "LOGIN_URI", "http://localhost:3000/"
     environment "RESET_PASSWORD_URL", "http://localhost:3000/reset-password?code="
 
-    dependsOn ":oidcTerraform"
+    dependsOn ":auditTerraform"
 }
