@@ -12,6 +12,7 @@ import org.apache.commons.validator.routines.UrlValidator;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -58,12 +59,14 @@ public class ClientRegistrationHandler
         return isWarming(input)
                 .orElseGet(
                         () -> {
+                            String ipAddress = IpAddressHelper.extractIpAddress(input);
                             auditService.submitAuditEvent(
                                     REGISTER_CLIENT_REQUEST_RECEIVED,
                                     context.getAwsRequestId(),
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN);
+                                    AuditService.UNKNOWN,
+                                    ipAddress);
 
                             try {
                                 ClientRegistrationRequest clientRegistrationRequest =
@@ -78,7 +81,8 @@ public class ClientRegistrationHandler
                                             context.getAwsRequestId(),
                                             AuditService.UNKNOWN,
                                             AuditService.UNKNOWN,
-                                            AuditService.UNKNOWN);
+                                            AuditService.UNKNOWN,
+                                            ipAddress);
 
                                     return generateApiGatewayProxyResponse(
                                             400, errorResponse.get().toJSONObject().toJSONString());
@@ -117,7 +121,8 @@ public class ClientRegistrationHandler
                                         context.getAwsRequestId(),
                                         AuditService.UNKNOWN,
                                         AuditService.UNKNOWN,
-                                        AuditService.UNKNOWN);
+                                        AuditService.UNKNOWN,
+                                        ipAddress);
 
                                 return generateApiGatewayProxyResponse(
                                         400,

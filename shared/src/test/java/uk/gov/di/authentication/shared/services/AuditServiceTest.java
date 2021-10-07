@@ -16,6 +16,7 @@ import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.Base64;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
@@ -27,6 +28,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasClientId;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasEmail;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasEventName;
+import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasIpAddress;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasRequestId;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasSessionId;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasTimestamp;
@@ -65,7 +67,7 @@ class AuditServiceTest {
         var auditService = new AuditService(FIXED_CLOCK, snsService, kmsConnectionService);
 
         auditService.submitAuditEvent(
-                TEST_EVENT_ONE, "request-id", "session-id", "client-id", "email");
+                TEST_EVENT_ONE, "request-id", "session-id", "client-id", "email", "ip-address");
 
         verify(snsService).publishAuditMessage(messageCaptor.capture());
         var serialisedAuditMessage = messageCaptor.getValue();
@@ -76,6 +78,7 @@ class AuditServiceTest {
         assertThat(serialisedAuditMessage, hasSessionId("session-id"));
         assertThat(serialisedAuditMessage, hasClientId("client-id"));
         assertThat(serialisedAuditMessage, hasEmail("email"));
+        assertThat(serialisedAuditMessage, hasIpAddress("ip-address"));
     }
 
     @Test
@@ -85,12 +88,13 @@ class AuditServiceTest {
         var signingRequestCaptor = ArgumentCaptor.forClass(SignRequest.class);
 
         auditService.submitAuditEvent(
-                TEST_EVENT_ONE, "request-id", "session-id", "client-id", "email");
+                TEST_EVENT_ONE, "request-id", "session-id", "client-id", "email", "ip-address");
 
         verify(kmsConnectionService).sign(signingRequestCaptor.capture());
         verify(snsService).publishAuditMessage(messageCaptor.capture());
 
-        SignedAuditEvent event = SignedAuditEvent.parseFrom(messageCaptor.getValue().getBytes());
+        SignedAuditEvent event =
+                SignedAuditEvent.parseFrom(Base64.getDecoder().decode(messageCaptor.getValue()));
 
         assertThat(
                 event.getPayload().toByteArray(),
@@ -108,6 +112,7 @@ class AuditServiceTest {
                 "session-id",
                 "client-id",
                 "email",
+                "ip-address",
                 pair("key", "value"),
                 pair("key2", "value2"));
 

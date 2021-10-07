@@ -9,6 +9,7 @@ import uk.gov.di.authentication.shared.domain.AuditableEvent;
 
 import java.nio.ByteBuffer;
 import java.time.Clock;
+import java.util.Base64;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -46,9 +47,11 @@ public class AuditService {
             String sessionId,
             String clientId,
             String email,
+            String ipAddress,
             MetadataPair... metadataPairs) {
         snsService.publishAuditMessage(
-                generateLogLine(event, requestId, sessionId, clientId, email, metadataPairs));
+                generateLogLine(
+                        event, requestId, sessionId, clientId, email, ipAddress, metadataPairs));
     }
 
     String generateLogLine(
@@ -57,6 +60,7 @@ public class AuditService {
             String sessionId,
             String clientId,
             String email,
+            String ipAddress,
             MetadataPair... metadataPairs) {
         var uniqueId = UUID.randomUUID();
         var timestamp = clock.instant().toString();
@@ -71,7 +75,10 @@ public class AuditService {
                         .setClientId(Optional.ofNullable(clientId).orElse(UNKNOWN))
                         .setUser(
                                 AuditEvent.User.newBuilder()
-                                        .setEmail(Optional.ofNullable(email).orElse(UNKNOWN)))
+                                        .setEmail(Optional.ofNullable(email).orElse(UNKNOWN))
+                                        .setIpAddress(
+                                                Optional.ofNullable(ipAddress).orElse(UNKNOWN))
+                                        .build())
                         .build();
 
         var signedEventBuilder =
@@ -79,7 +86,7 @@ public class AuditService {
                         .setSignature(ByteString.copyFrom(signPayload(auditEvent.toByteArray())))
                         .setPayload(auditEvent.toByteString());
 
-        return new String(signedEventBuilder.build().toByteArray());
+        return Base64.getEncoder().encodeToString(signedEventBuilder.build().toByteArray());
     }
 
     private byte[] signPayload(byte[] payload) {

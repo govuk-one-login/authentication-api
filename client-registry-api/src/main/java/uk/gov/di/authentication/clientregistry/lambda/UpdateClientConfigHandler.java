@@ -14,6 +14,7 @@ import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse
 import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -61,12 +62,14 @@ public class UpdateClientConfigHandler
         return isWarming(input)
                 .orElseGet(
                         () -> {
+                            String ipAddress = IpAddressHelper.extractIpAddress(input);
                             auditService.submitAuditEvent(
                                     UPDATE_CLIENT_REQUEST_RECEIVED,
                                     context.getAwsRequestId(),
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN);
+                                    AuditService.UNKNOWN,
+                                    ipAddress);
                             try {
                                 String clientId = input.getPathParameters().get("clientId");
                                 LOGGER.info("Request received with ClientId {}", clientId);
@@ -80,7 +83,8 @@ public class UpdateClientConfigHandler
                                             context.getAwsRequestId(),
                                             AuditService.UNKNOWN,
                                             clientId,
-                                            AuditService.UNKNOWN);
+                                            AuditService.UNKNOWN,
+                                            ipAddress);
                                     LOGGER.error("Client with ClientId {} is not valid", clientId);
                                     return generateApiGatewayProxyResponse(
                                             400,
@@ -97,7 +101,8 @@ public class UpdateClientConfigHandler
                                             context.getAwsRequestId(),
                                             AuditService.UNKNOWN,
                                             clientId,
-                                            AuditService.UNKNOWN);
+                                            AuditService.UNKNOWN,
+                                            ipAddress);
                                     return generateApiGatewayProxyResponse(
                                             400, errorResponse.get().toJSONObject().toJSONString());
                                 }
@@ -122,7 +127,8 @@ public class UpdateClientConfigHandler
                                         context.getAwsRequestId(),
                                         AuditService.UNKNOWN,
                                         AuditService.UNKNOWN,
-                                        AuditService.UNKNOWN);
+                                        AuditService.UNKNOWN,
+                                        ipAddress);
                                 LOGGER.error(
                                         "Request with path parameters {} is missing request parameters",
                                         input.getPathParameters());
