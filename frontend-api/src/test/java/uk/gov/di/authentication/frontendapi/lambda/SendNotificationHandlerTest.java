@@ -5,12 +5,21 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.authentication.frontendapi.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
@@ -26,6 +35,8 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.ValidationService;
 
+import java.net.URI;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -60,6 +71,9 @@ class SendNotificationHandlerTest {
     private static final String TEST_PHONE_NUMBER = "01234567891";
     private static final String TEST_SIX_DIGIT_CODE = "123456";
     private static final long CODE_EXPIRY_TIME = 900;
+    private static final String CLIENT_ID = "client-id";
+    private static final String TEST_CLIENT_ID = "test-client-id";
+    private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private final ValidationService validationService = mock(ValidationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
@@ -69,6 +83,17 @@ class SendNotificationHandlerTest {
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+    private final ClientSession clientSession = mock(ClientSession.class);
+    private final ClientRegistry clientRegistry =
+            new ClientRegistry().setTestClient(false).setClientID(CLIENT_ID);
+    private final ClientRegistry testClientRegistry =
+            new ClientRegistry()
+                    .setTestClient(true)
+                    .setClientID(TEST_CLIENT_ID)
+                    .setTestClientEmailAllowlist(
+                            List.of(
+                                    "joe.bloggs@digital.cabinet-office.gov.uk",
+                                    "jb2@digital.cabinet-office.gov.uk"));
 
     private final Context context = mock(Context.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -95,6 +120,10 @@ class SendNotificationHandlerTest {
         when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
         when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
+        when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
+        when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
+        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(clientSession));
     }
 
     @Test
@@ -106,6 +135,7 @@ class SendNotificationHandlerTest {
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         usingValidSession();
+        usingValidClientSession(CLIENT_ID);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(
@@ -119,6 +149,39 @@ class SendNotificationHandlerTest {
         assertThat(VERIFY_EMAIL_CODE_SENT, equalTo(response.getSessionState()));
 
         verify(awsSqsClient).send(serialisedRequest);
+        verify(codeStorageService)
+                .saveOtpCode(
+                        TEST_EMAIL_ADDRESS, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
+        verify(sessionService).save(argThat(this::isSessionWithEmailSent));
+    }
+
+    @Test
+    void shouldReturn200AndNotPutMessageOnQueueForAValidRequestUsingTestClientWithAllowedEmail()
+            throws JsonProcessingException {
+        when(configurationService.isTestClientsEnabled()).thenReturn(true);
+        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
+                .thenReturn(Optional.empty());
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_SIX_DIGIT_CODE);
+        ObjectMapper objectMapper = new ObjectMapper();
+        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
+
+        usingValidSession();
+        usingValidClientSession(TEST_CLIENT_ID);
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                        TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(200, result.getStatusCode());
+        BaseAPIResponse response =
+                new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
+        assertThat(VERIFY_EMAIL_CODE_SENT, equalTo(response.getSessionState()));
+
+        verify(awsSqsClient, never()).send(serialisedRequest);
         verify(codeStorageService)
                 .saveOtpCode(
                         TEST_EMAIL_ADDRESS, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
@@ -189,6 +252,7 @@ class SendNotificationHandlerTest {
         Mockito.doThrow(SdkClientException.class).when(awsSqsClient).send(eq(serialisedRequest));
 
         usingValidSession();
+        usingValidClientSession(CLIENT_ID);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(
@@ -227,6 +291,7 @@ class SendNotificationHandlerTest {
     public void shouldReturn200WhenVerifyTypeIsVerifyPhoneNumber() throws JsonProcessingException {
         session.setState(SessionState.ADDED_UNVERIFIED_PHONE_NUMBER);
         usingValidSession();
+        usingValidClientSession(CLIENT_ID);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(
@@ -282,6 +347,7 @@ class SendNotificationHandlerTest {
                 .thenReturn(Optional.empty());
 
         usingValidSession();
+        usingValidClientSession(CLIENT_ID);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(
@@ -431,6 +497,26 @@ class SendNotificationHandlerTest {
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
+    }
+
+    private void usingValidClientSession(String clientId) {
+        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(clientSession));
+        when(clientSession.getAuthRequestParams())
+                .thenReturn(withAuthenticationRequest(clientId).toParameters());
+    }
+
+    private AuthenticationRequest withAuthenticationRequest(String clientId) {
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        return new AuthenticationRequest.Builder(
+                        new ResponseType(ResponseType.Value.CODE),
+                        scope,
+                        new ClientID(clientId),
+                        REDIRECT_URI)
+                .state(new State())
+                .nonce(new Nonce())
+                .build();
     }
 
     private boolean isSessionWithEmailSent(Session session) {

@@ -5,10 +5,18 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -25,6 +33,8 @@ import uk.gov.di.authentication.shared.services.ValidationService;
 import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.net.URI;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -72,6 +82,13 @@ class VerifyCodeRequestHandlerTest {
 
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final String CODE = "123456";
+    private static final String CLIENT_ID = "client-id";
+    private static final String TEST_CLIENT_ID = "test-client-id";
+    private static final String TEST_CLIENT_CODE = "654321";
+    private static final String TEST_CLIENT_EMAIL =
+            "testclient.user1@digital.cabinet-office.gov.uk";
+
+    private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private final Context context = mock(Context.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
@@ -80,14 +97,26 @@ class VerifyCodeRequestHandlerTest {
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             mock(StateMachine.class);
     private final UserProfile userProfile = mock(UserProfile.class);
-    private final ClientSession clientSession = mock(ClientSession.class);
     private final Session session =
             new Session("session-id")
                     .setEmailAddress(TEST_EMAIL_ADDRESS)
                     .setState(VERIFY_EMAIL_CODE_SENT);
+    private final Session testClientSession =
+            new Session("test-client-session-id")
+                    .setEmailAddress(TEST_CLIENT_EMAIL)
+                    .setState(VERIFY_EMAIL_CODE_SENT);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+    private final ClientSession clientSession = mock(ClientSession.class);
+    private final ClientRegistry clientRegistry =
+            new ClientRegistry().setTestClient(false).setClientID(CLIENT_ID);
+    private final ClientRegistry testClientRegistry =
+            new ClientRegistry()
+                    .setTestClient(true)
+                    .setClientID(TEST_CLIENT_ID)
+                    .setTestClientEmailAllowlist(
+                            List.of("testclient.user1@digital.cabinet-office.gov.uk"));
 
     private VerifyCodeHandler handler;
 
@@ -105,6 +134,9 @@ class VerifyCodeRequestHandlerTest {
                         stateMachine);
 
         when(authenticationService.getUserProfileFromEmail(eq(TEST_EMAIL_ADDRESS)))
+                .thenReturn(Optional.of(userProfile));
+
+        when(authenticationService.getUserProfileFromEmail(eq(TEST_CLIENT_EMAIL)))
                 .thenReturn(Optional.of(userProfile));
 
         when(stateMachine.transition(
@@ -278,7 +310,7 @@ class VerifyCodeRequestHandlerTest {
     @Test
     public void shouldReturn400IfSessionIdIsInvalid() {
         APIGatewayProxyResponseEvent result =
-                makeCallWithCode("123456", VERIFY_EMAIL.toString(), Optional.empty());
+                makeCallWithCode("123456", VERIFY_EMAIL.toString(), Optional.empty(), CLIENT_ID);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
@@ -533,12 +565,43 @@ class VerifyCodeRequestHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1017));
     }
 
+    @Test
+    public void shouldReturn200ForValidVerifyEmailRequestUsingTestClient()
+            throws JsonProcessingException {
+        testClientSession.setState(VERIFY_EMAIL_CODE_SENT);
+        when(configurationService.isTestClientsEnabled()).thenReturn(true);
+        when(configurationService.getCodeMaxRetries()).thenReturn(5);
+        when(configurationService.getTestClientVerifyEmailOTP())
+                .thenReturn(Optional.of(TEST_CLIENT_CODE));
+        when(codeStorageService.getOtpCode(TEST_CLIENT_EMAIL, VERIFY_EMAIL))
+                .thenReturn(Optional.of(CODE));
+        when(validationService.validateVerificationCode(
+                        eq(VERIFY_EMAIL),
+                        eq(Optional.of(TEST_CLIENT_CODE)),
+                        eq(TEST_CLIENT_CODE),
+                        any(Session.class),
+                        eq(5)))
+                .thenReturn(USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE);
+        APIGatewayProxyResponseEvent result =
+                makeCallWithCode(
+                        TEST_CLIENT_CODE,
+                        VERIFY_EMAIL.toString(),
+                        Optional.of(testClientSession),
+                        TEST_CLIENT_ID);
+
+        verify(codeStorageService).deleteOtpCode(TEST_CLIENT_EMAIL, VERIFY_EMAIL);
+        assertThat(result, hasStatus(200));
+        BaseAPIResponse codeResponse =
+                new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
+        assertThat(codeResponse.getSessionState(), equalTo(EMAIL_CODE_VERIFIED));
+    }
+
     private APIGatewayProxyResponseEvent makeCallWithCode(String code, String notificationType) {
-        return makeCallWithCode(code, notificationType, Optional.of(session));
+        return makeCallWithCode(code, notificationType, Optional.of(session), CLIENT_ID);
     }
 
     private APIGatewayProxyResponseEvent makeCallWithCode(
-            String code, String notificationType, Optional<Session> session) {
+            String code, String notificationType, Optional<Session> session, String clientId) {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(
                 Map.of(
@@ -553,6 +616,25 @@ class VerifyCodeRequestHandlerTest {
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders())).thenReturn(session);
         when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(clientSession));
+        when(clientSession.getAuthRequestParams())
+                .thenReturn(withAuthenticationRequest(clientId).toParameters());
+        when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
+        when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
+        when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))
+                .thenReturn(Optional.of(clientSession));
         return handler.handleRequest(event, context);
+    }
+
+    private AuthenticationRequest withAuthenticationRequest(String clientId) {
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        return new AuthenticationRequest.Builder(
+                        new ResponseType(ResponseType.Value.CODE),
+                        scope,
+                        new ClientID(clientId),
+                        REDIRECT_URI)
+                .state(new State())
+                .nonce(new Nonce())
+                .build();
     }
 }

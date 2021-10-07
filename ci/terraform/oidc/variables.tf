@@ -193,3 +193,16 @@ variable "lambda_min_concurrency" {
   type        = number
   description = "The number of lambda instance to keep 'warm'"
 }
+
+variable "test_client_verify_email_otp" {
+  type = string
+}
+
+variable "test_client_verify_phone_number_otp" {
+  type = string
+}
+
+variable "test_clients_enabled" {
+  type    = string
+  default = "false"
+}
