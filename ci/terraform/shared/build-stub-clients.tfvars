@@ -6,6 +6,7 @@ stub_rp_clients = [
       "https://di-auth-stub-relying-party-build.london.cloudapps.digital/oidc/authorization-code/callback",
     ]
     logout_urls = []
+    test_client = "1"
   },
   {
     client_name = "di-auth-stub-relying-party-build-s2"
@@ -13,5 +14,6 @@ stub_rp_clients = [
       "https://di-auth-stub-relying-party-build-s2.london.cloudapps.digital/oidc/authorization-code/callback",
     ]
     logout_urls = []
+    test_client = "0"
   },
 ]

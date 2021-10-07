@@ -72,5 +72,8 @@ resource "aws_dynamodb_table_item" "stub_rp_client" {
     CookieConsentShared = {
       N = "1"
     }
+    TestClient = {
+      N = var.stub_rp_clients[count.index].test_client
+    }
   })
 }

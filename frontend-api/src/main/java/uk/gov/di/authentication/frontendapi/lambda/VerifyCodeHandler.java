@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -31,8 +32,10 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static java.util.Map.entry;
+import static uk.gov.di.authentication.frontendapi.entity.TestClientAllowlists.emailAllowlistContains;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
@@ -112,9 +115,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 return generateResponse(session);
             }
 
-            var code =
-                    codeStorageService.getOtpCode(
-                            session.getEmailAddress(), codeRequest.getNotificationType());
+            var code = getOtpCode(userContext, codeRequest.getNotificationType());
 
             var validationAction =
                     validationService.validateVerificationCode(
@@ -151,6 +152,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         } catch (StateMachine.InvalidStateTransitionException e) {
             LOG.error("Invalid transition in user journey", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
+        } catch (ClientNotFoundException e) {
+            LOG.error("Client not found", e);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
     }
 
@@ -239,5 +243,48 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 .contains(session.getState())) {
             blockCodeForSessionAndResetCount(session);
         }
+    }
+
+    private Optional<String> getOtpCode(UserContext userContext, NotificationType notificationType)
+            throws ClientNotFoundException {
+        final String emailAddress = userContext.getSession().getEmailAddress();
+        final Optional<String> generatedOTPCode =
+                codeStorageService.getOtpCode(emailAddress, notificationType);
+
+        return userContext
+                .getClient()
+                .map(
+                        clientRegistry -> {
+                            if (clientRegistry.isTestClient()
+                                    && emailAllowlistContains(emailAddress)) {
+                                LOG.info(
+                                        "Using TestClient {} {} email {} on TestClientEmailAllowlist with NotificationType {}",
+                                        clientRegistry.getClientID(),
+                                        clientRegistry.getClientName(),
+                                        emailAddress,
+                                        notificationType);
+                                switch (notificationType) {
+                                    case VERIFY_EMAIL:
+                                        return configurationService.getTestClientVerifyEmailOTP();
+                                    case VERIFY_PHONE_NUMBER:
+                                        return configurationService
+                                                .getTestClientVerifyPhoneNumberOTP();
+                                    case MFA_SMS:
+                                        return configurationService
+                                                .getTestClientVerifyPhoneNumberOTP();
+                                    default:
+                                        LOG.info(
+                                                "Returning the generated OTP for TestClient {} {} email {} with NotificationType {}",
+                                                clientRegistry.getClientID(),
+                                                clientRegistry.getClientName(),
+                                                emailAddress,
+                                                notificationType);
+                                        return generatedOTPCode;
+                                }
+                            } else {
+                                return generatedOTPCode;
+                            }
+                        })
+                .orElseThrow(() -> new ClientNotFoundException(userContext.getSession()));
     }
 }

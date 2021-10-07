@@ -138,6 +138,14 @@ public class ConfigurationService {
         return System.getenv("TERMS_CONDITIONS_VERSION");
     }
 
+    public Optional<String> getTestClientVerifyEmailOTP() {
+        return Optional.ofNullable(System.getenv("TEST_CLIENT_VERIFY_EMAIL_OTP"));
+    }
+
+    public Optional<String> getTestClientVerifyPhoneNumberOTP() {
+        return Optional.ofNullable(System.getenv("TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP"));
+    }
+
     public String getTokenSigningKeyAlias() {
         return System.getenv("TOKEN_SIGNING_KEY_ALIAS");
     }

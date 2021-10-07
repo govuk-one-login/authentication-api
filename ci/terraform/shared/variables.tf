@@ -87,7 +87,7 @@ variable "logging_endpoint_arn" {
 
 variable "stub_rp_clients" {
   default     = []
-  type        = list(object({ client_name : string, callback_urls : list(string), logout_urls : list(string) }))
+  type        = list(object({ client_name : string, callback_urls : list(string), logout_urls : list(string), test_client : string }))
   description = "The details of RP clients to provision in the Client table"
 }
 
