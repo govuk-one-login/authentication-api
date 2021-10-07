@@ -128,7 +128,8 @@ resource "aws_cloudwatch_event_target" "warmer_schedule_target" {
 resource "aws_lambda_permission" "allow_cloudwatch_to_call_warmer_lambda" {
   count = var.keep_lambdas_warm ? 1 : 0
 
-  statement_id  = "AllowExecutionFromCloudWatchScheduleRule"
+  statement_id_prefix = "AllowExecutionFromCloudWatchScheduleRule"
+
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.warmer_function[0].function_name
   principal     = "events.amazonaws.com"
@@ -138,9 +139,30 @@ resource "aws_lambda_permission" "allow_cloudwatch_to_call_warmer_lambda" {
 resource "aws_cloudwatch_event_rule" "warmer_deployment_trigger_rule" {
   count = var.keep_lambdas_warm ? 1 : 0
 
-  name          = "${aws_lambda_function.warmer_function[0].function_name}-on-deploy"
-  event_pattern = local.warmer_deployment_event_pattern
-  is_enabled    = true
+  name = "${aws_lambda_function.warmer_function[0].function_name}-on-deploy"
+  event_pattern = jsonencode({
+    "source" : [
+      "aws.lambda"
+    ],
+    "detail-type" : [
+      "AWS API Call via CloudTrail"
+    ],
+    "detail" : {
+      "eventSource" : [
+        "lambda.amazonaws.com"
+      ],
+      "eventName" : [
+        "UpdateAlias20150331"
+      ],
+      "requestParameters" : {
+        "functionName" : [
+          aws_lambda_function.authorizer.arn
+        ]
+      }
+    }
+  })
+
+  is_enabled = true
 }
 
 resource "aws_cloudwatch_event_target" "warmer_deployment_target" {
@@ -153,7 +175,8 @@ resource "aws_cloudwatch_event_target" "warmer_deployment_target" {
 resource "aws_lambda_permission" "allow_cloudwatch_deployment_rule_to_call_warmer_lambda" {
   count = var.keep_lambdas_warm ? 1 : 0
 
-  statement_id  = "AllowExecutionFromCloudWatchDeploymentRule"
+  statement_id_prefix = "AllowExecutionFromCloudWatchDeploymentRule-"
+
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.warmer_function[0].function_name
   principal     = "events.amazonaws.com"

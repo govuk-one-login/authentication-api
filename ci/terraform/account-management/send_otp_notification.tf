@@ -38,7 +38,6 @@ module "send_otp_notification" {
   warmer_handler_environment_variables = {
     LAMBDA_MIN_CONCURRENCY = var.lambda_min_concurrency
   }
-  warmer_deployment_event_pattern = local.warmer_deployment_event_pattern
 
   depends_on = [
     aws_api_gateway_rest_api.di_account_management_api,

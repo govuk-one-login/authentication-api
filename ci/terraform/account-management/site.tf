@@ -70,22 +70,4 @@ locals {
     authorizerRequestId          = "$context.authorizer.requestId"
     authorizerStatus             = "$context.authorizer.status"
   })
-
-  warmer_deployment_event_pattern = jsonencode({
-    "source" : [
-      "uk.gov.di.deployer"
-    ],
-    "resources" : [
-      "account-management-api"
-    ],
-    "detail-type" : [
-      "deployment-complete"
-    ],
-    "detail" : {
-      "environment" : [
-        var.environment
-      ]
-    }
-  })
-
 }
