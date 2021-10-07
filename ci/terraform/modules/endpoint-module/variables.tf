@@ -134,6 +134,10 @@ variable "warmer_delay_millis" {
   default = 200
 }
 
+variable "warmer_deployment_event_pattern" {
+  description = "The Cloudwatch event pattern that will manually trigger the warmer"
+}
+
 variable "authorizer_id" {
   type    = string
   default = null

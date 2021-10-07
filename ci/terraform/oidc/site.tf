@@ -73,6 +73,23 @@ locals {
     integrationLatency   = "$context.integration.latency"
     integrationRequestId = "$context.integration.requestId"
   })
+
+  warmer_deployment_event_pattern = jsonencode({
+    "source" : [
+      "uk.gov.di.deployer"
+    ],
+    "resources" : [
+      "oidc"
+    ],
+    "detail-type" : [
+      "deployment-complete"
+    ],
+    "detail" : {
+      "environment" : [
+        var.environment
+      ]
+    }
+  })
 }
 
 data "aws_caller_identity" "current" {}

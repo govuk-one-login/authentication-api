@@ -34,6 +34,7 @@ module "jwks" {
   warmer_handler_environment_variables = {
     LAMBDA_MIN_CONCURRENCY = var.lambda_min_concurrency
   }
+  warmer_deployment_event_pattern = local.warmer_deployment_event_pattern
 
   use_localstack = var.use_localstack
 

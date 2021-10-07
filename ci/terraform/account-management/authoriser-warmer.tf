@@ -128,9 +128,34 @@ resource "aws_cloudwatch_event_target" "warmer_schedule_target" {
 resource "aws_lambda_permission" "allow_cloudwatch_to_call_warmer_lambda" {
   count = var.keep_lambdas_warm ? 1 : 0
 
-  statement_id  = "AllowExecutionFromCloudWatch"
+  statement_id  = "AllowExecutionFromCloudWatchScheduleRule"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.warmer_function[0].function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.warmer_schedule_rule[0].arn
+}
+
+resource "aws_cloudwatch_event_rule" "warmer_deployment_trigger_rule" {
+  count = var.keep_lambdas_warm ? 1 : 0
+
+  name          = "${aws_lambda_function.warmer_function[0].function_name}-deployment-trigger"
+  event_pattern = local.warmer_deployment_event_pattern
+  is_enabled    = true
+}
+
+resource "aws_cloudwatch_event_target" "warmer_deployment_target" {
+  count = var.keep_lambdas_warm ? 1 : 0
+
+  arn  = aws_lambda_function.warmer_function[0].arn
+  rule = aws_cloudwatch_event_rule.warmer_deployment_trigger_rule[0].name
+}
+
+resource "aws_lambda_permission" "allow_cloudwatch_deployment_rule_to_call_warmer_lambda" {
+  count = var.keep_lambdas_warm ? 1 : 0
+
+  statement_id  = "AllowExecutionFromCloudWatchDeploymentRule"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.warmer_function[0].function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.warmer_deployment_trigger_rule[0].arn
 }
