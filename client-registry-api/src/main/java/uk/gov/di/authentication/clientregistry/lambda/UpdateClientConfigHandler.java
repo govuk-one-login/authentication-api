@@ -65,6 +65,7 @@ public class UpdateClientConfigHandler
                                     UPDATE_CLIENT_REQUEST_RECEIVED,
                                     context.getAwsRequestId(),
                                     AuditService.UNKNOWN,
+                                    AuditService.UNKNOWN,
                                     AuditService.UNKNOWN);
                             try {
                                 String clientId = input.getPathParameters().get("clientId");
@@ -78,7 +79,8 @@ public class UpdateClientConfigHandler
                                             UPDATE_CLIENT_REQUEST_ERROR,
                                             context.getAwsRequestId(),
                                             AuditService.UNKNOWN,
-                                            clientId);
+                                            clientId,
+                                            AuditService.UNKNOWN);
                                     LOGGER.error("Client with ClientId {} is not valid", clientId);
                                     return generateApiGatewayProxyResponse(
                                             400,
@@ -94,7 +96,8 @@ public class UpdateClientConfigHandler
                                             UPDATE_CLIENT_REQUEST_ERROR,
                                             context.getAwsRequestId(),
                                             AuditService.UNKNOWN,
-                                            clientId);
+                                            clientId,
+                                            AuditService.UNKNOWN);
                                     return generateApiGatewayProxyResponse(
                                             400, errorResponse.get().toJSONObject().toJSONString());
                                 }
@@ -117,6 +120,7 @@ public class UpdateClientConfigHandler
                                 auditService.submitAuditEvent(
                                         UPDATE_CLIENT_REQUEST_ERROR,
                                         context.getAwsRequestId(),
+                                        AuditService.UNKNOWN,
                                         AuditService.UNKNOWN,
                                         AuditService.UNKNOWN);
                                 LOGGER.error(

@@ -95,6 +95,7 @@ public class AuthorisationHandler
                                     OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
                                     context.getAwsRequestId(),
                                     AuditService.UNKNOWN,
+                                    AuditService.UNKNOWN,
                                     AuditService.UNKNOWN);
                             LOGGER.info("Received authentication request");
 
@@ -312,6 +313,7 @@ public class AuthorisationHandler
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR,
                 context.getAwsRequestId(),
+                AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 pair("description", errorObject.getDescription()));

@@ -40,6 +40,11 @@ public class AuditMessageMatcher<T> extends TypeSafeDiagnosingMatcher<String> {
         return new AuditMessageMatcher<>("client ID", AuditEvent::getClientId, clientId);
     }
 
+    public static AuditMessageMatcher<String> hasEmail(String email) {
+        Function<AuditEvent, String> getEmail = (auditEvent) -> auditEvent.getUser().getEmail();
+        return new AuditMessageMatcher<>("email", getEmail, email);
+    }
+
     @Override
     protected boolean matchesSafely(
             String serialisedAuditMessage, Description mismatchDescription) {

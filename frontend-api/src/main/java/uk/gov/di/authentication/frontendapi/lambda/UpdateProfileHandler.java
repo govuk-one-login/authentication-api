@@ -101,6 +101,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 ACCOUNT_MANAGEMENT_REQUEST_RECEIVED,
                 context.getAwsRequestId(),
                 AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
                 AuditService.UNKNOWN);
     }
 
@@ -109,6 +110,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         auditService.submitAuditEvent(
                 ACCOUNT_MANAGEMENT_REQUEST_ERROR,
                 context.getAwsRequestId(),
+                AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN);
     }
@@ -141,7 +143,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                 ACCOUNT_MANAGEMENT_PHONE_NUMBER_UPDATED,
                                 context.getAwsRequestId(),
                                 session.getSessionId(),
-                                AuditService.UNKNOWN);
+                                AuditService.UNKNOWN,
+                                session.getEmailAddress());
                         sessionService.save(session.setState(nextState));
                         LOGGER.info(
                                 "Phone number updated and session state changed. Session state {}",
@@ -190,7 +193,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                 ACCOUNT_MANAGEMENT_CONSENT_UPDATED,
                                 context.getAwsRequestId(),
                                 session.getSessionId(),
-                                clientId);
+                                clientId,
+                                session.getEmailAddress());
 
                         LOGGER.info(
                                 "Consent updated for ClientID {} and session state changed. Session state {}",
@@ -209,7 +213,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                 ACCOUNT_MANAGEMENT_TERMS_CONDS_ACCEPTANCE_UPDATED,
                                 context.getAwsRequestId(),
                                 session.getSessionId(),
-                                AuditService.UNKNOWN);
+                                AuditService.UNKNOWN,
+                                session.getEmailAddress());
                         LOGGER.info(
                                 "Updated terms and conditions. Email {} for Version {}",
                                 request.getEmail(),
