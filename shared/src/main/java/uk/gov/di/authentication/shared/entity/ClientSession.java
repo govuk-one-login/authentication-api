@@ -51,4 +51,9 @@ public class ClientSession {
     public VectorOfTrust getEffectiveVectorOfTrust() {
         return effectiveVectorOfTrust;
     }
+
+    public ClientSession setEffectiveVectorOfTrust(VectorOfTrust effectiveVectorOfTrust) {
+        this.effectiveVectorOfTrust = effectiveVectorOfTrust;
+        return this;
+    }
 }

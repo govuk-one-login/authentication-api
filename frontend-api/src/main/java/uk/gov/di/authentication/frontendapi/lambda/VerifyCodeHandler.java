@@ -10,11 +10,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
+import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -55,6 +58,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private final CodeStorageService codeStorageService;
     private final ValidationService validationService;
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine;
+    private static final String CLIENT_SESSION_ID_HEADER = "Client-Session-Id";
 
     protected VerifyCodeHandler(
             ConfigurationService configurationService,
@@ -131,8 +135,11 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     session.setState(
                             stateMachine.transition(
                                     session.getState(), validationAction, userContext)));
-
-            processCodeSessionState(session, codeRequest.getNotificationType());
+            processCodeSessionState(
+                    session,
+                    codeRequest.getNotificationType(),
+                    userContext.getClientSession(),
+                    input.getHeaders().get(CLIENT_SESSION_ID_HEADER));
 
             if (isSessionActionBadRequest(validationAction)) return generateResponse(session);
 
@@ -203,12 +210,21 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         sessionService.save(session.resetRetryCount());
     }
 
-    private void processCodeSessionState(Session session, NotificationType notificationType) {
+    private void processCodeSessionState(
+            Session session,
+            NotificationType notificationType,
+            ClientSession clientSession,
+            String clientSessionId) {
         if (notificationType.equals(VERIFY_PHONE_NUMBER)
                 && List.of(PHONE_NUMBER_CODE_VERIFIED, CONSENT_REQUIRED)
                         .contains(session.getState())) {
             codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
             authenticationService.updatePhoneNumberVerifiedStatus(session.getEmailAddress(), true);
+            clientSessionService.saveClientSession(
+                    clientSessionId,
+                    clientSession.setEffectiveVectorOfTrust(VectorOfTrust.getDefaults()));
+            sessionService.save(
+                    session.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL));
         } else if (List.of(
                         EMAIL_CODE_VERIFIED,
                         MFA_CODE_VERIFIED,
