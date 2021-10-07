@@ -154,7 +154,7 @@ resource "aws_lambda_permission" "allow_cloudwatch_to_call_warmer_lambda" {
 resource "aws_cloudwatch_event_rule" "warmer_deployment_trigger_rule" {
   count = var.keep_lambda_warm && var.warmer_handler_function_name != null ? 1 : 0
 
-  name          = "${aws_lambda_function.warmer_function[0].function_name}-deployment-trigger"
+  name          = "${aws_lambda_function.warmer_function[0].function_name}-on-deploy"
   event_pattern = var.warmer_deployment_event_pattern
   is_enabled    = true
 }
