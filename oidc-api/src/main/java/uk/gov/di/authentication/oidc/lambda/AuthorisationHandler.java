@@ -99,6 +99,7 @@ public class AuthorisationHandler
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
+                                    AuditService.UNKNOWN,
                                     ipAddress);
                             LOGGER.info("Received authentication request");
 
@@ -328,6 +329,7 @@ public class AuthorisationHandler
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR,
                 context.getAwsRequestId(),
+                AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,

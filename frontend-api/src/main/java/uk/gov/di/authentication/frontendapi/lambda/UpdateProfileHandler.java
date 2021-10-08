@@ -104,6 +104,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
                 AuditService.UNKNOWN);
     }
 
@@ -112,6 +113,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         auditService.submitAuditEvent(
                 ACCOUNT_MANAGEMENT_REQUEST_ERROR,
                 context.getAwsRequestId(),
+                AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
@@ -136,6 +138,11 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 LOGGER.info("Invalid session. Email {}", request.getEmail());
                 return generateErrorResponse(ErrorResponse.ERROR_1000, context);
             }
+
+            String email = session.getEmailAddress();
+            var userProfile =
+                    Optional.ofNullable(authenticationService.getUserProfileByEmail(email));
+
             switch (request.getUpdateProfileType()) {
                 case ADD_PHONE_NUMBER:
                     {
@@ -149,7 +156,10 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                 context.getAwsRequestId(),
                                 session.getSessionId(),
                                 AuditService.UNKNOWN,
-                                session.getEmailAddress(),
+                                userProfile
+                                        .map(UserProfile::getSubjectID)
+                                        .orElse(AuditService.UNKNOWN),
+                                email,
                                 ipAddress);
                         sessionService.save(session.setState(nextState));
                         LOGGER.info(
@@ -200,7 +210,10 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                 context.getAwsRequestId(),
                                 session.getSessionId(),
                                 clientId,
-                                session.getEmailAddress(),
+                                userProfile
+                                        .map(UserProfile::getSubjectID)
+                                        .orElse(AuditService.UNKNOWN),
+                                email,
                                 ipAddress);
 
                         LOGGER.info(
@@ -221,7 +234,10 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                 context.getAwsRequestId(),
                                 session.getSessionId(),
                                 AuditService.UNKNOWN,
-                                session.getEmailAddress(),
+                                userProfile
+                                        .map(UserProfile::getSubjectID)
+                                        .orElse(AuditService.UNKNOWN),
+                                email,
                                 ipAddress);
                         LOGGER.info(
                                 "Updated terms and conditions. Email {} for Version {}",

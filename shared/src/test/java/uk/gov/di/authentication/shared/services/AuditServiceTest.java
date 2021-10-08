@@ -31,6 +31,7 @@ import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasEv
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasIpAddress;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasRequestId;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasSessionId;
+import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasSubjectId;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasTimestamp;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.AuditServiceTest.TestEvents.TEST_EVENT_ONE;
@@ -67,7 +68,13 @@ class AuditServiceTest {
         var auditService = new AuditService(FIXED_CLOCK, snsService, kmsConnectionService);
 
         auditService.submitAuditEvent(
-                TEST_EVENT_ONE, "request-id", "session-id", "client-id", "email", "ip-address");
+                TEST_EVENT_ONE,
+                "request-id",
+                "session-id",
+                "client-id",
+                "subject-id",
+                "email",
+                "ip-address");
 
         verify(snsService).publishAuditMessage(messageCaptor.capture());
         var serialisedAuditMessage = messageCaptor.getValue();
@@ -77,6 +84,7 @@ class AuditServiceTest {
         assertThat(serialisedAuditMessage, hasRequestId("request-id"));
         assertThat(serialisedAuditMessage, hasSessionId("session-id"));
         assertThat(serialisedAuditMessage, hasClientId("client-id"));
+        assertThat(serialisedAuditMessage, hasSubjectId("subject-id"));
         assertThat(serialisedAuditMessage, hasEmail("email"));
         assertThat(serialisedAuditMessage, hasIpAddress("ip-address"));
     }
@@ -88,7 +96,13 @@ class AuditServiceTest {
         var signingRequestCaptor = ArgumentCaptor.forClass(SignRequest.class);
 
         auditService.submitAuditEvent(
-                TEST_EVENT_ONE, "request-id", "session-id", "client-id", "email", "ip-address");
+                TEST_EVENT_ONE,
+                "request-id",
+                "session-id",
+                "client-id",
+                "subject-id",
+                "email",
+                "ip-address");
 
         verify(kmsConnectionService).sign(signingRequestCaptor.capture());
         verify(snsService).publishAuditMessage(messageCaptor.capture());
@@ -111,6 +125,7 @@ class AuditServiceTest {
                 "request-id",
                 "session-id",
                 "client-id",
+                "subject-id",
                 "email",
                 "ip-address",
                 pair("key", "value"),

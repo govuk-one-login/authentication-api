@@ -112,7 +112,7 @@ class ClientRegistrationHandlerTest {
         assertThat(result, hasBody(OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString()));
 
         verify(auditService)
-                .submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR, "request-id", "", "", "", "");
+                .submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR, "request-id", "", "", "", "", "");
     }
 
     @Test
@@ -129,7 +129,7 @@ class ClientRegistrationHandlerTest {
         assertThat(result, hasBody(INVALID_PUBLIC_KEY.toJSONObject().toJSONString()));
 
         verify(auditService)
-                .submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR, "request-id", "", "", "", "");
+                .submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR, "request-id", "", "", "", "", "");
     }
 
     @Test
@@ -146,14 +146,15 @@ class ClientRegistrationHandlerTest {
         assertThat(result, hasBody(INVALID_SCOPE.toJSONObject().toJSONString()));
 
         verify(auditService)
-                .submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR, "request-id", "", "", "", "");
+                .submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR, "request-id", "", "", "", "", "");
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
         var response = handler.handleRequest(event, context);
 
         verify(auditService)
-                .submitAuditEvent(REGISTER_CLIENT_REQUEST_RECEIVED, "request-id", "", "", "", "");
+                .submitAuditEvent(
+                        REGISTER_CLIENT_REQUEST_RECEIVED, "request-id", "", "", "", "", "");
 
         return response;
     }
