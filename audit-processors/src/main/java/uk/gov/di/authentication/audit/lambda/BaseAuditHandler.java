@@ -10,6 +10,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.audit.AuditPayload.AuditEvent;
 import uk.gov.di.audit.AuditPayload.SignedAuditEvent;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.util.Base64;
 import java.util.Optional;
@@ -17,6 +19,13 @@ import java.util.Optional;
 public abstract class BaseAuditHandler implements RequestHandler<SNSEvent, Object> {
 
     private final Logger LOG = LoggerFactory.getLogger(getClass());
+    private final KmsConnectionService kmsConnectionService;
+    private final ConfigurationService service;
+
+    BaseAuditHandler(KmsConnectionService kmsConnectionService, ConfigurationService service) {
+        this.kmsConnectionService = kmsConnectionService;
+        this.service = service;
+    }
 
     @Override
     public Object handleRequest(SNSEvent input, Context context) {
@@ -25,7 +34,8 @@ public abstract class BaseAuditHandler implements RequestHandler<SNSEvent, Objec
                 .map(SNS::getMessage)
                 .map(Base64.getDecoder()::decode)
                 .map(this::parseToSignedAuditEvent)
-                .map(this::validateSignatureAndExtract)
+                .filter(this::validateSignature)
+                .map(this::extractPayload)
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .peek(event -> LOG.info("Consuming audit message with id: {}", event.getEventId()))
@@ -36,10 +46,7 @@ public abstract class BaseAuditHandler implements RequestHandler<SNSEvent, Objec
 
     abstract void handleAuditEvent(AuditEvent auditEvent);
 
-    private Optional<AuditEvent> validateSignatureAndExtract(
-            Optional<SignedAuditEvent> signedAuditEvent) {
-        // TODO: Use signedAuditEvent.getSignature() to validate signedAuditEvent.getPayload()
-
+    private Optional<AuditEvent> extractPayload(Optional<SignedAuditEvent> signedAuditEvent) {
         return signedAuditEvent
                 .map(SignedAuditEvent::getPayload)
                 .map(
@@ -47,15 +54,28 @@ public abstract class BaseAuditHandler implements RequestHandler<SNSEvent, Objec
                             try {
                                 return AuditEvent.parseFrom(payload);
                             } catch (InvalidProtocolBufferException e) {
+                                e.printStackTrace();
                                 return null;
                             }
                         });
+    }
+
+    private boolean validateSignature(Optional<SignedAuditEvent> event) {
+        if (event.isEmpty()) {
+            return false;
+        }
+
+        return kmsConnectionService.validateSignature(
+                event.get().getSignature().asReadOnlyByteBuffer(),
+                event.get().getPayload().asReadOnlyByteBuffer(),
+                service.getAuditSigningKeyAlias());
     }
 
     private Optional<SignedAuditEvent> parseToSignedAuditEvent(byte[] bytes) {
         try {
             return Optional.ofNullable(SignedAuditEvent.parseFrom(bytes));
         } catch (InvalidProtocolBufferException e) {
+            e.printStackTrace();
             return Optional.empty();
         }
     }
