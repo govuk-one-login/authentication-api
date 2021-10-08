@@ -147,6 +147,7 @@ class UpdateProfileHandlerTest {
                         "",
                         "",
                         TEST_EMAIL_ADDRESS,
+                        "",
                         "");
     }
 
@@ -184,6 +185,7 @@ class UpdateProfileHandlerTest {
                         "",
                         "",
                         TEST_EMAIL_ADDRESS,
+                        "",
                         "");
     }
 
@@ -235,6 +237,7 @@ class UpdateProfileHandlerTest {
                         clientID.getValue(),
                         "",
                         TEST_EMAIL_ADDRESS,
+                        "",
                         "");
         BaseAPIResponse codeResponse =
                 new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
@@ -260,7 +263,7 @@ class UpdateProfileHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        ACCOUNT_MANAGEMENT_REQUEST_ERROR, "request-id", "", "", "", "", "");
+                        ACCOUNT_MANAGEMENT_REQUEST_ERROR, "request-id", "", "", "", "", "", "");
     }
 
     @Test
@@ -280,7 +283,7 @@ class UpdateProfileHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        ACCOUNT_MANAGEMENT_REQUEST_ERROR, "request-id", "", "", "", "", "");
+                        ACCOUNT_MANAGEMENT_REQUEST_ERROR, "request-id", "", "", "", "", "", "");
     }
 
     private void usingValidSession() {
@@ -309,7 +312,7 @@ class UpdateProfileHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        ACCOUNT_MANAGEMENT_REQUEST_RECEIVED, "request-id", "", "", "", "", "");
+                        ACCOUNT_MANAGEMENT_REQUEST_RECEIVED, "request-id", "", "", "", "", "", "");
 
         return response;
     }

@@ -100,7 +100,8 @@ public class AuthorisationHandler
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
-                                    ipAddress);
+                                    ipAddress,
+                                    AuditService.UNKNOWN);
                             LOGGER.info("Received authentication request");
 
                             Map<String, List<String>> queryStringParameters =
@@ -334,6 +335,7 @@ public class AuthorisationHandler
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 ipAddress,
+                AuditService.UNKNOWN,
                 pair("description", errorObject.getDescription()));
 
         LOGGER.error(

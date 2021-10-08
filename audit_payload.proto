@@ -23,5 +23,6 @@ message AuditEvent {
     string id = 1;
     string email = 2;
     string ip_address = 3;
+    string phone_number = 4;
   }
 }

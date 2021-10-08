@@ -976,6 +976,19 @@ public final class AuditPayload {
              * @return The bytes for ipAddress.
              */
             com.google.protobuf.ByteString getIpAddressBytes();
+
+            /**
+             * <code>string phone_number = 4;</code>
+             *
+             * @return The phoneNumber.
+             */
+            java.lang.String getPhoneNumber();
+            /**
+             * <code>string phone_number = 4;</code>
+             *
+             * @return The bytes for phoneNumber.
+             */
+            com.google.protobuf.ByteString getPhoneNumberBytes();
         }
         /** Protobuf type {@code uk.gov.di.audit.AuditEvent.User} */
         public static final class User extends com.google.protobuf.GeneratedMessageV3
@@ -992,6 +1005,7 @@ public final class AuditPayload {
                 id_ = "";
                 email_ = "";
                 ipAddress_ = "";
+                phoneNumber_ = "";
             }
 
             @java.lang.Override
@@ -1042,6 +1056,13 @@ public final class AuditPayload {
                                     java.lang.String s = input.readStringRequireUtf8();
 
                                     ipAddress_ = s;
+                                    break;
+                                }
+                            case 34:
+                                {
+                                    java.lang.String s = input.readStringRequireUtf8();
+
+                                    phoneNumber_ = s;
                                     break;
                                 }
                             default:
@@ -1191,6 +1212,43 @@ public final class AuditPayload {
                 }
             }
 
+            public static final int PHONE_NUMBER_FIELD_NUMBER = 4;
+            private volatile java.lang.Object phoneNumber_;
+            /**
+             * <code>string phone_number = 4;</code>
+             *
+             * @return The phoneNumber.
+             */
+            @java.lang.Override
+            public java.lang.String getPhoneNumber() {
+                java.lang.Object ref = phoneNumber_;
+                if (ref instanceof java.lang.String) {
+                    return (java.lang.String) ref;
+                } else {
+                    com.google.protobuf.ByteString bs = (com.google.protobuf.ByteString) ref;
+                    java.lang.String s = bs.toStringUtf8();
+                    phoneNumber_ = s;
+                    return s;
+                }
+            }
+            /**
+             * <code>string phone_number = 4;</code>
+             *
+             * @return The bytes for phoneNumber.
+             */
+            @java.lang.Override
+            public com.google.protobuf.ByteString getPhoneNumberBytes() {
+                java.lang.Object ref = phoneNumber_;
+                if (ref instanceof java.lang.String) {
+                    com.google.protobuf.ByteString b =
+                            com.google.protobuf.ByteString.copyFromUtf8((java.lang.String) ref);
+                    phoneNumber_ = b;
+                    return b;
+                } else {
+                    return (com.google.protobuf.ByteString) ref;
+                }
+            }
+
             private byte memoizedIsInitialized = -1;
 
             @java.lang.Override
@@ -1215,6 +1273,9 @@ public final class AuditPayload {
                 if (!getIpAddressBytes().isEmpty()) {
                     com.google.protobuf.GeneratedMessageV3.writeString(output, 3, ipAddress_);
                 }
+                if (!getPhoneNumberBytes().isEmpty()) {
+                    com.google.protobuf.GeneratedMessageV3.writeString(output, 4, phoneNumber_);
+                }
                 unknownFields.writeTo(output);
             }
 
@@ -1232,6 +1293,11 @@ public final class AuditPayload {
                 }
                 if (!getIpAddressBytes().isEmpty()) {
                     size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, ipAddress_);
+                }
+                if (!getPhoneNumberBytes().isEmpty()) {
+                    size +=
+                            com.google.protobuf.GeneratedMessageV3.computeStringSize(
+                                    4, phoneNumber_);
                 }
                 size += unknownFields.getSerializedSize();
                 memoizedSize = size;
@@ -1252,6 +1318,7 @@ public final class AuditPayload {
                 if (!getId().equals(other.getId())) return false;
                 if (!getEmail().equals(other.getEmail())) return false;
                 if (!getIpAddress().equals(other.getIpAddress())) return false;
+                if (!getPhoneNumber().equals(other.getPhoneNumber())) return false;
                 if (!unknownFields.equals(other.unknownFields)) return false;
                 return true;
             }
@@ -1269,6 +1336,8 @@ public final class AuditPayload {
                 hash = (53 * hash) + getEmail().hashCode();
                 hash = (37 * hash) + IP_ADDRESS_FIELD_NUMBER;
                 hash = (53 * hash) + getIpAddress().hashCode();
+                hash = (37 * hash) + PHONE_NUMBER_FIELD_NUMBER;
+                hash = (53 * hash) + getPhoneNumber().hashCode();
                 hash = (29 * hash) + unknownFields.hashCode();
                 memoizedHashCode = hash;
                 return hash;
@@ -1420,6 +1489,8 @@ public final class AuditPayload {
 
                     ipAddress_ = "";
 
+                    phoneNumber_ = "";
+
                     return this;
                 }
 
@@ -1450,6 +1521,7 @@ public final class AuditPayload {
                     result.id_ = id_;
                     result.email_ = email_;
                     result.ipAddress_ = ipAddress_;
+                    result.phoneNumber_ = phoneNumber_;
                     onBuilt();
                     return result;
                 }
@@ -1514,6 +1586,10 @@ public final class AuditPayload {
                     }
                     if (!other.getIpAddress().isEmpty()) {
                         ipAddress_ = other.ipAddress_;
+                        onChanged();
+                    }
+                    if (!other.getPhoneNumber().isEmpty()) {
+                        phoneNumber_ = other.phoneNumber_;
                         onChanged();
                     }
                     this.mergeUnknownFields(other.unknownFields);
@@ -1771,6 +1847,82 @@ public final class AuditPayload {
                     checkByteStringIsUtf8(value);
 
                     ipAddress_ = value;
+                    onChanged();
+                    return this;
+                }
+
+                private java.lang.Object phoneNumber_ = "";
+                /**
+                 * <code>string phone_number = 4;</code>
+                 *
+                 * @return The phoneNumber.
+                 */
+                public java.lang.String getPhoneNumber() {
+                    java.lang.Object ref = phoneNumber_;
+                    if (!(ref instanceof java.lang.String)) {
+                        com.google.protobuf.ByteString bs = (com.google.protobuf.ByteString) ref;
+                        java.lang.String s = bs.toStringUtf8();
+                        phoneNumber_ = s;
+                        return s;
+                    } else {
+                        return (java.lang.String) ref;
+                    }
+                }
+                /**
+                 * <code>string phone_number = 4;</code>
+                 *
+                 * @return The bytes for phoneNumber.
+                 */
+                public com.google.protobuf.ByteString getPhoneNumberBytes() {
+                    java.lang.Object ref = phoneNumber_;
+                    if (ref instanceof String) {
+                        com.google.protobuf.ByteString b =
+                                com.google.protobuf.ByteString.copyFromUtf8((java.lang.String) ref);
+                        phoneNumber_ = b;
+                        return b;
+                    } else {
+                        return (com.google.protobuf.ByteString) ref;
+                    }
+                }
+                /**
+                 * <code>string phone_number = 4;</code>
+                 *
+                 * @param value The phoneNumber to set.
+                 * @return This builder for chaining.
+                 */
+                public Builder setPhoneNumber(java.lang.String value) {
+                    if (value == null) {
+                        throw new NullPointerException();
+                    }
+
+                    phoneNumber_ = value;
+                    onChanged();
+                    return this;
+                }
+                /**
+                 * <code>string phone_number = 4;</code>
+                 *
+                 * @return This builder for chaining.
+                 */
+                public Builder clearPhoneNumber() {
+
+                    phoneNumber_ = getDefaultInstance().getPhoneNumber();
+                    onChanged();
+                    return this;
+                }
+                /**
+                 * <code>string phone_number = 4;</code>
+                 *
+                 * @param value The bytes for phoneNumber to set.
+                 * @return This builder for chaining.
+                 */
+                public Builder setPhoneNumberBytes(com.google.protobuf.ByteString value) {
+                    if (value == null) {
+                        throw new NullPointerException();
+                    }
+                    checkByteStringIsUtf8(value);
+
+                    phoneNumber_ = value;
                     onChanged();
                     return this;
                 }
@@ -3590,7 +3742,7 @@ public final class AuditPayload {
         java.lang.String[] descriptorData = {
             "\n\023audit_payload.proto\022\017uk.gov.di.audit\"6"
                     + "\n\020SignedAuditEvent\022\021\n\tsignature\030\001 \001(\014\022\017\n"
-                    + "\007payload\030\002 \001(\014\"\311\003\n\nAuditEvent\022\020\n\010event_i"
+                    + "\007payload\030\002 \001(\014\"\337\003\n\nAuditEvent\022\020\n\010event_i"
                     + "d\030\001 \001(\t\022\022\n\nrequest_id\030\002 \001(\t\022\022\n\nsession_i"
                     + "d\030\003 \001(\t\022\021\n\tclient_id\030\004 \001(\t\022\021\n\ttimestamp\030"
                     + "\005 \001(\t\022\022\n\nevent_name\030\006 \001(\t\022.\n\004user\030\007 \001(\0132"
@@ -3600,9 +3752,9 @@ public final class AuditPayload {
                     + "gov.di.audit.AuditEvent.ExtensionsEntry\032"
                     + "/\n\rPlatformEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002"
                     + " \001(\t:\0028\001\0321\n\017ExtensionsEntry\022\013\n\003key\030\001 \001(\t"
-                    + "\022\r\n\005value\030\002 \001(\t:\0028\001\0325\n\004User\022\n\n\002id\030\001 \001(\t\022"
-                    + "\r\n\005email\030\002 \001(\t\022\022\n\nip_address\030\003 \001(\tb\006prot"
-                    + "o3"
+                    + "\022\r\n\005value\030\002 \001(\t:\0028\001\032K\n\004User\022\n\n\002id\030\001 \001(\t\022"
+                    + "\r\n\005email\030\002 \001(\t\022\022\n\nip_address\030\003 \001(\t\022\024\n\014ph"
+                    + "one_number\030\004 \001(\tb\006proto3"
         };
         descriptor =
                 com.google.protobuf.Descriptors.FileDescriptor.internalBuildGeneratedFileFrom(
@@ -3653,7 +3805,7 @@ public final class AuditPayload {
                 new com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
                         internal_static_uk_gov_di_audit_AuditEvent_User_descriptor,
                         new java.lang.String[] {
-                            "Id", "Email", "IpAddress",
+                            "Id", "Email", "IpAddress", "PhoneNumber",
                         });
     }
 

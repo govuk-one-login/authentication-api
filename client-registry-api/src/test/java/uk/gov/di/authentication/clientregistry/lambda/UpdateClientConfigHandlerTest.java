@@ -97,7 +97,8 @@ class UpdateClientConfigHandlerTest {
         assertThat(result, hasBody(OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString()));
 
         verify(auditService)
-                .submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR, "request-id", "", "", "", "", "");
+                .submitAuditEvent(
+                        UPDATE_CLIENT_REQUEST_ERROR, "request-id", "", "", "", "", "", "");
     }
 
     @Test
@@ -110,7 +111,8 @@ class UpdateClientConfigHandlerTest {
         assertThat(result, hasBody(OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString()));
 
         verify(auditService)
-                .submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR, "request-id", "", "", "", "", "");
+                .submitAuditEvent(
+                        UPDATE_CLIENT_REQUEST_ERROR, "request-id", "", "", "", "", "", "");
     }
 
     @Test
@@ -126,7 +128,7 @@ class UpdateClientConfigHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_CLIENT_REQUEST_ERROR, "request-id", "", CLIENT_ID, "", "", "");
+                        UPDATE_CLIENT_REQUEST_ERROR, "request-id", "", CLIENT_ID, "", "", "", "");
     }
 
     @Test
@@ -149,7 +151,7 @@ class UpdateClientConfigHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_CLIENT_REQUEST_ERROR, "request-id", "", CLIENT_ID, "", "", "");
+                        UPDATE_CLIENT_REQUEST_ERROR, "request-id", "", CLIENT_ID, "", "", "", "");
     }
 
     @Test
@@ -169,7 +171,7 @@ class UpdateClientConfigHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_CLIENT_REQUEST_ERROR, "request-id", "", CLIENT_ID, "", "", "");
+                        UPDATE_CLIENT_REQUEST_ERROR, "request-id", "", CLIENT_ID, "", "", "", "");
     }
 
     private ClientRegistry createClientRegistry() {
@@ -189,7 +191,8 @@ class UpdateClientConfigHandlerTest {
         var response = handler.handleRequest(event, context);
 
         verify(auditService)
-                .submitAuditEvent(UPDATE_CLIENT_REQUEST_RECEIVED, "request-id", "", "", "", "", "");
+                .submitAuditEvent(
+                        UPDATE_CLIENT_REQUEST_RECEIVED, "request-id", "", "", "", "", "", "");
 
         return response;
     }
