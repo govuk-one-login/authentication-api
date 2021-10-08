@@ -35,6 +35,7 @@ import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1011;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1017;
+import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_PHONE_VERIFICATION_CODE;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_TOO_MANY_EMAIL_VERIFICATION_CODES;
@@ -43,6 +44,7 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_IS_BLO
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_PHONE_VERIFICATION_CODES;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class SendNotificationHandler extends BaseFrontendHandler<SendNotificationRequest>
@@ -101,8 +103,21 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             UserContext userContext) {
         try {
             if (!userContext.getSession().validateSession(request.getEmail())) {
-                LOGGER.info("Invalid session. Email {}", request.getEmail());
+                LOGGER.info(
+                        "Invalid session. SessionId {}", userContext.getSession().getSessionId());
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+            }
+            if (request.getNotificationType().equals(ACCOUNT_CREATED_CONFIRMATION)) {
+                LOGGER.info(
+                        "Placing message on queue for AccountCreatedConfirmation for sessionId: {}",
+                        userContext.getSession().getSessionId());
+                NotifyRequest notifyRequest =
+                        new NotifyRequest(request.getEmail(), ACCOUNT_CREATED_CONFIRMATION);
+                sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+                LOGGER.info(
+                        "AccountCreatedConfirmation email placed on queue for sessionId: {}",
+                        userContext.getSession().getSessionId());
+                return generateEmptySuccessApiGatewayResponse();
             }
             boolean codeRequestValid =
                     isCodeRequestAttemptValid(

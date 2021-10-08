@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
@@ -32,7 +33,6 @@ public class NotificationHandlerTest {
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_PHONE_NUMBER = "01234567891";
     private static final String TEMPLATE_ID = "fdsfdssd";
-    private static final String CODE = "123456";
     private final Context context = mock(Context.class);
     private final NotificationService notificationService = mock(NotificationService.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
@@ -77,6 +77,27 @@ public class NotificationHandlerTest {
 
         verify(notificationService)
                 .sendEmail(TEST_EMAIL_ADDRESS, Collections.emptyMap(), TEMPLATE_ID);
+    }
+
+    @Test
+    public void shouldSuccessfullyProcessAccountCreatedConfirmationFromSQSQueue()
+            throws JsonProcessingException, NotificationClientException {
+        String accountManagementUrl = "http://account-management/sign-in";
+        when(notificationService.getNotificationTemplateId(ACCOUNT_CREATED_CONFIRMATION))
+                .thenReturn(TEMPLATE_ID);
+        when(configService.getAccountManagementURI()).thenReturn(accountManagementUrl);
+
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION);
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        Map<String, Object> personalisation = new HashMap<>();
+        personalisation.put("sign-in-page-url", accountManagementUrl);
+
+        verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, TEMPLATE_ID);
     }
 
     @Test

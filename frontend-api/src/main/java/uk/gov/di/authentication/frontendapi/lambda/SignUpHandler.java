@@ -102,7 +102,6 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                 LOG.info(
                         "SignUpHandler successfully processed request for session {}",
                         userContext.getSession().getSessionId());
-
                 return generateApiGatewayProxyResponse(
                         200, new BaseAPIResponse(userContext.getSession().getState()));
             } else {

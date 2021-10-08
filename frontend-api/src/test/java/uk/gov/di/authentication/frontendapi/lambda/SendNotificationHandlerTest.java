@@ -44,6 +44,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
@@ -102,7 +103,6 @@ class SendNotificationHandlerTest {
                 .thenReturn(Optional.empty());
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_SIX_DIGIT_CODE);
-        ObjectMapper objectMapper = new ObjectMapper();
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         usingValidSession();
@@ -115,8 +115,7 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(200, result.getStatusCode());
-        BaseAPIResponse response =
-                new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
+        BaseAPIResponse response = objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
         assertThat(VERIFY_EMAIL_CODE_SENT, equalTo(response.getSessionState()));
 
         verify(awsSqsClient).send(serialisedRequest);
@@ -186,7 +185,6 @@ class SendNotificationHandlerTest {
                 .thenReturn(Optional.empty());
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_SIX_DIGIT_CODE);
-        ObjectMapper objectMapper = new ObjectMapper();
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
         Mockito.doThrow(SdkClientException.class).when(awsSqsClient).send(eq(serialisedRequest));
 
@@ -238,8 +236,7 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(200, result.getStatusCode());
-        BaseAPIResponse response =
-                new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
+        BaseAPIResponse response = objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
         assertThat(VERIFY_PHONE_NUMBER_CODE_SENT, equalTo(response.getSessionState()));
     }
 
@@ -403,6 +400,24 @@ class SendNotificationHandlerTest {
         BaseAPIResponse codeResponse =
                 objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
         assertEquals(SessionState.EMAIL_CODE_REQUESTS_BLOCKED, codeResponse.getSessionState());
+    }
+
+    @Test
+    public void shouldReturn204WhenSendingAccountCreationEmail() throws JsonProcessingException {
+        usingValidSession();
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                        TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION);
+        verify(awsSqsClient).send(objectMapper.writeValueAsString(notifyRequest));
+
+        assertEquals(204, result.getStatusCode());
     }
 
     private void maxOutCodeRequestCount() {
