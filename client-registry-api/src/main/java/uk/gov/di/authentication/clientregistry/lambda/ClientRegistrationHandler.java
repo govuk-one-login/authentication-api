@@ -66,6 +66,7 @@ public class ClientRegistrationHandler
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
+                                    AuditService.UNKNOWN,
                                     ipAddress);
 
                             try {
@@ -79,6 +80,7 @@ public class ClientRegistrationHandler
                                     auditService.submitAuditEvent(
                                             REGISTER_CLIENT_REQUEST_ERROR,
                                             context.getAwsRequestId(),
+                                            AuditService.UNKNOWN,
                                             AuditService.UNKNOWN,
                                             AuditService.UNKNOWN,
                                             AuditService.UNKNOWN,
@@ -119,6 +121,7 @@ public class ClientRegistrationHandler
                                 auditService.submitAuditEvent(
                                         REGISTER_CLIENT_REQUEST_ERROR,
                                         context.getAwsRequestId(),
+                                        AuditService.UNKNOWN,
                                         AuditService.UNKNOWN,
                                         AuditService.UNKNOWN,
                                         AuditService.UNKNOWN,

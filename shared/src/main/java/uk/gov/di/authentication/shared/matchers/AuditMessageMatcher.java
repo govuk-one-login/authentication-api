@@ -51,6 +51,12 @@ public class AuditMessageMatcher<T> extends TypeSafeDiagnosingMatcher<String> {
         return new AuditMessageMatcher<>("ip address", getIpAddress, ipAddress);
     }
 
+    public static AuditMessageMatcher<String> hasSubjectId(String subjectId) {
+        Function<AuditEvent, String> getSubjectId =
+                (auditEvent) -> auditEvent.getUser().getSubjectId();
+        return new AuditMessageMatcher<>("subject ID", getSubjectId, subjectId);
+    }
+
     @Override
     protected boolean matchesSafely(
             String serialisedAuditMessage, Description mismatchDescription) {
