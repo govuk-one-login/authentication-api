@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthorizationService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -91,12 +92,14 @@ public class AuthorisationHandler
         return isWarming(input)
                 .orElseGet(
                         () -> {
+                            String ipAddress = IpAddressHelper.extractIpAddress(input);
                             auditService.submitAuditEvent(
                                     OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
                                     context.getAwsRequestId(),
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN);
+                                    AuditService.UNKNOWN,
+                                    ipAddress);
                             LOGGER.info("Received authentication request");
 
                             Map<String, List<String>> queryStringParameters =
@@ -120,12 +123,16 @@ public class AuthorisationHandler
                                         e.getState(),
                                         e.getResponseMode(),
                                         e.getErrorObject(),
-                                        context);
+                                        context,
+                                        ipAddress);
                             }
                             Optional<ErrorObject> error =
                                     authorizationService.validateAuthRequest(authRequest);
 
-                            return error.map(e -> generateErrorResponse(authRequest, e, context))
+                            return error.map(
+                                            e ->
+                                                    generateErrorResponse(
+                                                            authRequest, e, context, ipAddress))
                                     .orElseGet(
                                             () ->
                                                     getOrCreateSessionAndRedirect(
@@ -134,7 +141,8 @@ public class AuthorisationHandler
                                                                     .getSessionFromSessionCookie(
                                                                             input.getHeaders()),
                                                             authRequest,
-                                                            context));
+                                                            context,
+                                                            ipAddress));
                         });
     }
 
@@ -142,7 +150,8 @@ public class AuthorisationHandler
             Map<String, List<String>> authRequestParameters,
             Optional<Session> existingSession,
             AuthenticationRequest authenticationRequest,
-            Context context) {
+            Context context,
+            String ipAddress) {
         final SessionAction sessionAction;
         if (authenticationRequest.getPrompt() != null) {
             if (authenticationRequest.getPrompt().contains(Prompt.Type.CONSENT)
@@ -150,12 +159,13 @@ public class AuthorisationHandler
                 return generateErrorResponse(
                         authenticationRequest,
                         OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS,
-                        context);
+                        context,
+                        ipAddress);
             }
             if (authenticationRequest.getPrompt().contains(Prompt.Type.NONE)
                     && !isUserAuthenticated(existingSession)) {
                 return generateErrorResponse(
-                        authenticationRequest, OIDCError.LOGIN_REQUIRED, context);
+                        authenticationRequest, OIDCError.LOGIN_REQUIRED, context, ipAddress);
             }
             if (authenticationRequest.getPrompt().contains(Prompt.Type.LOGIN)
                     && isUserAuthenticated(existingSession)) {
@@ -293,14 +303,18 @@ public class AuthorisationHandler
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(
-            AuthenticationRequest authRequest, ErrorObject errorObject, Context context) {
+            AuthenticationRequest authRequest,
+            ErrorObject errorObject,
+            Context context,
+            String ipAddress) {
 
         return generateErrorResponse(
                 authRequest.getRedirectionURI(),
                 authRequest.getState(),
                 authRequest.getResponseMode(),
                 errorObject,
-                context);
+                context,
+                ipAddress);
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(
@@ -308,7 +322,8 @@ public class AuthorisationHandler
             State state,
             ResponseMode responseMode,
             ErrorObject errorObject,
-            Context context) {
+            Context context,
+            String ipAddress) {
 
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR,
@@ -316,6 +331,7 @@ public class AuthorisationHandler
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
+                ipAddress,
                 pair("description", errorObject.getDescription()));
 
         LOGGER.error(

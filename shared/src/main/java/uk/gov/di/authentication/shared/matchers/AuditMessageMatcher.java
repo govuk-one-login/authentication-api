@@ -5,7 +5,7 @@ import org.hamcrest.TypeSafeDiagnosingMatcher;
 import uk.gov.di.audit.AuditPayload.AuditEvent;
 import uk.gov.di.audit.AuditPayload.SignedAuditEvent;
 
-import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.function.Function;
 
 public class AuditMessageMatcher<T> extends TypeSafeDiagnosingMatcher<String> {
@@ -45,6 +45,12 @@ public class AuditMessageMatcher<T> extends TypeSafeDiagnosingMatcher<String> {
         return new AuditMessageMatcher<>("email", getEmail, email);
     }
 
+    public static AuditMessageMatcher<String> hasIpAddress(String ipAddress) {
+        Function<AuditEvent, String> getIpAddress =
+                (auditEvent) -> auditEvent.getUser().getIpAddress();
+        return new AuditMessageMatcher<>("ip address", getIpAddress, ipAddress);
+    }
+
     @Override
     protected boolean matchesSafely(
             String serialisedAuditMessage, Description mismatchDescription) {
@@ -71,7 +77,7 @@ public class AuditMessageMatcher<T> extends TypeSafeDiagnosingMatcher<String> {
     private AuditEvent deserialiseAuditEvent(String serialisedMessage) {
         try {
             var signedAuditEvent =
-                    SignedAuditEvent.parseFrom(serialisedMessage.getBytes(StandardCharsets.UTF_8));
+                    SignedAuditEvent.parseFrom(Base64.getDecoder().decode(serialisedMessage));
 
             return AuditEvent.parseFrom(signedAuditEvent.getPayload());
         } catch (Exception ex) {

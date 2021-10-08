@@ -20,6 +20,7 @@ import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -102,6 +103,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 context.getAwsRequestId(),
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
                 AuditService.UNKNOWN);
     }
 
@@ -110,6 +112,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         auditService.submitAuditEvent(
                 ACCOUNT_MANAGEMENT_REQUEST_ERROR,
                 context.getAwsRequestId(),
+                AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN);
@@ -125,6 +128,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
         LOGGER.info(
                 "UpdateProfileHandler processing request for session {}", session.getSessionId());
+
+        String ipAddress = IpAddressHelper.extractIpAddress(input);
 
         try {
             if (!session.validateSession(request.getEmail())) {
@@ -144,7 +149,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                 context.getAwsRequestId(),
                                 session.getSessionId(),
                                 AuditService.UNKNOWN,
-                                session.getEmailAddress());
+                                session.getEmailAddress(),
+                                ipAddress);
                         sessionService.save(session.setState(nextState));
                         LOGGER.info(
                                 "Phone number updated and session state changed. Session state {}",
@@ -194,7 +200,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                 context.getAwsRequestId(),
                                 session.getSessionId(),
                                 clientId,
-                                session.getEmailAddress());
+                                session.getEmailAddress(),
+                                ipAddress);
 
                         LOGGER.info(
                                 "Consent updated for ClientID {} and session state changed. Session state {}",
@@ -214,7 +221,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                 context.getAwsRequestId(),
                                 session.getSessionId(),
                                 AuditService.UNKNOWN,
-                                session.getEmailAddress());
+                                session.getEmailAddress(),
+                                ipAddress);
                         LOGGER.info(
                                 "Updated terms and conditions. Email {} for Version {}",
                                 request.getEmail(),
