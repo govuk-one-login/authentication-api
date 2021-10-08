@@ -49,6 +49,7 @@ public class AuditService {
             String subjectId,
             String email,
             String ipAddress,
+            String phoneNumber,
             MetadataPair... metadataPairs) {
         snsService.publishAuditMessage(
                 generateLogLine(
@@ -59,6 +60,7 @@ public class AuditService {
                         subjectId,
                         email,
                         ipAddress,
+                        phoneNumber,
                         metadataPairs));
     }
 
@@ -70,6 +72,7 @@ public class AuditService {
             String subjectId,
             String email,
             String ipAddress,
+            String phoneNumber,
             MetadataPair... metadataPairs) {
         var uniqueId = UUID.randomUUID();
         var timestamp = clock.instant().toString();
@@ -88,6 +91,8 @@ public class AuditService {
                                         .setEmail(Optional.ofNullable(email).orElse(UNKNOWN))
                                         .setIpAddress(
                                                 Optional.ofNullable(ipAddress).orElse(UNKNOWN))
+                                        .setPhoneNumber(
+                                                Optional.ofNullable(phoneNumber).orElse(UNKNOWN))
                                         .build())
                         .build();
 

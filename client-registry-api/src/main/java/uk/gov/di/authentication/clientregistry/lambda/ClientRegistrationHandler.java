@@ -67,7 +67,8 @@ public class ClientRegistrationHandler
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
-                                    ipAddress);
+                                    ipAddress,
+                                    AuditService.UNKNOWN);
 
                             try {
                                 ClientRegistrationRequest clientRegistrationRequest =
@@ -84,7 +85,8 @@ public class ClientRegistrationHandler
                                             AuditService.UNKNOWN,
                                             AuditService.UNKNOWN,
                                             AuditService.UNKNOWN,
-                                            ipAddress);
+                                            ipAddress,
+                                            AuditService.UNKNOWN);
 
                                     return generateApiGatewayProxyResponse(
                                             400, errorResponse.get().toJSONObject().toJSONString());
@@ -125,7 +127,8 @@ public class ClientRegistrationHandler
                                         AuditService.UNKNOWN,
                                         AuditService.UNKNOWN,
                                         AuditService.UNKNOWN,
-                                        ipAddress);
+                                        ipAddress,
+                                        AuditService.UNKNOWN);
 
                                 return generateApiGatewayProxyResponse(
                                         400,

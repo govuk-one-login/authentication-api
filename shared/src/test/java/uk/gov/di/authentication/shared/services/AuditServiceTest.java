@@ -29,6 +29,7 @@ import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasCl
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasEmail;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasEventName;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasIpAddress;
+import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasPhoneNumber;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasRequestId;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasSessionId;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasSubjectId;
@@ -74,7 +75,8 @@ class AuditServiceTest {
                 "client-id",
                 "subject-id",
                 "email",
-                "ip-address");
+                "ip-address",
+                "phone-number");
 
         verify(snsService).publishAuditMessage(messageCaptor.capture());
         var serialisedAuditMessage = messageCaptor.getValue();
@@ -87,6 +89,7 @@ class AuditServiceTest {
         assertThat(serialisedAuditMessage, hasSubjectId("subject-id"));
         assertThat(serialisedAuditMessage, hasEmail("email"));
         assertThat(serialisedAuditMessage, hasIpAddress("ip-address"));
+        assertThat(serialisedAuditMessage, hasPhoneNumber("phone-number"));
     }
 
     @Test
@@ -102,7 +105,8 @@ class AuditServiceTest {
                 "client-id",
                 "subject-id",
                 "email",
-                "ip-address");
+                "ip-address",
+                "phone-number");
 
         verify(kmsConnectionService).sign(signingRequestCaptor.capture());
         verify(snsService).publishAuditMessage(messageCaptor.capture());
@@ -128,6 +132,7 @@ class AuditServiceTest {
                 "subject-id",
                 "email",
                 "ip-address",
+                "phone-number",
                 pair("key", "value"),
                 pair("key2", "value2"));
 

@@ -70,7 +70,8 @@ public class UpdateClientConfigHandler
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
-                                    ipAddress);
+                                    ipAddress,
+                                    AuditService.UNKNOWN);
                             try {
                                 String clientId = input.getPathParameters().get("clientId");
                                 LOGGER.info("Request received with ClientId {}", clientId);
@@ -86,7 +87,8 @@ public class UpdateClientConfigHandler
                                             clientId,
                                             AuditService.UNKNOWN,
                                             AuditService.UNKNOWN,
-                                            ipAddress);
+                                            ipAddress,
+                                            AuditService.UNKNOWN);
                                     LOGGER.error("Client with ClientId {} is not valid", clientId);
                                     return generateApiGatewayProxyResponse(
                                             400,
@@ -105,7 +107,8 @@ public class UpdateClientConfigHandler
                                             clientId,
                                             AuditService.UNKNOWN,
                                             AuditService.UNKNOWN,
-                                            ipAddress);
+                                            ipAddress,
+                                            AuditService.UNKNOWN);
                                     return generateApiGatewayProxyResponse(
                                             400, errorResponse.get().toJSONObject().toJSONString());
                                 }
@@ -132,7 +135,8 @@ public class UpdateClientConfigHandler
                                         AuditService.UNKNOWN,
                                         AuditService.UNKNOWN,
                                         AuditService.UNKNOWN,
-                                        ipAddress);
+                                        ipAddress,
+                                        AuditService.UNKNOWN);
                                 LOGGER.error(
                                         "Request with path parameters {} is missing request parameters",
                                         input.getPathParameters());

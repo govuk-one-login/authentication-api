@@ -105,6 +105,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
                 AuditService.UNKNOWN);
     }
 
@@ -113,6 +114,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         auditService.submitAuditEvent(
                 ACCOUNT_MANAGEMENT_REQUEST_ERROR,
                 context.getAwsRequestId(),
+                AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
@@ -160,7 +162,10 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                         .map(UserProfile::getSubjectID)
                                         .orElse(AuditService.UNKNOWN),
                                 email,
-                                ipAddress);
+                                ipAddress,
+                                userProfile
+                                        .map(UserProfile::getPhoneNumber)
+                                        .orElse(AuditService.UNKNOWN));
                         sessionService.save(session.setState(nextState));
                         LOGGER.info(
                                 "Phone number updated and session state changed. Session state {}",
@@ -214,7 +219,10 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                         .map(UserProfile::getSubjectID)
                                         .orElse(AuditService.UNKNOWN),
                                 email,
-                                ipAddress);
+                                ipAddress,
+                                userProfile
+                                        .map(UserProfile::getPhoneNumber)
+                                        .orElse(AuditService.UNKNOWN));
 
                         LOGGER.info(
                                 "Consent updated for ClientID {} and session state changed. Session state {}",
@@ -238,7 +246,10 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                         .map(UserProfile::getSubjectID)
                                         .orElse(AuditService.UNKNOWN),
                                 email,
-                                ipAddress);
+                                ipAddress,
+                                userProfile
+                                        .map(UserProfile::getPhoneNumber)
+                                        .orElse(AuditService.UNKNOWN));
                         LOGGER.info(
                                 "Updated terms and conditions. Email {} for Version {}",
                                 request.getEmail(),
