@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
+import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
@@ -37,6 +38,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
@@ -78,6 +80,7 @@ class VerifyCodeRequestHandlerTest {
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             mock(StateMachine.class);
     private final UserProfile userProfile = mock(UserProfile.class);
+    private final ClientSession clientSession = mock(ClientSession.class);
     private final Session session =
             new Session("session-id")
                     .setEmailAddress(TEST_EMAIL_ADDRESS)
@@ -207,6 +210,7 @@ class VerifyCodeRequestHandlerTest {
         BaseAPIResponse codeResponse =
                 new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
         assertThat(codeResponse.getSessionState(), equalTo(PHONE_NUMBER_CODE_VERIFIED));
+        assertThat(session.getCurrentCredentialStrength(), equalTo(MEDIUM_LEVEL));
     }
 
     @Test
@@ -539,12 +543,16 @@ class VerifyCodeRequestHandlerTest {
         event.setHeaders(
                 Map.of(
                         "Session-Id",
-                        session.map(s -> s.getSessionId()).orElse("invalid-session-id")));
+                        session.map(s -> s.getSessionId()).orElse("invalid-session-id"),
+                        "Client-Session-Id",
+                        "client-session-id"));
         event.setBody(
                 format(
                         "{ \"code\": \"%s\", \"notificationType\": \"%s\" }",
                         code, notificationType));
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders())).thenReturn(session);
+        when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))
+                .thenReturn(Optional.of(clientSession));
         return handler.handleRequest(event, context);
     }
 }
