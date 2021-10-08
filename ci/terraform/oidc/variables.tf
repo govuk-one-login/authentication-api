@@ -173,6 +173,10 @@ variable "dns_state_role" {
   type = string
 }
 
+variable "account_management_url" {
+  type = string
+}
+
 variable "shared_state_bucket" {
   type = string
 }
