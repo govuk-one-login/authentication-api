@@ -103,14 +103,20 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             UserContext userContext) {
         try {
             if (!userContext.getSession().validateSession(request.getEmail())) {
-                LOGGER.info("Invalid session. SessionId {}", userContext.getSession().getSessionId());
+                LOGGER.info(
+                        "Invalid session. SessionId {}", userContext.getSession().getSessionId());
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
             if (request.getNotificationType().equals(ACCOUNT_CREATED_CONFIRMATION)) {
-                LOGGER.info("Placing message on queue for AccountCreatedConfirmation for sessionId: {}", userContext.getSession().getSessionId());
-                NotifyRequest notifyRequest = new NotifyRequest(request.getEmail(), ACCOUNT_CREATED_CONFIRMATION);
+                LOGGER.info(
+                        "Placing message on queue for AccountCreatedConfirmation for sessionId: {}",
+                        userContext.getSession().getSessionId());
+                NotifyRequest notifyRequest =
+                        new NotifyRequest(request.getEmail(), ACCOUNT_CREATED_CONFIRMATION);
                 sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
-                LOGGER.info("AccountCreatedConfirmation email placed on queue for sessionId: {}", userContext.getSession().getSessionId());
+                LOGGER.info(
+                        "AccountCreatedConfirmation email placed on queue for sessionId: {}",
+                        userContext.getSession().getSessionId());
                 return generateEmptySuccessApiGatewayResponse();
             }
             boolean codeRequestValid =

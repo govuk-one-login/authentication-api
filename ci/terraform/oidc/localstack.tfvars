@@ -8,6 +8,6 @@ keep_lambdas_warm       = false
 dns_state_bucket        = null
 dns_state_key           = null
 dns_state_role          = null
-account_management_url  = null
+account_management_url  = "http://localhost:3000/sign-in"
 frontend_base_url       = "http://localhost:3000"
 shared_state_bucket     = "terraform-state"

@@ -21,6 +21,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
@@ -54,47 +55,54 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     @Override
     public Void handleRequest(SQSEvent event, Context context) {
 
+        Map<String, Object> notifyPersonalisation = new HashMap<>();
+
         for (SQSMessage msg : event.getRecords()) {
             try {
                 NotifyRequest notifyRequest =
                         objectMapper.readValue(msg.getBody(), NotifyRequest.class);
                 try {
                     switch (notifyRequest.getNotificationType()) {
+                        case ACCOUNT_CREATED_CONFIRMATION:
+                            notifyPersonalisation.put(
+                                    "sign-in-page-url", configService.getAccountManagementURI());
+                            notificationService.sendEmail(
+                                    notifyRequest.getDestination(),
+                                    notifyPersonalisation,
+                                    notificationService.getNotificationTemplateId(
+                                            ACCOUNT_CREATED_CONFIRMATION));
+                            break;
                         case VERIFY_EMAIL:
-                            Map<String, Object> emailPersonalisation = new HashMap<>();
-                            emailPersonalisation.put("validation-code", notifyRequest.getCode());
-                            emailPersonalisation.put(
+                            notifyPersonalisation.put("validation-code", notifyRequest.getCode());
+                            notifyPersonalisation.put(
                                     "email-address", notifyRequest.getDestination());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
-                                    emailPersonalisation,
+                                    notifyPersonalisation,
                                     notificationService.getNotificationTemplateId(VERIFY_EMAIL));
                             break;
                         case VERIFY_PHONE_NUMBER:
-                            Map<String, Object> textPersonalisation = new HashMap<>();
-                            textPersonalisation.put("validation-code", notifyRequest.getCode());
+                            notifyPersonalisation.put("validation-code", notifyRequest.getCode());
                             notificationService.sendText(
                                     notifyRequest.getDestination(),
-                                    textPersonalisation,
+                                    notifyPersonalisation,
                                     notificationService.getNotificationTemplateId(
                                             VERIFY_PHONE_NUMBER));
                             break;
                         case MFA_SMS:
-                            Map<String, Object> mfaPersonalisation = new HashMap<>();
-                            mfaPersonalisation.put("validation-code", notifyRequest.getCode());
+                            notifyPersonalisation.put("validation-code", notifyRequest.getCode());
                             notificationService.sendText(
                                     notifyRequest.getDestination(),
-                                    mfaPersonalisation,
+                                    notifyPersonalisation,
                                     notificationService.getNotificationTemplateId(MFA_SMS));
                             break;
                         case RESET_PASSWORD:
-                            Map<String, Object> resetPasswordPersonalisation = new HashMap<>();
-                            resetPasswordPersonalisation.put(
+                            notifyPersonalisation.put(
                                     "reset-password-link",
                                     buildResetPasswordLink(notifyRequest.getCode()));
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
-                                    resetPasswordPersonalisation,
+                                    notifyPersonalisation,
                                     notificationService.getNotificationTemplateId(RESET_PASSWORD));
                             break;
                         case PASSWORD_RESET_CONFIRMATION:

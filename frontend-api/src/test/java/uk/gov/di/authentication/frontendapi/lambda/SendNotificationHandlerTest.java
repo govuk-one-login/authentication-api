@@ -115,8 +115,7 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(200, result.getStatusCode());
-        BaseAPIResponse response =
-                objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
+        BaseAPIResponse response = objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
         assertThat(VERIFY_EMAIL_CODE_SENT, equalTo(response.getSessionState()));
 
         verify(awsSqsClient).send(serialisedRequest);
@@ -237,8 +236,7 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(200, result.getStatusCode());
-        BaseAPIResponse response =
-                objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
+        BaseAPIResponse response = objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
         assertThat(VERIFY_PHONE_NUMBER_CODE_SENT, equalTo(response.getSessionState()));
     }
 

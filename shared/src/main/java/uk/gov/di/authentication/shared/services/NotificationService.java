@@ -36,6 +36,8 @@ public class NotificationService {
                 return System.getenv("RESET_PASSWORD_TEMPLATE_ID");
             case PASSWORD_RESET_CONFIRMATION:
                 return System.getenv("PASSWORD_RESET_CONFIRMATION_TEMPLATE_ID");
+            case ACCOUNT_CREATED_CONFIRMATION:
+                return System.getenv("ACCOUNT_CREATED_CONFIRMATION_TEMPLATE_ID");
             default:
                 throw new RuntimeException("NotificationType template ID does not exist");
         }

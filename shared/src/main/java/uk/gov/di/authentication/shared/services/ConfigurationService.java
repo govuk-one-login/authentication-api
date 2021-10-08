@@ -85,6 +85,10 @@ public class ConfigurationService {
         return URI.create(System.getenv("LOGIN_URI"));
     }
 
+    public String getAccountManagementURI() {
+        return System.getenv("ACCOUNT_MANAGEMENT_URI");
+    }
+
     public String getNotifyApiKey() {
         return System.getenv("NOTIFY_API_KEY");
     }

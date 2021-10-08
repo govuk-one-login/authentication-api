@@ -18,6 +18,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
@@ -107,5 +108,19 @@ public class SendNotificationIntegrationTest {
         assertThat(
                 personalisation.get("reset-password-link").asText(),
                 startsWith("http://localhost:3000/reset-password?code="));
+    }
+
+    @Test
+    void shouldCallNotifyWhenValidAccountCreatedRequestIsAddedToQueue()
+            throws JsonProcessingException {
+        client.send(
+                objectMapper.writeValueAsString(
+                        new NotifyRequest(TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION)));
+
+        JsonNode request = notifyStub.waitForRequest(60);
+        JsonNode personalisation = request.get("personalisation");
+        assertEquals(TEST_EMAIL_ADDRESS, request.get("email_address").asText());
+        assertEquals(
+                "http://localhost:3000/sign-in", personalisation.get("sign-in-page-url").asText());
     }
 }
