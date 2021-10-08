@@ -7,7 +7,7 @@ module "logout" {
   environment     = var.environment
 
   handler_environment_variables = {
-    DEFAULT_LOGOUT_URI      = "https://di-authentication-frontend.london.cloudapps.digital/signed-out"
+    DEFAULT_LOGOUT_URI      = var.use_localstack ? "http://localhost:3000/signed-out" : "https://front.${var.environment}.${var.service_domain_name}/signed-out"
     BASE_URL                = local.api_base_url
     EVENTS_SNS_TOPIC_ARN    = aws_sns_topic.events.arn
     AUDIT_SIGNING_KEY_ALIAS = local.audit_signing_key_alias_name
