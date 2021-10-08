@@ -46,12 +46,20 @@ public class AuditService {
             String requestId,
             String sessionId,
             String clientId,
+            String subjectId,
             String email,
             String ipAddress,
             MetadataPair... metadataPairs) {
         snsService.publishAuditMessage(
                 generateLogLine(
-                        event, requestId, sessionId, clientId, email, ipAddress, metadataPairs));
+                        event,
+                        requestId,
+                        sessionId,
+                        clientId,
+                        subjectId,
+                        email,
+                        ipAddress,
+                        metadataPairs));
     }
 
     String generateLogLine(
@@ -59,6 +67,7 @@ public class AuditService {
             String requestId,
             String sessionId,
             String clientId,
+            String subjectId,
             String email,
             String ipAddress,
             MetadataPair... metadataPairs) {
@@ -75,6 +84,7 @@ public class AuditService {
                         .setClientId(Optional.ofNullable(clientId).orElse(UNKNOWN))
                         .setUser(
                                 AuditEvent.User.newBuilder()
+                                        .setId(Optional.ofNullable(subjectId).orElse(UNKNOWN))
                                         .setEmail(Optional.ofNullable(email).orElse(UNKNOWN))
                                         .setIpAddress(
                                                 Optional.ofNullable(ipAddress).orElse(UNKNOWN))

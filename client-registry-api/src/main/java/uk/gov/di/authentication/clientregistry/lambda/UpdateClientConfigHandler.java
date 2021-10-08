@@ -69,6 +69,7 @@ public class UpdateClientConfigHandler
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
+                                    AuditService.UNKNOWN,
                                     ipAddress);
                             try {
                                 String clientId = input.getPathParameters().get("clientId");
@@ -83,6 +84,7 @@ public class UpdateClientConfigHandler
                                             context.getAwsRequestId(),
                                             AuditService.UNKNOWN,
                                             clientId,
+                                            AuditService.UNKNOWN,
                                             AuditService.UNKNOWN,
                                             ipAddress);
                                     LOGGER.error("Client with ClientId {} is not valid", clientId);
@@ -101,6 +103,7 @@ public class UpdateClientConfigHandler
                                             context.getAwsRequestId(),
                                             AuditService.UNKNOWN,
                                             clientId,
+                                            AuditService.UNKNOWN,
                                             AuditService.UNKNOWN,
                                             ipAddress);
                                     return generateApiGatewayProxyResponse(
@@ -125,6 +128,7 @@ public class UpdateClientConfigHandler
                                 auditService.submitAuditEvent(
                                         UPDATE_CLIENT_REQUEST_ERROR,
                                         context.getAwsRequestId(),
+                                        AuditService.UNKNOWN,
                                         AuditService.UNKNOWN,
                                         AuditService.UNKNOWN,
                                         AuditService.UNKNOWN,

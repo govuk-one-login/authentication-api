@@ -145,6 +145,7 @@ class UpdateProfileHandlerTest {
                         "request-id",
                         session.getSessionId(),
                         "",
+                        "",
                         TEST_EMAIL_ADDRESS,
                         "");
     }
@@ -180,6 +181,7 @@ class UpdateProfileHandlerTest {
                         ACCOUNT_MANAGEMENT_TERMS_CONDS_ACCEPTANCE_UPDATED,
                         "request-id",
                         session.getSessionId(),
+                        "",
                         "",
                         TEST_EMAIL_ADDRESS,
                         "");
@@ -231,6 +233,7 @@ class UpdateProfileHandlerTest {
                         "request-id",
                         session.getSessionId(),
                         clientID.getValue(),
+                        "",
                         TEST_EMAIL_ADDRESS,
                         "");
         BaseAPIResponse codeResponse =
@@ -256,7 +259,8 @@ class UpdateProfileHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
 
         verify(auditService)
-                .submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_ERROR, "request-id", "", "", "", "");
+                .submitAuditEvent(
+                        ACCOUNT_MANAGEMENT_REQUEST_ERROR, "request-id", "", "", "", "", "");
     }
 
     @Test
@@ -275,7 +279,8 @@ class UpdateProfileHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1017));
 
         verify(auditService)
-                .submitAuditEvent(ACCOUNT_MANAGEMENT_REQUEST_ERROR, "request-id", "", "", "", "");
+                .submitAuditEvent(
+                        ACCOUNT_MANAGEMENT_REQUEST_ERROR, "request-id", "", "", "", "", "");
     }
 
     private void usingValidSession() {
@@ -304,7 +309,7 @@ class UpdateProfileHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        ACCOUNT_MANAGEMENT_REQUEST_RECEIVED, "request-id", "", "", "", "");
+                        ACCOUNT_MANAGEMENT_REQUEST_RECEIVED, "request-id", "", "", "", "", "");
 
         return response;
     }
