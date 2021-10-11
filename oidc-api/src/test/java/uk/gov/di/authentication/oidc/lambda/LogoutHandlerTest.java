@@ -87,7 +87,7 @@ class LogoutHandlerTest {
     public void shouldDeleteSessionAndRedirectToClientLogoutUriForValidLogoutRequest() {
         when(dynamoClientService.getClient("client-id"))
                 .thenReturn(Optional.of(createClientRegistry()));
-        when(tokenValidationService.validateIdTokenSignature(signedIDToken.serialize()))
+        when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
                 .thenReturn(true);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
@@ -112,7 +112,7 @@ class LogoutHandlerTest {
     public void shouldNotReturnStateWhenStateIsNotSentInRequest() {
         when(dynamoClientService.getClient("client-id"))
                 .thenReturn(Optional.of(createClientRegistry()));
-        when(tokenValidationService.validateIdTokenSignature(signedIDToken.serialize()))
+        when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
                 .thenReturn(true);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
@@ -208,8 +208,7 @@ class LogoutHandlerTest {
         SignedJWT signedJWT =
                 TokenGeneratorHelper.generateIDToken(
                         "invalid-client-id", new Subject(), "http://localhost-rp", ecSigningKey);
-        when(tokenValidationService.validateIdTokenSignature(signedJWT.serialize()))
-                .thenReturn(true);
+        when(tokenValidationService.isTokenSignatureValid(signedJWT.serialize())).thenReturn(true);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
         event.setQueryStringParameters(
@@ -238,7 +237,7 @@ class LogoutHandlerTest {
 
     @Test
     public void shouldRedirectToDefaultLogoutUriWhenLogoutUriInRequestDoesNotMatchClientRegistry() {
-        when(tokenValidationService.validateIdTokenSignature(signedIDToken.serialize()))
+        when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
                 .thenReturn(true);
         when(dynamoClientService.getClient("client-id"))
                 .thenReturn(Optional.of(createClientRegistry()));

@@ -120,7 +120,7 @@ public class LogoutHandler
             throw new RuntimeException(
                     format("ID Token does not exist for Session: %s", session.getSessionId()));
         }
-        if (!tokenValidationService.validateIdTokenSignature(
+        if (!tokenValidationService.isTokenSignatureValid(
                 queryStringParameters.get("id_token_hint"))) {
             LOG.error(
                     "Unable to validate ID token signature for Session: {}",

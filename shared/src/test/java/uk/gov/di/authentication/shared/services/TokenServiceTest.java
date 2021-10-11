@@ -45,6 +45,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -394,8 +395,10 @@ public class TokenServiceTest {
     }
 
     private SignedJWT createSignedIdToken(JWSSigner signer) {
+        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         return TokenGeneratorHelper.generateIDToken(
-                CLIENT_ID, PUBLIC_SUBJECT, BASE_URL, signer, KEY_ID);
+                CLIENT_ID, PUBLIC_SUBJECT, BASE_URL, signer, KEY_ID, expiryDate);
     }
 
     private void createSignedAccessToken() throws JOSEException {

@@ -19,7 +19,6 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.Issuer;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
-import com.nimbusds.oauth2.sdk.token.Token;
 import com.nimbusds.openid.connect.sdk.validators.IDTokenValidator;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -69,19 +68,19 @@ public class TokenValidationService {
 
     public boolean validateAccessTokenSignature(AccessToken accessToken) {
         LOGGER.info("Validating Access Token signature");
-        return validateTokenSignature(accessToken);
+        return isTokenSignatureValid(accessToken.getValue());
     }
 
     public boolean validateRefreshTokenSignature(RefreshToken refreshToken) {
         LOGGER.info("Validating Refresh Token signature");
-        return validateTokenSignature(refreshToken);
+        return isTokenSignatureValid(refreshToken.getValue());
     }
 
-    private boolean validateTokenSignature(Token token) {
+    public boolean isTokenSignatureValid(String tokenValue) {
         boolean isVerified;
         try {
             LOGGER.info("TokenSigningKeyID: " + configService.getTokenSigningKeyAlias());
-            SignedJWT signedJwt = SignedJWT.parse(token.getValue());
+            SignedJWT signedJwt = SignedJWT.parse(tokenValue);
             JWSVerifier verifier = new ECDSAVerifier(getPublicJwk().toECKey());
             isVerified = signedJwt.verify(verifier);
         } catch (JOSEException | java.text.ParseException e) {

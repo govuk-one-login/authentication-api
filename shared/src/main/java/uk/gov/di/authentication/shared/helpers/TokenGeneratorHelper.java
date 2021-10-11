@@ -57,13 +57,20 @@ public class TokenGeneratorHelper {
         } catch (JOSEException e) {
             throw new RuntimeException(e);
         }
-        return generateIDToken(clientId, subject, issuerUrl, signer, signingKey.getKeyID());
+        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        return generateIDToken(
+                clientId, subject, issuerUrl, signer, signingKey.getKeyID(), expiryDate);
     }
 
     public static SignedJWT generateIDToken(
-            String clientId, Subject subject, String issuerUrl, JWSSigner signer, String keyId) {
-        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+            String clientId,
+            Subject subject,
+            String issuerUrl,
+            JWSSigner signer,
+            String keyId,
+            Date expiryDate) {
+
         IDTokenClaimsSet idTokenClaims =
                 new IDTokenClaimsSet(
                         new Issuer(issuerUrl),
