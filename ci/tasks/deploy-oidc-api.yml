@@ -29,6 +29,8 @@ run:
   args:
     - -euc
     - |
+      source oidc-api-env-vars/env.sh
+
       cd "api-src/ci/terraform/oidc"
       terraform init -input=false \
         -backend-config "role_arn=${DEPLOYER_ROLE_ARN}" \
@@ -37,9 +39,7 @@ run:
         -backend-config "encrypt=true" \
         -backend-config "region=eu-west-2"
 
-    source oidc-api-env-vars/env.sh
-
-    terraform apply -auto-approve \
+      terraform apply -auto-approve \
         -var 'oidc_api_lambda_zip_file=../../../../oidc-api-release/oidc-api.zip' \
         -var 'frontend_api_lambda_zip_file=../../../../frontend-api-release/frontend-api.zip' \
         -var 'client_registry_api_lambda_zip_file=../../../../client-registry-api-release/client-registry-api.zip' \
