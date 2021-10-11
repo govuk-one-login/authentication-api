@@ -17,6 +17,7 @@ import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -151,7 +152,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             request.getEmail(),
                             request.getNotificationType(),
                             userContext.getSession(),
-                            nextState);
+                            nextState,
+                            userContext);
                 case VERIFY_PHONE_NUMBER:
                     nextState =
                             stateMachine.transition(
@@ -175,7 +177,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             phoneNumber,
                             request.getNotificationType(),
                             userContext.getSession(),
-                            nextState);
+                            nextState,
+                            userContext);
             }
             return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
         } catch (SdkClientException ex) {
@@ -187,6 +190,9 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         } catch (StateMachine.InvalidStateTransitionException e) {
             LOGGER.error("Invalid transition in user journey", e);
             return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
+        } catch (ClientNotFoundException e) {
+            LOGGER.error("Client not found", e);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
     }
 
@@ -198,8 +204,9 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             String destination,
             NotificationType notificationType,
             Session session,
-            SessionState nextState)
-            throws JsonProcessingException {
+            SessionState nextState,
+            UserContext userContext)
+            throws JsonProcessingException, ClientNotFoundException {
 
         String code = codeGeneratorService.sixDigitCode();
         NotifyRequest notifyRequest = new NotifyRequest(destination, notificationType, code);
@@ -209,10 +216,12 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 configurationService.getCodeExpiry(),
                 notificationType);
         sessionService.save(session.setState(nextState).incrementCodeRequestCount());
-        sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
-        LOGGER.info(
-                "SendNotificationHandler successfully processed request for session {}",
-                session.getSessionId());
+        if (!isTestClientAndAllowedEmail(userContext, notificationType)) {
+            sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+            LOGGER.info(
+                    "SendNotificationHandler successfully processed request for session {}",
+                    session.getSessionId());
+        }
         return generateApiGatewayProxyResponse(200, new BaseAPIResponse(session.getState()));
     }
 
@@ -271,5 +280,39 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 LOGGER.error("Invalid NotificationType sent");
                 throw new RuntimeException("Invalid NotificationType sent");
         }
+    }
+
+    private boolean isTestClientAndAllowedEmail(
+            UserContext userContext, NotificationType notificationType)
+            throws ClientNotFoundException {
+        if (configurationService.isTestClientsEnabled()) {
+            LOGGER.warn(
+                    "TestClients are ENABLED: SessionId {}",
+                    userContext.getSession().getSessionId());
+        } else {
+            return false;
+        }
+        String emailAddress = userContext.getSession().getEmailAddress();
+        return userContext
+                .getClient()
+                .map(
+                        clientRegistry -> {
+                            if (clientRegistry.isTestClient()
+                                    && clientRegistry
+                                            .getTestClientEmailAllowlist()
+                                            .contains(emailAddress)) {
+                                LOGGER.info(
+                                        "SendNotificationHandler not sending message for TestClient {} {} email {} on TestClientEmailAllowlist with NotificationType {} for session {}",
+                                        clientRegistry.getClientID(),
+                                        clientRegistry.getClientName(),
+                                        emailAddress,
+                                        notificationType,
+                                        userContext.getSession().getSessionId());
+                                return true;
+                            } else {
+                                return false;
+                            }
+                        })
+                .orElseThrow(() -> new ClientNotFoundException(userContext.getSession()));
     }
 }

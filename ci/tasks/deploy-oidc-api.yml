@@ -14,6 +14,9 @@ params:
   DNS_STATE_BUCKET: ((dns-state-bucket))
   DNS_STATE_KEY: ((dns-state-key))
   STATE_BUCKET: digital-identity-dev-tfstate
+  TEST_CLIENT_VERIFY_EMAIL_OTP: ((test-client-verify-email-otp))
+  TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP: ((test-client-verify-phone-number-otp))
+  TEST_CLIENTS_ENABLED: false
 inputs:
   - name: api-src
   - name: oidc-api-release
@@ -54,6 +57,9 @@ run:
         -var "dns_state_role=${DNS_DEPLOYER_ROLE_ARN}" \
         -var "shared_state_bucket=${STATE_BUCKET}" \
         -var "account_management_url=${AM_URL}" \
+        -var 'test_client_verify_email_otp=${TEST_CLIENT_VERIFY_EMAIL_OTP}' \
+        -var 'test_client_verify_phone_number_otp=${TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP}' \
+        -var 'test_clients_enabled=${TEST_CLIENTS_ENABLED}' \
         -var-file "${DEPLOY_ENVIRONMENT}-overrides.tfvars" \
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-terraform-outputs.json

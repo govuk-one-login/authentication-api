@@ -21,6 +21,8 @@ public class ClientRegistry {
     private String subjectType;
     private boolean cookieConsentShared = false;
     private boolean isInternalService = false;
+    private boolean testClient = false;
+    private List<String> testClientEmailAllowlist = new ArrayList<>();
 
     @DynamoDBHashKey(attributeName = "ClientID")
     public String getClientID() {
@@ -141,6 +143,26 @@ public class ClientRegistry {
 
     public ClientRegistry setInternalService(boolean internalService) {
         isInternalService = internalService;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "TestClient")
+    public boolean isTestClient() {
+        return testClient;
+    }
+
+    public ClientRegistry setTestClient(boolean testClient) {
+        this.testClient = testClient;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "TestClientEmailAllowlist")
+    public List<String> getTestClientEmailAllowlist() {
+        return testClientEmailAllowlist;
+    }
+
+    public ClientRegistry setTestClientEmailAllowlist(List<String> testClientEmailAllowlist) {
+        this.testClientEmailAllowlist = testClientEmailAllowlist;
         return this;
     }
 }
