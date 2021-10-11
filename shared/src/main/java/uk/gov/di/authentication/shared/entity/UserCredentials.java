@@ -11,6 +11,7 @@ public class UserCredentials {
     private String password;
     private String created;
     private String updated;
+    private String migratedPassword;
 
     public UserCredentials() {}
 
@@ -61,6 +62,16 @@ public class UserCredentials {
 
     public UserCredentials setUpdated(String updated) {
         this.updated = updated;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "MigratedPassword")
+    public String getMigratedPassword() {
+        return migratedPassword;
+    }
+
+    public UserCredentials setMigratedPassword(String migratedPassword) {
+        this.migratedPassword = migratedPassword;
         return this;
     }
 }
