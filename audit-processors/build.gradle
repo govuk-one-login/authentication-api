@@ -13,7 +13,7 @@ dependencies {
     implementation configurations.lambda,
             configurations.sqs,
             project(":shared"),
-            "com.google.protobuf:protobuf-java:3.18.0"
+            "com.google.protobuf:protobuf-java:3.18.1"
 
     runtimeOnly configurations.logging_runtime
 
