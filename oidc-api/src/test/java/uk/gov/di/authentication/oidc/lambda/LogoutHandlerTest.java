@@ -206,7 +206,7 @@ class LogoutHandlerTest {
         assertThat(response, hasStatus(302));
         ErrorObject errorObject =
                 new ErrorObject(
-                        OAuth2Error.INVALID_REQUEST_CODE, "id token does not exist in session");
+                        OAuth2Error.INVALID_REQUEST_CODE, "unable to validate id_token_hint");
         URIBuilder uriBuilder = new URIBuilder(DEFAULT_LOGOUT_URI);
         uriBuilder.addParameter("error_code", errorObject.getCode());
         uriBuilder.addParameter("error_description", errorObject.getDescription());
@@ -240,7 +240,42 @@ class LogoutHandlerTest {
 
         assertThat(response, hasStatus(302));
         ErrorObject errorObject =
-                new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid subject in id token");
+                new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid id_token_hint provided");
+        URIBuilder uriBuilder = new URIBuilder(DEFAULT_LOGOUT_URI);
+        uriBuilder.addParameter("error_code", errorObject.getCode());
+        uriBuilder.addParameter("error_description", errorObject.getDescription());
+        URI expectedUri = uriBuilder.build();
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                equalTo(expectedUri.toString()));
+    }
+
+    @Test
+    public void shouldRedirectToDefaultLogoutUriWithErrorMessageWhenSignaturenIdTokenIsInvalid()
+            throws URISyntaxException, JOSEException {
+        ECKey ecSigningKey =
+                new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+        SignedJWT signedJWT =
+                TokenGeneratorHelper.generateIDToken(
+                        "invalid-client-id", new Subject(), "http://localhost-rp", ecSigningKey);
+        when(tokenValidationService.isTokenSignatureValid(signedJWT.serialize())).thenReturn(false);
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
+        event.setQueryStringParameters(
+                Map.of(
+                        "id_token_hint", signedJWT.serialize(),
+                        "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString()));
+
+        session.getClientSessions().add(CLIENT_SESSION_ID);
+        generateSessionFromCookie(session);
+        setupClientSessionToken(signedJWT);
+
+        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+
+        assertThat(response, hasStatus(302));
+        ErrorObject errorObject =
+                new ErrorObject(
+                        OAuth2Error.INVALID_REQUEST_CODE, "unable to validate id_token_hint");
         URIBuilder uriBuilder = new URIBuilder(DEFAULT_LOGOUT_URI);
         uriBuilder.addParameter("error_code", errorObject.getCode());
         uriBuilder.addParameter("error_description", errorObject.getDescription());
@@ -277,9 +312,7 @@ class LogoutHandlerTest {
 
         assertThat(response, hasStatus(302));
         ErrorObject errorObject =
-                new ErrorObject(
-                        OAuth2Error.UNAUTHORIZED_CLIENT_CODE,
-                        "client not found in client registry");
+                new ErrorObject(OAuth2Error.UNAUTHORIZED_CLIENT_CODE, "client not found");
         URIBuilder uriBuilder = new URIBuilder(DEFAULT_LOGOUT_URI);
         uriBuilder.addParameter("state", STATE.getValue());
         uriBuilder.addParameter("error_code", errorObject.getCode());

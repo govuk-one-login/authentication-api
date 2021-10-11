@@ -130,8 +130,7 @@ public class LogoutHandler
             return generateErrorLogoutResponse(
                     Optional.empty(),
                     new ErrorObject(
-                            OAuth2Error.INVALID_REQUEST_CODE,
-                            "id token does not exist in session"));
+                            OAuth2Error.INVALID_REQUEST_CODE, "unable to validate id_token_hint"));
         }
         if (!tokenValidationService.isTokenSignatureValid(
                 queryStringParameters.get("id_token_hint"))) {
@@ -141,8 +140,7 @@ public class LogoutHandler
             return generateErrorLogoutResponse(
                     Optional.empty(),
                     new ErrorObject(
-                            OAuth2Error.INVALID_REQUEST_CODE,
-                            "unable to validate id token signature"));
+                            OAuth2Error.INVALID_REQUEST_CODE, "unable to validate id_token_hint"));
         }
         try {
             String idTokenHint = queryStringParameters.get("id_token_hint");
@@ -151,7 +149,8 @@ public class LogoutHandler
                 return generateErrorLogoutResponse(
                         Optional.empty(),
                         new ErrorObject(
-                                OAuth2Error.INVALID_REQUEST_CODE, "invalid subject in id token"));
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "invalid id_token_hint provided"));
             }
             Optional<String> audience =
                     idToken.getJWTClaimsSet().getAudience().stream().findFirst();
@@ -196,9 +195,7 @@ public class LogoutHandler
             LOG.error("Client not found in ClientRegistry for ClientID: {}", clientID);
             return generateErrorLogoutResponse(
                     state,
-                    new ErrorObject(
-                            OAuth2Error.UNAUTHORIZED_CLIENT_CODE,
-                            "client not found in client registry"));
+                    new ErrorObject(OAuth2Error.UNAUTHORIZED_CLIENT_CODE, "client not found"));
         }
 
         if ((queryStringParameters.containsKey("post_logout_redirect_uri"))) {
