@@ -95,6 +95,7 @@ public class TokenServiceTest {
         Optional<String> baseUrl = Optional.of(BASE_URL);
         when(configurationService.getBaseURL()).thenReturn(baseUrl);
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
+        when(configurationService.getIDTokenExpiry()).thenReturn(120L);
         when(configurationService.getSessionExpiry()).thenReturn(300L);
     }
 

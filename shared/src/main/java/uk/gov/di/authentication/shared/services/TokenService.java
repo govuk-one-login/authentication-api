@@ -236,7 +236,8 @@ public class TokenService {
             LOGGER.error("Unable to build trustmarkUri");
             throw new RuntimeException(e);
         }
-        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
+        LocalDateTime localDateTime =
+                LocalDateTime.now().plusSeconds(configService.getIDTokenExpiry());
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         IDTokenClaimsSet idTokenClaims =
                 new IDTokenClaimsSet(
