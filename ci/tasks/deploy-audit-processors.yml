@@ -24,7 +24,7 @@ run:
       terraform init -input=false \
         -backend-config "role_arn=${DEPLOYER_ROLE_ARN}" \
         -backend-config "bucket=${STATE_BUCKET}" \
-        -backend-config "key=${DEPLOY_ENVIRONMENT}-terraform.tfstate" \
+        -backend-config "key=${DEPLOY_ENVIRONMENT}-audit-terraform.tfstate" \
         -backend-config "encrypt=true" \
         -backend-config "region=eu-west-2"
 
