@@ -10,8 +10,11 @@ import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.entity.ResponseHeaders;
@@ -27,16 +30,15 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -153,7 +155,9 @@ class LogoutHandlerTest {
     }
 
     @Test
-    public void shouldThrowWhenClientSessionIdIsNotFoundInSession() {
+    public void
+            shouldRedirectToDefaultLogoutUriWithErrorMessageWhenClientSessionIdIsNotFoundInSession()
+                    throws URISyntaxException {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
                 Map.of(
@@ -164,22 +168,23 @@ class LogoutHandlerTest {
         event.setHeaders(Map.of(COOKIE, buildCookieString("invalid-client-session-id")));
         generateSessionFromCookie(session);
 
-        RuntimeException exception =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> handler.handleRequest(event, context),
-                        "Expected to throw exception");
+        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
+        assertThat(response, hasStatus(302));
+        ErrorObject errorObject =
+                new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Invalid Session");
+        URIBuilder uriBuilder = new URIBuilder(DEFAULT_LOGOUT_URI);
+        uriBuilder.addParameter("error_code", errorObject.getCode());
+        uriBuilder.addParameter("error_description", errorObject.getDescription());
+        URI expectedUri = uriBuilder.build();
         assertThat(
-                exception.getMessage(),
-                equalTo(
-                        format(
-                                "Client Session ID does not exist in Session: %s",
-                                session.getSessionId())));
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                equalTo(expectedUri.toString()));
     }
 
     @Test
-    public void shouldThrowWhenIDTokenHintIsNotFoundInSession() {
+    public void shouldRedirectToDefaultLogoutUriWithErrorMessageWhenIDTokenHintIsNotFoundInSession()
+            throws URISyntaxException {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
         event.setQueryStringParameters(
@@ -189,20 +194,25 @@ class LogoutHandlerTest {
                         "state", STATE.toString()));
         generateSessionFromCookie(session);
 
-        RuntimeException exception =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> handler.handleRequest(event, context),
-                        "Expected to throw exception");
+        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
+        assertThat(response, hasStatus(302));
+        ErrorObject errorObject =
+                new ErrorObject(
+                        OAuth2Error.INVALID_REQUEST_CODE, "ID token does not exist in session");
+        URIBuilder uriBuilder = new URIBuilder(DEFAULT_LOGOUT_URI);
+        uriBuilder.addParameter("error_code", errorObject.getCode());
+        uriBuilder.addParameter("error_description", errorObject.getDescription());
+        URI expectedUri = uriBuilder.build();
         assertThat(
-                exception.getMessage(),
-                equalTo(format("ID Token does not exist for Session: %s", session.getSessionId())));
-        verify(sessionService, times(0)).deleteSessionFromRedis(SESSION_ID);
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                equalTo(expectedUri.toString()));
     }
 
     @Test
-    public void shouldThrowWhenClientIsNotFoundInClientRegistry() throws JOSEException {
+    public void
+            shouldRedirectToDefaultLogoutUriWithErrorMessageWhenClientIsNotFoundInClientRegistry()
+                    throws JOSEException, URISyntaxException {
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         SignedJWT signedJWT =
@@ -221,22 +231,26 @@ class LogoutHandlerTest {
         generateSessionFromCookie(session);
         setupClientSessionToken(signedJWT);
 
-        RuntimeException exception =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> handler.handleRequest(event, context),
-                        "Expected to throw exception");
+        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
+        assertThat(response, hasStatus(302));
+        ErrorObject errorObject =
+                new ErrorObject(
+                        OAuth2Error.UNAUTHORIZED_CLIENT_CODE, "Client not found in ClientRegistry");
+        URIBuilder uriBuilder = new URIBuilder(DEFAULT_LOGOUT_URI);
+        uriBuilder.addParameter("state", STATE.getValue());
+        uriBuilder.addParameter("error_code", errorObject.getCode());
+        uriBuilder.addParameter("error_description", errorObject.getDescription());
+        URI expectedUri = uriBuilder.build();
         assertThat(
-                exception.getMessage(),
-                equalTo(
-                        format(
-                                "Client not found in ClientRegistry for ClientID: %s",
-                                "invalid-client-id")));
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                equalTo(expectedUri.toString()));
     }
 
     @Test
-    public void shouldRedirectToDefaultLogoutUriWhenLogoutUriInRequestDoesNotMatchClientRegistry() {
+    public void
+            shouldRedirectToDefaultLogoutUriWithErrorMessageWhenLogoutUriInRequestDoesNotMatchClientRegistry()
+                    throws URISyntaxException {
         when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
                 .thenReturn(true);
         when(dynamoClientService.getClient("client-id"))
@@ -254,9 +268,18 @@ class LogoutHandlerTest {
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
         assertThat(response, hasStatus(302));
+        ErrorObject errorObject =
+                new ErrorObject(
+                        OAuth2Error.INVALID_REQUEST_CODE,
+                        "Client registry does not contain PostLogoutRedirectUri");
+        URIBuilder uriBuilder = new URIBuilder(DEFAULT_LOGOUT_URI);
+        uriBuilder.addParameter("state", STATE.getValue());
+        uriBuilder.addParameter("error_code", errorObject.getCode());
+        uriBuilder.addParameter("error_description", errorObject.getDescription());
+        URI expectedUri = uriBuilder.build();
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                equalTo(DEFAULT_LOGOUT_URI + "?state=" + STATE));
+                equalTo(expectedUri.toString()));
         verify(sessionService, times(1)).deleteSessionFromRedis(SESSION_ID);
     }
 
