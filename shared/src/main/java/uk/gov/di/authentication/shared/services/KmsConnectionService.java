@@ -7,9 +7,11 @@ import com.amazonaws.services.kms.model.GetPublicKeyRequest;
 import com.amazonaws.services.kms.model.GetPublicKeyResult;
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;
+import com.amazonaws.services.kms.model.VerifyRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.ByteBuffer;
 import java.util.Optional;
 
 public class KmsConnectionService {
@@ -43,6 +45,17 @@ public class KmsConnectionService {
     public GetPublicKeyResult getPublicKey(GetPublicKeyRequest getPublicKeyRequest) {
         LOGGER.info("Retrieving public key from KMS with KeyID {}", getPublicKeyRequest.getKeyId());
         return kmsClient.getPublicKey(getPublicKeyRequest);
+    }
+
+    public boolean validateSignature(
+            ByteBuffer signature, ByteBuffer content, String signingKeyId) {
+        var verifyRequest =
+                new VerifyRequest()
+                        .withMessage(content)
+                        .withSignature(signature)
+                        .withKeyId(signingKeyId);
+
+        return kmsClient.verify(verifyRequest).isSignatureValid();
     }
 
     public SignResult sign(SignRequest signRequest) {
