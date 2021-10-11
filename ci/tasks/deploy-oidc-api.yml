@@ -59,7 +59,7 @@ run:
         -var "account_management_url=${AM_URL}" \
         -var 'test_client_verify_email_otp=${TEST_CLIENT_VERIFY_EMAIL_OTP}' \
         -var 'test_client_verify_phone_number_otp=${TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP}' \
-        -var 'test_clients_enabled=${TEST_CLIENTS_ENABLED}' \
+        -var "test_clients_enabled=${TEST_CLIENTS_ENABLED}" \
         -var-file "${DEPLOY_ENVIRONMENT}-overrides.tfvars" \
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-terraform-outputs.json
