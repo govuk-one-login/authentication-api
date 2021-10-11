@@ -37,7 +37,7 @@ run:
         -var "environment=${DEPLOY_ENVIRONMENT}" \
         -var 'logging_endpoint_enabled=true' \
         -var 'logging_endpoint_arn=arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod' \
-        -var 'test_client_email_allowlist=${TEST_CLIENT_EMAIL_ALLOWLIST}' \
+        -var "test_client_email_allowlist=${TEST_CLIENT_EMAIL_ALLOWLIST}" \
         -var-file ${DEPLOY_ENVIRONMENT}-stub-clients.tfvars \
         -var-file ${DEPLOY_ENVIRONMENT}-sizing.tfvars \
 
