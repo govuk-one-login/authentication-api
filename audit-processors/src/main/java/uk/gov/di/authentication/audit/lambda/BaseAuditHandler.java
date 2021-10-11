@@ -18,13 +18,18 @@ import java.util.Optional;
 
 public abstract class BaseAuditHandler implements RequestHandler<SNSEvent, Object> {
 
-    private final Logger LOG = LoggerFactory.getLogger(getClass());
+    protected final Logger LOG = LoggerFactory.getLogger(getClass());
     private final KmsConnectionService kmsConnectionService;
     private final ConfigurationService service;
 
     BaseAuditHandler(KmsConnectionService kmsConnectionService, ConfigurationService service) {
         this.kmsConnectionService = kmsConnectionService;
         this.service = service;
+    }
+
+    BaseAuditHandler() {
+        this.service = new ConfigurationService();
+        this.kmsConnectionService = new KmsConnectionService(service);
     }
 
     @Override
