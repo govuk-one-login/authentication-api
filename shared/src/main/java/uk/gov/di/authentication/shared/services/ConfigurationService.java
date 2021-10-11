@@ -16,9 +16,12 @@ public class ConfigurationService {
     }
 
     // Please keep the method names in alphabetical order so we can find stuff more easily.
-
     public long getAccessTokenExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("ACCESS_TOKEN_EXPIRY", "180"));
+    }
+
+    public String getAccountManagementURI() {
+        return System.getenv("ACCOUNT_MANAGEMENT_URI");
     }
 
     public long getAuthCodeExpiry() {
@@ -77,16 +80,16 @@ public class ConfigurationService {
         return System.getenv().getOrDefault("FRONTEND_BASE_URL", "");
     }
 
+    public long getIDTokenExpiry() {
+        return Long.parseLong(System.getenv().getOrDefault("ID_TOKEN_EXPIRY", "120"));
+    }
+
     public Optional<String> getLocalstackEndpointUri() {
         return Optional.ofNullable(System.getenv("LOCALSTACK_ENDPOINT"));
     }
 
     public URI getLoginURI() {
         return URI.create(System.getenv("LOGIN_URI"));
-    }
-
-    public String getAccountManagementURI() {
-        return System.getenv("ACCOUNT_MANAGEMENT_URI");
     }
 
     public String getNotifyApiKey() {
