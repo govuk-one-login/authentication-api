@@ -16,6 +16,7 @@ module "send_notification" {
     REDIS_PORT              = local.external_redis_port
     REDIS_PASSWORD          = local.external_redis_password
     REDIS_TLS               = var.redis_use_tls
+    TEST_CLIENTS_ENABLED    = var.test_clients_enabled
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.SendNotificationHandler::handleRequest"
 

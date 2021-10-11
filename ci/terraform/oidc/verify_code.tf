@@ -20,6 +20,7 @@ module "verify_code" {
     TERMS_CONDITIONS_VERSION            = var.terms_and_conditions
     TEST_CLIENT_VERIFY_EMAIL_OTP        = var.test_client_verify_email_otp
     TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP = var.test_client_verify_phone_number_otp
+    TEST_CLIENTS_ENABLED                = var.test_clients_enabled
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.VerifyCodeHandler::handleRequest"
 
