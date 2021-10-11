@@ -180,7 +180,7 @@ class LogoutHandlerTest {
 
         assertThat(response, hasStatus(302));
         ErrorObject errorObject =
-                new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Invalid Session");
+                new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid session");
         URIBuilder uriBuilder = new URIBuilder(DEFAULT_LOGOUT_URI);
         uriBuilder.addParameter("error_code", errorObject.getCode());
         uriBuilder.addParameter("error_description", errorObject.getDescription());
@@ -206,7 +206,7 @@ class LogoutHandlerTest {
         assertThat(response, hasStatus(302));
         ErrorObject errorObject =
                 new ErrorObject(
-                        OAuth2Error.INVALID_REQUEST_CODE, "ID token does not exist in session");
+                        OAuth2Error.INVALID_REQUEST_CODE, "id token does not exist in session");
         URIBuilder uriBuilder = new URIBuilder(DEFAULT_LOGOUT_URI);
         uriBuilder.addParameter("error_code", errorObject.getCode());
         uriBuilder.addParameter("error_description", errorObject.getDescription());
@@ -240,7 +240,7 @@ class LogoutHandlerTest {
 
         assertThat(response, hasStatus(302));
         ErrorObject errorObject =
-                new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Invalid Subject in ID Token");
+                new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid subject in id token");
         URIBuilder uriBuilder = new URIBuilder(DEFAULT_LOGOUT_URI);
         uriBuilder.addParameter("error_code", errorObject.getCode());
         uriBuilder.addParameter("error_description", errorObject.getDescription());
@@ -278,7 +278,8 @@ class LogoutHandlerTest {
         assertThat(response, hasStatus(302));
         ErrorObject errorObject =
                 new ErrorObject(
-                        OAuth2Error.UNAUTHORIZED_CLIENT_CODE, "Client not found in ClientRegistry");
+                        OAuth2Error.UNAUTHORIZED_CLIENT_CODE,
+                        "client not found in client registry");
         URIBuilder uriBuilder = new URIBuilder(DEFAULT_LOGOUT_URI);
         uriBuilder.addParameter("state", STATE.getValue());
         uriBuilder.addParameter("error_code", errorObject.getCode());
@@ -314,7 +315,7 @@ class LogoutHandlerTest {
         ErrorObject errorObject =
                 new ErrorObject(
                         OAuth2Error.INVALID_REQUEST_CODE,
-                        "Client registry does not contain PostLogoutRedirectUri");
+                        "client registry does not contain post_logout_redirect_uri");
         URIBuilder uriBuilder = new URIBuilder(DEFAULT_LOGOUT_URI);
         uriBuilder.addParameter("state", STATE.getValue());
         uriBuilder.addParameter("error_code", errorObject.getCode());

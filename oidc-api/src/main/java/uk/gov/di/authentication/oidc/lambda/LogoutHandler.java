@@ -116,7 +116,7 @@ public class LogoutHandler
             LOG.error("Client Session ID does not exist in Session: {}", session.getSessionId());
             return generateErrorLogoutResponse(
                     Optional.empty(),
-                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Invalid Session"));
+                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid session"));
         }
         if (queryStringParameters.get("id_token_hint") == null
                 || !queryStringParameters.containsKey("id_token_hint")
@@ -131,7 +131,7 @@ public class LogoutHandler
                     Optional.empty(),
                     new ErrorObject(
                             OAuth2Error.INVALID_REQUEST_CODE,
-                            "ID token does not exist in session"));
+                            "id token does not exist in session"));
         }
         if (!tokenValidationService.isTokenSignatureValid(
                 queryStringParameters.get("id_token_hint"))) {
@@ -142,7 +142,7 @@ public class LogoutHandler
                     Optional.empty(),
                     new ErrorObject(
                             OAuth2Error.INVALID_REQUEST_CODE,
-                            "Unable to validate ID token signature"));
+                            "unable to validate id token signature"));
         }
         try {
             String idTokenHint = queryStringParameters.get("id_token_hint");
@@ -151,7 +151,7 @@ public class LogoutHandler
                 return generateErrorLogoutResponse(
                         Optional.empty(),
                         new ErrorObject(
-                                OAuth2Error.INVALID_REQUEST_CODE, "Invalid Subject in ID Token"));
+                                OAuth2Error.INVALID_REQUEST_CODE, "invalid subject in id token"));
             }
             Optional<String> audience =
                     idToken.getJWTClaimsSet().getAudience().stream().findFirst();
@@ -165,7 +165,7 @@ public class LogoutHandler
             LOG.error("Unable to parse id_token_hint into SignedJWT", e);
             return generateErrorLogoutResponse(
                     Optional.empty(),
-                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Invalid id_token_hint"));
+                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid id_token_hint"));
         }
     }
 
@@ -198,7 +198,7 @@ public class LogoutHandler
                     state,
                     new ErrorObject(
                             OAuth2Error.UNAUTHORIZED_CLIENT_CODE,
-                            "Client not found in ClientRegistry"));
+                            "client not found in client registry"));
         }
 
         if ((queryStringParameters.containsKey("post_logout_redirect_uri"))) {
@@ -213,7 +213,7 @@ public class LogoutHandler
                         state,
                         new ErrorObject(
                                 OAuth2Error.INVALID_REQUEST_CODE,
-                                "Client registry does not contain PostLogoutRedirectUri"));
+                                "client registry does not contain post_logout_redirect_uri"));
             } else {
                 LOG.info(
                         "The post_logout_redirect_uri is present in logout request and client registry. Value is {}",
