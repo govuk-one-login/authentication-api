@@ -21,7 +21,7 @@ inputs:
   - name: client-registry-api-release
   - name: lambda-warmer-release
   - name: shared-terraform-outputs
-  - name: domain-terraform-outputs
+  - name: oidc-api-env-vars
 outputs:
   - name: terraform-outputs
 run:
@@ -37,9 +37,9 @@ run:
         -backend-config "encrypt=true" \
         -backend-config "region=eu-west-2"
 
-      export AM_URL="https://$(jq -r .${ENVIRONMENT_NAME}_account_management_url.value < domain-terraform-outputs/domain-terraform-outputs.json)"
+    source oidc-api-env-vars/env.sh
 
-      terraform apply -auto-approve \
+    terraform apply -auto-approve \
         -var 'oidc_api_lambda_zip_file=../../../../oidc-api-release/oidc-api.zip' \
         -var 'frontend_api_lambda_zip_file=../../../../frontend-api-release/frontend-api.zip' \
         -var 'client_registry_api_lambda_zip_file=../../../../client-registry-api-release/client-registry-api.zip' \
@@ -53,7 +53,7 @@ run:
         -var "dns_state_key=${DNS_STATE_KEY}" \
         -var "dns_state_role=${DNS_DEPLOYER_ROLE_ARN}" \
         -var "shared_state_bucket=${STATE_BUCKET}" \
-        -var 'account_management_url=${AM_URL}' \
+        -var "account_management_url=${AM_URL}" \
         -var-file "${DEPLOY_ENVIRONMENT}-overrides.tfvars" \
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-terraform-outputs.json
