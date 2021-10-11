@@ -12,6 +12,7 @@ params:
   STATE_BUCKET: digital-identity-dev-tfstate
 inputs:
   - name: shared-terraform-outputs
+  - name: di-authentication-api-audit-processors
 outputs:
   - name: terraform-outputs
 run:
@@ -19,7 +20,7 @@ run:
   args:
     - -euc
     - |
-      cd "api-src/ci/terraform/audit-processors"
+      cd "di-authentication-api-audit-processors/ci/terraform/audit-processors"
       terraform init -input=false \
         -backend-config "role_arn=${DEPLOYER_ROLE_ARN}" \
         -backend-config "bucket=${STATE_BUCKET}" \
