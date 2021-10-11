@@ -19,8 +19,11 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
 
 import java.nio.ByteBuffer;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -62,9 +65,30 @@ class TokenValidationServiceTest {
         getPublicKeyResult.setPublicKey(ByteBuffer.wrap(ecPublicJWK.toECPublicKey().getEncoded()));
         when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
                 .thenReturn(getPublicKeyResult);
-
-        SignedJWT signedIdToken = createSignedIdToken(signer);
+        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        SignedJWT signedIdToken = createSignedIdToken(signer, expiryDate);
         assertTrue(tokenValidationService.validateIdTokenSignature(signedIdToken.serialize()));
+    }
+
+    @Test
+    public void shouldNotFailSignatureValidationIfTokenHasExpired() throws JOSEException {
+        ECKey ecJWK = generateECKeyPair();
+        ECKey ecPublicJWK = ecJWK.toPublicJWK();
+        JWSSigner signer = new ECDSASigner(ecJWK);
+        when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
+        GetPublicKeyResult getPublicKeyResult = new GetPublicKeyResult();
+        getPublicKeyResult.setKeyUsage("SIGN_VERIFY");
+        getPublicKeyResult.setKeyId(KEY_ID);
+        getPublicKeyResult.setSigningAlgorithms(
+                Collections.singletonList(JWSAlgorithm.ES256.getName()));
+        getPublicKeyResult.setPublicKey(ByteBuffer.wrap(ecPublicJWK.toECPublicKey().getEncoded()));
+        when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
+                .thenReturn(getPublicKeyResult);
+        LocalDateTime localDateTime = LocalDateTime.now().minusMinutes(2);
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+        SignedJWT signedIdToken = createSignedIdToken(signer, expiryDate);
+        assertTrue(tokenValidationService.isTokenSignatureValid(signedIdToken.serialize()));
     }
 
     @Test
@@ -118,8 +142,9 @@ class TokenValidationServiceTest {
         }
     }
 
-    private SignedJWT createSignedIdToken(JWSSigner signer) {
-        return TokenGeneratorHelper.generateIDToken(CLIENT_ID, SUBJECT, BASE_URL, signer, KEY_ID);
+    private SignedJWT createSignedIdToken(JWSSigner signer, Date expiryDate) {
+        return TokenGeneratorHelper.generateIDToken(
+                CLIENT_ID, SUBJECT, BASE_URL, signer, KEY_ID, expiryDate);
     }
 
     private SignedJWT createSignedAccessToken(JWSSigner signer) {
