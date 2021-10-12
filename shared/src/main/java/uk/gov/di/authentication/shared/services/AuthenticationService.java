@@ -50,4 +50,6 @@ public interface AuthenticationService {
     UserCredentials getUserCredentialsFromEmail(String email);
 
     void migrateLegacyPassword(String email, String password);
+
+    void bulkAdd(List<UserCredentials> userCredentialsList, List<UserProfile> userProfileList);
 }
