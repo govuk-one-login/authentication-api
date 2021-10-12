@@ -9,6 +9,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -20,6 +21,7 @@ import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -84,10 +86,12 @@ class LoginHandlerTest {
 
     @Test
     public void shouldReturn200IfLoginIsSuccessful() throws JsonProcessingException {
-        when(authenticationService.userExists(EMAIL)).thenReturn(true);
-        when(userMigrationService.userHasBeenPartlyMigrated(EMAIL)).thenReturn(false);
+        UserProfile userProfile = generateUserProfile();
+        when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
+        when(userMigrationService.userHasBeenPartlyMigrated(
+                        userProfile.getLegacySubjectID(), EMAIL))
+                .thenReturn(false);
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
-        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
         when(clientSession.getAuthRequestParams())
                 .thenReturn(generateAuthRequest(Optional.empty()).toParameters());
         usingValidSession();
@@ -108,10 +112,12 @@ class LoginHandlerTest {
 
     @Test
     public void shouldReturn200IfPasswordIsEnteredAgain() throws JsonProcessingException {
-        when(authenticationService.userExists(EMAIL)).thenReturn(true);
-        when(userMigrationService.userHasBeenPartlyMigrated(EMAIL)).thenReturn(false);
+        UserProfile userProfile = generateUserProfile();
+        when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
+        when(userMigrationService.userHasBeenPartlyMigrated(
+                        userProfile.getLegacySubjectID(), EMAIL))
+                .thenReturn(false);
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
-        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
 
         session.setState(MFA_SMS_CODE_SENT);
 
@@ -135,9 +141,11 @@ class LoginHandlerTest {
     @Test
     public void shouldChangeStateToAccountTemporarilyLockedAfter5UnsuccessfulAttempts()
             throws JsonProcessingException {
-        when(authenticationService.userExists(EMAIL)).thenReturn(true);
-        when(userMigrationService.userHasBeenPartlyMigrated(EMAIL)).thenReturn(false);
-        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
+        UserProfile userProfile = generateUserProfile();
+        when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
+        when(userMigrationService.userHasBeenPartlyMigrated(
+                        userProfile.getLegacySubjectID(), EMAIL))
+                .thenReturn(false);
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(5);
 
@@ -157,8 +165,11 @@ class LoginHandlerTest {
     @Test
     public void shouldKeepUserLockedWhenTheyEnterSuccessfulLoginRequestInNewSession()
             throws JsonProcessingException {
-        when(authenticationService.userExists(EMAIL)).thenReturn(true);
-        when(userMigrationService.userHasBeenPartlyMigrated(EMAIL)).thenReturn(false);
+        UserProfile userProfile = generateUserProfile();
+        when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
+        when(userMigrationService.userHasBeenPartlyMigrated(
+                        userProfile.getLegacySubjectID(), EMAIL))
+                .thenReturn(false);
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(5);
 
@@ -178,9 +189,11 @@ class LoginHandlerTest {
     @Test
     public void shouldRemoveIncorrectPasswordCountRemovesUponSuccessfulLogin()
             throws JsonProcessingException {
-        when(authenticationService.userExists(EMAIL)).thenReturn(true);
-        when(userMigrationService.userHasBeenPartlyMigrated(EMAIL)).thenReturn(false);
-        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
+        UserProfile userProfile = generateUserProfile();
+        when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
+        when(userMigrationService.userHasBeenPartlyMigrated(
+                        userProfile.getLegacySubjectID(), EMAIL))
+                .thenReturn(false);
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(4);
 
@@ -205,8 +218,11 @@ class LoginHandlerTest {
 
     @Test
     public void shouldReturn401IfUserHasInvalidCredentials() {
-        when(authenticationService.userExists(EMAIL)).thenReturn(true);
-        when(userMigrationService.userHasBeenPartlyMigrated(EMAIL)).thenReturn(false);
+        UserProfile userProfile = generateUserProfile();
+        when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
+        when(userMigrationService.userHasBeenPartlyMigrated(
+                        userProfile.getLegacySubjectID(), EMAIL))
+                .thenReturn(false);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
@@ -251,12 +267,10 @@ class LoginHandlerTest {
 
     @Test
     public void shouldReturn400IfUserDoesNotHaveAnAccount() {
-        when(authenticationService.userExists(EMAIL)).thenReturn(false);
+        when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(null);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
-        when(userMigrationService.userHasBeenPartlyMigrated(EMAIL)).thenReturn(false);
-        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
         usingValidSession();
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -267,10 +281,12 @@ class LoginHandlerTest {
 
     @Test
     public void shouldReturn400IfUserTransitionsFromWrongState() {
-        when(authenticationService.userExists(EMAIL)).thenReturn(true);
-        when(userMigrationService.userHasBeenPartlyMigrated(EMAIL)).thenReturn(false);
+        UserProfile userProfile = generateUserProfile();
+        when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
+        when(userMigrationService.userHasBeenPartlyMigrated(
+                        userProfile.getLegacySubjectID(), EMAIL))
+                .thenReturn(false);
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
-        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
 
         session.setState(NEW);
 
@@ -304,5 +320,16 @@ class LoginHandlerTest {
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
+    }
+
+    private UserProfile generateUserProfile() {
+        return new UserProfile()
+                .setEmail(EMAIL)
+                .setEmailVerified(true)
+                .setPhoneNumber(PHONE_NUMBER)
+                .setPhoneNumberVerified(true)
+                .setPublicSubjectID(new Subject().getValue())
+                .setSubjectID(new Subject().getValue())
+                .setLegacySubjectID(null);
     }
 }

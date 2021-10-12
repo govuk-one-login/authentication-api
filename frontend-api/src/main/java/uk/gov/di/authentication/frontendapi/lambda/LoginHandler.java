@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -25,6 +26,8 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.UserContext;
+
+import java.util.Objects;
 
 import static uk.gov.di.authentication.shared.entity.SessionAction.ACCOUNT_LOCK_EXPIRED;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_PASSWORD_TOO_MANY_TIMES;
@@ -81,9 +84,10 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         LOGGER.info("Request received to the LoginHandler");
         try {
             LoginRequest loginRequest = objectMapper.readValue(input.getBody(), LoginRequest.class);
-            boolean userHasAccount = authenticationService.userExists(loginRequest.getEmail());
+            UserProfile userProfile =
+                    authenticationService.getUserProfileByEmail(loginRequest.getEmail());
 
-            if (!userHasAccount) {
+            if (Objects.isNull(userProfile)) {
                 LOGGER.error("The user does not have an account");
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
             }
@@ -113,7 +117,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 sessionService.save(userContext.getSession().setState(nextState));
             }
             boolean userIsAMigratedUser =
-                    userMigrationService.userHasBeenPartlyMigrated(loginRequest.getEmail());
+                    userMigrationService.userHasBeenPartlyMigrated(
+                            userProfile.getLegacySubjectID(), loginRequest.getEmail());
             if (userIsAMigratedUser) {}
             boolean hasValidCredentials =
                     authenticationService.login(
@@ -139,8 +144,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 return generateApiGatewayProxyResponse(
                         200, new BaseAPIResponse(userContext.getSession().getState()));
             }
-            String phoneNumber =
-                    authenticationService.getPhoneNumber(loginRequest.getEmail()).orElseThrow();
+            String phoneNumber = userProfile.getPhoneNumber();
 
             String concatPhoneNumber = RedactPhoneNumberHelper.redactPhoneNumber(phoneNumber);
 
