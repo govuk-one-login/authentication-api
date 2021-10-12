@@ -16,6 +16,9 @@ class UserMigrationServiceTest {
     private UserMigrationService userMigrationService;
     private static final String TEST_EMAIL = "test@digital.cabinet-office.gov.uk";
     private static final String LEGACY_SUBJECT = "some-subject";
+    private static final String LEGACY_PASSWORD_ENCRYPTED =
+            "$2y$05$pfRGAcOQjcxAc07N/6Ju1OwYYKIuCiGtGmk7L0Fjb.qBKGOYv4msK";
+    private static final String LEGACY_PASSWORD_DECRYPTED = "password000";
 
     @BeforeEach
     public void setUp() {
@@ -41,6 +44,20 @@ class UserMigrationServiceTest {
         when(authenticationService.getUserCredentialsFromEmail(TEST_EMAIL))
                 .thenReturn(generateUserCredentials("sign-in-password", null));
         assertFalse(userMigrationService.userHasBeenPartlyMigrated(null, TEST_EMAIL));
+    }
+
+    @Test
+    public void shouldReturnTrueIfMigratedUserHasEnteredCorrectCredentials() {
+        when(authenticationService.getUserCredentialsFromEmail(TEST_EMAIL))
+                .thenReturn(generateUserCredentials("sign-in-password", LEGACY_PASSWORD_ENCRYPTED));
+        assertTrue(userMigrationService.processMigratedUser(TEST_EMAIL, LEGACY_PASSWORD_DECRYPTED));
+    }
+
+    @Test
+    public void shouldReturnFalseIfMigratedUserHasEnteredIncorrectCredentials() {
+        when(authenticationService.getUserCredentialsFromEmail(TEST_EMAIL))
+                .thenReturn(generateUserCredentials("sign-in-password", LEGACY_PASSWORD_ENCRYPTED));
+        assertFalse(userMigrationService.processMigratedUser(TEST_EMAIL, "wrong-password"));
     }
 
     private UserCredentials generateUserCredentials(

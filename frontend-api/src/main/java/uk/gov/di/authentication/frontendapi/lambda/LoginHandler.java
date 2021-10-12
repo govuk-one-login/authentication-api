@@ -116,17 +116,29 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                                 userContext);
                 sessionService.save(userContext.getSession().setState(nextState));
             }
+
             boolean userIsAMigratedUser =
                     userMigrationService.userHasBeenPartlyMigrated(
                             userProfile.getLegacySubjectID(), loginRequest.getEmail());
-            if (userIsAMigratedUser) {}
-            boolean hasValidCredentials =
-                    authenticationService.login(
-                            loginRequest.getEmail(), loginRequest.getPassword());
+            boolean hasValidCredentials;
+            if (userIsAMigratedUser) {
+                LOGGER.info(
+                        "Processing migrated user for sessionId {}",
+                        userContext.getSession().getSessionId());
+                hasValidCredentials =
+                        userMigrationService.processMigratedUser(
+                                loginRequest.getEmail(), loginRequest.getPassword());
+            } else {
+                hasValidCredentials =
+                        authenticationService.login(
+                                loginRequest.getEmail(), loginRequest.getPassword());
+            }
 
             if (!hasValidCredentials) {
                 codeStorageService.increaseIncorrectPasswordCount(loginRequest.getEmail());
-                LOGGER.error("Invalid login credentials entered");
+                LOGGER.error(
+                        "Invalid login credentials entered for sessionId {}",
+                        userContext.getSession().getSessionId());
                 return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
             }
 

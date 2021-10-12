@@ -15,6 +15,7 @@ dependencies {
             configurations.lambda,
             configurations.nimbus,
             configurations.sqs,
+            configurations.bouncycastle,
             project(":shared")
     runtimeOnly configurations.logging_runtime
 
