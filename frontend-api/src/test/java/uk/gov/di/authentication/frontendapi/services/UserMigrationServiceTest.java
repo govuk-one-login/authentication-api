@@ -8,6 +8,8 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class UserMigrationServiceTest {
@@ -43,14 +45,19 @@ class UserMigrationServiceTest {
     public void shouldReturnFalseIfUserDoesNotHaveALegacySubjectId() {
         when(authenticationService.getUserCredentialsFromEmail(TEST_EMAIL))
                 .thenReturn(generateUserCredentials("sign-in-password", null));
+
         assertFalse(userMigrationService.userHasBeenPartlyMigrated(null, TEST_EMAIL));
+        verify(authenticationService, never())
+                .migrateLegacyPassword(TEST_EMAIL, LEGACY_PASSWORD_DECRYPTED);
     }
 
     @Test
     public void shouldReturnTrueIfMigratedUserHasEnteredCorrectCredentials() {
         when(authenticationService.getUserCredentialsFromEmail(TEST_EMAIL))
                 .thenReturn(generateUserCredentials("sign-in-password", LEGACY_PASSWORD_ENCRYPTED));
+
         assertTrue(userMigrationService.processMigratedUser(TEST_EMAIL, LEGACY_PASSWORD_DECRYPTED));
+        verify(authenticationService).migrateLegacyPassword(TEST_EMAIL, LEGACY_PASSWORD_DECRYPTED);
     }
 
     @Test

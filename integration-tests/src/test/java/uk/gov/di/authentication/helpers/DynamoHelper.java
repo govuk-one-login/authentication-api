@@ -9,7 +9,6 @@ import com.amazonaws.services.dynamodbv2.model.ScanResult;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
-import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
@@ -34,16 +33,8 @@ public class DynamoHelper {
         return DYNAMO_SERVICE.userExists(email);
     }
 
-    public static UserProfile getUserProfileByEmail(String email) {
-        return DYNAMO_SERVICE.getUserProfileByEmail(email);
-    }
-
     public static void signUp(String email, String password) {
         signUp(email, password, new Subject());
-    }
-
-    public static Subject getSubjectFromEmail(String email) {
-        return DYNAMO_SERVICE.getSubjectFromEmail(email);
     }
 
     public static void signUp(String email, String password, Subject subject) {
@@ -54,10 +45,6 @@ public class DynamoHelper {
 
     public static void updateConsent(String email, ClientConsent clientConsent) {
         DYNAMO_SERVICE.updateConsent(email, clientConsent);
-    }
-
-    public static UserProfile getByPublicSubject(String subject) {
-        return DYNAMO_SERVICE.getUserProfileFromPublicSubject(subject);
     }
 
     public static void addPhoneNumber(String email, String phoneNumber) {

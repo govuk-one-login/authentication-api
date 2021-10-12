@@ -200,6 +200,15 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
+    public void migrateLegacyPassword(String email, String password) {
+        userCredentialsMapper.save(
+                userCredentialsMapper
+                        .load(UserCredentials.class, email)
+                        .setPassword(hashPassword(password))
+                        .setMigratedPassword(null));
+    }
+
+    @Override
     public Optional<List<ClientConsent>> getUserConsents(String email) {
         return Optional.ofNullable(
                 userProfileMapper.load(UserProfile.class, email).getClientConsent());

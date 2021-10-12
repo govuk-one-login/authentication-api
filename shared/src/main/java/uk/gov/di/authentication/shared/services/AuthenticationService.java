@@ -48,4 +48,6 @@ public interface AuthenticationService {
     Optional<UserProfile> getUserProfileFromEmail(String email);
 
     UserCredentials getUserCredentialsFromEmail(String email);
+
+    void migrateLegacyPassword(String email, String password);
 }
