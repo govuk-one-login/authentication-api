@@ -17,8 +17,6 @@ public interface AuthenticationService {
 
     boolean login(String email, String password);
 
-    boolean isEmailVerificationRequired();
-
     Subject getSubjectFromEmail(String email);
 
     void updatePhoneNumber(String email, String profileInformation);
@@ -48,4 +46,8 @@ public interface AuthenticationService {
     UserCredentials getUserCredentialsFromSubject(String subject);
 
     Optional<UserProfile> getUserProfileFromEmail(String email);
+
+    UserCredentials getUserCredentialsFromEmail(String email);
+
+    void migrateLegacyPassword(String email, String password);
 }

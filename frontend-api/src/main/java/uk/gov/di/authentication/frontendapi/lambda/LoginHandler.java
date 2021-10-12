@@ -10,19 +10,24 @@ import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.frontendapi.entity.LoginRequest;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
+import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.UserContext;
+
+import java.util.Objects;
 
 import static uk.gov.di.authentication.shared.entity.SessionAction.ACCOUNT_LOCK_EXPIRED;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_PASSWORD_TOO_MANY_TIMES;
@@ -38,6 +43,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LoginHandler.class);
     private final CodeStorageService codeStorageService;
+    private final UserMigrationService userMigrationService;
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             userJourneyStateMachine();
 
@@ -47,7 +53,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             AuthenticationService authenticationService,
             ClientSessionService clientSessionService,
             ClientService clientService,
-            CodeStorageService codeStorageService) {
+            CodeStorageService codeStorageService,
+            UserMigrationService userMigrationService) {
         super(
                 LoginRequest.class,
                 configurationService,
@@ -56,6 +63,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 clientService,
                 authenticationService);
         this.codeStorageService = codeStorageService;
+        this.userMigrationService = userMigrationService;
     }
 
     public LoginHandler() {
@@ -63,6 +71,10 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.codeStorageService =
                 new CodeStorageService(
                         new RedisConnectionService(ConfigurationService.getInstance()));
+        this.userMigrationService =
+                new UserMigrationService(
+                        new DynamoService(ConfigurationService.getInstance()),
+                        ConfigurationService.getInstance());
     }
 
     @Override
@@ -74,9 +86,10 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         LOGGER.info("Request received to the LoginHandler");
         try {
             LoginRequest loginRequest = objectMapper.readValue(input.getBody(), LoginRequest.class);
-            boolean userHasAccount = authenticationService.userExists(loginRequest.getEmail());
+            UserProfile userProfile =
+                    authenticationService.getUserProfileByEmail(loginRequest.getEmail());
 
-            if (!userHasAccount) {
+            if (Objects.isNull(userProfile)) {
                 LOGGER.error("The user does not have an account");
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
             }
@@ -106,13 +119,28 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 sessionService.save(userContext.getSession().setState(nextState));
             }
 
-            boolean hasValidCredentials =
-                    authenticationService.login(
-                            loginRequest.getEmail(), loginRequest.getPassword());
+            boolean userIsAMigratedUser =
+                    userMigrationService.userHasBeenPartlyMigrated(
+                            userProfile.getLegacySubjectID(), loginRequest.getEmail());
+            boolean hasValidCredentials;
+            if (userIsAMigratedUser) {
+                LOGGER.info(
+                        "Processing migrated user for sessionId {}",
+                        userContext.getSession().getSessionId());
+                hasValidCredentials =
+                        userMigrationService.processMigratedUser(
+                                loginRequest.getEmail(), loginRequest.getPassword());
+            } else {
+                hasValidCredentials =
+                        authenticationService.login(
+                                loginRequest.getEmail(), loginRequest.getPassword());
+            }
 
             if (!hasValidCredentials) {
                 codeStorageService.increaseIncorrectPasswordCount(loginRequest.getEmail());
-                LOGGER.error("Invalid login credentials entered");
+                LOGGER.error(
+                        "Invalid login credentials entered for sessionId {}",
+                        userContext.getSession().getSessionId());
                 return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
             }
 
@@ -130,8 +158,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 return generateApiGatewayProxyResponse(
                         200, new BaseAPIResponse(userContext.getSession().getState()));
             }
-            String phoneNumber =
-                    authenticationService.getPhoneNumber(loginRequest.getEmail()).orElseThrow();
+            String phoneNumber = userProfile.getPhoneNumber();
 
             String concatPhoneNumber = RedactPhoneNumberHelper.redactPhoneNumber(phoneNumber);
 
