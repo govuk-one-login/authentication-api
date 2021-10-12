@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
+import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -60,6 +61,7 @@ class LoginHandlerTest {
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
     private final ClientService clientService = mock(ClientService.class);
+    private final UserMigrationService userMigrationService = mock(UserMigrationService.class);
 
     private final Session session =
             new Session(IdGenerator.generate()).setState(AUTHENTICATION_REQUIRED);
@@ -76,12 +78,14 @@ class LoginHandlerTest {
                         authenticationService,
                         clientSessionService,
                         clientService,
-                        codeStorageService);
+                        codeStorageService,
+                        userMigrationService);
     }
 
     @Test
     public void shouldReturn200IfLoginIsSuccessful() throws JsonProcessingException {
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
+        when(userMigrationService.userHasBeenPartlyMigrated(EMAIL)).thenReturn(false);
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
         when(clientSession.getAuthRequestParams())
@@ -105,6 +109,7 @@ class LoginHandlerTest {
     @Test
     public void shouldReturn200IfPasswordIsEnteredAgain() throws JsonProcessingException {
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
+        when(userMigrationService.userHasBeenPartlyMigrated(EMAIL)).thenReturn(false);
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
 
@@ -131,6 +136,7 @@ class LoginHandlerTest {
     public void shouldChangeStateToAccountTemporarilyLockedAfter5UnsuccessfulAttempts()
             throws JsonProcessingException {
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
+        when(userMigrationService.userHasBeenPartlyMigrated(EMAIL)).thenReturn(false);
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(5);
@@ -152,6 +158,7 @@ class LoginHandlerTest {
     public void shouldKeepUserLockedWhenTheyEnterSuccessfulLoginRequestInNewSession()
             throws JsonProcessingException {
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
+        when(userMigrationService.userHasBeenPartlyMigrated(EMAIL)).thenReturn(false);
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(5);
 
@@ -172,6 +179,7 @@ class LoginHandlerTest {
     public void shouldRemoveIncorrectPasswordCountRemovesUponSuccessfulLogin()
             throws JsonProcessingException {
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
+        when(userMigrationService.userHasBeenPartlyMigrated(EMAIL)).thenReturn(false);
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(4);
@@ -198,6 +206,7 @@ class LoginHandlerTest {
     @Test
     public void shouldReturn401IfUserHasInvalidCredentials() {
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
+        when(userMigrationService.userHasBeenPartlyMigrated(EMAIL)).thenReturn(false);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
@@ -246,6 +255,7 @@ class LoginHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+        when(userMigrationService.userHasBeenPartlyMigrated(EMAIL)).thenReturn(false);
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
         usingValidSession();
 
@@ -258,6 +268,7 @@ class LoginHandlerTest {
     @Test
     public void shouldReturn400IfUserTransitionsFromWrongState() {
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
+        when(userMigrationService.userHasBeenPartlyMigrated(EMAIL)).thenReturn(false);
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
 

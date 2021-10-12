@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.frontendapi.entity.LoginRequest;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
+import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.SessionAction;
@@ -19,6 +20,7 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.StateMachine;
@@ -38,6 +40,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LoginHandler.class);
     private final CodeStorageService codeStorageService;
+    private final UserMigrationService userMigrationService;
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             userJourneyStateMachine();
 
@@ -47,7 +50,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             AuthenticationService authenticationService,
             ClientSessionService clientSessionService,
             ClientService clientService,
-            CodeStorageService codeStorageService) {
+            CodeStorageService codeStorageService,
+            UserMigrationService userMigrationService) {
         super(
                 LoginRequest.class,
                 configurationService,
@@ -56,6 +60,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 clientService,
                 authenticationService);
         this.codeStorageService = codeStorageService;
+        this.userMigrationService = userMigrationService;
     }
 
     public LoginHandler() {
@@ -63,6 +68,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.codeStorageService =
                 new CodeStorageService(
                         new RedisConnectionService(ConfigurationService.getInstance()));
+        this.userMigrationService =
+                new UserMigrationService(new DynamoService(new ConfigurationService()));
     }
 
     @Override
@@ -105,7 +112,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                                 userContext);
                 sessionService.save(userContext.getSession().setState(nextState));
             }
-
+            boolean userIsAMigratedUser =
+                    userMigrationService.userHasBeenPartlyMigrated(loginRequest.getEmail());
+            if (userIsAMigratedUser) {}
             boolean hasValidCredentials =
                     authenticationService.login(
                             loginRequest.getEmail(), loginRequest.getPassword());

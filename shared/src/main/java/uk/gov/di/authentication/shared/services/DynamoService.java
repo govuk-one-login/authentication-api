@@ -109,11 +109,6 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
-    public boolean isEmailVerificationRequired() {
-        return false;
-    }
-
-    @Override
     public Subject getSubjectFromEmail(String email) {
         return new Subject(userProfileMapper.load(UserProfile.class, email).getSubjectID());
     }
@@ -197,6 +192,11 @@ public class DynamoService implements AuthenticationService {
             }
         }
         return Optional.empty();
+    }
+
+    @Override
+    public UserCredentials getUserCredentialsFromEmail(String email) {
+        return userCredentialsMapper.load(UserCredentials.class, email);
     }
 
     @Override
