@@ -21,13 +21,11 @@ import uk.gov.di.authentication.oidc.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
-import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
@@ -58,7 +56,6 @@ class LogoutHandlerTest {
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final TokenValidationService tokenValidationService =
             mock(TokenValidationService.class);
-    private final DynamoService dynamoService = mock(DynamoService.class);
 
     private static final State STATE = new State();
     private static final String COOKIE = "Cookie";
@@ -81,8 +78,7 @@ class LogoutHandlerTest {
                         sessionService,
                         dynamoClientService,
                         clientSessionService,
-                        tokenValidationService,
-                        dynamoService);
+                        tokenValidationService);
         when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
@@ -97,7 +93,6 @@ class LogoutHandlerTest {
                 .thenReturn(Optional.of(createClientRegistry()));
         when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
                 .thenReturn(true);
-        when(dynamoService.getUserProfileByEmail(EMAIL)).thenReturn(generateUserProfile());
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
         event.setQueryStringParameters(
@@ -123,7 +118,6 @@ class LogoutHandlerTest {
                 .thenReturn(Optional.of(createClientRegistry()));
         when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
                 .thenReturn(true);
-        when(dynamoService.getUserProfileByEmail(EMAIL)).thenReturn(generateUserProfile());
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
         event.setQueryStringParameters(
@@ -217,40 +211,6 @@ class LogoutHandlerTest {
     }
 
     @Test
-    public void shouldRedirectToDefaultLogoutUriWithErrorMessageWhenSubjectInIdTokenIsInvalid()
-            throws URISyntaxException, JOSEException {
-        ECKey ecSigningKey =
-                new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
-        SignedJWT signedJWT =
-                TokenGeneratorHelper.generateIDToken(
-                        "invalid-client-id", new Subject(), "http://localhost-rp", ecSigningKey);
-        when(tokenValidationService.isTokenSignatureValid(signedJWT.serialize())).thenReturn(true);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
-        event.setQueryStringParameters(
-                Map.of(
-                        "id_token_hint", signedJWT.serialize(),
-                        "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString()));
-
-        session.getClientSessions().add(CLIENT_SESSION_ID);
-        generateSessionFromCookie(session);
-        setupClientSessionToken(signedJWT);
-
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
-
-        assertThat(response, hasStatus(302));
-        ErrorObject errorObject =
-                new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid id_token_hint provided");
-        URIBuilder uriBuilder = new URIBuilder(DEFAULT_LOGOUT_URI);
-        uriBuilder.addParameter("error_code", errorObject.getCode());
-        uriBuilder.addParameter("error_description", errorObject.getDescription());
-        URI expectedUri = uriBuilder.build();
-        assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                equalTo(expectedUri.toString()));
-    }
-
-    @Test
     public void shouldRedirectToDefaultLogoutUriWithErrorMessageWhenSignaturenIdTokenIsInvalid()
             throws URISyntaxException, JOSEException {
         ECKey ecSigningKey =
@@ -295,7 +255,6 @@ class LogoutHandlerTest {
                 TokenGeneratorHelper.generateIDToken(
                         "invalid-client-id", SUBJECT, "http://localhost-rp", ecSigningKey);
         when(tokenValidationService.isTokenSignatureValid(signedJWT.serialize())).thenReturn(true);
-        when(dynamoService.getUserProfileByEmail(EMAIL)).thenReturn(generateUserProfile());
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
         event.setQueryStringParameters(
@@ -331,7 +290,6 @@ class LogoutHandlerTest {
                 .thenReturn(true);
         when(dynamoClientService.getClient("client-id"))
                 .thenReturn(Optional.of(createClientRegistry()));
-        when(dynamoService.getUserProfileByEmail(EMAIL)).thenReturn(generateUserProfile());
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
         event.setQueryStringParameters(
@@ -397,12 +355,5 @@ class LogoutHandlerTest {
                 .setPostLogoutRedirectUrls(singletonList(CLIENT_LOGOUT_URI.toString()))
                 .setScopes(singletonList("openid"))
                 .setRedirectUrls(singletonList("http://localhost/redirect"));
-    }
-
-    private UserProfile generateUserProfile() {
-        return new UserProfile()
-                .setEmail(EMAIL)
-                .setEmailVerified(true)
-                .setPublicSubjectID(SUBJECT.getValue());
     }
 }
