@@ -26,7 +26,7 @@ resource "aws_elasticache_replication_group" "account_management_sessions_store"
   availability_zones            = data.aws_availability_zones.available.names
   replication_group_id          = "${var.environment}-account-mgmt-sessions-store"
   replication_group_description = "A Redis cluster for storing user session data"
-  node_type                     = "cache.t2.medium"
+  node_type                     = var.redis_node_size
   number_cache_clusters         = length(data.aws_availability_zones.available.names)
   engine                        = "redis"
   engine_version                = "6.x"

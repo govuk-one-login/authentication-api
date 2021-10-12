@@ -40,5 +40,6 @@ run:
         -var 'lambda_warmer_zip_file=../../../../lambda-warmer-release/lambda-warmer.zip' \
         -var "shared_state_bucket=${STATE_BUCKET}" \
         -var-file "${DEPLOY_ENVIRONMENT}-overrides.tfvars" \
+        -var-file ${DEPLOY_ENVIRONMENT}-sizing.tfvars \
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-account-managment-api-terraform-outputs.json

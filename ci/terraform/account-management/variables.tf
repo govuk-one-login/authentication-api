@@ -107,6 +107,10 @@ variable "redis_use_tls" {
   default = "true"
 }
 
+variable "redis_node_size" {
+  default = "cache.t2.small"
+}
+
 variable "keep_lambdas_warm" {
   default = true
   type    = bool
