@@ -210,6 +210,13 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
+    public void bulkAdd(
+            List<UserCredentials> userCredentialsList, List<UserProfile> userProfileList) {
+        userCredentialsMapper.batchSave(userCredentialsList);
+        userProfileMapper.batchSave(userProfileList);
+    }
+
+    @Override
     public Optional<List<ClientConsent>> getUserConsents(String email) {
         return Optional.ofNullable(
                 userProfileMapper.load(UserProfile.class, email).getClientConsent());
