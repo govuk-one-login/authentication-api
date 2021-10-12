@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 public class DataMigrationHandler implements RequestHandler<S3Event, String> {
 
     private static final Logger LOG = LoggerFactory.getLogger(DataMigrationHandler.class);
+    private static final int BATCH_SIZE = 1000;
 
     private final AuthenticationService authenticationService;
     private final ConfigurationService configurationService;
@@ -45,7 +46,10 @@ public class DataMigrationHandler implements RequestHandler<S3Event, String> {
     public DataMigrationHandler() {
         this.configurationService = ConfigurationService.getInstance();
         this.authenticationService = new DynamoService(configurationService);
-        this.client = AmazonS3ClientBuilder.standard().withRegion("eu-west-2").build();
+        this.client =
+                AmazonS3ClientBuilder.standard()
+                        .withRegion(configurationService.getAwsRegion())
+                        .build();
     }
 
     @Override
@@ -61,20 +65,16 @@ public class DataMigrationHandler implements RequestHandler<S3Event, String> {
             InputStreamReader reader = new InputStreamReader(object.getObjectContent());
             CsvToBean<ImportRecord> importRecords =
                     new CsvToBeanBuilder<ImportRecord>(reader).withType(ImportRecord.class).build();
+            var records = importRecords.parse();
 
-            final int BATCH_SIZE = 1000;
             int skip = 0;
-            int count = BATCH_SIZE;
-
-            while (count == BATCH_SIZE) {
+            int count;
+            do {
                 var importBatch =
-                        importRecords.stream()
-                                .skip(skip)
-                                .limit(BATCH_SIZE)
-                                .collect(Collectors.toList());
+                        records.stream().skip(skip).limit(BATCH_SIZE).collect(Collectors.toList());
                 count = importBatch.size();
                 skip = skip + count;
-                LOG.info("Read {} records", count);
+                LOG.info("Read {} records starting at {}", count, skip);
                 var batch =
                         buildImportBatch(
                                 importBatch, configurationService.getTermsAndConditionsVersion());
@@ -83,8 +83,8 @@ public class DataMigrationHandler implements RequestHandler<S3Event, String> {
                         batch.stream().map(p -> p.getLeft()).collect(Collectors.toList()),
                         batch.stream().map(p -> p.getRight()).collect(Collectors.toList()));
 
-                LOG.info("Imported {} records", count);
-            }
+            } while (count == BATCH_SIZE);
+            LOG.info("Imported {} records", skip);
         }
 
         return "Complete";
@@ -111,6 +111,9 @@ public class DataMigrationHandler implements RequestHandler<S3Event, String> {
                             UserProfile userProfile =
                                     new UserProfile()
                                             .setEmail(i.getEmail())
+                                            .setEmailVerified(true)
+                                            .setPhoneNumber(i.getPhone())
+                                            .setPhoneNumberVerified(true)
                                             .setSubjectID(subject.toString())
                                             .setEmailVerified(true)
                                             .setCreated(i.getCreatedAt().toString())

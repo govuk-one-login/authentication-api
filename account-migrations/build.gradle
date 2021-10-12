@@ -11,11 +11,13 @@ repositories {
 }
 
 dependencies {
-    implementation configurations.lambda,
+    implementation configurations.bouncycastle,
+            configurations.lambda,
             configurations.nimbus,
             "com.amazonaws:aws-java-sdk-s3:1.12.81",
             "com.opencsv:opencsv:5.5.2",
             project(":shared")
+
     runtimeOnly configurations.logging_runtime
 
     testImplementation configurations.tests,

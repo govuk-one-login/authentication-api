@@ -41,4 +41,29 @@ public class ImportRecord {
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
+
+    public ImportRecord setEmail(String email) {
+        this.email = email;
+        return this;
+    }
+
+    public ImportRecord setEncryptedPassword(String encryptedPassword) {
+        this.encryptedPassword = encryptedPassword;
+        return this;
+    }
+
+    public ImportRecord setSubjectIdentifier(String subjectIdentifier) {
+        this.subjectIdentifier = subjectIdentifier;
+        return this;
+    }
+
+    public ImportRecord setPhone(String phone) {
+        this.phone = phone;
+        return this;
+    }
+
+    public ImportRecord setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+        return this;
+    }
 }
