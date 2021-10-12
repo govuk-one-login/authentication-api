@@ -157,7 +157,8 @@ public class DynamoService implements AuthenticationService {
         userCredentialsMapper.save(
                 userCredentialsMapper
                         .load(UserCredentials.class, email)
-                        .setPassword(hashPassword(newPassword)));
+                        .setPassword(hashPassword(newPassword))
+                        .setMigratedPassword(null));
     }
 
     @Override
