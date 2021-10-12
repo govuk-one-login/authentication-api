@@ -4,6 +4,7 @@ import org.hamcrest.Description;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 import uk.gov.di.audit.AuditPayload.AuditEvent;
 import uk.gov.di.audit.AuditPayload.SignedAuditEvent;
+import uk.gov.di.authentication.shared.services.AuditService.MetadataPair;
 
 import java.util.Base64;
 import java.util.function.Function;
@@ -60,6 +61,15 @@ public class AuditMessageMatcher<T> extends TypeSafeDiagnosingMatcher<String> {
         Function<AuditEvent, String> getPhoneNumber =
                 (auditEvent) -> auditEvent.getUser().getPhoneNumber();
         return new AuditMessageMatcher<>("phone number", getPhoneNumber, phoneNumber);
+    }
+
+    public static AuditMessageMatcher<String> hasMetadataPair(MetadataPair metadataPair) {
+        Function<AuditEvent, String> getValue =
+                (auditEvent) -> auditEvent.getExtensionsOrThrow(metadataPair.getKey());
+        return new AuditMessageMatcher<>(
+                String.format("metadata value for key '%s'", metadataPair.getKey()),
+                getValue,
+                metadataPair.getValue().toString());
     }
 
     @Override

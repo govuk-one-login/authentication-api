@@ -9,6 +9,7 @@ import uk.gov.di.authentication.shared.domain.AuditableEvent;
 
 import java.nio.ByteBuffer;
 import java.time.Clock;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Objects;
 import java.util.Optional;
@@ -77,7 +78,7 @@ public class AuditService {
         var uniqueId = UUID.randomUUID();
         var timestamp = clock.instant().toString();
 
-        var auditEvent =
+        var auditEventBuilder =
                 AuditEvent.newBuilder()
                         .setEventName(eventEnum.toString())
                         .setEventId(uniqueId.toString())
@@ -93,8 +94,15 @@ public class AuditService {
                                                 Optional.ofNullable(ipAddress).orElse(UNKNOWN))
                                         .setPhoneNumber(
                                                 Optional.ofNullable(phoneNumber).orElse(UNKNOWN))
-                                        .build())
-                        .build();
+                                        .build());
+
+        Arrays.stream(metadataPairs)
+                .forEach(
+                        pair ->
+                                auditEventBuilder.putExtensions(
+                                        pair.getKey(), pair.getValue().toString()));
+
+        var auditEvent = auditEventBuilder.build();
 
         var signedEventBuilder =
                 SignedAuditEvent.newBuilder()
@@ -124,6 +132,14 @@ public class AuditService {
 
         public static MetadataPair pair(String key, Object value) {
             return new MetadataPair(key, value);
+        }
+
+        public String getKey() {
+            return key;
+        }
+
+        public Object getValue() {
+            return value;
         }
 
         @Override
