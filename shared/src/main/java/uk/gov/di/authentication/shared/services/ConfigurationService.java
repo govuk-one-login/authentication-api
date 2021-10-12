@@ -100,6 +100,10 @@ public class ConfigurationService {
         return Optional.ofNullable(System.getenv("NOTIFY_URL"));
     }
 
+    public Optional<String> getPasswordPepper() {
+        return Optional.ofNullable(System.getenv("PASSWORD_PEPPER"));
+    }
+
     public String getRedisHost() {
         return System.getenv().getOrDefault("REDIS_HOST", "redis");
     }

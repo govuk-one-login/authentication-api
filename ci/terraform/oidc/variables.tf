@@ -28,6 +28,12 @@ variable "deployer_role_arn" {
   type        = string
 }
 
+variable "password_pepper" {
+  description = "Added to migrated passwords before hashed"
+  type        = string
+  default     = null
+}
+
 variable "notify_api_key" {
   description = "The API key required to communicate with Notify"
   type        = string

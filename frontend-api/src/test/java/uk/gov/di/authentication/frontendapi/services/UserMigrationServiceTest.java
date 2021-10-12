@@ -4,6 +4,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -15,16 +18,20 @@ import static org.mockito.Mockito.when;
 class UserMigrationServiceTest {
 
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private UserMigrationService userMigrationService;
     private static final String TEST_EMAIL = "test@digital.cabinet-office.gov.uk";
     private static final String LEGACY_SUBJECT = "some-subject";
     private static final String LEGACY_PASSWORD_ENCRYPTED =
-            "$2y$05$pfRGAcOQjcxAc07N/6Ju1OwYYKIuCiGtGmk7L0Fjb.qBKGOYv4msK";
+            "$2a$05$2m1Swyvp.1UUWF3whZf4/e5bHFe/5G0I25txZOQ/zBJzWQWeZjPZK";
     private static final String LEGACY_PASSWORD_DECRYPTED = "password000";
+    private static final String TEST_PEPPER = "CUokSd0tqVvM64dEiGNe9-LwZoE";
 
     @BeforeEach
     public void setUp() {
-        userMigrationService = new UserMigrationService(authenticationService);
+        when(configurationService.getPasswordPepper()).thenReturn(Optional.of(TEST_PEPPER));
+        userMigrationService =
+                new UserMigrationService(authenticationService, configurationService);
     }
 
     @Test

@@ -72,7 +72,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 new CodeStorageService(
                         new RedisConnectionService(ConfigurationService.getInstance()));
         this.userMigrationService =
-                new UserMigrationService(new DynamoService(new ConfigurationService()));
+                new UserMigrationService(
+                        new DynamoService(ConfigurationService.getInstance()),
+                        ConfigurationService.getInstance());
     }
 
     @Override
