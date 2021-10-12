@@ -113,10 +113,12 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         userContext.getSession().getSessionId());
                 NotifyRequest notifyRequest =
                         new NotifyRequest(request.getEmail(), ACCOUNT_CREATED_CONFIRMATION);
-                sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
-                LOGGER.info(
-                        "AccountCreatedConfirmation email placed on queue for session: {}",
-                        userContext.getSession().getSessionId());
+                if (!isTestClientAndAllowedEmail(userContext, ACCOUNT_CREATED_CONFIRMATION)) {
+                    sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+                    LOGGER.info(
+                            "AccountCreatedConfirmation email placed on queue for session: {}",
+                            userContext.getSession().getSessionId());
+                }
                 return generateEmptySuccessApiGatewayResponse();
             }
             boolean codeRequestValid =
