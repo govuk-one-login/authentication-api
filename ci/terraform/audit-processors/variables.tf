@@ -26,3 +26,25 @@ variable "aws_endpoint" {
 variable "shared_state_bucket" {
   type = string
 }
+
+variable "lambda_zip_file" {
+  default = "../../../audit-processors/build/distributions/audit-processors.zip"
+  type    = string
+}
+
+variable "localstack_endpoint" {
+  type    = string
+  default = "http://localhost:45678/"
+}
+
+variable "logging_endpoint_enabled" {
+  type        = bool
+  default     = false
+  description = "Whether the service should ship its Lambda logs to the `logging_endpoint_arn`"
+}
+
+variable "logging_endpoint_arn" {
+  type        = string
+  default     = ""
+  description = "Amazon Resource Name (ARN) for the endpoint to ship logs to"
+}
