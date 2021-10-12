@@ -13,12 +13,10 @@ import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.oidc.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
-import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
@@ -42,7 +40,6 @@ public class LogoutHandler
     private final DynamoClientService dynamoClientService;
     private final ClientSessionService clientSessionService;
     private final TokenValidationService tokenValidationService;
-    private final DynamoService dynamoService;
 
     public LogoutHandler() {
         this.configurationService = new ConfigurationService();
@@ -56,11 +53,6 @@ public class LogoutHandler
         this.tokenValidationService =
                 new TokenValidationService(
                         configurationService, new KmsConnectionService(configurationService));
-        this.dynamoService =
-                new DynamoService(
-                        configurationService.getAwsRegion(),
-                        configurationService.getEnvironment(),
-                        configurationService.getDynamoEndpointUri());
     }
 
     public LogoutHandler(
@@ -68,14 +60,12 @@ public class LogoutHandler
             SessionService sessionService,
             DynamoClientService dynamoClientService,
             ClientSessionService clientSessionService,
-            TokenValidationService tokenValidationService,
-            DynamoService dynamoService) {
+            TokenValidationService tokenValidationService) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.dynamoClientService = dynamoClientService;
         this.clientSessionService = clientSessionService;
         this.tokenValidationService = tokenValidationService;
-        this.dynamoService = dynamoService;
     }
 
     @Override
@@ -145,13 +135,6 @@ public class LogoutHandler
         try {
             String idTokenHint = queryStringParameters.get("id_token_hint");
             SignedJWT idToken = SignedJWT.parse(idTokenHint);
-            if (!doesSubjectExistInUserProfile(idToken.getJWTClaimsSet().getSubject(), session)) {
-                return generateErrorLogoutResponse(
-                        Optional.empty(),
-                        new ErrorObject(
-                                OAuth2Error.INVALID_REQUEST_CODE,
-                                "invalid id_token_hint provided"));
-            }
             Optional<String> audience =
                     idToken.getJWTClaimsSet().getAudience().stream().findFirst();
             sessionService.deleteSessionFromRedis(session.getSessionId());
@@ -166,19 +149,6 @@ public class LogoutHandler
                     Optional.empty(),
                     new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid id_token_hint"));
         }
-    }
-
-    private boolean doesSubjectExistInUserProfile(String subject, Session session) {
-        UserProfile userProfile = dynamoService.getUserProfileByEmail(session.getEmailAddress());
-        if (userProfile == null) {
-            LOG.error("UserProfile not found using Email address in session");
-            return false;
-        }
-        if (!userProfile.getPublicSubjectID().equals(subject)) {
-            LOG.error("SubjectID in id token hint does not match PublicSubjectId in UserProfile");
-            return false;
-        }
-        return true;
     }
 
     private boolean doesIDTokenExistInSession(String idTokenHint, Session session) {
