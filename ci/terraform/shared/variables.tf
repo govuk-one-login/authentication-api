@@ -122,3 +122,10 @@ variable "dynamo_default_write_capacity" {
 variable "test_client_email_allowlist" {
   type = string
 }
+
+
+variable "account_migration_lambda_zip_file" {
+  default     = "../../../account-migrations/build/distributions/account-migrations.zip"
+  description = "Location of the account-migrations Lambda ZIP file"
+  type        = string
+}
