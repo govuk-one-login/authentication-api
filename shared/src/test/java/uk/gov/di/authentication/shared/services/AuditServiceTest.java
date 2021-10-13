@@ -29,6 +29,7 @@ import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasCl
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasEmail;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasEventName;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasIpAddress;
+import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasMetadataPair;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasPhoneNumber;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasRequestId;
 import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasSessionId;
@@ -141,5 +142,7 @@ class AuditServiceTest {
 
         assertThat(serialisedAuditMessage, hasTimestamp(FIXED_TIMESTAMP));
         assertThat(serialisedAuditMessage, hasEventName(TEST_EVENT_ONE.toString()));
+        assertThat(serialisedAuditMessage, hasMetadataPair(pair("key", "value")));
+        assertThat(serialisedAuditMessage, hasMetadataPair(pair("key2", "value2")));
     }
 }
