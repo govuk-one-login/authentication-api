@@ -18,7 +18,7 @@ dependencies {
             "org.glassfish.jersey.media:jersey-media-json-jackson:${dependencyVersions.glassfish_version}",
             "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.12.5",
             "org.eclipse.jetty:jetty-server:11.0.6",
-            "software.amazon.awssdk:sqs:2.17.46",
+            "software.amazon.awssdk:sqs:2.17.58",
             "org.awaitility:awaitility:4.1.0",
             "com.amazonaws:aws-java-sdk-dynamodb:1.12.74",
             "org.bouncycastle:bcpkix-jdk15on:1.69",
