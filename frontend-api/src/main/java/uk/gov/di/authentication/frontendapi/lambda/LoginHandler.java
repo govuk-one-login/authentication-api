@@ -83,14 +83,18 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             Context context,
             LoginRequest request,
             UserContext userContext) {
-        LOGGER.info("Request received to the LoginHandler");
+        LOGGER.info(
+                "Request received to the LoginHandler with session: {}",
+                userContext.getSession().getSessionId());
         try {
             LoginRequest loginRequest = objectMapper.readValue(input.getBody(), LoginRequest.class);
             UserProfile userProfile =
                     authenticationService.getUserProfileByEmail(loginRequest.getEmail());
 
             if (Objects.isNull(userProfile)) {
-                LOGGER.error("The user does not have an account");
+                LOGGER.error(
+                        "The user does not have an account for session: {}",
+                        userContext.getSession().getSessionId());
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
             }
 
@@ -99,7 +103,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     codeStorageService.getIncorrectPasswordCount(loginRequest.getEmail());
 
             if (incorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
-                LOGGER.info("User has exceeded max password retries");
+                LOGGER.info(
+                        "User has exceeded max password retries with session: {}",
+                        userContext.getSession().getSessionId());
                 var nextState =
                         stateMachine.transition(
                                 userContext.getSession().getState(),
@@ -125,7 +131,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             boolean hasValidCredentials;
             if (userIsAMigratedUser) {
                 LOGGER.info(
-                        "Processing migrated user for sessionId {}",
+                        "Processing migrated user with session: {}",
                         userContext.getSession().getSessionId());
                 hasValidCredentials =
                         userMigrationService.processMigratedUser(
@@ -138,8 +144,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
             if (!hasValidCredentials) {
                 codeStorageService.increaseIncorrectPasswordCount(loginRequest.getEmail());
-                LOGGER.error(
-                        "Invalid login credentials entered for sessionId {}",
+                LOGGER.info(
+                        "Invalid login credentials entered with session: {}",
                         userContext.getSession().getSessionId());
                 return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
             }
@@ -163,17 +169,21 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             String concatPhoneNumber = RedactPhoneNumberHelper.redactPhoneNumber(phoneNumber);
 
             LOGGER.info(
-                    "User has successfully Logged in. Generating successful LoginResponse for session with ID {}",
+                    "User has successfully Logged in. Generating successful LoginResponse with session: {}",
                     userContext.getSession().getSessionId());
             return generateApiGatewayProxyResponse(
                     200, new LoginResponse(concatPhoneNumber, userContext.getSession().getState()));
         } catch (JsonProcessingException e) {
             LOGGER.error(
-                    "Request is missing parameters. The body present in request: {}",
+                    "Request is missing parameters with session: {}. The body present in request: {}",
+                    userContext.getSession().getSessionId(),
                     input.getBody());
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
-            LOGGER.error("Invalid transition in user journey. Unable to Login user", e);
+            LOGGER.error(
+                    "Invalid transition in user journey with session: {}. Unable to Login user",
+                    userContext.getSession().getSessionId(),
+                    e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         }
     }

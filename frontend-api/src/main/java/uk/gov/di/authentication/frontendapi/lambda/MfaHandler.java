@@ -89,6 +89,10 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             MfaRequest request,
             UserContext userContext) {
         try {
+            LOGGER.info(
+                    "MfaHandler received request for session: {}",
+                    userContext.getSession().getSessionId());
+
             var nextState =
                     stateMachine.transition(
                             userContext.getSession().getState(), SYSTEM_HAS_SENT_MFA_CODE);
@@ -103,7 +107,9 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         400, new BaseAPIResponse(userContext.getSession().getState()));
             }
             if (!userContext.getSession().validateSession(userWithEmailRequest.getEmail())) {
-                LOGGER.error("Email in session does not match Email in Request");
+                LOGGER.error(
+                        "Email in session: {} does not match Email in Request",
+                        userContext.getSession().getSessionId());
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1000);
             }
             String phoneNumber =
@@ -112,7 +118,9 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                             .orElse(null);
 
             if (phoneNumber == null) {
-                LOGGER.error("PhoneNumber is null");
+                LOGGER.error(
+                        "PhoneNumber is null for session: {}",
+                        userContext.getSession().getSessionId());
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1014);
             }
             String code = codeGeneratorService.sixDigitCode();
@@ -127,23 +135,31 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             sqsClient.send(objectMapper.writeValueAsString(notifyRequest));
 
             LOGGER.info(
-                    "MfaHandler successfully processed request for session {}",
+                    "MfaHandler successfully processed request for session: {}",
                     userContext.getSession().getSessionId());
 
             return generateApiGatewayProxyResponse(
                     200, new BaseAPIResponse(userContext.getSession().getState()));
         } catch (JsonProcessingException e) {
-            LOGGER.error("Request is missing parameters. Request Body: {}", input.getBody());
+            LOGGER.error(
+                    "Request is missing parameters. session: {} Request Body: {}",
+                    userContext.getSession().getSessionId(),
+                    input.getBody());
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
-            LOGGER.error("Invalid transition in user journey", e);
+            LOGGER.error(
+                    "Invalid transition in user journey for session: {}",
+                    userContext.getSession().getSessionId(),
+                    e);
             return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
         }
     }
 
     private boolean validateCodeRequestAttempts(String email, Session session) {
         if (session.getCodeRequestCount() == configurationService.getCodeMaxRetries()) {
-            LOGGER.error("User has requested too many OTP codes");
+            LOGGER.info(
+                    "User has requested too many OTP codes for session: {}",
+                    session.getSessionId());
             codeStorageService.saveCodeRequestBlockedForSession(
                     email, session.getSessionId(), configurationService.getCodeExpiry());
             SessionState nextState =
@@ -152,7 +168,9 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             return false;
         }
         if (codeStorageService.isCodeRequestBlockedForSession(email, session.getSessionId())) {
-            LOGGER.error("User is blocked from requesting any OTP codes");
+            LOGGER.info(
+                    "User is blocked from requesting any OTP codes for session: {}",
+                    session.getSessionId());
             SessionState nextState =
                     stateMachine.transition(
                             session.getState(),

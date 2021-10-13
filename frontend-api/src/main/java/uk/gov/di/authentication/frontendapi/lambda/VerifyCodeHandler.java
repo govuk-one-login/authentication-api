@@ -99,6 +99,10 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             VerifyCodeRequest request,
             UserContext userContext) {
         try {
+            LOG.info(
+                    "VerifyCodeHandler processing request for session: {}",
+                    userContext.getSession().getSessionId());
+
             VerifyCodeRequest codeRequest =
                     objectMapper.readValue(input.getBody(), VerifyCodeRequest.class);
 
@@ -130,7 +134,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
             if (validationAction == null) {
                 LOG.error(
-                        "Encountered unexpected error while processing session {}",
+                        "Encountered unexpected error while processing session: {}",
                         userContext.getSession().getSessionId());
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
             }
@@ -150,13 +154,20 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             return generateSuccessResponse(session);
 
         } catch (JsonProcessingException e) {
-            LOG.error("Error parsing request", e);
+            LOG.error(
+                    "Error parsing request for session: {}",
+                    userContext.getSession().getSessionId(),
+                    e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
-            LOG.error("Invalid transition in user journey", e);
+            LOG.error(
+                    "Invalid transition in user journey for session: {}",
+                    userContext.getSession().getSessionId(),
+                    e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         } catch (ClientNotFoundException e) {
-            LOG.error("Client not found", e);
+            LOG.error(
+                    "Client not found for session: {}", userContext.getSession().getSessionId(), e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
     }
@@ -194,7 +205,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private APIGatewayProxyResponseEvent generateSuccessResponse(Session session)
             throws JsonProcessingException {
         LOG.info(
-                "VerifyCodeHandler successfully processed request for session {}",
+                "VerifyCodeHandler successfully processed request for session: {}",
                 session.getSessionId());
 
         return generateApiGatewayProxyResponse(200, new BaseAPIResponse(session.getState()));
@@ -203,7 +214,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private APIGatewayProxyResponseEvent generateResponse(Session session)
             throws JsonProcessingException {
         LOG.info(
-                "VerifyCodeHandler failed to process request for session {}",
+                "VerifyCodeHandler failed to process request for session: {}",
                 session.getSessionId());
 
         return generateApiGatewayProxyResponse(400, new BaseAPIResponse(session.getState()));
@@ -250,7 +261,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
     private Optional<String> getOtpCode(UserContext userContext, NotificationType notificationType)
             throws ClientNotFoundException {
-        LOG.warn("TestClients are ENABLED: SessionId {}", userContext.getSession().getSessionId());
+        LOG.warn("TestClients are ENABLED: session: {}", userContext.getSession().getSessionId());
         final String emailAddress = userContext.getSession().getEmailAddress();
         final Optional<String> generatedOTPCode =
                 codeStorageService.getOtpCode(emailAddress, notificationType);
@@ -264,11 +275,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                                             .getTestClientEmailAllowlist()
                                             .contains(emailAddress)) {
                                 LOG.info(
-                                        "Using TestClient {} {} email {} on TestClientEmailAllowlist with NotificationType {}",
+                                        "Using TestClient {} {} email {} on TestClientEmailAllowlist with NotificationType {} and session: {}",
                                         clientRegistry.getClientID(),
                                         clientRegistry.getClientName(),
                                         emailAddress,
-                                        notificationType);
+                                        notificationType,
+                                        userContext.getSession().getSessionId());
                                 switch (notificationType) {
                                     case VERIFY_EMAIL:
                                         return configurationService.getTestClientVerifyEmailOTP();
@@ -280,11 +292,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                                                 .getTestClientVerifyPhoneNumberOTP();
                                     default:
                                         LOG.info(
-                                                "Returning the generated OTP for TestClient {} {} email {} with NotificationType {}",
+                                                "Returning the generated OTP for TestClient {} {} email {} with NotificationType {} and session: {}",
                                                 clientRegistry.getClientID(),
                                                 clientRegistry.getClientName(),
                                                 emailAddress,
-                                                notificationType);
+                                                notificationType,
+                                                userContext.getSession().getSessionId());
                                         return generatedOTPCode;
                                 }
                             } else {

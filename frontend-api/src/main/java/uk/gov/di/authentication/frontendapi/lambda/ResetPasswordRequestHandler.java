@@ -93,18 +93,21 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             ResetPasswordRequest request,
             UserContext userContext) {
         LOGGER.info(
-                "ResetPasswordRequestHandler processing request for session {}",
+                "ResetPasswordRequestHandler processing request for session: {}",
                 userContext.getSession().getSessionId());
         try {
             if (!userContext.getSession().validateSession(request.getEmail())) {
                 LOGGER.info(
-                        "Invalid session. SessionId {}", userContext.getSession().getSessionId());
+                        "Invalid session. session: {}", userContext.getSession().getSessionId());
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
             Optional<ErrorResponse> emailErrorResponse =
                     validationService.validateEmailAddress(request.getEmail());
             if (emailErrorResponse.isPresent()) {
-                LOGGER.error("Encountered emailErrorResponse: {}", emailErrorResponse.get());
+                LOGGER.info(
+                        "Email validation failed: {} for session: {}",
+                        emailErrorResponse.get(),
+                        userContext.getSession().getSessionId());
                 return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
             }
 
@@ -117,13 +120,22 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                     request.getEmail(), NotificationType.RESET_PASSWORD, userContext);
 
         } catch (SdkClientException ex) {
-            LOGGER.error("Error sending message to queue", ex);
+            LOGGER.error(
+                    "Error sending message to queue for session: {}",
+                    userContext.getSession().getSessionId(),
+                    ex);
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
         } catch (JsonProcessingException e) {
-            LOGGER.error("Error parsing request", e);
+            LOGGER.error(
+                    "Error parsing request for session: {}",
+                    userContext.getSession().getSessionId(),
+                    e);
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
-            LOGGER.error("Invalid transition in user journey", e);
+            LOGGER.error(
+                    "Invalid transition in user journey for session: {}",
+                    userContext.getSession().getSessionId(),
+                    e);
             return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
         }
     }
@@ -148,7 +160,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                 userContext.getSession().setState(nextState).incrementPasswordResetCount());
         sqsClient.send(serialiseRequest(notifyRequest));
         LOGGER.info(
-                "ResetPasswordRequestHandler successfully processed request for session {}",
+                "ResetPasswordRequestHandler successfully processed request for session: {}",
                 userContext.getSession().getSessionId());
         return generateApiGatewayProxyResponse(
                 200, new BaseAPIResponse(userContext.getSession().getState()));
@@ -158,11 +170,15 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             String email, UserContext userContext) {
         if (codeStorageService.isPasswordResetBlockedForSession(
                 email, userContext.getSession().getSessionId())) {
-            LOGGER.info("User cannot request another password reset");
+            LOGGER.info(
+                    "User cannot request another password reset for session: {}",
+                    userContext.getSession().getSessionId());
             return Optional.of(ErrorResponse.ERROR_1023);
         } else if (userContext.getSession().getPasswordResetCount()
                 > configurationService.getCodeMaxRetries()) {
-            LOGGER.info("User has requested too many password resets");
+            LOGGER.info(
+                    "User has requested too many password resets for session: {}",
+                    userContext.getSession().getSessionId());
             codeStorageService.savePasswordResetBlockedForSession(
                     userContext.getSession().getEmailAddress(),
                     userContext.getSession().getSessionId(),
