@@ -70,6 +70,9 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
             SignupRequest request,
             UserContext userContext) {
         try {
+            LOG.info(
+                    "SignUpHandler received request for session: {}",
+                    userContext.getSession().getSessionId());
             var nextState =
                     stateMachine.transition(
                             userContext.getSession().getState(), USER_HAS_CREATED_A_PASSWORD);
@@ -82,7 +85,10 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
             if (passwordValidationErrors.isEmpty()) {
                 if (authenticationService.userExists(signupRequest.getEmail())) {
-                    LOG.error("User with email {} already exists", signupRequest.getEmail());
+                    LOG.error(
+                            "User with email {} already exists for session: {}",
+                            signupRequest.getEmail(),
+                            userContext.getSession().getSessionId());
                     return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
                 }
                 authenticationService.signUp(
@@ -100,7 +106,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                                 .setEmailAddress(signupRequest.getEmail()));
 
                 LOG.info(
-                        "SignUpHandler successfully processed request for session {}",
+                        "SignUpHandler successfully processed request for session: {}",
                         userContext.getSession().getSessionId());
                 return generateApiGatewayProxyResponse(
                         200, new BaseAPIResponse(userContext.getSession().getState()));
@@ -108,10 +114,16 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                 return generateApiGatewayProxyErrorResponse(400, passwordValidationErrors.get());
             }
         } catch (JsonProcessingException e) {
-            LOG.error("Error parsing request", e);
+            LOG.error(
+                    "Error parsing request for session: {}",
+                    userContext.getSession().getSessionId(),
+                    e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
-            LOG.error("Invalid transition in user journey", e);
+            LOG.error(
+                    "Invalid transition in user journey for session: {}",
+                    userContext.getSession().getSessionId(),
+                    e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         }
     }

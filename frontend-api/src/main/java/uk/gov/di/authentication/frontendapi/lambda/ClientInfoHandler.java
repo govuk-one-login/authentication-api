@@ -77,7 +77,9 @@ public class ClientInfoHandler
                                             input.getHeaders());
 
                             if (clientSession.isEmpty()) {
-                                LOGGER.info("ClientSession not found.");
+                                LOGGER.info(
+                                        "ClientSession not found for session: {}",
+                                        session.get().getSessionId());
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1018);
                             }
@@ -100,9 +102,10 @@ public class ClientInfoHandler
                                         clientService.getClient(clientID);
 
                                 if (optionalClientRegistry.isEmpty()) {
-                                    LOGGER.info(
-                                            "Client not found in ClientRegistry for ClientID: {}",
-                                            clientID);
+                                    LOGGER.error(
+                                            "ClientId {} not found in ClientRegistry for session: {}",
+                                            clientID,
+                                            session.get().getSessionId());
                                     return generateApiGatewayProxyErrorResponse(
                                             403, ErrorResponse.ERROR_1015);
                                 }
@@ -118,18 +121,22 @@ public class ClientInfoHandler
                                                 state);
 
                                 LOGGER.info(
-                                        "Found Client Info for ClientID: {} ClientName {} Scopes {} Redirect Uri {} Service Type {} State {}",
+                                        "Found Client Info for ClientID: {} ClientName {} Scopes {} Redirect Uri {} Service Type {} State {} for session: {}",
                                         clientRegistry.getClientID(),
                                         clientRegistry.getClientName(),
                                         scopes,
                                         redirectUri,
                                         clientRegistry.getServiceType(),
-                                        state);
+                                        state,
+                                        session.get().getSessionId());
 
                                 return generateApiGatewayProxyResponse(200, clientInfoResponse);
 
                             } catch (ParseException | JsonProcessingException e) {
-                                LOGGER.error("Error when calling ClientInfo", e);
+                                LOGGER.error(
+                                        "Error when calling ClientInfo for session: {}",
+                                        session.get().getSessionId(),
+                                        e);
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1001);
                             }

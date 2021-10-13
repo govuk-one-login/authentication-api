@@ -104,19 +104,18 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             UserContext userContext) {
         try {
             if (!userContext.getSession().validateSession(request.getEmail())) {
-                LOGGER.info(
-                        "Invalid session. SessionId {}", userContext.getSession().getSessionId());
+                LOGGER.info("Invalid session: {}", userContext.getSession().getSessionId());
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
             if (request.getNotificationType().equals(ACCOUNT_CREATED_CONFIRMATION)) {
                 LOGGER.info(
-                        "Placing message on queue for AccountCreatedConfirmation for sessionId: {}",
+                        "Placing message on queue for AccountCreatedConfirmation for session: {}",
                         userContext.getSession().getSessionId());
                 NotifyRequest notifyRequest =
                         new NotifyRequest(request.getEmail(), ACCOUNT_CREATED_CONFIRMATION);
                 sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
                 LOGGER.info(
-                        "AccountCreatedConfirmation email placed on queue for sessionId: {}",
+                        "AccountCreatedConfirmation email placed on queue for session: {}",
                         userContext.getSession().getSessionId());
                 return generateEmptySuccessApiGatewayResponse();
             }
@@ -143,7 +142,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             validationService.validateEmailAddress(request.getEmail());
                     if (emailErrorResponse.isPresent()) {
                         LOGGER.error(
-                                "Session: {} encountered emailErrorResponse: {}",
+                                "session: {} encountered emailErrorResponse: {}",
                                 userContext.getSession().getSessionId(),
                                 emailErrorResponse.get());
                         return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
@@ -163,7 +162,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
                     if (request.getPhoneNumber() == null) {
                         LOGGER.error(
-                                "No phone number provided for session {}",
+                                "No phone number provided for session: {}",
                                 userContext.getSession().getSessionId());
                         return generateApiGatewayProxyResponse(400, ERROR_1011);
                     }
@@ -182,16 +181,26 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             }
             return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
         } catch (SdkClientException ex) {
-            LOGGER.error("Error sending message to queue", ex);
+            LOGGER.error(
+                    "Error sending message to queue for session: {}",
+                    userContext.getSession().getSessionId(),
+                    ex);
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
         } catch (JsonProcessingException e) {
-            LOGGER.error("Error parsing request", e);
+            LOGGER.error(
+                    "Error parsing request for session: {}",
+                    userContext.getSession().getSessionId(),
+                    e);
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
-            LOGGER.error("Invalid transition in user journey", e);
+            LOGGER.error(
+                    "Invalid transition in user journey for session: {}",
+                    userContext.getSession().getSessionId(),
+                    e);
             return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
         } catch (ClientNotFoundException e) {
-            LOGGER.error("Client not found", e);
+            LOGGER.error(
+                    "Client not found for session: {}", userContext.getSession().getSessionId(), e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
     }
