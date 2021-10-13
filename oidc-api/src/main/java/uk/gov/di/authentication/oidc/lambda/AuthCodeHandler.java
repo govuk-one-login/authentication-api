@@ -29,7 +29,6 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.UserContext;
 
-import java.net.HttpCookie;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
@@ -37,6 +36,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 import static java.util.Objects.isNull;
+import static uk.gov.di.authentication.oidc.entity.RequestParameters.COOKIE_CONSENT;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
@@ -202,7 +202,7 @@ public class AuthCodeHandler
                                                     authCode,
                                                     COOKIE_CONSENT_PARAM_NAME,
                                                     getCookieConsentSharedParamValue(
-                                                            input.getHeaders()));
+                                                            input.getQueryStringParameters()));
                                 } else {
                                     authenticationResponse =
                                             authorizationService.generateSuccessfulAuthResponse(
@@ -249,19 +249,10 @@ public class AuthCodeHandler
                 .withHeaders(Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()));
     }
 
-    private String getCookieConsentSharedParamValue(Map<String, String> headers) {
-        HttpCookie cookiePreferencesCookie =
-                CookieHelper.getHttpCookieFromHeaders(headers, COOKIE_PREFERENCES_NAME)
-                        .orElse(null);
-        if (cookiePreferencesCookie == null) {
+    private String getCookieConsentSharedParamValue(Map<String, String> queryParams) {
+        if (!queryParams.containsKey(COOKIE_CONSENT) || queryParams.get(COOKIE_CONSENT).isEmpty()) {
             return COOKIE_CONSENT_NOT_ENGAGED;
         }
-        if (cookiePreferencesCookie.getValue().contains(COOKIE_CONSENT_ANALYTICS_TRUE)) {
-            return COOKIE_CONSENT_ACCEPT;
-        } else if (cookiePreferencesCookie.getValue().contains(COOKIE_CONSENT_ANALYTICS_FALSE)) {
-            return COOKIE_CONSENT_REJECT;
-        } else {
-            return COOKIE_CONSENT_NOT_ENGAGED;
-        }
+        return queryParams.get(COOKIE_CONSENT);
     }
 }
