@@ -12,7 +12,8 @@ params:
   STATE_BUCKET: digital-identity-dev-tfstate
 inputs:
   - name: shared-terraform-outputs
-  - name: di-authentication-api-audit-processors
+  - name: api-src
+  - name: audit-processors-release
 outputs:
   - name: terraform-outputs
 run:
@@ -20,7 +21,7 @@ run:
   args:
     - -euc
     - |
-      cd "di-authentication-api-audit-processors/ci/terraform/audit-processors"
+      cd "api-src/ci/terraform/audit-processors"
       terraform init -input=false \
         -backend-config "role_arn=${DEPLOYER_ROLE_ARN}" \
         -backend-config "bucket=${STATE_BUCKET}" \
@@ -29,6 +30,7 @@ run:
         -backend-config "region=eu-west-2"
 
       terraform apply -auto-approve \
+        -var "lambda_zip_file=../../../../audit-processors-release/audit-processors.zip" \
         -var "deployer_role_arn=${DEPLOYER_ROLE_ARN}" \
         -var "environment=${DEPLOY_ENVIRONMENT}" \
         -var "shared_state_bucket=${STATE_BUCKET}" \
