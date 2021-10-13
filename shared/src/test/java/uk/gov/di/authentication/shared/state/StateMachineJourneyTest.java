@@ -11,6 +11,7 @@ import uk.gov.di.authentication.shared.helpers.IdGenerator;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_MAX_CODES_SENT;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_NOT_VALID;
@@ -153,6 +154,25 @@ public class StateMachineJourneyTest {
         final SessionState nextState =
                 stateMachine.transition(
                         MFA_CODE_MAX_RETRIES_REACHED,
+                        SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY,
+                        userContext);
+        assertThat(nextState, equalTo(UPLIFT_REQUIRED_CM));
+    }
+
+    @Test
+    public void
+            returns_UPLIFT_REQUIRED_CM_WhenUserStartsNewJourneyAfterReachingConsentPageWhilstUplifting() {
+        UserContext userContext =
+                UserContext.builder(
+                                session.setCurrentCredentialStrength(
+                                        CredentialTrustLevel.LOW_LEVEL))
+                        .withClientSession(
+                                new ClientSession(null, null, null)
+                                        .setEffectiveVectorOfTrust(VectorOfTrust.getDefaults()))
+                        .build();
+        final SessionState nextState =
+                stateMachine.transition(
+                        CONSENT_REQUIRED,
                         SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY,
                         userContext);
         assertThat(nextState, equalTo(UPLIFT_REQUIRED_CM));

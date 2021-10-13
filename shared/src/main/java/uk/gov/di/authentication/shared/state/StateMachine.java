@@ -416,6 +416,9 @@ public class StateMachine<T, A, C> {
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(CONSENT_REQUIRED)
                 .allow(
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY)
+                                .then(UPLIFT_REQUIRED_CM)
+                                .ifCondition(upliftRequired()),
                         on(USER_HAS_ACTIONED_CONSENT).then(CONSENT_ADDED),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY)
                                 .then(UPDATED_TERMS_AND_CONDITIONS)
