@@ -486,6 +486,27 @@ class SendNotificationHandlerTest {
         assertEquals(204, result.getStatusCode());
     }
 
+    @Test
+    public void shouldReturn204AndNotSendAccountCreationEmailForTestClientAndTestUser()
+            throws JsonProcessingException {
+        usingValidSession();
+        usingValidClientSession(TEST_CLIENT_ID);
+        when(configurationService.isTestClientsEnabled()).thenReturn(true);
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                        TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION);
+        verify(awsSqsClient, never()).send(objectMapper.writeValueAsString(notifyRequest));
+
+        assertEquals(204, result.getStatusCode());
+    }
+
     private void maxOutCodeRequestCount() {
         session.incrementCodeRequestCount();
         session.incrementCodeRequestCount();
