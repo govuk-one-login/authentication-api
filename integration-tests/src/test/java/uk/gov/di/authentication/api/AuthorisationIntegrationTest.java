@@ -233,7 +233,7 @@ public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
         assertThat(response.getCookies().get("gs").getValue(), not(startsWith(sessionId)));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
-                startsWith(configurationService.getAuthCodeURI().toString()));
+                startsWith(configurationService.getLoginURI().toString()));
     }
 
     @Test

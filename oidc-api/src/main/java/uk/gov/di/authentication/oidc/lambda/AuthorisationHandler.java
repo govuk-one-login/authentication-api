@@ -44,7 +44,6 @@ import static java.lang.String.format;
 import static uk.gov.di.authentication.oidc.entity.RequestParameters.COOKIE_CONSENT;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED;
-import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
 import static uk.gov.di.authentication.shared.entity.SessionState.INTERRUPT_STATES;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -216,18 +215,14 @@ public class AuthorisationHandler
             throw new RuntimeException(e);
         }
         URI redirectUri;
-        if (nextState == AUTHENTICATED) {
-            redirectUri = configurationService.getAuthCodeURI();
-        } else {
-            try {
-                URIBuilder redirectUriBuilder = new URIBuilder(configurationService.getLoginURI());
-                if (INTERRUPT_STATES.contains(nextState)) {
-                    redirectUriBuilder.addParameter("interrupt", nextState.toString());
-                }
-                redirectUri = redirectUriBuilder.build();
-            } catch (URISyntaxException e) {
-                throw new RuntimeException("Error constructing redirect URI", e);
+        try {
+            URIBuilder redirectUriBuilder = new URIBuilder(configurationService.getLoginURI());
+            if (INTERRUPT_STATES.contains(nextState)) {
+                redirectUriBuilder.addParameter("interrupt", nextState.toString());
             }
+            redirectUri = redirectUriBuilder.build();
+        } catch (URISyntaxException e) {
+            throw new RuntimeException("Error constructing redirect URI", e);
         }
         redirectUri =
                 checkToShareCookieConsent(

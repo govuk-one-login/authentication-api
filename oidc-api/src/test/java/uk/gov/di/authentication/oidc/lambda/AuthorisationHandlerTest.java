@@ -8,6 +8,7 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCError;
+import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,6 +28,7 @@ import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.Optional;
 
@@ -268,22 +270,24 @@ class AuthorisationHandlerTest {
     }
 
     @Test
-    void shouldSkipLoginWhenPromptParamAbsentAndLoggedIn() {
+    void shouldSkipLoginWhenPromptParamAbsentAndLoggedIn() throws URISyntaxException {
         final URI loginUrl = URI.create("http://example.com");
-        final URI authCodeUri = URI.create("/auth-code");
         final Session session = new Session("a-session-id");
         session.addClientSession("old-client-session-id");
 
         whenLoggedIn(session, loginUrl);
-        when(configService.getAuthCodeURI()).thenReturn(authCodeUri);
         when(authorizationService.buildUserContext(eq(session), any(ClientSession.class)))
                 .thenReturn(userContext);
 
         APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent());
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+        URI expectedUri =
+                new URIBuilder(loginUrl)
+                        .addParameter("interrupt", AUTHENTICATED.toString())
+                        .build();
 
         assertThat(response, hasStatus(302));
-        assertEquals(authCodeUri, uri);
+        assertEquals(expectedUri, uri);
         assertEquals(EXPECTED_COOKIE_STRING, response.getHeaders().get("Set-Cookie"));
         verify(sessionService).save(eq(session));
         assertEquals(SessionState.AUTHENTICATED, session.getState());
@@ -315,23 +319,26 @@ class AuthorisationHandlerTest {
     }
 
     @Test
-    void shouldSkipLoginWhenPromptParamNoneAndLoggedIn() {
+    void shouldSkipLoginWhenPromptParamNoneAndLoggedIn() throws URISyntaxException {
         final URI loginUrl = URI.create("http://example.com");
-        final URI authCodeUri = URI.create("/auth-code");
 
         final Session session = new Session("a-session-id");
         session.addClientSession("old-client-session-id");
 
         whenLoggedIn(session, loginUrl);
-        when(configService.getAuthCodeURI()).thenReturn(authCodeUri);
         when(authorizationService.buildUserContext(eq(session), any(ClientSession.class)))
                 .thenReturn(userContext);
 
         APIGatewayProxyResponseEvent response = makeHandlerRequest(withPromptRequestEvent("none"));
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
+        URI expectedUri =
+                new URIBuilder(loginUrl)
+                        .addParameter("interrupt", AUTHENTICATED.toString())
+                        .build();
+
         assertThat(response, hasStatus(302));
-        assertEquals(authCodeUri, uri);
+        assertEquals(expectedUri, uri);
         assertEquals(EXPECTED_COOKIE_STRING, response.getHeaders().get("Set-Cookie"));
         verify(sessionService).save(eq(session));
         assertEquals(SessionState.AUTHENTICATED, session.getState());
