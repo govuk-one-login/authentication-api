@@ -341,6 +341,9 @@ public class StateMachine<T, A, C> {
                                 .ifCondition(userHasNotGivenConsent()),
                         on(USER_ENTERED_VALID_MFA_CODE).then(MFA_CODE_VERIFIED).byDefault(),
                         on(USER_ENTERED_INVALID_MFA_CODE).then(MFA_CODE_NOT_VALID),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY)
+                                .then(UPLIFT_REQUIRED_CM)
+                                .ifCondition(upliftRequired()),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW),
                         on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND))
@@ -349,11 +352,17 @@ public class StateMachine<T, A, C> {
                         on(SYSTEM_HAS_SENT_MFA_CODE).then(MFA_SMS_CODE_SENT),
                         on(SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_MFA_VERIFICATION_CODES)
                                 .then(MFA_CODE_REQUESTS_BLOCKED),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY)
+                                .then(UPLIFT_REQUIRED_CM)
+                                .ifCondition(upliftRequired()),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(MFA_CODE_REQUESTS_BLOCKED)
                 .allow(
                         on(SYSTEM_HAS_SENT_MFA_CODE).then(MFA_SMS_CODE_SENT),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY)
+                                .then(UPLIFT_REQUIRED_CM)
+                                .ifCondition(upliftRequired()),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(MFA_CODE_NOT_VALID)
@@ -374,10 +383,16 @@ public class StateMachine<T, A, C> {
                         on(USER_ENTERED_INVALID_MFA_CODE).then(MFA_CODE_NOT_VALID),
                         on(USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES)
                                 .then(MFA_CODE_MAX_RETRIES_REACHED),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY)
+                                .then(UPLIFT_REQUIRED_CM)
+                                .ifCondition(upliftRequired()),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(MFA_CODE_MAX_RETRIES_REACHED)
                 .allow(
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY)
+                                .then(UPLIFT_REQUIRED_CM)
+                                .ifCondition(upliftRequired()),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(MFA_CODE_VERIFIED)
