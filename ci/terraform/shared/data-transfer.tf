@@ -104,7 +104,8 @@ resource "aws_lambda_function" "data_transfer_lambda" {
   function_name = "${var.environment}-account-transfer-lambda"
   role          = aws_iam_role.data_transfer_lambda_role[0].arn
   handler       = "uk.gov.di.authentication.accountmigration.DataMigrationHandler::handleRequest"
-  memory_size   = 4096
+  memory_size   = 8192
+  timeout       = 900
 
   tracing_config {
     mode = "Active"
