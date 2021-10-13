@@ -56,4 +56,13 @@ public class CredentialTrustUpliftRequiredTest {
 
         assertThat(condition.isMet(Optional.of(userContext)), equalTo(false));
     }
+
+    @Test
+    public void shouldReturnFalseIfSessionHasNotRecordedACredentialTrustLevel() {
+        CredentialTrustUpliftRequired condition = new CredentialTrustUpliftRequired();
+        when(session.getCurrentCredentialStrength()).thenReturn(null);
+        when(vectorOfTrust.getCredentialTrustLevel()).thenReturn(null);
+
+        assertThat(condition.isMet(Optional.of(userContext)), equalTo(false));
+    }
 }
