@@ -29,3 +29,60 @@ resource "aws_iam_role_policy_attachment" "provided_policies" {
   role       = aws_iam_role.lambda_role.name
   policy_arn = var.policies_to_attach[count.index]
 }
+
+resource "aws_iam_policy" "logging_policy" {
+  name        = "${var.environment}-${var.role_name}-lambda-logging"
+  path        = "/"
+  description = "IAM policy for logging from a lambda"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ]
+
+      Resource = [
+        "arn:aws:logs:*:*:*",
+      ]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_logs" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = aws_iam_policy.logging_policy.arn
+}
+
+resource "aws_iam_policy" "networking_policy" {
+  name        = "${var.environment}-${var.role_name}-lambda-networking"
+  path        = "/"
+  description = "IAM policy for managing VPC connection for a lambda"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "ec2:DescribeNetworkInterfaces",
+        "ec2:CreateNetworkInterface",
+        "ec2:DeleteNetworkInterface"
+      ]
+      Resource = ["*"]
+      Condition = {
+        ArnLikeIfExists = {
+          "ec2:Vpc" = [var.vpc_arn]
+        }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "networking_policy" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = aws_iam_policy.networking_policy.arn
+}
