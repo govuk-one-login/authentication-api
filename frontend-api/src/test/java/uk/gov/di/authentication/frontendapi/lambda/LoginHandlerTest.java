@@ -13,15 +13,19 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import net.minidev.json.JSONArray;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -31,15 +35,19 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URI;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.SessionState.ACCOUNT_TEMPORARILY_LOCKED;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
@@ -73,6 +81,14 @@ class LoginHandlerTest {
         when(configurationService.getMaxPasswordRetries()).thenReturn(5);
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(clientSession));
+
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.add("Cl.Cm");
+        VectorOfTrust vectorOfTrust =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        Collections.singletonList(jsonArray.toJSONString()));
+        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vectorOfTrust);
+
         handler =
                 new LoginHandler(
                         configurationService,
@@ -347,6 +363,63 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1017));
+    }
+
+    @Test
+    public void shouldSetSessionCredentialStrengthIfClientSessionsVtrIsLow()
+            throws JsonProcessingException {
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
+        when(userMigrationService.userHasBeenPartlyMigrated(
+                        userProfile.getLegacySubjectID(), EMAIL))
+                .thenReturn(false);
+        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
+        when(clientSession.getAuthRequestParams())
+                .thenReturn(generateAuthRequest(Optional.empty()).toParameters());
+
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.add("Cl");
+        VectorOfTrust vectorOfTrust =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        Collections.singletonList(jsonArray.toJSONString()));
+        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vectorOfTrust);
+
+        usingValidSession();
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        ArgumentCaptor<Session> sessionArgumentCaptor = ArgumentCaptor.forClass(Session.class);
+        verify(sessionService, times(1)).save(sessionArgumentCaptor.capture());
+
+        Session session = sessionArgumentCaptor.getValue();
+        assertThat(session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.LOW_LEVEL));
+    }
+
+    @Test
+    public void shouldNotSetSessionCredentialStrengthIfClientSessionsVtrIsMedium()
+            throws JsonProcessingException {
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
+        when(userMigrationService.userHasBeenPartlyMigrated(
+                        userProfile.getLegacySubjectID(), EMAIL))
+                .thenReturn(false);
+        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
+        when(clientSession.getAuthRequestParams())
+                .thenReturn(generateAuthRequest(Optional.empty()).toParameters());
+
+        usingValidSession();
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        ArgumentCaptor<Session> sessionArgumentCaptor = ArgumentCaptor.forClass(Session.class);
+        verify(sessionService, times(1)).save(sessionArgumentCaptor.capture());
+
+        Session session = sessionArgumentCaptor.getValue();
+        assertThat(session.getCurrentCredentialStrength(), nullValue());
     }
 
     private AuthenticationRequest generateAuthRequest(Optional<String> credentialTrustLevel) {

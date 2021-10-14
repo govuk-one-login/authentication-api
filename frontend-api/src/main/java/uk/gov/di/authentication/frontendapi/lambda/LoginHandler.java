@@ -12,7 +12,9 @@ import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -159,7 +161,18 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             userContext.getSession().getState(),
                             USER_ENTERED_VALID_CREDENTIALS,
                             userContext);
-            sessionService.save(userContext.getSession().setState(nextState));
+
+            CredentialTrustLevel credentialTrustLevel =
+                    userContext
+                            .getClientSession()
+                            .getEffectiveVectorOfTrust()
+                            .getCredentialTrustLevel();
+            Session session = userContext.getSession().setState(nextState);
+            if (credentialTrustLevel.equals(CredentialTrustLevel.LOW_LEVEL)) {
+                session.setCurrentCredentialStrength(credentialTrustLevel);
+            }
+            sessionService.save(session);
+
             if (nextState.equals(TWO_FACTOR_REQUIRED)) {
                 return generateApiGatewayProxyResponse(
                         200, new BaseAPIResponse(userContext.getSession().getState()));
