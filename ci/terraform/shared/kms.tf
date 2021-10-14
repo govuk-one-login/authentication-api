@@ -93,12 +93,13 @@ resource "aws_kms_alias" "audit_payload_signing_key_alias" {
 data "aws_iam_policy_document" "audit_payload_kms_signing_policy_document" {
   count = var.use_localstack ? 0 : 1
   statement {
-    sid    = "AllowAccessToKmsSigningKey"
+    sid    = "AllowAccessToKmsAuditSigningKey"
     effect = "Allow"
 
     actions = [
       "kms:Sign",
       "kms:GetPublicKey",
+      "kms:Verify"
     ]
     resources = [
       aws_kms_key.audit_payload_signing_key.arn,
