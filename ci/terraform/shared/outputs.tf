@@ -12,6 +12,10 @@ output "redis_password" {
   value     = random_password.redis_password.result
 }
 
+output "authentication_vpc_arn" {
+  value = aws_vpc.authentication.arn
+}
+
 output "authentication_security_group_id" {
   value = aws_vpc.authentication.default_security_group_id
 }
