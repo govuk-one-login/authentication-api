@@ -7,6 +7,7 @@ import com.amazonaws.services.kms.model.GetPublicKeyRequest;
 import com.amazonaws.services.kms.model.GetPublicKeyResult;
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;
+import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
 import com.amazonaws.services.kms.model.VerifyRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +54,7 @@ public class KmsConnectionService {
                 new VerifyRequest()
                         .withMessage(content)
                         .withSignature(signature)
+                        .withSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
                         .withKeyId(signingKeyId);
 
         return kmsClient.verify(verifyRequest).isSignatureValid();
