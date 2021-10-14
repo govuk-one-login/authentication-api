@@ -35,6 +35,14 @@ resource "aws_sns_topic_subscription" "event_stream_subscription" {
   endpoint  = aws_lambda_function.audit_processor_lambda.arn
 }
 
+resource "aws_lambda_permission" "sns_can_execute_subscriber_lambda" {
+  statement_id  = "AllowExecutionFromSNS"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.audit_processor_lambda.function_name
+  principal     = "sns.amazonaws.com"
+  source_arn    = data.aws_sns_topic.event_stream.arn
+}
+
 resource "aws_cloudwatch_log_group" "lambda_log_group" {
   count = var.use_localstack ? 0 : 1
 
