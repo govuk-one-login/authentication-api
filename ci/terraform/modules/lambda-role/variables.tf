@@ -17,3 +17,7 @@ variable "policies_to_attach" {
   default     = []
   description = "Policies to attach to the role"
 }
+
+variable "vpc_arn" {
+  type = string
+}
