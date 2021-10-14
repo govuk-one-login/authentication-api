@@ -2,7 +2,7 @@ resource "aws_lambda_function" "audit_processor_lambda" {
   filename      = var.lambda_zip_file
   function_name = "${var.environment}-audit-processor-example-lambda"
   role          = local.lambda_iam_role_arn
-  handler       = "uk.gov.di.authentication.audit.lambda.ExampleAuditHandler::handleRequest"
+  handler       = "uk.gov.di.authentication.audit.lambda.ExampleAuditLambda::handleRequest"
   timeout       = 30
   memory_size   = 4096
   publish       = true
