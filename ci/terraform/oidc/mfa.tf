@@ -17,6 +17,7 @@ module "mfa" {
     REDIS_PASSWORD          = local.external_redis_password
     REDIS_TLS               = var.redis_use_tls
     DYNAMO_ENDPOINT         = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    TEST_CLIENTS_ENABLED    = var.test_clients_enabled
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.MfaHandler::handleRequest"
 
