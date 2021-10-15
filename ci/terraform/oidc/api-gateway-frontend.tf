@@ -15,10 +15,6 @@ resource "aws_api_gateway_usage_plan" "di_auth_frontend_usage_plan" {
     aws_api_gateway_stage.endpoint_frontend_stage,
     aws_api_gateway_rest_api.di_authentication_frontend_api,
   ]
-  throttle_settings {
-    burst_limit = 100
-    rate_limit  = 100
-  }
 }
 
 resource "aws_api_gateway_api_key" "di_auth_frontend_api_key" {
@@ -168,4 +164,92 @@ module "dashboard_frontend_api" {
   source           = "../modules/dashboards"
   api_gateway_name = aws_api_gateway_rest_api.di_authentication_frontend_api.name
   use_localstack   = var.use_localstack
+}
+
+resource "aws_wafv2_web_acl" "wafregional_web_acl_frontend_api" {
+  count = var.use_localstack ? 0 : 1
+  name  = "${var.environment}-frontend-waf-web-acl"
+  scope = "REGIONAL"
+
+  default_action {
+    allow {}
+  }
+
+  rule {
+    action {
+      block {}
+    }
+    priority = 1
+    name     = "${var.environment}-frontend-waf-rate-based-rule"
+    statement {
+      rate_based_statement {
+        limit              = 250
+        aggregate_key_type = "IP"
+      }
+    }
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${replace(var.environment, "-", "")}FrontendWafMaxRequestRate"
+      sampled_requests_enabled   = false
+    }
+  }
+
+  rule {
+    override_action {
+      none {}
+    }
+    priority = 2
+    name     = "${var.environment}-frontend-common-rule-set"
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesCommonRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${replace(var.environment, "-", "")}FrontendWafCommonRuleSet"
+      sampled_requests_enabled   = false
+    }
+  }
+
+  rule {
+    override_action {
+      none {}
+    }
+    priority = 3
+    name     = "${var.environment}-frontend-bad-rule-set"
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesKnownBadInputsRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${replace(var.environment, "-", "")}FrontendWafBaduleSet"
+      sampled_requests_enabled   = false
+    }
+  }
+
+  visibility_config {
+    cloudwatch_metrics_enabled = true
+    metric_name                = "${replace(var.environment, "-", "")}FrontendWafRules"
+    sampled_requests_enabled   = false
+  }
+}
+
+resource "aws_wafv2_web_acl_association" "waf_association_frontend_api" {
+  count        = var.use_localstack ? 0 : 1
+  resource_arn = aws_api_gateway_stage.endpoint_frontend_stage.arn
+  web_acl_arn  = aws_wafv2_web_acl.wafregional_web_acl_frontend_api[count.index].arn
+
+  depends_on = [
+    aws_api_gateway_stage.endpoint_frontend_stage,
+    aws_wafv2_web_acl.wafregional_web_acl_frontend_api
+  ]
 }

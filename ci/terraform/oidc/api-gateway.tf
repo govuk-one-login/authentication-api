@@ -258,41 +258,90 @@ module "dashboard" {
   use_localstack   = var.use_localstack
 }
 
-resource "aws_wafregional_rate_based_rule" "wafregional_max_request_rate_rule" {
-  count       = var.use_localstack ? 0 : 1
-  name        = "${var.environment}-waf-max-request-rate"
-  metric_name = "${replace(var.environment, "-", "")}WafMaxRequestRate"
-
-  rate_key   = "IP"
-  rate_limit = "250"
-}
-
-resource "aws_wafregional_web_acl" "wafregional_web_acl" {
-  count       = var.use_localstack ? 0 : 1
-  name        = "${var.environment}-waf-web-acl"
-  metric_name = "${replace(var.environment, "-", "")}WafMaxRequestRate"
+resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
+  count = var.use_localstack ? 0 : 1
+  name  = "${var.environment}-oidc-waf-web-acl"
+  scope = "REGIONAL"
 
   default_action {
-    type = "ALLOW"
+    allow {}
   }
 
   rule {
     action {
-      type = "BLOCK"
+      block {}
     }
     priority = 1
-    rule_id  = aws_wafregional_rate_based_rule.wafregional_max_request_rate_rule[count.index].id
-    type     = "RATE_BASED"
+    name     = "${var.environment}-oidc-waf-rate-based-rule"
+    statement {
+      rate_based_statement {
+        limit              = 250
+        aggregate_key_type = "IP"
+      }
+    }
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${replace(var.environment, "-", "")}OidcWafMaxRequestRate"
+      sampled_requests_enabled   = false
+    }
+  }
+
+  rule {
+    override_action {
+      none {}
+    }
+    priority = 2
+    name     = "${var.environment}-oidc-common-rule-set"
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesCommonRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${replace(var.environment, "-", "")}OidcWafCommonRuleSet"
+      sampled_requests_enabled   = false
+    }
+  }
+
+  rule {
+    override_action {
+      none {}
+    }
+    priority = 3
+    name     = "${var.environment}-oidc-bad-rule-set"
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesKnownBadInputsRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${replace(var.environment, "-", "")}OidcWafBaduleSet"
+      sampled_requests_enabled   = false
+    }
+  }
+
+  visibility_config {
+    cloudwatch_metrics_enabled = true
+    metric_name                = "${replace(var.environment, "-", "")}OidcWafRules"
+    sampled_requests_enabled   = false
   }
 }
 
-resource "aws_wafregional_web_acl_association" "association" {
+resource "aws_wafv2_web_acl_association" "oidc_waf_association" {
   count        = var.use_localstack ? 0 : 1
   resource_arn = aws_api_gateway_stage.endpoint_stage.arn
-  web_acl_id   = aws_wafregional_web_acl.wafregional_web_acl[count.index].id
+  web_acl_arn  = aws_wafv2_web_acl.wafregional_web_acl_oidc_api[count.index].arn
 
   depends_on = [
     aws_api_gateway_stage.endpoint_stage,
-    aws_wafregional_web_acl.wafregional_web_acl
+    aws_wafv2_web_acl.wafregional_web_acl_oidc_api
   ]
 }
