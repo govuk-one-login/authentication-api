@@ -5,10 +5,19 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -21,6 +30,8 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
+import java.net.URI;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -29,6 +40,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -46,6 +58,8 @@ public class MfaHandlerTest {
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final String CODE = "123456";
     private static final long CODE_EXPIRY_TIME = 900;
+    private static final String TEST_CLIENT_ID = "test-client-id";
+    private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private final Context context = mock(Context.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -54,12 +68,22 @@ public class MfaHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
+    private final ClientSession clientSession = mock(ClientSession.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Session session =
             new Session("a-session-id")
                     .setEmailAddress(TEST_EMAIL_ADDRESS)
                     .setState(SessionState.LOGGED_IN);
+    private final ClientRegistry testClientRegistry =
+            new ClientRegistry()
+                    .setTestClient(true)
+                    .setClientID(TEST_CLIENT_ID)
+                    .setTestClientEmailAllowlist(
+                            List.of(
+                                    "joe.bloggs@digital.cabinet-office.gov.uk",
+                                    TEST_EMAIL_ADDRESS,
+                                    "jb2@digital.cabinet-office.gov.uk"));
 
     @BeforeEach
     public void setUp() {
@@ -75,6 +99,7 @@ public class MfaHandlerTest {
                         clientService,
                         authenticationService,
                         sqsClient);
+        when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
     }
 
     @Test
@@ -209,8 +234,49 @@ public class MfaHandlerTest {
         assertEquals(SessionState.MFA_CODE_REQUESTS_BLOCKED, codeResponse.getSessionState());
     }
 
+    @Test
+    public void shouldReturn200AndNotSendMessageForSuccessfulMfaRequestOnTestClient()
+            throws JsonProcessingException {
+        usingValidSession();
+        usingValidClientSession(TEST_CLIENT_ID);
+        when(configurationService.isTestClientsEnabled()).thenReturn(true);
+        when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(PHONE_NUMBER));
+        when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
+        NotifyRequest notifyRequest = new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE);
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        verify(sqsClient, never()).send(objectMapper.writeValueAsString(notifyRequest));
+        verify(codeStorageService).saveOtpCode(TEST_EMAIL_ADDRESS, CODE, CODE_EXPIRY_TIME, MFA_SMS);
+        assertThat(result, hasStatus(200));
+    }
+
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
+    }
+
+    private void usingValidClientSession(String clientId) {
+        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(clientSession));
+        when(clientSession.getAuthRequestParams())
+                .thenReturn(withAuthenticationRequest(clientId).toParameters());
+    }
+
+    private AuthenticationRequest withAuthenticationRequest(String clientId) {
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        return new AuthenticationRequest.Builder(
+                        new ResponseType(ResponseType.Value.CODE),
+                        scope,
+                        new ClientID(clientId),
+                        REDIRECT_URI)
+                .state(new State())
+                .nonce(new Nonce())
+                .build();
     }
 }
