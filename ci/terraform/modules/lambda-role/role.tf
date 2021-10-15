@@ -1,5 +1,5 @@
 resource "aws_iam_role" "lambda_role" {
-  name = "${var.environment}-${var.role_name}-lambda-role"
+  name_prefix = "${var.environment}-${var.role_name}-role"
 
   assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_role.json
 
@@ -31,7 +31,7 @@ resource "aws_iam_role_policy_attachment" "provided_policies" {
 }
 
 resource "aws_iam_policy" "logging_policy" {
-  name        = "${var.environment}-${var.role_name}-lambda-logging"
+  name_prefix = "${var.environment}-${var.role_name}-logging"
   path        = "/"
   description = "IAM policy for logging from a lambda"
 
@@ -58,7 +58,7 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
 }
 
 resource "aws_iam_policy" "networking_policy" {
-  name        = "${var.environment}-${var.role_name}-lambda-networking"
+  name_prefix = "${var.environment}-${var.role_name}-networking"
   path        = "/"
   description = "IAM policy for managing VPC connection for a lambda"
 
