@@ -25,35 +25,35 @@ output "authentication_subnet_ids" {
 }
 
 output "lambda_iam_role_arn" {
-  value = aws_iam_role.lambda_iam_role.arn
+  value = module.standard_lambda_role.arn
 }
 
 output "lambda_iam_role_name" {
-  value = aws_iam_role.lambda_iam_role.name
+  value = module.standard_lambda_role.name
 }
 
 output "dynamo_sqs_lambda_iam_role_arn" {
-  value = aws_iam_role.dynamo_sqs_lambda_iam_role.arn
+  value = module.dynamo_sqs_lambda_role.arn
 }
 
 output "dynamo_sqs_lambda_iam_role_name" {
-  value = aws_iam_role.dynamo_sqs_lambda_iam_role.name
+  value = module.dynamo_sqs_lambda_role.name
 }
 
 output "sqs_lambda_iam_role_arn" {
-  value = aws_iam_role.sqs_lambda_iam_role.arn
+  value = module.sqs_lambda_role.arn
 }
 
 output "sqs_lambda_iam_role_name" {
-  value = aws_iam_role.sqs_lambda_iam_role.name
+  value = module.sqs_lambda_role.name
 }
 
 output "email_lambda_iam_role_arn" {
-  value = aws_iam_role.email_lambda_iam_role.arn
+  value = module.email_notification_sqs_lambda_role.arn
 }
 
 output "token_lambda_iam_role_arn" {
-  value = aws_iam_role.token_lambda_iam_role.arn
+  value = module.token_lambda_role.arn
 }
 
 output "id_token_signing_key_alias_name" {

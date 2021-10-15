@@ -62,18 +62,6 @@ resource "aws_iam_policy" "lambda_kms_policy" {
   policy = data.aws_iam_policy_document.kms_policy_document[0].json
 }
 
-resource "aws_iam_role_policy_attachment" "lambda_kms" {
-  count      = var.use_localstack ? 0 : 1
-  role       = aws_iam_role.lambda_iam_role.name
-  policy_arn = aws_iam_policy.lambda_kms_policy[0].arn
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_kms_signing_policy" {
-  count      = var.use_localstack ? 0 : 1
-  role       = aws_iam_role.token_lambda_iam_role.name
-  policy_arn = aws_iam_policy.lambda_kms_signing_policy[0].arn
-}
-
 # Audit signing key
 
 resource "aws_kms_key" "audit_payload_signing_key" {
@@ -114,24 +102,6 @@ resource "aws_iam_policy" "audit_signing_key_lambda_kms_signing_policy" {
   description = "IAM policy for managing KMS connection for a lambda which allows signing of audit payloads"
 
   policy = data.aws_iam_policy_document.audit_payload_kms_signing_policy_document[0].json
-}
-
-resource "aws_iam_role_policy_attachment" "attach_audit_signing_key_policy_default" {
-  count      = var.use_localstack ? 0 : 1
-  role       = aws_iam_role.lambda_iam_role.name
-  policy_arn = aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0].arn
-}
-
-resource "aws_iam_role_policy_attachment" "attach_audit_signing_key_policy_token" {
-  count      = var.use_localstack ? 0 : 1
-  role       = aws_iam_role.token_lambda_iam_role.name
-  policy_arn = aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0].arn
-}
-
-resource "aws_iam_role_policy_attachment" "attach_audit_signing_key_policy_dynamo" {
-  count      = var.use_localstack ? 0 : 1
-  role       = aws_iam_role.dynamo_sqs_lambda_iam_role.name
-  policy_arn = aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0].arn
 }
 
 # Cloudwatch Log Encryption
