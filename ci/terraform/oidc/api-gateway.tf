@@ -257,3 +257,42 @@ module "dashboard" {
   api_gateway_name = aws_api_gateway_rest_api.di_authentication_api.name
   use_localstack   = var.use_localstack
 }
+
+resource "aws_wafregional_rate_based_rule" "wafregional_max_request_rate_rule" {
+  count       = var.use_localstack ? 0 : 1
+  name        = "${var.environment}-waf-max-request-rate"
+  metric_name = "${replace(var.environment, "-", "")}WafMaxRequestRate"
+
+  rate_key   = "IP"
+  rate_limit = "250"
+}
+
+resource "aws_wafregional_web_acl" "wafregional_web_acl" {
+  count       = var.use_localstack ? 0 : 1
+  name        = "${var.environment}-waf-web-acl"
+  metric_name = "${replace(var.environment, "-", "")}WafMaxRequestRate"
+
+  default_action {
+    type = "ALLOW"
+  }
+
+  rule {
+    action {
+      type = "BLOCK"
+    }
+    priority = 1
+    rule_id  = aws_wafregional_rate_based_rule.wafregional_max_request_rate_rule[count.index].id
+    type     = "RATE_BASED"
+  }
+}
+
+resource "aws_wafregional_web_acl_association" "association" {
+  count        = var.use_localstack ? 0 : 1
+  resource_arn = aws_api_gateway_stage.endpoint_stage.arn
+  web_acl_id   = aws_wafregional_web_acl.wafregional_web_acl[count.index].id
+
+  depends_on = [
+    aws_api_gateway_stage.endpoint_stage,
+    aws_wafregional_web_acl.wafregional_web_acl
+  ]
+}

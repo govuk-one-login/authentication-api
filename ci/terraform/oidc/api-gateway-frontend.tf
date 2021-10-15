@@ -15,6 +15,10 @@ resource "aws_api_gateway_usage_plan" "di_auth_frontend_usage_plan" {
     aws_api_gateway_stage.endpoint_frontend_stage,
     aws_api_gateway_rest_api.di_authentication_frontend_api,
   ]
+  throttle_settings {
+    burst_limit = 100
+    rate_limit  = 100
+  }
 }
 
 resource "aws_api_gateway_api_key" "di_auth_frontend_api_key" {
