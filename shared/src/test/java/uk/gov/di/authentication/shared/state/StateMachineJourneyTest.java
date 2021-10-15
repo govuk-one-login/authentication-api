@@ -1,16 +1,34 @@
 package uk.gov.di.authentication.shared.state;
 
+import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import net.minidev.json.JSONArray;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.entity.TermsAndConditions;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+
+import java.net.URI;
+import java.util.Collections;
+import java.util.Date;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_MAX_CODES_SENT;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_MAX_RETRIES_REACHED;
@@ -25,10 +43,21 @@ import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_EMAIL_C
 
 public class StateMachineJourneyTest {
 
-    private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
-            StateMachine.userJourneyStateMachine();
+    private static final URI REDIRECT_URI = URI.create("test-uri");
+    private static final ClientID CLIENT_ID = new ClientID("test-client");
+
+    private final ConfigurationService mockConfigurationService = mock(ConfigurationService.class);
 
     private final Session session = new Session(IdGenerator.generate());
+
+    private StateMachine<SessionState, SessionAction, UserContext> stateMachine;
+
+    @BeforeEach
+    void setup() {
+        when(mockConfigurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
+
+        stateMachine = StateMachine.userJourneyStateMachine(mockConfigurationService);
+    }
 
     @Test
     public void returns_MFA_SMS_CODE_SENT_WhenUserEntersPasswordAgain() {
@@ -176,5 +205,36 @@ public class StateMachineJourneyTest {
                         SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY,
                         userContext);
         assertThat(nextState, equalTo(UPLIFT_REQUIRED_CM));
+    }
+
+    public static UserProfile generateUserProfile(
+            boolean phoneNumberVerified, String acceptedTermsAndConditionsVersion) {
+        UserProfile userProfile = new UserProfile();
+        userProfile.setPhoneNumberVerified(phoneNumberVerified);
+        userProfile.setTermsAndConditions(
+                new TermsAndConditions(acceptedTermsAndConditionsVersion, new Date().toString()));
+        return userProfile;
+    }
+
+    public static VectorOfTrust generateLowLevelVectorOfTrust() {
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.add("Cl");
+        return VectorOfTrust.parseFromAuthRequestAttribute(
+                Collections.singletonList(jsonArray.toJSONString()));
+    }
+
+    public static AuthenticationRequest generateAuthRequest(String vtr) {
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        State state = new State();
+        Scope scope = new Scope();
+        Nonce nonce = new Nonce();
+        scope.add(OIDCScopeValue.OPENID);
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.add(vtr);
+        return new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
+                .state(state)
+                .nonce(nonce)
+                .customParameter("vtr", jsonArray.toJSONString())
+                .build();
     }
 }

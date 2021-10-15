@@ -407,6 +407,15 @@ public class StateMachine<T, A, C> {
                                 .ifCondition(userHasNotGivenConsent()),
                         on(USER_ACCEPTS_TERMS_AND_CONDITIONS)
                                 .then(UPDATED_TERMS_AND_CONDITIONS_ACCEPTED),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY)
+                                .then(UPLIFT_REQUIRED_CM)
+                                .ifCondition(upliftRequired()),
+                        on(USER_HAS_STARTED_A_NEW_JOURNEY)
+                                .then(UPDATED_TERMS_AND_CONDITIONS)
+                                .ifCondition(
+                                        userHasNotAcceptedTermsAndConditionsVersion(
+                                                configurationService
+                                                        .getTermsAndConditionsVersion())),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(UPDATED_TERMS_AND_CONDITIONS_ACCEPTED)
