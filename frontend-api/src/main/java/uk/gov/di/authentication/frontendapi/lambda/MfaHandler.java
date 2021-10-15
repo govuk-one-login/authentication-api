@@ -11,10 +11,13 @@ import uk.gov.di.authentication.frontendapi.entity.BaseFrontendRequest;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.frontendapi.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -132,8 +135,9 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             sessionService.save(
                     userContext.getSession().setState(nextState).incrementCodeRequestCount());
             NotifyRequest notifyRequest = new NotifyRequest(phoneNumber, MFA_SMS, code);
-            sqsClient.send(objectMapper.writeValueAsString(notifyRequest));
-
+            if (!isTestClientAndAllowedEmail(userContext, MFA_SMS)) {
+                sqsClient.send(objectMapper.writeValueAsString(notifyRequest));
+            }
             LOGGER.info(
                     "MfaHandler successfully processed request for session: {}",
                     userContext.getSession().getSessionId());
@@ -152,6 +156,10 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     userContext.getSession().getSessionId(),
                     e);
             return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
+        } catch (ClientNotFoundException e) {
+            LOGGER.error(
+                    "Client not found for session: {}", userContext.getSession().getSessionId(), e);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
     }
 
@@ -179,5 +187,39 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             return false;
         }
         return true;
+    }
+
+    private boolean isTestClientAndAllowedEmail(
+            UserContext userContext, NotificationType notificationType)
+            throws ClientNotFoundException {
+        if (configurationService.isTestClientsEnabled()) {
+            LOGGER.warn(
+                    "TestClients are ENABLED: SessionId {}",
+                    userContext.getSession().getSessionId());
+        } else {
+            return false;
+        }
+        String emailAddress = userContext.getSession().getEmailAddress();
+        return userContext
+                .getClient()
+                .map(
+                        clientRegistry -> {
+                            if (clientRegistry.isTestClient()
+                                    && clientRegistry
+                                            .getTestClientEmailAllowlist()
+                                            .contains(emailAddress)) {
+                                LOGGER.info(
+                                        "MfaHandler not sending message for TestClient {} {} email {} on TestClientEmailAllowlist with NotificationType {} for session {}",
+                                        clientRegistry.getClientID(),
+                                        clientRegistry.getClientName(),
+                                        emailAddress,
+                                        notificationType,
+                                        userContext.getSession().getSessionId());
+                                return true;
+                            } else {
+                                return false;
+                            }
+                        })
+                .orElseThrow(() -> new ClientNotFoundException(userContext.getSession()));
     }
 }
