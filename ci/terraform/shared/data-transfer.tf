@@ -61,16 +61,40 @@ resource "aws_iam_policy" "data_transfer_s3_policy" {
   policy      = data.aws_iam_policy_document.data_transfer_lambda_s3_policy[0].json
 }
 
-module "data_transfer_lambda_role" {
-  count       = var.use_localstack ? 0 : 1
-  source      = "../modules/lambda-role"
-  environment = var.environment
-  role_name   = "data-transfer"
-  vpc_arn     = aws_vpc.authentication.arn
-  policies_to_attach = [
-    aws_iam_policy.data_transfer_s3_policy[0].arn,
-    aws_iam_policy.lambda_dynamo_policy[0].arn
-  ]
+resource "aws_iam_role" "data_transfer_lambda_role" {
+  count = var.use_localstack ? 0 : 1
+
+  name = "${var.environment}-data-transfer-lambda-role"
+
+  assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_policy.json
+}
+
+resource "aws_iam_role_policy_attachment" "data_transfer_logging" {
+  count = var.use_localstack ? 0 : 1
+
+  role       = aws_iam_role.data_transfer_lambda_role[0].name
+  policy_arn = aws_iam_policy.endpoint_logging_policy.arn
+}
+
+resource "aws_iam_role_policy_attachment" "data_transfer_networking" {
+  count = var.use_localstack ? 0 : 1
+
+  role       = aws_iam_role.data_transfer_lambda_role[0].name
+  policy_arn = aws_iam_policy.endpoint_networking_policy.arn
+}
+
+resource "aws_iam_role_policy_attachment" "data_transfer_s3" {
+  count = var.use_localstack ? 0 : 1
+
+  role       = aws_iam_role.data_transfer_lambda_role[0].name
+  policy_arn = aws_iam_policy.data_transfer_s3_policy[0].arn
+}
+
+resource "aws_iam_role_policy_attachment" "data_transfer_dynamo" {
+  count = var.use_localstack ? 0 : 1
+
+  role       = aws_iam_role.data_transfer_lambda_role[0].name
+  policy_arn = aws_iam_policy.lambda_dynamo_policy[0].arn
 }
 
 resource "aws_lambda_function" "data_transfer_lambda" {
@@ -78,7 +102,7 @@ resource "aws_lambda_function" "data_transfer_lambda" {
 
   filename      = var.account_migration_lambda_zip_file
   function_name = "${var.environment}-account-transfer-lambda"
-  role          = module.data_transfer_lambda_role[0].arn
+  role          = aws_iam_role.data_transfer_lambda_role[0].arn
   handler       = "uk.gov.di.authentication.accountmigration.DataMigrationHandler::handleRequest"
   memory_size   = 8192
   timeout       = 900
