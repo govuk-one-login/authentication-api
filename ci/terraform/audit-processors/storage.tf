@@ -57,6 +57,36 @@ resource "aws_sqs_queue_policy" "storage_batch_subscription" {
 EOF
 }
 
+resource "aws_iam_policy" "read_from_queue_policy" {
+  name        = "${var.environment}-audit-processor-storage-sqs"
+  path        = "/"
+  description = "IAM policy for a lambda reading from SQS"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "sqs:DeleteMessage",
+        "sqs:ReceiveMessage",
+        "sqs:GetQueueAttributes"
+      ]
+
+      Resource = [
+        aws_sqs_queue.storage_batch.arn,
+      ]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "read_from_queue_attachment" {
+  count = var.use_localstack ? 0 : 1
+
+  role       = local.lambda_iam_role_name
+  policy_arn = aws_iam_policy.read_from_queue_policy.arn
+}
+
 resource "aws_sqs_queue" "storage_batch" {
   name                      = "audit-storage-batch-queue"
   receive_wait_time_seconds = 20
