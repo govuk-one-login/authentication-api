@@ -34,6 +34,7 @@ data "aws_iam_policy_document" "s3_smoketest_policy_document" {
     ]
     resources = [
       aws_s3_bucket.smoketest_sms_bucket.arn,
+      "${aws_s3_bucket.smoketest_sms_bucket.arn}/*",
     ]
   }
 }

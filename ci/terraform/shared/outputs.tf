@@ -77,3 +77,7 @@ output "cloudwatch_encryption_key_arn" {
 output "sms_bucket_name_arn" {
   value = aws_s3_bucket.smoketest_sms_bucket.arn
 }
+
+output "sms_bucket_name" {
+  value = aws_s3_bucket.smoketest_sms_bucket.bucket
+}
