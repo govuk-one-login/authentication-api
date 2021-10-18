@@ -29,18 +29,56 @@ resource "aws_lambda_function" "audit_processor_lambda" {
   tags = local.default_tags
 }
 
-resource "aws_sns_topic_subscription" "event_stream_subscription" {
-  topic_arn = data.aws_sns_topic.event_stream.arn
-  protocol  = "lambda"
-  endpoint  = aws_lambda_function.audit_processor_lambda.arn
+resource "aws_sqs_queue_policy" "storage_batch_subscription" {
+  queue_url = aws_sqs_queue.storage_batch.id
+  policy    = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "sns.amazonaws.com"
+      },
+      "Action": [
+        "sqs:SendMessage"
+      ],
+      "Resource": [
+        "${aws_sqs_queue.storage_batch.arn}"
+      ],
+      "Condition": {
+        "ArnEquals": {
+          "aws:SourceArn": "${data.aws_sns_topic.event_stream.arn}"
+        }
+      }
+    }
+  ]
+}
+EOF
 }
 
-resource "aws_lambda_permission" "sns_can_execute_subscriber_lambda" {
-  statement_id  = "AllowExecutionFromSNS"
+resource "aws_sqs_queue" "storage_batch" {
+  name                      = "audit-storage-batch-queue"
+  receive_wait_time_seconds = 20
+}
+
+resource "aws_sns_topic_subscription" "event_stream_subscription" {
+  topic_arn = data.aws_sns_topic.event_stream.arn
+  protocol  = "sqs"
+  endpoint  = aws_sqs_queue.storage_batch.arn
+}
+
+//resource "aws_lambda_event_source_mapping" "example" {
+//  event_source_arn = aws_sqs_queue.storage_batch.arn
+//  function_name    = aws_lambda_function.audit_processor_lambda.arn
+//}
+
+resource "aws_lambda_permission" "sqs_can_execute_subscriber_lambda" {
+  statement_id  = "AllowExecutionFromSQS"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.audit_processor_lambda.function_name
-  principal     = "sns.amazonaws.com"
-  source_arn    = data.aws_sns_topic.event_stream.arn
+  principal     = "sqs.amazonaws.com"
+  source_arn    = aws_sqs_queue.storage_batch.arn
 }
 
 resource "aws_cloudwatch_log_group" "lambda_log_group" {
