@@ -36,10 +36,13 @@ public class StorageSQSAuditHandler implements RequestHandler<SQSEvent, Object> 
 
     @Override
     public Object handleRequest(SQSEvent input, Context context) {
+        LOG.info("Processing {} events from queue", input.getRecords().size());
         var auditMessages =
                 input.getRecords().stream()
+                        .peek(record -> LOG.info("Processing record {}", record.getMessageId()))
                         .map(SQSMessage::getBody)
                         .map(Base64.getDecoder()::decode)
+                        .peek(payload -> LOG.info("Extracted payload: length {}", payload.length))
                         .map(AuditEventHelper::parseToSignedAuditEvent)
                         .filter(this::validateSignature)
                         .map(AuditEventHelper::extractPayload)
@@ -66,8 +69,11 @@ public class StorageSQSAuditHandler implements RequestHandler<SQSEvent, Object> 
 
     private boolean validateSignature(Optional<SignedAuditEvent> event) {
         if (event.isEmpty()) {
+            LOG.error("Missing payload could not validate signature");
             return false;
         }
+
+        LOG.info("Validating signature");
 
         return kmsConnectionService.validateSignature(
                 event.get().getSignature().asReadOnlyByteBuffer(),
