@@ -102,11 +102,13 @@ resource "aws_lambda_function" "email_sqs_lambda" {
   }
   environment {
     variables = merge(var.notify_template_map, {
-      FRONTEND_BASE_URL      = local.frontend_base_url
-      ACCOUNT_MANAGEMENT_URI = var.account_management_url
-      RESET_PASSWORD_ROUTE   = var.reset_password_route
-      NOTIFY_API_KEY         = var.notify_api_key
-      NOTIFY_URL             = var.notify_url
+      FRONTEND_BASE_URL         = local.frontend_base_url
+      ACCOUNT_MANAGEMENT_URI    = var.account_management_url
+      RESET_PASSWORD_ROUTE      = var.reset_password_route
+      NOTIFY_API_KEY            = var.notify_api_key
+      NOTIFY_URL                = var.notify_url
+      NOTIFY_TEST_PHONE_NUMBER  = var.notify_test_phone_number
+      SMOKETEST_SMS_BUCKET_NAME = local.sms_bucket_name
     })
   }
 

@@ -44,6 +44,11 @@ variable "notify_url" {
   default = null
 }
 
+variable "notify_test_phone_number" {
+  type    = string
+  default = null
+}
+
 variable "notify_template_map" {
   type = map(string)
   default = {
