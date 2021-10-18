@@ -297,6 +297,10 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
       managed_rule_group_statement {
         name        = "AWSManagedRulesCommonRuleSet"
         vendor_name = "AWS"
+
+        excluded_rule {
+          name = "GenericRFI_QUERYARGUMENTS"
+        }
       }
     }
 
