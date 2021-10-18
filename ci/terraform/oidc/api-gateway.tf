@@ -129,8 +129,6 @@ resource "aws_api_gateway_deployment" "deployment" {
       module.openid_configuration_discovery.method_trigger_value,
       module.register.integration_trigger_value,
       module.register.method_trigger_value,
-      module.reset_password.integration_trigger_value,
-      module.reset_password.method_trigger_value,
       module.token.integration_trigger_value,
       module.token.method_trigger_value,
       module.trustmarks.integration_trigger_value,
