@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
-import com.google.protobuf.InvalidProtocolBufferException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.audit.AuditPayload.AuditEvent;
@@ -41,7 +40,7 @@ public class StorageSQSAuditHandler implements RequestHandler<SQSEvent, Object> 
                 input.getRecords().stream()
                         .map(SQSMessage::getBody)
                         .map(Base64.getDecoder()::decode)
-                        .map(this::parseToSignedAuditEvent)
+                        .map(AuditEventHelper::parseToSignedAuditEvent)
                         .filter(this::validateSignature)
                         .map(AuditEventHelper::extractPayload)
                         .filter(Optional::isPresent)
@@ -74,14 +73,5 @@ public class StorageSQSAuditHandler implements RequestHandler<SQSEvent, Object> 
                 event.get().getSignature().asReadOnlyByteBuffer(),
                 event.get().getPayload().asReadOnlyByteBuffer(),
                 service.getAuditSigningKeyAlias());
-    }
-
-    private Optional<SignedAuditEvent> parseToSignedAuditEvent(byte[] bytes) {
-        try {
-            return Optional.ofNullable(SignedAuditEvent.parseFrom(bytes));
-        } catch (InvalidProtocolBufferException e) {
-            e.printStackTrace();
-            return Optional.empty();
-        }
     }
 }

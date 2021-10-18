@@ -5,7 +5,6 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SNSEvent;
 import com.amazonaws.services.lambda.runtime.events.SNSEvent.SNS;
 import com.amazonaws.services.lambda.runtime.events.SNSEvent.SNSRecord;
-import com.google.protobuf.InvalidProtocolBufferException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.audit.AuditPayload.AuditEvent;
@@ -39,7 +38,7 @@ public abstract class BaseAuditHandler implements RequestHandler<SNSEvent, Objec
                 .map(SNSRecord::getSNS)
                 .map(SNS::getMessage)
                 .map(Base64.getDecoder()::decode)
-                .map(this::parseToSignedAuditEvent)
+                .map(AuditEventHelper::parseToSignedAuditEvent)
                 .filter(this::validateSignature)
                 .map(AuditEventHelper::extractPayload)
                 .filter(Optional::isPresent)
@@ -61,14 +60,5 @@ public abstract class BaseAuditHandler implements RequestHandler<SNSEvent, Objec
                 event.get().getSignature().asReadOnlyByteBuffer(),
                 event.get().getPayload().asReadOnlyByteBuffer(),
                 service.getAuditSigningKeyAlias());
-    }
-
-    private Optional<SignedAuditEvent> parseToSignedAuditEvent(byte[] bytes) {
-        try {
-            return Optional.ofNullable(SignedAuditEvent.parseFrom(bytes));
-        } catch (InvalidProtocolBufferException e) {
-            e.printStackTrace();
-            return Optional.empty();
-        }
     }
 }

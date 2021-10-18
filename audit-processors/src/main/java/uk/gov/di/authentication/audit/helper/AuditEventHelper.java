@@ -21,4 +21,13 @@ public class AuditEventHelper {
                             }
                         });
     }
+
+    public static Optional<SignedAuditEvent> parseToSignedAuditEvent(byte[] bytes) {
+        try {
+            return Optional.ofNullable(SignedAuditEvent.parseFrom(bytes));
+        } catch (InvalidProtocolBufferException e) {
+            e.printStackTrace();
+            return Optional.empty();
+        }
+    }
 }
