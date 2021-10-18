@@ -23,23 +23,27 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_MFA_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_RESET_PASSWORD_LINK;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_REGISTERED_EMAIL_ADDRESS;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_CREDENTIALS;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_MFA_CODE;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY;
+import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.LOGGED_IN;
+import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_VERIFIED;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_SMS_CODE_SENT;
 import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
-import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS;
+import static uk.gov.di.authentication.shared.entity.SessionState.RESET_PASSWORD_LINK_SENT;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPLIFT_REQUIRED_CM;
 import static uk.gov.di.authentication.shared.state.StateMachineJourneyTest.CLIENT_ID;
 import static uk.gov.di.authentication.shared.state.StateMachineJourneyTest.generateAuthRequest;
 import static uk.gov.di.authentication.shared.state.StateMachineJourneyTest.generateLowLevelVectorOfTrust;
 import static uk.gov.di.authentication.shared.state.StateMachineJourneyTest.generateUserProfile;
 
-public class TermsAndConditionsJourneyTest {
+public class SignInJourneyTest {
     private final ConfigurationService mockConfigurationService = mock(ConfigurationService.class);
 
     private final Session session = new Session(IdGenerator.generate());
@@ -54,10 +58,18 @@ public class TermsAndConditionsJourneyTest {
     }
 
     @Test
-    public void testCanReachTermsAndConditionsWithout2FA() {
+    public void testCanSignInWithout2FA() {
         UserProfile userProfile =
                 generateUserProfile(
-                        true, "0.1", new HashSet<String>(Arrays.asList("phone", "email")));
+                        true,
+                        "1.0",
+                        new HashSet<String>(
+                                Arrays.asList(
+                                        "phone_number",
+                                        "phone_number_verified",
+                                        "email",
+                                        "email_verified",
+                                        "sub")));
 
         UserContext userContext =
                 UserContext.builder(
@@ -80,9 +92,7 @@ public class TermsAndConditionsJourneyTest {
                                 USER_ENTERED_REGISTERED_EMAIL_ADDRESS,
                                 AUTHENTICATION_REQUIRED),
                         new JourneyTransition(
-                                userContext,
-                                USER_ENTERED_VALID_CREDENTIALS,
-                                UPDATED_TERMS_AND_CONDITIONS));
+                                userContext, USER_ENTERED_VALID_CREDENTIALS, AUTHENTICATED));
 
         SessionState currentState = NEW;
 
@@ -97,21 +107,29 @@ public class TermsAndConditionsJourneyTest {
     }
 
     @Test
-    public void testCanReachTermsAndConditionsWith2FA() {
+    public void testCanSignInWith2FA() {
         UserProfile userProfile =
                 generateUserProfile(
-                        true, "0.1", new HashSet<String>(Arrays.asList("phone", "email")));
+                        true,
+                        "1.0",
+                        new HashSet<String>(
+                                Arrays.asList(
+                                        "phone_number",
+                                        "phone_number_verified",
+                                        "email",
+                                        "email_verified",
+                                        "sub")));
 
         UserContext userContext =
                 UserContext.builder(
                                 session.setCurrentCredentialStrength(
-                                        CredentialTrustLevel.MEDIUM_LEVEL))
+                                        CredentialTrustLevel.LOW_LEVEL))
                         .withClientSession(
                                 new ClientSession(
                                                 generateAuthRequest("Cl.Cm").toParameters(),
                                                 null,
                                                 null)
-                                        .setEffectiveVectorOfTrust(generateLowLevelVectorOfTrust()))
+                                        .setEffectiveVectorOfTrust(VectorOfTrust.getDefaults()))
                         .withUserProfile(userProfile)
                         .withClient(new ClientRegistry().setClientID(CLIENT_ID.toString()))
                         .build();
@@ -127,9 +145,9 @@ public class TermsAndConditionsJourneyTest {
                         new JourneyTransition(
                                 userContext, SYSTEM_HAS_SENT_MFA_CODE, MFA_SMS_CODE_SENT),
                         new JourneyTransition(
-                                userContext,
-                                USER_ENTERED_VALID_MFA_CODE,
-                                UPDATED_TERMS_AND_CONDITIONS));
+                                userContext, USER_ENTERED_VALID_MFA_CODE, MFA_CODE_VERIFIED),
+                        new JourneyTransition(
+                                userContext, SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE, AUTHENTICATED));
 
         SessionState currentState = NEW;
 
@@ -144,59 +162,18 @@ public class TermsAndConditionsJourneyTest {
     }
 
     @Test
-    public void
-            testAfterReachingTermsAndConditionsNewSessionShouldGoBackToTermsAndConditionsIfUpliftIsNotRequired() {
+    public void testCanSignInWithout2FAAndTriggerAnUpliftWithANewJourney() {
         UserProfile userProfile =
                 generateUserProfile(
-                        true, "0.1", new HashSet<String>(Arrays.asList("phone", "email")));
-
-        UserContext userContext =
-                UserContext.builder(
-                                session.setCurrentCredentialStrength(
-                                        CredentialTrustLevel.LOW_LEVEL))
-                        .withClientSession(
-                                new ClientSession(
-                                                generateAuthRequest("Cl").toParameters(),
-                                                null,
-                                                null)
-                                        .setEffectiveVectorOfTrust(generateLowLevelVectorOfTrust()))
-                        .withUserProfile(userProfile)
-                        .withClient(new ClientRegistry().setClientID(CLIENT_ID.toString()))
-                        .build();
-
-        List<JourneyTransition> transitions =
-                Arrays.asList(
-                        new JourneyTransition(
-                                userContext,
-                                USER_ENTERED_REGISTERED_EMAIL_ADDRESS,
-                                AUTHENTICATION_REQUIRED),
-                        new JourneyTransition(
-                                userContext,
-                                USER_ENTERED_VALID_CREDENTIALS,
-                                UPDATED_TERMS_AND_CONDITIONS),
-                        new JourneyTransition(
-                                userContext,
-                                USER_HAS_STARTED_A_NEW_JOURNEY,
-                                UPDATED_TERMS_AND_CONDITIONS));
-
-        SessionState currentState = NEW;
-
-        for (JourneyTransition transition : transitions) {
-            currentState =
-                    stateMachine.transition(
-                            currentState,
-                            transition.getSessionAction(),
-                            transition.getUserContext());
-            assertThat(currentState, equalTo(transition.getExpectedSessionState()));
-        }
-    }
-
-    @Test
-    public void
-            testNewSessionAfterReachingTermsAndConditionsShouldGoTo_MFA_SMS_CODE_SENT_WhenUpliftIsRequired() {
-        UserProfile userProfile =
-                generateUserProfile(
-                        true, "0.1", new HashSet<String>(Arrays.asList("phone", "email")));
+                        true,
+                        "1.0",
+                        new HashSet<String>(
+                                Arrays.asList(
+                                        "phone_number",
+                                        "phone_number_verified",
+                                        "email",
+                                        "email_verified",
+                                        "sub")));
 
         UserContext userContext =
                 UserContext.builder(
@@ -218,11 +195,127 @@ public class TermsAndConditionsJourneyTest {
                                         CredentialTrustLevel.LOW_LEVEL))
                         .withClientSession(
                                 new ClientSession(
-                                                generateAuthRequest("Cl").toParameters(),
+                                                generateAuthRequest("Cl.Cm").toParameters(),
                                                 null,
                                                 null)
                                         .setEffectiveVectorOfTrust(VectorOfTrust.getDefaults()))
                         .withUserProfile(userProfile)
+                        .withClient(new ClientRegistry().setClientID(CLIENT_ID.toString()))
+                        .build();
+
+        List<JourneyTransition> transitions =
+                Arrays.asList(
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_REGISTERED_EMAIL_ADDRESS,
+                                AUTHENTICATION_REQUIRED),
+                        new JourneyTransition(
+                                userContext, USER_ENTERED_VALID_CREDENTIALS, AUTHENTICATED),
+                        new JourneyTransition(
+                                upliftedUserContext,
+                                USER_HAS_STARTED_A_NEW_JOURNEY,
+                                UPLIFT_REQUIRED_CM),
+                        new JourneyTransition(
+                                upliftedUserContext, SYSTEM_HAS_SENT_MFA_CODE, MFA_SMS_CODE_SENT),
+                        new JourneyTransition(
+                                upliftedUserContext,
+                                USER_ENTERED_VALID_MFA_CODE,
+                                MFA_CODE_VERIFIED),
+                        new JourneyTransition(
+                                upliftedUserContext,
+                                SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE,
+                                AUTHENTICATED));
+
+        SessionState currentState = NEW;
+
+        for (JourneyTransition transition : transitions) {
+            currentState =
+                    stateMachine.transition(
+                            currentState,
+                            transition.getSessionAction(),
+                            transition.getUserContext());
+            assertThat(currentState, equalTo(transition.getExpectedSessionState()));
+        }
+    }
+
+    @Test
+    public void testCanSignInWithout2FAAndUserIsAutomaticallyAuthenticatedOnNewJourney() {
+        UserProfile userProfile =
+                generateUserProfile(
+                        true,
+                        "1.0",
+                        new HashSet<String>(
+                                Arrays.asList(
+                                        "phone_number",
+                                        "phone_number_verified",
+                                        "email",
+                                        "email_verified",
+                                        "sub")));
+
+        UserContext userContext =
+                UserContext.builder(
+                                session.setCurrentCredentialStrength(
+                                        CredentialTrustLevel.LOW_LEVEL))
+                        .withClientSession(
+                                new ClientSession(
+                                                generateAuthRequest("Cl").toParameters(),
+                                                null,
+                                                null)
+                                        .setEffectiveVectorOfTrust(generateLowLevelVectorOfTrust()))
+                        .withUserProfile(userProfile)
+                        .withClient(new ClientRegistry().setClientID(CLIENT_ID.toString()))
+                        .build();
+
+        List<JourneyTransition> transitions =
+                Arrays.asList(
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_REGISTERED_EMAIL_ADDRESS,
+                                AUTHENTICATION_REQUIRED),
+                        new JourneyTransition(
+                                userContext, USER_ENTERED_VALID_CREDENTIALS, AUTHENTICATED),
+                        new JourneyTransition(
+                                userContext, USER_HAS_STARTED_A_NEW_JOURNEY, AUTHENTICATED));
+
+        SessionState currentState = NEW;
+
+        for (JourneyTransition transition : transitions) {
+            currentState =
+                    stateMachine.transition(
+                            currentState,
+                            transition.getSessionAction(),
+                            transition.getUserContext());
+            assertThat(currentState, equalTo(transition.getExpectedSessionState()));
+        }
+    }
+
+    @Test
+    public void
+            testCanReSignInUsingOriginalLoginDetailsAfterRequestingAPasswordResetAndStartingANewJourney() {
+        UserProfile userProfile =
+                generateUserProfile(
+                        true,
+                        "1.0",
+                        new HashSet<String>(
+                                Arrays.asList(
+                                        "phone_number",
+                                        "phone_number_verified",
+                                        "email",
+                                        "email_verified",
+                                        "sub")));
+
+        UserContext userContext =
+                UserContext.builder(
+                                session.setCurrentCredentialStrength(
+                                        CredentialTrustLevel.LOW_LEVEL))
+                        .withClientSession(
+                                new ClientSession(
+                                                generateAuthRequest("Cl").toParameters(),
+                                                null,
+                                                null)
+                                        .setEffectiveVectorOfTrust(generateLowLevelVectorOfTrust()))
+                        .withUserProfile(userProfile)
+                        .withClient(new ClientRegistry().setClientID(CLIENT_ID.toString()))
                         .build();
 
         List<JourneyTransition> transitions =
@@ -233,14 +326,15 @@ public class TermsAndConditionsJourneyTest {
                                 AUTHENTICATION_REQUIRED),
                         new JourneyTransition(
                                 userContext,
-                                USER_ENTERED_VALID_CREDENTIALS,
-                                UPDATED_TERMS_AND_CONDITIONS),
+                                SYSTEM_HAS_SENT_RESET_PASSWORD_LINK,
+                                RESET_PASSWORD_LINK_SENT),
+                        new JourneyTransition(userContext, USER_HAS_STARTED_A_NEW_JOURNEY, NEW),
                         new JourneyTransition(
-                                upliftedUserContext,
-                                USER_HAS_STARTED_A_NEW_JOURNEY,
-                                UPLIFT_REQUIRED_CM),
+                                userContext,
+                                USER_ENTERED_REGISTERED_EMAIL_ADDRESS,
+                                AUTHENTICATION_REQUIRED),
                         new JourneyTransition(
-                                upliftedUserContext, SYSTEM_HAS_SENT_MFA_CODE, MFA_SMS_CODE_SENT));
+                                userContext, USER_ENTERED_VALID_CREDENTIALS, AUTHENTICATED));
 
         SessionState currentState = NEW;
 
