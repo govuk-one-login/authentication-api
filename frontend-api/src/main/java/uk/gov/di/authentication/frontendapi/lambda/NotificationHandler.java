@@ -4,6 +4,8 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3Client;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -34,12 +36,16 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
     private final NotificationService notificationService;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final AmazonS3 s3Client;
     private final ConfigurationService configService;
 
     public NotificationHandler(
-            NotificationService notificationService, ConfigurationService configService) {
+            NotificationService notificationService,
+            ConfigurationService configService,
+            AmazonS3 s3Client) {
         this.notificationService = notificationService;
         this.configService = configService;
+        this.s3Client = s3Client;
     }
 
     public NotificationHandler() {
@@ -50,6 +56,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                         .map(url -> new NotificationClient(configService.getNotifyApiKey(), url))
                         .orElse(new NotificationClient(configService.getNotifyApiKey()));
         this.notificationService = new NotificationService(client);
+        this.s3Client = AmazonS3Client.builder().withRegion(configService.getAwsRegion()).build();
     }
 
     @Override
@@ -113,6 +120,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                             PASSWORD_RESET_CONFIRMATION));
                             break;
                     }
+                    writeTestClientOtpToS3(notifyRequest.getCode(), notifyRequest.getDestination());
                 } catch (NotificationClientException e) {
                     LOG.error(
                             "Error sending with Notify using NotificationType: {}",
@@ -142,5 +150,18 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                 + code
                 + "."
                 + expiryDate.toInstant().toEpochMilli();
+    }
+
+    private void writeTestClientOtpToS3(String otp, String destination) {
+        Boolean isNotifyTestNumber =
+                configService
+                        .getNotifyTestPhoneNumber()
+                        .map(t -> t.equals(destination))
+                        .orElse(false);
+        if (isNotifyTestNumber) {
+            String key = configService.getNotifyTestPhoneNumber().get() + ":" + otp;
+            String bucketName = configService.getSmoketestBucketName();
+            s3Client.putObject(bucketName, key, "");
+        }
     }
 }

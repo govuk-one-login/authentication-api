@@ -3,6 +3,7 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
+import com.amazonaws.services.s3.AmazonS3;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +17,7 @@ import uk.gov.service.notify.NotificationClientException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -24,6 +26,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
+import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
@@ -32,16 +35,21 @@ public class NotificationHandlerTest {
 
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_PHONE_NUMBER = "01234567891";
+    private static final String NOTIFY_PHONE_NUMBER = "01234567899";
     private static final String TEMPLATE_ID = "fdsfdssd";
+    private static final String BUCKET_NAME = "test-s3-bucket";
     private final Context context = mock(Context.class);
     private final NotificationService notificationService = mock(NotificationService.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
+    private final AmazonS3 s3Client = mock(AmazonS3.class);
     private NotificationHandler handler;
     private ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     public void setUp() {
-        handler = new NotificationHandler(notificationService, configService);
+        when(configService.getNotifyTestPhoneNumber()).thenReturn(Optional.of(NOTIFY_PHONE_NUMBER));
+        when(configService.getSmoketestBucketName()).thenReturn(BUCKET_NAME);
+        handler = new NotificationHandler(notificationService, configService, s3Client);
     }
 
     @Test
@@ -187,6 +195,66 @@ public class NotificationHandlerTest {
         assertEquals(
                 "Error sending with Notify using NotificationType: VERIFY_PHONE_NUMBER",
                 exception.getMessage());
+    }
+
+    @Test
+    public void shouldSuccessfullyProcessPhoneMessageFromSQSQueueAndWriteToS3WhenTestClient()
+            throws JsonProcessingException, NotificationClientException {
+        when(notificationService.getNotificationTemplateId(VERIFY_PHONE_NUMBER))
+                .thenReturn(TEMPLATE_ID);
+
+        NotifyRequest notifyRequest =
+                new NotifyRequest(NOTIFY_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321");
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        Map<String, Object> personalisation = new HashMap<>();
+        personalisation.put("validation-code", "654321");
+
+        verify(notificationService)
+                .sendText(notifyRequest.getDestination(), personalisation, TEMPLATE_ID);
+        String key = NOTIFY_PHONE_NUMBER + ":" + "654321";
+        verify(s3Client).putObject(BUCKET_NAME, key, "");
+    }
+
+    @Test
+    public void shouldSuccessfullyProcessMfaessageFromSQSQueue()
+            throws JsonProcessingException, NotificationClientException {
+        when(notificationService.getNotificationTemplateId(MFA_SMS)).thenReturn(TEMPLATE_ID);
+
+        NotifyRequest notifyRequest = new NotifyRequest(TEST_PHONE_NUMBER, MFA_SMS, "654321");
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        Map<String, Object> personalisation = new HashMap<>();
+        personalisation.put("validation-code", "654321");
+
+        verify(notificationService)
+                .sendText(notifyRequest.getDestination(), personalisation, TEMPLATE_ID);
+    }
+
+    @Test
+    public void shouldSuccessfullyProcessMfaMessageFromSQSQueueAndWriteToS3WhenTestClient()
+            throws JsonProcessingException, NotificationClientException {
+        when(notificationService.getNotificationTemplateId(MFA_SMS)).thenReturn(TEMPLATE_ID);
+
+        NotifyRequest notifyRequest = new NotifyRequest(NOTIFY_PHONE_NUMBER, MFA_SMS, "654321");
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        Map<String, Object> personalisation = new HashMap<>();
+        personalisation.put("validation-code", "654321");
+
+        verify(notificationService)
+                .sendText(notifyRequest.getDestination(), personalisation, TEMPLATE_ID);
+        String key = NOTIFY_PHONE_NUMBER + ":" + "654321";
+        verify(s3Client).putObject(BUCKET_NAME, key, "");
     }
 
     private SQSEvent generateSQSEvent(String messageBody) {

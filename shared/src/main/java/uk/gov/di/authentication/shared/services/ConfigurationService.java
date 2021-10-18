@@ -100,6 +100,10 @@ public class ConfigurationService {
         return Optional.ofNullable(System.getenv("NOTIFY_URL"));
     }
 
+    public Optional<String> getNotifyTestPhoneNumber() {
+        return Optional.ofNullable(System.getenv("NOTIFY_TEST_PHONE_NUMBER"));
+    }
+
     public Optional<String> getPasswordPepper() {
         return Optional.ofNullable(System.getenv("PASSWORD_PEPPER"));
     }
@@ -135,6 +139,10 @@ public class ConfigurationService {
 
     public long getSessionExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("SESSION_EXPIRY", "3600"));
+    }
+
+    public String getSmoketestBucketName() {
+        return System.getenv("SMOKETEST_SMS_BUCKET_NAME");
     }
 
     public URI getSkipLoginURI() {
