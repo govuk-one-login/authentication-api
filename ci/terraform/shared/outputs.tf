@@ -73,3 +73,7 @@ output "stub_rp_client_credentials" {
 output "cloudwatch_encryption_key_arn" {
   value = aws_kms_key.cloudwatch_log_encryption.arn
 }
+
+output "sms_bucket_name_arn" {
+  value = aws_s3_bucket.smoketest_sms_bucket.arn
+}
