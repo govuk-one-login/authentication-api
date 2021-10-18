@@ -276,3 +276,92 @@ module "dashboard" {
   api_gateway_name = aws_api_gateway_rest_api.di_account_management_api.name
   use_localstack   = var.use_localstack
 }
+
+
+resource "aws_wafv2_web_acl" "wafregional_web_acl_am_api" {
+  count = var.use_localstack ? 0 : 1
+  name  = "${var.environment}-am-waf-web-acl"
+  scope = "REGIONAL"
+
+  default_action {
+    allow {}
+  }
+
+  rule {
+    action {
+      block {}
+    }
+    priority = 1
+    name     = "${var.environment}-am-waf-rate-based-rule"
+    statement {
+      rate_based_statement {
+        limit              = 250
+        aggregate_key_type = "IP"
+      }
+    }
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${replace(var.environment, "-", "")}AMWafMaxRequestRate"
+      sampled_requests_enabled   = false
+    }
+  }
+
+  rule {
+    override_action {
+      none {}
+    }
+    priority = 2
+    name     = "${var.environment}-am-common-rule-set"
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesCommonRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${replace(var.environment, "-", "")}AMWafCommonRuleSet"
+      sampled_requests_enabled   = false
+    }
+  }
+
+  rule {
+    override_action {
+      none {}
+    }
+    priority = 3
+    name     = "${var.environment}-am-bad-rule-set"
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesKnownBadInputsRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${replace(var.environment, "-", "")}AmWafBaduleSet"
+      sampled_requests_enabled   = false
+    }
+  }
+
+  visibility_config {
+    cloudwatch_metrics_enabled = true
+    metric_name                = "${replace(var.environment, "-", "")}AMWafRules"
+    sampled_requests_enabled   = false
+  }
+}
+
+resource "aws_wafv2_web_acl_association" "waf_association_am_api" {
+  count        = var.use_localstack ? 0 : 1
+  resource_arn = aws_api_gateway_stage.stage.arn
+  web_acl_arn  = aws_wafv2_web_acl.wafregional_web_acl_am_api[count.index].arn
+
+  depends_on = [
+    aws_api_gateway_stage.stage,
+    aws_wafv2_web_acl.wafregional_web_acl_am_api
+  ]
+}
