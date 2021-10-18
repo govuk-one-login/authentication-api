@@ -52,6 +52,8 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
       module.userexists.method_trigger_value,
       module.verify_code.integration_trigger_value,
       module.verify_code.method_trigger_value,
+      module.reset_password.integration_trigger_value,
+      module.reset_password.method_trigger_value,
       module.reset-password-request.integration_trigger_value,
       module.reset-password-request.method_trigger_value
     ]))
@@ -69,6 +71,7 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
     module.update_profile,
     module.userexists,
     module.verify_code,
+    module.reset_password,
     module.reset-password-request
   ]
 }
@@ -130,6 +133,7 @@ resource "aws_api_gateway_stage" "endpoint_frontend_stage" {
     module.update_profile,
     module.userexists,
     module.verify_code,
+    module.reset_password,
     module.reset-password-request,
     aws_api_gateway_deployment.deployment,
   ]
