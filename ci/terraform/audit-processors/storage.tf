@@ -2,7 +2,7 @@ resource "aws_lambda_function" "audit_processor_lambda" {
   filename      = var.lambda_zip_file
   function_name = "${var.environment}-audit-processor-example-lambda"
   role          = local.lambda_iam_role_arn
-  handler       = "uk.gov.di.authentication.audit.lambda.ExampleAuditLambda::handleRequest"
+  handler       = "uk.gov.di.authentication.audit.lambda.StorageSQSAuditHandler::handleRequest"
   timeout       = 30
   memory_size   = 4096
   publish       = true
@@ -68,10 +68,10 @@ resource "aws_sns_topic_subscription" "event_stream_subscription" {
   endpoint  = aws_sqs_queue.storage_batch.arn
 }
 
-//resource "aws_lambda_event_source_mapping" "example" {
-//  event_source_arn = aws_sqs_queue.storage_batch.arn
-//  function_name    = aws_lambda_function.audit_processor_lambda.arn
-//}
+resource "aws_lambda_event_source_mapping" "audit_storage_batch_queue_subscription" {
+  event_source_arn = aws_sqs_queue.storage_batch.arn
+  function_name    = aws_lambda_function.audit_processor_lambda.arn
+}
 
 resource "aws_lambda_permission" "sqs_can_execute_subscriber_lambda" {
   statement_id  = "AllowExecutionFromSQS"
