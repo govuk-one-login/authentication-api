@@ -10,6 +10,7 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import net.minidev.json.JSONArray;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -24,6 +25,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import java.net.URI;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -43,8 +45,9 @@ import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_EMAIL_C
 
 public class StateMachineJourneyTest {
 
+    public static final ClientID CLIENT_ID = new ClientID("test-client");
+
     private static final URI REDIRECT_URI = URI.create("test-uri");
-    private static final ClientID CLIENT_ID = new ClientID("test-client");
 
     private final ConfigurationService mockConfigurationService = mock(ConfigurationService.class);
 
@@ -208,11 +211,15 @@ public class StateMachineJourneyTest {
     }
 
     public static UserProfile generateUserProfile(
-            boolean phoneNumberVerified, String acceptedTermsAndConditionsVersion) {
+            boolean phoneNumberVerified,
+            String acceptedTermsAndConditionsVersion,
+            Set<String> consentClaims) {
         UserProfile userProfile = new UserProfile();
         userProfile.setPhoneNumberVerified(phoneNumberVerified);
         userProfile.setTermsAndConditions(
                 new TermsAndConditions(acceptedTermsAndConditionsVersion, new Date().toString()));
+        userProfile.setClientConsent(
+                new ClientConsent(CLIENT_ID.toString(), consentClaims, new Date().toString()));
         return userProfile;
     }
 
@@ -229,6 +236,8 @@ public class StateMachineJourneyTest {
         Scope scope = new Scope();
         Nonce nonce = new Nonce();
         scope.add(OIDCScopeValue.OPENID);
+        scope.add("phone");
+        scope.add("email");
         JSONArray jsonArray = new JSONArray();
         jsonArray.add(vtr);
         return new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
