@@ -4,9 +4,24 @@ resource "aws_sqs_queue" "email_queue" {
   max_message_size          = 2048
   message_retention_seconds = 1209600
   receive_wait_time_seconds = 10
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.email_dead_letter_queue.arn
+    maxReceiveCount     = 3
+  })
 
   kms_master_key_id                 = var.use_localstack ? null : "alias/aws/sqs"
   kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
+
+  tags = local.default_tags
+}
+
+resource "aws_sqs_queue" "email_dead_letter_queue" {
+  name = "${var.environment}-email-notification-dlq"
+
+  kms_master_key_id                 = var.use_localstack ? null : "alias/aws/sqs"
+  kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
+
+  message_retention_seconds = 3600
 
   tags = local.default_tags
 }
