@@ -8,13 +8,13 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
 import com.amazonaws.services.dynamodbv2.datamodeling.QueryResultPage;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.util.Base64;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.helpers.Argon2Helper;
+import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
+import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -292,11 +292,11 @@ public class DynamoService implements AuthenticationService {
     }
 
     private static String hashPassword(String password) {
-        return Base64.encodeAsString(Argon2Helper.argon2Hash(password.getBytes()));
+        return Argon2EncoderHelper.argon2Hash(password);
     }
 
     private static boolean verifyPassword(String hashedPassword, String password) {
-        return hashedPassword.equals(hashPassword(password));
+        return Argon2MatcherHelper.matchRawStringWithEncoded(password, hashedPassword);
     }
 
     private void warmUp(String tableName) {
