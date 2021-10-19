@@ -215,8 +215,7 @@ public class NotificationHandlerTest {
 
         verify(notificationService)
                 .sendText(notifyRequest.getDestination(), personalisation, TEMPLATE_ID);
-        String key = NOTIFY_PHONE_NUMBER + ":" + "654321";
-        verify(s3Client).putObject(BUCKET_NAME, key, "");
+        verify(s3Client).putObject(BUCKET_NAME, NOTIFY_PHONE_NUMBER, "654321");
     }
 
     @Test
@@ -253,8 +252,7 @@ public class NotificationHandlerTest {
 
         verify(notificationService)
                 .sendText(notifyRequest.getDestination(), personalisation, TEMPLATE_ID);
-        String key = NOTIFY_PHONE_NUMBER + ":" + "654321";
-        verify(s3Client).putObject(BUCKET_NAME, key, "");
+        verify(s3Client).putObject(BUCKET_NAME, NOTIFY_PHONE_NUMBER, "654321");
     }
 
     private SQSEvent generateSQSEvent(String messageBody) {

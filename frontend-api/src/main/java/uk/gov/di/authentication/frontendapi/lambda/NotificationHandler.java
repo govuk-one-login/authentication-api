@@ -160,10 +160,10 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                         .orElse(false);
         if (isNotifyTestNumber) {
             LOG.info("Notify Test Number used in request. Writing to S3 bucket");
-            String key = configService.getNotifyTestPhoneNumber().get() + ":" + otp;
+            String key = configService.getNotifyTestPhoneNumber().get();
             String bucketName = configService.getSmoketestBucketName();
             try {
-                s3Client.putObject(bucketName, key, "");
+                s3Client.putObject(bucketName, key, otp);
             } catch (Exception e) {
                 LOG.error("Exception thrown when writing to S3 bucket", e);
             }
