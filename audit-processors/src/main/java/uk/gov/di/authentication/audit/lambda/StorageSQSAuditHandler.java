@@ -23,13 +23,13 @@ public class StorageSQSAuditHandler implements RequestHandler<SQSEvent, Object> 
     private final KmsConnectionService kmsConnectionService;
     private final ConfigurationService service;
 
-    StorageSQSAuditHandler(
+    public StorageSQSAuditHandler(
             KmsConnectionService kmsConnectionService, ConfigurationService service) {
         this.kmsConnectionService = kmsConnectionService;
         this.service = service;
     }
 
-    StorageSQSAuditHandler() {
+    public StorageSQSAuditHandler() {
         this.service = new ConfigurationService();
         this.kmsConnectionService = new KmsConnectionService(service);
     }
