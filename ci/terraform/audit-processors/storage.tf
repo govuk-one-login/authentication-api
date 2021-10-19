@@ -13,7 +13,7 @@ module "audit_storage_lambda_role" {
 
 resource "aws_iam_policy" "audit_payload_kms_verification" {
   name        = "payload-kms-verification"
-  path        = "${var.environment}/audit-storage/"
+  path        = "/${var.environment}/audit-storage/"
   description = "IAM policy for a lambda needing to verify payload signatures"
 
   policy = jsonencode({
