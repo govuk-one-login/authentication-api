@@ -1,3 +1,39 @@
+module "audit_storage_lambda_role" {
+  source = "../modules/lambda-role"
+
+  environment = var.environment
+  role_name   = "audit-storage"
+  vpc_arn     = local.authentication_vpc_arn
+
+  policies_to_attach = [
+    aws_iam_policy.read_from_queue_policy.arn,
+    aws_iam_policy.audit_payload_kms_verification.arn
+  ]
+}
+
+resource "aws_iam_policy" "audit_payload_kms_verification" {
+  name        = "payload-kms-verification"
+  path        = "${var.environment}/audit-storage/"
+  description = "IAM policy for a lambda needing to verify payload signatures"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "kms:Sign",
+        "kms:GetPublicKey",
+        "kms:Verify"
+      ]
+
+      Resource = [
+        local.audit_signing_key_arn,
+      ]
+    }]
+  })
+}
+
 resource "aws_lambda_function" "audit_processor_lambda" {
   filename      = var.lambda_zip_file
   function_name = "${var.environment}-audit-processor-example-lambda"
