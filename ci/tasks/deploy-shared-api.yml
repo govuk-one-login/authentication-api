@@ -14,9 +14,6 @@ params:
   TEST_CLIENT_EMAIL_ALLOWLIST: ((test-client-email-allowlist))
 inputs:
   - name: api-src
-  - name: oidc-api-release
-  - name: frontend-api-release
-  - name: client-registry-api-release
   - name: account-migration-release
 outputs:
   - name: terraform-outputs
