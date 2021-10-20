@@ -33,5 +33,5 @@ output "email_queue" {
 }
 
 output "analytics_cookie_domain" {
-  value = local.service_domain_name
+  value = module.dns.service_domain_name
 }

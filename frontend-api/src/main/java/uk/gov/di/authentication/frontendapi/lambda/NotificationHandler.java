@@ -8,6 +8,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
@@ -16,6 +17,7 @@ import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
+import java.net.URISyntaxException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Collections;
@@ -71,8 +73,11 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                 try {
                     switch (notifyRequest.getNotificationType()) {
                         case ACCOUNT_CREATED_CONFIRMATION:
-                            notifyPersonalisation.put(
-                                    "sign-in-page-url", configService.getAccountManagementURI());
+                            URIBuilder builder =
+                                    new URIBuilder(configService.getAccountManagementURI())
+                                            .setPath("/sign-in");
+
+                            notifyPersonalisation.put("sign-in-page-url", builder.build());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,
@@ -121,7 +126,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             break;
                     }
                     writeTestClientOtpToS3(notifyRequest.getCode(), notifyRequest.getDestination());
-                } catch (NotificationClientException e) {
+                } catch (NotificationClientException | URISyntaxException e) {
                     LOG.error(
                             "Error sending with Notify using NotificationType: {}",
                             notifyRequest.getNotificationType(),

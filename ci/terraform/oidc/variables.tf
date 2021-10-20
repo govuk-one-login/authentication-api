@@ -65,11 +65,6 @@ variable "environment" {
   type = string
 }
 
-variable "api_base_url" {
-  type    = string
-  default = "http://localhost:8080"
-}
-
 variable "aws_endpoint" {
   type    = string
   default = null
@@ -122,19 +117,6 @@ variable "redis_use_tls" {
   default = "true"
 }
 
-variable "service_domain_name" {
-  default = null
-}
-
-variable "oidc_api_url" {
-  default = null
-}
-
-variable "frontend_api_url" {
-  default = null
-}
-
-
 variable "enable_api_gateway_execution_logging" {
   default     = true
   description = "Whether to enable logging of API gateway runs"
@@ -174,12 +156,7 @@ variable "keep_lambdas_warm" {
 
 variable "reset_password_route" {
   type    = string
-  default = "/reset-password?code="
-}
-
-variable "frontend_base_url" {
-  type    = string
-  default = null
+  default = "reset-password?code="
 }
 
 variable "dns_state_bucket" {
@@ -191,10 +168,6 @@ variable "dns_state_key" {
 }
 
 variable "dns_state_role" {
-  type = string
-}
-
-variable "account_management_url" {
   type = string
 }
 
