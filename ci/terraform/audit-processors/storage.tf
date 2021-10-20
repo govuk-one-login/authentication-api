@@ -37,7 +37,7 @@ resource "aws_iam_policy" "audit_payload_kms_verification" {
 resource "aws_lambda_function" "audit_processor_lambda" {
   filename      = var.lambda_zip_file
   function_name = "${var.environment}-audit-processor-example-lambda"
-  role          = local.lambda_iam_role_arn
+  role          = module.audit_storage_lambda_role.arn
   handler       = "uk.gov.di.authentication.audit.lambda.StorageSQSAuditHandler::handleRequest"
   timeout       = 30
   memory_size   = 4096
