@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
+import com.google.gson.JsonParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.audit.AuditPayload.AuditEvent;
@@ -41,6 +42,7 @@ public class StorageSQSAuditHandler implements RequestHandler<SQSEvent, Object> 
                 input.getRecords().stream()
                         .peek(record -> LOG.info("Processing record {}", record.getMessageId()))
                         .map(SQSMessage::getBody)
+                        .map(this::readAsJson)
                         .map(Base64.getDecoder()::decode)
                         .peek(payload -> LOG.info("Extracted payload: length {}", payload.length))
                         .map(AuditEventHelper::parseToSignedAuditEvent)
@@ -55,6 +57,10 @@ public class StorageSQSAuditHandler implements RequestHandler<SQSEvent, Object> 
         this.handleAuditEvent(auditMessages);
 
         return null;
+    }
+
+    private String readAsJson(String snsMessage) {
+        return JsonParser.parseString(snsMessage).getAsJsonObject().get("Message").getAsString();
     }
 
     void handleAuditEvent(List<AuditEvent> auditEvent) {

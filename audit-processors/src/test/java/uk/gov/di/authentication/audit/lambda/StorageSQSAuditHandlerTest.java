@@ -2,6 +2,7 @@ package uk.gov.di.authentication.audit.lambda;
 
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
+import com.google.gson.Gson;
 import com.google.protobuf.AbstractMessageLite;
 import com.google.protobuf.ByteString;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,7 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import java.nio.ByteBuffer;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -55,6 +57,7 @@ public class StorageSQSAuditHandlerTest {
         return Optional.of(payload)
                 .map(AbstractMessageLite::toByteArray)
                 .map(Base64.getEncoder()::encodeToString)
+                .map(encodedPayload -> new Gson().toJson(Map.of("Message", encodedPayload)))
                 .map(
                         body -> {
                             var message = new SQSMessage();
