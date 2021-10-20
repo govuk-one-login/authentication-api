@@ -71,3 +71,5 @@ locals {
     authorizerStatus             = "$context.authorizer.status"
   })
 }
+
+data "aws_caller_identity" "current" {}
