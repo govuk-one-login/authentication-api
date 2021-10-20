@@ -177,6 +177,10 @@ public class ConfigurationService {
         return System.getenv("AUDIT_SIGNING_KEY_ALIAS");
     }
 
+    public String getAuditStorageS3Bucket() {
+        return System.getenv("AUDIT_STORAGE_S3_BUCKET");
+    }
+
     public int getWarmupDelayMillis() {
         return Integer.parseInt(System.getenv().getOrDefault("WARMER_DELAY", "75"));
     }
