@@ -327,6 +327,10 @@ public class TokenHandler
         }
         if (!new RefreshToken(tokenStore.getToken()).equals(currentRefreshToken)) {
             LOG.error("Refresh token found does not match Refresh token in request");
+            LOG.error(
+                    "Expected refresh token: {} does not match refresh token in request: {}",
+                    tokenStore.getToken(),
+                    currentRefreshToken);
             return generateApiGatewayProxyResponse(
                     400,
                     new ErrorObject(OAuth2Error.INVALID_GRANT_CODE, "Invalid Refresh token")
