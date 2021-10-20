@@ -20,11 +20,11 @@ variable "environment" {
 }
 
 variable "is_localstack" {
-  type = bool
+  type    = bool
   default = false
 }
 
 variable "is_sandpit" {
-  type = bool
+  type    = bool
   default = false
 }
