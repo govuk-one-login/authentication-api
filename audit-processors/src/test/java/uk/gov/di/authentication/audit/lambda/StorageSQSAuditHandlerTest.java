@@ -8,6 +8,7 @@ import com.google.protobuf.ByteString;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.audit.AuditPayload.AuditEvent;
 import uk.gov.di.audit.AuditPayload.SignedAuditEvent;
+import uk.gov.di.authentication.audit.services.S3Service;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
@@ -28,6 +29,7 @@ public class StorageSQSAuditHandlerTest {
 
     private final KmsConnectionService kms = mock(KmsConnectionService.class);
     private final ConfigurationService config = mock(ConfigurationService.class);
+    private final S3Service s3Service = mock(S3Service.class);
 
     @Test
     void handlesRequestsAppropriately() {
@@ -36,7 +38,7 @@ public class StorageSQSAuditHandlerTest {
                 .thenReturn(true);
 
         var baseHandler =
-                new StorageSQSAuditHandler(kms, config) {
+                new StorageSQSAuditHandler(kms, config, s3Service) {
                     @Override
                     void handleAuditEvent(List<AuditEvent> auditEvents) {
                         assertThat(auditEvents.size(), is(1));

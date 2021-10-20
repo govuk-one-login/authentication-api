@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import uk.gov.di.audit.AuditPayload.AuditEvent;
 import uk.gov.di.audit.AuditPayload.SignedAuditEvent;
 import uk.gov.di.authentication.audit.helper.AuditEventHelper;
+import uk.gov.di.authentication.audit.services.S3Service;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
@@ -23,16 +24,21 @@ public class StorageSQSAuditHandler implements RequestHandler<SQSEvent, Object> 
     protected final Logger LOG = LoggerFactory.getLogger(getClass());
     private final KmsConnectionService kmsConnectionService;
     private final ConfigurationService service;
+    private final S3Service s3service;
 
     public StorageSQSAuditHandler(
-            KmsConnectionService kmsConnectionService, ConfigurationService service) {
+            KmsConnectionService kmsConnectionService,
+            ConfigurationService service,
+            S3Service s3Service) {
         this.kmsConnectionService = kmsConnectionService;
         this.service = service;
+        this.s3service = s3Service;
     }
 
     public StorageSQSAuditHandler() {
         this.service = new ConfigurationService();
         this.kmsConnectionService = new KmsConnectionService(service);
+        this.s3service = new S3Service(service);
     }
 
     @Override
