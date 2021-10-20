@@ -24,6 +24,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class StorageSQSAuditHandlerTest {
@@ -46,14 +47,31 @@ public class StorageSQSAuditHandlerTest {
                     }
                 };
 
-        var payload =
-                SignedAuditEvent.newBuilder()
-                        .setSignature(ByteString.copyFrom("signature".getBytes()))
-                        .setPayload(
-                                AuditEvent.newBuilder().setEventId("foo").build().toByteString())
-                        .build();
+        var payload = payloadWithEventId("foo");
 
         baseHandler.handleRequest(inputEvent(payload), null);
+    }
+
+    @Test
+    void collectsPayloadsAndWritesThemToS3() {
+        when(config.getAuditSigningKeyAlias()).thenReturn("key_alias");
+        when(kms.validateSignature(any(ByteBuffer.class), any(ByteBuffer.class), anyString()))
+                .thenReturn(true);
+
+        var handler = new StorageSQSAuditHandler(kms, config, s3Service);
+
+        var payloads = List.of(payloadWithEventId("foo"), payloadWithEventId("bar"));
+
+        handler.handleRequest(inputEvent(payloads), null);
+
+        verify(s3Service).storeRecords("{\"eventId\":\"foo\"}\n{\"eventId\":\"bar\"}");
+    }
+
+    private SignedAuditEvent payloadWithEventId(String eventId) {
+        return SignedAuditEvent.newBuilder()
+                .setSignature(ByteString.copyFrom("signature".getBytes()))
+                .setPayload(AuditEvent.newBuilder().setEventId(eventId).build().toByteString())
+                .build();
     }
 
     private SQSEvent inputEvent(SignedAuditEvent payload) {

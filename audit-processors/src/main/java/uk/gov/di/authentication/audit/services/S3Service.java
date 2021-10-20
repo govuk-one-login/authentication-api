@@ -8,4 +8,6 @@ public class S3Service {
     public S3Service(ConfigurationService configurationService) {
         this.configurationService = configurationService;
     }
+
+    public void storeRecords(String payloads) {}
 }

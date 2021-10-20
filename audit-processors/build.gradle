@@ -14,6 +14,7 @@ dependencies {
             configurations.sqs,
             project(":shared"),
             "com.google.protobuf:protobuf-java:3.18.1",
+            "com.google.protobuf:protobuf-java-util:3.18.1",
             "com.google.code.gson:gson:2.8.8"
 
     runtimeOnly configurations.logging_runtime

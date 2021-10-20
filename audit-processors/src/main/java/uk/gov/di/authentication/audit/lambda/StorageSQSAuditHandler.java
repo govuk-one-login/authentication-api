@@ -5,6 +5,8 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
 import com.google.gson.JsonParser;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.JsonFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.audit.AuditPayload.AuditEvent;
@@ -16,6 +18,7 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.util.Base64;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -70,13 +73,29 @@ public class StorageSQSAuditHandler implements RequestHandler<SQSEvent, Object> 
     }
 
     void handleAuditEvent(List<AuditEvent> auditEvent) {
-        auditEvent.forEach(
-                event ->
-                        LOG.info(
-                                "Processing event({}, {}, {})",
-                                event.getEventId(),
-                                event.getEventName(),
-                                event.getClientId()));
+        var content =
+                auditEvent.stream()
+                        .peek(
+                                event ->
+                                        LOG.info(
+                                                "Processing event({}, {}, {})",
+                                                event.getEventId(),
+                                                event.getEventName(),
+                                                event.getClientId()))
+                        .map(
+                                event -> {
+                                    try {
+                                        return JsonFormat.printer()
+                                                .omittingInsignificantWhitespace()
+                                                .print(event);
+                                    } catch (InvalidProtocolBufferException e) {
+                                        return null;
+                                    }
+                                })
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.joining("\n"));
+
+        s3service.storeRecords(content);
     }
 
     private boolean validateSignature(Optional<SignedAuditEvent> event) {
