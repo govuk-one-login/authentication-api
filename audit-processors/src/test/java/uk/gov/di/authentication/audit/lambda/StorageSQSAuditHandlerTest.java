@@ -14,9 +14,10 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.nio.ByteBuffer;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -56,20 +57,27 @@ public class StorageSQSAuditHandlerTest {
     }
 
     private SQSEvent inputEvent(SignedAuditEvent payload) {
-        return Optional.of(payload)
-                .map(AbstractMessageLite::toByteArray)
-                .map(Base64.getEncoder()::encodeToString)
-                .map(encodedPayload -> new Gson().toJson(Map.of("Message", encodedPayload)))
-                .map(
-                        body -> {
-                            var message = new SQSMessage();
-                            message.setBody(body);
+        return inputEvent(Collections.singletonList(payload));
+    }
 
-                            var event = new SQSEvent();
-                            event.setRecords(List.of(message));
+    private SQSEvent inputEvent(List<SignedAuditEvent> payload) {
+        var messages =
+                payload.stream()
+                        .map(AbstractMessageLite::toByteArray)
+                        .map(Base64.getEncoder()::encodeToString)
+                        .map(encodedPayload -> new Gson().toJson(Map.of("Message", encodedPayload)))
+                        .map(
+                                body -> {
+                                    var message = new SQSMessage();
+                                    message.setBody(body);
 
-                            return event;
-                        })
-                .get();
+                                    return message;
+                                })
+                        .collect(Collectors.toList());
+
+        var event = new SQSEvent();
+        event.setRecords(messages);
+
+        return event;
     }
 }
