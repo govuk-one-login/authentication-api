@@ -77,7 +77,8 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                     new URIBuilder(configService.getAccountManagementURI())
                                             .setPath("/sign-in");
 
-                            notifyPersonalisation.put("sign-in-page-url", builder.build());
+                            notifyPersonalisation.put(
+                                    "sign-in-page-url", builder.build().toString());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,
