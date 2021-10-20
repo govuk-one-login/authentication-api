@@ -123,8 +123,17 @@ variable "redis_use_tls" {
 }
 
 variable "service_domain_name" {
-  default = "auth.ida.digital.cabinet-office.gov.uk"
+  default = null
 }
+
+variable "oidc_api_url" {
+  default = null
+}
+
+variable "frontend_api_url" {
+  default = null
+}
+
 
 variable "enable_api_gateway_execution_logging" {
   default     = true

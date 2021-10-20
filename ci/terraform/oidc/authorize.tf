@@ -8,10 +8,10 @@ module "authorize" {
 
   handler_environment_variables = {
     BASE_URL                 = local.api_base_url
-    DOMAIN_NAME              = "${var.environment}.${var.service_domain_name}"
+    DOMAIN_NAME              = local.service_domain_name
     EVENTS_SNS_TOPIC_ARN     = aws_sns_topic.events.arn
     AUDIT_SIGNING_KEY_ALIAS  = local.audit_signing_key_alias_name
-    LOGIN_URI                = var.use_localstack ? "http://localhost:3000/" : "https://front.${var.environment}.${var.service_domain_name}/"
+    LOGIN_URI                = var.use_localstack ? "http://localhost:3000/" : "https://${local.frontend_base_url}"
     LOCALSTACK_ENDPOINT      = var.use_localstack ? var.localstack_endpoint : null
     REDIS_HOST               = local.external_redis_host
     REDIS_PORT               = local.external_redis_port
