@@ -100,11 +100,6 @@ resource "aws_lambda_function" "warmer_function" {
 
   source_code_hash = filebase64sha256(var.warmer_lambda_zip_file)
 
-  vpc_config {
-    security_group_ids = [var.security_group_id]
-    subnet_ids         = var.subnet_id
-  }
-
   environment {
     variables = merge(var.warmer_handler_environment_variables, {
       LAMBDA_ARN       = aws_lambda_function.endpoint_lambda.arn
