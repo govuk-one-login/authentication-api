@@ -12,6 +12,7 @@ import com.nimbusds.oauth2.sdk.id.Issuer;
 import com.nimbusds.openid.connect.sdk.SubjectType;
 import com.nimbusds.openid.connect.sdk.claims.ClaimType;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
+import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
@@ -119,7 +120,7 @@ public class WellknownHandler
 
     private URI buildURI(String prefix, String baseUrl) {
         try {
-            return new URI(baseUrl + prefix);
+            return new URIBuilder(baseUrl).setPath(prefix).build();
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
