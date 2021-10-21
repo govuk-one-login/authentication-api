@@ -219,6 +219,10 @@ resource "aws_s3_bucket" "audit_storage_bucket" {
       days          = 1
       storage_class = "INTELLIGENT_TIERING"
     }
+
+    expiration {
+      days = var.audit_storage_expiry_days
+    }
   }
 
   tags = local.default_tags

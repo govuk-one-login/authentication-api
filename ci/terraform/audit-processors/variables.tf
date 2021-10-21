@@ -48,3 +48,9 @@ variable "logging_endpoint_arn" {
   default     = ""
   description = "Amazon Resource Name (ARN) for the endpoint to ship logs to"
 }
+
+variable "audit_storage_expiry_days" {
+  type        = number
+  description = "How long before files in the audit store are expired (default: 7 years)"
+  default     = 7 * 365
+}
