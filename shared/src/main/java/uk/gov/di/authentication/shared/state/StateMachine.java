@@ -320,6 +320,8 @@ public class StateMachine<T, A, C> {
                 .when(LOGGED_IN)
                 .allow(
                         on(SYSTEM_HAS_SENT_MFA_CODE).then(MFA_SMS_CODE_SENT),
+                        on(SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_MFA_VERIFICATION_CODES)
+                                .then(MFA_CODE_REQUESTS_BLOCKED),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(MFA_SMS_CODE_SENT)
