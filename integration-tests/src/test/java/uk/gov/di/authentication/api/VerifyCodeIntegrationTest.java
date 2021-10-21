@@ -202,7 +202,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         String sessionId = RedisHelper.createSession();
         RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
         RedisHelper.setSessionState(sessionId, SessionState.PHONE_NUMBER_CODE_NOT_VALID);
-        RedisHelper.blockPhoneCode(EMAIL_ADDRESS, sessionId);
+        RedisHelper.blockPhoneCode(EMAIL_ADDRESS);
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
         headers.add("X-API-Key", FRONTEND_API_KEY);
@@ -227,7 +227,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
         String sessionId = RedisHelper.createSession();
         RedisHelper.setSessionState(sessionId, SessionState.EMAIL_CODE_NOT_VALID);
         RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
-        RedisHelper.blockPhoneCode(EMAIL_ADDRESS, sessionId);
+        RedisHelper.blockPhoneCode(EMAIL_ADDRESS);
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
         headers.add("X-API-Key", FRONTEND_API_KEY);

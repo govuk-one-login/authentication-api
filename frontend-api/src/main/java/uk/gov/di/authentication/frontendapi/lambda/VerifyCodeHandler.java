@@ -49,6 +49,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.PHONE_NUMBER_C
 import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
@@ -198,8 +199,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     }
 
     private boolean isCodeBlockedForSession(Session session) {
-        return codeStorageService.isCodeBlockedForSession(
-                session.getEmailAddress(), session.getSessionId());
+        return codeStorageService.isBlockedForEmail(
+                session.getEmailAddress(), CODE_BLOCKED_KEY_PREFIX);
     }
 
     private APIGatewayProxyResponseEvent generateSuccessResponse(Session session)
@@ -221,9 +222,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     }
 
     private void blockCodeForSessionAndResetCount(Session session) {
-        codeStorageService.saveCodeBlockedForSession(
+        codeStorageService.saveBlockedForEmail(
                 session.getEmailAddress(),
-                session.getSessionId(),
+                CODE_BLOCKED_KEY_PREFIX,
                 configurationService.getCodeExpiry());
         sessionService.save(session.resetRetryCount());
     }

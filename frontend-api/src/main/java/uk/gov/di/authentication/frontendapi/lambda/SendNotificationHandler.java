@@ -46,6 +46,7 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_IS_BLO
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class SendNotificationHandler extends BaseFrontendHandler<SendNotificationRequest>
@@ -244,8 +245,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         if (session.getCodeRequestCount() == configurationService.getCodeMaxRetries()) {
             LOGGER.error(
                     "User has requested too many OTP codes for session {}", session.getSessionId());
-            codeStorageService.saveCodeRequestBlockedForSession(
-                    email, session.getSessionId(), configurationService.getCodeExpiry());
+            codeStorageService.saveBlockedForEmail(
+                    email, CODE_REQUEST_BLOCKED_KEY_PREFIX, configurationService.getCodeExpiry());
             SessionState nextState =
                     stateMachine.transition(
                             session.getState(),
@@ -254,7 +255,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             sessionService.save(session.setState(nextState).resetCodeRequestCount());
             return false;
         }
-        if (codeStorageService.isCodeRequestBlockedForSession(email, session.getSessionId())) {
+        if (codeStorageService.isBlockedForEmail(email, CODE_REQUEST_BLOCKED_KEY_PREFIX)) {
             LOGGER.error(
                     "User is blocked from requesting any OTP codes for session {}",
                     session.getSessionId());

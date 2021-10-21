@@ -50,6 +50,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.MFA_SMS_MAX_CO
 import static uk.gov.di.authentication.shared.entity.SessionState.UPLIFT_REQUIRED_CM;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 
 public class MfaHandlerTest {
 
@@ -209,7 +210,8 @@ public class MfaHandlerTest {
                 objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
         assertEquals(SessionState.MFA_SMS_MAX_CODES_SENT, codeResponse.getSessionState());
         verify(codeStorageService)
-                .saveCodeRequestBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_EXPIRY_TIME);
+                .saveBlockedForEmail(
+                        TEST_EMAIL_ADDRESS, CODE_REQUEST_BLOCKED_KEY_PREFIX, CODE_EXPIRY_TIME);
     }
 
     @Test
@@ -217,7 +219,9 @@ public class MfaHandlerTest {
             throws JsonProcessingException {
         usingValidSession();
         session.setState(MFA_SMS_MAX_CODES_SENT);
-        when(codeStorageService.isCodeRequestBlockedForEmail(TEST_EMAIL_ADDRESS)).thenReturn(true);
+        when(codeStorageService.isBlockedForEmail(
+                        TEST_EMAIL_ADDRESS, CODE_REQUEST_BLOCKED_KEY_PREFIX))
+                .thenReturn(true);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));

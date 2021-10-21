@@ -39,6 +39,7 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SE
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_MFA_VERIFICATION_CODES;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class MfaHandler extends BaseFrontendHandler<MfaRequest>
@@ -168,14 +169,14 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             LOGGER.info(
                     "User has requested too many OTP codes for session: {}",
                     session.getSessionId());
-            codeStorageService.saveCodeRequestBlockedForEmail(
-                    email, configurationService.getCodeExpiry());
+            codeStorageService.saveBlockedForEmail(
+                    email, CODE_REQUEST_BLOCKED_KEY_PREFIX, configurationService.getCodeExpiry());
             SessionState nextState =
                     stateMachine.transition(session.getState(), SYSTEM_HAS_SENT_TOO_MANY_MFA_CODES);
             sessionService.save(session.setState(nextState).resetCodeRequestCount());
             return false;
         }
-        if (codeStorageService.isCodeRequestBlockedForEmail(email)) {
+        if (codeStorageService.isBlockedForEmail(email, CODE_REQUEST_BLOCKED_KEY_PREFIX)) {
             LOGGER.info(
                     "User is blocked from requesting any OTP codes for session: {}",
                     session.getSessionId());

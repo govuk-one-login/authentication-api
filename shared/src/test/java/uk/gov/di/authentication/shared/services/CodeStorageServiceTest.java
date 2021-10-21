@@ -15,13 +15,15 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.PASSWORD_RESET_BLOCKED_KEY_PREFIX;
 
 class CodeStorageServiceTest {
 
     private static final String TEST_EMAIL = "test@test.com";
     private static final String CODE = "123456";
     private static final String SUBJECT = "some-subject";
-    private static final String SESSION_ID = "session-id-1234";
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
     private final CodeStorageService codeStorageService =
@@ -35,8 +37,11 @@ class CodeStorageServiceTest {
     private static final String REDIS_MFA_KEY =
             "mfa-code:f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a";
     private static final String REDIS_BLOCKED_KEY =
-            "code-blocked:f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a"
-                    + SESSION_ID;
+            "code-blocked:f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a";
+    private static final String REDIS_BLOCKED_REQUEST_KEY =
+            "code-request-blocked:f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a";
+    private static final String REDIS_BLOCKED_PASSWORD_RESET_KEY =
+            "password-reset-blocked:f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a";
     private static final String RESET_PASSWORD_KEY = "reset-password-code:" + CODE;
     private static final long CODE_EXPIRY_TIME = 900;
     private static final long AUTH_CODE_EXPIRY_TIME = 300;
@@ -135,25 +140,81 @@ class CodeStorageServiceTest {
     }
 
     @Test
-    public void shouldSaveToRedisWhenCodeIsBlockedForSession() {
-        codeStorageService.saveCodeBlockedForSession(TEST_EMAIL, SESSION_ID, CODE_EXPIRY_TIME);
+    public void shouldSaveToRedisWhenCodeIsBlockedForEmail() {
+        codeStorageService.saveBlockedForEmail(
+                TEST_EMAIL, CODE_BLOCKED_KEY_PREFIX, CODE_EXPIRY_TIME);
 
         verify(redisConnectionService)
                 .saveWithExpiry(REDIS_BLOCKED_KEY, CODE_BLOCKED_VALUE, CODE_EXPIRY_TIME);
     }
 
     @Test
-    public void shouldRetrieveSessionIdWhenCodeIsBlocked() {
+    public void shouldSaveToRedisWhenCodeRequestIsBlockedForEmail() {
+        codeStorageService.saveBlockedForEmail(
+                TEST_EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX, CODE_EXPIRY_TIME);
+
+        verify(redisConnectionService)
+                .saveWithExpiry(REDIS_BLOCKED_REQUEST_KEY, CODE_BLOCKED_VALUE, CODE_EXPIRY_TIME);
+    }
+
+    @Test
+    public void shouldSaveToRedisWhenPasswordResetIsBlockedForEmail() {
+        codeStorageService.saveBlockedForEmail(
+                TEST_EMAIL, PASSWORD_RESET_BLOCKED_KEY_PREFIX, CODE_EXPIRY_TIME);
+
+        verify(redisConnectionService)
+                .saveWithExpiry(
+                        REDIS_BLOCKED_PASSWORD_RESET_KEY, CODE_BLOCKED_VALUE, CODE_EXPIRY_TIME);
+    }
+
+    @Test
+    public void shouldRetrieveEmailWhenCodeIsBlocked() {
         when(redisConnectionService.getValue(REDIS_BLOCKED_KEY)).thenReturn(CODE_BLOCKED_VALUE);
 
-        assertTrue(codeStorageService.isCodeBlockedForSession(TEST_EMAIL, SESSION_ID));
+        assertTrue(codeStorageService.isBlockedForEmail(TEST_EMAIL, CODE_BLOCKED_KEY_PREFIX));
+    }
+
+    @Test
+    public void shouldRetrieveEmailWhenCodeRequestIsBlocked() {
+        when(redisConnectionService.getValue(REDIS_BLOCKED_REQUEST_KEY))
+                .thenReturn(CODE_BLOCKED_VALUE);
+
+        assertTrue(
+                codeStorageService.isBlockedForEmail(TEST_EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX));
+    }
+
+    @Test
+    public void shouldRetrieveEmailWhenPasswordResettIsBlocked() {
+        when(redisConnectionService.getValue(REDIS_BLOCKED_PASSWORD_RESET_KEY))
+                .thenReturn(CODE_BLOCKED_VALUE);
+
+        assertTrue(
+                codeStorageService.isBlockedForEmail(
+                        TEST_EMAIL, PASSWORD_RESET_BLOCKED_KEY_PREFIX));
     }
 
     @Test
     public void shouldReturnEmptyOptionalWhenCodeIsNotBlockedForSession() {
         when(redisConnectionService.getValue(REDIS_BLOCKED_KEY)).thenReturn(null);
 
-        assertFalse(codeStorageService.isCodeBlockedForSession(TEST_EMAIL, SESSION_ID));
+        assertFalse(codeStorageService.isBlockedForEmail(TEST_EMAIL, CODE_BLOCKED_KEY_PREFIX));
+    }
+
+    @Test
+    public void shouldReturnEmptyOptionalWhenCodeRequestIsNotBlockedForSession() {
+        when(redisConnectionService.getValue(REDIS_BLOCKED_REQUEST_KEY)).thenReturn(null);
+
+        assertFalse(
+                codeStorageService.isBlockedForEmail(TEST_EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX));
+    }
+
+    @Test
+    public void shouldReturnEmptyOptionalWhenPasswordResetIsNotBlockedForSession() {
+        when(redisConnectionService.getValue(REDIS_BLOCKED_PASSWORD_RESET_KEY)).thenReturn(null);
+
+        assertFalse(
+                codeStorageService.isBlockedForEmail(
+                        TEST_EMAIL, PASSWORD_RESET_BLOCKED_KEY_PREFIX));
     }
 
     @Test
