@@ -55,8 +55,16 @@ variable "lambda_dynamo_endpoint" {
   description = "The endpoint that the Lambda must use to connect to DynamoDB API. This may or may not be the same as aws_dynamodb_endpoint"
 }
 
-variable "service_domain_name" {
-  default = "auth.ida.digital.cabinet-office.gov.uk"
+variable "dns_state_bucket" {
+  type = string
+}
+
+variable "dns_state_key" {
+  type = string
+}
+
+variable "dns_state_role" {
+  type = string
 }
 
 variable "enable_api_gateway_execution_logging" {

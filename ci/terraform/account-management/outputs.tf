@@ -1,5 +1,5 @@
 output "base_url" {
-  value = local.api_base_url
+  value = local.oidc_api_base_url
 }
 
 output "api_gateway_root_id" {

@@ -153,7 +153,7 @@ data "aws_region" "current" {
 }
 
 locals {
-  api_base_url = var.use_localstack ? "${var.aws_endpoint}/restapis/${aws_api_gateway_rest_api.di_account_management_api.id}/${var.environment}/_user_request_" : "https://api.${var.environment}.${var.service_domain_name}"
+  oidc_api_base_url = var.use_localstack ? "${var.aws_endpoint}/restapis/${aws_api_gateway_rest_api.di_account_management_api.id}/${var.environment}/_user_request_" : module.dns.oidc_api_url
 }
 
 resource "aws_api_gateway_deployment" "deployment" {
@@ -268,7 +268,7 @@ resource "aws_api_gateway_base_path_mapping" "api" {
 
   api_id      = aws_api_gateway_rest_api.di_account_management_api.id
   stage_name  = aws_api_gateway_stage.stage.stage_name
-  domain_name = "acct-mgmt-api.${var.environment}.${var.service_domain_name}"
+  domain_name = module.dns.account_management_api_fqdn
 }
 
 module "dashboard" {

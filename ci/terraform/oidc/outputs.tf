@@ -33,5 +33,5 @@ output "email_queue" {
 }
 
 output "analytics_cookie_domain" {
-  value = var.environment == "production" ? "${var.service_domain_name}" : "${var.environment}.${var.service_domain_name}"
+  value = module.dns.service_domain_name
 }

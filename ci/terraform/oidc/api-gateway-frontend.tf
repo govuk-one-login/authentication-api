@@ -28,7 +28,7 @@ resource "aws_api_gateway_usage_plan_key" "di_auth_frontend_usage_plan_key" {
 }
 
 locals {
-  frontend_api_base_url = var.use_localstack ? "${var.aws_endpoint}/restapis/${aws_api_gateway_rest_api.di_authentication_frontend_api.id}/${var.environment}/_user_request_" : "https://auth.${var.environment}.${var.service_domain_name}"
+  frontend_api_base_url = var.use_localstack ? "${var.aws_endpoint}/restapis/${aws_api_gateway_rest_api.di_authentication_frontend_api.id}/${var.environment}/_user_request_" : "https://${module.dns.frontend_api_url}"
 }
 
 resource "aws_api_gateway_deployment" "frontend_deployment" {
@@ -161,7 +161,7 @@ resource "aws_api_gateway_base_path_mapping" "frontend_api" {
 
   api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
   stage_name  = aws_api_gateway_stage.endpoint_frontend_stage.stage_name
-  domain_name = "auth.${var.environment}.${var.service_domain_name}"
+  domain_name = module.dns.frontend_api_url
 }
 
 module "dashboard_frontend_api" {
