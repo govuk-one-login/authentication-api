@@ -247,7 +247,7 @@ resource "aws_api_gateway_base_path_mapping" "api" {
 
   api_id      = aws_api_gateway_rest_api.di_authentication_api.id
   stage_name  = aws_api_gateway_stage.endpoint_stage.stage_name
-  domain_name = module.dns.oidc_api_url
+  domain_name = module.dns.oidc_api_fqdn
 }
 
 module "dashboard" {
