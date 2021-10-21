@@ -16,7 +16,6 @@ import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
-import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
@@ -62,7 +61,7 @@ public class TokenHandler
     private final ClientSessionService clientSessionService;
     private final TokenValidationService tokenValidationService;
     private final RedisConnectionService redisConnectionService;
-    private static final String TOKEN_PATH = "/token";
+    private static final String TOKEN_PATH = "token";
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
 
     public TokenHandler(
@@ -149,17 +148,10 @@ public class TokenHandler
                                                         return new RuntimeException(
                                                                 "Application was not configured with baseURL");
                                                     });
-                            String tokenUrl = null;
-                            try {
-                                tokenUrl =
-                                        new URIBuilder(baseUrl)
-                                                .setPath(TOKEN_PATH)
-                                                .build()
-                                                .toString();
-                            } catch (URISyntaxException e) {
-                                LOG.error("Invalid base URL provided", e);
-                                throw new RuntimeException("Invalid base URL provided");
-                            }
+                            String tokenUrl =
+                                    baseUrl.endsWith("/")
+                                            ? baseUrl + TOKEN_PATH
+                                            : baseUrl + "/" + TOKEN_PATH;
                             Optional<ErrorObject> invalidPrivateKeyJwtError =
                                     tokenService.validatePrivateKeyJWT(
                                             input.getBody(), client.getPublicKey(), tokenUrl);
