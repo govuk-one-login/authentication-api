@@ -209,8 +209,7 @@ public class MfaHandlerTest {
                 objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
         assertEquals(SessionState.MFA_SMS_MAX_CODES_SENT, codeResponse.getSessionState());
         verify(codeStorageService)
-                .saveCodeRequestBlockedForSession(
-                        TEST_EMAIL_ADDRESS, session.getSessionId(), CODE_EXPIRY_TIME);
+                .saveCodeRequestBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_EXPIRY_TIME);
     }
 
     @Test
@@ -218,9 +217,7 @@ public class MfaHandlerTest {
             throws JsonProcessingException {
         usingValidSession();
         session.setState(MFA_SMS_MAX_CODES_SENT);
-        when(codeStorageService.isCodeRequestBlockedForSession(
-                        TEST_EMAIL_ADDRESS, session.getSessionId()))
-                .thenReturn(true);
+        when(codeStorageService.isCodeRequestBlockedForEmail(TEST_EMAIL_ADDRESS)).thenReturn(true);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
