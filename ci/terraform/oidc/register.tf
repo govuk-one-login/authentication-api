@@ -19,6 +19,7 @@ module "register" {
   rest_api_id              = aws_api_gateway_rest_api.di_authentication_api.id
   root_resource_id         = aws_api_gateway_resource.register_resource.id
   execution_arn            = aws_api_gateway_rest_api.di_authentication_api.execution_arn
+  authentication_vpc_arn   = local.authentication_vpc_arn
   lambda_zip_file          = var.client_registry_api_lambda_zip_file
   security_group_id        = local.authentication_security_group_id
   subnet_id                = local.authentication_subnet_ids
