@@ -211,6 +211,16 @@ resource "aws_s3_bucket" "audit_storage_bucket" {
     }
   }
 
+  lifecycle_rule {
+    id      = "default-intelligent-tiering"
+    enabled = true
+
+    transition {
+      days          = 1
+      storage_class = "INTELLIGENT_TIERING"
+    }
+  }
+
   tags = local.default_tags
 }
 
