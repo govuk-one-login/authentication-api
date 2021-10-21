@@ -193,6 +193,15 @@ resource "aws_s3_bucket" "audit_storage_bucket" {
   tags = local.default_tags
 }
 
+resource "aws_s3_bucket_public_access_block" "audit_storage_bucket_access" {
+  count                   = var.use_localstack ? 0 : 1
+  bucket                  = aws_s3_bucket.audit_storage_bucket[0].id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
 resource "aws_iam_policy" "audit_storage_s3_access" {
   count       = var.use_localstack ? 0 : 1
   name        = "lambda-s3-access"
