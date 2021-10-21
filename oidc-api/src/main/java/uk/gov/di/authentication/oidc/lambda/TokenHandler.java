@@ -61,7 +61,7 @@ public class TokenHandler
     private final ClientSessionService clientSessionService;
     private final TokenValidationService tokenValidationService;
     private final RedisConnectionService redisConnectionService;
-    private static final String TOKEN_PATH = "/token";
+    private static final String TOKEN_PATH = "token";
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
 
     public TokenHandler(
@@ -148,7 +148,10 @@ public class TokenHandler
                                                         return new RuntimeException(
                                                                 "Application was not configured with baseURL");
                                                     });
-                            String tokenUrl = baseUrl + TOKEN_PATH;
+                            String tokenUrl =
+                                    baseUrl.endsWith("/")
+                                            ? baseUrl + TOKEN_PATH
+                                            : baseUrl + "/" + TOKEN_PATH;
                             Optional<ErrorObject> invalidPrivateKeyJwtError =
                                     tokenService.validatePrivateKeyJWT(
                                             input.getBody(), client.getPublicKey(), tokenUrl);
