@@ -5,10 +5,10 @@ module "audit_storage_lambda_role" {
   role_name   = "audit-storage"
   vpc_arn     = local.authentication_vpc_arn
 
-  policies_to_attach = [
+  policies_to_attach = concat([
     aws_iam_policy.read_from_queue_policy.arn,
     aws_iam_policy.audit_payload_kms_verification.arn
-  ]
+  ], var.use_localstack ? [] : [aws_iam_policy.audit_storage_s3_access[0].arn])
 }
 
 resource "aws_iam_policy" "audit_payload_kms_verification" {
@@ -37,7 +37,7 @@ resource "aws_iam_policy" "audit_payload_kms_verification" {
 resource "aws_lambda_function" "audit_processor_lambda" {
   filename      = var.lambda_zip_file
   function_name = "${var.environment}-audit-processor-example-lambda"
-  role          = local.lambda_iam_role_arn
+  role          = module.audit_storage_lambda_role.arn
   handler       = "uk.gov.di.authentication.audit.lambda.StorageSQSAuditHandler::handleRequest"
   timeout       = 30
   memory_size   = 4096
@@ -56,7 +56,8 @@ resource "aws_lambda_function" "audit_processor_lambda" {
     variables = {
       AUDIT_SIGNING_KEY_ALIAS = local.audit_signing_key_alias_name
       LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
-      TOKEN_SIGNING_KEY_ALIAS = local.audit_signing_key_alias_name
+      TOKEN_SIGNING_KEY_ALIAS = local.audit_signing_key_alias_name,
+      AUDIT_STORAGE_S3_BUCKET = var.use_localstack ? null : aws_s3_bucket.audit_storage_bucket[0].bucket
     }
   }
 
@@ -173,4 +174,44 @@ resource "aws_lambda_alias" "active_processor" {
   description      = "Alias pointing at active version of Lambda"
   function_name    = aws_lambda_function.audit_processor_lambda.arn
   function_version = aws_lambda_function.audit_processor_lambda.version
+}
+
+resource "aws_s3_bucket" "audit_storage_bucket" {
+  count  = var.use_localstack ? 0 : 1
+  bucket = "${var.environment}-audit-storage"
+
+  acl = "private"
+
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        sse_algorithm = "AES256"
+      }
+    }
+  }
+
+  tags = local.default_tags
+}
+
+resource "aws_iam_policy" "audit_storage_s3_access" {
+  count       = var.use_localstack ? 0 : 1
+  name        = "lambda-s3-access"
+  path        = "/${var.environment}/audit-storage/"
+  description = "IAM policy for managing s3 access from audit-storage lambda"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "s3:PutObject",
+      ]
+
+      Resource = [
+        aws_s3_bucket.audit_storage_bucket[0].arn,
+        "${aws_s3_bucket.audit_storage_bucket[0].arn}/*"
+      ]
+    }]
+  })
 }
