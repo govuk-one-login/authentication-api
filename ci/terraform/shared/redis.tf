@@ -32,6 +32,7 @@ resource "aws_elasticache_replication_group" "sessions_store" {
   engine_version                = "6.x"
   parameter_group_name          = "default.redis6.x"
   port                          = 6379
+  multi_az_enabled              = true
 
   at_rest_encryption_enabled = true
   transit_encryption_enabled = true
