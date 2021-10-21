@@ -85,11 +85,27 @@ public class CodeStorageService {
         }
     }
 
+    public void saveCodeRequestBlockedForEmail(String email, long codeBlockedTime) {
+        String encodedHash = HashHelper.hashSha256String(email);
+        String key = CODE_REQUEST_BLOCKED_KEY_PREFIX + encodedHash;
+        try {
+            redisConnectionService.saveWithExpiry(key, CODE_BLOCKED_VALUE, codeBlockedTime);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public boolean isCodeRequestBlockedForSession(String emailAddress, String sessionId) {
         return redisConnectionService.getValue(
                         CODE_REQUEST_BLOCKED_KEY_PREFIX
                                 + HashHelper.hashSha256String(emailAddress)
                                 + sessionId)
+                != null;
+    }
+
+    public boolean isCodeRequestBlockedForEmail(String emailAddress) {
+        return redisConnectionService.getValue(
+                        CODE_REQUEST_BLOCKED_KEY_PREFIX + HashHelper.hashSha256String(emailAddress))
                 != null;
     }
 

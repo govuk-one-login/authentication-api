@@ -168,14 +168,14 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             LOGGER.info(
                     "User has requested too many OTP codes for session: {}",
                     session.getSessionId());
-            codeStorageService.saveCodeRequestBlockedForSession(
-                    email, session.getSessionId(), configurationService.getCodeExpiry());
+            codeStorageService.saveCodeRequestBlockedForEmail(
+                    email, configurationService.getCodeExpiry());
             SessionState nextState =
                     stateMachine.transition(session.getState(), SYSTEM_HAS_SENT_TOO_MANY_MFA_CODES);
             sessionService.save(session.setState(nextState).resetCodeRequestCount());
             return false;
         }
-        if (codeStorageService.isCodeRequestBlockedForSession(email, session.getSessionId())) {
+        if (codeStorageService.isCodeRequestBlockedForEmail(email)) {
             LOGGER.info(
                     "User is blocked from requesting any OTP codes for session: {}",
                     session.getSessionId());
