@@ -161,7 +161,7 @@ resource "aws_api_gateway_base_path_mapping" "frontend_api" {
 
   api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
   stage_name  = aws_api_gateway_stage.endpoint_frontend_stage.stage_name
-  domain_name = module.dns.frontend_api_url
+  domain_name = module.dns.frontend_api_fqdn
 }
 
 module "dashboard_frontend_api" {
