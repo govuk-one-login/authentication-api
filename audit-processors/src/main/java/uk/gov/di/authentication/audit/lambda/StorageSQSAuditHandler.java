@@ -75,13 +75,6 @@ public class StorageSQSAuditHandler implements RequestHandler<SQSEvent, Object> 
     void handleAuditEvent(List<AuditEvent> auditEvent) {
         var content =
                 auditEvent.stream()
-                        .peek(
-                                event ->
-                                        LOG.info(
-                                                "Processing event({}, {}, {})",
-                                                event.getEventId(),
-                                                event.getEventName(),
-                                                event.getClientId()))
                         .map(
                                 event -> {
                                     try {
