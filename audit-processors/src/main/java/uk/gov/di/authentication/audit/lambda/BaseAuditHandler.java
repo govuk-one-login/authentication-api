@@ -5,8 +5,8 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SNSEvent;
 import com.amazonaws.services.lambda.runtime.events.SNSEvent.SNS;
 import com.amazonaws.services.lambda.runtime.events.SNSEvent.SNSRecord;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditPayload.AuditEvent;
 import uk.gov.di.audit.AuditPayload.SignedAuditEvent;
 import uk.gov.di.authentication.audit.helper.AuditEventHelper;
@@ -18,7 +18,7 @@ import java.util.Optional;
 
 public abstract class BaseAuditHandler implements RequestHandler<SNSEvent, Object> {
 
-    protected final Logger LOG = LoggerFactory.getLogger(getClass());
+    protected final Logger LOG = LogManager.getLogger(getClass());
     private final KmsConnectionService kmsConnectionService;
     private final ConfigurationService service;
 
