@@ -125,8 +125,29 @@ resource "aws_iam_role_policy_attachment" "read_from_queue_attachment" {
 }
 
 resource "aws_sqs_queue" "storage_batch" {
-  name                      = "audit-storage-batch-queue"
-  receive_wait_time_seconds = 20
+  name                      = "${var.environment}-audit-storage-batch-queue"
+  message_retention_seconds = 1209600
+
+  kms_master_key_id                 = var.use_localstack ? null : "alias/aws/sqs"
+  kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
+
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.storage_batch_dead_letter_queue.arn
+    maxReceiveCount     = 3
+  })
+
+  tags = local.default_tags
+}
+
+resource "aws_sqs_queue" "storage_batch_dead_letter_queue" {
+  name = "${var.environment}-audit-storage-batch-dead-letter-queue"
+
+  kms_master_key_id                 = var.use_localstack ? null : "alias/aws/sqs"
+  kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
+
+  message_retention_seconds = 604800
+
+  tags = local.default_tags
 }
 
 resource "aws_sns_topic_subscription" "event_stream_subscription" {
