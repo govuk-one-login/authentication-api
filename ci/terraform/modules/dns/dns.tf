@@ -15,5 +15,5 @@ locals {
   frontend_api_fqdn           = var.is_localstack ? "localhost:8080" : var.is_sandpit ? "auth.sandpit.auth.ida.digital.cabinet-office.gov.uk" : lookup(data.terraform_remote_state.dns[0].outputs, "${var.environment}_api_frontend_url", "")
   service_domain_name         = var.is_localstack ? "localhost" : var.is_sandpit ? "sandpit.auth.ida.digital.cabinet-office.gov.uk" : lookup(data.terraform_remote_state.dns[0].outputs, "${var.environment}_service_domain", "")
   account_management_fqdn     = var.is_localstack ? "localhost:3000" : var.is_sandpit ? "account-management.sandpit.auth.ida.digital.cabinet-office.gov.uk" : lookup(data.terraform_remote_state.dns[0].outputs, "${var.environment}_account_management_url", "")
-  account_management_api_fqdn = var.is_localstack ? "localhost:8080" : var.is_sandpit ? "acct-mgmt-api.sandpit.auth.ida.digital.cabinet-office.gov.uk" : lookup(data.terraform_remote_state.dns[0].outputs, "${var.environment}_account_management_url", "")
+  account_management_api_fqdn = var.is_localstack ? "localhost:8080" : var.is_sandpit ? "acct-mgmt-api.sandpit.auth.ida.digital.cabinet-office.gov.uk" : lookup(data.terraform_remote_state.dns[0].outputs, "${var.environment}_account_management_api_url", "")
 }
