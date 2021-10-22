@@ -111,6 +111,45 @@ data "aws_iam_policy_document" "email_queue_policy_document" {
   ]
 }
 
+data "aws_iam_policy_document" "email_dlq_queue_policy_document" {
+  statement {
+    sid    = "SendAndReceive"
+    effect = "Allow"
+
+    principals {
+      type = "AWS"
+
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+
+    actions = [
+      "sqs:SendMessage",
+      "sqs:ReceiveMessage",
+      "sqs:ChangeMessageVisibility",
+      "sqs:DeleteMessage",
+      "sqs:GetQueueAttributes",
+    ]
+
+    resources = [aws_sqs_queue.email_dead_letter_queue.arn]
+  }
+
+  depends_on = [
+    time_sleep.wait_60_seconds,
+    aws_iam_role.account_management_sqs_iam_role,
+    aws_iam_role.dynamo_sqs_lambda_iam_role,
+  ]
+}
+
+resource "aws_sqs_queue_policy" "email_dlq_queue_policy" {
+  depends_on = [
+    time_sleep.wait_60_seconds,
+    data.aws_iam_policy_document.email_dlq_queue_policy_document,
+  ]
+
+  queue_url = aws_sqs_queue.email_dead_letter_queue.id
+  policy    = data.aws_iam_policy_document.email_dlq_queue_policy_document.json
+}
+
 resource "aws_sqs_queue_policy" "email_queue_policy" {
   depends_on = [
     time_sleep.wait_60_seconds,
