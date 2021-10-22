@@ -21,7 +21,7 @@ import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.matchers.LogEventMatcher.hasObjectMessageProperty;
@@ -41,7 +41,7 @@ public class CounterFraudAuditLambdaTest {
 
         when(config.getAuditSigningKeyAlias()).thenReturn("key_alias");
         when(config.getAuditHmacSecret()).thenReturn("i-am-a-fake-hash-key");
-        when(kms.validateSignature(any(ByteBuffer.class), any(ByteBuffer.class), anyString()))
+        when(kms.validateSignature(any(ByteBuffer.class), any(ByteBuffer.class), eq("key_alias")))
                 .thenReturn(true);
     }
 
@@ -99,12 +99,12 @@ public class CounterFraudAuditLambdaTest {
                 logEvent,
                 hasObjectMessageProperty(
                         "user.id",
-                        "0e49411b4a5da564d867bef289f129fe7faa1d3341a458344e790c522d451a20"));
+                        "fe3ad3ffe725ab111628ea3df4b04fb0fda486479fb621c8d4ac325c9e1ce91b"));
         assertThat(
                 logEvent,
                 hasObjectMessageProperty(
                         "user.phone",
-                        "f264cf9189f466ecdec47c450dfd0e13a59f85dfc1e63ef93d3870ef6b927821"));
+                        "889340bac0d98dc4f74eeef79c907ea763f3915277d641176fa081d8f7b48cd7"));
 
         assertThat(logEvent, hasObjectMessageProperty("user.ip-address", "test-ip-address"));
     }
