@@ -184,4 +184,8 @@ public class ConfigurationService {
     public byte[] getSalt() {
         return System.getenv().getOrDefault("SALT", "random").getBytes(StandardCharsets.UTF_8);
     }
+
+    public String getAuditHmacSecret() {
+        return System.getenv("AUDIT_HMAC_SECRET");
+    }
 }
