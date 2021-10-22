@@ -299,6 +299,9 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
         excluded_rule {
           name = "GenericRFI_QUERYARGUMENTS"
         }
+        excluded_rule {
+          name = "GenericRFI_BODY"
+        }
       }
     }
 
