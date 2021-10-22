@@ -3,6 +3,7 @@ package uk.gov.di.authentication.shared.helpers;
 import org.bouncycastle.crypto.generators.Argon2BytesGenerator;
 import org.bouncycastle.crypto.params.Argon2Parameters;
 
+import java.security.SecureRandom;
 import java.util.Base64;
 
 public class Argon2EncoderHelper {
@@ -11,9 +12,11 @@ public class Argon2EncoderHelper {
     private static final int PARALLELISM = 1;
     private static final int ITERATIONS = 2;
     private static final Base64.Encoder BASE64_ENCODER = Base64.getEncoder().withoutPadding();
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     public static String argon2Hash(String raw) {
         byte[] salt = new byte[32];
+        RANDOM.nextBytes(salt);
 
         var parameters =
                 new Argon2Parameters.Builder(Argon2Parameters.ARGON2_id)
