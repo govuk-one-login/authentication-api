@@ -8,7 +8,6 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
@@ -17,7 +16,6 @@ import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
-import java.net.URISyntaxException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Collections;
@@ -31,6 +29,7 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_R
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
+import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 
 public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
@@ -73,12 +72,10 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                 try {
                     switch (notifyRequest.getNotificationType()) {
                         case ACCOUNT_CREATED_CONFIRMATION:
-                            URIBuilder builder =
-                                    new URIBuilder(configService.getAccountManagementURI())
-                                            .setPath("/sign-in");
-
                             notifyPersonalisation.put(
-                                    "sign-in-page-url", builder.build().toString());
+                                    "sign-in-page-url",
+                                    buildURI(configService.getAccountManagementURI(), "/sign-in")
+                                            .toString());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,
@@ -127,7 +124,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             break;
                     }
                     writeTestClientOtpToS3(notifyRequest.getCode(), notifyRequest.getDestination());
-                } catch (NotificationClientException | URISyntaxException e) {
+                } catch (NotificationClientException e) {
                     LOG.error(
                             "Error sending with Notify using NotificationType: {}",
                             notifyRequest.getNotificationType(),
@@ -151,11 +148,13 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
         LocalDateTime localDateTime =
                 LocalDateTime.now().plusSeconds(configService.getCodeExpiry());
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
-        return configService.getFrontendBaseUrl()
-                + configService.getResetPasswordRoute()
-                + code
-                + "."
-                + expiryDate.toInstant().toEpochMilli();
+        return buildURI(
+                        configService.getFrontendBaseUrl(),
+                        configService.getResetPasswordRoute()
+                                + code
+                                + "."
+                                + expiryDate.toInstant().toEpochMilli())
+                .toString();
     }
 
     private void writeTestClientOtpToS3(String otp, String destination) {

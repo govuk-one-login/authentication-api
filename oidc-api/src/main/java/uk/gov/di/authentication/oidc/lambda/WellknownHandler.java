@@ -12,7 +12,6 @@ import com.nimbusds.oauth2.sdk.id.Issuer;
 import com.nimbusds.openid.connect.sdk.SubjectType;
 import com.nimbusds.openid.connect.sdk.claims.ClaimType;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
-import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
@@ -24,6 +23,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class WellknownHandler
@@ -42,19 +42,17 @@ public class WellknownHandler
                 new OIDCProviderMetadata(
                         new Issuer(baseUrl),
                         List.of(SubjectType.PUBLIC, SubjectType.PAIRWISE),
-                        buildURI("/.well-known/jwks.json", baseUrl));
+                        buildURI(baseUrl, "/.well-known/jwks.json"));
     }
 
     public WellknownHandler() {
         this.configService = new ConfigurationService();
+        baseUrl = configService.getBaseURL().orElseThrow();
         providerMetadata =
                 new OIDCProviderMetadata(
                         new Issuer(configService.getBaseURL().get()),
                         List.of(SubjectType.PUBLIC, SubjectType.PAIRWISE),
-                        buildURI(
-                                "/.well-known/jwks.json",
-                                configService.getBaseURL().orElseThrow()));
-        baseUrl = configService.getBaseURL().orElseThrow();
+                        buildURI(baseUrl, "/.well-known/jwks.json"));
     }
 
     @Override
@@ -64,13 +62,13 @@ public class WellknownHandler
                 .orElseGet(
                         () -> {
                             try {
-                                providerMetadata.setTokenEndpointURI(buildURI("/token", baseUrl));
+                                providerMetadata.setTokenEndpointURI(buildURI(baseUrl, "/token"));
                                 providerMetadata.setUserInfoEndpointURI(
-                                        buildURI("/userinfo", baseUrl));
+                                        buildURI(baseUrl, "/userinfo"));
                                 providerMetadata.setAuthorizationEndpointURI(
-                                        buildURI("/authorize", baseUrl));
+                                        buildURI(baseUrl, "/authorize"));
                                 providerMetadata.setRegistrationEndpointURI(
-                                        buildURI("/connect/register", baseUrl));
+                                        buildURI(baseUrl, "/connect/register"));
                                 providerMetadata.setTokenEndpointAuthMethods(
                                         List.of(ClientAuthenticationMethod.PRIVATE_KEY_JWT));
                                 providerMetadata.setScopes(
@@ -104,9 +102,9 @@ public class WellknownHandler
                                                 JWSAlgorithm.HS512));
                                 providerMetadata.setServiceDocsURI(new URI("http://TBA"));
                                 providerMetadata.setEndSessionEndpointURI(
-                                        buildURI("/logout", baseUrl));
+                                        buildURI(baseUrl, "/logout"));
                                 providerMetadata.setCustomParameter(
-                                        "trustmarks", buildURI("/trustmark", baseUrl).toString());
+                                        "trustmarks", buildURI(baseUrl, "/trustmark").toString());
 
                                 return generateApiGatewayProxyResponse(
                                         200, providerMetadata.toString());
@@ -116,13 +114,5 @@ public class WellknownHandler
                                         500, "Service not configured");
                             }
                         });
-    }
-
-    private URI buildURI(String prefix, String baseUrl) {
-        try {
-            return new URIBuilder(baseUrl).setPath(prefix).build();
-        } catch (URISyntaxException e) {
-            throw new RuntimeException(e);
-        }
     }
 }

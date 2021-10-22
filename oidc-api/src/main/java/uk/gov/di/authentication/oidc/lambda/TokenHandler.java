@@ -45,6 +45,7 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.RequestBodyHelper.parseRequestBody;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
@@ -148,10 +149,7 @@ public class TokenHandler
                                                         return new RuntimeException(
                                                                 "Application was not configured with baseURL");
                                                     });
-                            String tokenUrl =
-                                    baseUrl.endsWith("/")
-                                            ? baseUrl + TOKEN_PATH
-                                            : baseUrl + "/" + TOKEN_PATH;
+                            String tokenUrl = buildURI(baseUrl, TOKEN_PATH).toString();
                             Optional<ErrorObject> invalidPrivateKeyJwtError =
                                     tokenService.validatePrivateKeyJWT(
                                             input.getBody(), client.getPublicKey(), tokenUrl);
