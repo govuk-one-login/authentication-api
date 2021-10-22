@@ -1,3 +1,26 @@
+resource "aws_kms_key" "events_topic_encryption" {
+  description = "alias/${var.environment}/events-encryption-key"
+
+  policy = data.aws_iam_policy_document.events_topic_encryption_key_access.json
+}
+
+data "aws_iam_policy_document" "events_topic_encryption_key_access" {
+  version   = "2012-10-17"
+  policy_id = "${var.environment}-events-topic-encryption-key-access"
+
+  statement {
+    principals {
+      identifiers = ["sqs.amazonaws.com", "sns.amazonaws.com"]
+      type        = "Service"
+    }
+
+    effect  = "Allow"
+    sid     = "GrantServiceAccess"
+    actions = ["kms:GenerateDataKey*", "kms:Decrypt"]
+  }
+}
+
+
 resource "aws_sns_topic" "events" {
   name              = "${var.environment}-events"
   kms_master_key_id = "alias/aws/sns"
@@ -23,6 +46,18 @@ data "aws_iam_policy_document" "events_policy_document" {
       "SNS:Subscribe"
     ]
     resources = [aws_sns_topic.events.arn]
+  }
+
+  statement {
+    effect = "Allow"
+    sid    = "AllowLambdasToEncryptWithCustomKey"
+    actions = [
+      "kms:GenerateDataKey",
+      "kms:Decrypt"
+    ]
+    resources = [
+      aws_kms_key.events_topic_encryption.arn
+    ]
   }
 }
 
