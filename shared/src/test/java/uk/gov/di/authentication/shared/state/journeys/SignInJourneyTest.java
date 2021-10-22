@@ -28,6 +28,8 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SE
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_RESET_PASSWORD_LINK;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_TOO_MANY_MFA_CODES;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_MFA_VERIFICATION_CODES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_MFA_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_REGISTERED_EMAIL_ADDRESS;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_CREDENTIALS;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_MFA_CODE;
@@ -35,6 +37,8 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STAR
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.LOGGED_IN;
+import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_MAX_RETRIES_REACHED;
+import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_NOT_VALID;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_REQUESTS_BLOCKED;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_VERIFIED;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_SMS_CODE_SENT;
@@ -398,6 +402,74 @@ public class SignInJourneyTest {
                                 userContext,
                                 SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_MFA_VERIFICATION_CODES,
                                 MFA_CODE_REQUESTS_BLOCKED));
+
+        SessionState currentState = NEW;
+
+        for (JourneyTransition transition : transitions) {
+            currentState =
+                    stateMachine.transition(
+                            currentState,
+                            transition.getSessionAction(),
+                            transition.getUserContext());
+            assertThat(currentState, equalTo(transition.getExpectedSessionState()));
+        }
+    }
+
+    @Test
+    public void testCanSignInAndAttemptTooManyMfaAndReachLockScreenAgainOnNewSession() {
+        UserProfile userProfile =
+                generateUserProfile(
+                        true,
+                        "1.0",
+                        new HashSet<String>(
+                                Arrays.asList(
+                                        "phone_number",
+                                        "phone_number_verified",
+                                        "email",
+                                        "email_verified",
+                                        "sub")));
+
+        UserContext userContext =
+                UserContext.builder(
+                                session.setCurrentCredentialStrength(
+                                        CredentialTrustLevel.MEDIUM_LEVEL))
+                        .withClientSession(
+                                new ClientSession(
+                                                generateAuthRequest("Cl.Cm").toParameters(),
+                                                null,
+                                                null)
+                                        .setEffectiveVectorOfTrust(VectorOfTrust.getDefaults()))
+                        .withUserProfile(userProfile)
+                        .withClient(new ClientRegistry().setClientID(CLIENT_ID.toString()))
+                        .build();
+
+        List<JourneyTransition> transitions =
+                Arrays.asList(
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_REGISTERED_EMAIL_ADDRESS,
+                                AUTHENTICATION_REQUIRED),
+                        new JourneyTransition(
+                                userContext, USER_ENTERED_VALID_CREDENTIALS, LOGGED_IN),
+                        new JourneyTransition(
+                                userContext, SYSTEM_HAS_SENT_MFA_CODE, MFA_SMS_CODE_SENT),
+                        new JourneyTransition(
+                                userContext, USER_ENTERED_INVALID_MFA_CODE, MFA_CODE_NOT_VALID),
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES,
+                                MFA_CODE_MAX_RETRIES_REACHED),
+                        new JourneyTransition(userContext, USER_HAS_STARTED_A_NEW_JOURNEY, NEW),
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_REGISTERED_EMAIL_ADDRESS,
+                                AUTHENTICATION_REQUIRED),
+                        new JourneyTransition(
+                                userContext, USER_ENTERED_VALID_CREDENTIALS, LOGGED_IN),
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES,
+                                MFA_CODE_MAX_RETRIES_REACHED));
 
         SessionState currentState = NEW;
 
