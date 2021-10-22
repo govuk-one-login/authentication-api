@@ -10,6 +10,7 @@ params:
   DEPLOYER_ROLE_ARN: ((deployer-role-arn-non-prod))
   DEPLOY_ENVIRONMENT: build
   STATE_BUCKET: digital-identity-dev-tfstate
+  AUDIT_STORE_EXPIRY_DAYS: 7
 inputs:
   - name: shared-terraform-outputs
   - name: api-src
@@ -36,6 +37,7 @@ run:
         -var "shared_state_bucket=${STATE_BUCKET}" \
         -var 'logging_endpoint_enabled=true' \
         -var 'logging_endpoint_arn=arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod' \
+        -var "audit_storage_expiry_days=${AUDIT_STORE_EXPIRY_DAYS}" \
         -var-file "${DEPLOY_ENVIRONMENT}-overrides.tfvars" \
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-terraform-outputs.json

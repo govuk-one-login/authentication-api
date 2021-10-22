@@ -36,7 +36,7 @@ resource "aws_iam_policy" "audit_payload_kms_verification" {
 
 resource "aws_lambda_function" "audit_processor_lambda" {
   filename      = var.lambda_zip_file
-  function_name = "${var.environment}-audit-processor-example-lambda"
+  function_name = "${var.environment}-audit-storage-lambda"
   role          = module.audit_storage_lambda_role.arn
   handler       = "uk.gov.di.authentication.audit.lambda.StorageSQSAuditHandler::handleRequest"
   timeout       = 30
@@ -125,8 +125,29 @@ resource "aws_iam_role_policy_attachment" "read_from_queue_attachment" {
 }
 
 resource "aws_sqs_queue" "storage_batch" {
-  name                      = "audit-storage-batch-queue"
-  receive_wait_time_seconds = 20
+  name                      = "${var.environment}-audit-storage-batch-queue"
+  message_retention_seconds = 1209600
+
+  kms_master_key_id                 = var.use_localstack ? null : "alias/aws/sqs"
+  kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
+
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.storage_batch_dead_letter_queue.arn
+    maxReceiveCount     = 3
+  })
+
+  tags = local.default_tags
+}
+
+resource "aws_sqs_queue" "storage_batch_dead_letter_queue" {
+  name = "${var.environment}-audit-storage-batch-dead-letter-queue"
+
+  kms_master_key_id                 = var.use_localstack ? null : "alias/aws/sqs"
+  kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
+
+  message_retention_seconds = 604800
+
+  tags = local.default_tags
 }
 
 resource "aws_sns_topic_subscription" "event_stream_subscription" {
@@ -190,7 +211,30 @@ resource "aws_s3_bucket" "audit_storage_bucket" {
     }
   }
 
+  lifecycle_rule {
+    id      = "default-intelligent-tiering"
+    enabled = true
+
+    transition {
+      days          = 1
+      storage_class = "INTELLIGENT_TIERING"
+    }
+
+    expiration {
+      days = var.audit_storage_expiry_days
+    }
+  }
+
   tags = local.default_tags
+}
+
+resource "aws_s3_bucket_public_access_block" "audit_storage_bucket_access" {
+  count                   = var.use_localstack ? 0 : 1
+  bucket                  = aws_s3_bucket.audit_storage_bucket[0].id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
 
 resource "aws_iam_policy" "audit_storage_s3_access" {
