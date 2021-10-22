@@ -63,10 +63,6 @@ variable "environment" {
   type = string
 }
 
-variable "authentication_vpc_arn" {
-  type = string
-}
-
 variable "security_group_id" {
   type        = string
   description = "The id of the security for the lambda"

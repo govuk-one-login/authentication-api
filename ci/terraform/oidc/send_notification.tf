@@ -24,7 +24,6 @@ module "send_notification" {
   root_resource_id         = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id
   execution_arn            = aws_api_gateway_rest_api.di_authentication_frontend_api.execution_arn
   lambda_zip_file          = var.frontend_api_lambda_zip_file
-  authentication_vpc_arn   = local.authentication_vpc_arn
   security_group_id        = local.authentication_security_group_id
   subnet_id                = local.authentication_subnet_ids
   lambda_role_arn          = local.dynamo_sqs_lambda_iam_role_arn

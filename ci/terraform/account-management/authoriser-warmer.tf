@@ -82,11 +82,6 @@ resource "aws_lambda_function" "warmer_function" {
 
   source_code_hash = filebase64sha256(var.lambda_warmer_zip_file)
 
-  vpc_config {
-    security_group_ids = [aws_vpc.account_management_vpc.default_security_group_id]
-    subnet_ids         = aws_subnet.account_management_subnets.*.id
-  }
-
   environment {
     variables = {
       LAMBDA_ARN             = aws_lambda_function.authorizer.arn
