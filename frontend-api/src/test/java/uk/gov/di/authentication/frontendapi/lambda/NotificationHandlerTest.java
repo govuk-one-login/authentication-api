@@ -91,9 +91,10 @@ public class NotificationHandlerTest {
     public void shouldSuccessfullyProcessAccountCreatedConfirmationFromSQSQueue()
             throws JsonProcessingException, NotificationClientException {
         String accountManagementUrl = "http://account-management/sign-in";
+        String baseUrl = "http://account-management/";
         when(notificationService.getNotificationTemplateId(ACCOUNT_CREATED_CONFIRMATION))
                 .thenReturn(TEMPLATE_ID);
-        when(configService.getAccountManagementURI()).thenReturn(accountManagementUrl);
+        when(configService.getAccountManagementURI()).thenReturn(baseUrl);
 
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION);

@@ -28,10 +28,6 @@ public class ConfigurationService {
         return Long.parseLong(System.getenv().getOrDefault("AUTH_CODE_EXPIRY", "300"));
     }
 
-    public URI getAuthCodeURI() {
-        return URI.create(System.getenv().getOrDefault("AUTH_CODE_URI", "/auth-code"));
-    }
-
     public String getAwsRegion() {
         return System.getenv("AWS_REGION");
     }

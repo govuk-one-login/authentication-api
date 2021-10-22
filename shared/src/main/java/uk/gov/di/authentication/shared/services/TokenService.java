@@ -43,7 +43,6 @@ import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
@@ -61,6 +60,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
+import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 
 public class TokenService {
 
@@ -229,13 +230,7 @@ public class TokenService {
             AccessTokenHash accessTokenHash,
             String vot) {
         LOGGER.info("Generating IdToken for ClientId: {}", clientId);
-        URI trustMarkUri;
-        try {
-            trustMarkUri = new URI(configService.getBaseURL().get() + "/trustmark");
-        } catch (URISyntaxException e) {
-            LOGGER.error("Unable to build trustmarkUri");
-            throw new RuntimeException(e);
-        }
+        URI trustMarkUri = buildURI(configService.getBaseURL().get(), "/trustmark");
         LocalDateTime localDateTime =
                 LocalDateTime.now().plusSeconds(configService.getIDTokenExpiry());
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
