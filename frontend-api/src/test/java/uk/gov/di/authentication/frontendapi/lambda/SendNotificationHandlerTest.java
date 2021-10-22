@@ -64,6 +64,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_EMAIL_C
 import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_PHONE_NUMBER_CODE_SENT;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 
 class SendNotificationHandlerTest {
@@ -467,6 +468,57 @@ class SendNotificationHandlerTest {
         BaseAPIResponse codeResponse =
                 objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
         assertEquals(SessionState.EMAIL_CODE_REQUESTS_BLOCKED, codeResponse.getSessionState());
+    }
+
+    @Test
+    public void shouldReturn400IfUserIsBlockedFromEnteringEmailOtpCodes()
+            throws JsonProcessingException {
+        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
+                .thenReturn(Optional.empty());
+        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
+                .thenReturn(true);
+        session.setState(SessionState.EMAIL_CODE_MAX_RETRIES_REACHED);
+        usingValidSession();
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                        TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(400, result.getStatusCode());
+        BaseAPIResponse codeResponse =
+                objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
+        assertEquals(SessionState.EMAIL_CODE_MAX_RETRIES_REACHED, codeResponse.getSessionState());
+    }
+
+    @Test
+    public void shouldReturn400IfUserIsBlockedFromEnteringPhoneOtpCodes()
+            throws JsonProcessingException {
+        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
+                .thenReturn(Optional.empty());
+        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
+                .thenReturn(true);
+        session.setState(SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED);
+        usingValidSession();
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(400, result.getStatusCode());
+        BaseAPIResponse codeResponse =
+                objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
+        assertEquals(
+                SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED, codeResponse.getSessionState());
     }
 
     @Test

@@ -45,11 +45,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
+import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_SMS_CODE_SENT;
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_SMS_MAX_CODES_SENT;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPLIFT_REQUIRED_CM;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 
 public class MfaHandlerTest {
@@ -182,7 +184,7 @@ public class MfaHandlerTest {
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        verifyNoInteractions(sqsClient, codeStorageService);
+        verifyNoInteractions(sqsClient);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1017));
@@ -233,6 +235,26 @@ public class MfaHandlerTest {
         BaseAPIResponse codeResponse =
                 objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
         assertEquals(SessionState.MFA_CODE_REQUESTS_BLOCKED, codeResponse.getSessionState());
+    }
+
+    @Test
+    public void shouldReturn400IfUserIsBlockedFromAttemptingMfaCodes()
+            throws JsonProcessingException {
+        usingValidSession();
+        session.setState(MFA_CODE_MAX_RETRIES_REACHED);
+        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
+                .thenReturn(true);
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(400, result.getStatusCode());
+        BaseAPIResponse codeResponse =
+                objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
+        assertEquals(MFA_CODE_MAX_RETRIES_REACHED, codeResponse.getSessionState());
     }
 
     @Test
