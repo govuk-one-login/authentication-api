@@ -12,7 +12,7 @@ module "fraud_realtime_logging_role" {
 }
 
 resource "aws_iam_policy" "fraud_realtime_logging_audit_payload_kms_verification" {
-  name        = "payload-kms-verification"
+  name_prefix = "payload-kms-verification-"
   path        = "/${var.environment}/fraud-realtime-logging/"
   description = "IAM policy for a lambda needing to verify payload signatures"
 
@@ -67,7 +67,7 @@ resource "aws_lambda_function" "fraud_realtime_logging_lambda" {
 resource "aws_sns_topic_subscription" "fraud_realtime_logging_lambda_subscription" {
   topic_arn = data.aws_sns_topic.event_stream.arn
   protocol  = "lambda"
-  endpoint  = aws_lambda_function.fraud_realtime_logging_lambda.function_name
+  endpoint  = aws_lambda_function.fraud_realtime_logging_lambda.arn
 }
 
 resource "aws_lambda_permission" "sns_can_execute_subscriber_fraud_realtime_logging_lambda" {
