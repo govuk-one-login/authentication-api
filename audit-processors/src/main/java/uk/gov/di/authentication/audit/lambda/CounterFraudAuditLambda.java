@@ -9,12 +9,12 @@ import java.util.HashMap;
 
 public class CounterFraudAuditLambda extends BaseAuditHandler {
 
-    CounterFraudAuditLambda(
+    public CounterFraudAuditLambda(
             KmsConnectionService kmsConnectionService, ConfigurationService service) {
         super(kmsConnectionService, service);
     }
 
-    CounterFraudAuditLambda() {
+    public CounterFraudAuditLambda() {
         super();
     }
 
