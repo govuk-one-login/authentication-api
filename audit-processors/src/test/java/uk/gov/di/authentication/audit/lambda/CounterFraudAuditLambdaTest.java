@@ -1,8 +1,5 @@
 package uk.gov.di.authentication.audit.lambda;
 
-import com.amazonaws.services.lambda.runtime.events.SNSEvent;
-import com.google.protobuf.AbstractMessageLite;
-import com.google.protobuf.ByteString;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.Logger;
@@ -14,16 +11,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.audit.AuditPayload.AuditEvent;
 import uk.gov.di.audit.AuditPayload.AuditEvent.User;
-import uk.gov.di.audit.AuditPayload.SignedAuditEvent;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -55,14 +49,9 @@ public class CounterFraudAuditLambdaTest {
     void handlesRequestsAppropriately() {
         var handler = new CounterFraudAuditLambda(kms, config);
 
-        var payload =
-                SignedAuditEvent.newBuilder()
-                        .setSignature(ByteString.copyFrom("signature".getBytes()))
-                        .setPayload(
-                                AuditEvent.newBuilder().setEventId("foo").build().toByteString())
-                        .build();
+        var payload = AuditEvent.newBuilder().setEventId("foo").build();
 
-        handler.handleRequest(inputEvent(payload), null);
+        handler.handleAuditEvent(payload);
 
         LogEvent logEvent = appender.getEvents().get(1);
 
@@ -74,25 +63,17 @@ public class CounterFraudAuditLambdaTest {
         var handler = new CounterFraudAuditLambda(kms, config);
 
         var payload =
-                SignedAuditEvent.newBuilder()
-                        .setSignature(ByteString.copyFrom("signature".getBytes()))
-                        .setPayload(
-                                AuditEvent.newBuilder()
-                                        .setEventId("foo")
-                                        .setUser(
-                                                User.newBuilder()
-                                                        .setEmail(
-                                                                "test-example@digital.cabinet-office.gov.uk")
-                                                        .setId("some-id")
-                                                        .setPhoneNumber("some-phone-number")
-                                                        .build())
-                                        .build()
-                                        .toByteString())
+                AuditEvent.newBuilder()
+                        .setEventId("foo")
+                        .setUser(
+                                User.newBuilder()
+                                        .setEmail("test-example@digital.cabinet-office.gov.uk")
+                                        .setId("some-id")
+                                        .setPhoneNumber("some-phone-number")
+                                        .build())
                         .build();
 
-        handler.handleRequest(inputEvent(payload), null);
-
-        System.out.println(appender.getEvents());
+        handler.handleAuditEvent(payload);
 
         LogEvent logEvent = appender.getEvents().get(1);
 
@@ -111,17 +92,6 @@ public class CounterFraudAuditLambdaTest {
                 hasMDCProperty(
                         "user.phone",
                         "f264cf9189f466ecdec47c450dfd0e13a59f85dfc1e63ef93d3870ef6b927821"));
-    }
-
-    private SNSEvent inputEvent(SignedAuditEvent payload) {
-        return Optional.of(payload)
-                .map(AbstractMessageLite::toByteArray)
-                .map(Base64.getEncoder()::encodeToString)
-                .map(new SNSEvent.SNS()::withMessage)
-                .map(new SNSEvent.SNSRecord()::withSns)
-                .map(List::of)
-                .map(new SNSEvent()::withRecords)
-                .get();
     }
 
     public static class ListAppender extends AbstractAppender {
