@@ -24,7 +24,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.shared.matchers.LogEventMatcher.hasMDCProperty;
+import static uk.gov.di.authentication.shared.matchers.LogEventMatcher.hasObjectMessageProperty;
 
 public class CounterFraudAuditLambdaTest {
 
@@ -63,12 +63,12 @@ public class CounterFraudAuditLambdaTest {
 
         LogEvent logEvent = appender.getEvents().get(0);
 
-        assertThat(logEvent, hasMDCProperty("event-id", "test-event-id"));
-        assertThat(logEvent, hasMDCProperty("request-id", "test-request-id"));
-        assertThat(logEvent, hasMDCProperty("session-id", "test-session-id"));
-        assertThat(logEvent, hasMDCProperty("client-id", "test-client-id"));
-        assertThat(logEvent, hasMDCProperty("timestamp", "test-timestamp"));
-        assertThat(logEvent, hasMDCProperty("event-name", "test-event-name"));
+        assertThat(logEvent, hasObjectMessageProperty("event-id", "test-event-id"));
+        assertThat(logEvent, hasObjectMessageProperty("request-id", "test-request-id"));
+        assertThat(logEvent, hasObjectMessageProperty("session-id", "test-session-id"));
+        assertThat(logEvent, hasObjectMessageProperty("client-id", "test-client-id"));
+        assertThat(logEvent, hasObjectMessageProperty("timestamp", "test-timestamp"));
+        assertThat(logEvent, hasObjectMessageProperty("event-name", "test-event-name"));
     }
 
     @Test
@@ -92,21 +92,21 @@ public class CounterFraudAuditLambdaTest {
 
         assertThat(
                 logEvent,
-                hasMDCProperty(
+                hasObjectMessageProperty(
                         "user.email",
                         "dbc2c80d5e663075eb736f52df8446c109878f1a27b9d2f7db634d4e64923c94"));
         assertThat(
                 logEvent,
-                hasMDCProperty(
+                hasObjectMessageProperty(
                         "user.id",
                         "0e49411b4a5da564d867bef289f129fe7faa1d3341a458344e790c522d451a20"));
         assertThat(
                 logEvent,
-                hasMDCProperty(
+                hasObjectMessageProperty(
                         "user.phone",
                         "f264cf9189f466ecdec47c450dfd0e13a59f85dfc1e63ef93d3870ef6b927821"));
 
-        assertThat(logEvent, hasMDCProperty("user.ip-address", "test-ip-address"));
+        assertThat(logEvent, hasObjectMessageProperty("user.ip-address", "test-ip-address"));
     }
 
     public static class ListAppender extends AbstractAppender {
