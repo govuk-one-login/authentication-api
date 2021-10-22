@@ -36,6 +36,7 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SE
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_RESET_PASSWORD_LINK_TOO_MANY_TIMES;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.PASSWORD_RESET_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswordRequest>
@@ -168,8 +169,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
 
     private Optional<ErrorResponse> validatePasswordResetCount(
             String email, UserContext userContext) {
-        if (codeStorageService.isPasswordResetBlockedForSession(
-                email, userContext.getSession().getSessionId())) {
+        if (codeStorageService.isBlockedForEmail(email, PASSWORD_RESET_BLOCKED_KEY_PREFIX)) {
             LOGGER.info(
                     "User cannot request another password reset for session: {}",
                     userContext.getSession().getSessionId());
@@ -179,9 +179,9 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             LOGGER.info(
                     "User has requested too many password resets for session: {}",
                     userContext.getSession().getSessionId());
-            codeStorageService.savePasswordResetBlockedForSession(
+            codeStorageService.saveBlockedForEmail(
                     userContext.getSession().getEmailAddress(),
-                    userContext.getSession().getSessionId(),
+                    PASSWORD_RESET_BLOCKED_KEY_PREFIX,
                     configurationService.getCodeExpiry());
             sessionService.save(userContext.getSession().resetPasswordResetCount());
             SessionState nextState =

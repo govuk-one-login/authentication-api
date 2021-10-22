@@ -11,15 +11,15 @@ import static java.lang.String.format;
 
 public class CodeStorageService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(CodeStorageService.class);
+    public static final String CODE_REQUEST_BLOCKED_KEY_PREFIX = "code-request-blocked:";
+    public static final String CODE_BLOCKED_KEY_PREFIX = "code-blocked:";
+    public static final String PASSWORD_RESET_BLOCKED_KEY_PREFIX = "password-reset-blocked:";
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(CodeStorageService.class);
     private final RedisConnectionService redisConnectionService;
     private static final String EMAIL_KEY_PREFIX = "email-code:";
     private static final String PHONE_NUMBER_KEY_PREFIX = "phone-number-code:";
     private static final String MFA_KEY_PREFIX = "mfa-code:";
-    private static final String CODE_BLOCKED_KEY_PREFIX = "code-blocked:";
-    private static final String CODE_REQUEST_BLOCKED_KEY_PREFIX = "code-request-blocked:";
-    private static final String PASSWORD_RESET_BLOCKED_KEY_PREFIX = "password-reset-blocked:";
     private static final String CODE_BLOCKED_VALUE = "blocked";
     private static final String RESET_PASSWORD_KEY_PREFIX = "reset-password-code:";
     private static final String MULTIPLE_INCORRECT_PASSWORDS_PREFIX =
@@ -64,9 +64,9 @@ public class CodeStorageService {
         }
     }
 
-    public void saveCodeBlockedForSession(String email, String sessionId, long codeBlockedTime) {
+    public void saveBlockedForEmail(String email, String prefix, long codeBlockedTime) {
         String encodedHash = HashHelper.hashSha256String(email);
-        String key = CODE_BLOCKED_KEY_PREFIX + encodedHash + sessionId;
+        String key = prefix + encodedHash;
         try {
             redisConnectionService.saveWithExpiry(key, CODE_BLOCKED_VALUE, codeBlockedTime);
         } catch (Exception e) {
@@ -74,57 +74,8 @@ public class CodeStorageService {
         }
     }
 
-    public void saveCodeRequestBlockedForSession(
-            String email, String sessionId, long codeBlockedTime) {
-        String encodedHash = HashHelper.hashSha256String(email);
-        String key = CODE_REQUEST_BLOCKED_KEY_PREFIX + encodedHash + sessionId;
-        try {
-            redisConnectionService.saveWithExpiry(key, CODE_BLOCKED_VALUE, codeBlockedTime);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public void saveCodeRequestBlockedForEmail(String email, long codeBlockedTime) {
-        String encodedHash = HashHelper.hashSha256String(email);
-        String key = CODE_REQUEST_BLOCKED_KEY_PREFIX + encodedHash;
-        try {
-            redisConnectionService.saveWithExpiry(key, CODE_BLOCKED_VALUE, codeBlockedTime);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public boolean isCodeRequestBlockedForSession(String emailAddress, String sessionId) {
-        return redisConnectionService.getValue(
-                        CODE_REQUEST_BLOCKED_KEY_PREFIX
-                                + HashHelper.hashSha256String(emailAddress)
-                                + sessionId)
-                != null;
-    }
-
-    public boolean isCodeRequestBlockedForEmail(String emailAddress) {
-        return redisConnectionService.getValue(
-                        CODE_REQUEST_BLOCKED_KEY_PREFIX + HashHelper.hashSha256String(emailAddress))
-                != null;
-    }
-
-    public void savePasswordResetBlockedForSession(
-            String email, String sessionId, long codeBlockedTime) {
-        String encodedHash = HashHelper.hashSha256String(email);
-        String key = PASSWORD_RESET_BLOCKED_KEY_PREFIX + encodedHash + sessionId;
-        try {
-            redisConnectionService.saveWithExpiry(key, CODE_BLOCKED_VALUE, codeBlockedTime);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public boolean isPasswordResetBlockedForSession(String emailAddress, String sessionId) {
-        return redisConnectionService.getValue(
-                        PASSWORD_RESET_BLOCKED_KEY_PREFIX
-                                + HashHelper.hashSha256String(emailAddress)
-                                + sessionId)
+    public boolean isBlockedForEmail(String emailAddress, String prefix) {
+        return redisConnectionService.getValue(prefix + HashHelper.hashSha256String(emailAddress))
                 != null;
     }
 
@@ -165,14 +116,6 @@ public class CodeStorageService {
         if (numberOfKeysRemoved == 0) {
             LOGGER.info(format("No key was deleted for code: %s", code));
         }
-    }
-
-    public boolean isCodeBlockedForSession(String emailAddress, String sessionId) {
-        return redisConnectionService.getValue(
-                        CODE_BLOCKED_KEY_PREFIX
-                                + HashHelper.hashSha256String(emailAddress)
-                                + sessionId)
-                != null;
     }
 
     public Optional<String> getOtpCode(String emailAddress, NotificationType notificationType) {

@@ -51,6 +51,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.RESET_PASSWORD
 import static uk.gov.di.authentication.shared.entity.SessionState.RESET_PASSWORD_LINK_SENT;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.PASSWORD_RESET_BLOCKED_KEY_PREFIX;
 
 class ResetPasswordRequestHandlerTest {
 
@@ -231,7 +232,7 @@ class ResetPasswordRequestHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         verify(codeStorageService)
-                .savePasswordResetBlockedForSession(TEST_EMAIL_ADDRESS, sessionId, 900);
+                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, PASSWORD_RESET_BLOCKED_KEY_PREFIX, 900);
         verify(session).resetPasswordResetCount();
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1022));
     }
@@ -249,7 +250,8 @@ class ResetPasswordRequestHandlerTest {
         when(session.getSessionId()).thenReturn(sessionId);
         when(session.validateSession(TEST_EMAIL_ADDRESS)).thenReturn(true);
         when(session.getPasswordResetCount()).thenReturn(0);
-        when(codeStorageService.isPasswordResetBlockedForSession(TEST_EMAIL_ADDRESS, sessionId))
+        when(codeStorageService.isBlockedForEmail(
+                        TEST_EMAIL_ADDRESS, PASSWORD_RESET_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));

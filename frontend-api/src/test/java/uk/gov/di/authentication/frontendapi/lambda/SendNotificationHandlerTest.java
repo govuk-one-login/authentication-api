@@ -64,6 +64,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_EMAIL_C
 import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_PHONE_NUMBER_CODE_SENT;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 
 class SendNotificationHandlerTest {
 
@@ -402,8 +403,8 @@ class SendNotificationHandlerTest {
                 objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
         assertEquals(SessionState.EMAIL_MAX_CODES_SENT, codeResponse.getSessionState());
         verify(codeStorageService)
-                .saveCodeRequestBlockedForSession(
-                        TEST_EMAIL_ADDRESS, session.getSessionId(), CODE_EXPIRY_TIME);
+                .saveBlockedForEmail(
+                        TEST_EMAIL_ADDRESS, CODE_REQUEST_BLOCKED_KEY_PREFIX, CODE_EXPIRY_TIME);
         verify(codeStorageService, never())
                 .saveOtpCode(
                         TEST_EMAIL_ADDRESS, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
@@ -432,8 +433,8 @@ class SendNotificationHandlerTest {
                 objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
         assertEquals(SessionState.PHONE_NUMBER_MAX_CODES_SENT, codeResponse.getSessionState());
         verify(codeStorageService)
-                .saveCodeRequestBlockedForSession(
-                        TEST_EMAIL_ADDRESS, session.getSessionId(), CODE_EXPIRY_TIME);
+                .saveBlockedForEmail(
+                        TEST_EMAIL_ADDRESS, CODE_REQUEST_BLOCKED_KEY_PREFIX, CODE_EXPIRY_TIME);
         verify(codeStorageService, never())
                 .saveOtpCode(
                         TEST_EMAIL_ADDRESS,
@@ -447,8 +448,8 @@ class SendNotificationHandlerTest {
             throws JsonProcessingException {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
-        when(codeStorageService.isCodeRequestBlockedForSession(
-                        TEST_EMAIL_ADDRESS, session.getSessionId()))
+        when(codeStorageService.isBlockedForEmail(
+                        TEST_EMAIL_ADDRESS, CODE_REQUEST_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
         session.setState(SessionState.EMAIL_MAX_CODES_SENT);
         usingValidSession();

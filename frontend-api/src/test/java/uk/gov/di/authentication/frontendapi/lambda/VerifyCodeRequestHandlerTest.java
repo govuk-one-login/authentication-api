@@ -77,6 +77,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_EMAIL_C
 import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_PHONE_NUMBER_CODE_SENT;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
 class VerifyCodeRequestHandlerTest {
 
@@ -353,7 +354,7 @@ class VerifyCodeRequestHandlerTest {
         verify(authenticationService, never())
                 .updatePhoneNumberVerifiedStatus(TEST_EMAIL_ADDRESS, true);
         verify(codeStorageService)
-                .saveCodeBlockedForSession(TEST_EMAIL_ADDRESS, session.getSessionId(), 900);
+                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900);
     }
 
     @Test
@@ -361,7 +362,7 @@ class VerifyCodeRequestHandlerTest {
             throws JsonProcessingException {
         final String USER_INPUT = "123456";
         session.setState(PHONE_NUMBER_CODE_NOT_VALID);
-        when(codeStorageService.isCodeBlockedForSession(TEST_EMAIL_ADDRESS, session.getSessionId()))
+        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
 
         APIGatewayProxyResponseEvent result =
@@ -401,7 +402,7 @@ class VerifyCodeRequestHandlerTest {
         assertThat(codeResponse.getSessionState(), equalTo(EMAIL_CODE_MAX_RETRIES_REACHED));
         assertThat(session.getRetryCount(), equalTo(0));
         verify(codeStorageService)
-                .saveCodeBlockedForSession(TEST_EMAIL_ADDRESS, session.getSessionId(), 900);
+                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900);
     }
 
     @Test
@@ -409,7 +410,7 @@ class VerifyCodeRequestHandlerTest {
         session.setState(EMAIL_CODE_NOT_VALID);
 
         final String USER_INPUT = "123456";
-        when(codeStorageService.isCodeBlockedForSession(TEST_EMAIL_ADDRESS, session.getSessionId()))
+        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
 
         APIGatewayProxyResponseEvent result = makeCallWithCode(USER_INPUT, VERIFY_EMAIL.toString());
@@ -521,14 +522,14 @@ class VerifyCodeRequestHandlerTest {
         assertThat(codeResponse.getSessionState(), equalTo(MFA_CODE_MAX_RETRIES_REACHED));
         assertThat(session.getRetryCount(), equalTo(0));
         verify(codeStorageService)
-                .saveCodeBlockedForSession(TEST_EMAIL_ADDRESS, session.getSessionId(), 900);
+                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900);
     }
 
     @Test
     public void shouldReturnMaxReachedWhenMfaCodeIsBlocked() throws JsonProcessingException {
         final String USER_INPUT = "123456";
         session.setState(MFA_CODE_NOT_VALID);
-        when(codeStorageService.isCodeBlockedForSession(TEST_EMAIL_ADDRESS, session.getSessionId()))
+        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
 
         APIGatewayProxyResponseEvent result = makeCallWithCode(USER_INPUT, MFA_SMS.toString());

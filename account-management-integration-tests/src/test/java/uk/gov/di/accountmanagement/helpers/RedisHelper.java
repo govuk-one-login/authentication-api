@@ -26,6 +26,7 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMA
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.services.AuthorisationCodeService.AUTH_CODE_PREFIX;
 import static uk.gov.di.authentication.shared.services.ClientSessionService.CLIENT_SESSION_PREFIX;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
 public class RedisHelper {
 
@@ -140,11 +141,11 @@ public class RedisHelper {
         }
     }
 
-    public static void blockPhoneCode(String email, String sessionId) {
+    public static void blockPhoneCode(String email) {
         try (RedisConnectionService redis =
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
 
-            new CodeStorageService(redis).saveCodeBlockedForSession(email, sessionId, 10);
+            new CodeStorageService(redis).saveBlockedForEmail(email, CODE_BLOCKED_KEY_PREFIX, 10);
         }
     }
 
