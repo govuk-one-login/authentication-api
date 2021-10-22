@@ -1,3 +1,10 @@
+locals {
+  extra_policies = var.use_localstack ? [] : [
+    aws_iam_policy.audit_storage_s3_access[0].arn,
+    aws_iam_policy.audit_storage_events_encryption_key_access[0].arn
+  ]
+}
+
 module "audit_storage_lambda_role" {
   source = "../modules/lambda-role"
 
@@ -8,7 +15,7 @@ module "audit_storage_lambda_role" {
   policies_to_attach = concat([
     aws_iam_policy.read_from_queue_policy.arn,
     aws_iam_policy.audit_payload_kms_verification.arn
-  ], var.use_localstack ? [] : [aws_iam_policy.audit_storage_s3_access[0].arn])
+  ], local.extra_policies)
 }
 
 resource "aws_iam_policy" "audit_payload_kms_verification" {
@@ -256,6 +263,32 @@ resource "aws_iam_policy" "audit_storage_s3_access" {
       Resource = [
         aws_s3_bucket.audit_storage_bucket[0].arn,
         "${aws_s3_bucket.audit_storage_bucket[0].arn}/*"
+      ]
+    }]
+  })
+}
+
+data "aws_kms_key" "events_encryption_key" {
+  key_id = "alias/${var.environment}-events-encryption-key-alias"
+}
+
+resource "aws_iam_policy" "audit_storage_events_encryption_key_access" {
+  count       = var.use_localstack ? 0 : 1
+  name_prefix = "events-encryption-key-access"
+  path        = "/${var.environment}/audit-storage/"
+  description = "IAM policy for managing kms access to event stream encryption key"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "kms:Decrypt"
+      ]
+
+      Resource = [
+        data.aws_kms_key.events_encryption_key.arn
       ]
     }]
   })
