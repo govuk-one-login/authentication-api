@@ -168,8 +168,12 @@ public class StateMachine<T, A, C> {
                         on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND),
                         on(USER_ENTERED_REGISTERED_EMAIL_ADDRESS).then(AUTHENTICATION_REQUIRED),
                         on(SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE).then(VERIFY_EMAIL_CODE_SENT),
+                        on(USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES)
+                                .then(EMAIL_CODE_MAX_RETRIES_REACHED),
                         on(SYSTEM_HAS_SENT_TOO_MANY_EMAIL_VERIFICATION_CODES)
                                 .then(EMAIL_MAX_CODES_SENT),
+                        on(SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_EMAIL_VERIFICATION_CODES)
+                                .then(EMAIL_CODE_REQUESTS_BLOCKED),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(VERIFY_EMAIL_CODE_SENT)
@@ -224,6 +228,10 @@ public class StateMachine<T, A, C> {
                         on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND))
                 .when(ADDED_UNVERIFIED_PHONE_NUMBER)
                 .allow(
+                        on(USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES)
+                                .then(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED),
+                        on(SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_PHONE_VERIFICATION_CODES)
+                                .then(PHONE_NUMBER_CODE_REQUESTS_BLOCKED),
                         on(SYSTEM_HAS_SENT_PHONE_VERIFICATION_CODE)
                                 .then(VERIFY_PHONE_NUMBER_CODE_SENT),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
@@ -326,6 +334,8 @@ public class StateMachine<T, A, C> {
                         on(SYSTEM_HAS_SENT_MFA_CODE).then(MFA_SMS_CODE_SENT),
                         on(SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_MFA_VERIFICATION_CODES)
                                 .then(MFA_CODE_REQUESTS_BLOCKED),
+                        on(USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES)
+                                .then(MFA_CODE_MAX_RETRIES_REACHED),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(MFA_SMS_CODE_SENT)
