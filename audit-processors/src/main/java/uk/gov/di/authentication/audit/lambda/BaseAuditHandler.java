@@ -20,7 +20,7 @@ public abstract class BaseAuditHandler implements RequestHandler<SNSEvent, Objec
 
     protected final Logger LOG = LogManager.getLogger(getClass());
     private final KmsConnectionService kmsConnectionService;
-    private final ConfigurationService service;
+    protected final ConfigurationService service;
 
     BaseAuditHandler(KmsConnectionService kmsConnectionService, ConfigurationService service) {
         this.kmsConnectionService = kmsConnectionService;
