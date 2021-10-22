@@ -43,9 +43,12 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SE
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_TOO_MANY_PHONE_VERIFICATION_CODES;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_EMAIL_VERIFICATION_CODES;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_PHONE_VERIFICATION_CODES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
@@ -266,6 +269,17 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             sessionService.save(session.setState(nextState));
             return false;
         }
+        if (codeStorageService.isBlockedForEmail(email, CODE_BLOCKED_KEY_PREFIX)) {
+            LOGGER.error(
+                    "User is blocked from requesting any OTP codes for session {}",
+                    session.getSessionId());
+            SessionState nextState =
+                    stateMachine.transition(
+                            session.getState(),
+                            getSessionActionForMaxCodeAttempts(notificationType));
+            sessionService.save(session.setState(nextState));
+            return false;
+        }
         return true;
     }
 
@@ -288,6 +302,18 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 return SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_EMAIL_VERIFICATION_CODES;
             case VERIFY_PHONE_NUMBER:
                 return SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_PHONE_VERIFICATION_CODES;
+            default:
+                LOGGER.error("Invalid NotificationType sent");
+                throw new RuntimeException("Invalid NotificationType sent");
+        }
+    }
+
+    private SessionAction getSessionActionForMaxCodeAttempts(NotificationType notificationType) {
+        switch (notificationType) {
+            case VERIFY_EMAIL:
+                return USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES;
+            case VERIFY_PHONE_NUMBER:
+                return USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES;
             default:
                 LOGGER.error("Invalid NotificationType sent");
                 throw new RuntimeException("Invalid NotificationType sent");

@@ -37,8 +37,10 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_MFA_CODE;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_TOO_MANY_MFA_CODES;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_MFA_VERIFICATION_CODES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
@@ -97,10 +99,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     "MfaHandler received request for session: {}",
                     userContext.getSession().getSessionId());
 
-            var nextState =
-                    stateMachine.transition(
-                            userContext.getSession().getState(), SYSTEM_HAS_SENT_MFA_CODE);
-
             BaseFrontendRequest userWithEmailRequest =
                     objectMapper.readValue(input.getBody(), BaseFrontendRequest.class);
             boolean codeRequestValid =
@@ -110,6 +108,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 return generateApiGatewayProxyResponse(
                         400, new BaseAPIResponse(userContext.getSession().getState()));
             }
+
             if (!userContext.getSession().validateSession(userWithEmailRequest.getEmail())) {
                 LOGGER.error(
                         "Email in session: {} does not match Email in Request",
@@ -127,6 +126,11 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         userContext.getSession().getSessionId());
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1014);
             }
+
+            var nextState =
+                    stateMachine.transition(
+                            userContext.getSession().getState(), SYSTEM_HAS_SENT_MFA_CODE);
+
             String code = codeGeneratorService.sixDigitCode();
             codeStorageService.saveOtpCode(
                     userWithEmailRequest.getEmail(),
@@ -184,6 +188,16 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     stateMachine.transition(
                             session.getState(),
                             SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_MFA_VERIFICATION_CODES);
+            sessionService.save(session.setState(nextState));
+            return false;
+        }
+        if (codeStorageService.isBlockedForEmail(email, CODE_BLOCKED_KEY_PREFIX)) {
+            LOGGER.error(
+                    "User is blocked from requesting any OTP codes for session {}",
+                    session.getSessionId());
+            SessionState nextState =
+                    stateMachine.transition(
+                            session.getState(), USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES);
             sessionService.save(session.setState(nextState));
             return false;
         }
