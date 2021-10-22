@@ -1,4 +1,5 @@
 module "register" {
+  count  = var.client_registry_api_enabled ? 1 : 0
   source = "../modules/endpoint-module"
 
   endpoint_name   = "register"
