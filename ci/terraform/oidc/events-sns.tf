@@ -2,6 +2,11 @@ resource "aws_kms_key" "events_topic_encryption" {
   description = "alias/${var.environment}/events-encryption-key"
 }
 
+resource "aws_kms_alias" "events_topic_encryption_alias" {
+  target_key_id = aws_kms_key.events_topic_encryption.id
+  name          = "alias/${var.environment}-events-encryption-key-alias"
+}
+
 data "aws_iam_policy_document" "events_encryption_key_permissions" {
   version   = "2012-10-17"
   policy_id = "${var.environment}-events-encryption-key-policy"
