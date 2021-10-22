@@ -238,9 +238,9 @@ resource "aws_s3_bucket_public_access_block" "audit_storage_bucket_access" {
 }
 
 resource "aws_iam_policy" "audit_storage_s3_access" {
-  count       = var.use_localstack ? 0 : 1
-  name        = "lambda-s3-access"
-  path        = "/${var.environment}/audit-storage/"
+  count = var.use_localstack ? 0 : 1
+  name_prefix = "lambda-s3-access"
+  path = "/${var.environment}/audit-storage/"
   description = "IAM policy for managing s3 access from audit-storage lambda"
 
   policy = jsonencode({

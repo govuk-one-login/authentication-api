@@ -1,36 +1,6 @@
 resource "aws_kms_key" "events_topic_encryption" {
   description = "alias/${var.environment}/events-encryption-key"
-
-  policy = data.aws_iam_policy_document.events_topic_encryption_key_access.json
 }
-
-data "aws_iam_policy_document" "events_topic_encryption_key_access" {
-  version   = "2012-10-17"
-  policy_id = "${var.environment}-events-topic-encryption-key-access"
-
-  statement {
-    principals {
-      identifiers = ["sqs.amazonaws.com", "sns.amazonaws.com"]
-      type        = "Service"
-    }
-
-    effect  = "Allow"
-    sid     = "GrantServiceAccess"
-    actions = ["kms:GenerateDataKey*", "kms:Decrypt"]
-  }
-
-  statement {
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
-    }
-
-    effect  = "Allow"
-    sid     = "Enable IAM User Permissions"
-    actions = ["kms:*"]
-  }
-}
-
 
 resource "aws_sns_topic" "events" {
   name              = "${var.environment}-events"
