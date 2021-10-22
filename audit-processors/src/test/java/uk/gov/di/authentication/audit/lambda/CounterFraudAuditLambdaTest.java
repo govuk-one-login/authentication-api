@@ -49,13 +49,26 @@ public class CounterFraudAuditLambdaTest {
     void handlesRequestsAppropriately() {
         var handler = new CounterFraudAuditLambda(kms, config);
 
-        var payload = AuditEvent.newBuilder().setEventId("foo").build();
+        var payload =
+                AuditEvent.newBuilder()
+                        .setEventId("test-event-id")
+                        .setRequestId("test-request-id")
+                        .setSessionId("test-session-id")
+                        .setClientId("test-client-id")
+                        .setTimestamp("test-timestamp")
+                        .setEventName("test-event-name")
+                        .build();
 
         handler.handleAuditEvent(payload);
 
-        LogEvent logEvent = appender.getEvents().get(1);
+        LogEvent logEvent = appender.getEvents().get(0);
 
-        assertThat(logEvent, hasMDCProperty("event-id", "foo"));
+        assertThat(logEvent, hasMDCProperty("event-id", "test-event-id"));
+        assertThat(logEvent, hasMDCProperty("request-id", "test-request-id"));
+        assertThat(logEvent, hasMDCProperty("session-id", "test-session-id"));
+        assertThat(logEvent, hasMDCProperty("client-id", "test-client-id"));
+        assertThat(logEvent, hasMDCProperty("timestamp", "test-timestamp"));
+        assertThat(logEvent, hasMDCProperty("event-name", "test-event-name"));
     }
 
     @Test
@@ -64,18 +77,18 @@ public class CounterFraudAuditLambdaTest {
 
         var payload =
                 AuditEvent.newBuilder()
-                        .setEventId("foo")
                         .setUser(
                                 User.newBuilder()
+                                        .setId("test-id")
                                         .setEmail("test-example@digital.cabinet-office.gov.uk")
-                                        .setId("some-id")
-                                        .setPhoneNumber("some-phone-number")
+                                        .setPhoneNumber("test-phone-number")
+                                        .setIpAddress("test-ip-address")
                                         .build())
                         .build();
 
         handler.handleAuditEvent(payload);
 
-        LogEvent logEvent = appender.getEvents().get(1);
+        LogEvent logEvent = appender.getEvents().get(0);
 
         assertThat(
                 logEvent,
@@ -92,6 +105,8 @@ public class CounterFraudAuditLambdaTest {
                 hasMDCProperty(
                         "user.phone",
                         "f264cf9189f466ecdec47c450dfd0e13a59f85dfc1e63ef93d3870ef6b927821"));
+
+        assertThat(logEvent, hasMDCProperty("user.ip-address", "test-ip-address"));
     }
 
     public static class ListAppender extends AbstractAppender {
