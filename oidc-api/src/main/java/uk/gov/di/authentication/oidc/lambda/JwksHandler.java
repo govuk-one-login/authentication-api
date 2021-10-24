@@ -5,6 +5,8 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.jwk.JWKSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
@@ -17,6 +19,7 @@ public class JwksHandler
 
     private final TokenValidationService tokenValidationService;
     private final ConfigurationService configurationService;
+    private static final Logger LOG = LoggerFactory.getLogger(JwksHandler.class);
 
     public JwksHandler(
             TokenValidationService tokenValidationService,
@@ -40,11 +43,14 @@ public class JwksHandler
                         () -> {
                             JWKSet jwkSet;
                             try {
+                                LOG.info("JWKs request received");
                                 jwkSet = new JWKSet(tokenValidationService.getPublicJwk());
                             } catch (IllegalArgumentException e) {
+                                LOG.error("Error in JWKs lambda. Public Jwk is null", e);
                                 return generateApiGatewayProxyResponse(
                                         500, "Signing key is not present");
                             }
+                            LOG.info("Generating JWKs successful response");
                             return generateApiGatewayProxyResponse(200, jwkSet.toString(true));
                         });
     }

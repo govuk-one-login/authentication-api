@@ -151,7 +151,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     200, new BaseAPIResponse(userContext.getSession().getState()));
         } catch (JsonProcessingException e) {
             LOGGER.error(
-                    "Request is missing parameters. session: {} Request Body: {}",
+                    "MFA request is missing parameters. session: {} Request Body: {}",
                     userContext.getSession().getSessionId(),
                     input.getBody());
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);

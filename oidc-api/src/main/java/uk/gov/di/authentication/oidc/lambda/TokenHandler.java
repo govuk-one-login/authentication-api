@@ -111,10 +111,14 @@ public class TokenHandler
         return isWarming(input)
                 .orElseGet(
                         () -> {
+                            LOG.info("Token request received");
                             Optional<ErrorObject> invalidRequestParamError =
                                     tokenService.validateTokenRequestParams(input.getBody());
                             if (invalidRequestParamError.isPresent()) {
-                                LOG.error("Parameters missing from Token Request");
+                                LOG.error(
+                                        "Invalid Token Request. ErrorCode: {}. ErrorDescription: {}",
+                                        invalidRequestParamError.get().getCode(),
+                                        invalidRequestParamError.get().getDescription());
                                 return generateApiGatewayProxyResponse(
                                         400,
                                         invalidRequestParamError
@@ -155,7 +159,7 @@ public class TokenHandler
                                             input.getBody(), client.getPublicKey(), tokenUrl);
                             if (invalidPrivateKeyJwtError.isPresent()) {
                                 LOG.error(
-                                        "Private Key JWT is not valid for Client ID {}", clientID);
+                                        "Private Key JWT is not valid for Client ID: {}", clientID);
                                 return generateApiGatewayProxyResponse(
                                         400,
                                         invalidPrivateKeyJwtError
@@ -167,6 +171,7 @@ public class TokenHandler
                             if (requestBody
                                     .get("grant_type")
                                     .equals(GrantType.REFRESH_TOKEN.getValue())) {
+                                LOG.info("Processing refresh token request");
                                 return processRefreshTokenRequest(
                                         requestBody,
                                         client.getScopes(),
@@ -193,7 +198,9 @@ public class TokenHandler
                                         AuthenticationRequest.parse(
                                                 clientSession.getAuthRequestParams());
                             } catch (ParseException e) {
-                                LOG.error("Could not parse authentication request", e);
+                                LOG.error(
+                                        "Could not parse authentication request from client session",
+                                        e);
                                 throw new RuntimeException(
                                         format(
                                                 "Unable to parse Auth Request\n Auth Request Params: %s \n Exception: %s",
@@ -345,6 +352,7 @@ public class TokenHandler
                         new Subject(tokenStore.getInternalSubjectId()),
                         scopes,
                         publicSubject);
+        LOG.info("Generating successful RefreshToken response");
         return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
     }
 }

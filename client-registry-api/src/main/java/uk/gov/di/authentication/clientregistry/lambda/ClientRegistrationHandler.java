@@ -9,6 +9,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import org.apache.commons.validator.routines.UrlValidator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
@@ -32,6 +34,7 @@ public class ClientRegistrationHandler
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ClientConfigValidationService validationService;
     private final AuditService auditService;
+    private static final Logger LOGGER = LoggerFactory.getLogger(ClientRegistrationHandler.class);
 
     public ClientRegistrationHandler(
             ClientService clientService,
@@ -71,6 +74,7 @@ public class ClientRegistrationHandler
                                     AuditService.UNKNOWN);
 
                             try {
+                                LOGGER.info("Client registration request received");
                                 ClientRegistrationRequest clientRegistrationRequest =
                                         objectMapper.readValue(
                                                 input.getBody(), ClientRegistrationRequest.class);
@@ -78,6 +82,10 @@ public class ClientRegistrationHandler
                                         validationService.validateClientRegistrationConfig(
                                                 clientRegistrationRequest);
                                 if (errorResponse.isPresent()) {
+                                    LOGGER.error(
+                                            "Invalid Client registration request. Failed validation. Error Code: {}. Error description: {}",
+                                            errorResponse.get().getCode(),
+                                            errorResponse.get().getDescription());
                                     auditService.submitAuditEvent(
                                             REGISTER_CLIENT_REQUEST_ERROR,
                                             context.getAwsRequestId(),
@@ -116,10 +124,13 @@ public class ClientRegistrationHandler
                                                 clientRegistrationRequest
                                                         .getPostLogoutRedirectUris(),
                                                 clientRegistrationRequest.getServiceType());
-
+                                LOGGER.info("Generating successful Client registration response");
                                 return generateApiGatewayProxyResponse(
                                         200, clientRegistrationResponse);
                             } catch (JsonProcessingException e) {
+                                LOGGER.error(
+                                        "Invalid Client registration request. Missing parameters from request",
+                                        e);
                                 auditService.submitAuditEvent(
                                         REGISTER_CLIENT_REQUEST_ERROR,
                                         context.getAwsRequestId(),

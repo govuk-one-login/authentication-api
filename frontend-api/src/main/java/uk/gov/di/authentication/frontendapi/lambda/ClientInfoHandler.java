@@ -65,6 +65,7 @@ public class ClientInfoHandler
         return isWarming(input)
                 .orElseGet(
                         () -> {
+                            LOGGER.info("ClientInfo request received");
                             Optional<Session> session =
                                     sessionService.getSessionFromRequestHeaders(input.getHeaders());
                             if (session.isEmpty()) {
@@ -103,7 +104,7 @@ public class ClientInfoHandler
 
                                 if (optionalClientRegistry.isEmpty()) {
                                     LOGGER.error(
-                                            "ClientId {} not found in ClientRegistry for session: {}",
+                                            "ClientId: {} not found in ClientRegistry for session: {}",
                                             clientID,
                                             session.get().getSessionId());
                                     return generateApiGatewayProxyErrorResponse(

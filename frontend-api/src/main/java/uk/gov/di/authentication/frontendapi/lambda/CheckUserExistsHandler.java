@@ -112,7 +112,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             return generateApiGatewayProxyResponse(200, checkUserExistsResponse);
 
         } catch (JsonProcessingException e) {
-            LOG.error("Error parsing request", e);
+            LOG.error("Error parsing UserInfo request", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
             LOG.error("Invalid transition in user journey", e);
