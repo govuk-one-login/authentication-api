@@ -7,5 +7,6 @@ notify_template_map = {
   ACCOUNT_CREATED_CONFIRMATION_TEMPLATE_ID = "360b4786-0b34-45e2-b909-88de67490a0e"
 }
 
-cloudwatch_log_retention = 5
-lambda_min_concurrency   = 25
+cloudwatch_log_retention    = 5
+lambda_min_concurrency      = 25
+client_registry_api_enabled = false
