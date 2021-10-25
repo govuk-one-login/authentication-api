@@ -103,10 +103,9 @@ public class ClientConfigValidationService {
         return true;
     }
 
-    //    This change will need to be reverted to validate only against public scopes
     private boolean areScopesValid(List<String> scopes) {
         for (String scope : scopes) {
-            if (ValidScopes.getAllValidScopes().stream().noneMatch((t) -> t.equals(scope))) {
+            if (ValidScopes.getPublicValidScopes().stream().noneMatch((t) -> t.equals(scope))) {
                 return false;
             }
         }
