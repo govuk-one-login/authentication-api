@@ -35,9 +35,9 @@ import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.KeyPairHelper;
 import uk.gov.di.authentication.helpers.KmsHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
+import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ServiceType;
-import uk.gov.di.authentication.shared.entity.TokenStore;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 
 import java.net.URI;
@@ -126,7 +126,8 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
         setUpDynamo(keyPair, scope, internalSubject);
         SignedJWT signedJWT = generateSignedRefreshToken(scope, publicSubject);
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
-        TokenStore tokenStore = new TokenStore(refreshToken.getValue(), internalSubject.getValue());
+        AccessTokenStore tokenStore =
+                new AccessTokenStore(refreshToken.getValue(), internalSubject.getValue());
         RedisHelper.addToRedis(
                 REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + publicSubject.getValue(),
                 new ObjectMapper().writeValueAsString(tokenStore),

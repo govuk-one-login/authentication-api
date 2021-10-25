@@ -14,6 +14,7 @@ import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
+import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
@@ -28,6 +29,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -41,21 +43,19 @@ class TokenValidationServiceTest {
             new TokenValidationService(configurationService, kmsConnectionService);
     private static final Subject SUBJECT = new Subject("some-subject");
     private static final List<String> SCOPES = List.of("openid", "email", "phone");
+    private static final List<String> REFRESH_SCOPES = List.of("openid", "email", "offline_access");
     private static final String CLIENT_ID = "client-id";
     private static final String BASE_URL = "http://example.com";
     private static final String KEY_ID = "14342354354353";
+    private JWSSigner signer;
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws JOSEException {
         Optional<String> baseUrl = Optional.of(BASE_URL);
         when(configurationService.getBaseURL()).thenReturn(baseUrl);
-    }
-
-    @Test
-    public void shouldSuccessfullyValidateIDToken() throws JOSEException {
         ECKey ecJWK = generateECKeyPair();
         ECKey ecPublicJWK = ecJWK.toPublicJWK();
-        JWSSigner signer = new ECDSASigner(ecJWK);
+        signer = new ECDSASigner(ecJWK);
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
         GetPublicKeyResult getPublicKeyResult = new GetPublicKeyResult();
         getPublicKeyResult.setKeyUsage("SIGN_VERIFY");
@@ -65,26 +65,18 @@ class TokenValidationServiceTest {
         getPublicKeyResult.setPublicKey(ByteBuffer.wrap(ecPublicJWK.toECPublicKey().getEncoded()));
         when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
                 .thenReturn(getPublicKeyResult);
+    }
+
+    @Test
+    public void shouldSuccessfullyValidateIDToken() {
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         SignedJWT signedIdToken = createSignedIdToken(signer, expiryDate);
-        assertTrue(tokenValidationService.validateIdTokenSignature(signedIdToken.serialize()));
+        assertTrue(tokenValidationService.isTokenSignatureValid(signedIdToken.serialize()));
     }
 
     @Test
-    public void shouldNotFailSignatureValidationIfTokenHasExpired() throws JOSEException {
-        ECKey ecJWK = generateECKeyPair();
-        ECKey ecPublicJWK = ecJWK.toPublicJWK();
-        JWSSigner signer = new ECDSASigner(ecJWK);
-        when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
-        GetPublicKeyResult getPublicKeyResult = new GetPublicKeyResult();
-        getPublicKeyResult.setKeyUsage("SIGN_VERIFY");
-        getPublicKeyResult.setKeyId(KEY_ID);
-        getPublicKeyResult.setSigningAlgorithms(
-                Collections.singletonList(JWSAlgorithm.ES256.getName()));
-        getPublicKeyResult.setPublicKey(ByteBuffer.wrap(ecPublicJWK.toECPublicKey().getEncoded()));
-        when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
-                .thenReturn(getPublicKeyResult);
+    public void shouldNotFailSignatureValidationIfIdTokenHasExpired() {
         LocalDateTime localDateTime = LocalDateTime.now().minusMinutes(2);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
         SignedJWT signedIdToken = createSignedIdToken(signer, expiryDate);
@@ -92,24 +84,33 @@ class TokenValidationServiceTest {
     }
 
     @Test
-    public void shouldSuccessfullyValidateAccessToken() throws JOSEException {
-        ECKey ecJWK = generateECKeyPair();
-        ECKey ecPublicJWK = ecJWK.toPublicJWK();
-        JWSSigner signer = new ECDSASigner(ecJWK);
-        when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
-        GetPublicKeyResult getPublicKeyResult = new GetPublicKeyResult();
-        getPublicKeyResult.setKeyUsage("SIGN_VERIFY");
-        getPublicKeyResult.setKeyId(KEY_ID);
-        getPublicKeyResult.setSigningAlgorithms(
-                Collections.singletonList(JWSAlgorithm.ES256.getName()));
-        getPublicKeyResult.setPublicKey(ByteBuffer.wrap(ecPublicJWK.toECPublicKey().getEncoded()));
-        when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
-                .thenReturn(getPublicKeyResult);
-
+    public void shouldSuccessfullyValidateAccessToken() {
         SignedJWT signedAccessToken = createSignedAccessToken(signer);
         assertTrue(
                 tokenValidationService.validateAccessTokenSignature(
                         new BearerAccessToken(signedAccessToken.serialize())));
+    }
+
+    @Test
+    public void shouldSuccessfullyValidateRefreshToken() {
+        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+
+        SignedJWT signedAccessToken = createSignedRefreshTokenWithExpiry(signer, expiryDate);
+        assertTrue(
+                tokenValidationService.validateRefreshTokenSignatureAndExpiry(
+                        new RefreshToken(signedAccessToken.serialize())));
+    }
+
+    @Test
+    public void shouldFailToValidateRefreshTokenIfExpired() {
+        LocalDateTime localDateTime = LocalDateTime.now().minusMinutes(2);
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+
+        SignedJWT signedAccessToken = createSignedRefreshTokenWithExpiry(signer, expiryDate);
+        assertFalse(
+                tokenValidationService.validateRefreshTokenSignatureAndExpiry(
+                        new RefreshToken(signedAccessToken.serialize())));
     }
 
     @Test
@@ -134,6 +135,27 @@ class TokenValidationServiceTest {
         assertEquals(publicKeyJwk.getKeyUse(), KeyUse.SIGNATURE);
     }
 
+    @Test
+    public void shouldSuccessfullyValidateRefreshTokenScopes() {
+        List<String> clientScopes = List.of("openid", "email", "phone", "offline_access");
+        assertTrue(tokenValidationService.validateRefreshTokenScopes(clientScopes, REFRESH_SCOPES));
+    }
+
+    @Test
+    public void shouldFailToValidateRefreshTokenScopesWhenMissingOfflineAccess() {
+        List<String> clientScopes = List.of("openid", "email", "phone", "offline_access");
+        List<String> refreshScopes = List.of("openid", "email", "phone");
+        assertFalse(tokenValidationService.validateRefreshTokenScopes(clientScopes, refreshScopes));
+    }
+
+    @Test
+    public void
+            shouldFailToValidateRefreshTokenScopesWhenClientScopesDoNotContainAllRefreshTokenScopes() {
+        List<String> clientScopes = List.of("openid", "phone", "offline_access");
+        assertFalse(
+                tokenValidationService.validateRefreshTokenScopes(clientScopes, REFRESH_SCOPES));
+    }
+
     private ECKey generateECKeyPair() {
         try {
             return new ECKeyGenerator(Curve.P_256).keyID(KEY_ID).generate();
@@ -151,5 +173,10 @@ class TokenValidationServiceTest {
 
         return TokenGeneratorHelper.generateSignedToken(
                 CLIENT_ID, BASE_URL, SCOPES, signer, SUBJECT, KEY_ID);
+    }
+
+    private SignedJWT createSignedRefreshTokenWithExpiry(JWSSigner signer, Date expiryDate) {
+        return TokenGeneratorHelper.generateSignedToken(
+                CLIENT_ID, BASE_URL, REFRESH_SCOPES, signer, SUBJECT, KEY_ID, expiryDate);
     }
 }

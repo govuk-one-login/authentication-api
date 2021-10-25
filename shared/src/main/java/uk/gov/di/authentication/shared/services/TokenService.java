@@ -37,8 +37,9 @@ import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
-import uk.gov.di.authentication.shared.entity.TokenStore;
+import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 
@@ -279,7 +280,7 @@ public class TokenService {
                     ACCESS_TOKEN_PREFIX + clientId + "." + publicSubject.getValue(),
                     new ObjectMapper()
                             .writeValueAsString(
-                                    new TokenStore(
+                                    new AccessTokenStore(
                                             accessToken.getValue(), internalSubject.getValue())),
                     configService.getAccessTokenExpiry());
         } catch (JsonProcessingException e) {
@@ -308,15 +309,30 @@ public class TokenService {
                         .build();
         SignedJWT signedJWT = generateSignedJWT(claimsSet);
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
+        String redisKey = REFRESH_TOKEN_PREFIX + clientId + "." + publicSubject.getValue();
+        Optional<String> existingRefreshTokenStore =
+                Optional.ofNullable(redisConnectionService.getValue(redisKey));
         try {
-            String tokenStoreString =
-                    new ObjectMapper()
-                            .writeValueAsString(
-                                    new TokenStore(
-                                            refreshToken.getValue(), internalSubject.getValue()));
-            String redisKey = REFRESH_TOKEN_PREFIX + clientId + "." + publicSubject.getValue();
+            String serializedTokenStore;
+            if (existingRefreshTokenStore.isPresent()) {
+                RefreshTokenStore refreshTokenStore =
+                        new ObjectMapper()
+                                .readValue(
+                                        existingRefreshTokenStore.get(), RefreshTokenStore.class);
+                serializedTokenStore =
+                        new ObjectMapper()
+                                .writeValueAsString(
+                                        refreshTokenStore.addRefreshToken(refreshToken.getValue()));
+            } else {
+                serializedTokenStore =
+                        new ObjectMapper()
+                                .writeValueAsString(
+                                        new AccessTokenStore(
+                                                refreshToken.getValue(),
+                                                internalSubject.getValue()));
+            }
             redisConnectionService.saveWithExpiry(
-                    redisKey, tokenStoreString, configService.getSessionExpiry());
+                    redisKey, serializedTokenStore, configService.getSessionExpiry());
         } catch (JsonProcessingException e) {
             LOGGER.error("Unable to create new TokenStore with RefreshToken", e);
             throw new RuntimeException(e);

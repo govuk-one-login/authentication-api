@@ -17,8 +17,8 @@ import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.KeyPairHelper;
 import uk.gov.di.authentication.helpers.KmsHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
+import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ServiceType;
-import uk.gov.di.authentication.shared.entity.TokenStore;
 
 import java.security.KeyPair;
 import java.time.LocalDateTime;
@@ -66,8 +66,8 @@ public class UserInfoIntegrationTest extends IntegrationTestEndpoints {
                         .build();
         SignedJWT signedJWT = KmsHelper.signAccessToken(claimsSet);
         AccessToken accessToken = new BearerAccessToken(signedJWT.serialize());
-        TokenStore accessTokenStore =
-                new TokenStore(accessToken.getValue(), internalSubject.getValue());
+        AccessTokenStore accessTokenStore =
+                new AccessTokenStore(accessToken.getValue(), internalSubject.getValue());
         String accessTokenStoreString = new ObjectMapper().writeValueAsString(accessTokenStore);
         RedisHelper.addToRedis(
                 ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + publicSubject,

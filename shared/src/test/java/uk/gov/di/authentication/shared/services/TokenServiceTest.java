@@ -28,9 +28,9 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
-import uk.gov.di.authentication.shared.entity.TokenStore;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
 
@@ -133,8 +133,8 @@ public class TokenServiceTest {
                 tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("sub"));
         assertNotNull(tokenResponse.getOIDCTokens().getRefreshToken());
         String accessTokenKey = ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT;
-        TokenStore accessTokenStore =
-                new TokenStore(
+        AccessTokenStore accessTokenStore =
+                new AccessTokenStore(
                         tokenResponse.getOIDCTokens().getAccessToken().getValue(),
                         INTERNAL_SUBJECT.getValue());
         verify(redisConnectionService)
@@ -143,8 +143,8 @@ public class TokenServiceTest {
                         new ObjectMapper().writeValueAsString(accessTokenStore),
                         300L);
         String refreshTokenKey = REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT;
-        TokenStore refreshTokenStore =
-                new TokenStore(
+        AccessTokenStore refreshTokenStore =
+                new AccessTokenStore(
                         tokenResponse.getOIDCTokens().getRefreshToken().getValue(),
                         INTERNAL_SUBJECT.getValue());
         verify(redisConnectionService)
@@ -191,8 +191,8 @@ public class TokenServiceTest {
                 tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("sub"));
         assertNull(tokenResponse.getOIDCTokens().getRefreshToken());
         String accessTokenKey = ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT;
-        TokenStore accessTokenStore =
-                new TokenStore(
+        AccessTokenStore accessTokenStore =
+                new AccessTokenStore(
                         tokenResponse.getOIDCTokens().getAccessToken().getValue(),
                         INTERNAL_SUBJECT.getValue());
         verify(redisConnectionService)
