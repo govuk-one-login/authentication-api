@@ -34,6 +34,16 @@ resource "aws_iam_policy" "fraud_realtime_logging_audit_payload_kms_verification
   })
 }
 
+resource "random_password" "hmac_key" {
+  length = 32
+
+  override_special = "!&#$^<>-"
+  min_lower        = 3
+  min_numeric      = 3
+  min_special      = 3
+  min_upper        = 3
+}
+
 resource "aws_lambda_function" "fraud_realtime_logging_lambda" {
   filename      = var.lambda_zip_file
   function_name = "${var.environment}-fraud-realtime-logging-lambda"
@@ -56,6 +66,7 @@ resource "aws_lambda_function" "fraud_realtime_logging_lambda" {
     variables = {
       AUDIT_SIGNING_KEY_ALIAS = local.audit_signing_key_alias_name
       LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
+      AUDIT_HMAC_SECRET       = random_password.hmac_key.result
     }
   }
 
