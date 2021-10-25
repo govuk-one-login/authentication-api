@@ -145,6 +145,7 @@ resource "aws_lambda_function" "warmer_function" {
       LAMBDA_QUALIFIER = aws_lambda_alias.endpoint_lambda.name
     })
   }
+  kms_key_arn = var.lambda_env_vars_encryption_kms_key_arn
 
   runtime = var.warmer_handler_runtime
 

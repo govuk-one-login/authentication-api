@@ -129,6 +129,7 @@ resource "aws_lambda_function" "warmer_function" {
       LAMBDA_MIN_CONCURRENCY = var.lambda_min_concurrency
     }
   }
+  kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
 
   runtime = "java11"
 
