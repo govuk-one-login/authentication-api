@@ -86,9 +86,12 @@ public class ValidScopes {
     }
 
     public static Scope getScopesForWellKnownHandler() {
-        return new Scope(
-                allowedOIDCScopes.stream()
-                        .map(Identifier::getValue)
-                        .collect(Collectors.joining(",")));
+        List<String> scopeValues =
+                allowedOIDCScopes.stream().map(Identifier::getValue).collect(Collectors.toList());
+        Scope scope = new Scope();
+        for (String scopeValue : scopeValues) {
+            scope.add(scopeValue);
+        }
+        return scope;
     }
 }

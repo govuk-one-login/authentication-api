@@ -102,7 +102,7 @@ class ValidScopesTest {
     @Test
     void shouldReturnOIDCScopesForWellKnown() {
         Scope scope = ValidScopes.getScopesForWellKnownHandler();
-        assertEquals(scope.toString(), "openid,email,phone,offline_access");
+        assertEquals(scope.toStringList(), List.of("openid", "email", "phone", "offline_access"));
     }
 
     @Test
