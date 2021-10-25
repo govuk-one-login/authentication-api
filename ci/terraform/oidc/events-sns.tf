@@ -1,47 +1,3 @@
-resource "aws_kms_key" "events_topic_encryption" {
-  description = "alias/${var.environment}/events-encryption-key"
-}
-
-resource "aws_kms_alias" "events_topic_encryption_alias" {
-  target_key_id = aws_kms_key.events_topic_encryption.id
-  name          = "alias/${var.environment}-events-encryption-key-alias"
-}
-
-data "aws_iam_policy_document" "events_encryption_key_permissions" {
-  version   = "2012-10-17"
-  policy_id = "${var.environment}-events-encryption-key-policy"
-
-  statement {
-    sid       = "Enable IAM User Permissions"
-    effect    = "Allow"
-    actions   = ["kms:*"]
-    resources = ["*"]
-
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
-    }
-  }
-
-  statement {
-    sid    = "Allow use of the key by SQS/SNS"
-    effect = "Allow"
-    actions = [
-      "kms:GenerateDataKey*",
-      "kms:Decrypt"
-    ]
-    resources = ["*"]
-
-    principals {
-      type = "Service"
-      identifiers = [
-        "sns.amazonaws.com",
-        "sqs.amazonaws.com"
-      ]
-    }
-  }
-}
-
 resource "aws_sns_topic" "events" {
   name              = "${var.environment}-events"
   kms_master_key_id = "alias/aws/sns"
@@ -77,7 +33,7 @@ data "aws_iam_policy_document" "events_policy_document" {
       "kms:Decrypt"
     ]
     resources = [
-      aws_kms_key.events_topic_encryption.arn
+      local.events_topic_encryption_key_arn
     ]
   }
 }
