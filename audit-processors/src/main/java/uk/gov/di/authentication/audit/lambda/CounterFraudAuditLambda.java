@@ -38,10 +38,24 @@ public class CounterFraudAuditLambda extends BaseAuditHandler {
         var hmacKey = this.service.getAuditHmacSecret();
 
         eventData.put("user.ip-address", user.getIpAddress());
-        eventData.put("user.id", encodeHexString(hmacSha256(user.getId(), hmacKey)));
-        eventData.put("user.email", encodeHexString(hmacSha256(user.getEmail(), hmacKey)));
-        eventData.put("user.phone", encodeHexString(hmacSha256(user.getPhoneNumber(), hmacKey)));
+
+        if (isPresent(user.getId())) {
+            eventData.put("user.id", encodeHexString(hmacSha256(user.getId(), hmacKey)));
+        }
+
+        if (isPresent(user.getId())) {
+            eventData.put("user.email", encodeHexString(hmacSha256(user.getEmail(), hmacKey)));
+        }
+
+        if (isPresent(user.getId())) {
+            eventData.put(
+                    "user.phone", encodeHexString(hmacSha256(user.getPhoneNumber(), hmacKey)));
+        }
 
         LOG.info(new ObjectMessage(eventData));
+    }
+
+    private boolean isPresent(String field) {
+        return !(field == null || field.isBlank());
     }
 }

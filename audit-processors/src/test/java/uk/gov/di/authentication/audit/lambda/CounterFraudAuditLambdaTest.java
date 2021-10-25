@@ -24,6 +24,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.matchers.LogEventMatcher.doesNotHaveObjectMessageProperty;
 import static uk.gov.di.authentication.shared.matchers.LogEventMatcher.hasObjectMessageProperty;
 
 public class CounterFraudAuditLambdaTest {
@@ -107,6 +108,21 @@ public class CounterFraudAuditLambdaTest {
                         "889340bac0d98dc4f74eeef79c907ea763f3915277d641176fa081d8f7b48cd7"));
 
         assertThat(logEvent, hasObjectMessageProperty("user.ip-address", "test-ip-address"));
+    }
+
+    @Test
+    void shouldHashNotHashMissingSensitiveFields() {
+        var handler = new CounterFraudAuditLambda(kms, config);
+
+        var payload = AuditEvent.newBuilder().setUser(User.newBuilder().build()).build();
+
+        handler.handleAuditEvent(payload);
+
+        LogEvent logEvent = appender.getEvents().get(0);
+
+        assertThat(logEvent, doesNotHaveObjectMessageProperty("user.email"));
+        assertThat(logEvent, doesNotHaveObjectMessageProperty("user.id"));
+        assertThat(logEvent, doesNotHaveObjectMessageProperty("user.phone"));
     }
 
     public static class ListAppender extends AbstractAppender {

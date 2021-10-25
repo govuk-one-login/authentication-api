@@ -30,4 +30,24 @@ public class LogEventMatcher {
             }
         };
     }
+
+    public static Matcher<LogEvent> doesNotHaveObjectMessageProperty(String key) {
+        return new TypeSafeMatcher<>() {
+
+            @Override
+            @SuppressWarnings("unchecked")
+            protected boolean matchesSafely(LogEvent item) {
+                var objectMessage = (ObjectMessage) item.getMessage();
+
+                var properties = (Map<String, String>) objectMessage.getParameter();
+
+                return !properties.containsKey(key);
+            }
+
+            @Override
+            public void describeTo(Description description) {
+                description.appendText("a log event without ObjectMessage property [" + key + "]");
+            }
+        };
+    }
 }
