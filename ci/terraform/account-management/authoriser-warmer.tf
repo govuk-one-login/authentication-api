@@ -66,6 +66,40 @@ resource "aws_iam_role_policy_attachment" "lambda_warmer_logs" {
   policy_arn = aws_iam_policy.lambda_warmer_logging_policy[0].arn
 }
 
+resource "aws_iam_role_policy_attachment" "lambda_warmer_networking" {
+  count = var.keep_lambdas_warm ? 1 : 0
+
+  role       = aws_iam_role.lambda_warmer_role[0].name
+  policy_arn = aws_iam_policy.warmer_endpoint_networking_policy.arn
+}
+
+resource "aws_iam_policy" "warmer_endpoint_networking_policy" {
+  name        = "${aws_lambda_function.authorizer.function_name}-standard-warmer-lambda-networking"
+  path        = "/"
+  description = "IAM policy for managing VPC connection for a lambda"
+
+  policy = data.aws_iam_policy_document.warmer_endpoint_networking_policy.json
+}
+
+data "aws_iam_policy_document" "warmer_endpoint_networking_policy" {
+  version = "2012-10-17"
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "ec2:DescribeNetworkInterfaces",
+      "ec2:CreateNetworkInterface",
+      "ec2:DeleteNetworkInterface",
+    ]
+    resources = ["*"]
+    condition {
+      test     = "ArnLikeIfExists"
+      variable = "ec2:Vpc"
+      values   = [aws_vpc.account_management_vpc.arn]
+    }
+  }
+}
+
 resource "aws_lambda_function" "warmer_function" {
   count = var.keep_lambdas_warm ? 1 : 0
 
