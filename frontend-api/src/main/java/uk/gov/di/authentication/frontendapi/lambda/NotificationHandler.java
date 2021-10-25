@@ -74,8 +74,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                         case ACCOUNT_CREATED_CONFIRMATION:
                             notifyPersonalisation.put(
                                     "sign-in-page-url",
-                                    buildURI(configService.getAccountManagementURI(), "/sign-in")
-                                            .toString());
+                                    buildURI(configService.getAccountManagementURI()).toString());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,

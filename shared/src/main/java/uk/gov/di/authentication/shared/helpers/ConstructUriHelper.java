@@ -18,4 +18,8 @@ public class ConstructUriHelper {
                 ? URI.create(baseUrl)
                 : URI.create(baseUrl + path.replaceAll("^/+", ""));
     }
+
+    public static URI buildURI(String baseUrl) {
+        return buildURI(baseUrl, null);
+    }
 }
