@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
 
@@ -143,9 +144,9 @@ public class TokenServiceTest {
                         new ObjectMapper().writeValueAsString(accessTokenStore),
                         300L);
         String refreshTokenKey = REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT;
-        AccessTokenStore refreshTokenStore =
-                new AccessTokenStore(
-                        tokenResponse.getOIDCTokens().getRefreshToken().getValue(),
+        RefreshTokenStore refreshTokenStore =
+                new RefreshTokenStore(
+                        List.of(tokenResponse.getOIDCTokens().getRefreshToken().getValue()),
                         INTERNAL_SUBJECT.getValue());
         verify(redisConnectionService)
                 .saveWithExpiry(
