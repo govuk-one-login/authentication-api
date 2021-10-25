@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginRequest;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
@@ -18,6 +19,8 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -31,10 +34,10 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Objects;
 
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.LOG_IN_SUCCESS;
 import static uk.gov.di.authentication.shared.entity.SessionAction.ACCOUNT_LOCK_EXPIRED;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_PASSWORD_TOO_MANY_TIMES;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_CREDENTIALS;
-import static uk.gov.di.authentication.shared.entity.SessionState.ACCOUNT_TEMPORARILY_LOCKED;
 import static uk.gov.di.authentication.shared.entity.SessionState.TWO_FACTOR_REQUIRED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -46,6 +49,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     private static final Logger LOGGER = LoggerFactory.getLogger(LoginHandler.class);
     private final CodeStorageService codeStorageService;
     private final UserMigrationService userMigrationService;
+    private final AuditService auditService;
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             userJourneyStateMachine();
 
@@ -56,7 +60,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             ClientSessionService clientSessionService,
             ClientService clientService,
             CodeStorageService codeStorageService,
-            UserMigrationService userMigrationService) {
+            UserMigrationService userMigrationService,
+            AuditService auditService) {
         super(
                 LoginRequest.class,
                 configurationService,
@@ -66,6 +71,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 authenticationService);
         this.codeStorageService = codeStorageService;
         this.userMigrationService = userMigrationService;
+        this.auditService = auditService;
     }
 
     public LoginHandler() {
@@ -77,6 +83,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 new UserMigrationService(
                         new DynamoService(ConfigurationService.getInstance()),
                         ConfigurationService.getInstance());
+        this.auditService = new AuditService();
     }
 
     @Override
@@ -97,6 +104,17 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 LOGGER.error(
                         "The user does not have an account for session: {}",
                         userContext.getSession().getSessionId());
+
+                auditService.submitAuditEvent(
+                        FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
+                        context.getAwsRequestId(),
+                        userContext.getSession().getSessionId(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN);
+
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
             }
 
@@ -113,12 +131,24 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                                 userContext.getSession().getState(),
                                 USER_ENTERED_INVALID_PASSWORD_TOO_MANY_TIMES,
                                 userContext);
+
+                auditService.submitAuditEvent(
+                        FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                        context.getAwsRequestId(),
+                        userContext.getSession().getSessionId(),
+                        AuditService.UNKNOWN,
+                        userProfile.getSubjectID(),
+                        userProfile.getEmail(),
+                        IpAddressHelper.extractIpAddress(input),
+                        userProfile.getPhoneNumber());
+
                 sessionService.save(userContext.getSession().setState(nextState));
                 return generateApiGatewayProxyResponse(
                         200, new LoginResponse(null, userContext.getSession().getState()));
             }
 
-            if (incorrectPasswordCount == 0 && currentState.equals(ACCOUNT_TEMPORARILY_LOCKED)) {
+            if (incorrectPasswordCount == 0
+                    && currentState.equals(SessionState.ACCOUNT_TEMPORARILY_LOCKED)) {
                 var nextState =
                         stateMachine.transition(
                                 userContext.getSession().getState(),
@@ -149,6 +179,17 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 LOGGER.info(
                         "Invalid login credentials entered with session: {}",
                         userContext.getSession().getSessionId());
+
+                auditService.submitAuditEvent(
+                        FrontendAuditableEvent.INVALID_CREDENTIALS,
+                        context.getAwsRequestId(),
+                        userContext.getSession().getSessionId(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        loginRequest.getEmail(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN);
+
                 return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
             }
 
@@ -184,6 +225,17 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             LOGGER.info(
                     "User has successfully Logged in. Generating successful LoginResponse with session: {}",
                     userContext.getSession().getSessionId());
+
+            auditService.submitAuditEvent(
+                    LOG_IN_SUCCESS,
+                    context.getAwsRequestId(),
+                    session.getSessionId(),
+                    AuditService.UNKNOWN,
+                    userProfile.getSubjectID(),
+                    userProfile.getEmail(),
+                    IpAddressHelper.extractIpAddress(input),
+                    userProfile.getPhoneNumber());
+
             return generateApiGatewayProxyResponse(
                     200, new LoginResponse(concatPhoneNumber, userContext.getSession().getState()));
         } catch (JsonProcessingException e) {
