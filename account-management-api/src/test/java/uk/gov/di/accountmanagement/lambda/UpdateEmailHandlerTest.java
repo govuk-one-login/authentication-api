@@ -9,6 +9,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
+import uk.gov.di.accountmanagement.entity.UpdateEmailRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -22,6 +23,7 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -182,5 +184,17 @@ class UpdateEmailHandlerTest {
         verify(sqsClient, never()).send(new ObjectMapper().writeValueAsString(notifyRequest));
         String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1004);
         assertThat(result, hasBody(expectedResponse));
+    }
+
+    @Test
+    public void shouldFormatAllEmailsToLowerCase() {
+        final UpdateEmailRequest updateEmailRequest =
+                new UpdateEmailRequest(
+                        "Joe.Bloggs@digital.cabinet-office.gov.uk",
+                        "Bloggs.Joe@digital.cabinet-office.gov.uk",
+                        OTP);
+
+        assertEquals(updateEmailRequest.getExistingEmailAddress(), EXISTING_EMAIL_ADDRESS);
+        assertEquals(updateEmailRequest.getReplacementEmailAddress(), NEW_EMAIL_ADDRESS);
     }
 }
