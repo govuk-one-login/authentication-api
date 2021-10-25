@@ -14,8 +14,8 @@ public class UpdateEmailRequest {
             @JsonProperty(required = true, value = "replacementEmailAddress")
                     String replacementEmailAddress,
             @JsonProperty(required = true, value = "otp") String otp) {
-        this.existingEmailAddress = existingEmailAddress;
-        this.replacementEmailAddress = replacementEmailAddress;
+        this.existingEmailAddress = existingEmailAddress.toLowerCase();
+        this.replacementEmailAddress = replacementEmailAddress.toLowerCase();
         this.otp = otp;
     }
 

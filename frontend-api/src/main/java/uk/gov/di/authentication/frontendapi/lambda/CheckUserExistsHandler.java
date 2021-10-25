@@ -79,7 +79,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                     USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS,
                                     userContext));
 
-            String emailAddress = request.getEmail();
+            String emailAddress = request.getEmail().toLowerCase();
             Optional<ErrorResponse> errorResponse =
                     validationService.validateEmailAddress(emailAddress);
             if (errorResponse.isPresent()) {
