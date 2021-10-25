@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
+import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -115,8 +116,11 @@ public class DynamoService implements AuthenticationService {
 
     @Override
     public void updatePhoneNumber(String email, String phoneNumber) {
+        final String formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(phoneNumber);
         userProfileMapper.save(
-                userProfileMapper.load(UserProfile.class, email).setPhoneNumber(phoneNumber));
+                userProfileMapper
+                        .load(UserProfile.class, email)
+                        .setPhoneNumber(formattedPhoneNumber));
     }
 
     @Override
