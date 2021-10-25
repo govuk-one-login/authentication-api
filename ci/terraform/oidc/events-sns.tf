@@ -1,6 +1,6 @@
 resource "aws_sns_topic" "events" {
   name              = "${var.environment}-events"
-  kms_master_key_id = "alias/aws/sns"
+  kms_master_key_id = local.events_topic_encryption_key_arn
   tags              = local.default_tags
 }
 

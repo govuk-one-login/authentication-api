@@ -136,7 +136,7 @@ resource "aws_sqs_queue" "storage_batch" {
   name                      = "${var.environment}-audit-storage-batch-queue"
   message_retention_seconds = 1209600
 
-  kms_master_key_id                 = var.use_localstack ? null : "alias/aws/sqs"
+  kms_master_key_id                 = var.use_localstack ? null : local.events_topic_encryption_key_arn
   kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
 
   redrive_policy = jsonencode({
@@ -268,10 +268,6 @@ resource "aws_iam_policy" "audit_storage_s3_access" {
   })
 }
 
-data "aws_kms_key" "events_encryption_key" {
-  key_id = "alias/${var.environment}-events-encryption-key-alias"
-}
-
 resource "aws_iam_policy" "audit_storage_events_encryption_key_access" {
   count       = var.use_localstack ? 0 : 1
   name_prefix = "events-encryption-key-access"
@@ -288,7 +284,7 @@ resource "aws_iam_policy" "audit_storage_events_encryption_key_access" {
       ]
 
       Resource = [
-        data.aws_kms_key.events_encryption_key.arn
+        local.events_topic_encryption_key_arn
       ]
     }]
   })

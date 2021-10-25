@@ -27,6 +27,7 @@ locals {
   cloudwatch_log_retention               = 5
   authentication_vpc_arn                 = data.terraform_remote_state.shared.outputs.authentication_vpc_arn
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
+  events_topic_encryption_key_arn        = data.terraform_remote_state.shared.outputs.events_topic_encryption_key_arn
 }
 
 data "aws_sns_topic" "event_stream" {
