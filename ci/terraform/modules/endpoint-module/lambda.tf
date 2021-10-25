@@ -21,6 +21,7 @@ resource "aws_lambda_function" "endpoint_lambda" {
       WARMER_DELAY = var.warmer_delay_millis
     })
   }
+  kms_key_arn = var.lambda_env_vars_encryption_kms_key_arn
 
   runtime = var.handler_runtime
 

@@ -94,6 +94,7 @@ resource "aws_lambda_function" "authorizer" {
       ENVIRONMENT             = var.environment
     }
   }
+  kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "authorizer_log_subscription" {

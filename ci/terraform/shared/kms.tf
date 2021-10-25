@@ -164,8 +164,6 @@ data "aws_iam_policy_document" "cloudwatch" {
     actions = [
       "kms:Encrypt*",
       "kms:Decrypt*",
-      "kms:ReEncrypt*",
-      "kms:GenerateDataKey*",
       "kms:Describe*"
     ]
     effect = "Allow"
@@ -189,4 +187,50 @@ resource "aws_kms_key" "cloudwatch_log_encryption" {
   policy                  = data.aws_iam_policy_document.cloudwatch.json
 
   tags = local.default_tags
+}
+
+resource "aws_kms_key" "lambda_env_vars_encryption_key" {
+  description              = "KMS encryption key for lambda environment variables"
+  deletion_window_in_days  = 30
+  key_usage                = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+
+  tags = local.default_tags
+}
+
+resource "aws_kms_alias" "lambda_env_vars_encryption_key_alias" {
+  name          = "alias/${var.environment}-lambda-env-vars-encryption-key-alias"
+  target_key_id = aws_kms_key.lambda_env_vars_encryption_key.key_id
+}
+
+data "aws_iam_policy_document" "lambda_env_vars_encryption_key_policy_document" {
+  count = var.use_localstack ? 0 : 1
+  statement {
+    sid    = "AllowAccessToLambdaEnvVarsKmsEncryptionKey"
+    effect = "Allow"
+
+    actions = [
+      "kms:Encrypt*",
+      "kms:Decrypt*",
+      "kms:GetPublicKey"
+    ]
+    resources = [
+      aws_kms_key.lambda_env_vars_encryption_key.arn,
+    ]
+  }
+}
+
+resource "aws_iam_policy" "lambda_env_vars_encryption_kms_policy" {
+  count       = var.use_localstack ? 0 : 1
+  name        = "${var.environment}-lambda-env-vars-encryption-key-kms-policy"
+  path        = "/"
+  description = "IAM policy for managing KMS connection for a lambda environment variable encryption"
+
+  policy = data.aws_iam_policy_document.lambda_env_vars_encryption_key_policy_document[0].json
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_env_vars_encryption_kms_policy" {
+  count      = var.use_localstack ? 0 : 1
+  role       = aws_iam_role.lambda_iam_role.name
+  policy_arn = aws_iam_policy.lambda_env_vars_encryption_kms_policy[0].arn
 }

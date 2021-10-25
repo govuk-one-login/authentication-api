@@ -89,3 +89,7 @@ output "sms_bucket_name_arn" {
 output "sms_bucket_name" {
   value = aws_s3_bucket.smoketest_sms_bucket.bucket
 }
+
+output "lambda_env_vars_encryption_kms_key_arn" {
+  value = aws_kms_key.lambda_env_vars_encryption_key.arn
+}

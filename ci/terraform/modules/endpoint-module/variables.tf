@@ -152,3 +152,7 @@ variable "cloudwatch_log_retention" {
   type        = number
   description = "The number of day to retain Cloudwatch logs for"
 }
+
+variable "lambda_env_vars_encryption_kms_key_arn" {
+  type = string
+}
