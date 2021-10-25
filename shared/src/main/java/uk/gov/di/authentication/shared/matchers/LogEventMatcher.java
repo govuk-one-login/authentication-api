@@ -10,7 +10,7 @@ import java.util.Map;
 
 public class LogEventMatcher {
 
-    public static Matcher<LogEvent> hasMDCProperty(String key, String value) {
+    public static Matcher<LogEvent> hasObjectMessageProperty(String key, String value) {
         return new TypeSafeMatcher<>() {
 
             @Override
@@ -26,7 +26,7 @@ public class LogEventMatcher {
             @Override
             public void describeTo(Description description) {
                 description.appendText(
-                        "a log event with MDC Property [" + key + ", " + value + "]");
+                        "a log event with ObjectMessage property [" + key + ", " + value + "]");
             }
         };
     }
