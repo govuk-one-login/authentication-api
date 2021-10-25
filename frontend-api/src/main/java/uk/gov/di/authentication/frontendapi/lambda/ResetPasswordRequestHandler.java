@@ -8,14 +8,18 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
 import uk.gov.di.authentication.frontendapi.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -48,6 +52,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     private final AwsSqsClient sqsClient;
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
+    private final AuditService auditService;
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             userJourneyStateMachine();
 
@@ -60,7 +65,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             ValidationService validationService,
             AwsSqsClient sqsClient,
             CodeGeneratorService codeGeneratorService,
-            CodeStorageService codeStorageService) {
+            CodeStorageService codeStorageService,
+            AuditService auditService) {
         super(
                 ResetPasswordRequest.class,
                 configurationService,
@@ -72,6 +78,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.sqsClient = sqsClient;
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
+        this.auditService = auditService;
     }
 
     public ResetPasswordRequestHandler() {
@@ -85,6 +92,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
+        this.auditService = new AuditService();
     }
 
     @Override
@@ -111,6 +119,19 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                         userContext.getSession().getSessionId());
                 return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
             }
+
+            auditService.submitAuditEvent(
+                    FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
+                    context.getAwsRequestId(),
+                    userContext.getSession().getSessionId(),
+                    userContext
+                            .getClient()
+                            .map(ClientRegistry::getClientID)
+                            .orElse(AuditService.UNKNOWN),
+                    AuditService.UNKNOWN,
+                    request.getEmail(),
+                    IpAddressHelper.extractIpAddress(input),
+                    AuditService.UNKNOWN);
 
             Optional<ErrorResponse> errorResponse =
                     validatePasswordResetCount(request.getEmail(), userContext);

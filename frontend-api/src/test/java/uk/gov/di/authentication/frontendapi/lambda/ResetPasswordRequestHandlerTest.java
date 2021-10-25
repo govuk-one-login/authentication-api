@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -17,6 +18,7 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -67,6 +69,7 @@ class ResetPasswordRequestHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
+    private final AuditService auditService = mock(AuditService.class);
     private final Context context = mock(Context.class);
 
     private final Session session =
@@ -83,7 +86,8 @@ class ResetPasswordRequestHandlerTest {
                     validationService,
                     awsSqsClient,
                     codeGeneratorService,
-                    codeStorageService);
+                    codeStorageService,
+                    auditService);
 
     @BeforeEach
     void setup() {
@@ -105,6 +109,11 @@ class ResetPasswordRequestHandlerTest {
 
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(
+                new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                        .withIdentity(
+                                new APIGatewayProxyRequestEvent.RequestIdentity()
+                                        .withSourceIp("123.123.123.123")));
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -119,6 +128,17 @@ class ResetPasswordRequestHandlerTest {
                 .savePasswordResetCode(
                         subject.getValue(), TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, RESET_PASSWORD);
         verify(sessionService).save(argThat(this::isSessionWithEmailSent));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
+                        context.getAwsRequestId(),
+                        session.getSessionId(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN);
     }
 
     @Test

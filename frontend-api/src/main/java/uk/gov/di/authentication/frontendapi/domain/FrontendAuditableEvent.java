@@ -8,5 +8,6 @@ public enum FrontendAuditableEvent implements AuditableEvent {
     NO_ACCOUNT_WITH_EMAIL,
     CODE_MAX_RETRIES_REACHED,
     CODE_VERIFIED,
+    PASSWORD_RESET_REQUESTED,
     LOG_IN_SUCCESS
 }
