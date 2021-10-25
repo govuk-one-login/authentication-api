@@ -201,5 +201,5 @@ variable "test_clients_enabled" {
 }
 
 variable "client_registry_api_enabled" {
-  default = true
+  default = false
 }
