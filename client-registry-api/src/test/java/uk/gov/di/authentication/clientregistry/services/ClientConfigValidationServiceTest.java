@@ -99,20 +99,20 @@ class ClientConfigValidationServiceTest {
         assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
     }
 
-    @Test
-    public void shouldReturnErrorForPrivateScopeInRegistrationRequest() {
-        Optional<ErrorObject> errorResponse =
-                validationService.validateClientRegistrationConfig(
-                        generateClientRegRequest(
-                                singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
-                                List.of("openid", "am"),
-                                singletonList("http://localhost/post-redirect-logout"),
-                                String.valueOf(MANDATORY),
-                                "http://test.com",
-                                "public"));
-        assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
-    }
+    //    @Test
+    //    public void shouldReturnErrorForPrivateScopeInRegistrationRequest() {
+    //        Optional<ErrorObject> errorResponse =
+    //                validationService.validateClientRegistrationConfig(
+    //                        generateClientRegRequest(
+    //                                singletonList("http://localhost:1000/redirect"),
+    //                                VALID_PUBLIC_CERT,
+    //                                List.of("openid", "am"),
+    //                                singletonList("http://localhost/post-redirect-logout"),
+    //                                String.valueOf(MANDATORY),
+    //                                "http://test.com",
+    //                                "public"));
+    //        assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
+    //    }
 
     @Test
     public void shouldPassValidationForValidUpdateRequest() {

@@ -62,6 +62,7 @@ public class WellknownHandler
                 .orElseGet(
                         () -> {
                             try {
+                                LOG.info("Wellknown request received");
                                 providerMetadata.setTokenEndpointURI(buildURI(baseUrl, "/token"));
                                 providerMetadata.setUserInfoEndpointURI(
                                         buildURI(baseUrl, "/userinfo"));

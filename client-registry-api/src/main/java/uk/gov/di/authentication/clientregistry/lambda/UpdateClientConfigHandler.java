@@ -74,7 +74,9 @@ public class UpdateClientConfigHandler
                                     AuditService.UNKNOWN);
                             try {
                                 String clientId = input.getPathParameters().get("clientId");
-                                LOGGER.info("Request received with ClientId {}", clientId);
+                                LOGGER.info(
+                                        "Update client config request received with ClientId: {}",
+                                        clientId);
 
                                 UpdateClientConfigRequest updateClientConfigRequest =
                                         objectMapper.readValue(
@@ -89,7 +91,9 @@ public class UpdateClientConfigHandler
                                             AuditService.UNKNOWN,
                                             ipAddress,
                                             AuditService.UNKNOWN);
-                                    LOGGER.error("Client with ClientId {} is not valid", clientId);
+                                    LOGGER.error(
+                                            "Invalid update Client config request. Invalid CliendId: {}",
+                                            clientId);
                                     return generateApiGatewayProxyResponse(
                                             400,
                                             OAuth2Error.INVALID_CLIENT
@@ -100,6 +104,10 @@ public class UpdateClientConfigHandler
                                         validationService.validateClientUpdateConfig(
                                                 updateClientConfigRequest);
                                 if (errorResponse.isPresent()) {
+                                    LOGGER.error(
+                                            "≈. Failed validation. ErrorCode: {}. ErrorDescription: {}",
+                                            errorResponse.get().getCode(),
+                                            errorResponse.get().getDescription());
                                     auditService.submitAuditEvent(
                                             UPDATE_CLIENT_REQUEST_ERROR,
                                             context.getAwsRequestId(),
@@ -138,8 +146,8 @@ public class UpdateClientConfigHandler
                                         ipAddress,
                                         AuditService.UNKNOWN);
                                 LOGGER.error(
-                                        "Request with path parameters {} is missing request parameters",
-                                        input.getPathParameters());
+                                        "Invalid Client registration request. Missing parameters from request",
+                                        e);
                                 return generateApiGatewayProxyResponse(
                                         400,
                                         OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString());
