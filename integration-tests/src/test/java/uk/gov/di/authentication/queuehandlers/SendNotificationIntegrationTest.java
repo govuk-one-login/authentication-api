@@ -120,7 +120,6 @@ public class SendNotificationIntegrationTest {
         JsonNode request = notifyStub.waitForRequest(60);
         JsonNode personalisation = request.get("personalisation");
         assertEquals(TEST_EMAIL_ADDRESS, request.get("email_address").asText());
-        assertEquals(
-                "http://localhost:3000/sign-in", personalisation.get("sign-in-page-url").asText());
+        assertEquals("http://localhost:3000/", personalisation.get("sign-in-page-url").asText());
     }
 }
