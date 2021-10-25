@@ -52,7 +52,7 @@ public class ClientSessionService {
             String result =
                     redisConnectionService.getValue(CLIENT_SESSION_PREFIX.concat(clientSessionId));
             return objectMapper.readValue(result, ClientSession.class);
-        } catch (JsonProcessingException e) {
+        } catch (JsonProcessingException | IllegalArgumentException e) {
             LOG.error("Error getting client session from Redis", e);
             throw new RuntimeException(e);
         }
