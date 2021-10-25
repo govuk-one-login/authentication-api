@@ -10,16 +10,13 @@ import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.KeyUse;
-import com.nimbusds.jose.proc.BadJOSEException;
-import com.nimbusds.jose.proc.JWSKeySelector;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.oauth2.sdk.id.Issuer;
+import com.nimbusds.jwt.util.DateUtils;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
-import com.nimbusds.openid.connect.sdk.validators.IDTokenValidator;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMException;
@@ -30,6 +27,10 @@ import org.slf4j.LoggerFactory;
 import java.security.Provider;
 import java.security.PublicKey;
 import java.security.interfaces.ECPublicKey;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
+import java.util.List;
 
 public class TokenValidationService {
 
@@ -43,37 +44,37 @@ public class TokenValidationService {
         this.kmsConnectionService = kmsConnectionService;
     }
 
-    public boolean validateIdTokenSignature(String idTokenHint) {
-        try {
-            LOGGER.info("Validating ID token signature");
-            SignedJWT idToken = SignedJWT.parse(idTokenHint);
-            JWK publicJwk = getPublicJwk();
-            JWKSet jwkSet = new JWKSet(publicJwk);
-            IDTokenValidator validator =
-                    new IDTokenValidator(
-                            new Issuer(configService.getBaseURL().get()),
-                            new ClientID(idToken.getJWTClaimsSet().getAudience().get(0)),
-                            JWSAlgorithm.ES256,
-                            jwkSet);
-            JWSKeySelector jwsKeySelector = validator.getJWSKeySelector();
-            LOGGER.info("KEYSELECTOR: " + jwsKeySelector.selectJWSKeys(idToken.getHeader(), null));
-            validator.validate(idToken, null);
-        } catch (java.text.ParseException | JOSEException | BadJOSEException e) {
-            LOGGER.error("Unable to validate Signature of ID token", e);
-            return false;
-        }
-        LOGGER.info("Successfully validated ID token signature");
-        return true;
-    }
-
     public boolean validateAccessTokenSignature(AccessToken accessToken) {
         LOGGER.info("Validating Access Token signature");
         return isTokenSignatureValid(accessToken.getValue());
     }
 
-    public boolean validateRefreshTokenSignature(RefreshToken refreshToken) {
+    public boolean validateRefreshTokenSignatureAndExpiry(RefreshToken refreshToken) {
         LOGGER.info("Validating Refresh Token signature");
-        return isTokenSignatureValid(refreshToken.getValue());
+        if (!isTokenSignatureValid(refreshToken.getValue())) {
+            return false;
+        }
+        LOGGER.info("Validating Refresh Token expiry");
+        if (hasTokenExpired(refreshToken.getValue())) {
+            LOGGER.error("Refresh token has expired");
+            return false;
+        }
+        return true;
+    }
+
+    private boolean hasTokenExpired(String tokenValue) {
+        try {
+            JWTClaimsSet claimsSet = SignedJWT.parse(tokenValue).getJWTClaimsSet();
+            LocalDateTime localDateTime = LocalDateTime.now();
+            Date currentDateTime = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+            if (!DateUtils.isAfter(claimsSet.getExpirationTime(), currentDateTime, 60)) {
+                return true;
+            }
+        } catch (java.text.ParseException e) {
+            LOGGER.error("Unable to parse token when checking if expired", e);
+            return true;
+        }
+        return false;
     }
 
     public boolean isTokenSignatureValid(String tokenValue) {
@@ -88,6 +89,19 @@ public class TokenValidationService {
             return false;
         }
         return isVerified;
+    }
+
+    public boolean validateRefreshTokenScopes(
+            List<String> clientScopes, List<String> refreshTokenScopes) {
+        if (!clientScopes.containsAll(refreshTokenScopes)) {
+            LOGGER.error("Scopes in Client Registry does not contain all scopes in Refresh Token");
+            return false;
+        }
+        if (!refreshTokenScopes.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
+            LOGGER.error("Scopes in Refresh Token does not contain OFFLINE_ACCESS scope");
+            return false;
+        }
+        return true;
     }
 
     public PublicKey getPublicKey() {

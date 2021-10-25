@@ -14,14 +14,13 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.entity.TokenStore;
+import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
@@ -291,7 +290,7 @@ public class TokenHandler
             List<String> clientScopes,
             RefreshToken currentRefreshToken) {
         boolean refreshTokenSignatureValid =
-                tokenValidationService.validateRefreshTokenSignature(currentRefreshToken);
+                tokenValidationService.validateRefreshTokenSignatureAndExpiry(currentRefreshToken);
         if (!refreshTokenSignatureValid) {
             return generateApiGatewayProxyResponse(
                     400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
@@ -310,11 +309,9 @@ public class TokenHandler
                             .toJSONObject()
                             .toJSONString());
         }
-        if (!clientScopes.containsAll(scopes)) {
-            return generateApiGatewayProxyResponse(
-                    400, OAuth2Error.INVALID_SCOPE.toJSONObject().toJSONString());
-        }
-        if (!scopes.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
+        boolean areScopesValid =
+                tokenValidationService.validateRefreshTokenScopes(clientScopes, scopes);
+        if (!areScopesValid) {
             return generateApiGatewayProxyResponse(
                     400, OAuth2Error.INVALID_SCOPE.toJSONObject().toJSONString());
         }
@@ -322,9 +319,9 @@ public class TokenHandler
         String redisKey = REFRESH_TOKEN_PREFIX + clientId + "." + publicSubject.getValue();
         Optional<String> refreshToken =
                 Optional.ofNullable(redisConnectionService.getValue(redisKey));
-        TokenStore tokenStore;
+        RefreshTokenStore tokenStore;
         try {
-            tokenStore = new ObjectMapper().readValue(refreshToken.get(), TokenStore.class);
+            tokenStore = new ObjectMapper().readValue(refreshToken.get(), RefreshTokenStore.class);
         } catch (JsonProcessingException | NoSuchElementException | IllegalArgumentException e) {
             LOG.error("Refresh token not found with given key");
             return generateApiGatewayProxyResponse(
@@ -333,19 +330,33 @@ public class TokenHandler
                             .toJSONObject()
                             .toJSONString());
         }
-        if (!new RefreshToken(tokenStore.getToken()).equals(currentRefreshToken)) {
-            LOG.error("Refresh token found does not match Refresh token in request");
-            LOG.error(
-                    "Expected refresh token: {} does not match refresh token in request: {}",
-                    tokenStore.getToken(),
-                    currentRefreshToken);
+        if (!tokenStore.getRefreshTokens().contains(currentRefreshToken.getValue())) {
+            LOG.error("Refresh token store does not contain Refresh token in request");
             return generateApiGatewayProxyResponse(
                     400,
                     new ErrorObject(OAuth2Error.INVALID_GRANT_CODE, "Invalid Refresh token")
                             .toJSONObject()
                             .toJSONString());
         }
-        redisConnectionService.deleteValue(redisKey);
+        if (tokenStore.getRefreshTokens().size() > 1) {
+            LOG.info("Removing Refresh Token from refresh token store");
+            try {
+                redisConnectionService.saveWithExpiry(
+                        redisKey,
+                        new ObjectMapper()
+                                .writeValueAsString(
+                                        tokenStore.removeRefreshToken(
+                                                currentRefreshToken.getValue())),
+                        configurationService.getSessionExpiry());
+            } catch (JsonProcessingException e) {
+                LOG.error("Unable to serialize refresh token store when updating", e);
+                throw new RuntimeException(e);
+            }
+        } else {
+            LOG.info("Deleting refresh token store as no other refresh tokens exist");
+            redisConnectionService.deleteValue(redisKey);
+        }
+
         OIDCTokenResponse tokenResponse =
                 tokenService.generateRefreshTokenResponse(
                         clientId,

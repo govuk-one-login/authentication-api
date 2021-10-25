@@ -2,7 +2,7 @@ package uk.gov.di.authentication.shared.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class TokenStore {
+public class AccessTokenStore {
 
     @JsonProperty("token")
     private String token;
@@ -10,7 +10,7 @@ public class TokenStore {
     @JsonProperty("internal_subject_id")
     private String internalSubjectId;
 
-    public TokenStore(
+    public AccessTokenStore(
             @JsonProperty(required = true, value = "token") String token,
             @JsonProperty(required = true, value = "internal_subject_id")
                     String internalSubjectId) {
