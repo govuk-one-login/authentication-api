@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
 import com.nimbusds.oauth2.sdk.id.Issuer;
 import com.nimbusds.openid.connect.sdk.SubjectType;
@@ -73,7 +74,7 @@ public class WellknownHandler
                                 providerMetadata.setTokenEndpointAuthMethods(
                                         List.of(ClientAuthenticationMethod.PRIVATE_KEY_JWT));
                                 providerMetadata.setScopes(
-                                        ValidScopes.getScopesForWellKnownHandler());
+                                        new Scope(ValidScopes.getScopesForWellKnownHandler()));
                                 providerMetadata.setResponseTypes(
                                         List.of(new ResponseType("code")));
                                 providerMetadata.setGrantTypes(
