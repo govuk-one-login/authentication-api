@@ -327,8 +327,8 @@ public class TokenService {
                 serializedTokenStore =
                         new ObjectMapper()
                                 .writeValueAsString(
-                                        new AccessTokenStore(
-                                                refreshToken.getValue(),
+                                        new RefreshTokenStore(
+                                                List.of(refreshToken.getValue()),
                                                 internalSubject.getValue()));
             }
             redisConnectionService.saveWithExpiry(
