@@ -12,3 +12,4 @@ shared_state_bucket                 = "terraform-state"
 test_client_verify_email_otp        = "123456"
 test_client_verify_phone_number_otp = "123456"
 test_clients_enabled                = "true"
+client_registry_api_enabled         = true

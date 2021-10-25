@@ -199,3 +199,7 @@ variable "test_clients_enabled" {
   type    = string
   default = "false"
 }
+
+variable "client_registry_api_enabled" {
+  default = false
+}
