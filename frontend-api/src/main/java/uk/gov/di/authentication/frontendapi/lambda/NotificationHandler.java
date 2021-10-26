@@ -115,6 +115,14 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                     notificationService.getNotificationTemplateId(RESET_PASSWORD));
                             break;
                         case PASSWORD_RESET_CONFIRMATION:
+                            Map<String, Object> passwordResetConfirmationPersonalisation =
+                                    new HashMap<>();
+                            passwordResetConfirmationPersonalisation.put(
+                                    "customer-support-link",
+                                    buildURI(
+                                                    configService.getFrontendBaseUrl(),
+                                                    configService.getCustomerSupportLinkRoute())
+                                            .toString());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     Collections.emptyMap(),

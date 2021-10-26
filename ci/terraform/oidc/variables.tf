@@ -138,6 +138,11 @@ variable "reset_password_route" {
   default = "reset-password?code="
 }
 
+variable "customer_support_link_route" {
+  type    = string
+  default = "support"
+}
+
 variable "dns_state_bucket" {
   type = string
 }
