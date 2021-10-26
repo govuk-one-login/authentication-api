@@ -76,6 +76,15 @@ resource "aws_ssm_parameter" "redis_port" {
   value  = var.use_localstack ? var.external_redis_port : aws_elasticache_replication_group.sessions_store[0].port
 }
 
+resource "aws_ssm_parameter" "password_pepper" {
+  count  = var.password_pepper == null ? 0 : 1
+  name   = "${var.environment}-${local.redis_key}-password-pepper"
+  type   = "SecureString"
+  key_id = aws_kms_alias.parameter_store_key_alias.id
+  value  = var.password_pepper
+}
+
+
 data "aws_iam_policy_document" "redis_parameter_policy" {
   statement {
     sid    = "AllowGetParameters"
@@ -126,5 +135,47 @@ resource "aws_iam_role_policy_attachment" "token_lambda_iam_role_parameters" {
 
 resource "aws_iam_role_policy_attachment" "dynamo_sqs_lambda_iam_role_parameters" {
   policy_arn = aws_iam_policy.parameter_policy.arn
+  role       = aws_iam_role.lambda_iam_role.name
+}
+
+data "aws_iam_policy_document" "pepper_parameter_policy" {
+  count = var.password_pepper == null ? 0 : 1
+  statement {
+    sid    = "AllowGetParameters"
+    effect = "Allow"
+
+    actions = [
+      "ssm:GetParameter",
+    ]
+
+    resources = [
+      aws_ssm_parameter.password_pepper[0].arn
+    ]
+  }
+  statement {
+    sid    = "AllowDecryptOfParameters"
+    effect = "Allow"
+
+    actions = [
+      "kms:Decrypt",
+    ]
+
+    resources = [
+      aws_kms_alias.parameter_store_key_alias.arn,
+      aws_kms_key.parameter_store_key.arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "pepper_parameter_policy" {
+  count       = var.password_pepper == null ? 0 : 1
+  policy      = data.aws_iam_policy_document.pepper_parameter_policy[0].json
+  path        = "/${var.environment}/lambda-parameters/"
+  name_prefix = "pepper-parameter-store-policy"
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_iam_role_pepper_parameters" {
+  count      = var.password_pepper == null ? 0 : 1
+  policy_arn = aws_iam_policy.pepper_parameter_policy[0].arn
   role       = aws_iam_role.lambda_iam_role.name
 }

@@ -125,3 +125,10 @@ variable "account_migration_lambda_zip_file" {
   description = "Location of the account-migrations Lambda ZIP file"
   type        = string
 }
+
+variable "password_pepper" {
+  description = "Added to migrated passwords before hashed"
+  type        = string
+  default     = null
+}
+

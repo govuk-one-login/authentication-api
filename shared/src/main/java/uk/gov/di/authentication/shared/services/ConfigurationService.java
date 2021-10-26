@@ -4,6 +4,7 @@ import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagement;
 import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagementClient;
 import com.amazonaws.services.simplesystemsmanagement.model.GetParameterRequest;
+import com.amazonaws.services.simplesystemsmanagement.model.ParameterNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -117,7 +118,15 @@ public class ConfigurationService {
     }
 
     public Optional<String> getPasswordPepper() {
-        return Optional.ofNullable(System.getenv("PASSWORD_PEPPER"));
+        try {
+            var request =
+                    new GetParameterRequest()
+                            .withWithDecryption(true)
+                            .withName(format("{0}-password-pepper", getEnvironment()));
+            return Optional.of(getSsmClient().getParameter(request).getParameter().getValue());
+        } catch (ParameterNotFoundException e) {
+            return Optional.empty();
+        }
     }
 
     public String getRedisHost() {

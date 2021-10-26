@@ -10,6 +10,7 @@ params:
   DEPLOYER_ROLE_ARN: ((deployer-role-arn-non-prod))
   DEPLOY_ENVIRONMENT: build
   NOTIFY_API_KEY: ((build-notify-api-key))
+  PASSWORD_PEPPER: ((build-password-pepper))
   STATE_BUCKET: digital-identity-dev-tfstate
   TEST_CLIENT_EMAIL_ALLOWLIST: ((test-client-email-allowlist))
 inputs:
@@ -37,6 +38,7 @@ run:
         -var 'logging_endpoint_arn=arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod' \
         -var "test_client_email_allowlist=${TEST_CLIENT_EMAIL_ALLOWLIST}" \
         -var 'account_migration_lambda_zip_file=../../../../account-migration-release/account-migrations.zip' \
+        -var "password_pepper=${PASSWORD_PEPPER}" \
         -var-file ${DEPLOY_ENVIRONMENT}-stub-clients.tfvars \
         -var-file ${DEPLOY_ENVIRONMENT}-sizing.tfvars \
 
