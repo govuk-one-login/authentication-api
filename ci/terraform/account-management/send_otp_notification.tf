@@ -12,10 +12,6 @@ module "send_otp_notification" {
     DYNAMO_ENDPOINT     = var.use_localstack ? var.lambda_dynamo_endpoint : null
     LOCALSTACK_ENDPOINT = var.use_localstack ? var.localstack_endpoint : null
     REDIS_KEY           = local.redis_key
-    REDIS_HOST          = var.use_localstack ? var.external_redis_host : aws_elasticache_replication_group.account_management_sessions_store[0].primary_endpoint_address
-    REDIS_PORT          = var.use_localstack ? var.external_redis_port : aws_elasticache_replication_group.account_management_sessions_store[0].port
-    REDIS_PASSWORD      = var.use_localstack ? var.external_redis_password : random_password.redis_password.result
-    REDIS_TLS           = var.redis_use_tls
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.SendOtpNotificationHandler::handleRequest"
 
