@@ -8,12 +8,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdateEmailRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.ValidationService;
 
@@ -47,12 +49,17 @@ class UpdateEmailHandlerTest {
     private static final String INVALID_EMAIL_ADDRESS = "igital.cabinet-office.gov.uk";
     private static final String OTP = "123456";
     private static final Subject SUBJECT = new Subject();
+    private final AuditService auditService = mock(AuditService.class);
 
     @BeforeEach
     public void setUp() {
         handler =
                 new UpdateEmailHandler(
-                        dynamoService, sqsClient, validationService, codeStorageService);
+                        dynamoService,
+                        sqsClient,
+                        validationService,
+                        codeStorageService,
+                        auditService);
     }
 
     @Test
@@ -68,6 +75,8 @@ class UpdateEmailHandlerTest {
                 new APIGatewayProxyRequestEvent.ProxyRequestContext();
         Map<String, Object> authorizerParams = new HashMap<>();
         authorizerParams.put("principalId", SUBJECT.getValue());
+        proxyRequestContext.setIdentity(
+                new APIGatewayProxyRequestEvent.RequestIdentity().withSourceIp("123.123.123.123"));
         proxyRequestContext.setAuthorizer(authorizerParams);
         event.setRequestContext(proxyRequestContext);
         when(codeStorageService.isValidOtpCode(NEW_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
@@ -82,6 +91,17 @@ class UpdateEmailHandlerTest {
         verify(dynamoService).updateEmail(EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS);
         NotifyRequest notifyRequest = new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED);
         verify(sqsClient).send(new ObjectMapper().writeValueAsString(notifyRequest));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AccountManagementAuditableEvent.UPDATE_EMAIL,
+                        context.getAwsRequestId(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        userProfile.getSubjectID(),
+                        userProfile.getEmail(),
+                        "123.123.123.123",
+                        userProfile.getPhoneNumber());
     }
 
     @Test

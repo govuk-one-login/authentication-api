@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdateEmailRequest;
@@ -16,7 +17,9 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
@@ -38,6 +41,7 @@ public class UpdateEmailHandler
     private final ValidationService validationService;
     private final CodeStorageService codeStorageService;
     private static final Logger LOGGER = LoggerFactory.getLogger(UpdateEmailHandler.class);
+    private final AuditService auditService;
 
     public UpdateEmailHandler() {
         ConfigurationService configurationService = new ConfigurationService();
@@ -50,17 +54,20 @@ public class UpdateEmailHandler
         this.validationService = new ValidationService();
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
+        this.auditService = new AuditService();
     }
 
     public UpdateEmailHandler(
             DynamoService dynamoService,
             AwsSqsClient sqsClient,
             ValidationService validationService,
-            CodeStorageService codeStorageService) {
+            CodeStorageService codeStorageService,
+            AuditService auditService) {
         this.dynamoService = dynamoService;
         this.sqsClient = sqsClient;
         this.validationService = validationService;
         this.codeStorageService = codeStorageService;
+        this.auditService = auditService;
     }
 
     @Override
@@ -123,6 +130,17 @@ public class UpdateEmailHandler
                                                 updateInfoRequest.getReplacementEmailAddress(),
                                                 NotificationType.EMAIL_UPDATED);
                                 sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+
+                                auditService.submitAuditEvent(
+                                        AccountManagementAuditableEvent.UPDATE_EMAIL,
+                                        context.getAwsRequestId(),
+                                        AuditService.UNKNOWN,
+                                        AuditService.UNKNOWN,
+                                        userProfile.getSubjectID(),
+                                        userProfile.getEmail(),
+                                        IpAddressHelper.extractIpAddress(input),
+                                        userProfile.getPhoneNumber());
+
                                 LOGGER.info(
                                         "Message successfully added to queue. Generating successful gateway response");
                                 return generateEmptySuccessApiGatewayResponse();
