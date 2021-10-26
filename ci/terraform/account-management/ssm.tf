@@ -1,5 +1,5 @@
 locals {
-  redis_key = "session"
+  redis_key = "account-management"
 }
 
 data "aws_iam_policy_document" "key_policy" {
@@ -14,9 +14,9 @@ data "aws_iam_policy_document" "key_policy" {
       type = "AWS"
       identifiers = [
         format(
-          "arn:%s:iam::%s:root",
-          data.aws_partition.current.partition,
-          data.aws_caller_identity.current.account_id
+        "arn:%s:iam::%s:root",
+        data.aws_partition.current.partition,
+        data.aws_caller_identity.current.account_id
         )
       ]
     }
@@ -25,7 +25,7 @@ data "aws_iam_policy_document" "key_policy" {
 }
 
 resource "aws_kms_key" "parameter_store_key" {
-  description             = "KMS key for parameter store"
+  description             = "KMS key for account management parameter store"
   deletion_window_in_days = 30
   enable_key_rotation     = true
   policy                  = data.aws_iam_policy_document.key_policy.json
@@ -37,7 +37,7 @@ resource "aws_kms_key" "parameter_store_key" {
 }
 
 resource "aws_kms_alias" "parameter_store_key_alias" {
-  name          = "alias/${var.environment}-lambda-parameter-store-encryption-key"
+  name          = "alias/${var.environment}-acct-mgmt-lambda-parameter-store-encryption-key"
   target_key_id = aws_kms_key.parameter_store_key.id
 }
 
@@ -45,14 +45,14 @@ resource "aws_ssm_parameter" "redis_master_host" {
   name   = "${var.environment}-${local.redis_key}-redis-master-host"
   type   = "SecureString"
   key_id = aws_kms_alias.parameter_store_key_alias.id
-  value  = var.use_localstack ? var.external_redis_host : aws_elasticache_replication_group.sessions_store[0].primary_endpoint_address
+  value  = var.use_localstack ? var.external_redis_host : aws_elasticache_replication_group.account_management_sessions_store[0].primary_endpoint_address
 }
 
 resource "aws_ssm_parameter" "redis_replica_host" {
   name   = "${var.environment}-${local.redis_key}-redis-replica-host"
   type   = "SecureString"
   key_id = aws_kms_alias.parameter_store_key_alias.id
-  value  = var.use_localstack ? "" : aws_elasticache_replication_group.sessions_store[0].reader_endpoint_address
+  value  = var.use_localstack ? "" : aws_elasticache_replication_group.account_management_sessions_store[0].reader_endpoint_address
 }
 
 resource "aws_ssm_parameter" "redis_tls" {
@@ -73,7 +73,7 @@ resource "aws_ssm_parameter" "redis_port" {
   name   = "${var.environment}-${local.redis_key}-redis-port"
   type   = "SecureString"
   key_id = aws_kms_alias.parameter_store_key_alias.id
-  value  = var.use_localstack ? var.external_redis_port : aws_elasticache_replication_group.sessions_store[0].port
+  value  = var.use_localstack ? var.external_redis_port : aws_elasticache_replication_group.account_management_sessions_store[0].port
 }
 
 data "aws_iam_policy_document" "redis_parameter_policy" {
