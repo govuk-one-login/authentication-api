@@ -150,3 +150,8 @@ variable "customer_support_link_route" {
   type    = string
   default = "support"
 }
+
+variable "localstack_endpoint" {
+  type    = string
+  default = "http://localhost:45678/"
+}
