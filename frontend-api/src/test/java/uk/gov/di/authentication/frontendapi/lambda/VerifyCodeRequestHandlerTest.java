@@ -15,6 +15,7 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -23,6 +24,7 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -77,6 +79,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_EMAIL_C
 import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_PHONE_NUMBER_CODE_SENT;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
 class VerifyCodeRequestHandlerTest {
@@ -110,6 +113,7 @@ class VerifyCodeRequestHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
+    private final AuditService auditService = mock(AuditService.class);
     private final ClientRegistry clientRegistry =
             new ClientRegistry().setTestClient(false).setClientID(CLIENT_ID);
     private final ClientRegistry testClientRegistry =
@@ -132,7 +136,8 @@ class VerifyCodeRequestHandlerTest {
                         authenticationService,
                         codeStorageService,
                         validationService,
-                        stateMachine);
+                        stateMachine,
+                        auditService);
 
         when(authenticationService.getUserProfileFromEmail(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.of(userProfile));
@@ -217,6 +222,18 @@ class VerifyCodeRequestHandlerTest {
         BaseAPIResponse codeResponse =
                 new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
         assertThat(codeResponse.getSessionState(), equalTo(EMAIL_CODE_VERIFIED));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.CODE_VERIFIED,
+                        context.getAwsRequestId(),
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        AuditService.UNKNOWN,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        pair("notification-type", VERIFY_EMAIL.name()));
     }
 
     @Test
@@ -244,6 +261,18 @@ class VerifyCodeRequestHandlerTest {
                 new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
         assertThat(codeResponse.getSessionState(), equalTo(PHONE_NUMBER_CODE_VERIFIED));
         assertThat(session.getCurrentCredentialStrength(), equalTo(MEDIUM_LEVEL));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.CODE_VERIFIED,
+                        context.getAwsRequestId(),
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        AuditService.UNKNOWN,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        pair("notification-type", VERIFY_PHONE_NUMBER.name()));
     }
 
     @Test
@@ -355,6 +384,17 @@ class VerifyCodeRequestHandlerTest {
                 .updatePhoneNumberVerifiedStatus(TEST_EMAIL_ADDRESS, true);
         verify(codeStorageService)
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900);
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                        context.getAwsRequestId(),
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        AuditService.UNKNOWN,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        pair("notification-type", VERIFY_PHONE_NUMBER.name()));
     }
 
     @Test
@@ -403,6 +443,17 @@ class VerifyCodeRequestHandlerTest {
         assertThat(session.getRetryCount(), equalTo(0));
         verify(codeStorageService)
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900);
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                        context.getAwsRequestId(),
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        AuditService.UNKNOWN,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        pair("notification-type", VERIFY_EMAIL.name()));
     }
 
     @Test
@@ -445,6 +496,18 @@ class VerifyCodeRequestHandlerTest {
         BaseAPIResponse codeResponse =
                 new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
         assertThat(codeResponse.getSessionState(), equalTo(MFA_CODE_VERIFIED));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.CODE_VERIFIED,
+                        context.getAwsRequestId(),
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        AuditService.UNKNOWN,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        pair("notification-type", MFA_SMS.name()));
     }
 
     @Test
@@ -523,6 +586,17 @@ class VerifyCodeRequestHandlerTest {
         assertThat(session.getRetryCount(), equalTo(0));
         verify(codeStorageService)
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900);
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                        context.getAwsRequestId(),
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        AuditService.UNKNOWN,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        pair("notification-type", MFA_SMS.name()));
     }
 
     @Test
@@ -604,6 +678,11 @@ class VerifyCodeRequestHandlerTest {
     private APIGatewayProxyResponseEvent makeCallWithCode(
             String code, String notificationType, Optional<Session> session, String clientId) {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(
+                new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                        .withIdentity(
+                                new APIGatewayProxyRequestEvent.RequestIdentity()
+                                        .withSourceIp("123.123.123.123")));
         event.setHeaders(
                 Map.of(
                         "Session-Id",

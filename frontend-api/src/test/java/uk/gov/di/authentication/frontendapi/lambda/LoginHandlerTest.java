@@ -17,6 +17,7 @@ import net.minidev.json.JSONArray;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
@@ -27,6 +28,7 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -72,6 +74,7 @@ class LoginHandlerTest {
     private final ClientSession clientSession = mock(ClientSession.class);
     private final ClientService clientService = mock(ClientService.class);
     private final UserMigrationService userMigrationService = mock(UserMigrationService.class);
+    private final AuditService auditService = mock(AuditService.class);
 
     private final Session session =
             new Session(IdGenerator.generate()).setState(AUTHENTICATION_REQUIRED);
@@ -81,6 +84,7 @@ class LoginHandlerTest {
         when(configurationService.getMaxPasswordRetries()).thenReturn(5);
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(clientSession));
+        when(context.getAwsRequestId()).thenReturn("aws-session-id");
 
         JSONArray jsonArray = new JSONArray();
         jsonArray.add("Cl.Cm");
@@ -97,7 +101,8 @@ class LoginHandlerTest {
                         clientSessionService,
                         clientService,
                         codeStorageService,
-                        userMigrationService);
+                        userMigrationService,
+                        auditService);
     }
 
     @Test
@@ -112,6 +117,11 @@ class LoginHandlerTest {
                 .thenReturn(generateAuthRequest(Optional.empty()).toParameters());
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(
+                new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                        .withIdentity(
+                                new APIGatewayProxyRequestEvent.RequestIdentity()
+                                        .withSourceIp("123.123.123.123")));
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -124,6 +134,17 @@ class LoginHandlerTest {
         assertThat(
                 response.getRedactedPhoneNumber(),
                 equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.LOG_IN_SUCCESS,
+                        "aws-session-id",
+                        session.getSessionId(),
+                        "",
+                        userProfile.getSubjectID(),
+                        userProfile.getEmail(),
+                        "123.123.123.123",
+                        userProfile.getPhoneNumber());
     }
 
     @Test
@@ -219,6 +240,11 @@ class LoginHandlerTest {
 
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(
+                new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                        .withIdentity(
+                                new APIGatewayProxyRequestEvent.RequestIdentity()
+                                        .withSourceIp("123.123.123.123")));
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -228,6 +254,17 @@ class LoginHandlerTest {
         LoginResponse response =
                 new ObjectMapper().readValue(result.getBody(), LoginResponse.class);
         assertThat(response.getSessionState(), equalTo(ACCOUNT_TEMPORARILY_LOCKED));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                        "aws-session-id",
+                        session.getSessionId(),
+                        "",
+                        userProfile.getSubjectID(),
+                        userProfile.getEmail(),
+                        "123.123.123.123",
+                        userProfile.getPhoneNumber());
     }
 
     @Test
@@ -268,12 +305,28 @@ class LoginHandlerTest {
                         userProfile.getLegacySubjectID(), EMAIL))
                 .thenReturn(false);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(
+                new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                        .withIdentity(
+                                new APIGatewayProxyRequestEvent.RequestIdentity()
+                                        .withSourceIp("123.123.123.123")));
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
         usingValidSession();
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.INVALID_CREDENTIALS,
+                        "aws-session-id",
+                        session.getSessionId(),
+                        "",
+                        "",
+                        EMAIL,
+                        "123.123.123.123",
+                        "");
 
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
@@ -333,11 +386,27 @@ class LoginHandlerTest {
     public void shouldReturn400IfUserDoesNotHaveAnAccount() {
         when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(null);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(
+                new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                        .withIdentity(
+                                new APIGatewayProxyRequestEvent.RequestIdentity()
+                                        .withSourceIp("123.123.123.123")));
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         usingValidSession();
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
+                        "aws-session-id",
+                        session.getSessionId(),
+                        "",
+                        "",
+                        "",
+                        "123.123.123.123",
+                        "");
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));

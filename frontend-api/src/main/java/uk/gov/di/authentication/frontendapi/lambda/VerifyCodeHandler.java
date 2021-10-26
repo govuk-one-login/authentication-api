@@ -8,8 +8,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -19,6 +21,8 @@ import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -49,6 +53,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.PHONE_NUMBER_C
 import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
@@ -61,6 +66,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private final CodeStorageService codeStorageService;
     private final ValidationService validationService;
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine;
+    private final AuditService auditService;
     private static final String CLIENT_SESSION_ID_HEADER = "Client-Session-Id";
 
     protected VerifyCodeHandler(
@@ -71,7 +77,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             AuthenticationService authenticationService,
             CodeStorageService codeStorageService,
             ValidationService validationService,
-            StateMachine<SessionState, SessionAction, UserContext> stateMachine) {
+            StateMachine<SessionState, SessionAction, UserContext> stateMachine,
+            AuditService auditService) {
         super(
                 VerifyCodeRequest.class,
                 configurationService,
@@ -82,6 +89,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.codeStorageService = codeStorageService;
         this.validationService = validationService;
         this.stateMachine = stateMachine;
+        this.auditService = auditService;
     }
 
     public VerifyCodeHandler() {
@@ -91,6 +99,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         new RedisConnectionService(ConfigurationService.getInstance()));
         this.validationService = new ValidationService();
         this.stateMachine = userJourneyStateMachine();
+        this.auditService = new AuditService();
     }
 
     @Override
@@ -148,7 +157,10 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     session,
                     codeRequest.getNotificationType(),
                     userContext.getClientSession(),
-                    input.getHeaders().get(CLIENT_SESSION_ID_HEADER));
+                    input.getHeaders().get(CLIENT_SESSION_ID_HEADER),
+                    input,
+                    context,
+                    userContext);
 
             if (isSessionActionBadRequest(validationAction)) return generateResponse(session);
 
@@ -233,10 +245,28 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             Session session,
             NotificationType notificationType,
             ClientSession clientSession,
-            String clientSessionId) {
+            String clientSessionId,
+            APIGatewayProxyRequestEvent input,
+            Context context,
+            UserContext userContext) {
         if (notificationType.equals(VERIFY_PHONE_NUMBER)
                 && List.of(PHONE_NUMBER_CODE_VERIFIED, CONSENT_REQUIRED)
                         .contains(session.getState())) {
+
+            auditService.submitAuditEvent(
+                    FrontendAuditableEvent.CODE_VERIFIED,
+                    context.getAwsRequestId(),
+                    session.getSessionId(),
+                    userContext
+                            .getClient()
+                            .map(ClientRegistry::getClientID)
+                            .orElse(AuditService.UNKNOWN),
+                    AuditService.UNKNOWN,
+                    session.getEmailAddress(),
+                    IpAddressHelper.extractIpAddress(input),
+                    AuditService.UNKNOWN,
+                    pair("notification-type", notificationType.name()));
+
             codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
             authenticationService.updatePhoneNumberVerifiedStatus(session.getEmailAddress(), true);
             clientSessionService.saveClientSession(
@@ -250,12 +280,42 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         UPDATED_TERMS_AND_CONDITIONS,
                         CONSENT_REQUIRED)
                 .contains(session.getState())) {
+
+            auditService.submitAuditEvent(
+                    FrontendAuditableEvent.CODE_VERIFIED,
+                    context.getAwsRequestId(),
+                    session.getSessionId(),
+                    userContext
+                            .getClient()
+                            .map(ClientRegistry::getClientID)
+                            .orElse(AuditService.UNKNOWN),
+                    AuditService.UNKNOWN,
+                    session.getEmailAddress(),
+                    IpAddressHelper.extractIpAddress(input),
+                    AuditService.UNKNOWN,
+                    pair("notification-type", notificationType.name()));
+
             codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
         } else if (List.of(
                         PHONE_NUMBER_CODE_MAX_RETRIES_REACHED,
                         EMAIL_CODE_MAX_RETRIES_REACHED,
                         MFA_CODE_MAX_RETRIES_REACHED)
                 .contains(session.getState())) {
+
+            auditService.submitAuditEvent(
+                    FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                    context.getAwsRequestId(),
+                    session.getSessionId(),
+                    userContext
+                            .getClient()
+                            .map(ClientRegistry::getClientID)
+                            .orElse(AuditService.UNKNOWN),
+                    AuditService.UNKNOWN,
+                    session.getEmailAddress(),
+                    IpAddressHelper.extractIpAddress(input),
+                    AuditService.UNKNOWN,
+                    pair("notification-type", notificationType.name()));
+
             blockCodeForSessionAndResetCount(session);
         }
     }
