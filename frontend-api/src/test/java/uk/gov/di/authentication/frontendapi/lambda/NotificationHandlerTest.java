@@ -38,6 +38,10 @@ public class NotificationHandlerTest {
     private static final String NOTIFY_PHONE_NUMBER = "01234567899";
     private static final String TEMPLATE_ID = "fdsfdssd";
     private static final String BUCKET_NAME = "test-s3-bucket";
+    private static final String FRONTEND_BASE_URL = "https://localhost:8080/frontend";
+    private static final String CUSTOMER_SUPPORT_LINK_URL =
+            "https://localhost:8080/frontend/support";
+    private static final String CUSTOMER_SUPPORT_LINK_ROUTE = "support";
     private final Context context = mock(Context.class);
     private final NotificationService notificationService = mock(NotificationService.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
@@ -75,6 +79,8 @@ public class NotificationHandlerTest {
             throws JsonProcessingException, NotificationClientException {
         when(notificationService.getNotificationTemplateId(PASSWORD_RESET_CONFIRMATION))
                 .thenReturn(TEMPLATE_ID);
+        when(configService.getFrontendBaseUrl()).thenReturn(FRONTEND_BASE_URL);
+        when(configService.getCustomerSupportLinkRoute()).thenReturn(CUSTOMER_SUPPORT_LINK_ROUTE);
 
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, PASSWORD_RESET_CONFIRMATION);
@@ -82,6 +88,9 @@ public class NotificationHandlerTest {
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
         handler.handleRequest(sqsEvent, context);
+
+        Map<String, Object> personalisation = new HashMap<>();
+        personalisation.put("customer-support-link", CUSTOMER_SUPPORT_LINK_URL);
 
         verify(notificationService)
                 .sendEmail(TEST_EMAIL_ADDRESS, Collections.emptyMap(), TEMPLATE_ID);

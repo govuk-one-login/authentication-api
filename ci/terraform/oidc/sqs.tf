@@ -154,13 +154,14 @@ resource "aws_lambda_function" "email_sqs_lambda" {
   }
   environment {
     variables = merge(var.notify_template_map, {
-      FRONTEND_BASE_URL         = module.dns.frontend_url
-      ACCOUNT_MANAGEMENT_URI    = module.dns.account_management_url
-      RESET_PASSWORD_ROUTE      = var.reset_password_route
-      NOTIFY_API_KEY            = var.notify_api_key
-      NOTIFY_URL                = var.notify_url
-      NOTIFY_TEST_PHONE_NUMBER  = var.notify_test_phone_number
-      SMOKETEST_SMS_BUCKET_NAME = local.sms_bucket_name
+      FRONTEND_BASE_URL           = module.dns.frontend_url
+      ACCOUNT_MANAGEMENT_URI      = module.dns.account_management_url
+      RESET_PASSWORD_ROUTE        = var.reset_password_route
+      CUSTOMER_SUPPORT_LINK_ROUTE = var.customer_support_link_route
+      NOTIFY_API_KEY              = var.notify_api_key
+      NOTIFY_URL                  = var.notify_url
+      NOTIFY_TEST_PHONE_NUMBER    = var.notify_test_phone_number
+      SMOKETEST_SMS_BUCKET_NAME   = local.sms_bucket_name
     })
   }
   kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
