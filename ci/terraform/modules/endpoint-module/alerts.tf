@@ -7,7 +7,7 @@ resource "aws_cloudwatch_log_metric_filter" "lambda_error_metric_filter" {
   metric_transformation {
     name      = replace("${var.environment}-${var.endpoint_name}-error-count", ".", "")
     namespace = "LambdaErrorsNamespace"
-    value     = "10"
+    value     = "1"
   }
 }
 
@@ -20,7 +20,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_error_cloudwatch_alarm" {
   namespace           = aws_cloudwatch_log_metric_filter.lambda_error_metric_filter[0].metric_transformation[0].namespace
   period              = "3600"
   statistic           = "Sum"
-  threshold           = "10"
+  threshold           = "5"
   alarm_description   = "This metric monitors errors within a Lambda"
   alarm_actions       = [data.aws_sns_topic.slack_events.arn]
 }

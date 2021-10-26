@@ -106,6 +106,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             LOGGER.info("PHONE_NUMBER_UPDATED email has been sent using Notify");
                             break;
                         case PASSWORD_UPDATED:
+                            LOGGER.info("Sending PASSWORD_UPDATED email using Notify");
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     new HashMap<>(),

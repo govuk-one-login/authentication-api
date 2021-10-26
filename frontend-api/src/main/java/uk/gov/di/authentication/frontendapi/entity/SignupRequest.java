@@ -9,7 +9,7 @@ public class SignupRequest extends BaseFrontendRequest {
     public SignupRequest(
             @JsonProperty(required = true, value = "email") String email,
             @JsonProperty(required = true, value = "password") String password) {
-        super(email);
+        super(email.toLowerCase());
         this.password = password;
     }
 

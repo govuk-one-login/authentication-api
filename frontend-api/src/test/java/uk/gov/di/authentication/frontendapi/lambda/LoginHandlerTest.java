@@ -61,8 +61,8 @@ import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEv
 
 class LoginHandlerTest {
 
-    private static final String EMAIL = "computer-1";
-    private static final String PASSWORD = "joe.bloggs@test.com";
+    private static final String EMAIL = "joe.bloggs@test.com";
+    private static final String PASSWORD = "computer-1";
     private static final String PHONE_NUMBER = "01234567890";
     private LoginHandler handler;
     private final Context context = mock(Context.class);
@@ -123,7 +123,10 @@ class LoginHandlerTest {
                                 new APIGatewayProxyRequestEvent.RequestIdentity()
                                         .withSourceIp("123.123.123.123")));
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+        event.setBody(
+                format(
+                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
+                        PASSWORD, EMAIL.toUpperCase()));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -134,6 +137,7 @@ class LoginHandlerTest {
         assertThat(
                 response.getRedactedPhoneNumber(),
                 equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+        verify(authenticationService).getUserProfileByEmail(EMAIL);
 
         verify(auditService)
                 .submitAuditEvent(
