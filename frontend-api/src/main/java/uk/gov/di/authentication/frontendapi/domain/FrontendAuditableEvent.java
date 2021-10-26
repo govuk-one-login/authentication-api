@@ -14,5 +14,6 @@ public enum FrontendAuditableEvent implements AuditableEvent {
     CHECK_USER_NO_ACCOUNT_WITH_EMAIL,
     CHECK_USER_KNOWN_EMAIL,
     CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
-    CREATE_ACCOUNT
+    CREATE_ACCOUNT,
+    CLIENT_INFO_FOUND
 }

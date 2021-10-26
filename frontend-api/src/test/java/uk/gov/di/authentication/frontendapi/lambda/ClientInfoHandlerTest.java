@@ -14,12 +14,14 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ClientInfoResponse;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -34,6 +36,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -54,12 +58,19 @@ public class ClientInfoHandlerTest {
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final AuditService auditService = mock(AuditService.class);
 
     @BeforeEach
-    public void beforEach() {
+    public void beforeEach() {
+        when(context.getAwsRequestId()).thenReturn("aws-session-id");
+
         handler =
                 new ClientInfoHandler(
-                        configurationService, clientSessionService, clientService, sessionService);
+                        configurationService,
+                        clientSessionService,
+                        clientService,
+                        sessionService,
+                        auditService);
         clientRegistry = new ClientRegistry();
         clientRegistry.setClientID(TEST_CLIENT_ID);
         clientRegistry.setClientName(TEST_CLIENT_NAME);
@@ -75,6 +86,11 @@ public class ClientInfoHandlerTest {
         usingValidClientSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(CLIENT_SESSION_ID_HEADER, KNOWN_CLIENT_SESSION_ID));
+        event.setRequestContext(
+                new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                        .withIdentity(
+                                new APIGatewayProxyRequestEvent.RequestIdentity()
+                                        .withSourceIp("123.123.123.123")));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -84,6 +100,17 @@ public class ClientInfoHandlerTest {
 
         assertEquals(response.getClientId(), TEST_CLIENT_ID);
         assertEquals(response.getClientName(), TEST_CLIENT_NAME);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.CLIENT_INFO_FOUND,
+                        "aws-session-id",
+                        "session-id",
+                        TEST_CLIENT_ID,
+                        auditService.UNKNOWN,
+                        auditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN);
     }
 
     @Test
@@ -97,6 +124,8 @@ public class ClientInfoHandlerTest {
 
         String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1018);
         assertThat(result, hasBody(expectedResponse));
+
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -110,6 +139,8 @@ public class ClientInfoHandlerTest {
 
         String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1015);
         assertThat(result, hasBody(expectedResponse));
+
+        verifyNoInteractions(auditService);
     }
 
     private void usingValidClientSession() {
