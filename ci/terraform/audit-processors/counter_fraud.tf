@@ -6,7 +6,6 @@ module "fraud_realtime_logging_role" {
   vpc_arn     = local.authentication_vpc_arn
 
   policies_to_attach = [
-    aws_iam_policy.read_from_queue_policy.arn,
     aws_iam_policy.fraud_realtime_logging_audit_payload_kms_verification.arn
   ]
 }
