@@ -9,13 +9,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdatePasswordRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
@@ -31,6 +34,7 @@ public class UpdatePasswordHandler
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final DynamoService dynamoService;
     private final AwsSqsClient sqsClient;
+    private final AuditService auditService;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(UpdatePasswordHandler.class);
 
@@ -42,11 +46,14 @@ public class UpdatePasswordHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
+        this.auditService = new AuditService();
     }
 
-    public UpdatePasswordHandler(DynamoService dynamoService, AwsSqsClient sqsClient) {
+    public UpdatePasswordHandler(
+            DynamoService dynamoService, AwsSqsClient sqsClient, AuditService auditService) {
         this.dynamoService = dynamoService;
         this.sqsClient = sqsClient;
+        this.auditService = auditService;
     }
 
     @Override
@@ -88,6 +95,17 @@ public class UpdatePasswordHandler
                                 sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
                                 LOGGER.info(
                                         "Message successfully added to queue. Generating successful gateway response");
+
+                                auditService.submitAuditEvent(
+                                        AccountManagementAuditableEvent.UPDATE_PASSWORD,
+                                        context.getAwsRequestId(),
+                                        AuditService.UNKNOWN,
+                                        AuditService.UNKNOWN,
+                                        userProfile.getSubjectID(),
+                                        userProfile.getEmail(),
+                                        IpAddressHelper.extractIpAddress(input),
+                                        userProfile.getPhoneNumber());
+
                                 return generateEmptySuccessApiGatewayResponse();
 
                             } catch (JsonProcessingException | IllegalArgumentException e) {
