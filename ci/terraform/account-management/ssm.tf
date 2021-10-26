@@ -52,7 +52,7 @@ resource "aws_ssm_parameter" "redis_replica_host" {
   name   = "${var.environment}-${local.redis_key}-redis-replica-host"
   type   = "SecureString"
   key_id = aws_kms_alias.parameter_store_key_alias.id
-  value  = var.use_localstack ? "" : aws_elasticache_replication_group.account_management_sessions_store[0].reader_endpoint_address
+  value  = var.use_localstack ? var.external_redis_host : aws_elasticache_replication_group.account_management_sessions_store[0].reader_endpoint_address
 }
 
 resource "aws_ssm_parameter" "redis_tls" {
@@ -88,7 +88,7 @@ data "aws_iam_policy_document" "redis_parameter_policy" {
     resources = [
       aws_ssm_parameter.redis_master_host.arn,
       aws_ssm_parameter.redis_replica_host.arn,
-      aws_ssm_parameter.redis_tls,
+      aws_ssm_parameter.redis_tls.arn,
       aws_ssm_parameter.redis_password.arn,
       aws_ssm_parameter.redis_port.arn,
     ]
