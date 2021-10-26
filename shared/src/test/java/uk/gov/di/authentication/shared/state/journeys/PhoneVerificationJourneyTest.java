@@ -29,11 +29,14 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_IS_BLO
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_A_NEW_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_REGISTERED_EMAIL_ADDRESS;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_CREDENTIALS;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_PHONE_VERIFICATION_CODE;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_CREATED_A_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.SessionState.ADDED_UNVERIFIED_PHONE_NUMBER;
+import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_VERIFIED;
 import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
 import static uk.gov.di.authentication.shared.entity.SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED;
@@ -281,6 +284,94 @@ public class PhoneVerificationJourneyTest {
     }
 
     @Test
+    public void testCanReachBlockedByRequestingTooManyCodesButEnterANewEmailAndStillBeBlocked() {
+        UserProfile userProfile =
+                generateUserProfile(
+                                true,
+                                "1.0",
+                                new HashSet<String>(
+                                        Arrays.asList(
+                                                "phone",
+                                                "phone_number",
+                                                "email",
+                                                "email_verified",
+                                                "sub")))
+                        .setPhoneNumberVerified(false);
+
+        UserContext userContext =
+                UserContext.builder(
+                                session.setCurrentCredentialStrength(
+                                        CredentialTrustLevel.LOW_LEVEL))
+                        .withClientSession(
+                                new ClientSession(
+                                                generateAuthRequest("Cl").toParameters(),
+                                                null,
+                                                null)
+                                        .setEffectiveVectorOfTrust(generateLowLevelVectorOfTrust()))
+                        .withUserProfile(userProfile)
+                        .withClient(new ClientRegistry().setClientID(CLIENT_ID.toString()))
+                        .build();
+
+        List<JourneyTransition> transitions =
+                Arrays.asList(
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS,
+                                USER_NOT_FOUND),
+                        new JourneyTransition(
+                                userContext,
+                                SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE,
+                                VERIFY_EMAIL_CODE_SENT),
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE,
+                                EMAIL_CODE_VERIFIED),
+                        new JourneyTransition(
+                                userContext, USER_HAS_CREATED_A_PASSWORD, TWO_FACTOR_REQUIRED),
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_A_NEW_PHONE_NUMBER,
+                                ADDED_UNVERIFIED_PHONE_NUMBER),
+                        new JourneyTransition(
+                                userContext,
+                                SYSTEM_HAS_SENT_PHONE_VERIFICATION_CODE,
+                                VERIFY_PHONE_NUMBER_CODE_SENT),
+                        new JourneyTransition(
+                                userContext,
+                                SYSTEM_HAS_SENT_TOO_MANY_PHONE_VERIFICATION_CODES,
+                                PHONE_NUMBER_MAX_CODES_SENT),
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS,
+                                USER_NOT_FOUND),
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_REGISTERED_EMAIL_ADDRESS,
+                                AUTHENTICATION_REQUIRED),
+                        new JourneyTransition(
+                                userContext, USER_ENTERED_VALID_CREDENTIALS, TWO_FACTOR_REQUIRED),
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_A_NEW_PHONE_NUMBER,
+                                ADDED_UNVERIFIED_PHONE_NUMBER),
+                        new JourneyTransition(
+                                userContext,
+                                SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_PHONE_VERIFICATION_CODES,
+                                PHONE_NUMBER_CODE_REQUESTS_BLOCKED));
+
+        SessionState currentState = NEW;
+
+        for (JourneyTransition transition : transitions) {
+            currentState =
+                    stateMachine.transition(
+                            currentState,
+                            transition.getSessionAction(),
+                            transition.getUserContext());
+            assertThat(currentState, equalTo(transition.getExpectedSessionState()));
+        }
+    }
+
+    @Test
     public void testCanReachBlockedStatusIfIncorrectCodeIsEnteredTooManyTimes() {
         UserProfile userProfile =
                 generateUserProfile(
@@ -414,6 +505,98 @@ public class PhoneVerificationJourneyTest {
                                 userContext,
                                 USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES,
                                 PHONE_NUMBER_CODE_MAX_RETRIES_REACHED),
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_A_NEW_PHONE_NUMBER,
+                                ADDED_UNVERIFIED_PHONE_NUMBER),
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES,
+                                PHONE_NUMBER_CODE_MAX_RETRIES_REACHED));
+
+        SessionState currentState = NEW;
+
+        for (JourneyTransition transition : transitions) {
+            currentState =
+                    stateMachine.transition(
+                            currentState,
+                            transition.getSessionAction(),
+                            transition.getUserContext());
+            assertThat(currentState, equalTo(transition.getExpectedSessionState()));
+        }
+    }
+
+    @Test
+    public void testCanReachBlockedByIncorrectCodeTooManyTimesButEnterANewEmailAndStillBeBlocked() {
+        UserProfile userProfile =
+                generateUserProfile(
+                                true,
+                                "1.0",
+                                new HashSet<String>(
+                                        Arrays.asList(
+                                                "phone_number",
+                                                "phone_number_verified",
+                                                "email",
+                                                "email_verified",
+                                                "sub")))
+                        .setPhoneNumberVerified(false);
+
+        UserContext userContext =
+                UserContext.builder(
+                                session.setCurrentCredentialStrength(
+                                        CredentialTrustLevel.LOW_LEVEL))
+                        .withClientSession(
+                                new ClientSession(
+                                                generateAuthRequest("Cl").toParameters(),
+                                                null,
+                                                null)
+                                        .setEffectiveVectorOfTrust(generateLowLevelVectorOfTrust()))
+                        .withUserProfile(userProfile)
+                        .withClient(new ClientRegistry().setClientID(CLIENT_ID.toString()))
+                        .build();
+
+        List<JourneyTransition> transitions =
+                Arrays.asList(
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS,
+                                USER_NOT_FOUND),
+                        new JourneyTransition(
+                                userContext,
+                                SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE,
+                                VERIFY_EMAIL_CODE_SENT),
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE,
+                                EMAIL_CODE_VERIFIED),
+                        new JourneyTransition(
+                                userContext, USER_HAS_CREATED_A_PASSWORD, TWO_FACTOR_REQUIRED),
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_A_NEW_PHONE_NUMBER,
+                                ADDED_UNVERIFIED_PHONE_NUMBER),
+                        new JourneyTransition(
+                                userContext,
+                                SYSTEM_HAS_SENT_PHONE_VERIFICATION_CODE,
+                                VERIFY_PHONE_NUMBER_CODE_SENT),
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE,
+                                PHONE_NUMBER_CODE_NOT_VALID),
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES,
+                                PHONE_NUMBER_CODE_MAX_RETRIES_REACHED),
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS,
+                                USER_NOT_FOUND),
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_REGISTERED_EMAIL_ADDRESS,
+                                AUTHENTICATION_REQUIRED),
+                        new JourneyTransition(
+                                userContext, USER_ENTERED_VALID_CREDENTIALS, TWO_FACTOR_REQUIRED),
                         new JourneyTransition(
                                 userContext,
                                 USER_ENTERED_A_NEW_PHONE_NUMBER,

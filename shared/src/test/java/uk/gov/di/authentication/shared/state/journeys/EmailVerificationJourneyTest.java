@@ -29,6 +29,7 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY;
 import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_NOT_VALID;
 import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_VERIFIED;
@@ -297,6 +298,114 @@ public class EmailVerificationJourneyTest {
                                 userContext,
                                 SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE,
                                 VERIFY_EMAIL_CODE_SENT));
+
+        SessionState currentState = NEW;
+
+        for (JourneyTransition transition : transitions) {
+            currentState =
+                    stateMachine.transition(
+                            currentState,
+                            transition.getSessionAction(),
+                            transition.getUserContext());
+            assertThat(currentState, equalTo(transition.getExpectedSessionState()));
+        }
+    }
+
+    @Test
+    public void
+            testCanReachBlockedByIncorrectCodeTooManyTimesAndStartANewJourneyWithBrowserBackButtonAndReachBlocked() {
+        UserProfile userProfile =
+                generateUserProfile(true, "1.0", new HashSet<String>(Collections.emptyList()));
+
+        UserContext userContext =
+                UserContext.builder(
+                                session.setCurrentCredentialStrength(
+                                        CredentialTrustLevel.LOW_LEVEL))
+                        .withClientSession(
+                                new ClientSession(
+                                                generateAuthRequest("Cl").toParameters(),
+                                                null,
+                                                null)
+                                        .setEffectiveVectorOfTrust(generateLowLevelVectorOfTrust()))
+                        .withUserProfile(userProfile)
+                        .withClient(new ClientRegistry().setClientID(CLIENT_ID.toString()))
+                        .build();
+
+        List<JourneyTransition> transitions =
+                Arrays.asList(
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS,
+                                USER_NOT_FOUND),
+                        new JourneyTransition(
+                                userContext,
+                                SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE,
+                                VERIFY_EMAIL_CODE_SENT),
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE,
+                                EMAIL_CODE_NOT_VALID),
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES,
+                                EMAIL_CODE_MAX_RETRIES_REACHED),
+                        new JourneyTransition(userContext, USER_HAS_STARTED_A_NEW_JOURNEY, NEW),
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES,
+                                EMAIL_CODE_MAX_RETRIES_REACHED));
+
+        SessionState currentState = NEW;
+
+        for (JourneyTransition transition : transitions) {
+            currentState =
+                    stateMachine.transition(
+                            currentState,
+                            transition.getSessionAction(),
+                            transition.getUserContext());
+            assertThat(currentState, equalTo(transition.getExpectedSessionState()));
+        }
+    }
+
+    @Test
+    public void
+            testCanReachBlockedByRequestingTooManyCodesAndStartANewJourneyWithBrowserBackButtonAndReachBlocked() {
+        UserProfile userProfile =
+                generateUserProfile(true, "1.0", new HashSet<String>(Collections.emptyList()));
+
+        UserContext userContext =
+                UserContext.builder(
+                                session.setCurrentCredentialStrength(
+                                        CredentialTrustLevel.LOW_LEVEL))
+                        .withClientSession(
+                                new ClientSession(
+                                                generateAuthRequest("Cl").toParameters(),
+                                                null,
+                                                null)
+                                        .setEffectiveVectorOfTrust(generateLowLevelVectorOfTrust()))
+                        .withUserProfile(userProfile)
+                        .withClient(new ClientRegistry().setClientID(CLIENT_ID.toString()))
+                        .build();
+
+        List<JourneyTransition> transitions =
+                Arrays.asList(
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS,
+                                USER_NOT_FOUND),
+                        new JourneyTransition(
+                                userContext,
+                                SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE,
+                                VERIFY_EMAIL_CODE_SENT),
+                        new JourneyTransition(
+                                userContext,
+                                SYSTEM_HAS_SENT_TOO_MANY_EMAIL_VERIFICATION_CODES,
+                                EMAIL_MAX_CODES_SENT),
+                        new JourneyTransition(userContext, USER_HAS_STARTED_A_NEW_JOURNEY, NEW),
+                        new JourneyTransition(
+                                userContext,
+                                SYSTEM_HAS_SENT_TOO_MANY_EMAIL_VERIFICATION_CODES,
+                                EMAIL_MAX_CODES_SENT));
 
         SessionState currentState = NEW;
 
