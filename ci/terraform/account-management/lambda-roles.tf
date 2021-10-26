@@ -220,3 +220,43 @@ resource "aws_iam_role_policy_attachment" "dynamo_sqs_lambda_networking" {
   role       = aws_iam_role.dynamo_sqs_lambda_iam_role.name
   policy_arn = aws_iam_policy.endpoint_networking_policy.arn
 }
+
+### Audit signing key permissions
+
+data "aws_iam_policy_document" "account_management_audit_payload_kms_signing_policy_document" {
+  count = var.use_localstack ? 0 : 1
+  statement {
+    sid    = "AllowAccessToKmsAuditSigningKey"
+    effect = "Allow"
+
+    actions = [
+      "kms:Sign",
+      "kms:GetPublicKey",
+      "kms:Verify"
+    ]
+    resources = [
+      local.audit_signing_key_arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "audit_signing_key_lambda_kms_signing_policy" {
+  count       = var.use_localstack ? 0 : 1
+  name        = "${var.environment}-account-management-lambda-audit-payload-kms-signing-policy"
+  path        = "/"
+  description = "IAM policy for managing KMS connection for a lambda which allows signing of audit payloads"
+
+  policy = data.aws_iam_policy_document.account_management_audit_payload_kms_signing_policy_document[0].json
+}
+
+resource "aws_iam_role_policy_attachment" "audit_signing_key_lambda_dynamo" {
+  count      = var.use_localstack ? 0 : 1
+  role       = aws_iam_role.lambda_iam_role.name
+  policy_arn = aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0].arn
+}
+
+resource "aws_iam_role_policy_attachment" "audit_signing_key_lambda_sqs_dynamo" {
+  count      = var.use_localstack ? 0 : 1
+  role       = aws_iam_role.dynamo_sqs_lambda_iam_role.name
+  policy_arn = aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0].arn
+}
