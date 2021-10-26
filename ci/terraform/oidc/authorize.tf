@@ -13,6 +13,7 @@ module "authorize" {
     AUDIT_SIGNING_KEY_ALIAS  = local.audit_signing_key_alias_name
     LOGIN_URI                = module.dns.frontend_url
     LOCALSTACK_ENDPOINT      = var.use_localstack ? var.localstack_endpoint : null
+    REDIS_KEY                = local.redis_key
     REDIS_HOST               = local.external_redis_host
     REDIS_PORT               = local.external_redis_port
     REDIS_PASSWORD           = local.external_redis_password

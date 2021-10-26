@@ -13,6 +13,7 @@ module "token" {
     EVENTS_SNS_TOPIC_ARN    = aws_sns_topic.events.arn
     AUDIT_SIGNING_KEY_ALIAS = local.audit_signing_key_alias_name
     LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
+    REDIS_KEY               = local.redis_key
     REDIS_HOST              = local.external_redis_host
     REDIS_PORT              = local.external_redis_port
     REDIS_PASSWORD          = local.external_redis_password
