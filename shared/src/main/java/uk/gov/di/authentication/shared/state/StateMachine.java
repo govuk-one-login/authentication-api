@@ -192,11 +192,13 @@ public class StateMachine<T, A, C> {
                         on(SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE).then(VERIFY_EMAIL_CODE_SENT),
                         on(SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_EMAIL_VERIFICATION_CODES)
                                 .then(EMAIL_CODE_REQUESTS_BLOCKED),
+                        on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(EMAIL_CODE_REQUESTS_BLOCKED)
                 .allow(
                         on(SYSTEM_HAS_SENT_EMAIL_VERIFICATION_CODE).then(VERIFY_EMAIL_CODE_SENT),
+                        on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(EMAIL_CODE_NOT_VALID)
@@ -211,6 +213,7 @@ public class StateMachine<T, A, C> {
                 .allow(
                         on(USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES)
                                 .then(EMAIL_CODE_MAX_RETRIES_REACHED),
+                        on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(EMAIL_CODE_VERIFIED)
@@ -261,6 +264,8 @@ public class StateMachine<T, A, C> {
                                 .then(VERIFY_PHONE_NUMBER_CODE_SENT),
                         on(SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_PHONE_VERIFICATION_CODES)
                                 .then(PHONE_NUMBER_CODE_REQUESTS_BLOCKED),
+                        on(USER_ENTERED_A_NEW_PHONE_NUMBER).then(ADDED_UNVERIFIED_PHONE_NUMBER),
+                        on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(PHONE_NUMBER_CODE_REQUESTS_BLOCKED)
@@ -288,6 +293,8 @@ public class StateMachine<T, A, C> {
                 .allow(
                         on(USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES)
                                 .then(PHONE_NUMBER_CODE_MAX_RETRIES_REACHED),
+                        on(USER_ENTERED_A_NEW_PHONE_NUMBER).then(ADDED_UNVERIFIED_PHONE_NUMBER),
+                        on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(ACCOUNT_TEMPORARILY_LOCKED)
@@ -295,6 +302,7 @@ public class StateMachine<T, A, C> {
                         on(SYSTEM_HAS_SENT_RESET_PASSWORD_LINK).then(RESET_PASSWORD_LINK_SENT),
                         on(USER_ENTERED_INVALID_PASSWORD_TOO_MANY_TIMES)
                                 .then(ACCOUNT_TEMPORARILY_LOCKED),
+                        on(ACCOUNT_LOCK_EXPIRED).then(AUTHENTICATION_REQUIRED),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(AUTHENTICATION_REQUIRED)
@@ -368,6 +376,7 @@ public class StateMachine<T, A, C> {
                         on(SYSTEM_HAS_SENT_MFA_CODE).then(MFA_SMS_CODE_SENT),
                         on(SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_MFA_VERIFICATION_CODES)
                                 .then(MFA_CODE_REQUESTS_BLOCKED),
+                        on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY)
                                 .then(UPLIFT_REQUIRED_CM)
                                 .ifCondition(upliftRequired()),
@@ -375,7 +384,10 @@ public class StateMachine<T, A, C> {
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(MFA_CODE_REQUESTS_BLOCKED)
                 .allow(
+                        on(SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_MFA_VERIFICATION_CODES)
+                                .then(MFA_CODE_REQUESTS_BLOCKED),
                         on(SYSTEM_HAS_SENT_MFA_CODE).then(MFA_SMS_CODE_SENT),
+                        on(USER_ENTERED_INVALID_MFA_CODE).then(MFA_CODE_NOT_VALID),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY)
                                 .then(UPLIFT_REQUIRED_CM)
                                 .ifCondition(upliftRequired()),
@@ -408,6 +420,8 @@ public class StateMachine<T, A, C> {
                 .allow(
                         on(USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES)
                                 .then(MFA_CODE_MAX_RETRIES_REACHED),
+                        on(SYSTEM_HAS_SENT_MFA_CODE).then(MFA_SMS_CODE_SENT),
+                        on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY)
                                 .then(UPLIFT_REQUIRED_CM)
                                 .ifCondition(upliftRequired()),
