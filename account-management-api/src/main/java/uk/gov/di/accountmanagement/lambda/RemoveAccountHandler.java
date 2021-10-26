@@ -9,13 +9,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.RemoveAccountRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -33,12 +36,16 @@ public class RemoveAccountHandler
 
     private final AuthenticationService authenticationService;
     private final AwsSqsClient sqsClient;
+    private final AuditService auditService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public RemoveAccountHandler(
-            AuthenticationService authenticationService, AwsSqsClient sqsClient) {
+            AuthenticationService authenticationService,
+            AwsSqsClient sqsClient,
+            AuditService auditService) {
         this.authenticationService = authenticationService;
         this.sqsClient = sqsClient;
+        this.auditService = auditService;
     }
 
     public RemoveAccountHandler() {
@@ -53,6 +60,7 @@ public class RemoveAccountHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
+        this.auditService = new AuditService();
     }
 
     @Override
@@ -85,6 +93,16 @@ public class RemoveAccountHandler
                                 sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
                                 LOGGER.info(
                                         "Remove account message successfully added to queue. Generating successful gateway response");
+                                auditService.submitAuditEvent(
+                                        AccountManagementAuditableEvent.DELETE_ACCOUNT,
+                                        context.getAwsRequestId(),
+                                        AuditService.UNKNOWN,
+                                        AuditService.UNKNOWN,
+                                        userProfile.getSubjectID(),
+                                        userProfile.getEmail(),
+                                        IpAddressHelper.extractIpAddress(input),
+                                        userProfile.getPhoneNumber());
+
                                 return generateEmptySuccessApiGatewayResponse();
                             } catch (JsonProcessingException e) {
                                 LOGGER.error(
