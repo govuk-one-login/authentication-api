@@ -139,7 +139,7 @@ public class UserInfoService {
             return Optional.ofNullable(
                     new ObjectMapper().readValue(result, AccessTokenStore.class));
         } catch (JsonProcessingException | IllegalArgumentException e) {
-            LOGGER.error("Error getting AccessToken from Redis");
+            LOGGER.error("Error getting AccessToken from Redis. ClientID: {}", clientId);
             return Optional.empty();
         }
     }
