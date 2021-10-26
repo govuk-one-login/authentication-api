@@ -14,9 +14,9 @@ data "aws_iam_policy_document" "key_policy" {
       type = "AWS"
       identifiers = [
         format(
-        "arn:%s:iam::%s:root",
-        data.aws_partition.current.partition,
-        data.aws_caller_identity.current.account_id
+          "arn:%s:iam::%s:root",
+          data.aws_partition.current.partition,
+          data.aws_caller_identity.current.account_id
         )
       ]
     }
