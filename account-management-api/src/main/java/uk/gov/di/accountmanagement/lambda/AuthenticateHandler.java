@@ -63,7 +63,7 @@ public class AuthenticateHandler
                                                 loginRequest.getEmail(),
                                                 loginRequest.getPassword());
                                 if (!hasValidCredentials) {
-                                    LOGGER.error("Invalid login credentials entered");
+                                    LOGGER.info("Invalid login credentials entered");
                                     return generateApiGatewayProxyErrorResponse(
                                             401, ErrorResponse.ERROR_1008);
                                 }
