@@ -8,11 +8,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
 import java.util.HashMap;
@@ -22,6 +24,7 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -31,6 +34,7 @@ class UpdatePasswordHandlerTest {
     private final Context context = mock(Context.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
+    private final AuditService auditService = mock(AuditService.class);
 
     private UpdatePasswordHandler handler;
     private static final String EXISTING_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
@@ -39,7 +43,7 @@ class UpdatePasswordHandlerTest {
 
     @BeforeEach
     public void setUp() {
-        handler = new UpdatePasswordHandler(dynamoService, sqsClient);
+        handler = new UpdatePasswordHandler(dynamoService, sqsClient, auditService);
     }
 
     @Test
@@ -55,6 +59,8 @@ class UpdatePasswordHandlerTest {
                 new APIGatewayProxyRequestEvent.ProxyRequestContext();
         Map<String, Object> authorizerParams = new HashMap<>();
         authorizerParams.put("principalId", SUBJECT.getValue());
+        proxyRequestContext.setIdentity(
+                new APIGatewayProxyRequestEvent.RequestIdentity().withSourceIp("123.123.123.123"));
         proxyRequestContext.setAuthorizer(authorizerParams);
         event.setRequestContext(proxyRequestContext);
 
@@ -65,6 +71,17 @@ class UpdatePasswordHandlerTest {
         NotifyRequest notifyRequest =
                 new NotifyRequest(EXISTING_EMAIL_ADDRESS, NotificationType.PASSWORD_UPDATED);
         verify(sqsClient).send(new ObjectMapper().writeValueAsString(notifyRequest));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AccountManagementAuditableEvent.UPDATE_PASSWORD,
+                        context.getAwsRequestId(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        userProfile.getSubjectID(),
+                        userProfile.getEmail(),
+                        "123.123.123.123",
+                        userProfile.getPhoneNumber());
     }
 
     @Test
@@ -82,5 +99,7 @@ class UpdatePasswordHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+
+        verifyNoInteractions(auditService);
     }
 }

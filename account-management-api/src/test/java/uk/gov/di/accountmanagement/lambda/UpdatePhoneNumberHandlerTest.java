@@ -8,11 +8,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.ValidationService;
 
@@ -25,6 +27,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PHONE_NUMBER_UPDATED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
@@ -45,12 +48,17 @@ class UpdatePhoneNumberHandlerTest {
     private static final String INVALID_PHONE_NUMBER = "12345";
     private static final String OTP = "123456";
     private static final Subject SUBJECT = new Subject();
+    private final AuditService auditService = mock(AuditService.class);
 
     @BeforeEach
     public void setUp() {
         handler =
                 new UpdatePhoneNumberHandler(
-                        dynamoService, sqsClient, validationService, codeStorageService);
+                        dynamoService,
+                        sqsClient,
+                        validationService,
+                        codeStorageService,
+                        auditService);
     }
 
     @Test
@@ -66,6 +74,8 @@ class UpdatePhoneNumberHandlerTest {
                 new APIGatewayProxyRequestEvent.ProxyRequestContext();
         Map<String, Object> authorizerParams = new HashMap<>();
         authorizerParams.put("principalId", SUBJECT.getValue());
+        proxyRequestContext.setIdentity(
+                new APIGatewayProxyRequestEvent.RequestIdentity().withSourceIp("123.123.123.123"));
         proxyRequestContext.setAuthorizer(authorizerParams);
         event.setRequestContext(proxyRequestContext);
         when(codeStorageService.isValidOtpCode(EMAIL_ADDRESS, OTP, VERIFY_PHONE_NUMBER))
@@ -78,6 +88,17 @@ class UpdatePhoneNumberHandlerTest {
         verify(dynamoService).updatePhoneNumber(EMAIL_ADDRESS, PHONE_NUMBER);
         NotifyRequest notifyRequest = new NotifyRequest(EMAIL_ADDRESS, PHONE_NUMBER_UPDATED);
         verify(sqsClient).send(new ObjectMapper().writeValueAsString(notifyRequest));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AccountManagementAuditableEvent.UPDATE_PHONE_NUMBER,
+                        context.getAwsRequestId(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        userProfile.getSubjectID(),
+                        userProfile.getEmail(),
+                        "123.123.123.123",
+                        userProfile.getPhoneNumber());
     }
 
     @Test
@@ -94,6 +115,8 @@ class UpdatePhoneNumberHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -120,6 +143,7 @@ class UpdatePhoneNumberHandlerTest {
         verify(sqsClient, times(0)).send(new ObjectMapper().writeValueAsString(notifyRequest));
         String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1020);
         assertThat(result, hasBody(expectedResponse));
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -149,5 +173,6 @@ class UpdatePhoneNumberHandlerTest {
         verify(sqsClient, times(0)).send(new ObjectMapper().writeValueAsString(notifyRequest));
         String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1012);
         assertThat(result, hasBody(expectedResponse));
+        verifyNoInteractions(auditService);
     }
 }

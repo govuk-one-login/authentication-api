@@ -8,9 +8,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 
 import java.util.HashMap;
@@ -33,10 +35,11 @@ class RemoveAccountHandlerTest {
     private final Context context = mock(Context.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+    private final AuditService auditService = mock(AuditService.class);
 
     @BeforeEach
     public void setUp() {
-        handler = new RemoveAccountHandler(authenticationService, sqsClient);
+        handler = new RemoveAccountHandler(authenticationService, sqsClient, auditService);
     }
 
     @Test
@@ -48,6 +51,8 @@ class RemoveAccountHandlerTest {
         Map<String, Object> authorizerParams = new HashMap<>();
         authorizerParams.put("principalId", SUBJECT.getValue());
         proxyRequestContext.setAuthorizer(authorizerParams);
+        proxyRequestContext.setIdentity(
+                new APIGatewayProxyRequestEvent.RequestIdentity().withSourceIp("123.123.123.123"));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(proxyRequestContext);
@@ -58,6 +63,17 @@ class RemoveAccountHandlerTest {
         verify(authenticationService).removeAccount(eq(EMAIL));
         NotifyRequest notifyRequest = new NotifyRequest(EMAIL, DELETE_ACCOUNT);
         verify(sqsClient).send(new ObjectMapper().writeValueAsString(notifyRequest));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AccountManagementAuditableEvent.DELETE_ACCOUNT,
+                        context.getAwsRequestId(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        userProfile.getSubjectID(),
+                        userProfile.getEmail(),
+                        "123.123.123.123",
+                        userProfile.getPhoneNumber());
 
         assertThat(result, hasStatus(204));
     }
