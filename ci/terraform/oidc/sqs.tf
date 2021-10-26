@@ -163,6 +163,7 @@ resource "aws_lambda_function" "email_sqs_lambda" {
       SMOKETEST_SMS_BUCKET_NAME = local.sms_bucket_name
     })
   }
+  kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
 
   tags = local.default_tags
 }

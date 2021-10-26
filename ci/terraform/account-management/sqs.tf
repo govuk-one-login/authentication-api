@@ -193,6 +193,7 @@ resource "aws_lambda_function" "email_sqs_lambda" {
       NOTIFY_URL     = var.notify_url
     })
   }
+  kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
 
   tags = local.default_tags
 

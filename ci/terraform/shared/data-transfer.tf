@@ -122,6 +122,7 @@ resource "aws_lambda_function" "data_transfer_lambda" {
       TERMS_CONDITIONS_VERSION = var.terms_and_conditions
     }
   }
+  kms_key_arn = aws_kms_key.lambda_env_vars_encryption_key.arn
 
   runtime = "java11"
 
