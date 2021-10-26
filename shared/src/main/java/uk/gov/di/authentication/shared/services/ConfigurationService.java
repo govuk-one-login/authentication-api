@@ -122,10 +122,7 @@ public class ConfigurationService {
             var request =
                     new GetParameterRequest()
                             .withWithDecryption(true)
-                            .withName(
-                                    format(
-                                            "{0}-password-pepper",
-                                            getEnvironment()));
+                            .withName(format("{0}-password-pepper", getEnvironment()));
             return Optional.of(getSsmClient().getParameter(request).getParameter().getValue());
         } catch (ParameterNotFoundException e) {
             return Optional.empty();
