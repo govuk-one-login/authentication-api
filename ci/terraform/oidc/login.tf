@@ -12,7 +12,6 @@ module "login" {
     EVENTS_SNS_TOPIC_ARN     = aws_sns_topic.events.arn
     AUDIT_SIGNING_KEY_ALIAS  = local.audit_signing_key_alias_name
     LOCALSTACK_ENDPOINT      = var.use_localstack ? var.localstack_endpoint : null
-    PASSWORD_PEPPER          = var.password_pepper
     REDIS_KEY                = local.redis_key
     DYNAMO_ENDPOINT          = var.use_localstack ? var.lambda_dynamo_endpoint : null
     TERMS_CONDITIONS_VERSION = var.terms_and_conditions
