@@ -150,7 +150,7 @@ resource "aws_sqs_queue" "storage_batch" {
 resource "aws_sqs_queue" "storage_batch_dead_letter_queue" {
   name = "${var.environment}-audit-storage-batch-dead-letter-queue"
 
-  kms_master_key_id                 = var.use_localstack ? null : "alias/aws/sqs"
+  kms_master_key_id                 = var.use_localstack ? null : local.events_topic_encryption_key_arn
   kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
 
   message_retention_seconds = 604800
