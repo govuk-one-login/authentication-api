@@ -155,7 +155,10 @@ public class TokenHandler
                             String tokenUrl = buildURI(baseUrl, TOKEN_PATH).toString();
                             Optional<ErrorObject> invalidPrivateKeyJwtError =
                                     tokenService.validatePrivateKeyJWT(
-                                            input.getBody(), client.getPublicKey(), tokenUrl);
+                                            input.getBody(),
+                                            client.getPublicKey(),
+                                            tokenUrl,
+                                            clientID);
                             if (invalidPrivateKeyJwtError.isPresent()) {
                                 LOG.error(
                                         "Private Key JWT is not valid for Client ID: {}", clientID);

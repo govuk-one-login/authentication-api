@@ -12,7 +12,9 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.TokenResponse;
+import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
+import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
@@ -226,14 +228,15 @@ public class TokenIntegrationTest extends IntegrationTestEndpoints {
 
     private Response generateTokenRequest(KeyPair keyPair, Scope scope) throws JOSEException {
         PrivateKey privateKey = keyPair.getPrivate();
+        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(5);
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        JWTAuthenticationClaimsSet claimsSet =
+                new JWTAuthenticationClaimsSet(
+                        new ClientID(CLIENT_ID), new Audience(ROOT_RESOURCE_URL + TOKEN_ENDPOINT));
+        claimsSet.getExpirationTime().setTime(expiryDate.getTime());
         PrivateKeyJWT privateKeyJWT =
                 new PrivateKeyJWT(
-                        new ClientID(CLIENT_ID),
-                        URI.create(ROOT_RESOURCE_URL + TOKEN_ENDPOINT),
-                        JWSAlgorithm.RS256,
-                        (RSAPrivateKey) privateKey,
-                        null,
-                        null);
+                        claimsSet, JWSAlgorithm.RS256, (RSAPrivateKey) privateKey, null, null);
         String code = new AuthorizationCode().toString();
         RedisHelper.addAuthCodeAndCreateClientSession(
                 code, "a-client-session-id", TEST_EMAIL, generateAuthRequest(scope).toParameters());

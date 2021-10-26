@@ -18,7 +18,9 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
+import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
@@ -35,7 +37,6 @@ import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
 
-import java.net.URI;
 import java.nio.ByteBuffer;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -207,26 +208,58 @@ public class TokenServiceTest {
     }
 
     @Test
-    public void shouldSuccessfullyValidatePrivateKeyJWT() throws JOSEException {
+    public void shouldSuccessfullyValidatePrivateKeyJWT() throws JOSEException, ParseException {
         KeyPair keyPair = generateRsaKeyPair();
         String publicKey = Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded());
-        String requestParams = generateSerialisedPrivateKeyJWT(keyPair);
+        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(5);
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        String requestParams = generateSerialisedPrivateKeyJWT(keyPair, expiryDate.getTime());
         assertThat(
                 tokenService.validatePrivateKeyJWT(
-                        requestParams, publicKey, "http://localhost/token"),
+                        requestParams, publicKey, "http://localhost/token", CLIENT_ID),
                 equalTo(Optional.empty()));
     }
 
     @Test
-    public void shouldReturnErrorIfUnableToValidatePrivateKeyJWT() throws JOSEException {
+    public void shouldFailToValidatePrivateKeyJWTIfExpired() throws JOSEException, ParseException {
+        KeyPair keyPair = generateRsaKeyPair();
+        String publicKey = Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded());
+        LocalDateTime localDateTime = LocalDateTime.now().minusMinutes(2);
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        String requestParams = generateSerialisedPrivateKeyJWT(keyPair, expiryDate.getTime());
+        assertThat(
+                tokenService.validatePrivateKeyJWT(
+                        requestParams, publicKey, "http://localhost/token", CLIENT_ID),
+                equalTo(Optional.of(OAuth2Error.INVALID_GRANT)));
+    }
+
+    @Test
+    public void shouldFailToValidatePrivateKeyJWTIfInvalidClientId()
+            throws JOSEException, ParseException {
+        KeyPair keyPair = generateRsaKeyPair();
+        String publicKey = Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded());
+        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(5);
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        String requestParams = generateSerialisedPrivateKeyJWT(keyPair, expiryDate.getTime());
+        assertThat(
+                tokenService.validatePrivateKeyJWT(
+                        requestParams, publicKey, "http://localhost/token", "wrong-client-id"),
+                equalTo(Optional.of(OAuth2Error.INVALID_CLIENT)));
+    }
+
+    @Test
+    public void shouldReturnErrorIfUnableToValidatePrivateKeyJWTSignature()
+            throws JOSEException, ParseException {
         KeyPair keyPair = generateRsaKeyPair();
         KeyPair keyPairTwo = generateRsaKeyPair();
         String publicKey =
                 Base64.getMimeEncoder().encodeToString(keyPairTwo.getPublic().getEncoded());
-        String requestParams = generateSerialisedPrivateKeyJWT(keyPair);
+        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(5);
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        String requestParams = generateSerialisedPrivateKeyJWT(keyPair, expiryDate.getTime());
         assertThat(
                 tokenService.validatePrivateKeyJWT(
-                        requestParams, publicKey, "http://localhost/token"),
+                        requestParams, publicKey, "http://localhost/token", CLIENT_ID),
                 equalTo(Optional.of(OAuth2Error.INVALID_CLIENT)));
     }
 
@@ -365,17 +398,20 @@ public class TokenServiceTest {
         assertTrue(errorObject.isPresent());
     }
 
-    private String generateSerialisedPrivateKeyJWT(KeyPair keyPair) throws JOSEException {
+    private String generateSerialisedPrivateKeyJWT(KeyPair keyPair, long expiryTime)
+            throws JOSEException {
+        JWTAuthenticationClaimsSet claimsSet =
+                new JWTAuthenticationClaimsSet(
+                        new ClientID(CLIENT_ID), new Audience("http://localhost/token"));
+        claimsSet.getExpirationTime().setTime(expiryTime);
         PrivateKeyJWT privateKeyJWT =
                 new PrivateKeyJWT(
-                        new ClientID("client-id"),
-                        URI.create("http://localhost/token"),
+                        claimsSet,
                         JWSAlgorithm.RS256,
                         (RSAPrivateKey) keyPair.getPrivate(),
                         null,
                         null);
         Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
-        privateKeyParams.putAll(privateKeyParams);
         return URLUtils.serializeParameters(privateKeyParams);
     }
 

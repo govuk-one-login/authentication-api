@@ -12,6 +12,7 @@ import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.jwt.util.DateUtils;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
@@ -57,6 +58,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -163,12 +165,21 @@ public class TokenService {
     }
 
     public Optional<ErrorObject> validatePrivateKeyJWT(
-            String requestString, String publicKey, String tokenUrl) {
+            String requestString, String publicKey, String tokenUrl, String clientID) {
         PrivateKeyJWT privateKeyJWT;
         try {
             privateKeyJWT = PrivateKeyJWT.parse(requestString);
         } catch (ParseException e) {
             LOGGER.error("Couldn't parse Private Key JWT", e);
+            return Optional.of(OAuth2Error.INVALID_CLIENT);
+        }
+        if (hasPrivateKeyJwtExpired(privateKeyJWT.getClientAssertion())) {
+            LOGGER.error("PrivateKeyJWT has expired");
+            return Optional.of(OAuth2Error.INVALID_GRANT);
+        }
+        if (Objects.isNull(privateKeyJWT.getClientID())
+                || !privateKeyJWT.getClientID().toString().equals(clientID)) {
+            LOGGER.error("Invalid ClientID in PrivateKeyJWT");
             return Optional.of(OAuth2Error.INVALID_CLIENT);
         }
         ClientAuthenticationVerifier<?> authenticationVerifier =
@@ -367,6 +378,21 @@ public class TokenService {
             LOGGER.error("Exception thrown when trying to parse SignedJWT or JWTClaimSet", e);
             throw new RuntimeException(e);
         }
+    }
+
+    private boolean hasPrivateKeyJwtExpired(SignedJWT signedJWT) {
+        try {
+            JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
+            LocalDateTime localDateTime = LocalDateTime.now();
+            Date currentDateTime = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+            if (DateUtils.isBefore(claimsSet.getExpirationTime(), currentDateTime, 30)) {
+                return true;
+            }
+        } catch (java.text.ParseException e) {
+            LOGGER.error("Unable to parse PrivateKeyJwt when checking if expired", e);
+            return true;
+        }
+        return false;
     }
 
     private ClientCredentialsSelector<?> generateClientCredentialsSelector(String publicKey) {
