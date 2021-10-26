@@ -18,7 +18,6 @@ import uk.gov.service.notify.NotificationClientException;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -125,7 +124,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                             .toString());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
-                                    Collections.emptyMap(),
+                                    passwordResetConfirmationPersonalisation,
                                     notificationService.getNotificationTemplateId(
                                             PASSWORD_RESET_CONFIRMATION));
                             break;
