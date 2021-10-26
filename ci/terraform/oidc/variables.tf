@@ -86,24 +86,9 @@ variable "use_localstack" {
   default = false
 }
 
-variable "external_redis_host" {
-  type    = string
-  default = "redis"
-}
-
 variable "terms_and_conditions" {
   type    = string
   default = "1.0"
-}
-
-variable "external_redis_port" {
-  type    = number
-  default = 6379
-}
-
-variable "external_redis_password" {
-  type    = string
-  default = null
 }
 
 variable "localstack_endpoint" {

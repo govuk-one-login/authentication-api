@@ -17,9 +17,6 @@ data "terraform_remote_state" "shared" {
 
 locals {
   redis_key                              = "session"
-  external_redis_host                    = var.use_localstack ? var.external_redis_host : data.terraform_remote_state.shared.outputs.redis_host
-  external_redis_port                    = var.use_localstack ? var.external_redis_port : data.terraform_remote_state.shared.outputs.redis_port
-  external_redis_password                = var.use_localstack ? var.external_redis_password : data.terraform_remote_state.shared.outputs.redis_password
   authentication_vpc_arn                 = data.terraform_remote_state.shared.outputs.authentication_vpc_arn
   authentication_security_group_id       = data.terraform_remote_state.shared.outputs.authentication_security_group_id
   authentication_subnet_ids              = data.terraform_remote_state.shared.outputs.authentication_subnet_ids
