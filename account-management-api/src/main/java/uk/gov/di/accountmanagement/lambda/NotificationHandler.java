@@ -18,6 +18,8 @@ import uk.gov.service.notify.NotificationClientException;
 import java.util.HashMap;
 import java.util.Map;
 
+import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
+
 public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NotificationHandler.class);
@@ -79,6 +81,12 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             Map<String, Object> emailUpdatePersonalisation = new HashMap<>();
                             emailUpdatePersonalisation.put(
                                     "email-address", notifyRequest.getDestination());
+                            emailUpdatePersonalisation.put(
+                                    "customer-support-link",
+                                    buildURI(
+                                                    configService.getFrontendBaseUrl(),
+                                                    configService.getCustomerSupportLinkRoute())
+                                            .toString());
                             LOGGER.info("Sending EMAIL_UPDATED email using Notify");
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
@@ -89,27 +97,48 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             break;
                         case DELETE_ACCOUNT:
                             LOGGER.info("Sending DELETE_ACCOUNT email using Notify");
+                            Map<String, Object> accountDeletedPersonalisation = new HashMap<>();
+                            accountDeletedPersonalisation.put(
+                                    "customer-support-link",
+                                    buildURI(
+                                                    configService.getFrontendBaseUrl(),
+                                                    configService.getCustomerSupportLinkRoute())
+                                            .toString());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
-                                    new HashMap<>(),
+                                    accountDeletedPersonalisation,
                                     notificationService.getNotificationTemplateId(
                                             NotificationType.DELETE_ACCOUNT));
                             LOGGER.info("DELETE_ACCOUNT email has been sent using Notify");
                             break;
                         case PHONE_NUMBER_UPDATED:
                             LOGGER.info("Sending PHONE_NUMBER_UPDATED email using Notify");
+                            Map<String, Object> phoneNumberUpdatedPersonalisation = new HashMap<>();
+                            phoneNumberUpdatedPersonalisation.put(
+                                    "customer-support-link",
+                                    buildURI(
+                                                    configService.getFrontendBaseUrl(),
+                                                    configService.getCustomerSupportLinkRoute())
+                                            .toString());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
-                                    Map.of(),
+                                    phoneNumberUpdatedPersonalisation,
                                     notificationService.getNotificationTemplateId(
                                             NotificationType.PHONE_NUMBER_UPDATED));
                             LOGGER.info("PHONE_NUMBER_UPDATED email has been sent using Notify");
                             break;
                         case PASSWORD_UPDATED:
                             LOGGER.info("Sending PASSWORD_UPDATED email using Notify");
+                            Map<String, Object> passwordUpdatedPersonalisation = new HashMap<>();
+                            passwordUpdatedPersonalisation.put(
+                                    "customer-support-link",
+                                    buildURI(
+                                                    configService.getFrontendBaseUrl(),
+                                                    configService.getCustomerSupportLinkRoute())
+                                            .toString());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
-                                    new HashMap<>(),
+                                    passwordUpdatedPersonalisation,
                                     notificationService.getNotificationTemplateId(
                                             NotificationType.PASSWORD_UPDATED));
                             LOGGER.info("PASSWORD_UPDATED email has been sent using Notify");

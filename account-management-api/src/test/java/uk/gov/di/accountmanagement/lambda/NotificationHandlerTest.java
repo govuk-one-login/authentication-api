@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.entity.NotificationType.DELETE_ACCOUNT;
 import static uk.gov.di.accountmanagement.entity.NotificationType.EMAIL_UPDATED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PASSWORD_UPDATED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PHONE_NUMBER_UPDATED;
@@ -33,6 +34,10 @@ public class NotificationHandlerTest {
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_PHONE_NUMBER = "01234567890";
     private static final String TEMPLATE_ID = "12345667";
+    private static final String FRONTEND_BASE_URL = "https://localhost:8080/frontend";
+    private static final String CUSTOMER_SUPPORT_LINK_URL =
+            "https://localhost:8080/frontend/support";
+    private static final String CUSTOMER_SUPPORT_LINK_ROUTE = "support";
     private final Context context = mock(Context.class);
     private final NotificationService notificationService = mock(NotificationService.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
@@ -85,6 +90,8 @@ public class NotificationHandlerTest {
     public void shouldSuccessfullyProcessUpdateEmailMessageFromSQSQueue()
             throws JsonProcessingException, NotificationClientException {
         when(notificationService.getNotificationTemplateId(EMAIL_UPDATED)).thenReturn(TEMPLATE_ID);
+        when(configService.getFrontendBaseUrl()).thenReturn(FRONTEND_BASE_URL);
+        when(configService.getCustomerSupportLinkRoute()).thenReturn(CUSTOMER_SUPPORT_LINK_ROUTE);
 
         NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, EMAIL_UPDATED);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -94,6 +101,7 @@ public class NotificationHandlerTest {
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("email-address", notifyRequest.getDestination());
+        personalisation.put("customer-support-link", CUSTOMER_SUPPORT_LINK_URL);
 
         verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, TEMPLATE_ID);
     }
@@ -103,6 +111,8 @@ public class NotificationHandlerTest {
             throws JsonProcessingException, NotificationClientException {
         when(notificationService.getNotificationTemplateId(PASSWORD_UPDATED))
                 .thenReturn(TEMPLATE_ID);
+        when(configService.getFrontendBaseUrl()).thenReturn(FRONTEND_BASE_URL);
+        when(configService.getCustomerSupportLinkRoute()).thenReturn(CUSTOMER_SUPPORT_LINK_ROUTE);
 
         NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, PASSWORD_UPDATED);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -111,6 +121,7 @@ public class NotificationHandlerTest {
         handler.handleRequest(sqsEvent, context);
 
         Map<String, Object> personalisation = new HashMap<>();
+        personalisation.put("customer-support-link", CUSTOMER_SUPPORT_LINK_URL);
 
         verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, TEMPLATE_ID);
     }
@@ -120,6 +131,8 @@ public class NotificationHandlerTest {
             throws JsonProcessingException, NotificationClientException {
         when(notificationService.getNotificationTemplateId(PHONE_NUMBER_UPDATED))
                 .thenReturn(TEMPLATE_ID);
+        when(configService.getFrontendBaseUrl()).thenReturn(FRONTEND_BASE_URL);
+        when(configService.getCustomerSupportLinkRoute()).thenReturn(CUSTOMER_SUPPORT_LINK_ROUTE);
 
         NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, PHONE_NUMBER_UPDATED);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -127,7 +140,29 @@ public class NotificationHandlerTest {
 
         handler.handleRequest(sqsEvent, context);
 
-        verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, Map.of(), TEMPLATE_ID);
+        Map<String, Object> personalisation = new HashMap<>();
+        personalisation.put("customer-support-link", CUSTOMER_SUPPORT_LINK_URL);
+
+        verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, TEMPLATE_ID);
+    }
+
+    @Test
+    public void shouldSuccessfullyProcessDeleteAccountMessageFromSQSQueue()
+            throws JsonProcessingException, NotificationClientException {
+        when(notificationService.getNotificationTemplateId(DELETE_ACCOUNT)).thenReturn(TEMPLATE_ID);
+        when(configService.getFrontendBaseUrl()).thenReturn(FRONTEND_BASE_URL);
+        when(configService.getCustomerSupportLinkRoute()).thenReturn(CUSTOMER_SUPPORT_LINK_ROUTE);
+
+        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, DELETE_ACCOUNT);
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        Map<String, Object> personalisation = new HashMap<>();
+        personalisation.put("customer-support-link", CUSTOMER_SUPPORT_LINK_URL);
+
+        verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, TEMPLATE_ID);
     }
 
     @Test
