@@ -238,6 +238,35 @@ data "aws_iam_policy_document" "account_management_audit_payload_kms_signing_pol
       local.audit_signing_key_arn
     ]
   }
+
+  statement {
+    effect = "Allow"
+    sid    = "GiveEventsSnsTopicPolicyPublish"
+    actions = [
+      "SNS:Publish",
+      "SNS:RemovePermission",
+      "SNS:SetTopicAttributes",
+      "SNS:DeleteTopic",
+      "SNS:ListSubscriptionsByTopic",
+      "SNS:GetTopicAttributes",
+      "SNS:Receive",
+      "SNS:AddPermission",
+      "SNS:Subscribe"
+    ]
+    resources = [data.aws_sns_topic.events.arn]
+  }
+
+  statement {
+    effect = "Allow"
+    sid    = "AllowLambdasToEncryptWithCustomKey"
+    actions = [
+      "kms:GenerateDataKey",
+      "kms:Decrypt"
+    ]
+    resources = [
+      local.events_topic_encryption_key_arn
+    ]
+  }
 }
 
 resource "aws_iam_policy" "audit_signing_key_lambda_kms_signing_policy" {
