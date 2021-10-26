@@ -7,11 +7,15 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -35,6 +39,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
     private static final Logger LOG = LoggerFactory.getLogger(CheckUserExistsHandler.class);
 
     private final ValidationService validationService;
+    private final AuditService auditService;
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             userJourneyStateMachine();
 
@@ -44,7 +49,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
-            ValidationService validationService) {
+            ValidationService validationService,
+            AuditService auditService) {
         super(
                 CheckUserExistsRequest.class,
                 configurationService,
@@ -53,11 +59,13 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 clientService,
                 authenticationService);
         this.validationService = validationService;
+        this.auditService = auditService;
     }
 
     public CheckUserExistsHandler() {
         super(CheckUserExistsRequest.class, ConfigurationService.getInstance());
         this.validationService = new ValidationService();
+        this.auditService = new AuditService();
     }
 
     @Override
@@ -83,6 +91,18 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             Optional<ErrorResponse> errorResponse =
                     validationService.validateEmailAddress(emailAddress);
             if (errorResponse.isPresent()) {
+                auditService.submitAuditEvent(
+                        FrontendAuditableEvent.CHECK_USER_INVALID_EMAIL,
+                        context.getAwsRequestId(),
+                        userContext.getSession().getSessionId(),
+                        userContext
+                                .getClient()
+                                .map(ClientRegistry::getClientID)
+                                .orElse(AuditService.UNKNOWN),
+                        AuditService.UNKNOWN,
+                        emailAddress,
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN);
                 LOG.error(
                         "Encountered an error while processing request for session {}; errorResponse is {}",
                         userContext.getSession().getSessionId(),
@@ -99,6 +119,31 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                         userContext.getSession().getState(),
                                         USER_ENTERED_REGISTERED_EMAIL_ADDRESS,
                                         userContext));
+                auditService.submitAuditEvent(
+                        FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL,
+                        context.getAwsRequestId(),
+                        userContext.getSession().getSessionId(),
+                        userContext
+                                .getClient()
+                                .map(ClientRegistry::getClientID)
+                                .orElse(AuditService.UNKNOWN),
+                        AuditService.UNKNOWN,
+                        emailAddress,
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN);
+            } else {
+                auditService.submitAuditEvent(
+                        FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL,
+                        context.getAwsRequestId(),
+                        userContext.getSession().getSessionId(),
+                        userContext
+                                .getClient()
+                                .map(ClientRegistry::getClientID)
+                                .orElse(AuditService.UNKNOWN),
+                        AuditService.UNKNOWN,
+                        emailAddress,
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN);
             }
             CheckUserExistsResponse checkUserExistsResponse =
                     new CheckUserExistsResponse(
