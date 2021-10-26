@@ -24,6 +24,7 @@ import uk.gov.di.authentication.shared.services.ValidationService;
 import java.util.Map;
 import java.util.Optional;
 
+import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
@@ -69,6 +70,7 @@ class SignUpHandlerTest {
 
     @Test
     public void shouldReturn200IfSignUpIsSuccessful() throws JsonProcessingException {
+        String email = "joe.bloggs@test.com";
         session.setState(EMAIL_CODE_VERIFIED);
         String password = "computer-1";
         when(validationService.validatePassword(eq(password))).thenReturn(Optional.empty());
@@ -76,7 +78,8 @@ class SignUpHandlerTest {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody("{ \"password\": \"computer-1\", \"email\": \"joe.bloggs@test.com\" }");
+        event.setBody(
+                format("{ \"password\": \"computer-1\", \"email\": \"%s\" }", email.toUpperCase()));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         verify(authenticationService)
@@ -97,6 +100,12 @@ class SignUpHandlerTest {
         BaseAPIResponse response =
                 new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
         assertThat(response.getSessionState(), equalTo(TWO_FACTOR_REQUIRED));
+        verify(authenticationService)
+                .signUp(
+                        eq(email),
+                        eq("computer-1"),
+                        any(Subject.class),
+                        any(TermsAndConditions.class));
     }
 
     @Test

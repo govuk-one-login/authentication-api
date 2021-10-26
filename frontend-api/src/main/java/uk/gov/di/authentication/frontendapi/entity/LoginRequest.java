@@ -9,7 +9,7 @@ public class LoginRequest extends BaseFrontendRequest {
     public LoginRequest(
             @JsonProperty(required = true, value = "email") String email,
             @JsonProperty(required = true, value = "password") String password) {
-        super(email);
+        super(email.toLowerCase());
         this.password = password;
     }
 
