@@ -97,3 +97,11 @@ output "sms_bucket_name" {
 output "lambda_env_vars_encryption_kms_key_arn" {
   value = aws_kms_key.lambda_env_vars_encryption_key.arn
 }
+
+output "lambda_parameter_encryption_key_id" {
+  value = aws_kms_key.parameter_store_key.id
+}
+
+output "lambda_parameter_encryption_alias_id" {
+  value = aws_kms_alias.parameter_store_key_alias.id
+}
