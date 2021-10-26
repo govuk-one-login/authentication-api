@@ -9,11 +9,14 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ClientInfoResponse;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -36,16 +39,19 @@ public class ClientInfoHandler
     private final ClientSessionService clientSessionService;
     private final ClientService clientService;
     private final SessionService sessionService;
+    private final AuditService auditService;
 
     public ClientInfoHandler(
             ConfigurationService configurationService,
             ClientSessionService clientSessionService,
             ClientService clientService,
-            SessionService sessionService) {
+            SessionService sessionService,
+            AuditService auditService) {
         this.configurationService = configurationService;
         this.clientSessionService = clientSessionService;
         this.clientService = clientService;
         this.sessionService = sessionService;
+        this.auditService = auditService;
     }
 
     public ClientInfoHandler() {
@@ -57,6 +63,7 @@ public class ClientInfoHandler
                         configurationService.getEnvironment(),
                         configurationService.getDynamoEndpointUri());
         this.sessionService = new SessionService(configurationService);
+        this.auditService = new AuditService();
     }
 
     @Override
@@ -130,6 +137,16 @@ public class ClientInfoHandler
                                         clientRegistry.getServiceType(),
                                         state,
                                         session.get().getSessionId());
+
+                                auditService.submitAuditEvent(
+                                        FrontendAuditableEvent.CLIENT_INFO_FOUND,
+                                        context.getAwsRequestId(),
+                                        session.get().getSessionId(),
+                                        clientRegistry.getClientID(),
+                                        AuditService.UNKNOWN,
+                                        AuditService.UNKNOWN,
+                                        IpAddressHelper.extractIpAddress(input),
+                                        AuditService.UNKNOWN);
 
                                 return generateApiGatewayProxyResponse(200, clientInfoResponse);
 
