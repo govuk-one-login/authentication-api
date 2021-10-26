@@ -149,7 +149,7 @@ data "aws_iam_policy_document" "pepper_parameter_policy" {
     ]
 
     resources = [
-      aws_ssm_parameter.password_pepper.arn
+      aws_ssm_parameter.password_pepper[0].arn
     ]
   }
   statement {
@@ -168,12 +168,14 @@ data "aws_iam_policy_document" "pepper_parameter_policy" {
 }
 
 resource "aws_iam_policy" "pepper_parameter_policy" {
-  policy      = data.aws_iam_policy_document.pepper_parameter_policy.json
+  count       = var.password_pepper == null ? 0 : 1
+  policy      = data.aws_iam_policy_document.pepper_parameter_policy[0].json
   path        = "/${var.environment}/lambda-parameters/"
   name_prefix = "pepper-parameter-store-policy"
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_iam_role_pepper_parameters" {
-  policy_arn = aws_iam_policy.pepper_parameter_policy.arn
+  count      = var.password_pepper == null ? 0 : 1
+  policy_arn = aws_iam_policy.pepper_parameter_policy[0].arn
   role       = aws_iam_role.lambda_iam_role.name
 }
