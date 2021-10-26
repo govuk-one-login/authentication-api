@@ -151,7 +151,10 @@ public class TokenHandlerTest {
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
         when(tokenService.validatePrivateKeyJWT(
-                        anyString(), eq(clientRegistry.getPublicKey()), eq(BASE_URI)))
+                        anyString(),
+                        eq(clientRegistry.getPublicKey()),
+                        eq(BASE_URI),
+                        eq(CLIENT_ID)))
                 .thenReturn(Optional.empty());
         String authCode = new AuthorizationCode().toString();
         when(authorisationCodeService.getExchangeDataForCode(authCode))
@@ -198,7 +201,10 @@ public class TokenHandlerTest {
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
         when(tokenService.validatePrivateKeyJWT(
-                        anyString(), eq(clientRegistry.getPublicKey()), eq(BASE_URI)))
+                        anyString(),
+                        eq(clientRegistry.getPublicKey()),
+                        eq(BASE_URI),
+                        eq(CLIENT_ID)))
                 .thenReturn(Optional.empty());
         when(tokenValidationService.validateRefreshTokenSignatureAndExpiry(refreshToken))
                 .thenReturn(true);
@@ -242,7 +248,10 @@ public class TokenHandlerTest {
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
         when(tokenService.validatePrivateKeyJWT(
-                        anyString(), eq(clientRegistry.getPublicKey()), eq(BASE_URI)))
+                        anyString(),
+                        eq(clientRegistry.getPublicKey()),
+                        eq(BASE_URI),
+                        eq(CLIENT_ID)))
                 .thenReturn(Optional.empty());
         when(tokenValidationService.validateRefreshTokenSignatureAndExpiry(refreshToken))
                 .thenReturn(true);
@@ -314,7 +323,10 @@ public class TokenHandlerTest {
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPairOne.getPrivate());
         when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
         when(tokenService.validatePrivateKeyJWT(
-                        anyString(), eq(clientRegistry.getPublicKey()), eq(TOKEN_URI)))
+                        anyString(),
+                        eq(clientRegistry.getPublicKey()),
+                        eq(TOKEN_URI),
+                        eq(CLIENT_ID)))
                 .thenReturn(Optional.of(OAuth2Error.INVALID_CLIENT));
 
         APIGatewayProxyResponseEvent result =
@@ -333,7 +345,10 @@ public class TokenHandlerTest {
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
         when(tokenService.validatePrivateKeyJWT(
-                        anyString(), eq(clientRegistry.getPublicKey()), eq(BASE_URI)))
+                        anyString(),
+                        eq(clientRegistry.getPublicKey()),
+                        eq(BASE_URI),
+                        eq(CLIENT_ID)))
                 .thenReturn(Optional.empty());
         String authCode = new AuthorizationCode().toString();
         when(authorisationCodeService.getExchangeDataForCode(authCode))
@@ -354,7 +369,10 @@ public class TokenHandlerTest {
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
         when(tokenService.validatePrivateKeyJWT(
-                        anyString(), eq(clientRegistry.getPublicKey()), eq(BASE_URI)))
+                        anyString(),
+                        eq(clientRegistry.getPublicKey()),
+                        eq(BASE_URI),
+                        eq(CLIENT_ID)))
                 .thenReturn(Optional.empty());
         String authCode = new AuthorizationCode().toString();
         when(authorisationCodeService.getExchangeDataForCode(authCode))
