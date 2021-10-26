@@ -111,6 +111,24 @@ public class CounterFraudAuditLambdaTest {
     }
 
     @Test
+    void shouldAddExtensionsToPayload() {
+        var handler = new CounterFraudAuditLambda(kms, config);
+
+        var payload =
+                AuditEvent.newBuilder()
+                        .putExtensions("key1", "value1")
+                        .putExtensions("key2", "value2")
+                        .build();
+
+        handler.handleAuditEvent(payload);
+
+        LogEvent logEvent = appender.getEvents().get(0);
+
+        assertThat(logEvent, hasObjectMessageProperty("extensions.key1", "value1"));
+        assertThat(logEvent, hasObjectMessageProperty("extensions.key2", "value2"));
+    }
+
+    @Test
     void shouldHashNotHashMissingSensitiveFields() {
         var handler = new CounterFraudAuditLambda(kms, config);
 

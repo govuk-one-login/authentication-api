@@ -52,6 +52,10 @@ public class CounterFraudAuditLambda extends BaseAuditHandler {
                     "user.phone", encodeHexString(hmacSha256(user.getPhoneNumber(), hmacKey)));
         }
 
+        auditEvent
+                .getExtensionsMap()
+                .forEach((key, value) -> eventData.put("extensions." + key, value));
+
         LOG.info(new ObjectMessage(eventData));
     }
 
