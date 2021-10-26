@@ -69,6 +69,7 @@ resource "aws_lambda_function" "fraud_realtime_logging_lambda" {
       AUDIT_HMAC_SECRET       = random_password.hmac_key.result
     }
   }
+  kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
 
   runtime = "java11"
 

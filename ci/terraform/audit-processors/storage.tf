@@ -60,6 +60,7 @@ resource "aws_lambda_function" "audit_processor_lambda" {
       AUDIT_STORAGE_S3_BUCKET = var.use_localstack ? null : aws_s3_bucket.audit_storage_bucket[0].bucket
     }
   }
+  kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
 
   runtime = "java11"
 
