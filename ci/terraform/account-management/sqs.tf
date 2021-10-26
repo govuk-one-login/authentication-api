@@ -189,8 +189,10 @@ resource "aws_lambda_function" "email_sqs_lambda" {
   }
   environment {
     variables = merge(var.notify_template_map, {
-      NOTIFY_API_KEY = var.notify_api_key
-      NOTIFY_URL     = var.notify_url
+      FRONTEND_BASE_URL           = module.dns.frontend_url
+      CUSTOMER_SUPPORT_LINK_ROUTE = var.customer_support_link_route
+      NOTIFY_API_KEY              = var.notify_api_key
+      NOTIFY_URL                  = var.notify_url
     })
   }
   kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
