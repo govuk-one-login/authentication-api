@@ -130,12 +130,12 @@ resource "aws_iam_role_policy_attachment" "lambda_iam_role_parameters" {
 
 resource "aws_iam_role_policy_attachment" "token_lambda_iam_role_parameters" {
   policy_arn = aws_iam_policy.parameter_policy.arn
-  role       = aws_iam_role.lambda_iam_role.name
+  role       = aws_iam_role.token_lambda_iam_role.name
 }
 
 resource "aws_iam_role_policy_attachment" "dynamo_sqs_lambda_iam_role_parameters" {
   policy_arn = aws_iam_policy.parameter_policy.arn
-  role       = aws_iam_role.lambda_iam_role.name
+  role       = aws_iam_role.dynamo_sqs_lambda_iam_role.name
 }
 
 data "aws_iam_policy_document" "pepper_parameter_policy" {
