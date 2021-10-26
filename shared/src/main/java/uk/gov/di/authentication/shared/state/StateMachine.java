@@ -163,6 +163,7 @@ public class StateMachine<T, A, C> {
                 .when(RESET_PASSWORD_LINK_MAX_RETRIES_REACHED)
                 .allow(
                         on(SYSTEM_HAS_SENT_RESET_PASSWORD_LINK).then(RESET_PASSWORD_LINK_SENT),
+                        on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(USER_NOT_FOUND)
