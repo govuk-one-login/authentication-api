@@ -8,12 +8,16 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.SignupRequest;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -38,6 +42,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
     private static final Logger LOG = LoggerFactory.getLogger(SignUpHandler.class);
 
     private final ValidationService validationService;
+    private final AuditService auditService;
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             userJourneyStateMachine();
 
@@ -47,7 +52,8 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
-            ValidationService validationService) {
+            ValidationService validationService,
+            AuditService auditService) {
         super(
                 SignupRequest.class,
                 configurationService,
@@ -56,11 +62,13 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                 clientService,
                 authenticationService);
         this.validationService = validationService;
+        this.auditService = auditService;
     }
 
     public SignUpHandler() {
         super(SignupRequest.class, ConfigurationService.getInstance());
         this.validationService = new ValidationService();
+        this.auditService = new AuditService();
     }
 
     @Override
@@ -85,6 +93,20 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
             if (passwordValidationErrors.isEmpty()) {
                 if (authenticationService.userExists(signupRequest.getEmail())) {
+
+                    auditService.submitAuditEvent(
+                            FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
+                            context.getAwsRequestId(),
+                            userContext.getSession().getSessionId(),
+                            userContext
+                                    .getClient()
+                                    .map(ClientRegistry::getClientID)
+                                    .orElse(AuditService.UNKNOWN),
+                            AuditService.UNKNOWN,
+                            signupRequest.getEmail(),
+                            IpAddressHelper.extractIpAddress(input),
+                            AuditService.UNKNOWN);
+
                     LOG.error(
                             "User with email {} already exists for session: {}",
                             signupRequest.getEmail(),
@@ -98,6 +120,19 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                         new TermsAndConditions(
                                 configurationService.getTermsAndConditionsVersion(),
                                 LocalDateTime.now(ZoneId.of("UTC")).toString()));
+
+                auditService.submitAuditEvent(
+                        FrontendAuditableEvent.CREATE_ACCOUNT,
+                        context.getAwsRequestId(),
+                        userContext.getSession().getSessionId(),
+                        userContext
+                                .getClient()
+                                .map(ClientRegistry::getClientID)
+                                .orElse(AuditService.UNKNOWN),
+                        AuditService.UNKNOWN,
+                        signupRequest.getEmail(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN);
 
                 sessionService.save(
                         userContext

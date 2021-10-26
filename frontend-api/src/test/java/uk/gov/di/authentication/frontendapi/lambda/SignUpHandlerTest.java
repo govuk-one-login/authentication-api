@@ -8,12 +8,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -33,6 +35,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_VERIFIED;
 import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
@@ -49,6 +52,7 @@ class SignUpHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
+    private final AuditService auditService = mock(AuditService.class);
 
     private SignUpHandler handler;
 
@@ -65,7 +69,8 @@ class SignUpHandlerTest {
                         clientSessionService,
                         clientService,
                         authenticationService,
-                        validationService);
+                        validationService,
+                        auditService);
     }
 
     @Test
@@ -77,6 +82,11 @@ class SignUpHandlerTest {
         when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(false);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(
+                new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                        .withIdentity(
+                                new APIGatewayProxyRequestEvent.RequestIdentity()
+                                        .withSourceIp("123.123.123.123")));
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(
                 format("{ \"password\": \"computer-1\", \"email\": \"%s\" }", email.toUpperCase()));
@@ -106,6 +116,17 @@ class SignUpHandlerTest {
                         eq("computer-1"),
                         any(Subject.class),
                         any(TermsAndConditions.class));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.CREATE_ACCOUNT,
+                        context.getAwsRequestId(),
+                        session.getSessionId(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "joe.bloggs@test.com",
+                        "123.123.123.123",
+                        AuditService.UNKNOWN);
     }
 
     @Test
@@ -119,6 +140,8 @@ class SignUpHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
+
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -132,6 +155,8 @@ class SignUpHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -149,6 +174,8 @@ class SignUpHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1007));
+
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -160,12 +187,28 @@ class SignUpHandlerTest {
 
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(
+                new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                        .withIdentity(
+                                new APIGatewayProxyRequestEvent.RequestIdentity()
+                                        .withSourceIp("123.123.123.123")));
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
         event.setBody("{ \"password\": \"computer\", \"email\": \"joe.bloggs@test.com\" }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1009));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
+                        context.getAwsRequestId(),
+                        session.getSessionId(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "joe.bloggs@test.com",
+                        "123.123.123.123",
+                        AuditService.UNKNOWN);
     }
 
     @Test
@@ -183,6 +226,8 @@ class SignUpHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1017));
+
+        verifyNoInteractions(auditService);
     }
 
     private void usingValidSession() {
