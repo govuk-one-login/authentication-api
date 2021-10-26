@@ -284,6 +284,10 @@ public class AuthorisationHandler
 
     private APIGatewayProxyResponseEvent redirect(
             Session session, String clientSessionID, URI redirectURI) {
+        LOGGER.info(
+                "Redirecting for SessionId: {} and ClientSessionId: {}",
+                session.getSessionId(),
+                clientSessionID);
         return new APIGatewayProxyResponseEvent()
                 .withStatusCode(302)
                 .withHeaders(

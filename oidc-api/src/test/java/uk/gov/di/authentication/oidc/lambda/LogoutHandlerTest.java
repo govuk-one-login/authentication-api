@@ -68,7 +68,7 @@ class LogoutHandlerTest {
     private SignedJWT signedIDToken;
     private static final Subject SUBJECT = new Subject();
     private static final String EMAIL = "joe.bloggs@test.com";
-    private final Session session = generateSession().setEmailAddress(EMAIL);
+    private Session session;
 
     @BeforeEach
     public void setUp() throws JOSEException {
@@ -85,6 +85,7 @@ class LogoutHandlerTest {
         signedIDToken =
                 TokenGeneratorHelper.generateIDToken(
                         "client-id", SUBJECT, "http://localhost-rp", ecSigningKey);
+        session = generateSession().setEmailAddress(EMAIL);
     }
 
     @Test
@@ -100,12 +101,16 @@ class LogoutHandlerTest {
                         "id_token_hint", signedIDToken.serialize(),
                         "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString(),
                         "state", STATE.toString()));
-        session.getClientSessions().add(CLIENT_SESSION_ID);
+        session.getClientSessions().add("client-session-id-2");
+        session.getClientSessions().add("client-session-id-3");
         generateSessionFromCookie(session);
         setupClientSessionToken(signedIDToken);
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
-        verify(sessionService, times(1)).deleteSessionFromRedis(SESSION_ID);
 
+        verify(sessionService, times(1)).deleteSessionFromRedis(SESSION_ID);
+        verify(clientSessionService).deleteClientSessionFromRedis(CLIENT_SESSION_ID);
+        verify(clientSessionService).deleteClientSessionFromRedis("client-session-id-2");
+        verify(clientSessionService).deleteClientSessionFromRedis("client-session-id-3");
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
@@ -126,12 +131,12 @@ class LogoutHandlerTest {
                         signedIDToken.serialize(),
                         "post_logout_redirect_uri",
                         CLIENT_LOGOUT_URI.toString()));
-        session.getClientSessions().add(CLIENT_SESSION_ID);
         generateSessionFromCookie(session);
         setupClientSessionToken(signedIDToken);
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
         verify(sessionService, times(1)).deleteSessionFromRedis(SESSION_ID);
+        verify(clientSessionService).deleteClientSessionFromRedis(CLIENT_SESSION_ID);
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
