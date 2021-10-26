@@ -95,10 +95,14 @@ public class LogoutHandler
 
     private APIGatewayProxyResponseEvent processLogoutRequest(
             Session session, APIGatewayProxyRequestEvent input, Optional<String> state) {
-        LOG.info("LogoutHandler processing request for session {}", session.getSessionId());
 
         CookieHelper.SessionCookieIds sessionCookieIds =
                 CookieHelper.parseSessionCookie(input.getHeaders()).get();
+
+        LOG.info(
+                "LogoutHandler processing request for SessionId: {} and ClientSessionId: {}",
+                session.getSessionId(),
+                sessionCookieIds.getClientSessionId());
 
         Map<String, String> queryStringParameters = input.getQueryStringParameters();
 
@@ -112,7 +116,7 @@ public class LogoutHandler
                 || !queryStringParameters.containsKey("id_token_hint")
                 || queryStringParameters.get("id_token_hint").isBlank()) {
             LOG.info("Deleting session from redis as no id token is present in request");
-            sessionService.deleteSessionFromRedis(session.getSessionId());
+            destroySessions(session);
             return generateDefaultLogoutResponse(state);
         }
         if (!doesIDTokenExistInSession(queryStringParameters.get("id_token_hint"), session)) {
@@ -137,7 +141,7 @@ public class LogoutHandler
             SignedJWT idToken = SignedJWT.parse(idTokenHint);
             Optional<String> audience =
                     idToken.getJWTClaimsSet().getAudience().stream().findFirst();
-            sessionService.deleteSessionFromRedis(session.getSessionId());
+            destroySessions(session);
             return audience.map(
                             a ->
                                     validateClientIDAgainstClientRegistry(
@@ -233,5 +237,14 @@ public class LogoutHandler
         return new APIGatewayProxyResponseEvent()
                 .withStatusCode(302)
                 .withHeaders(Map.of(ResponseHeaders.LOCATION, uri.toString()));
+    }
+
+    private void destroySessions(Session session) {
+        for (String clientSessionId : session.getClientSessions()) {
+            LOG.info("Deleting ClientSession with ClientSessionId: {}", clientSessionId);
+            clientSessionService.deleteClientSessionFromRedis(clientSessionId);
+        }
+        LOG.info("Deleting Session with SessionId: {}", session.getSessionId());
+        sessionService.deleteSessionFromRedis(session.getSessionId());
     }
 }

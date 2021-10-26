@@ -44,6 +44,7 @@ public class ClientSessionService {
             LOG.error("Error saving client session to Redis", e);
             throw new RuntimeException(e);
         }
+        LOG.info("Generated new ClientSession with ID: {}", id);
         return id;
     }
 
@@ -68,6 +69,10 @@ public class ClientSessionService {
             LOG.error("Error saving client session to Redis", e);
             throw new RuntimeException(e);
         }
+    }
+
+    public void deleteClientSessionFromRedis(String clientSessionId) {
+        redisConnectionService.deleteValue(clientSessionId);
     }
 
     public Optional<ClientSession> getClientSessionFromRequestHeaders(Map<String, String> headers) {
