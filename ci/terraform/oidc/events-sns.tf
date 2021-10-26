@@ -1,10 +1,6 @@
-resource "aws_kms_key" "events_topic_encryption" {
-  description = "alias/${var.environment}/events-encryption-key"
-}
-
 resource "aws_sns_topic" "events" {
   name              = "${var.environment}-events"
-  kms_master_key_id = "alias/aws/sns"
+  kms_master_key_id = local.events_topic_encryption_key_arn
   tags              = local.default_tags
 }
 
@@ -37,7 +33,7 @@ data "aws_iam_policy_document" "events_policy_document" {
       "kms:Decrypt"
     ]
     resources = [
-      aws_kms_key.events_topic_encryption.arn
+      local.events_topic_encryption_key_arn
     ]
   }
 }

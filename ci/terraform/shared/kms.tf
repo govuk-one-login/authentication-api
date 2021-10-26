@@ -234,3 +234,52 @@ resource "aws_iam_role_policy_attachment" "lambda_env_vars_encryption_kms_policy
   role       = aws_iam_role.lambda_iam_role.name
   policy_arn = aws_iam_policy.lambda_env_vars_encryption_kms_policy[0].arn
 }
+### Events flow encryption key
+
+resource "aws_kms_key" "events_topic_encryption" {
+  description = "alias/${var.environment}/events-encryption-key"
+
+  policy = data.aws_iam_policy_document.events_encryption_key_permissions.json
+
+  tags = local.default_tags
+}
+
+resource "aws_kms_alias" "events_topic_encryption_alias" {
+  name          = "alias/${var.environment}-events-encryption-key-alias"
+  target_key_id = aws_kms_key.events_topic_encryption.id
+}
+
+data "aws_iam_policy_document" "events_encryption_key_permissions" {
+  version   = "2012-10-17"
+  policy_id = "${var.environment}-events-encryption-key-policy"
+
+  statement {
+    sid       = "Enable IAM User Permissions"
+    effect    = "Allow"
+    actions   = ["kms:*"]
+    resources = ["*"]
+
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+  }
+
+  statement {
+    sid    = "Allow use of the key by SQS/SNS"
+    effect = "Allow"
+    actions = [
+      "kms:GenerateDataKey*",
+      "kms:Decrypt"
+    ]
+    resources = ["*"]
+
+    principals {
+      type = "Service"
+      identifiers = [
+        "sns.amazonaws.com",
+        "sqs.amazonaws.com"
+      ]
+    }
+  }
+}

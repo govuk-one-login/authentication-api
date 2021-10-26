@@ -34,4 +34,5 @@ locals {
   audit_signing_key_alias_name           = data.terraform_remote_state.shared.outputs.audit_signing_key_alias_name
   sms_bucket_name                        = data.terraform_remote_state.shared.outputs.sms_bucket_name
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
+  events_topic_encryption_key_arn        = data.terraform_remote_state.shared.outputs.events_topic_encryption_key_arn
 }
