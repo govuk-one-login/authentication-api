@@ -1,11 +1,21 @@
 package uk.gov.di.authentication.shared.services;
 
+import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagement;
+import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagementClient;
+import com.amazonaws.services.simplesystemsmanagement.model.GetParameterRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
+import static java.text.MessageFormat.format;
+
 public class ConfigurationService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConfigurationService.class);
     private static ConfigurationService configurationService;
 
     public static ConfigurationService getInstance() {
@@ -14,6 +24,8 @@ public class ConfigurationService {
         }
         return configurationService;
     }
+
+    private AWSSimpleSystemsManagement ssmClient;
 
     // Please keep the method names in alphabetical order so we can find stuff more easily.
     public long getAccessTokenExpiry() {
@@ -109,19 +121,39 @@ public class ConfigurationService {
     }
 
     public String getRedisHost() {
-        return System.getenv().getOrDefault("REDIS_HOST", "redis");
+        var request =
+                new GetParameterRequest()
+                        .withWithDecryption(true)
+                        .withName(
+                                format(
+                                        "{0}-{1}-redis-master-host",
+                                        getEnvironment(), getRedisKey()));
+        return getSsmClient().getParameter(request).getParameter().getValue();
     }
 
     public Optional<String> getRedisPassword() {
-        return Optional.ofNullable(System.getenv("REDIS_PASSWORD"));
+        var request =
+                new GetParameterRequest()
+                        .withWithDecryption(true)
+                        .withName(
+                                format("{0}-{1}-redis-password", getEnvironment(), getRedisKey()));
+        return Optional.ofNullable(getSsmClient().getParameter(request).getParameter().getValue());
     }
 
     public int getRedisPort() {
-        return Integer.parseInt(System.getenv().getOrDefault("REDIS_PORT", "6379"));
+        var request =
+                new GetParameterRequest()
+                        .withWithDecryption(true)
+                        .withName(format("{0}-{1}-redis-port", getEnvironment(), getRedisKey()));
+        return Integer.parseInt(getSsmClient().getParameter(request).getParameter().getValue());
     }
 
     public boolean getUseRedisTLS() {
-        return Boolean.parseBoolean(System.getenv().getOrDefault("REDIS_TLS", "false"));
+        var request =
+                new GetParameterRequest()
+                        .withWithDecryption(true)
+                        .withName(format("{0}-{1}-redis-tls", getEnvironment(), getRedisKey()));
+        return Boolean.parseBoolean(getSsmClient().getParameter(request).getParameter().getValue());
     }
 
     public String getResetPasswordRoute() {
@@ -191,5 +223,30 @@ public class ConfigurationService {
 
     public String getAuditHmacSecret() {
         return System.getenv("AUDIT_HMAC_SECRET");
+    }
+
+    private AWSSimpleSystemsManagement getSsmClient() {
+        if (ssmClient == null) {
+            if (getLocalstackEndpointUri().isPresent()) {
+                LOGGER.info(
+                        "Localstack endpoint URI is present: " + getLocalstackEndpointUri().get());
+                ssmClient =
+                        AWSSimpleSystemsManagementClient.builder()
+                                .withEndpointConfiguration(
+                                        new AwsClientBuilder.EndpointConfiguration(
+                                                getLocalstackEndpointUri().get(), getAwsRegion()))
+                                .build();
+            } else {
+                ssmClient =
+                        AWSSimpleSystemsManagementClient.builder()
+                                .withRegion(getAwsRegion())
+                                .build();
+            }
+        }
+        return ssmClient;
+    }
+
+    private String getRedisKey() {
+        return System.getenv("REDIS_KEY");
     }
 }
