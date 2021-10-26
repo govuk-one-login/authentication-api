@@ -14,7 +14,6 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.service.notify.NotificationClientException;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -92,8 +91,7 @@ public class NotificationHandlerTest {
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("customer-support-link", CUSTOMER_SUPPORT_LINK_URL);
 
-        verify(notificationService)
-                .sendEmail(TEST_EMAIL_ADDRESS, Collections.emptyMap(), TEMPLATE_ID);
+        verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, TEMPLATE_ID);
     }
 
     @Test
