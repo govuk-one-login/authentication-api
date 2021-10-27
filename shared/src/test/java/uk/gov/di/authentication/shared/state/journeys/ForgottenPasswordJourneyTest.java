@@ -26,6 +26,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_RESET_PASSWORD_LINK;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_PASSWORD_TOO_MANY_TIMES;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_REGISTERED_EMAIL_ADDRESS;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_CREDENTIALS;
 import static uk.gov.di.authentication.shared.entity.SessionState.ACCOUNT_TEMPORARILY_LOCKED;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
@@ -36,6 +37,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
 import static uk.gov.di.authentication.shared.entity.SessionState.RESET_PASSWORD_LINK_SENT;
 import static uk.gov.di.authentication.shared.entity.SessionState.TWO_FACTOR_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS;
+import static uk.gov.di.authentication.shared.entity.SessionState.USER_NOT_FOUND;
 import static uk.gov.di.authentication.shared.state.StateMachineJourneyTest.CLIENT_ID;
 import static uk.gov.di.authentication.shared.state.StateMachineJourneyTest.generateAuthRequest;
 import static uk.gov.di.authentication.shared.state.StateMachineJourneyTest.generateLowLevelVectorOfTrust;
@@ -353,6 +355,73 @@ public class ForgottenPasswordJourneyTest {
                                 RESET_PASSWORD_LINK_SENT),
                         new JourneyTransition(
                                 userContext, USER_ENTERED_VALID_CREDENTIALS, LOGGED_IN));
+
+        SessionState currentState = NEW;
+
+        for (JourneyTransition transition : transitions) {
+            currentState =
+                    stateMachine.transition(
+                            currentState,
+                            transition.getSessionAction(),
+                            transition.getUserContext());
+            assertThat(currentState, equalTo(transition.getExpectedSessionState()));
+        }
+    }
+
+    @Test
+    public void testCanReachLockedAccountAndStartAgainAndCorrectlyGetBackToLockedStatus() {
+        UserProfile userProfile =
+                generateUserProfile(
+                        true,
+                        "1.0",
+                        new HashSet<String>(
+                                Arrays.asList(
+                                        "phone",
+                                        "phone_number_verified",
+                                        "email",
+                                        "email_verified",
+                                        "sub")));
+
+        UserContext userContext =
+                UserContext.builder(
+                                session.setCurrentCredentialStrength(
+                                        CredentialTrustLevel.MEDIUM_LEVEL))
+                        .withClientSession(
+                                new ClientSession(
+                                                generateAuthRequest("Cl.Cm").toParameters(),
+                                                null,
+                                                null)
+                                        .setEffectiveVectorOfTrust(VectorOfTrust.getDefaults()))
+                        .withUserProfile(userProfile)
+                        .withClient(new ClientRegistry().setClientID(CLIENT_ID.toString()))
+                        .build();
+
+        List<JourneyTransition> transitions =
+                Arrays.asList(
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_REGISTERED_EMAIL_ADDRESS,
+                                AUTHENTICATION_REQUIRED),
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_INVALID_PASSWORD_TOO_MANY_TIMES,
+                                ACCOUNT_TEMPORARILY_LOCKED),
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS,
+                                USER_NOT_FOUND),
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS,
+                                USER_NOT_FOUND),
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_REGISTERED_EMAIL_ADDRESS,
+                                AUTHENTICATION_REQUIRED),
+                        new JourneyTransition(
+                                userContext,
+                                USER_ENTERED_INVALID_PASSWORD_TOO_MANY_TIMES,
+                                ACCOUNT_TEMPORARILY_LOCKED));
 
         SessionState currentState = NEW;
 

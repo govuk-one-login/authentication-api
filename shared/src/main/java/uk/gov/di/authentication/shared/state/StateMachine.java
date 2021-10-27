@@ -330,6 +330,7 @@ public class StateMachine<T, A, C> {
                         on(USER_ENTERED_INVALID_PASSWORD_TOO_MANY_TIMES)
                                 .then(ACCOUNT_TEMPORARILY_LOCKED),
                         on(ACCOUNT_LOCK_EXPIRED).then(AUTHENTICATION_REQUIRED),
+                        on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(AUTHENTICATION_REQUIRED)
