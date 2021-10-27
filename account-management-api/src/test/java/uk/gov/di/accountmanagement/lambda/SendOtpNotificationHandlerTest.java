@@ -9,11 +9,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -33,10 +35,12 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 class SendOtpNotificationHandlerTest {
 
@@ -51,6 +55,7 @@ class SendOtpNotificationHandlerTest {
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final Context context = mock(Context.class);
+    private final AuditService auditService = mock(AuditService.class);
 
     private final SendOtpNotificationHandler handler =
             new SendOtpNotificationHandler(
@@ -59,7 +64,8 @@ class SendOtpNotificationHandlerTest {
                     awsSqsClient,
                     codeGeneratorService,
                     codeStorageService,
-                    dynamoService);
+                    dynamoService,
+                    auditService);
 
     @BeforeEach
     void setup() {
@@ -78,6 +84,11 @@ class SendOtpNotificationHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of());
+        event.setRequestContext(
+                new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                        .withIdentity(
+                                new APIGatewayProxyRequestEvent.RequestIdentity()
+                                        .withSourceIp("123.123.123.123")));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
@@ -90,6 +101,18 @@ class SendOtpNotificationHandlerTest {
         verify(codeStorageService)
                 .saveOtpCode(
                         TEST_EMAIL_ADDRESS, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AccountManagementAuditableEvent.SEND_OTP,
+                        context.getAwsRequestId(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        null,
+                        pair("notification-type", VERIFY_EMAIL));
     }
 
     @Test
@@ -101,6 +124,11 @@ class SendOtpNotificationHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of());
+        event.setRequestContext(
+                new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                        .withIdentity(
+                                new APIGatewayProxyRequestEvent.RequestIdentity()
+                                        .withSourceIp("123.123.123.123")));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\"  }",
@@ -116,6 +144,18 @@ class SendOtpNotificationHandlerTest {
                         TEST_SIX_DIGIT_CODE,
                         CODE_EXPIRY_TIME,
                         VERIFY_PHONE_NUMBER);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AccountManagementAuditableEvent.SEND_OTP,
+                        context.getAwsRequestId(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        TEST_PHONE_NUMBER,
+                        pair("notification-type", VERIFY_PHONE_NUMBER));
     }
 
     @Test
@@ -127,6 +167,8 @@ class SendOtpNotificationHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -146,6 +188,8 @@ class SendOtpNotificationHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1004));
+
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -164,6 +208,8 @@ class SendOtpNotificationHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1012));
+
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -186,6 +232,8 @@ class SendOtpNotificationHandlerTest {
 
         assertEquals(500, result.getStatusCode());
         assertTrue(result.getBody().contains("Error sending message to queue"));
+
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -207,6 +255,8 @@ class SendOtpNotificationHandlerTest {
         verify(awsSqsClient, never()).send(anyString());
         verify(codeStorageService, never())
                 .saveOtpCode(anyString(), anyString(), anyLong(), any(NotificationType.class));
+
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -225,5 +275,7 @@ class SendOtpNotificationHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1009));
+
+        verifyNoInteractions(auditService);
     }
 }

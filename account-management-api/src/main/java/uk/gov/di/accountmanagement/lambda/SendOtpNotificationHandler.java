@@ -9,11 +9,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.SendNotificationRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -28,6 +31,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class SendOtpNotificationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -41,6 +45,7 @@ public class SendOtpNotificationHandler
     private final CodeStorageService codeStorageService;
     private final DynamoService dynamoService;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final AuditService auditService;
 
     public SendOtpNotificationHandler(
             ConfigurationService configurationService,
@@ -48,13 +53,15 @@ public class SendOtpNotificationHandler
             AwsSqsClient sqsClient,
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService,
-            DynamoService dynamoService) {
+            DynamoService dynamoService,
+            AuditService auditService) {
         this.configurationService = configurationService;
         this.validationService = validationService;
         this.sqsClient = sqsClient;
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
         this.dynamoService = dynamoService;
+        this.auditService = auditService;
     }
 
     public SendOtpNotificationHandler() {
@@ -69,6 +76,7 @@ public class SendOtpNotificationHandler
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
         this.dynamoService = new DynamoService(configurationService);
+        this.auditService = new AuditService();
     }
 
     @Override
@@ -104,7 +112,9 @@ public class SendOtpNotificationHandler
                                         }
                                         return handleNotificationRequest(
                                                 sendNotificationRequest.getEmail(),
-                                                sendNotificationRequest);
+                                                sendNotificationRequest,
+                                                input,
+                                                context);
                                     case VERIFY_PHONE_NUMBER:
                                         LOGGER.info("NotificationType is VERIFY_PHONE_NUMBER");
                                         Optional<ErrorResponse> phoneNumberValidationError =
@@ -119,7 +129,9 @@ public class SendOtpNotificationHandler
                                         }
                                         return handleNotificationRequest(
                                                 sendNotificationRequest.getPhoneNumber(),
-                                                sendNotificationRequest);
+                                                sendNotificationRequest,
+                                                input,
+                                                context);
                                 }
                                 return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
                             } catch (SdkClientException ex) {
@@ -134,7 +146,10 @@ public class SendOtpNotificationHandler
     }
 
     private APIGatewayProxyResponseEvent handleNotificationRequest(
-            String destination, SendNotificationRequest sendNotificationRequest)
+            String destination,
+            SendNotificationRequest sendNotificationRequest,
+            APIGatewayProxyRequestEvent input,
+            Context context)
             throws JsonProcessingException {
 
         String code = codeGeneratorService.sixDigitCode();
@@ -149,6 +164,18 @@ public class SendOtpNotificationHandler
                 "Sending message to SQS queue for notificationType: {}",
                 sendNotificationRequest.getNotificationType());
         sqsClient.send(serialiseRequest(notifyRequest));
+
+        auditService.submitAuditEvent(
+                AccountManagementAuditableEvent.SEND_OTP,
+                context.getAwsRequestId(),
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                sendNotificationRequest.getEmail(),
+                IpAddressHelper.extractIpAddress(input),
+                sendNotificationRequest.getPhoneNumber(),
+                pair("notification-type", sendNotificationRequest.getNotificationType()));
+
         LOGGER.info("Generating successful API response");
         return generateEmptySuccessApiGatewayResponse();
     }
