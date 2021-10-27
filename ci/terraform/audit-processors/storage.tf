@@ -289,3 +289,21 @@ resource "aws_iam_policy" "audit_storage_events_encryption_key_access" {
     }]
   })
 }
+
+resource "aws_cloudwatch_metric_alarm" "audit_storage_error_alarm" {
+  count               = var.use_localstack ? 0 : 1
+  alarm_name          = "${var.environment}-audit-storage-error-alarm"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "Errors"
+  namespace           = "AWS/Lambda"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "1"
+
+  dimensions = {
+    FunctionName = aws_lambda_function.audit_processor_lambda.function_name
+  }
+  alarm_description = "This metric monitors number of errors from the audit storage lambda"
+  alarm_actions     = [data.aws_sns_topic.slack_events.arn]
+}
