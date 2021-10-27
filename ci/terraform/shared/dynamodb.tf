@@ -33,7 +33,7 @@ resource "aws_dynamodb_table" "user_credentials_table" {
   }
 
   lifecycle {
-    prevent_destroy = false
+    prevent_destroy = true
   }
 
   tags = local.default_tags
@@ -87,7 +87,7 @@ resource "aws_dynamodb_table" "user_profile_table" {
   }
 
   lifecycle {
-    prevent_destroy = false
+    prevent_destroy = true
   }
 
   tags = local.default_tags
