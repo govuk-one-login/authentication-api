@@ -6,5 +6,6 @@ public enum AccountManagementAuditableEvent implements AuditableEvent {
     UPDATE_EMAIL,
     UPDATE_PASSWORD,
     UPDATE_PHONE_NUMBER,
+    ACCOUNT_MANAGEMENT_AUTHENTICATE,
     DELETE_ACCOUNT
 }

@@ -5,7 +5,9 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 
 import java.util.Optional;
@@ -13,6 +15,8 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -25,10 +29,11 @@ class AuthenticateHandlerTest {
     private AuthenticateHandler handler;
     private final Context context = mock(Context.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+    private final AuditService auditService = mock(AuditService.class);
 
     @BeforeEach
     public void setUp() {
-        handler = new AuthenticateHandler(authenticationService);
+        handler = new AuthenticateHandler(authenticationService, auditService);
     }
 
     @Test
@@ -37,10 +42,26 @@ class AuthenticateHandlerTest {
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(
+                new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                        .withIdentity(
+                                new APIGatewayProxyRequestEvent.RequestIdentity()
+                                        .withSourceIp("123.123.123.123")));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE,
+                        context.getAwsRequestId(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        EMAIL,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN);
     }
 
     @Test
@@ -54,6 +75,8 @@ class AuthenticateHandlerTest {
 
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
+
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -66,6 +89,8 @@ class AuthenticateHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -79,5 +104,7 @@ class AuthenticateHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
+
+        verifyNoInteractions(auditService);
     }
 }
