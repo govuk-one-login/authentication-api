@@ -86,7 +86,10 @@ public class AuthoriseAccessTokenHandler
                 Date currentDateTime =
                         Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
                 if (DateUtils.isBefore(claimsSet.getExpirationTime(), currentDateTime, 60)) {
-                    LOGGER.error("Access Token has expired");
+                    LOGGER.error(
+                            "Access Token expires at: {}. CurrentDateTime is: {}",
+                            claimsSet.getExpirationTime(),
+                            currentDateTime);
                     throw new RuntimeException("Unauthorized");
                 }
                 boolean isAccessTokenSignatureValid =
