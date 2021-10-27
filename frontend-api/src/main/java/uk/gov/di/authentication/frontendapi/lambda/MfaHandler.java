@@ -7,10 +7,12 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.BaseFrontendRequest;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.frontendapi.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
@@ -18,6 +20,8 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -51,6 +55,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
 
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
+    private final AuditService auditService;
     private final AwsSqsClient sqsClient;
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             userJourneyStateMachine();
@@ -63,6 +68,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
+            AuditService auditService,
             AwsSqsClient sqsClient) {
         super(
                 MfaRequest.class,
@@ -73,6 +79,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 authenticationService);
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
+        this.auditService = auditService;
         this.sqsClient = sqsClient;
     }
 
@@ -81,6 +88,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
+        this.auditService = new AuditService();
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
@@ -105,6 +113,19 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     validateCodeRequestAttempts(
                             userWithEmailRequest.getEmail(), userContext.getSession());
             if (!codeRequestValid) {
+                auditService.submitAuditEvent(
+                        FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
+                        context.getAwsRequestId(),
+                        userContext.getSession().getSessionId(),
+                        userContext
+                                .getClient()
+                                .map(ClientRegistry::getClientID)
+                                .orElse(AuditService.UNKNOWN),
+                        AuditService.UNKNOWN,
+                        userWithEmailRequest.getEmail(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN);
+
                 return generateApiGatewayProxyResponse(
                         400, new BaseAPIResponse(userContext.getSession().getState()));
             }
@@ -113,6 +134,20 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 LOGGER.error(
                         "Email in session: {} does not match Email in Request",
                         userContext.getSession().getSessionId());
+
+                auditService.submitAuditEvent(
+                        FrontendAuditableEvent.MFA_MISMATCHED_EMAIL,
+                        context.getAwsRequestId(),
+                        userContext.getSession().getSessionId(),
+                        userContext
+                                .getClient()
+                                .map(ClientRegistry::getClientID)
+                                .orElse(AuditService.UNKNOWN),
+                        AuditService.UNKNOWN,
+                        userWithEmailRequest.getEmail(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN);
+
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1000);
             }
             String phoneNumber =
@@ -124,6 +159,20 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 LOGGER.error(
                         "PhoneNumber is null for session: {}",
                         userContext.getSession().getSessionId());
+
+                auditService.submitAuditEvent(
+                        FrontendAuditableEvent.MFA_MISSING_PHONE_NUMBER,
+                        context.getAwsRequestId(),
+                        userContext.getSession().getSessionId(),
+                        userContext
+                                .getClient()
+                                .map(ClientRegistry::getClientID)
+                                .orElse(AuditService.UNKNOWN),
+                        AuditService.UNKNOWN,
+                        userWithEmailRequest.getEmail(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN);
+
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1014);
             }
 
@@ -142,6 +191,19 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             NotifyRequest notifyRequest = new NotifyRequest(phoneNumber, MFA_SMS, code);
             if (!isTestClientAndAllowedEmail(userContext, MFA_SMS)) {
                 sqsClient.send(objectMapper.writeValueAsString(notifyRequest));
+
+                auditService.submitAuditEvent(
+                        FrontendAuditableEvent.MFA_CODE_SENT,
+                        context.getAwsRequestId(),
+                        userContext.getSession().getSessionId(),
+                        userContext
+                                .getClient()
+                                .map(ClientRegistry::getClientID)
+                                .orElse(AuditService.UNKNOWN),
+                        AuditService.UNKNOWN,
+                        userWithEmailRequest.getEmail(),
+                        IpAddressHelper.extractIpAddress(input),
+                        phoneNumber);
             }
             LOGGER.info(
                     "MfaHandler successfully processed request for session: {}",

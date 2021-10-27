@@ -14,6 +14,7 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -22,6 +23,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -70,6 +72,7 @@ public class MfaHandlerTest {
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
+    private final AuditService auditService = mock(AuditService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
@@ -90,6 +93,7 @@ public class MfaHandlerTest {
 
     @BeforeEach
     public void setUp() {
+        when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         handler =
@@ -101,6 +105,7 @@ public class MfaHandlerTest {
                         clientSessionService,
                         clientService,
                         authenticationService,
+                        auditService,
                         sqsClient);
         when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
     }
@@ -115,12 +120,28 @@ public class MfaHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+        event.setRequestContext(
+                new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                        .withIdentity(
+                                new APIGatewayProxyRequestEvent.RequestIdentity()
+                                        .withSourceIp("123.123.123.123")));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         verify(sqsClient).send(new ObjectMapper().writeValueAsString(notifyRequest));
         verify(codeStorageService).saveOtpCode(TEST_EMAIL_ADDRESS, CODE, CODE_EXPIRY_TIME, MFA_SMS);
         assertThat(result, hasStatus(200));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.MFA_CODE_SENT,
+                        "aws-session-id",
+                        session.getSessionId(),
+                        "",
+                        AuditService.UNKNOWN,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        PHONE_NUMBER);
     }
 
     @Test
@@ -135,12 +156,28 @@ public class MfaHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+        event.setRequestContext(
+                new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                        .withIdentity(
+                                new APIGatewayProxyRequestEvent.RequestIdentity()
+                                        .withSourceIp("123.123.123.123")));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         verify(sqsClient).send(new ObjectMapper().writeValueAsString(notifyRequest));
         verify(codeStorageService).saveOtpCode(TEST_EMAIL_ADDRESS, CODE, CODE_EXPIRY_TIME, MFA_SMS);
         assertThat(result, hasStatus(200));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.MFA_CODE_SENT,
+                        "aws-session-id",
+                        session.getSessionId(),
+                        "",
+                        AuditService.UNKNOWN,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        PHONE_NUMBER);
     }
 
     @Test
@@ -148,10 +185,50 @@ public class MfaHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+        event.setRequestContext(
+                new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                        .withIdentity(
+                                new APIGatewayProxyRequestEvent.RequestIdentity()
+                                        .withSourceIp("123.123.123.123")));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
+
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
+    public void shouldReturn400WhenEmailInSessionDoesNotMatchEmailInRequest()
+            throws JsonProcessingException {
+        usingValidSession();
+        when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(PHONE_NUMBER));
+        when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
+        NotifyRequest notifyRequest = new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE);
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(format("{ \"email\": \"%s\"}", "wrong.email@gov.uk"));
+        event.setRequestContext(
+                new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                        .withIdentity(
+                                new APIGatewayProxyRequestEvent.RequestIdentity()
+                                        .withSourceIp("123.123.123.123")));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.MFA_MISMATCHED_EMAIL,
+                        "aws-session-id",
+                        session.getSessionId(),
+                        "",
+                        AuditService.UNKNOWN,
+                        "wrong.email@gov.uk",
+                        "123.123.123.123",
+                        AuditService.UNKNOWN);
     }
 
     @Test
@@ -161,11 +238,27 @@ public class MfaHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+        event.setRequestContext(
+                new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                        .withIdentity(
+                                new APIGatewayProxyRequestEvent.RequestIdentity()
+                                        .withSourceIp("123.123.123.123")));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1014));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.MFA_MISSING_PHONE_NUMBER,
+                        "aws-session-id",
+                        session.getSessionId(),
+                        "",
+                        AuditService.UNKNOWN,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN);
     }
 
     @Test
@@ -188,6 +281,8 @@ public class MfaHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1017));
+
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -204,6 +299,11 @@ public class MfaHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+        event.setRequestContext(
+                new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                        .withIdentity(
+                                new APIGatewayProxyRequestEvent.RequestIdentity()
+                                        .withSourceIp("123.123.123.123")));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -214,6 +314,17 @@ public class MfaHandlerTest {
         verify(codeStorageService)
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS, CODE_REQUEST_BLOCKED_KEY_PREFIX, CODE_EXPIRY_TIME);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
+                        "aws-session-id",
+                        session.getSessionId(),
+                        "",
+                        AuditService.UNKNOWN,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN);
     }
 
     @Test
@@ -228,6 +339,11 @@ public class MfaHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+        event.setRequestContext(
+                new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                        .withIdentity(
+                                new APIGatewayProxyRequestEvent.RequestIdentity()
+                                        .withSourceIp("123.123.123.123")));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -235,6 +351,17 @@ public class MfaHandlerTest {
         BaseAPIResponse codeResponse =
                 objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
         assertEquals(SessionState.MFA_CODE_REQUESTS_BLOCKED, codeResponse.getSessionState());
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
+                        "aws-session-id",
+                        session.getSessionId(),
+                        "",
+                        AuditService.UNKNOWN,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN);
     }
 
     @Test
@@ -248,6 +375,11 @@ public class MfaHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+        event.setRequestContext(
+                new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                        .withIdentity(
+                                new APIGatewayProxyRequestEvent.RequestIdentity()
+                                        .withSourceIp("123.123.123.123")));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -255,6 +387,17 @@ public class MfaHandlerTest {
         BaseAPIResponse codeResponse =
                 objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
         assertEquals(MFA_CODE_MAX_RETRIES_REACHED, codeResponse.getSessionState());
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
+                        "aws-session-id",
+                        session.getSessionId(),
+                        "",
+                        AuditService.UNKNOWN,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN);
     }
 
     @Test
@@ -276,6 +419,8 @@ public class MfaHandlerTest {
         verify(sqsClient, never()).send(objectMapper.writeValueAsString(notifyRequest));
         verify(codeStorageService).saveOtpCode(TEST_EMAIL_ADDRESS, CODE, CODE_EXPIRY_TIME, MFA_SMS);
         assertThat(result, hasStatus(200));
+
+        verifyNoInteractions(auditService);
     }
 
     private void usingValidSession() {
