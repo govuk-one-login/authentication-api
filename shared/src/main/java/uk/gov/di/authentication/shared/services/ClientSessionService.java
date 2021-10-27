@@ -54,7 +54,10 @@ public class ClientSessionService {
                     redisConnectionService.getValue(CLIENT_SESSION_PREFIX.concat(clientSessionId));
             return objectMapper.readValue(result, ClientSession.class);
         } catch (JsonProcessingException | IllegalArgumentException e) {
-            LOG.error("Error getting client session from Redis", e);
+            LOG.error(
+                    "Error getting client session from Redis with ClientSessionId: {}",
+                    clientSessionId,
+                    e);
             throw new RuntimeException(e);
         }
     }
