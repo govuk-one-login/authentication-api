@@ -78,7 +78,7 @@ resource "aws_ssm_parameter" "redis_port" {
 
 resource "aws_ssm_parameter" "password_pepper" {
   count  = var.password_pepper == null ? 0 : 1
-  name   = "${var.environment}-${local.redis_key}-password-pepper"
+  name   = "${var.environment}-password-pepper"
   type   = "SecureString"
   key_id = aws_kms_alias.parameter_store_key_alias.id
   value  = var.password_pepper
