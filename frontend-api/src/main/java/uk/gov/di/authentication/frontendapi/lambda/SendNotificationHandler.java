@@ -147,7 +147,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                     Optional<ErrorResponse> emailErrorResponse =
                             validationService.validateEmailAddress(request.getEmail());
                     if (emailErrorResponse.isPresent()) {
-                        LOGGER.error(
+                        LOGGER.info(
                                 "session: {} encountered emailErrorResponse: {}",
                                 userContext.getSession().getSessionId(),
                                 emailErrorResponse.get());
@@ -246,7 +246,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             NotificationType notificationType,
             UserContext userContext) {
         if (session.getCodeRequestCount() == configurationService.getCodeMaxRetries()) {
-            LOGGER.error(
+            LOGGER.info(
                     "User has requested too many OTP codes for session {}", session.getSessionId());
             codeStorageService.saveBlockedForEmail(
                     email, CODE_REQUEST_BLOCKED_KEY_PREFIX, configurationService.getCodeExpiry());
@@ -259,7 +259,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             return false;
         }
         if (codeStorageService.isBlockedForEmail(email, CODE_REQUEST_BLOCKED_KEY_PREFIX)) {
-            LOGGER.error(
+            LOGGER.info(
                     "User is blocked from requesting any OTP codes for session {}",
                     session.getSessionId());
             SessionState nextState =
@@ -270,7 +270,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             return false;
         }
         if (codeStorageService.isBlockedForEmail(email, CODE_BLOCKED_KEY_PREFIX)) {
-            LOGGER.error(
+            LOGGER.info(
                     "User is blocked from requesting any OTP codes for session {}",
                     session.getSessionId());
             SessionState nextState =

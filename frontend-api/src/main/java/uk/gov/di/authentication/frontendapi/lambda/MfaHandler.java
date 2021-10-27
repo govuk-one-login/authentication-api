@@ -192,7 +192,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             return false;
         }
         if (codeStorageService.isBlockedForEmail(email, CODE_BLOCKED_KEY_PREFIX)) {
-            LOGGER.error(
+            LOGGER.info(
                     "User is blocked from requesting any OTP codes for session {}",
                     session.getSessionId());
             SessionState nextState =

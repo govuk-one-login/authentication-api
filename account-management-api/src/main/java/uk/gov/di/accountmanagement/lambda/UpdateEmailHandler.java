@@ -90,7 +90,7 @@ public class UpdateEmailHandler
                                                 updateInfoRequest.getOtp(),
                                                 NotificationType.VERIFY_EMAIL);
                                 if (!isValidOtpCode) {
-                                    LOGGER.error("Invalid OTP code sent in request");
+                                    LOGGER.info("Invalid OTP code sent in request");
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1020);
                                 }
@@ -99,7 +99,7 @@ public class UpdateEmailHandler
                                                 updateInfoRequest.getExistingEmailAddress(),
                                                 updateInfoRequest.getReplacementEmailAddress());
                                 if (emailValidationErrors.isPresent()) {
-                                    LOGGER.error(
+                                    LOGGER.info(
                                             "Invalid email address with error: {}",
                                             emailValidationErrors.get().getMessage());
                                     return generateApiGatewayProxyErrorResponse(
@@ -107,7 +107,7 @@ public class UpdateEmailHandler
                                 }
                                 if (dynamoService.userExists(
                                         updateInfoRequest.getReplacementEmailAddress())) {
-                                    LOGGER.error(
+                                    LOGGER.info(
                                             "An account with this email address already exists");
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1009);

@@ -107,7 +107,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN);
 
-                    LOG.error(
+                    LOG.info(
                             "User with email {} already exists for session: {}",
                             signupRequest.getEmail(),
                             userContext.getSession().getSessionId());
@@ -146,6 +146,8 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                 return generateApiGatewayProxyResponse(
                         200, new BaseAPIResponse(userContext.getSession().getState()));
             } else {
+                LOG.info(
+                        "Invalid Password entered with errors: {}", passwordValidationErrors.get());
                 return generateApiGatewayProxyErrorResponse(400, passwordValidationErrors.get());
             }
         } catch (JsonProcessingException e) {
