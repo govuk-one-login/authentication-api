@@ -158,6 +158,29 @@ public class StateMachine<T, A, C> {
                         on(SYSTEM_HAS_SENT_RESET_PASSWORD_LINK_TOO_MANY_TIMES)
                                 .then(RESET_PASSWORD_LINK_MAX_RETRIES_REACHED),
                         on(SYSTEM_HAS_SENT_RESET_PASSWORD_LINK).then(RESET_PASSWORD_LINK_SENT),
+                        on(USER_ENTERED_VALID_CREDENTIALS)
+                                .ifCondition(phoneNumberUnverified())
+                                .then(TWO_FACTOR_REQUIRED),
+                        on(USER_ENTERED_VALID_CREDENTIALS)
+                                .ifCondition(
+                                        and(
+                                                clientDoesNotRequireMfa(),
+                                                userHasNotAcceptedTermsAndConditionsVersion(
+                                                        configurationService
+                                                                .getTermsAndConditionsVersion())))
+                                .then(UPDATED_TERMS_AND_CONDITIONS),
+                        on(USER_ENTERED_VALID_CREDENTIALS)
+                                .ifCondition(
+                                        and(clientDoesNotRequireMfa(), clientIsAnInternalService()))
+                                .then(AUTHENTICATED),
+                        on(USER_ENTERED_VALID_CREDENTIALS)
+                                .ifCondition(
+                                        and(clientDoesNotRequireMfa(), userHasNotGivenConsent()))
+                                .then(CONSENT_REQUIRED),
+                        on(USER_ENTERED_VALID_CREDENTIALS)
+                                .ifCondition(clientDoesNotRequireMfa())
+                                .then(AUTHENTICATED),
+                        on(USER_ENTERED_VALID_CREDENTIALS).then(LOGGED_IN),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED).then(NEW))
                 .when(RESET_PASSWORD_LINK_MAX_RETRIES_REACHED)
