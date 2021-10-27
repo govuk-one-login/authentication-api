@@ -10,7 +10,6 @@ import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.helpers.RequestHelper;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.SessionState;
 
 import java.io.IOException;
@@ -73,25 +72,5 @@ public class UserExistsIntegrationTest extends IntegrationTestEndpoints {
         assertEquals(request.getEmail(), checkUserExistsResponse.getEmail());
         assertEquals(USER_NOT_FOUND, checkUserExistsResponse.getSessionState());
         assertFalse(checkUserExistsResponse.doesUserExist());
-    }
-
-    @Test
-    public void shouldReturn400IfStateTransitionIsInvalid() throws IOException {
-        String emailAddress = "joe.bloggs+2@digital.cabinet-office.gov.uk";
-        String sessionId = RedisHelper.createSession();
-        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
-        headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", FRONTEND_API_KEY);
-        RedisHelper.setSessionState(sessionId, SessionState.AUTHENTICATED);
-        BaseFrontendRequest request = new BaseFrontendRequest(emailAddress);
-        Response response =
-                RequestHelper.request(
-                        FRONTEND_ROOT_RESOURCE_URL, USEREXISTS_ENDPOINT, request, headers);
-
-        assertEquals(400, response.getStatus());
-
-        String responseString = response.readEntity(String.class);
-
-        assertEquals(responseString, objectMapper.writeValueAsString(ErrorResponse.ERROR_1017));
     }
 }
