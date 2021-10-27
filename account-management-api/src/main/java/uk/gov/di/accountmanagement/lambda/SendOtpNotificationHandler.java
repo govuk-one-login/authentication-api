@@ -89,7 +89,7 @@ public class SendOtpNotificationHandler
                                                 validationService.validateEmailAddress(
                                                         sendNotificationRequest.getEmail());
                                         if (emailErrorResponse.isPresent()) {
-                                            LOGGER.error(
+                                            LOGGER.info(
                                                     "Invalid email address. Errors are: {}",
                                                     emailErrorResponse.get());
                                             return generateApiGatewayProxyErrorResponse(
@@ -97,7 +97,7 @@ public class SendOtpNotificationHandler
                                         }
                                         if (dynamoService.userExists(
                                                 sendNotificationRequest.getEmail())) {
-                                            LOGGER.error(
+                                            LOGGER.info(
                                                     "User already exists with this email address");
                                             return generateApiGatewayProxyErrorResponse(
                                                     400, ErrorResponse.ERROR_1009);
@@ -111,7 +111,7 @@ public class SendOtpNotificationHandler
                                                 validationService.validatePhoneNumber(
                                                         sendNotificationRequest.getPhoneNumber());
                                         if (phoneNumberValidationError.isPresent()) {
-                                            LOGGER.error(
+                                            LOGGER.info(
                                                     "Invalid phone number. Errors are: {}",
                                                     phoneNumberValidationError.get());
                                             return generateApiGatewayProxyErrorResponse(

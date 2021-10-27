@@ -78,7 +78,7 @@ public class ResetPasswordHandler
                                         validationService.validatePassword(
                                                 resetPasswordWithCodeRequest.getPassword());
                                 if (errorResponse.isPresent()) {
-                                    LOGGER.error(
+                                    LOGGER.info(
                                             "Password did not pass validation because: {}",
                                             errorResponse.get().getMessage());
                                     return generateApiGatewayProxyErrorResponse(

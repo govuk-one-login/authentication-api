@@ -87,7 +87,7 @@ public class UpdatePhoneNumberHandler
                                                 updatePhoneNumberRequest.getOtp(),
                                                 NotificationType.VERIFY_PHONE_NUMBER);
                                 if (!isValidOtpCode) {
-                                    LOGGER.error("Invalid OTP code sent in request");
+                                    LOGGER.info("Invalid OTP code sent in request");
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1020);
                                 }
@@ -95,7 +95,7 @@ public class UpdatePhoneNumberHandler
                                         validationService.validatePhoneNumber(
                                                 updatePhoneNumberRequest.getPhoneNumber());
                                 if (phoneValidationErrors.isPresent()) {
-                                    LOGGER.error(
+                                    LOGGER.info(
                                             "Invalid phone number with error: {}",
                                             phoneValidationErrors.get().getMessage());
                                     return generateApiGatewayProxyErrorResponse(
