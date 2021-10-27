@@ -103,6 +103,24 @@ class ResetPasswordHandlerTest {
         verify(authenticationService, never()).updatePassword(EMAIL, NEW_PASSWORD);
     }
 
+    @Test
+    public void shouldDeleteIncorrectPasswordCountOnSuccessfulRequest() {
+        when(codeStorageService.getSubjectWithPasswordResetCode(CODE))
+                .thenReturn(Optional.of(SUBJECT));
+        when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(2);
+        when(authenticationService.getUserCredentialsFromSubject(SUBJECT))
+                .thenReturn(generateUserCredentials());
+        NotifyRequest notifyRequest =
+                new NotifyRequest(EMAIL, NotificationType.PASSWORD_RESET_CONFIRMATION);
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setBody(format("{ \"code\": \"%s\", \"password\": \"%s\"}", CODE, NEW_PASSWORD));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(204));
+        verify(codeStorageService, times(1)).deleteSubjectWithPasswordResetCode(CODE);
+        verify(codeStorageService, times(1)).deleteIncorrectPasswordCount(EMAIL);
+    }
+
     private UserCredentials generateUserCredentials() {
         return new UserCredentials()
                 .setEmail(EMAIL)
