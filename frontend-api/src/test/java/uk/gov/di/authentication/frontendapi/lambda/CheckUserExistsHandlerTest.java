@@ -200,20 +200,6 @@ class CheckUserExistsHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserTransitionsFromWrongState() {
-        usingValidSession();
-        session.setState(SessionState.AUTHENTICATED);
-
-        APIGatewayProxyResponseEvent result =
-                handler.handleRequest(usingTestEventWithSession(session), context);
-
-        assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1017));
-
-        verifyNoInteractions(auditService);
-    }
-
-    @Test
     public void shouldReturn200IfUserTransitionsFromUserNotFoundAndUserDoesNotExist()
             throws JsonProcessingException {
         usingValidSession();
