@@ -24,5 +24,6 @@ public enum FrontendAuditableEvent implements AuditableEvent {
     MFA_INVALID_CODE_REQUEST,
     MFA_MISMATCHED_EMAIL,
     MFA_MISSING_PHONE_NUMBER,
-    MFA_CODE_SENT
+    MFA_CODE_SENT,
+    MFA_CODE_SENT_FOR_TEST_CLIENT
 }

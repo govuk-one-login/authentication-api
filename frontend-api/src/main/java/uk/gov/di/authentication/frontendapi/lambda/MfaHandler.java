@@ -204,6 +204,19 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         userWithEmailRequest.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
                         phoneNumber);
+            } else {
+                auditService.submitAuditEvent(
+                        FrontendAuditableEvent.MFA_CODE_SENT_FOR_TEST_CLIENT,
+                        context.getAwsRequestId(),
+                        userContext.getSession().getSessionId(),
+                        userContext
+                                .getClient()
+                                .map(ClientRegistry::getClientID)
+                                .orElse(AuditService.UNKNOWN),
+                        AuditService.UNKNOWN,
+                        userWithEmailRequest.getEmail(),
+                        IpAddressHelper.extractIpAddress(input),
+                        phoneNumber);
             }
             LOGGER.info(
                     "MfaHandler successfully processed request for session: {}",

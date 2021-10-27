@@ -413,6 +413,11 @@ public class MfaHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+        event.setRequestContext(
+                new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                        .withIdentity(
+                                new APIGatewayProxyRequestEvent.RequestIdentity()
+                                        .withSourceIp("123.123.123.123")));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -420,7 +425,16 @@ public class MfaHandlerTest {
         verify(codeStorageService).saveOtpCode(TEST_EMAIL_ADDRESS, CODE, CODE_EXPIRY_TIME, MFA_SMS);
         assertThat(result, hasStatus(200));
 
-        verifyNoInteractions(auditService);
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.MFA_CODE_SENT_FOR_TEST_CLIENT,
+                        "aws-session-id",
+                        session.getSessionId(),
+                        TEST_CLIENT_ID,
+                        AuditService.UNKNOWN,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        PHONE_NUMBER);
     }
 
     private void usingValidSession() {
