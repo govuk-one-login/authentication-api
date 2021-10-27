@@ -102,7 +102,9 @@ public class WellknownHandler
                                                 JWSAlgorithm.HS256,
                                                 JWSAlgorithm.HS384,
                                                 JWSAlgorithm.HS512));
-                                providerMetadata.setServiceDocsURI(new URI("http://TBA"));
+                                providerMetadata.setServiceDocsURI(
+                                        new URI(
+                                                "https://auth-tech-docs.london.cloudapps.digital/"));
                                 providerMetadata.setEndSessionEndpointURI(
                                         buildURI(baseUrl, "/logout"));
                                 providerMetadata.setCustomParameter(
