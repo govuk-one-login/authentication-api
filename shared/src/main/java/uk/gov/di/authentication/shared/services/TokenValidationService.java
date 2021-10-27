@@ -67,7 +67,7 @@ public class TokenValidationService {
             JWTClaimsSet claimsSet = SignedJWT.parse(tokenValue).getJWTClaimsSet();
             LocalDateTime localDateTime = LocalDateTime.now();
             Date currentDateTime = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
-            if (DateUtils.isBefore(claimsSet.getExpirationTime(), currentDateTime, 60)) {
+            if (DateUtils.isBefore(claimsSet.getExpirationTime(), currentDateTime, 0)) {
                 return true;
             }
         } catch (java.text.ParseException e) {
