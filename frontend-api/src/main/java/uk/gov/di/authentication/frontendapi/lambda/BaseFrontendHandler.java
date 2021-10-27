@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.Locale;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -131,7 +132,9 @@ public abstract class BaseFrontendHandler<T>
                                 userContextBuilder
                                         .withUserProfile(
                                                 authenticationService.getUserProfileFromEmail(
-                                                        ((BaseFrontendRequest) request).getEmail()))
+                                                        ((BaseFrontendRequest) request)
+                                                                .getEmail()
+                                                                .toLowerCase(Locale.ROOT)))
                                         .withUserAuthenticated(false);
                         });
 
