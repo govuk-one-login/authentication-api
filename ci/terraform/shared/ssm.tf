@@ -92,6 +92,7 @@ data "aws_iam_policy_document" "redis_parameter_policy" {
 
     actions = [
       "ssm:GetParameter",
+      "ssm:GetParameters",
     ]
 
     resources = [
@@ -146,6 +147,7 @@ data "aws_iam_policy_document" "pepper_parameter_policy" {
 
     actions = [
       "ssm:GetParameter",
+      "ssm:GetParameters",
     ]
 
     resources = [
