@@ -8,8 +8,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.AuthenticateRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -25,9 +28,12 @@ public class AuthenticateHandler
 
     private final AuthenticationService authenticationService;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final AuditService auditService;
 
-    public AuthenticateHandler(AuthenticationService authenticationService) {
+    public AuthenticateHandler(
+            AuthenticationService authenticationService, AuditService auditService) {
         this.authenticationService = authenticationService;
+        this.auditService = auditService;
     }
 
     public AuthenticateHandler() {
@@ -37,6 +43,7 @@ public class AuthenticateHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEnvironment(),
                         configurationService.getDynamoEndpointUri());
+        this.auditService = new AuditService();
     }
 
     @Override
@@ -69,6 +76,18 @@ public class AuthenticateHandler
                                 }
                                 LOGGER.info(
                                         "User has successfully Logged in. Generating successful AuthenticateResponse");
+
+                                auditService.submitAuditEvent(
+                                        AccountManagementAuditableEvent
+                                                .ACCOUNT_MANAGEMENT_AUTHENTICATE,
+                                        context.getAwsRequestId(),
+                                        AuditService.UNKNOWN,
+                                        AuditService.UNKNOWN,
+                                        AuditService.UNKNOWN,
+                                        loginRequest.getEmail(),
+                                        IpAddressHelper.extractIpAddress(input),
+                                        AuditService.UNKNOWN);
+
                                 return generateEmptySuccessApiGatewayResponse();
                             } catch (JsonProcessingException e) {
                                 LOGGER.error(

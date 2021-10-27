@@ -58,14 +58,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_CONSENT_UPDATED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_ERROR;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_RECEIVED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.ADD_PHONE_NUMBER;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.CAPTURE_CONSENT;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
-import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_CONSENT_UPDATED;
-import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_PHONE_NUMBER_UPDATED;
-import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_REQUEST_ERROR;
-import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_REQUEST_RECEIVED;
-import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_TERMS_CONDS_ACCEPTANCE_UPDATED;
 import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_ADDED;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.buildCookieString;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -141,7 +141,7 @@ class UpdateProfileHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        ACCOUNT_MANAGEMENT_PHONE_NUMBER_UPDATED,
+                        UPDATE_PROFILE_PHONE_NUMBER,
                         "request-id",
                         session.getSessionId(),
                         "",
@@ -179,7 +179,7 @@ class UpdateProfileHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        ACCOUNT_MANAGEMENT_TERMS_CONDS_ACCEPTANCE_UPDATED,
+                        UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE,
                         "request-id",
                         session.getSessionId(),
                         "",
@@ -231,7 +231,7 @@ class UpdateProfileHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        ACCOUNT_MANAGEMENT_CONSENT_UPDATED,
+                        UPDATE_PROFILE_CONSENT_UPDATED,
                         "request-id",
                         session.getSessionId(),
                         clientID.getValue(),
@@ -263,7 +263,7 @@ class UpdateProfileHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        ACCOUNT_MANAGEMENT_REQUEST_ERROR, "request-id", "", "", "", "", "", "");
+                        UPDATE_PROFILE_REQUEST_ERROR, "request-id", "", "", "", "", "", "");
     }
 
     @Test
@@ -283,7 +283,7 @@ class UpdateProfileHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        ACCOUNT_MANAGEMENT_REQUEST_ERROR, "request-id", "", "", "", "", "", "");
+                        UPDATE_PROFILE_REQUEST_ERROR, "request-id", "", "", "", "", "", "");
     }
 
     private void usingValidSession() {
@@ -312,7 +312,7 @@ class UpdateProfileHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        ACCOUNT_MANAGEMENT_REQUEST_RECEIVED, "request-id", "", "", "", "", "", "");
+                        UPDATE_PROFILE_REQUEST_RECEIVED, "request-id", "", "", "", "", "", "");
 
         return response;
     }

@@ -37,11 +37,11 @@ import java.time.ZoneId;
 import java.util.Optional;
 import java.util.Set;
 
-import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_CONSENT_UPDATED;
-import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_PHONE_NUMBER_UPDATED;
-import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_REQUEST_ERROR;
-import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_REQUEST_RECEIVED;
-import static uk.gov.di.authentication.shared.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_TERMS_CONDS_ACCEPTANCE_UPDATED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_CONSENT_UPDATED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_ERROR;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_RECEIVED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ACCEPTS_TERMS_AND_CONDITIONS;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_A_NEW_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_ACTIONED_CONSENT;
@@ -99,7 +99,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
     @Override
     public void onRequestReceived(Context context) {
         auditService.submitAuditEvent(
-                ACCOUNT_MANAGEMENT_REQUEST_RECEIVED,
+                UPDATE_PROFILE_REQUEST_RECEIVED,
                 context.getAwsRequestId(),
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
@@ -112,7 +112,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
     @Override
     public void onRequestValidationError(Context context) {
         auditService.submitAuditEvent(
-                ACCOUNT_MANAGEMENT_REQUEST_ERROR,
+                UPDATE_PROFILE_REQUEST_ERROR,
                 context.getAwsRequestId(),
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
@@ -157,7 +157,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                         authenticationService.updatePhoneNumber(
                                 request.getEmail(), request.getProfileInformation());
                         auditService.submitAuditEvent(
-                                ACCOUNT_MANAGEMENT_PHONE_NUMBER_UPDATED,
+                                UPDATE_PROFILE_PHONE_NUMBER,
                                 context.getAwsRequestId(),
                                 session.getSessionId(),
                                 AuditService.UNKNOWN,
@@ -218,7 +218,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                         sessionService.save(session.setState(nextState));
 
                         auditService.submitAuditEvent(
-                                ACCOUNT_MANAGEMENT_CONSENT_UPDATED,
+                                UPDATE_PROFILE_CONSENT_UPDATED,
                                 context.getAwsRequestId(),
                                 session.getSessionId(),
                                 clientId,
@@ -246,7 +246,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                 configurationService.getTermsAndConditionsVersion());
 
                         auditService.submitAuditEvent(
-                                ACCOUNT_MANAGEMENT_TERMS_CONDS_ACCEPTANCE_UPDATED,
+                                UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE,
                                 context.getAwsRequestId(),
                                 session.getSessionId(),
                                 AuditService.UNKNOWN,
