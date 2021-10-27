@@ -12,7 +12,8 @@ public class ClientSubjectHelper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ClientSubjectHelper.class);
 
-    private static final ConfigurationService configurationService = new ConfigurationService();
+    private static final ConfigurationService configurationService =
+            ConfigurationService.getInstance();
 
     public static String pairwiseIdentifier(String subjectID, String sector) {
         try {

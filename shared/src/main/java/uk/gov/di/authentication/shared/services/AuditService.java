@@ -33,7 +33,7 @@ public class AuditService {
 
     public AuditService() {
         this.clock = Clock.systemUTC();
-        var configService = new ConfigurationService();
+        var configService = ConfigurationService.getInstance();
         this.snsService = new SnsService(configService);
         this.kmsConnectionService =
                 new KmsConnectionService(
@@ -114,7 +114,7 @@ public class AuditService {
 
     private byte[] signPayload(byte[] payload) {
         SignRequest signRequest = new SignRequest();
-        signRequest.setKeyId(new ConfigurationService().getAuditSigningKeyAlias());
+        signRequest.setKeyId(ConfigurationService.getInstance().getAuditSigningKeyAlias());
         signRequest.setMessage(ByteBuffer.wrap(payload));
         signRequest.setSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256.toString());
 

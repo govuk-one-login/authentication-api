@@ -11,7 +11,8 @@ import java.util.Optional;
 import static java.lang.Thread.sleep;
 
 public class WarmerHelper {
-    private static final ConfigurationService configurationService = new ConfigurationService();
+    private static final ConfigurationService configurationService =
+            ConfigurationService.getInstance();
     private static final Logger LOGGER = LoggerFactory.getLogger(WarmerHelper.class);
 
     public static final String WARMUP_HEADER = "__WARMUP_REQUEST__";

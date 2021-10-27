@@ -28,7 +28,7 @@ public abstract class BaseAuditHandler implements RequestHandler<SNSEvent, Objec
     }
 
     BaseAuditHandler() {
-        this.service = new ConfigurationService();
+        this.service = ConfigurationService.getInstance();
         this.kmsConnectionService = new KmsConnectionService(service);
     }
 

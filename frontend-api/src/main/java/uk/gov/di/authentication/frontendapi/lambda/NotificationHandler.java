@@ -49,7 +49,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     }
 
     public NotificationHandler() {
-        this.configService = new ConfigurationService();
+        this.configService = ConfigurationService.getInstance();
         NotificationClient client =
                 configService
                         .getNotifyApiUrl()

@@ -29,7 +29,7 @@ public class JwksHandler
     }
 
     public JwksHandler() {
-        this.configurationService = new ConfigurationService();
+        this.configurationService = ConfigurationService.getInstance();
         this.tokenValidationService =
                 new TokenValidationService(
                         configurationService, new KmsConnectionService(configurationService));

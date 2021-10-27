@@ -49,7 +49,7 @@ public class RemoveAccountHandler
     }
 
     public RemoveAccountHandler() {
-        ConfigurationService configurationService = new ConfigurationService();
+        ConfigurationService configurationService = ConfigurationService.getInstance();
         this.authenticationService =
                 new DynamoService(
                         configurationService.getAwsRegion(),

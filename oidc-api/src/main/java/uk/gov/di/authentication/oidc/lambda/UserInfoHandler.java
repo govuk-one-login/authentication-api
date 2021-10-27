@@ -35,7 +35,7 @@ public class UserInfoHandler
     }
 
     public UserInfoHandler() {
-        configurationService = new ConfigurationService();
+        configurationService = ConfigurationService.getInstance();
         RedisConnectionService redisConnectionService =
                 new RedisConnectionService(configurationService);
         userInfoService =

@@ -77,7 +77,7 @@ public class AuthCodeHandler
     }
 
     public AuthCodeHandler() {
-        configurationService = new ConfigurationService();
+        configurationService = ConfigurationService.getInstance();
         sessionService = new SessionService(configurationService);
         authorisationCodeService = new AuthorisationCodeService(configurationService);
         authorizationService = new AuthorizationService(configurationService);

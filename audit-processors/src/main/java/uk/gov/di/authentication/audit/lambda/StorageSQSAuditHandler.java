@@ -39,7 +39,7 @@ public class StorageSQSAuditHandler implements RequestHandler<SQSEvent, Object> 
     }
 
     public StorageSQSAuditHandler() {
-        this.service = new ConfigurationService();
+        this.service = ConfigurationService.getInstance();
         this.kmsConnectionService = new KmsConnectionService(service);
         this.s3service = new S3Service(service);
     }

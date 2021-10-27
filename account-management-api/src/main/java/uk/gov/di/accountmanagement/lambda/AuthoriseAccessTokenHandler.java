@@ -49,7 +49,7 @@ public class AuthoriseAccessTokenHandler
     }
 
     public AuthoriseAccessTokenHandler() {
-        configurationService = new ConfigurationService();
+        configurationService = ConfigurationService.getInstance();
         tokenValidationService =
                 new TokenValidationService(
                         configurationService, new KmsConnectionService(configurationService));

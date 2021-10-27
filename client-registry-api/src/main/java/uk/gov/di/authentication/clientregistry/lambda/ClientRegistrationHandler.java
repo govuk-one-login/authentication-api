@@ -46,7 +46,7 @@ public class ClientRegistrationHandler
     }
 
     public ClientRegistrationHandler() {
-        ConfigurationService configurationService = new ConfigurationService();
+        ConfigurationService configurationService = ConfigurationService.getInstance();
         this.clientService =
                 new DynamoClientService(
                         configurationService.getAwsRegion(),
