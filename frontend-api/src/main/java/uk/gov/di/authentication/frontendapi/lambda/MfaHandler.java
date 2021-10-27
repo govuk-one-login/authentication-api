@@ -8,7 +8,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.frontendapi.entity.BaseFrontendRequest;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.frontendapi.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
@@ -32,6 +31,8 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.UserContext;
+
+import java.util.Locale;
 
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1000;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
@@ -107,11 +108,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     "MfaHandler received request for session: {}",
                     userContext.getSession().getSessionId());
 
-            BaseFrontendRequest userWithEmailRequest =
-                    objectMapper.readValue(input.getBody(), BaseFrontendRequest.class);
-            boolean codeRequestValid =
-                    validateCodeRequestAttempts(
-                            userWithEmailRequest.getEmail(), userContext.getSession());
+            String email = request.getEmail().toLowerCase(Locale.ROOT);
+            boolean codeRequestValid = validateCodeRequestAttempts(email, userContext.getSession());
             if (!codeRequestValid) {
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
@@ -122,7 +120,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                                 .map(ClientRegistry::getClientID)
                                 .orElse(AuditService.UNKNOWN),
                         AuditService.UNKNOWN,
-                        userWithEmailRequest.getEmail(),
+                        email,
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN);
 
@@ -130,7 +128,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         400, new BaseAPIResponse(userContext.getSession().getState()));
             }
 
-            if (!userContext.getSession().validateSession(userWithEmailRequest.getEmail())) {
+            if (!userContext.getSession().validateSession(email)) {
                 LOGGER.error(
                         "Email in session: {} does not match Email in Request",
                         userContext.getSession().getSessionId());
@@ -144,16 +142,13 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                                 .map(ClientRegistry::getClientID)
                                 .orElse(AuditService.UNKNOWN),
                         AuditService.UNKNOWN,
-                        userWithEmailRequest.getEmail(),
+                        email,
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN);
 
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1000);
             }
-            String phoneNumber =
-                    authenticationService
-                            .getPhoneNumber(userWithEmailRequest.getEmail())
-                            .orElse(null);
+            String phoneNumber = authenticationService.getPhoneNumber(email).orElse(null);
 
             if (phoneNumber == null) {
                 LOGGER.error(
@@ -169,7 +164,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                                 .map(ClientRegistry::getClientID)
                                 .orElse(AuditService.UNKNOWN),
                         AuditService.UNKNOWN,
-                        userWithEmailRequest.getEmail(),
+                        email,
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN);
 
@@ -182,10 +177,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
 
             String code = codeGeneratorService.sixDigitCode();
             codeStorageService.saveOtpCode(
-                    userWithEmailRequest.getEmail(),
-                    code,
-                    configurationService.getCodeExpiry(),
-                    MFA_SMS);
+                    email, code, configurationService.getCodeExpiry(), MFA_SMS);
             sessionService.save(
                     userContext.getSession().setState(nextState).incrementCodeRequestCount());
             NotifyRequest notifyRequest = new NotifyRequest(phoneNumber, MFA_SMS, code);
@@ -201,7 +193,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                                 .map(ClientRegistry::getClientID)
                                 .orElse(AuditService.UNKNOWN),
                         AuditService.UNKNOWN,
-                        userWithEmailRequest.getEmail(),
+                        email,
                         IpAddressHelper.extractIpAddress(input),
                         phoneNumber);
             } else {
@@ -214,7 +206,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                                 .map(ClientRegistry::getClientID)
                                 .orElse(AuditService.UNKNOWN),
                         AuditService.UNKNOWN,
-                        userWithEmailRequest.getEmail(),
+                        email,
                         IpAddressHelper.extractIpAddress(input),
                         phoneNumber);
             }
