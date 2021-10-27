@@ -100,6 +100,15 @@ public class ResetPasswordHandler
                                 authenticationService.updatePassword(
                                         userCredentials.getEmail(),
                                         resetPasswordWithCodeRequest.getPassword());
+
+                                int incorrectPasswordCount =
+                                        codeStorageService.getIncorrectPasswordCount(
+                                                userCredentials.getEmail());
+                                if (incorrectPasswordCount != 0) {
+                                    codeStorageService.deleteIncorrectPasswordCount(
+                                            userCredentials.getEmail());
+                                }
+
                                 NotifyRequest notifyRequest =
                                         new NotifyRequest(
                                                 userCredentials.getEmail(),
