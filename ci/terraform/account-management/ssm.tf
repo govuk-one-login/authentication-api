@@ -83,6 +83,7 @@ data "aws_iam_policy_document" "redis_parameter_policy" {
 
     actions = [
       "ssm:GetParameter",
+      "ssm:GetParameters",
     ]
 
     resources = [
