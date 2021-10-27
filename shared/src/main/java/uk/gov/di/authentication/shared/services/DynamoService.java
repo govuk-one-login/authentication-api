@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -73,7 +74,7 @@ public class DynamoService implements AuthenticationService {
 
     @Override
     public boolean userExists(String email) {
-        return userProfileMapper.load(UserProfile.class, email) != null;
+        return userProfileMapper.load(UserProfile.class, email.toLowerCase(Locale.ROOT)) != null;
     }
 
     @Override
@@ -83,7 +84,7 @@ public class DynamoService implements AuthenticationService {
         String hashedPassword = hashPassword(password);
         UserCredentials userCredentials =
                 new UserCredentials()
-                        .setEmail(email)
+                        .setEmail(email.toLowerCase(Locale.ROOT))
                         .setSubjectID(subject.toString())
                         .setPassword(hashedPassword)
                         .setCreated(dateTime)
@@ -91,7 +92,7 @@ public class DynamoService implements AuthenticationService {
 
         UserProfile userProfile =
                 new UserProfile()
-                        .setEmail(email)
+                        .setEmail(email.toLowerCase(Locale.ROOT))
                         .setSubjectID(subject.toString())
                         .setEmailVerified(true)
                         .setCreated(dateTime)
@@ -105,13 +106,17 @@ public class DynamoService implements AuthenticationService {
 
     @Override
     public boolean login(String email, String password) {
-        UserCredentials userCredentials = userCredentialsMapper.load(UserCredentials.class, email);
+        UserCredentials userCredentials =
+                userCredentialsMapper.load(UserCredentials.class, email.toLowerCase(Locale.ROOT));
         return verifyPassword(userCredentials.getPassword(), password);
     }
 
     @Override
     public Subject getSubjectFromEmail(String email) {
-        return new Subject(userProfileMapper.load(UserProfile.class, email).getSubjectID());
+        return new Subject(
+                userProfileMapper
+                        .load(UserProfile.class, email.toLowerCase(Locale.ROOT))
+                        .getSubjectID());
     }
 
     @Override
@@ -119,19 +124,21 @@ public class DynamoService implements AuthenticationService {
         final String formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(phoneNumber);
         userProfileMapper.save(
                 userProfileMapper
-                        .load(UserProfile.class, email)
+                        .load(UserProfile.class, email.toLowerCase(Locale.ROOT))
                         .setPhoneNumber(formattedPhoneNumber));
     }
 
     @Override
     public void updateConsent(String email, ClientConsent clientConsent) {
         userProfileMapper.save(
-                userProfileMapper.load(UserProfile.class, email).setClientConsent(clientConsent));
+                userProfileMapper
+                        .load(UserProfile.class, email.toLowerCase(Locale.ROOT))
+                        .setClientConsent(clientConsent));
     }
 
     @Override
     public UserProfile getUserProfileByEmail(String email) {
-        return userProfileMapper.load(UserProfile.class, email);
+        return userProfileMapper.load(UserProfile.class, email.toLowerCase(Locale.ROOT));
     }
 
     @Override
@@ -141,34 +148,42 @@ public class DynamoService implements AuthenticationService {
 
         userProfileMapper.save(
                 userProfileMapper
-                        .load(UserProfile.class, email)
+                        .load(UserProfile.class, email.toLowerCase(Locale.ROOT))
                         .setTermsAndConditions(termsAndConditions));
     }
 
     @Override
     public void updateEmail(String currentEmail, String newEmail) {
         userProfileMapper.save(
-                userProfileMapper.load(UserProfile.class, currentEmail).setEmail(newEmail));
-        userProfileMapper.delete(userProfileMapper.load(UserProfile.class, currentEmail));
+                userProfileMapper
+                        .load(UserProfile.class, currentEmail)
+                        .setEmail(newEmail.toLowerCase(Locale.ROOT)));
+        userProfileMapper.delete(
+                userProfileMapper.load(UserProfile.class, currentEmail.toLowerCase(Locale.ROOT)));
         userCredentialsMapper.save(
-                userCredentialsMapper.load(UserCredentials.class, currentEmail).setEmail(newEmail));
+                userCredentialsMapper
+                        .load(UserCredentials.class, currentEmail)
+                        .setEmail(newEmail.toLowerCase(Locale.ROOT)));
         userCredentialsMapper.delete(
-                userCredentialsMapper.load(UserCredentials.class, currentEmail));
+                userCredentialsMapper.load(
+                        UserCredentials.class, currentEmail.toLowerCase(Locale.ROOT)));
     }
 
     @Override
     public void updatePassword(String email, String newPassword) {
         userCredentialsMapper.save(
                 userCredentialsMapper
-                        .load(UserCredentials.class, email)
+                        .load(UserCredentials.class, email.toLowerCase(Locale.ROOT))
                         .setPassword(hashPassword(newPassword))
                         .setMigratedPassword(null));
     }
 
     @Override
     public void removeAccount(String email) {
-        userProfileMapper.delete(userProfileMapper.load(UserProfile.class, email));
-        userCredentialsMapper.delete(userCredentialsMapper.load(UserCredentials.class, email));
+        userProfileMapper.delete(
+                userProfileMapper.load(UserProfile.class, email.toLowerCase(Locale.ROOT)));
+        userCredentialsMapper.delete(
+                userCredentialsMapper.load(UserCredentials.class, email.toLowerCase(Locale.ROOT)));
     }
 
     @Override
@@ -190,7 +205,8 @@ public class DynamoService implements AuthenticationService {
     public Optional<UserProfile> getUserProfileFromEmail(String email) {
         if (nonNull(email) && !email.isBlank()) {
             UserCredentials userCredentials =
-                    userCredentialsMapper.load(UserCredentials.class, email);
+                    userCredentialsMapper.load(
+                            UserCredentials.class, email.toLowerCase(Locale.ROOT));
 
             if (nonNull(userCredentials)) {
                 return Optional.of(getUserProfileFromSubject(userCredentials.getSubjectID()));
@@ -201,14 +217,14 @@ public class DynamoService implements AuthenticationService {
 
     @Override
     public UserCredentials getUserCredentialsFromEmail(String email) {
-        return userCredentialsMapper.load(UserCredentials.class, email);
+        return userCredentialsMapper.load(UserCredentials.class, email.toLowerCase(Locale.ROOT));
     }
 
     @Override
     public void migrateLegacyPassword(String email, String password) {
         userCredentialsMapper.save(
                 userCredentialsMapper
-                        .load(UserCredentials.class, email)
+                        .load(UserCredentials.class, email.toLowerCase(Locale.ROOT))
                         .setPassword(hashPassword(password))
                         .setMigratedPassword(null));
     }
@@ -223,21 +239,25 @@ public class DynamoService implements AuthenticationService {
     @Override
     public Optional<List<ClientConsent>> getUserConsents(String email) {
         return Optional.ofNullable(
-                userProfileMapper.load(UserProfile.class, email).getClientConsent());
+                userProfileMapper
+                        .load(UserProfile.class, email.toLowerCase(Locale.ROOT))
+                        .getClientConsent());
     }
 
     @Override
     public void updatePhoneNumberVerifiedStatus(String email, boolean verifiedStatus) {
         userProfileMapper.save(
                 userProfileMapper
-                        .load(UserProfile.class, email)
+                        .load(UserProfile.class, email.toLowerCase(Locale.ROOT))
                         .setPhoneNumberVerified(verifiedStatus));
     }
 
     @Override
     public Optional<String> getPhoneNumber(String email) {
         return Optional.ofNullable(
-                userProfileMapper.load(UserProfile.class, email).getPhoneNumber());
+                userProfileMapper
+                        .load(UserProfile.class, email.toLowerCase(Locale.ROOT))
+                        .getPhoneNumber());
     }
 
     @Override
