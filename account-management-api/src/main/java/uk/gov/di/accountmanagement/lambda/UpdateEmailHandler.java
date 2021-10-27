@@ -44,7 +44,7 @@ public class UpdateEmailHandler
     private final AuditService auditService;
 
     public UpdateEmailHandler() {
-        ConfigurationService configurationService = new ConfigurationService();
+        ConfigurationService configurationService = ConfigurationService.getInstance();
         this.dynamoService = new DynamoService(configurationService);
         this.sqsClient =
                 new AwsSqsClient(

@@ -44,7 +44,7 @@ public class UpdatePhoneNumberHandler
     private final AuditService auditService;
 
     public UpdatePhoneNumberHandler() {
-        ConfigurationService configurationService = new ConfigurationService();
+        ConfigurationService configurationService = ConfigurationService.getInstance();
         this.dynamoService = new DynamoService(configurationService);
         this.sqsClient =
                 new AwsSqsClient(

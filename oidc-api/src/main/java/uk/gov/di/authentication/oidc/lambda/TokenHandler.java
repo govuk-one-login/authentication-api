@@ -84,7 +84,7 @@ public class TokenHandler
     }
 
     public TokenHandler() {
-        configurationService = new ConfigurationService();
+        configurationService = ConfigurationService.getInstance();
         clientService =
                 new DynamoClientService(
                         configurationService.getAwsRegion(),

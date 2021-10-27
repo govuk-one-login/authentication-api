@@ -42,7 +42,7 @@ public class LogoutHandler
     private final TokenValidationService tokenValidationService;
 
     public LogoutHandler() {
-        this.configurationService = new ConfigurationService();
+        this.configurationService = ConfigurationService.getInstance();
         this.sessionService = new SessionService(configurationService);
         this.dynamoClientService =
                 new DynamoClientService(

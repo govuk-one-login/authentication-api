@@ -39,8 +39,8 @@ public class UpdatePasswordHandler
     private static final Logger LOGGER = LoggerFactory.getLogger(UpdatePasswordHandler.class);
 
     public UpdatePasswordHandler() {
-        ConfigurationService configurationService = new ConfigurationService();
-        this.dynamoService = new DynamoService(new ConfigurationService());
+        ConfigurationService configurationService = ConfigurationService.getInstance();
+        this.dynamoService = new DynamoService(ConfigurationService.getInstance());
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),

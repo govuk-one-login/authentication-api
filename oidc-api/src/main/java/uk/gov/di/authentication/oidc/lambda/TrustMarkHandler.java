@@ -29,7 +29,7 @@ public class TrustMarkHandler
     }
 
     public TrustMarkHandler() {
-        this.configurationService = new ConfigurationService();
+        this.configurationService = ConfigurationService.getInstance();
     }
 
     public APIGatewayProxyResponseEvent handleRequest(

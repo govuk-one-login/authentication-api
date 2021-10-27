@@ -4,13 +4,16 @@ import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagement;
 import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagementClient;
 import com.amazonaws.services.simplesystemsmanagement.model.GetParameterRequest;
+import com.amazonaws.services.simplesystemsmanagement.model.GetParametersRequest;
 import com.amazonaws.services.simplesystemsmanagement.model.ParameterNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static java.text.MessageFormat.format;
 
@@ -27,6 +30,8 @@ public class ConfigurationService {
     }
 
     private AWSSimpleSystemsManagement ssmClient;
+    private Map<String, String> ssmRedisParameters;
+    private Optional<String> passwordPepper;
 
     // Please keep the method names in alphabetical order so we can find stuff more easily.
     public long getAccessTokenExpiry() {
@@ -118,51 +123,42 @@ public class ConfigurationService {
     }
 
     public Optional<String> getPasswordPepper() {
-        try {
-            var request =
-                    new GetParameterRequest()
-                            .withWithDecryption(true)
-                            .withName(format("{0}-password-pepper", getEnvironment()));
-            return Optional.of(getSsmClient().getParameter(request).getParameter().getValue());
-        } catch (ParameterNotFoundException e) {
-            return Optional.empty();
+        if (passwordPepper == null) {
+            try {
+                var request =
+                        new GetParameterRequest()
+                                .withWithDecryption(true)
+                                .withName(format("{0}-password-pepper", getEnvironment()));
+                passwordPepper =
+                        Optional.of(getSsmClient().getParameter(request).getParameter().getValue());
+            } catch (ParameterNotFoundException e) {
+                passwordPepper = Optional.empty();
+            }
         }
+        return passwordPepper;
     }
 
     public String getRedisHost() {
-        var request =
-                new GetParameterRequest()
-                        .withWithDecryption(true)
-                        .withName(
-                                format(
-                                        "{0}-{1}-redis-master-host",
-                                        getEnvironment(), getRedisKey()));
-        return getSsmClient().getParameter(request).getParameter().getValue();
+        return getSsmRedisParameters()
+                .get(format("{0}-{1}-redis-master-host", getEnvironment(), getRedisKey()));
     }
 
     public Optional<String> getRedisPassword() {
-        var request =
-                new GetParameterRequest()
-                        .withWithDecryption(true)
-                        .withName(
-                                format("{0}-{1}-redis-password", getEnvironment(), getRedisKey()));
-        return Optional.ofNullable(getSsmClient().getParameter(request).getParameter().getValue());
+        return Optional.ofNullable(
+                getSsmRedisParameters()
+                        .get(format("{0}-{1}-redis-password", getEnvironment(), getRedisKey())));
     }
 
     public int getRedisPort() {
-        var request =
-                new GetParameterRequest()
-                        .withWithDecryption(true)
-                        .withName(format("{0}-{1}-redis-port", getEnvironment(), getRedisKey()));
-        return Integer.parseInt(getSsmClient().getParameter(request).getParameter().getValue());
+        return Integer.parseInt(
+                getSsmRedisParameters()
+                        .get(format("{0}-{1}-redis-port", getEnvironment(), getRedisKey())));
     }
 
     public boolean getUseRedisTLS() {
-        var request =
-                new GetParameterRequest()
-                        .withWithDecryption(true)
-                        .withName(format("{0}-{1}-redis-tls", getEnvironment(), getRedisKey()));
-        return Boolean.parseBoolean(getSsmClient().getParameter(request).getParameter().getValue());
+        return Boolean.parseBoolean(
+                getSsmRedisParameters()
+                        .get(format("{0}-{1}-redis-tls", getEnvironment(), getRedisKey())));
     }
 
     public String getResetPasswordRoute() {
@@ -232,6 +228,28 @@ public class ConfigurationService {
 
     public String getAuditHmacSecret() {
         return System.getenv("AUDIT_HMAC_SECRET");
+    }
+
+    private Map<String, String> getSsmRedisParameters() {
+        if (ssmRedisParameters == null) {
+            var getParametersRequest =
+                    new GetParametersRequest()
+                            .withNames(
+                                    format(
+                                            "{0}-{1}-redis-master-host",
+                                            getEnvironment(), getRedisKey()),
+                                    format(
+                                            "{0}-{1}-redis-password",
+                                            getEnvironment(), getRedisKey()),
+                                    format("{0}-{1}-redis-port", getEnvironment(), getRedisKey()),
+                                    format("{0}-{1}-redis-tls", getEnvironment(), getRedisKey()))
+                            .withWithDecryption(true);
+            var result = getSsmClient().getParameters(getParametersRequest);
+            ssmRedisParameters =
+                    result.getParameters().stream()
+                            .collect(Collectors.toMap(p -> p.getName(), p -> p.getValue()));
+        }
+        return ssmRedisParameters;
     }
 
     private AWSSimpleSystemsManagement getSsmClient() {

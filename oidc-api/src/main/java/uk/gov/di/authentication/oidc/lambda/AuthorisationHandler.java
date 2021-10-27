@@ -77,7 +77,7 @@ public class AuthorisationHandler
     }
 
     public AuthorisationHandler() {
-        configurationService = new ConfigurationService();
+        configurationService = ConfigurationService.getInstance();
         this.sessionService = new SessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.authorizationService = new AuthorizationService(configurationService);

@@ -85,7 +85,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
     public UpdateProfileHandler() {
         super(UpdateProfileRequest.class, ConfigurationService.getInstance());
-        configurationService = new ConfigurationService();
+        configurationService = ConfigurationService.getInstance();
         this.authenticationService =
                 new DynamoService(
                         configurationService.getAwsRegion(),

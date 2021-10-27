@@ -47,7 +47,7 @@ public class WellknownHandler
     }
 
     public WellknownHandler() {
-        this.configService = new ConfigurationService();
+        this.configService = ConfigurationService.getInstance();
         baseUrl = configService.getBaseURL().orElseThrow();
         providerMetadata =
                 new OIDCProviderMetadata(

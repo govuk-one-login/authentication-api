@@ -58,7 +58,7 @@ public class SendOtpNotificationHandler
     }
 
     public SendOtpNotificationHandler() {
-        this.configurationService = new ConfigurationService();
+        this.configurationService = ConfigurationService.getInstance();
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),

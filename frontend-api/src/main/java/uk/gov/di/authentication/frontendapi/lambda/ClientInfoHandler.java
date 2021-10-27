@@ -55,7 +55,7 @@ public class ClientInfoHandler
     }
 
     public ClientInfoHandler() {
-        configurationService = new ConfigurationService();
+        configurationService = ConfigurationService.getInstance();
         clientSessionService = new ClientSessionService(configurationService);
         clientService =
                 new DynamoClientService(
