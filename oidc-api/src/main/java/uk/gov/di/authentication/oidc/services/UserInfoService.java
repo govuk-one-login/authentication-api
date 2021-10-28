@@ -68,8 +68,11 @@ public class UserInfoService {
             LocalDateTime localDateTime = LocalDateTime.now();
             Date currentDateTime = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
             if (DateUtils.isBefore(
-                    signedJWT.getJWTClaimsSet().getExpirationTime(), currentDateTime, 60)) {
-                LOGGER.error("Access Token has expired");
+                    signedJWT.getJWTClaimsSet().getExpirationTime(), currentDateTime, 0)) {
+                LOGGER.error(
+                        "Access Token has expired. Access Token expires at: {}. CurrentDateTime is: {}",
+                        signedJWT.getJWTClaimsSet().getExpirationTime(),
+                        currentDateTime);
                 throw new UserInfoValidationException(
                         "Invalid Access Token", BearerTokenError.INVALID_TOKEN);
             }
