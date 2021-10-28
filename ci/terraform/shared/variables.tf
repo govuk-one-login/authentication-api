@@ -36,7 +36,7 @@ variable "external_redis_host" {
 
 variable "terms_and_conditions" {
   type    = string
-  default = "1.0"
+  default = "1.1"
 }
 
 variable "external_redis_port" {
