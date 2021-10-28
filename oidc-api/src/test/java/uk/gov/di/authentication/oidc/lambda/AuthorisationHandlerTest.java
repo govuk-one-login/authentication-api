@@ -2,6 +2,8 @@ package uk.gov.di.authentication.oidc.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent.ProxyRequestContext;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent.RequestIdentity;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -134,6 +136,9 @@ class AuthorisationHandlerTest {
                         "scope", "email,openid,profile",
                         "response_type", "code",
                         "state", "some-state"));
+        event.setRequestContext(
+                new ProxyRequestContext()
+                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
         APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
         final String expectedCookieString =
@@ -190,6 +195,9 @@ class AuthorisationHandlerTest {
                         "scope", "email,openid,profile",
                         "invalid_parameter", "nonsense",
                         "state", state.toString()));
+        event.setRequestContext(
+                new ProxyRequestContext()
+                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
 
         APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
 
@@ -207,7 +215,7 @@ class AuthorisationHandlerTest {
                         "",
                         "",
                         "",
-                        "",
+                        "123.123.123.123",
                         "",
                         pair("description", "Invalid request: Missing response_type parameter"));
     }
@@ -223,6 +231,9 @@ class AuthorisationHandlerTest {
                         "redirect_uri", "http://localhost:8080",
                         "scope", "email,openid,profile,non-existent-scope",
                         "response_type", "code"));
+        event.setRequestContext(
+                new ProxyRequestContext()
+                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
 
         APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
 
@@ -239,7 +250,7 @@ class AuthorisationHandlerTest {
                         "",
                         "",
                         "",
-                        "",
+                        "123.123.123.123",
                         "",
                         pair("description", OAuth2Error.INVALID_SCOPE.getDescription()));
     }
@@ -267,6 +278,18 @@ class AuthorisationHandlerTest {
         assertEquals(EXPECTED_COOKIE_STRING, response.getHeaders().get("Set-Cookie"));
         verify(sessionService).save(eq(session));
         assertEquals(SessionState.NEW, session.getState());
+
+        //
+        // auditServiceInOrder.verify(auditService).submitAuditEvent(OidcAuditableEvent.AUTHORISATION_INITIATED,
+        //                context.getAwsRequestId(),
+        //                session.getSessionId(),
+        //                "test-id",
+        //                AuditService.UNKNOWN,
+        //                AuditService.UNKNOWN,
+        //                "123.123.123.123",
+        //                AuditService.UNKNOWN,
+        //                pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY)
+        //                );
     }
 
     @Test
@@ -313,7 +336,7 @@ class AuthorisationHandlerTest {
                         "",
                         "",
                         "",
-                        "",
+                        "123.123.123.123",
                         "",
                         pair("description", OIDCError.LOGIN_REQUIRED.getDescription()));
     }
@@ -414,7 +437,7 @@ class AuthorisationHandlerTest {
                         "",
                         "",
                         "",
-                        "",
+                        "123.123.123.123",
                         "",
                         pair(
                                 "description",
@@ -440,7 +463,7 @@ class AuthorisationHandlerTest {
                         "",
                         "",
                         "",
-                        "",
+                        "123.123.123.123",
                         "",
                         pair(
                                 "description",
@@ -466,7 +489,7 @@ class AuthorisationHandlerTest {
                         "",
                         "",
                         "",
-                        "",
+                        "123.123.123.123",
                         "",
                         pair(
                                 "description",
@@ -492,7 +515,7 @@ class AuthorisationHandlerTest {
                         "",
                         "",
                         "",
-                        "",
+                        "123.123.123.123",
                         "",
                         pair(
                                 "description",
@@ -518,7 +541,7 @@ class AuthorisationHandlerTest {
                         "",
                         "",
                         "",
-                        "",
+                        "123.123.123.123",
                         "",
                         pair(
                                 "description",
@@ -584,7 +607,7 @@ class AuthorisationHandlerTest {
                         "",
                         "",
                         "",
-                        "",
+                        "123.123.123.123",
                         "");
 
         return response;
@@ -600,6 +623,9 @@ class AuthorisationHandlerTest {
                         "response_type", "code",
                         "state", "some-state",
                         "prompt", prompt));
+        event.setRequestContext(
+                new ProxyRequestContext()
+                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
         return event;
     }
 
@@ -613,6 +639,9 @@ class AuthorisationHandlerTest {
                         "response_type", "code",
                         "state", "some-state",
                         "cookie_consent", cookieConsent));
+        event.setRequestContext(
+                new ProxyRequestContext()
+                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
         return event;
     }
 
@@ -625,6 +654,9 @@ class AuthorisationHandlerTest {
                         "scope", "email,openid,profile",
                         "response_type", "code",
                         "state", "some-state"));
+        event.setRequestContext(
+                new ProxyRequestContext()
+                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
         return event;
     }
 
