@@ -8,6 +8,7 @@ import com.amazonaws.services.simplesystemsmanagement.model.GetParametersRequest
 import com.amazonaws.services.simplesystemsmanagement.model.ParameterNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.shared.configuration.AuditPublisherConfiguration;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -17,7 +18,7 @@ import java.util.stream.Collectors;
 
 import static java.text.MessageFormat.format;
 
-public class ConfigurationService {
+public class ConfigurationService implements AuditPublisherConfiguration {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ConfigurationService.class);
     private static ConfigurationService configurationService;
@@ -88,10 +89,6 @@ public class ConfigurationService {
 
     public String getEnvironment() {
         return System.getenv("ENVIRONMENT");
-    }
-
-    public String getEventsSnsTopicArn() {
-        return System.getenv("EVENTS_SNS_TOPIC_ARN");
     }
 
     public String getFrontendBaseUrl() {
@@ -208,10 +205,6 @@ public class ConfigurationService {
 
     public String getTokenSigningKeyAlias() {
         return System.getenv("TOKEN_SIGNING_KEY_ALIAS");
-    }
-
-    public String getAuditSigningKeyAlias() {
-        return System.getenv("AUDIT_SIGNING_KEY_ALIAS");
     }
 
     public String getAuditStorageS3Bucket() {
