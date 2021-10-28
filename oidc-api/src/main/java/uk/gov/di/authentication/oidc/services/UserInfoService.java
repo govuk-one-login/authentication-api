@@ -96,7 +96,10 @@ public class UserInfoService {
             String subject = signedJWT.getJWTClaimsSet().getSubject();
             Optional<AccessTokenStore> accessTokenStore = getAccessTokenStore(clientID, subject);
             if (accessTokenStore.isEmpty()) {
-                LOGGER.error("Access Token Store is empty");
+                LOGGER.error(
+                        "Access Token Store is empty. Access Token expires at: {}. CurrentDateTime is: {}",
+                        signedJWT.getJWTClaimsSet().getExpirationTime(),
+                        currentDateTime);
                 throw new UserInfoValidationException(
                         "Invalid Access Token", BearerTokenError.INVALID_TOKEN);
             }
