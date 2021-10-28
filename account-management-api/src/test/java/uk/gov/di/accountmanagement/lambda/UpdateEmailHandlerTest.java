@@ -35,6 +35,7 @@ import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 
 class UpdateEmailHandlerTest {
 
@@ -75,8 +76,7 @@ class UpdateEmailHandlerTest {
                 new APIGatewayProxyRequestEvent.ProxyRequestContext();
         Map<String, Object> authorizerParams = new HashMap<>();
         authorizerParams.put("principalId", SUBJECT.getValue());
-        proxyRequestContext.setIdentity(
-                new APIGatewayProxyRequestEvent.RequestIdentity().withSourceIp("123.123.123.123"));
+        proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
         proxyRequestContext.setAuthorizer(authorizerParams);
         event.setRequestContext(proxyRequestContext);
         when(codeStorageService.isValidOtpCode(NEW_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))

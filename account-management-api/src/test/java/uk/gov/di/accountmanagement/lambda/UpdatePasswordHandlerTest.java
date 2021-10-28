@@ -28,6 +28,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 
 class UpdatePasswordHandlerTest {
 
@@ -59,8 +60,7 @@ class UpdatePasswordHandlerTest {
                 new APIGatewayProxyRequestEvent.ProxyRequestContext();
         Map<String, Object> authorizerParams = new HashMap<>();
         authorizerParams.put("principalId", SUBJECT.getValue());
-        proxyRequestContext.setIdentity(
-                new APIGatewayProxyRequestEvent.RequestIdentity().withSourceIp("123.123.123.123"));
+        proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
         proxyRequestContext.setAuthorizer(authorizerParams);
         event.setRequestContext(proxyRequestContext);
 

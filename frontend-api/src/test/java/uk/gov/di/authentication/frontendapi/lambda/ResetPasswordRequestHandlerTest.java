@@ -54,6 +54,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.RESET_PASSWORD
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.PASSWORD_RESET_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 
 class ResetPasswordRequestHandlerTest {
 
@@ -109,11 +110,7 @@ class ResetPasswordRequestHandlerTest {
 
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(
-                new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                        .withIdentity(
-                                new APIGatewayProxyRequestEvent.RequestIdentity()
-                                        .withSourceIp("123.123.123.123")));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);

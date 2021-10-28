@@ -58,6 +58,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.MFA_SMS_CODE_S
 import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 
 class LoginHandlerTest {
 
@@ -117,11 +118,7 @@ class LoginHandlerTest {
                 .thenReturn(generateAuthRequest(Optional.empty()).toParameters());
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(
-                new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                        .withIdentity(
-                                new APIGatewayProxyRequestEvent.RequestIdentity()
-                                        .withSourceIp("123.123.123.123")));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(
                 format(
@@ -244,11 +241,7 @@ class LoginHandlerTest {
 
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(
-                new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                        .withIdentity(
-                                new APIGatewayProxyRequestEvent.RequestIdentity()
-                                        .withSourceIp("123.123.123.123")));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -309,11 +302,7 @@ class LoginHandlerTest {
                         userProfile.getLegacySubjectID(), EMAIL))
                 .thenReturn(false);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(
-                new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                        .withIdentity(
-                                new APIGatewayProxyRequestEvent.RequestIdentity()
-                                        .withSourceIp("123.123.123.123")));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
@@ -390,11 +379,7 @@ class LoginHandlerTest {
     public void shouldReturn400IfUserDoesNotHaveAnAccount() {
         when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(null);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(
-                new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                        .withIdentity(
-                                new APIGatewayProxyRequestEvent.RequestIdentity()
-                                        .withSourceIp("123.123.123.123")));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         usingValidSession();
