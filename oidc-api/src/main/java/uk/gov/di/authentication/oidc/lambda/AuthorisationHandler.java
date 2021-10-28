@@ -178,21 +178,19 @@ public class AuthorisationHandler
             sessionAction = USER_HAS_STARTED_A_NEW_JOURNEY;
         }
 
-        return existingSession
-                .map(
-                        session ->
-                                updateSessionAndRedirect(
-                                        authRequestParameters,
-                                        authenticationRequest,
-                                        session,
-                                        sessionAction))
-                .orElseGet(
-                        () ->
-                                createSessionAndRedirect(
-                                        authRequestParameters,
-                                        authenticationRequest,
-                                        authenticationRequest.getClientID(),
-                                        configurationService.getLoginURI()));
+        var session = existingSession.orElseGet(sessionService::createSession);
+
+        if (existingSession.isEmpty()) {
+            return createSessionAndRedirect(
+                    session,
+                    authRequestParameters,
+                    authenticationRequest,
+                    authenticationRequest.getClientID(),
+                    configurationService.getLoginURI());
+        } else {
+            return updateSessionAndRedirect(
+                    authRequestParameters, authenticationRequest, session, sessionAction);
+        }
     }
 
     private APIGatewayProxyResponseEvent updateSessionAndRedirect(
@@ -257,12 +255,11 @@ public class AuthorisationHandler
     }
 
     private APIGatewayProxyResponseEvent createSessionAndRedirect(
+            Session session,
             Map<String, List<String>> authRequest,
             AuthenticationRequest authenticationRequest,
             ClientID clientId,
             URI redirectURI) {
-        Session session = sessionService.createSession();
-
         String clientSessionID =
                 clientSessionService.generateClientSession(
                         new ClientSession(
