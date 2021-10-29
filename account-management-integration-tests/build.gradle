@@ -37,7 +37,11 @@ test {
     filter {
         includeTestsMatching "*"
     }
+    environment "AWS_ACCESS_KEY_ID", "mock-access-key"
+    environment "AWS_SECRET_ACCESS_KEY", "mock-secret-key "
+
     testLogging {
         showStandardStreams = false
     }
+    dependsOn ":acctMgmtTerraform"
 }

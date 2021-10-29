@@ -1,5 +1,6 @@
 plugins {
     id "com.diffplug.spotless" version "5.15.1"
+    id 'com.avast.gradle.docker-compose' version "0.14.9"
 }
 
 apply plugin: "java"
@@ -18,6 +19,13 @@ ext {
         jackson_version: "2.13.0",
         glassfish_version: "3.0.3",
     ]
+
+    terraformEnvironment = project.properties["terraformEnvironment"] ?: "localstack"
+
+    awsCredentialsEnvironment = terraformEnvironment == "localstack" ? [
+        AWS_ACCESS_KEY_ID: "mock-access-key",
+        AWS_SECRET_ACCESS_KEY: "mock-secret-key",
+    ] : [:]
 }
 
 subprojects {
@@ -45,7 +53,8 @@ subprojects {
 
         glassfish "org.glassfish.jersey.core:jersey-client:${dependencyVersions.glassfish_version}",
                 "org.glassfish.jersey.inject:jersey-hk2:${dependencyVersions.glassfish_version}",
-                "org.glassfish.jersey.media:jersey-media-json-jackson:${dependencyVersions.glassfish_version}"
+                "org.glassfish.jersey.media:jersey-media-json-jackson:${dependencyVersions.glassfish_version}",
+                "jakarta.activation:jakarta.activation-api:2.0.1"
 
         govuk_notify "uk.gov.service.notify:notifications-java-client:3.17.2-RELEASE"
 
@@ -98,4 +107,145 @@ spotless {
     }
 }
 
+dockerCompose {
+    buildBeforeUp = true
+    forceRecreate = false
+
+    startedServices = [
+        'aws',
+        'dynamodb',
+        'redis'
+    ]
+    def logDir = new File(project.buildDir, "logs")
+    if (!logDir.exists()) {
+        println("creating logs folder...")
+        logDir.mkdir()
+    }
+    captureContainersOutput = false
+    captureContainersOutputToFile = new File('logs', 'docker-compose-gradle.log')
+    projectName = rootProject.rootDir.name
+}
+
 compileJava.dependsOn "spotlessApply"
+
+clean.dependsOn "composeDown"
+
+abstract class Terraform extends DefaultTask {
+
+    Terraform() {
+        group = "terraform"
+    }
+
+    @Input
+    abstract MapProperty<String, String> getEnvironmentVars()
+
+    @InputDirectory
+    abstract DirectoryProperty getTerraformDirectory()
+
+    @Input
+    abstract Property<String> getEnvironmentName()
+
+    @Internal
+    Object terraformOutputs
+
+    @TaskAction
+    void apply() {
+        def tfEnvironment = [
+            "TF_DATA_DIR": "${project.buildDir}/terraform/${environmentName.get()}-${terraformDirectory.get().asFile.name}",
+            "TF_IN_AUTOMATION": "1"
+        ] + environmentVars.get()
+
+        logger.lifecycle("Running Terraform Initialise...")
+        project.exec {
+            executable "terraform"
+            workingDir terraformDirectory.asFile
+            environment tfEnvironment
+            args "init", "-backend-config=${environmentName.get()}.hcl"
+        }
+
+        logger.lifecycle("Applying ${terraformDirectory.getAsFile().get().name} Terraform (run gradle with --info to see output)...")
+        project.exec {
+            logging.captureStandardOutput(LogLevel.INFO)
+            executable "terraform"
+            workingDir terraformDirectory.asFile
+            environment tfEnvironment
+            args "apply", "-auto-approve", "-var-file=${environmentName.get()}.tfvars"
+        }
+
+        logger.lifecycle("Getting Terraform Outputs!")
+        new ByteArrayOutputStream().withStream { os ->
+            project.exec {
+                standardOutput os
+                executable "terraform"
+                workingDir terraformDirectory.asFile
+                environment tfEnvironment
+                args "output", "-json"
+            }
+            this.terraformOutputs = new groovy.json.JsonSlurper().parse(os.toByteArray())
+        }
+        logger.lifecycle("Terraform Complete!")
+    }
+
+    protected Object outputs() {
+        return this.terraformOutputs
+    }
+}
+
+task sharedTerraform (type: Terraform) {
+    terraformDirectory = layout.projectDirectory.dir("ci/terraform/shared")
+    environmentName = terraformEnvironment
+    environmentVars = awsCredentialsEnvironment
+
+    if (terraformEnvironment == "localstack") {
+        dependsOn "composeUp"
+    }
+    dependsOn ":lambda-warmer:buildZip"
+    dependsOn ":account-migrations:buildZip"
+}
+
+task oidcTerraform (type: Terraform) {
+    terraformDirectory = layout.projectDirectory.dir("ci/terraform/oidc")
+    environmentName = project.properties["terraformEnvironment"] ?: "localstack"
+    environmentVars = awsCredentialsEnvironment
+
+    doLast {
+        def json = outputs()
+        allprojects.findAll {it.name == "integration-tests"}.first().tasks.getByName("test") {
+            environment "API_GATEWAY_ID", json.api_gateway_root_id.value
+            environment "TOKEN_SIGNING_KEY_ALIAS", json.token_signing_key_alias.value
+            environment "BASE_URL", json.base_url.value
+            environment "API_KEY", json.frontend_api_key.value
+            environment "FRONTEND_API_GATEWAY_ID", json.frontend_api_gateway_root_id.value
+            environment "FRONTEND_API_KEY", json.frontend_api_key.value
+        }
+    }
+    dependsOn ":client-registry-api:buildZip"
+    dependsOn ":frontend-api:buildZip"
+    dependsOn ":oidc-api:buildZip"
+    dependsOn "sharedTerraform"
+}
+
+task auditTerraform (type: Terraform) {
+    terraformDirectory = layout.projectDirectory.dir("ci/terraform/audit-processors")
+    environmentName = project.properties["terraformEnvironment"] ?: "localstack"
+    environmentVars = awsCredentialsEnvironment
+
+    dependsOn ":audit-processors:buildZip"
+    dependsOn "oidcTerraform"
+}
+
+task acctMgmtTerraform (type: Terraform) {
+    terraformDirectory = layout.projectDirectory.dir("ci/terraform/account-management")
+    environmentName = project.properties["terraformEnvironment"] ?: "localstack"
+    environmentVars = awsCredentialsEnvironment
+
+    doLast {
+        def json = outputs()
+        allprojects.findAll {it.name == "account-management-integration-tests"}.first().tasks.getByName("test") {
+            environment "API_GATEWAY_ID", json.api_gateway_root_id.value
+            environment "BASE_URL", json.base_url.value
+        }
+    }
+    dependsOn ":account-management-api:buildZip"
+    dependsOn "auditTerraform"
+}

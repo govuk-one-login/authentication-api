@@ -16,8 +16,6 @@ services:
       - "notify.internal:host-gateway"
     networks:
       - di-authentication-api-net
-    volumes:
-      - ./oidc-api/build/distributions:/dist/lambda/
     ports:
       - 45678:45678
     healthcheck:

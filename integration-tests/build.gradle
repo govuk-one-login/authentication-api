@@ -35,4 +35,12 @@ test {
     testLogging {
         showStandardStreams = false
     }
+
+    environment "AWS_ACCESS_KEY_ID", "mock-access-key"
+    environment "AWS_SECRET_ACCESS_KEY", "mock-secret-key "
+    environment "STUB_RELYING_PARTY_REDIRECT_URI", "https://di-auth-stub-relying-party-build.london.cloudapps.digital/"
+    environment "LOGIN_URI", "http://localhost:3000/"
+    environment "RESET_PASSWORD_URL", "http://localhost:3000/reset-password?code="
+
+    dependsOn ":auditTerraform"
 }
