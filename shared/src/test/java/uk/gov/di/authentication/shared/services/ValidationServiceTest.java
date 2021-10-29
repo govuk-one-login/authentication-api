@@ -87,33 +87,40 @@ public class ValidationServiceTest {
     }
 
     @Test
-    public void shouldReturnErrorIsPhoneNumberContainsLetter() {
+    public void shouldReturnErrorIfPhoneNumberContainsLetter() {
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1012),
                 validationService.validatePhoneNumber("0123456789A"));
     }
 
     @Test
-    public void shouldReturnErrorIsPhoneNumberIsLessThan10Characters() {
+    public void shouldReturnErrorIfPhoneNumberIsLessThan10Characters() {
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1012),
                 validationService.validatePhoneNumber("0123456789"));
     }
 
     @Test
-    public void shouldReturnErrorIsPhoneNumberIsTooLong() {
+    public void shouldReturnErrorIfPhoneNumberIsTooLong() {
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1012),
                 validationService.validatePhoneNumber("012345678999"));
     }
 
     @Test
-    public void shouldNotReturnErrorIsPhoneNumberIsValid() {
-        assertEquals(Optional.empty(), validationService.validatePhoneNumber("01234567891"));
+    public void shouldReturnErrorIfPhoneNumberIsNotAMobile() {
+        assertEquals(
+                Optional.of(ErrorResponse.ERROR_1012),
+                validationService.validatePhoneNumber("01234567891"));
     }
 
     @Test
-    public void shouldReturnErrorIsPhoneNumberContainsNonnumericCharacters() {
+    public void shouldNotReturnErrorIsPhoneNumberIsValid() {
+        assertEquals(Optional.empty(), validationService.validatePhoneNumber("07123456789"));
+    }
+
+    @Test
+    public void shouldReturnErrorIfPhoneNumberContainsNonnumericCharacters() {
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1012),
                 validationService.validatePhoneNumber("202-456-1111"));

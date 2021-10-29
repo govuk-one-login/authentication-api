@@ -10,6 +10,7 @@ import uk.gov.di.authentication.shared.entity.SessionAction;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
+import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.MOBILE;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_MFA_CODE;
@@ -67,6 +68,9 @@ public class ValidationService {
         PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
         try {
             var phoneNumber = phoneUtil.parse(phoneNumberInput, "GB");
+            if (!phoneUtil.getNumberType(phoneNumber).equals(MOBILE)) {
+                return Optional.of(ErrorResponse.ERROR_1012);
+            }
             if (phoneUtil.isValidNumber(phoneNumber)) {
                 return Optional.empty();
             }
