@@ -55,6 +55,7 @@ import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEv
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 
 public class MfaHandlerTest {
 
@@ -120,11 +121,7 @@ public class MfaHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
-        event.setRequestContext(
-                new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                        .withIdentity(
-                                new APIGatewayProxyRequestEvent.RequestIdentity()
-                                        .withSourceIp("123.123.123.123")));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -156,11 +153,7 @@ public class MfaHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
-        event.setRequestContext(
-                new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                        .withIdentity(
-                                new APIGatewayProxyRequestEvent.RequestIdentity()
-                                        .withSourceIp("123.123.123.123")));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -185,11 +178,7 @@ public class MfaHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
-        event.setRequestContext(
-                new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                        .withIdentity(
-                                new APIGatewayProxyRequestEvent.RequestIdentity()
-                                        .withSourceIp("123.123.123.123")));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -209,11 +198,7 @@ public class MfaHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"email\": \"%s\"}", "wrong.email@gov.uk"));
-        event.setRequestContext(
-                new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                        .withIdentity(
-                                new APIGatewayProxyRequestEvent.RequestIdentity()
-                                        .withSourceIp("123.123.123.123")));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -238,11 +223,7 @@ public class MfaHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
-        event.setRequestContext(
-                new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                        .withIdentity(
-                                new APIGatewayProxyRequestEvent.RequestIdentity()
-                                        .withSourceIp("123.123.123.123")));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -299,11 +280,7 @@ public class MfaHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
-        event.setRequestContext(
-                new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                        .withIdentity(
-                                new APIGatewayProxyRequestEvent.RequestIdentity()
-                                        .withSourceIp("123.123.123.123")));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -339,11 +316,7 @@ public class MfaHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
-        event.setRequestContext(
-                new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                        .withIdentity(
-                                new APIGatewayProxyRequestEvent.RequestIdentity()
-                                        .withSourceIp("123.123.123.123")));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -375,11 +348,7 @@ public class MfaHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
-        event.setRequestContext(
-                new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                        .withIdentity(
-                                new APIGatewayProxyRequestEvent.RequestIdentity()
-                                        .withSourceIp("123.123.123.123")));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -413,11 +382,7 @@ public class MfaHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
-        event.setRequestContext(
-                new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                        .withIdentity(
-                                new APIGatewayProxyRequestEvent.RequestIdentity()
-                                        .withSourceIp("123.123.123.123")));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 

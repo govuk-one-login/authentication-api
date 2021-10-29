@@ -41,6 +41,7 @@ import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 
 class SendOtpNotificationHandlerTest {
 
@@ -84,11 +85,7 @@ class SendOtpNotificationHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of());
-        event.setRequestContext(
-                new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                        .withIdentity(
-                                new APIGatewayProxyRequestEvent.RequestIdentity()
-                                        .withSourceIp("123.123.123.123")));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
@@ -124,11 +121,7 @@ class SendOtpNotificationHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of());
-        event.setRequestContext(
-                new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                        .withIdentity(
-                                new APIGatewayProxyRequestEvent.RequestIdentity()
-                                        .withSourceIp("123.123.123.123")));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\"  }",

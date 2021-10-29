@@ -42,6 +42,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
 import static uk.gov.di.authentication.shared.entity.SessionState.TWO_FACTOR_REQUIRED;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 
 class SignUpHandlerTest {
 
@@ -82,11 +83,7 @@ class SignUpHandlerTest {
         when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(false);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(
-                new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                        .withIdentity(
-                                new APIGatewayProxyRequestEvent.RequestIdentity()
-                                        .withSourceIp("123.123.123.123")));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(
                 format("{ \"password\": \"computer-1\", \"email\": \"%s\" }", email.toUpperCase()));
@@ -187,11 +184,7 @@ class SignUpHandlerTest {
 
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(
-                new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                        .withIdentity(
-                                new APIGatewayProxyRequestEvent.RequestIdentity()
-                                        .withSourceIp("123.123.123.123")));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
         event.setBody("{ \"password\": \"computer\", \"email\": \"joe.bloggs@test.com\" }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);

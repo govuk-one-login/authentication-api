@@ -81,6 +81,7 @@ import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEv
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 
 class VerifyCodeRequestHandlerTest {
 
@@ -678,11 +679,7 @@ class VerifyCodeRequestHandlerTest {
     private APIGatewayProxyResponseEvent makeCallWithCode(
             String code, String notificationType, Optional<Session> session, String clientId) {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(
-                new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                        .withIdentity(
-                                new APIGatewayProxyRequestEvent.RequestIdentity()
-                                        .withSourceIp("123.123.123.123")));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(
                 Map.of(
                         "Session-Id",

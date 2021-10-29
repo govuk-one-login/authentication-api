@@ -36,6 +36,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
+import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 
 class CheckUserExistsHandlerTest {
 
@@ -77,11 +78,7 @@ class CheckUserExistsHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"email\": \"joe.bloggs@digital.cabinet-office.gov.uk\" }");
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setRequestContext(
-                new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                        .withIdentity(
-                                new APIGatewayProxyRequestEvent.RequestIdentity()
-                                        .withSourceIp("123.123.123.123")));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(200, result.getStatusCode());
@@ -113,11 +110,7 @@ class CheckUserExistsHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"email\": \"joe.bloggs@digital.cabinet-office.gov.uk\" }");
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setRequestContext(
-                new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                        .withIdentity(
-                                new APIGatewayProxyRequestEvent.RequestIdentity()
-                                        .withSourceIp("123.123.123.123")));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(200, result.getStatusCode());
@@ -177,11 +170,7 @@ class CheckUserExistsHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"email\": \"joe.bloggs\" }");
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setRequestContext(
-                new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                        .withIdentity(
-                                new APIGatewayProxyRequestEvent.RequestIdentity()
-                                        .withSourceIp("123.123.123.123")));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
@@ -209,11 +198,7 @@ class CheckUserExistsHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"email\": \"joe.bloggs\" }");
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setRequestContext(
-                new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                        .withIdentity(
-                                new APIGatewayProxyRequestEvent.RequestIdentity()
-                                        .withSourceIp("123.123.123.123")));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 

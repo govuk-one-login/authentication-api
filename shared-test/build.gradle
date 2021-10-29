@@ -11,10 +11,16 @@ repositories {
 
 dependencies {
     implementation configurations.tests,
+            configurations.lambda,
             configurations.glassfish,
             "org.eclipse.jetty:jetty-server:11.0.7"
 }
 
 test {
     useJUnitPlatform()
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
 }

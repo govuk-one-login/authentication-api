@@ -26,6 +26,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.entity.NotificationType.DELETE_ACCOUNT;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 
 class RemoveAccountHandlerTest {
 
@@ -51,8 +52,7 @@ class RemoveAccountHandlerTest {
         Map<String, Object> authorizerParams = new HashMap<>();
         authorizerParams.put("principalId", SUBJECT.getValue());
         proxyRequestContext.setAuthorizer(authorizerParams);
-        proxyRequestContext.setIdentity(
-                new APIGatewayProxyRequestEvent.RequestIdentity().withSourceIp("123.123.123.123"));
+        proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(proxyRequestContext);
