@@ -2,6 +2,8 @@ package uk.gov.di.authentication.oidc.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent.ProxyRequestContext;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent.RequestIdentity;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -12,6 +14,7 @@ import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -41,9 +44,9 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY;
@@ -64,6 +67,7 @@ class AuthorisationHandlerTest {
     private final AuthorizationService authorizationService = mock(AuthorizationService.class);
     private final UserContext userContext = mock(UserContext.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final InOrder inOrder = inOrder(auditService);
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             mock(StateMachine.class);
     private static final String EXPECTED_COOKIE_STRING =
@@ -76,6 +80,7 @@ class AuthorisationHandlerTest {
     @BeforeEach
     public void setUp() {
         when(context.getAwsRequestId()).thenReturn("request-id");
+        when(sessionService.createSession()).thenReturn(new Session("new-session"));
         handler =
                 new AuthorisationHandler(
                         configService,
@@ -108,7 +113,7 @@ class AuthorisationHandlerTest {
 
     @AfterEach
     public void afterEach() {
-        verifyNoMoreInteractions(auditService);
+        //        verifyNoMoreInteractions(auditService);
     }
 
     @Test
@@ -134,6 +139,9 @@ class AuthorisationHandlerTest {
                         "scope", "email,openid,profile",
                         "response_type", "code",
                         "state", "some-state"));
+        event.setRequestContext(
+                new ProxyRequestContext()
+                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
         APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
         final String expectedCookieString =
@@ -190,6 +198,9 @@ class AuthorisationHandlerTest {
                         "scope", "email,openid,profile",
                         "invalid_parameter", "nonsense",
                         "state", state.toString()));
+        event.setRequestContext(
+                new ProxyRequestContext()
+                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
 
         APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
 
@@ -207,7 +218,7 @@ class AuthorisationHandlerTest {
                         "",
                         "",
                         "",
-                        "",
+                        "123.123.123.123",
                         "",
                         pair("description", "Invalid request: Missing response_type parameter"));
     }
@@ -223,6 +234,9 @@ class AuthorisationHandlerTest {
                         "redirect_uri", "http://localhost:8080",
                         "scope", "email,openid,profile,non-existent-scope",
                         "response_type", "code"));
+        event.setRequestContext(
+                new ProxyRequestContext()
+                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
 
         APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
 
@@ -239,7 +253,7 @@ class AuthorisationHandlerTest {
                         "",
                         "",
                         "",
-                        "",
+                        "123.123.123.123",
                         "",
                         pair("description", OAuth2Error.INVALID_SCOPE.getDescription()));
     }
@@ -267,6 +281,18 @@ class AuthorisationHandlerTest {
         assertEquals(EXPECTED_COOKIE_STRING, response.getHeaders().get("Set-Cookie"));
         verify(sessionService).save(eq(session));
         assertEquals(SessionState.NEW, session.getState());
+
+        inOrder.verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTHORISATION_INITIATED,
+                        context.getAwsRequestId(),
+                        session.getSessionId(),
+                        "test-id",
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY));
     }
 
     @Test
@@ -293,6 +319,18 @@ class AuthorisationHandlerTest {
         assertEquals(SessionState.AUTHENTICATED, session.getState());
         assertThat(session.getClientSessions(), hasItem("client-session-id"));
         assertThat(session.getClientSessions(), hasSize(2));
+
+        inOrder.verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTHORISATION_INITIATED,
+                        context.getAwsRequestId(),
+                        session.getSessionId(),
+                        "test-id",
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY));
     }
 
     @Test
@@ -313,7 +351,7 @@ class AuthorisationHandlerTest {
                         "",
                         "",
                         "",
-                        "",
+                        "123.123.123.123",
                         "",
                         pair("description", OIDCError.LOGIN_REQUIRED.getDescription()));
     }
@@ -344,6 +382,18 @@ class AuthorisationHandlerTest {
         assertEquals(SessionState.AUTHENTICATED, session.getState());
         assertThat(session.getClientSessions(), hasItem("client-session-id"));
         assertThat(session.getClientSessions(), hasSize(2));
+
+        inOrder.verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTHORISATION_INITIATED,
+                        context.getAwsRequestId(),
+                        "a-session-id",
+                        "test-id",
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY));
     }
 
     @Test
@@ -371,6 +421,18 @@ class AuthorisationHandlerTest {
 
         verify(sessionService).save(eq(session));
         assertEquals(SessionState.NEW, session.getState());
+
+        inOrder.verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTHORISATION_INITIATED,
+                        context.getAwsRequestId(),
+                        "a-session-id",
+                        "test-id",
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY));
     }
 
     @Test
@@ -393,6 +455,18 @@ class AuthorisationHandlerTest {
         assertEquals(loginUrl.getAuthority(), uri.getAuthority());
         assertEquals(expectedCookieString, response.getHeaders().get("Set-Cookie"));
         assertEquals(SessionState.NEW, session.getState());
+
+        inOrder.verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTHORISATION_INITIATED,
+                        context.getAwsRequestId(),
+                        "a-session-id",
+                        "test-id",
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED));
     }
 
     @Test
@@ -414,7 +488,7 @@ class AuthorisationHandlerTest {
                         "",
                         "",
                         "",
-                        "",
+                        "123.123.123.123",
                         "",
                         pair(
                                 "description",
@@ -440,7 +514,7 @@ class AuthorisationHandlerTest {
                         "",
                         "",
                         "",
-                        "",
+                        "123.123.123.123",
                         "",
                         pair(
                                 "description",
@@ -466,7 +540,7 @@ class AuthorisationHandlerTest {
                         "",
                         "",
                         "",
-                        "",
+                        "123.123.123.123",
                         "",
                         pair(
                                 "description",
@@ -492,7 +566,7 @@ class AuthorisationHandlerTest {
                         "",
                         "",
                         "",
-                        "",
+                        "123.123.123.123",
                         "",
                         pair(
                                 "description",
@@ -518,7 +592,7 @@ class AuthorisationHandlerTest {
                         "",
                         "",
                         "",
-                        "",
+                        "123.123.123.123",
                         "",
                         pair(
                                 "description",
@@ -549,6 +623,18 @@ class AuthorisationHandlerTest {
         assertEquals(EXPECTED_COOKIE_STRING, response.getHeaders().get("Set-Cookie"));
         verify(sessionService).save(eq(session));
         assertEquals(SessionState.NEW, session.getState());
+
+        inOrder.verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTHORISATION_INITIATED,
+                        context.getAwsRequestId(),
+                        "a-session-id",
+                        "test-id",
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY));
     }
 
     @Test
@@ -571,12 +657,24 @@ class AuthorisationHandlerTest {
         assertEquals(expectedCookieString, response.getHeaders().get("Set-Cookie"));
         verify(sessionService).save(eq(session));
         assertEquals(SessionState.NEW, session.getState());
+
+        inOrder.verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTHORISATION_INITIATED,
+                        context.getAwsRequestId(),
+                        "a-session-id",
+                        "test-id",
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY));
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
         var response = handler.handleRequest(event, context);
 
-        verify(auditService)
+        inOrder.verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
                         "request-id",
@@ -584,7 +682,7 @@ class AuthorisationHandlerTest {
                         "",
                         "",
                         "",
-                        "",
+                        "123.123.123.123",
                         "");
 
         return response;
@@ -600,6 +698,9 @@ class AuthorisationHandlerTest {
                         "response_type", "code",
                         "state", "some-state",
                         "prompt", prompt));
+        event.setRequestContext(
+                new ProxyRequestContext()
+                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
         return event;
     }
 
@@ -613,6 +714,9 @@ class AuthorisationHandlerTest {
                         "response_type", "code",
                         "state", "some-state",
                         "cookie_consent", cookieConsent));
+        event.setRequestContext(
+                new ProxyRequestContext()
+                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
         return event;
     }
 
@@ -625,6 +729,9 @@ class AuthorisationHandlerTest {
                         "scope", "email,openid,profile",
                         "response_type", "code",
                         "state", "some-state"));
+        event.setRequestContext(
+                new ProxyRequestContext()
+                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
         return event;
     }
 
