@@ -60,7 +60,7 @@ public class UpdateProfileIntegrationTest extends IntegrationTestEndpoints {
         headers.add("Session-Id", sessionId);
         headers.add("X-API-Key", FRONTEND_API_KEY);
         UpdateProfileRequest request =
-                new UpdateProfileRequest(EMAIL_ADDRESS, ADD_PHONE_NUMBER, "0123456789");
+                new UpdateProfileRequest(EMAIL_ADDRESS, ADD_PHONE_NUMBER, "07123456789");
 
         Response response =
                 RequestHelper.request(
