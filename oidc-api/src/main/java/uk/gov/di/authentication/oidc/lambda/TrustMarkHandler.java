@@ -54,6 +54,8 @@ public class TrustMarkHandler
         return new TrustMarkResponse(
                 configurationService.getBaseURL().orElseThrow(),
                 configurationService.getBaseURL().orElseThrow(),
-                Arrays.asList(CredentialTrustLevel.values()));
+                Arrays.asList(
+                        CredentialTrustLevel.LOW_LEVEL.getValue(),
+                        CredentialTrustLevel.MEDIUM_LEVEL.getValue()));
     }
 }
