@@ -1,6 +1,6 @@
 package uk.gov.di.authentication.shared.configuration;
 
-public interface AuditPublisherConfiguration {
+public interface AuditPublisherConfiguration extends BaseLambdaConfiguration {
 
     default String getAuditSigningKeyAlias() {
         return System.getenv("AUDIT_SIGNING_KEY_ALIAS");

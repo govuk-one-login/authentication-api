@@ -9,6 +9,7 @@ import com.amazonaws.services.simplesystemsmanagement.model.ParameterNotFoundExc
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.configuration.AuditPublisherConfiguration;
+import uk.gov.di.authentication.shared.configuration.BaseLambdaConfiguration;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -18,7 +19,7 @@ import java.util.stream.Collectors;
 
 import static java.text.MessageFormat.format;
 
-public class ConfigurationService implements AuditPublisherConfiguration {
+public class ConfigurationService implements BaseLambdaConfiguration, AuditPublisherConfiguration {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ConfigurationService.class);
     private static ConfigurationService configurationService;
@@ -45,10 +46,6 @@ public class ConfigurationService implements AuditPublisherConfiguration {
 
     public long getAuthCodeExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("AUTH_CODE_EXPIRY", "300"));
-    }
-
-    public String getAwsRegion() {
-        return System.getenv("AWS_REGION");
     }
 
     public Optional<String> getBaseURL() {
@@ -87,20 +84,12 @@ public class ConfigurationService implements AuditPublisherConfiguration {
         return System.getenv("EMAIL_QUEUE_URL");
     }
 
-    public String getEnvironment() {
-        return System.getenv("ENVIRONMENT");
-    }
-
     public String getFrontendBaseUrl() {
         return System.getenv().getOrDefault("FRONTEND_BASE_URL", "");
     }
 
     public long getIDTokenExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("ID_TOKEN_EXPIRY", "120"));
-    }
-
-    public Optional<String> getLocalstackEndpointUri() {
-        return Optional.ofNullable(System.getenv("LOCALSTACK_ENDPOINT"));
     }
 
     public URI getLoginURI() {
