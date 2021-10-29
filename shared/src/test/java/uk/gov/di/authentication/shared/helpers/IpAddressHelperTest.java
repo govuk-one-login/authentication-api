@@ -19,7 +19,7 @@ class IpAddressHelperTest {
         var request = new APIGatewayProxyRequestEvent();
 
         request.setHeaders(
-                Map.of("x-forwarded-for", "234.234.234.234, 123.123.123.123, 111.111.111.111"));
+                Map.of("X-Forwarded-For", "234.234.234.234, 123.123.123.123, 111.111.111.111"));
         request.setRequestContext(stubContextWithSourceIp());
 
         assertThat(extractIpAddress(request), is("234.234.234.234"));
@@ -29,7 +29,7 @@ class IpAddressHelperTest {
     void shouldPreferXForwardedForOverSourceIp() {
         var request = new APIGatewayProxyRequestEvent();
 
-        request.setHeaders(Map.of("x-forwarded-for", "123.123.123.123"));
+        request.setHeaders(Map.of("X-Forwarded-For", "123.123.123.123"));
         request.setRequestContext(stubContextWithSourceIp());
 
         assertThat(extractIpAddress(request), is("123.123.123.123"));
