@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.oidc.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 
 import java.util.List;
 
@@ -13,12 +12,12 @@ public class TrustMarkResponse {
     private String trustMark;
 
     @JsonProperty("C")
-    private List<CredentialTrustLevel> c;
+    private List<String> c;
 
     public TrustMarkResponse(
             @JsonProperty(required = true, value = "idp") String idp,
             @JsonProperty(required = true, value = "trustmark_provider") String trustMark,
-            @JsonProperty(required = true, value = "C") List<CredentialTrustLevel> c) {
+            @JsonProperty(required = true, value = "C") List<String> c) {
         this.idp = idp;
         this.trustMark = trustMark;
         this.c = c;
@@ -32,7 +31,7 @@ public class TrustMarkResponse {
         return trustMark;
     }
 
-    public List<CredentialTrustLevel> getC() {
+    public List<String> getC() {
         return c;
     }
 }
