@@ -180,6 +180,17 @@ public class AuthorisationHandler
 
         var session = existingSession.orElseGet(sessionService::createSession);
 
+        auditService.submitAuditEvent(
+                OidcAuditableEvent.AUTHORISATION_INITIATED,
+                context.getAwsRequestId(),
+                session.getSessionId(),
+                authenticationRequest.getClientID().getValue(),
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                ipAddress,
+                AuditService.UNKNOWN,
+                pair("session-action", sessionAction));
+
         if (existingSession.isEmpty()) {
             return createSessionAndRedirect(
                     session,

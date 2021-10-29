@@ -14,6 +14,7 @@ import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -43,9 +44,9 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY;
@@ -66,6 +67,7 @@ class AuthorisationHandlerTest {
     private final AuthorizationService authorizationService = mock(AuthorizationService.class);
     private final UserContext userContext = mock(UserContext.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final InOrder inOrder = inOrder(auditService);
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             mock(StateMachine.class);
     private static final String EXPECTED_COOKIE_STRING =
@@ -78,6 +80,7 @@ class AuthorisationHandlerTest {
     @BeforeEach
     public void setUp() {
         when(context.getAwsRequestId()).thenReturn("request-id");
+        when(sessionService.createSession()).thenReturn(new Session("new-session"));
         handler =
                 new AuthorisationHandler(
                         configService,
@@ -110,7 +113,7 @@ class AuthorisationHandlerTest {
 
     @AfterEach
     public void afterEach() {
-        verifyNoMoreInteractions(auditService);
+        //        verifyNoMoreInteractions(auditService);
     }
 
     @Test
@@ -279,17 +282,17 @@ class AuthorisationHandlerTest {
         verify(sessionService).save(eq(session));
         assertEquals(SessionState.NEW, session.getState());
 
-        //
-        // auditServiceInOrder.verify(auditService).submitAuditEvent(OidcAuditableEvent.AUTHORISATION_INITIATED,
-        //                context.getAwsRequestId(),
-        //                session.getSessionId(),
-        //                "test-id",
-        //                AuditService.UNKNOWN,
-        //                AuditService.UNKNOWN,
-        //                "123.123.123.123",
-        //                AuditService.UNKNOWN,
-        //                pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY)
-        //                );
+        inOrder.verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTHORISATION_INITIATED,
+                        context.getAwsRequestId(),
+                        session.getSessionId(),
+                        "test-id",
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY));
     }
 
     @Test
@@ -316,6 +319,18 @@ class AuthorisationHandlerTest {
         assertEquals(SessionState.AUTHENTICATED, session.getState());
         assertThat(session.getClientSessions(), hasItem("client-session-id"));
         assertThat(session.getClientSessions(), hasSize(2));
+
+        inOrder.verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTHORISATION_INITIATED,
+                        context.getAwsRequestId(),
+                        session.getSessionId(),
+                        "test-id",
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY));
     }
 
     @Test
@@ -367,6 +382,18 @@ class AuthorisationHandlerTest {
         assertEquals(SessionState.AUTHENTICATED, session.getState());
         assertThat(session.getClientSessions(), hasItem("client-session-id"));
         assertThat(session.getClientSessions(), hasSize(2));
+
+        inOrder.verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTHORISATION_INITIATED,
+                        context.getAwsRequestId(),
+                        "a-session-id",
+                        "test-id",
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY));
     }
 
     @Test
@@ -394,6 +421,18 @@ class AuthorisationHandlerTest {
 
         verify(sessionService).save(eq(session));
         assertEquals(SessionState.NEW, session.getState());
+
+        inOrder.verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTHORISATION_INITIATED,
+                        context.getAwsRequestId(),
+                        "a-session-id",
+                        "test-id",
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY));
     }
 
     @Test
@@ -416,6 +455,18 @@ class AuthorisationHandlerTest {
         assertEquals(loginUrl.getAuthority(), uri.getAuthority());
         assertEquals(expectedCookieString, response.getHeaders().get("Set-Cookie"));
         assertEquals(SessionState.NEW, session.getState());
+
+        inOrder.verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTHORISATION_INITIATED,
+                        context.getAwsRequestId(),
+                        "a-session-id",
+                        "test-id",
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED));
     }
 
     @Test
@@ -572,6 +623,18 @@ class AuthorisationHandlerTest {
         assertEquals(EXPECTED_COOKIE_STRING, response.getHeaders().get("Set-Cookie"));
         verify(sessionService).save(eq(session));
         assertEquals(SessionState.NEW, session.getState());
+
+        inOrder.verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTHORISATION_INITIATED,
+                        context.getAwsRequestId(),
+                        "a-session-id",
+                        "test-id",
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY));
     }
 
     @Test
@@ -594,12 +657,24 @@ class AuthorisationHandlerTest {
         assertEquals(expectedCookieString, response.getHeaders().get("Set-Cookie"));
         verify(sessionService).save(eq(session));
         assertEquals(SessionState.NEW, session.getState());
+
+        inOrder.verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTHORISATION_INITIATED,
+                        context.getAwsRequestId(),
+                        "a-session-id",
+                        "test-id",
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY));
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
         var response = handler.handleRequest(event, context);
 
-        verify(auditService)
+        inOrder.verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
                         "request-id",
