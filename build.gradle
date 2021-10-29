@@ -130,6 +130,7 @@ compileJava.dependsOn "spotlessApply"
 
 composeUp.dependsOn [
             ":account-management-api:buildZip",
+            ":audit-processors:buildZip",
             ":client-registry-api:buildZip",
             ":frontend-api:buildZip",
             ":lambda-warmer:buildZip",
