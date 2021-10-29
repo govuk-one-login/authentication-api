@@ -128,16 +128,6 @@ dockerCompose {
 
 compileJava.dependsOn "spotlessApply"
 
-composeUp.dependsOn [
-            ":account-management-api:buildZip",
-            ":audit-processors:buildZip",
-            ":client-registry-api:buildZip",
-            ":frontend-api:buildZip",
-            ":lambda-warmer:buildZip",
-            ":oidc-api:buildZip"
-            ,
-        ]
-
 clean.dependsOn "composeDown"
 
 abstract class Terraform extends DefaultTask {
@@ -209,6 +199,8 @@ task sharedTerraform (type: Terraform) {
     if (terraformEnvironment == "localstack") {
         dependsOn "composeUp"
     }
+    dependsOn ":lambda-warmer:buildZip"
+    dependsOn ":account-migrations:buildZip"
 }
 
 task oidcTerraform (type: Terraform) {
@@ -227,12 +219,19 @@ task oidcTerraform (type: Terraform) {
             environment "FRONTEND_API_KEY", json.frontend_api_key.value
         }
     }
+    dependsOn ":client-registry-api:buildZip"
+    dependsOn ":frontend-api:buildZip"
+    dependsOn ":oidc-api:buildZip"
+    dependsOn "sharedTerraform"
 }
 
 task auditTerraform (type: Terraform) {
     terraformDirectory = layout.projectDirectory.dir("ci/terraform/audit-processors")
     environmentName = project.properties["terraformEnvironment"] ?: "localstack"
     environmentVars = awsCredentialsEnvironment
+
+    dependsOn ":audit-processors:buildZip"
+    dependsOn "oidcTerraform"
 }
 
 task acctMgmtTerraform (type: Terraform) {
@@ -247,8 +246,6 @@ task acctMgmtTerraform (type: Terraform) {
             environment "BASE_URL", json.base_url.value
         }
     }
+    dependsOn ":account-management-api:buildZip"
+    dependsOn "auditTerraform"
 }
-
-oidcTerraform.dependsOn "sharedTerraform"
-auditTerraform.dependsOn "oidcTerraform"
-acctMgmtTerraform.dependsOn "oidcTerraform"

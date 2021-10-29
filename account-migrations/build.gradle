@@ -37,5 +37,3 @@ task buildZip(type: Zip) {
         from configurations.runtimeClasspath
     }
 }
-
-build.dependsOn buildZip
