@@ -23,8 +23,8 @@ public class IpAddressHelper {
 
         LOG.info("Headers on request: {}", headers.keySet());
 
-        if (headers.containsKey("x-forwarded-for")) {
-            return headers.get("x-forwarded-for").split(",")[0].trim();
+        if (headers.containsKey("X-Forwarded-For")) {
+            return headers.get("X-Forwarded-For").split(",")[0].trim();
         }
 
         return Optional.ofNullable(input)
