@@ -153,6 +153,12 @@ variable "cloudwatch_log_retention" {
   description = "The number of day to retain Cloudwatch logs for"
 }
 
+variable "lambda_log_alarm_threshold" {
+  type        = number
+  description = "The number of errors in a lambda logs before generating a Cloudwatch alarm"
+  default     = 5
+}
+
 variable "lambda_env_vars_encryption_kms_key_arn" {
   type = string
 }
