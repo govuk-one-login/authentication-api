@@ -140,6 +140,12 @@ variable "cloudwatch_log_retention" {
   description = "The number of day to retain Cloudwatch logs for"
 }
 
+variable "dlq_alarm_threshold" {
+  default     = 1
+  type        = number
+  description = "The number of messages on a DLQ before a Cloudwatch alarm is generated"
+}
+
 variable "lambda_min_concurrency" {
   default     = 10
   type        = number

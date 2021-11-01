@@ -7,12 +7,12 @@ resource "aws_cloudwatch_metric_alarm" "sqs_deadletter_cloudwatch_alarm" {
   namespace           = "AWS/SQS"
   period              = "300"
   statistic           = "Sum"
-  threshold           = "1"
+  threshold           = var.dlq_alarm_threshold
 
   dimensions = {
     QueueName = aws_sqs_queue.email_dead_letter_queue.name
   }
-  alarm_description = "This metric monitors number of deadletters on the queue"
+  alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.email_dead_letter_queue.name}"
   alarm_actions     = [data.aws_sns_topic.slack_events.arn]
 }
 
