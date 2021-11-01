@@ -166,9 +166,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                         .orElse(AuditService.UNKNOWN),
                                 email,
                                 ipAddress,
-                                userProfile
-                                        .map(UserProfile::getPhoneNumber)
-                                        .orElse(AuditService.UNKNOWN));
+                                request.getProfileInformation());
                         sessionService.save(session.setState(nextState));
                         LOGGER.info(
                                 "Phone number updated and session state changed. Session: {}, Session state {}",

@@ -148,7 +148,7 @@ class UpdateProfileHandlerTest {
                         "",
                         TEST_EMAIL_ADDRESS,
                         "",
-                        "");
+                        PHONE_NUMBER);
     }
 
     @Test

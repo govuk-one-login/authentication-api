@@ -43,11 +43,11 @@ public class CounterFraudAuditLambda extends BaseAuditHandler {
             eventData.put("user.id", encodeHexString(hmacSha256(user.getId(), hmacKey)));
         }
 
-        if (isPresent(user.getId())) {
+        if (isPresent(user.getEmail())) {
             eventData.put("user.email", encodeHexString(hmacSha256(user.getEmail(), hmacKey)));
         }
 
-        if (isPresent(user.getId())) {
+        if (isPresent(user.getPhoneNumber())) {
             eventData.put(
                     "user.phone", encodeHexString(hmacSha256(user.getPhoneNumber(), hmacKey)));
         }
