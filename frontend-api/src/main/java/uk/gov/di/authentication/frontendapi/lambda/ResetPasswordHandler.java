@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordWithCodeRequest;
@@ -116,7 +117,7 @@ public class ResetPasswordHandler
                                                 NotificationType.PASSWORD_RESET_CONFIRMATION);
                                 LOGGER.info("Placing message on queue");
                                 sqsClient.send(serialiseRequest(notifyRequest));
-                            } catch (JsonProcessingException e) {
+                            } catch (JsonProcessingException | ConstraintViolationException e) {
                                 LOGGER.error("Incorrect parameters in ResetPassword request");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1001);
