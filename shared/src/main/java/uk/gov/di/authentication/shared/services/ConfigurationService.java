@@ -8,6 +8,8 @@ import com.amazonaws.services.simplesystemsmanagement.model.GetParametersRequest
 import com.amazonaws.services.simplesystemsmanagement.model.ParameterNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.shared.configuration.AuditPublisherConfiguration;
+import uk.gov.di.authentication.shared.configuration.BaseLambdaConfiguration;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -17,7 +19,7 @@ import java.util.stream.Collectors;
 
 import static java.text.MessageFormat.format;
 
-public class ConfigurationService {
+public class ConfigurationService implements BaseLambdaConfiguration, AuditPublisherConfiguration {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ConfigurationService.class);
     private static ConfigurationService configurationService;
@@ -44,10 +46,6 @@ public class ConfigurationService {
 
     public long getAuthCodeExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("AUTH_CODE_EXPIRY", "300"));
-    }
-
-    public String getAwsRegion() {
-        return System.getenv("AWS_REGION");
     }
 
     public Optional<String> getBaseURL() {
@@ -86,24 +84,12 @@ public class ConfigurationService {
         return System.getenv("EMAIL_QUEUE_URL");
     }
 
-    public String getEnvironment() {
-        return System.getenv("ENVIRONMENT");
-    }
-
-    public String getEventsSnsTopicArn() {
-        return System.getenv("EVENTS_SNS_TOPIC_ARN");
-    }
-
     public String getFrontendBaseUrl() {
         return System.getenv().getOrDefault("FRONTEND_BASE_URL", "");
     }
 
     public long getIDTokenExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("ID_TOKEN_EXPIRY", "120"));
-    }
-
-    public Optional<String> getLocalstackEndpointUri() {
-        return Optional.ofNullable(System.getenv("LOCALSTACK_ENDPOINT"));
     }
 
     public URI getLoginURI() {
@@ -208,10 +194,6 @@ public class ConfigurationService {
 
     public String getTokenSigningKeyAlias() {
         return System.getenv("TOKEN_SIGNING_KEY_ALIAS");
-    }
-
-    public String getAuditSigningKeyAlias() {
-        return System.getenv("AUDIT_SIGNING_KEY_ALIAS");
     }
 
     public String getAuditStorageS3Bucket() {
