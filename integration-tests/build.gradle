@@ -14,7 +14,7 @@ dependencies {
             configurations.glassfish,
             configurations.nimbus,
             "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.13.0",
-            "software.amazon.awssdk:sqs:2.17.63",
+            "software.amazon.awssdk:sqs:2.17.71",
             "com.amazonaws:aws-java-sdk-dynamodb:1.12.91",
             "org.bouncycastle:bcpkix-jdk15on:1.69",
             "io.lettuce:lettuce-core:6.1.5.RELEASE",
