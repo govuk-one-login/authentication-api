@@ -9,6 +9,13 @@ public class SignupRequest extends BaseFrontendRequest {
     @NotNull
     private String password;
 
+    public SignupRequest() {}
+
+    public SignupRequest(String email, String password) {
+        this.email = email;
+        this.password = password;
+    }
+
     public String getPassword() {
         return password;
     }

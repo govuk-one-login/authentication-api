@@ -13,6 +13,15 @@ public class UpdateProfileRequest extends BaseFrontendRequest {
     @NotNull
     private String profileInformation;
 
+    public UpdateProfileRequest() {}
+
+    public UpdateProfileRequest(
+            String email, UpdateProfileType updateProfileType, String profileInformation) {
+        this.email = email;
+        this.updateProfileType = updateProfileType;
+        this.profileInformation = profileInformation;
+    }
+
     public UpdateProfileType getUpdateProfileType() {
         return updateProfileType;
     }

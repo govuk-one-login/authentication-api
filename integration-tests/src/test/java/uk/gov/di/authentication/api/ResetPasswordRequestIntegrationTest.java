@@ -59,7 +59,7 @@ public class ResetPasswordRequestIntegrationTest extends IntegrationTestEndpoint
                 RequestHelper.request(
                         FRONTEND_ROOT_RESOURCE_URL,
                         RESET_PASSWORD_ENDPOINT,
-                        ResetPasswordRequest.create(email),
+                        new ResetPasswordRequest(email),
                         headers);
 
         notifyStub.waitForRequest(60);
@@ -90,7 +90,7 @@ public class ResetPasswordRequestIntegrationTest extends IntegrationTestEndpoint
                 RequestHelper.request(
                         FRONTEND_ROOT_RESOURCE_URL,
                         RESET_PASSWORD_ENDPOINT,
-                        ResetPasswordRequest.create(email),
+                        new ResetPasswordRequest(email),
                         headers);
 
         assertEquals(400, response.getStatus());

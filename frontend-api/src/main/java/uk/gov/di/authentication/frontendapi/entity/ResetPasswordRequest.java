@@ -4,16 +4,12 @@ public class ResetPasswordRequest extends BaseFrontendRequest {
 
     public ResetPasswordRequest() {}
 
-    private ResetPasswordRequest(String email) {
+    public ResetPasswordRequest(String email) {
         this.email = email;
     }
 
     @Override
     public String toString() {
         return "ResetPasswordRequest{" + "email='" + email + '\'' + '}';
-    }
-
-    public static ResetPasswordRequest create(String email) {
-        return new ResetPasswordRequest(email);
     }
 }

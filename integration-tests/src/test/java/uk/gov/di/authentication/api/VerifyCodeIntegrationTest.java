@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 
 import java.io.IOException;
 import java.net.URI;
@@ -43,7 +44,7 @@ public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
     private static final String CLIENT_ID = "test-client-id";
     private static final String REDIRECT_URI = "http://localhost/redirect";
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
 
     @Test
     public void shouldCallVerifyCodeEndpointToVerifyEmailCodeAndReturn200() throws IOException {

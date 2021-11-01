@@ -10,18 +10,13 @@ public class LoginRequest extends BaseFrontendRequest {
     private String password;
 
     public LoginRequest() {}
-    ;
 
-    private LoginRequest(String email, String password) {
+    public LoginRequest(String email, String password) {
         this.email = email;
         this.password = password;
     }
 
     public String getPassword() {
         return password;
-    }
-
-    public static LoginRequest create(String email, String password) {
-        return new LoginRequest(email, password);
     }
 }

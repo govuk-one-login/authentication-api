@@ -6,6 +6,7 @@ import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.BaseFrontendRequest;
+import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
@@ -36,7 +37,7 @@ public class UserExistsIntegrationTest extends IntegrationTestEndpoints {
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
         headers.add("Session-Id", sessionId);
         headers.add("X-API-Key", FRONTEND_API_KEY);
-        BaseFrontendRequest request = new BaseFrontendRequest(emailAddress);
+        BaseFrontendRequest request = new CheckUserExistsRequest(emailAddress);
 
         Response response =
                 RequestHelper.request(
@@ -60,7 +61,7 @@ public class UserExistsIntegrationTest extends IntegrationTestEndpoints {
         headers.add("Session-Id", sessionId);
         headers.add("X-API-Key", FRONTEND_API_KEY);
         RedisHelper.setSessionState(sessionId, SessionState.NEW);
-        BaseFrontendRequest request = new BaseFrontendRequest(emailAddress);
+        BaseFrontendRequest request = new CheckUserExistsRequest(emailAddress);
         Response response =
                 RequestHelper.request(
                         FRONTEND_ROOT_RESOURCE_URL, USEREXISTS_ENDPOINT, request, headers);

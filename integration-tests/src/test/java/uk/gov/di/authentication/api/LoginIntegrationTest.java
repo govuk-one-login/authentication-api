@@ -104,7 +104,7 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
                 RequestHelper.request(
                         FRONTEND_ROOT_RESOURCE_URL,
                         LOGIN_ENDPOINT,
-                        LoginRequest.create(email, password),
+                        new LoginRequest(email, password),
                         headers);
 
         assertEquals(200, response.getStatus());
@@ -140,7 +140,7 @@ public class LoginIntegrationTest extends IntegrationTestEndpoints {
                 RequestHelper.request(
                         FRONTEND_ROOT_RESOURCE_URL,
                         LOGIN_ENDPOINT,
-                        LoginRequest.create(email, password),
+                        new LoginRequest(email, password),
                         headers);
 
         assertEquals(401, response.getStatus());

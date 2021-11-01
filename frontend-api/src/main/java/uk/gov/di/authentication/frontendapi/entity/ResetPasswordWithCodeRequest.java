@@ -12,6 +12,13 @@ public class ResetPasswordWithCodeRequest {
     @NotNull
     private String password;
 
+    public ResetPasswordWithCodeRequest() {}
+
+    public ResetPasswordWithCodeRequest(String code, String password) {
+        this.code = code;
+        this.password = password;
+    }
+
     public String getCode() {
         return code;
     }
