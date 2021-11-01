@@ -129,17 +129,58 @@ public class CounterFraudAuditLambdaTest {
     }
 
     @Test
-    void shouldHashNotHashMissingSensitiveFields() {
+    void shouldNotHashMissingSensitiveFields_Id() {
         var handler = new CounterFraudAuditLambda(kms, config);
 
-        var payload = AuditEvent.newBuilder().setUser(User.newBuilder().build()).build();
+        var payload =
+                AuditEvent.newBuilder()
+                        .setUser(
+                                User.newBuilder()
+                                        .setEmail("test-email")
+                                        .setPhoneNumber("test-phone")
+                                        .build())
+                        .build();
+
+        handler.handleAuditEvent(payload);
+
+        LogEvent logEvent = appender.getEvents().get(0);
+
+        assertThat(logEvent, doesNotHaveObjectMessageProperty("user.id"));
+    }
+
+    @Test
+    void shouldNotHashMissingSensitiveFields_Email() {
+        var handler = new CounterFraudAuditLambda(kms, config);
+
+        var payload =
+                AuditEvent.newBuilder()
+                        .setUser(
+                                User.newBuilder()
+                                        .setId("test-id")
+                                        .setPhoneNumber("test-phone")
+                                        .build())
+                        .build();
 
         handler.handleAuditEvent(payload);
 
         LogEvent logEvent = appender.getEvents().get(0);
 
         assertThat(logEvent, doesNotHaveObjectMessageProperty("user.email"));
-        assertThat(logEvent, doesNotHaveObjectMessageProperty("user.id"));
+    }
+
+    @Test
+    void shouldNotHashMissingSensitiveFields_Phone() {
+        var handler = new CounterFraudAuditLambda(kms, config);
+
+        var payload =
+                AuditEvent.newBuilder()
+                        .setUser(User.newBuilder().setId("test-id").setEmail("test-email").build())
+                        .build();
+
+        handler.handleAuditEvent(payload);
+
+        LogEvent logEvent = appender.getEvents().get(0);
+
         assertThat(logEvent, doesNotHaveObjectMessageProperty("user.phone"));
     }
 
