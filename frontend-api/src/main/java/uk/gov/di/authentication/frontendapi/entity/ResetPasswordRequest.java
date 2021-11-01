@@ -1,15 +1,19 @@
 package uk.gov.di.authentication.frontendapi.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 public class ResetPasswordRequest extends BaseFrontendRequest {
 
-    public ResetPasswordRequest(@JsonProperty(required = true, value = "email") String email) {
-        super(email);
+    public ResetPasswordRequest() {}
+
+    private ResetPasswordRequest(String email) {
+        this.email = email;
     }
 
     @Override
     public String toString() {
         return "ResetPasswordRequest{" + "email='" + email + '\'' + '}';
+    }
+
+    public static ResetPasswordRequest create(String email) {
+        return new ResetPasswordRequest(email);
     }
 }

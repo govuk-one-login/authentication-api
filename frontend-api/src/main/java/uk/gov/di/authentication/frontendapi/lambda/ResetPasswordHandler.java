@@ -14,6 +14,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -34,7 +35,7 @@ public class ResetPasswordHandler
     private final AwsSqsClient sqsClient;
     private final CodeStorageService codeStorageService;
     private final ValidationService validationService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ResetPasswordHandler.class);
 

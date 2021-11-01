@@ -33,7 +33,7 @@ public class AuthenticateIntegrationTest extends IntegrationTestEndpoints {
         DynamoHelper.signUp(email, "wrong-password");
 
         Response response =
-                RequestHelper.buildRequest(LOGIN_ENDPOINT, new LoginRequest(email, password));
+                RequestHelper.buildRequest(LOGIN_ENDPOINT, LoginRequest.create(email, password));
 
         assertEquals(401, response.getStatus());
     }

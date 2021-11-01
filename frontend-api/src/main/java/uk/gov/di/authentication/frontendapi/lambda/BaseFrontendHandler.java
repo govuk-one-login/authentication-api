@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.frontendapi.entity.BaseFrontendRequest;
@@ -102,7 +103,7 @@ public abstract class BaseFrontendHandler<T>
         final T request;
         try {
             request = objectMapper.readValue(input.getBody(), clazz);
-        } catch (JsonProcessingException e) {
+        } catch (JsonProcessingException | ConstraintViolationException e) {
             LOG.error(
                     "Request is missing parameters. The body present in request: {}",
                     input.getBody());
