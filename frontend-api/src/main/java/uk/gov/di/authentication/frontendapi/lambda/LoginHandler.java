@@ -96,9 +96,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 "Request received to the LoginHandler with session: {}",
                 userContext.getSession().getSessionId());
         try {
-            LoginRequest loginRequest = objectMapper.readValue(input.getBody(), LoginRequest.class);
             UserProfile userProfile =
-                    authenticationService.getUserProfileByEmail(loginRequest.getEmail());
+                    authenticationService.getUserProfileByEmail(request.getEmail());
 
             if (Objects.isNull(userProfile)) {
                 LOGGER.error(
@@ -120,7 +119,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
             SessionState currentState = userContext.getSession().getState();
             int incorrectPasswordCount =
-                    codeStorageService.getIncorrectPasswordCount(loginRequest.getEmail());
+                    codeStorageService.getIncorrectPasswordCount(request.getEmail());
 
             if (incorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
                 LOGGER.info(
@@ -159,7 +158,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
             boolean userIsAMigratedUser =
                     userMigrationService.userHasBeenPartlyMigrated(
-                            userProfile.getLegacySubjectID(), loginRequest.getEmail());
+                            userProfile.getLegacySubjectID(), request.getEmail());
             boolean hasValidCredentials;
             if (userIsAMigratedUser) {
                 LOGGER.info(
@@ -167,15 +166,14 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         userContext.getSession().getSessionId());
                 hasValidCredentials =
                         userMigrationService.processMigratedUser(
-                                loginRequest.getEmail(), loginRequest.getPassword());
+                                request.getEmail(), request.getPassword());
             } else {
                 hasValidCredentials =
-                        authenticationService.login(
-                                loginRequest.getEmail(), loginRequest.getPassword());
+                        authenticationService.login(request.getEmail(), request.getPassword());
             }
 
             if (!hasValidCredentials) {
-                codeStorageService.increaseIncorrectPasswordCount(loginRequest.getEmail());
+                codeStorageService.increaseIncorrectPasswordCount(request.getEmail());
                 LOGGER.info(
                         "Invalid login credentials entered with session: {}",
                         userContext.getSession().getSessionId());
@@ -186,7 +184,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         userContext.getSession().getSessionId(),
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        loginRequest.getEmail(),
+                        request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN);
 
@@ -194,7 +192,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             }
 
             if (incorrectPasswordCount != 0) {
-                codeStorageService.deleteIncorrectPasswordCount(loginRequest.getEmail());
+                codeStorageService.deleteIncorrectPasswordCount(request.getEmail());
             }
 
             var nextState =

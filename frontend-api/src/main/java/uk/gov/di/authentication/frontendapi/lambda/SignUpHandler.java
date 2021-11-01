@@ -85,14 +85,11 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                     stateMachine.transition(
                             userContext.getSession().getState(), USER_HAS_CREATED_A_PASSWORD);
 
-            SignupRequest signupRequest =
-                    objectMapper.readValue(input.getBody(), SignupRequest.class);
-
             Optional<ErrorResponse> passwordValidationErrors =
-                    validationService.validatePassword(signupRequest.getPassword());
+                    validationService.validatePassword(request.getPassword());
 
             if (passwordValidationErrors.isEmpty()) {
-                if (authenticationService.userExists(signupRequest.getEmail())) {
+                if (authenticationService.userExists(request.getEmail())) {
 
                     auditService.submitAuditEvent(
                             FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
@@ -103,19 +100,19 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                                     .map(ClientRegistry::getClientID)
                                     .orElse(AuditService.UNKNOWN),
                             AuditService.UNKNOWN,
-                            signupRequest.getEmail(),
+                            request.getEmail(),
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN);
 
                     LOG.info(
                             "User with email {} already exists for session: {}",
-                            signupRequest.getEmail(),
+                            request.getEmail(),
                             userContext.getSession().getSessionId());
                     return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
                 }
                 authenticationService.signUp(
-                        signupRequest.getEmail(),
-                        signupRequest.getPassword(),
+                        request.getEmail(),
+                        request.getPassword(),
                         new Subject(),
                         new TermsAndConditions(
                                 configurationService.getTermsAndConditionsVersion(),
@@ -130,7 +127,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                                 .map(ClientRegistry::getClientID)
                                 .orElse(AuditService.UNKNOWN),
                         AuditService.UNKNOWN,
-                        signupRequest.getEmail(),
+                        request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN);
 
@@ -138,7 +135,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                         userContext
                                 .getSession()
                                 .setState(nextState)
-                                .setEmailAddress(signupRequest.getEmail()));
+                                .setEmailAddress(request.getEmail()));
 
                 LOG.info(
                         "SignUpHandler successfully processed request for session: {}",
