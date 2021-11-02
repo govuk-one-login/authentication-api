@@ -218,9 +218,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     200, new BaseAPIResponse(userContext.getSession().getState()));
         } catch (JsonProcessingException e) {
             LOGGER.error(
-                    "MFA request is missing parameters. session: {} Request Body: {}",
-                    userContext.getSession().getSessionId(),
-                    input.getBody());
+                    "MFA request is missing parameters. session: {}",
+                    userContext.getSession().getSessionId());
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
             LOGGER.error(
