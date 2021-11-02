@@ -1,3 +1,11 @@
+module "openid_configuration_role" {
+  source = "../modules/lambda-role"
+
+  role_name   = "openid-configuration"
+  environment = var.environment
+  vpc_arn     = local.authentication_vpc_arn
+}
+
 module "openid_configuration_discovery" {
   source = "../modules/endpoint-module"
 
@@ -7,11 +15,9 @@ module "openid_configuration_discovery" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT             = var.environment
-    BASE_URL                = local.api_base_url
-    EVENTS_SNS_TOPIC_ARN    = aws_sns_topic.events.arn
-    AUDIT_SIGNING_KEY_ALIAS = local.audit_signing_key_alias_name
-    LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
+    ENVIRONMENT         = var.environment
+    BASE_URL            = local.api_base_url
+    LOCALSTACK_ENDPOINT = var.use_localstack ? var.localstack_endpoint : null
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.WellknownHandler::handleRequest"
 
@@ -22,7 +28,7 @@ module "openid_configuration_discovery" {
   authentication_vpc_arn                 = local.authentication_vpc_arn
   security_group_id                      = local.authentication_security_group_id
   subnet_id                              = local.authentication_subnet_ids
-  lambda_role_arn                        = local.lambda_iam_role_arn
+  lambda_role_arn                        = module.openid_configuration_role.arn
   logging_endpoint_enabled               = var.logging_endpoint_enabled
   logging_endpoint_arn                   = var.logging_endpoint_arn
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
@@ -43,5 +49,6 @@ module "openid_configuration_discovery" {
     aws_api_gateway_rest_api.di_authentication_api,
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
+    module.openid_configuration_role
   ]
 }
