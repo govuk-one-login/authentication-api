@@ -7,6 +7,7 @@ module "delete_account" {
   handler_environment_variables = {
     ENVIRONMENT             = var.environment
     DYNAMO_ENDPOINT         = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
     EMAIL_QUEUE_URL         = aws_sqs_queue.email_queue.id
     EVENTS_SNS_TOPIC_ARN    = data.aws_sns_topic.events.arn
     AUDIT_SIGNING_KEY_ALIAS = local.audit_signing_key_alias_name
