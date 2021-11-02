@@ -2,14 +2,16 @@ package uk.gov.di.authentication.frontendapi.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import jakarta.validation.constraints.NotNull;
+import uk.gov.di.authentication.shared.serialization.EmailDeserializer;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class BaseFrontendRequest {
+public abstract class BaseFrontendRequest {
+    @NotNull
+    @JsonProperty("email")
+    @JsonDeserialize(using = EmailDeserializer.class)
     protected String email;
-
-    public BaseFrontendRequest(@JsonProperty(required = true, value = "email") String email) {
-        this.email = email;
-    }
 
     public String getEmail() {
         return email;

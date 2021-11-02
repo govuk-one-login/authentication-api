@@ -1,20 +1,19 @@
 package uk.gov.di.authentication.frontendapi.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotNull;
 
 public class SignupRequest extends BaseFrontendRequest {
 
+    @JsonProperty(required = true, value = "password")
+    @NotNull
     private String password;
 
-    public SignupRequest(
-            @JsonProperty(required = true, value = "email") String email,
-            @JsonProperty(required = true, value = "password") String password) {
-        super(email.toLowerCase());
-        this.password = password;
-    }
+    public SignupRequest() {}
 
-    public String getEmail() {
-        return email;
+    public SignupRequest(String email, String password) {
+        this.email = email;
+        this.password = password;
     }
 
     public String getPassword() {

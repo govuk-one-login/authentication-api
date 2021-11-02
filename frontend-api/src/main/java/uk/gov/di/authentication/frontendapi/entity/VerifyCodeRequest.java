@@ -1,21 +1,25 @@
 package uk.gov.di.authentication.frontendapi.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotNull;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 
 public class VerifyCodeRequest {
 
-    @JsonProperty private NotificationType notificationType;
+    public VerifyCodeRequest() {}
 
-    @JsonProperty private String code;
-
-    public VerifyCodeRequest(
-            @JsonProperty(required = true, value = "notificationType")
-                    NotificationType notificationType,
-            @JsonProperty(required = true, value = "code") String code) {
+    public VerifyCodeRequest(NotificationType notificationType, String code) {
         this.notificationType = notificationType;
         this.code = code;
     }
+
+    @JsonProperty(required = true, value = "notificationType")
+    @NotNull
+    private NotificationType notificationType;
+
+    @JsonProperty(required = true, value = "code")
+    @NotNull
+    private String code;
 
     public NotificationType getNotificationType() {
         return notificationType;

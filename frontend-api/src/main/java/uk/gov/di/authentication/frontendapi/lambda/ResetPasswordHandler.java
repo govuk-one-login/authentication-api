@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordWithCodeRequest;
@@ -14,6 +15,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -34,7 +36,7 @@ public class ResetPasswordHandler
     private final AwsSqsClient sqsClient;
     private final CodeStorageService codeStorageService;
     private final ValidationService validationService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ResetPasswordHandler.class);
 
@@ -115,7 +117,7 @@ public class ResetPasswordHandler
                                                 NotificationType.PASSWORD_RESET_CONFIRMATION);
                                 LOGGER.info("Placing message on queue");
                                 sqsClient.send(serialiseRequest(notifyRequest));
-                            } catch (JsonProcessingException e) {
+                            } catch (JsonProcessingException | ConstraintViolationException e) {
                                 LOGGER.error("Incorrect parameters in ResetPassword request");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1001);

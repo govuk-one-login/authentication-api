@@ -1,25 +1,25 @@
 package uk.gov.di.authentication.frontendapi.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotNull;
 
 public class UpdateProfileRequest extends BaseFrontendRequest {
 
+    @JsonProperty(required = true, value = "updateProfileType")
+    @NotNull
     private UpdateProfileType updateProfileType;
+
+    @JsonProperty(required = true, value = "profileInformation")
+    @NotNull
     private String profileInformation;
 
+    public UpdateProfileRequest() {}
+
     public UpdateProfileRequest(
-            @JsonProperty(required = true, value = "email") String email,
-            @JsonProperty(required = true, value = "updateProfileType")
-                    UpdateProfileType updateProfileType,
-            @JsonProperty(required = true, value = "profileInformation")
-                    String profileInformation) {
-        super(email);
+            String email, UpdateProfileType updateProfileType, String profileInformation) {
+        this.email = email;
         this.updateProfileType = updateProfileType;
         this.profileInformation = profileInformation;
-    }
-
-    public String getEmail() {
-        return email;
     }
 
     public UpdateProfileType getUpdateProfileType() {

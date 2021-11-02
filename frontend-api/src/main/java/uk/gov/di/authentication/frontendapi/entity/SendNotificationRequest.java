@@ -1,22 +1,17 @@
 package uk.gov.di.authentication.frontendapi.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotNull;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 
 public class SendNotificationRequest extends BaseFrontendRequest {
 
-    private final NotificationType notificationType;
-    private final String phoneNumber;
+    @JsonProperty(required = true, value = "notificationType")
+    @NotNull
+    private NotificationType notificationType;
 
-    public SendNotificationRequest(
-            @JsonProperty(required = true, value = "email") String email,
-            @JsonProperty(required = true, value = "notificationType")
-                    NotificationType notificationType,
-            @JsonProperty(value = "phoneNumber") String phoneNumber) {
-        super(email);
-        this.notificationType = notificationType;
-        this.phoneNumber = phoneNumber;
-    }
+    @JsonProperty(value = "phoneNumber")
+    private String phoneNumber;
 
     public NotificationType getNotificationType() {
         return notificationType;
