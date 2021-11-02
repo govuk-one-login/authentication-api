@@ -104,9 +104,7 @@ public abstract class BaseFrontendHandler<T>
         try {
             request = objectMapper.readValue(input.getBody(), clazz);
         } catch (JsonProcessingException | ConstraintViolationException e) {
-            LOG.error(
-                    "Request is missing parameters. The body present in request: {}",
-                    input.getBody());
+            LOG.error("Request is missing parameters.");
             onRequestValidationError(context);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }

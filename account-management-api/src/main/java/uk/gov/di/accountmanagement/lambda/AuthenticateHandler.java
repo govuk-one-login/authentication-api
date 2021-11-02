@@ -91,8 +91,7 @@ public class AuthenticateHandler
                                 return generateEmptySuccessApiGatewayResponse();
                             } catch (JsonProcessingException e) {
                                 LOGGER.error(
-                                        "Request is missing parameters. The body present in request: {}",
-                                        input.getBody());
+                                        "Request is missing parameters. The body present in request: ");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1001);
                             }

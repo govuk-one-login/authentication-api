@@ -238,9 +238,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     200, new LoginResponse(concatPhoneNumber, userContext.getSession().getState()));
         } catch (JsonProcessingException e) {
             LOGGER.error(
-                    "Request is missing parameters with session: {}. The body present in request: {}",
-                    userContext.getSession().getSessionId(),
-                    input.getBody());
+                    "Request is missing parameters with session: {}.",
+                    userContext.getSession().getSessionId());
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
             LOGGER.error(
