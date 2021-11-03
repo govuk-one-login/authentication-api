@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
@@ -29,6 +30,7 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.AuthorizationService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -56,6 +58,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.entity.RequestParameters.COOKIE_CONSENT;
 import static uk.gov.di.authentication.oidc.lambda.AuthCodeHandler.COOKIE_CONSENT_ACCEPT;
@@ -66,6 +70,7 @@ import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LE
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 
 class AuthCodeHandlerTest {
     private static final String SESSION_ID = "a-session-id";
@@ -81,6 +86,7 @@ class AuthCodeHandlerTest {
     private final Context context = mock(Context.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
+    private final AuditService auditService = mock(AuditService.class);
     private final VectorOfTrust vectorOfTrust = mock(VectorOfTrust.class);
     private AuthCodeHandler handler;
 
@@ -99,7 +105,9 @@ class AuthCodeHandlerTest {
                         authorisationCodeService,
                         configurationService,
                         authorizationService,
-                        clientSessionService);
+                        clientSessionService,
+                        auditService);
+        when(context.getAwsRequestId()).thenReturn("aws-session-id");
     }
 
     private static Stream<Arguments> upliftTestParameters() {
@@ -151,6 +159,7 @@ class AuthCodeHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
         assertThat(response, hasStatus(302));
@@ -163,6 +172,17 @@ class AuthCodeHandlerTest {
                 not(containsString(COOKIE_CONSENT_PARAM_NAME)));
 
         assertThat(session.getCurrentCredentialStrength(), equalTo(finalLevel));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTH_CODE_ISSUED,
+                        "aws-session-id",
+                        SESSION_ID,
+                        clientID.getValue(),
+                        AuditService.UNKNOWN,
+                        EMAIL,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN);
     }
 
     @ParameterizedTest
@@ -200,6 +220,7 @@ class AuthCodeHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
         event.setQueryStringParameters(Map.of(COOKIE_CONSENT, cookieValue));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
         assertThat(response, hasStatus(302));
@@ -212,6 +233,17 @@ class AuthCodeHandlerTest {
                 containsString(COOKIE_CONSENT_PARAM_NAME + "=" + returnedCookieConsentParamValue));
 
         assertThat(session.getCurrentCredentialStrength(), equalTo(MEDIUM_LEVEL));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTH_CODE_ISSUED,
+                        "aws-session-id",
+                        SESSION_ID,
+                        clientID.getValue(),
+                        AuditService.UNKNOWN,
+                        EMAIL,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN);
     }
 
     @Test
@@ -222,6 +254,8 @@ class AuthCodeHandlerTest {
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1000));
+
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -237,6 +271,8 @@ class AuthCodeHandlerTest {
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1016));
+
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -262,6 +298,8 @@ class AuthCodeHandlerTest {
         assertEquals(
                 "http://localhost/redirect?error=invalid_client&error_description=Client+authentication+failed",
                 response.getHeaders().get(ResponseHeaders.LOCATION));
+
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -287,6 +325,8 @@ class AuthCodeHandlerTest {
         assertEquals(
                 "http://localhost/redirect?error=invalid_request&error_description=Invalid+request",
                 response.getHeaders().get(ResponseHeaders.LOCATION));
+
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -321,6 +361,8 @@ class AuthCodeHandlerTest {
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1017));
+
+        verifyNoInteractions(auditService);
     }
 
     private AuthenticationRequest generateValidSessionAndAuthRequest(

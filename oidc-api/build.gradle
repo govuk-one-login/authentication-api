@@ -22,7 +22,8 @@ dependencies {
             project(":client-registry-api")
 
     testImplementation configurations.tests,
-            configurations.lambda_tests
+            configurations.lambda_tests,
+            project(":shared-test")
     testRuntimeOnly configurations.test_runtime
 }
 
