@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id "jacoco"
 }
 
 group "uk.gov.di.authentication.accountmigration"
@@ -36,4 +37,11 @@ task buildZip(type: Zip) {
     into("lib") {
         from configurations.runtimeClasspath
     }
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled true
+    }
+    dependsOn "test"
 }
