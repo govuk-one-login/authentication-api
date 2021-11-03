@@ -15,7 +15,7 @@ dependencies {
     implementation configurations.bouncycastle,
             configurations.lambda,
             configurations.nimbus,
-            "com.amazonaws:aws-java-sdk-s3:1.12.91",
+            configurations.s3,
             "com.opencsv:opencsv:5.5.2",
             project(":shared")
 
