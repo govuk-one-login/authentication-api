@@ -227,7 +227,7 @@ public class RedisExtension
 
     @Override
     public void beforeAll(ExtensionContext context) throws Exception {
-        redis = new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD);
+        redis = new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false);
         RedisURI.Builder builder =
                 RedisURI.builder().withHost(REDIS_HOST).withPort(6379).withSsl(false);
         if (REDIS_PASSWORD.isPresent()) builder.withPassword(REDIS_PASSWORD.get().toCharArray());
