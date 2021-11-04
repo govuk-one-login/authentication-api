@@ -105,8 +105,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                             AuditService.UNKNOWN);
 
                     LOG.info(
-                            "User with email {} already exists for session: {}",
-                            request.getEmail(),
+                            "User already exists for session: {}",
                             userContext.getSession().getSessionId());
                     return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
                 }

@@ -137,10 +137,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
         try {
             if (!session.validateSession(request.getEmail())) {
-                LOGGER.info(
-                        "Invalid session: {}. Email {}",
-                        session.getSessionId(),
-                        request.getEmail());
+                LOGGER.info("Invalid session: {}", session.getSessionId());
                 return generateErrorResponse(ErrorResponse.ERROR_1000, context);
             }
 
@@ -257,9 +254,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                         .map(UserProfile::getPhoneNumber)
                                         .orElse(AuditService.UNKNOWN));
                         LOGGER.info(
-                                "Updated terms and conditions for session: {}. Email {} for Version {}",
+                                "Updated terms and conditions for session: {} for Version {}",
                                 session.getSessionId(),
-                                request.getEmail(),
                                 configurationService.getTermsAndConditionsVersion());
 
                         var nextState =
