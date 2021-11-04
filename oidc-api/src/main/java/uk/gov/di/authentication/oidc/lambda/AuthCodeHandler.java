@@ -12,6 +12,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -21,6 +22,8 @@ import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper.SessionCookieIds;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.AuthorizationService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -60,6 +63,7 @@ public class AuthCodeHandler
     private final ConfigurationService configurationService;
     private final AuthorizationService authorizationService;
     private final ClientSessionService clientSessionService;
+    private final AuditService auditService;
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             userJourneyStateMachine();
 
@@ -68,12 +72,14 @@ public class AuthCodeHandler
             AuthorisationCodeService authorisationCodeService,
             ConfigurationService configurationService,
             AuthorizationService authorizationService,
-            ClientSessionService clientSessionService) {
+            ClientSessionService clientSessionService,
+            AuditService auditService) {
         this.sessionService = sessionService;
         this.authorisationCodeService = authorisationCodeService;
         this.configurationService = configurationService;
         this.authorizationService = authorizationService;
         this.clientSessionService = clientSessionService;
+        this.auditService = auditService;
     }
 
     public AuthCodeHandler() {
@@ -82,6 +88,7 @@ public class AuthCodeHandler
         authorisationCodeService = new AuthorisationCodeService(configurationService);
         authorizationService = new AuthorizationService(configurationService);
         clientSessionService = new ClientSessionService(configurationService);
+        auditService = new AuditService();
     }
 
     @Override
@@ -212,6 +219,15 @@ public class AuthCodeHandler
                                 LOGGER.info(
                                         "AuthCodeHandler successfully processed request for session: {}",
                                         session.getSessionId());
+                                auditService.submitAuditEvent(
+                                        OidcAuditableEvent.AUTH_CODE_ISSUED,
+                                        context.getAwsRequestId(),
+                                        session.getSessionId(),
+                                        authenticationRequest.getClientID().getValue(),
+                                        AuditService.UNKNOWN,
+                                        session.getEmailAddress(),
+                                        IpAddressHelper.extractIpAddress(input),
+                                        AuditService.UNKNOWN);
                                 return new APIGatewayProxyResponseEvent()
                                         .withStatusCode(302)
                                         .withHeaders(
