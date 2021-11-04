@@ -135,8 +135,7 @@ public class UpdatePhoneNumberHandler
                                 return generateEmptySuccessApiGatewayResponse();
                             } catch (JsonProcessingException | IllegalArgumentException e) {
                                 LOGGER.error(
-                                        "UpdatePhoneNumber request is missing or contains invalid parameters.",
-                                        e);
+                                        "UpdatePhoneNumber request is missing or contains invalid parameters.");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1001);
                             }

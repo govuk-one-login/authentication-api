@@ -146,8 +146,7 @@ public class UpdateEmailHandler
                                 return generateEmptySuccessApiGatewayResponse();
                             } catch (JsonProcessingException | IllegalArgumentException e) {
                                 LOGGER.error(
-                                        "UpdateInfo request is missing or contains invalid parameters.",
-                                        e);
+                                        "UpdateInfo request is missing or contains invalid parameters.");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1001);
                             }
