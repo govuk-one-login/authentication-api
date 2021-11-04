@@ -91,7 +91,7 @@ subprojects {
 
         sqs "software.amazon.awssdk:sqs:2.17.73"
 
-        s3 "com.amazonaws:aws-java-sdk-s3:1.12.101"
+        s3 "com.amazonaws:aws-java-sdk-s3:1.12.102"
 
         tests "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit}",
                 "org.junit.jupiter:junit-jupiter-params:${dependencyVersions.junit}",
