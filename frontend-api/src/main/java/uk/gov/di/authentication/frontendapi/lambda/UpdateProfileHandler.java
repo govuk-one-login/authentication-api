@@ -153,7 +153,9 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                     {
                         var nextState =
                                 stateMachine.transition(
-                                        session.getState(), USER_ENTERED_A_NEW_PHONE_NUMBER);
+                                        session.getState(),
+                                        USER_ENTERED_A_NEW_PHONE_NUMBER,
+                                        userContext);
                         authenticationService.updatePhoneNumber(
                                 request.getEmail(), request.getProfileInformation());
                         auditService.submitAuditEvent(
@@ -211,7 +213,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
                         var nextState =
                                 stateMachine.transition(
-                                        session.getState(), USER_HAS_ACTIONED_CONSENT);
+                                        session.getState(), USER_HAS_ACTIONED_CONSENT, userContext);
 
                         sessionService.save(session.setState(nextState));
 

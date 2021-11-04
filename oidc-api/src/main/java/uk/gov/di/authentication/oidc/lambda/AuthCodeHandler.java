@@ -124,7 +124,8 @@ public class AuthCodeHandler
                                 nextState =
                                         stateMachine.transition(
                                                 session.getState(),
-                                                SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE);
+                                                SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE,
+                                                UserContext.builder(session).build());
                             } catch (StateMachine.InvalidStateTransitionException e) {
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1017);
