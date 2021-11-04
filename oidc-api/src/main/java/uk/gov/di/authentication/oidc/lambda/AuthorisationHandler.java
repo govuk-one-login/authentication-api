@@ -220,7 +220,6 @@ public class AuthorisationHandler
         try {
             nextState = stateMachine.transition(session.getState(), sessionAction, userContext);
         } catch (StateMachine.InvalidStateTransitionException e) {
-            LOGGER.error("Invalid state transition in authorize", e);
             throw new RuntimeException(e);
         }
         URI redirectUri;

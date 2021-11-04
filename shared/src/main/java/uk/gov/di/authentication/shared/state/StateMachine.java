@@ -108,12 +108,12 @@ public class StateMachine<T, A, C> {
                         > 1) {
             throw handleNoTransitionContext(from, action);
         }
-        var sessionId =  context
-                .filter(c -> c instanceof UserContext)
-                .map(UserContext.class::cast)
-                .map(UserContext::getSession)
-                .map(Session::getSessionId)
-                .orElse(null);
+        var sessionId =
+                context.filter(c -> c instanceof UserContext)
+                        .map(UserContext.class::cast)
+                        .map(UserContext::getSession)
+                        .map(Session::getSessionId)
+                        .orElse(null);
         T to =
                 states.getOrDefault(from, emptyList()).stream()
                         .filter(

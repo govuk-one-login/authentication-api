@@ -154,10 +154,6 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                     e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
-            LOG.error(
-                    "Invalid transition in user journey for session: {}",
-                    userContext.getSession().getSessionId(),
-                    e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         }
     }

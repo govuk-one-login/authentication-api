@@ -126,9 +126,6 @@ public class AuthCodeHandler
                                                 session.getState(),
                                                 SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE);
                             } catch (StateMachine.InvalidStateTransitionException e) {
-                                LOGGER.error(
-                                        "Invalid state transition for session: {}",
-                                        session.getSessionId());
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1017);
                             }
