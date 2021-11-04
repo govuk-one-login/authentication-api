@@ -132,7 +132,7 @@ public class CodeStorageService {
                         prefix + HashHelper.hashSha256String(emailAddress));
 
         if (numberOfKeysRemoved == 0) {
-            LOGGER.info(format("No %s key was deleted for: %s", prefix, emailAddress));
+            LOGGER.info(format("No %s key was deleted.", prefix));
         }
     }
 
