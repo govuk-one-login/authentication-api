@@ -29,7 +29,7 @@ function funky_started() {
 startup() {
   printf "\nStarting di-authentication-api...\n"
 
-  ./gradlew clean build :account-management-integration-tests:terraformApply -x test
+  ./gradlew clean build auditTerraform -x test
   if [[ -z ${IN_GITHUB_ACTIONS+x} ||  ${IN_GITHUB_ACTIONS} -eq 0 ]]; then
     funky_started
   else
