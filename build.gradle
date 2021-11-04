@@ -14,7 +14,7 @@ apply plugin: "idea"
 ext {
     dependencyVersions = [
         jackson_version: "2.13.0",
-        aws_sdk_version: "1.12.95",
+        aws_sdk_version: "1.12.101",
         aws_lambda_core_version: "1.2.1",
         aws_lambda_events_version: "3.10.0",
         nimbusds_oauth_version: "9.19",
@@ -83,7 +83,7 @@ subprojects {
                 "com.fasterxml.jackson.core:jackson-annotations:${dependencyVersions.jackson_version}",
                 "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${dependencyVersions.jackson_version}",
                 "org.hibernate.validator:hibernate-validator:7.0.1.Final",
-                "org.glassfish:jakarta.el:4.0.1"
+                "org.glassfish:jakarta.el:4.0.2"
 
         nimbus "com.nimbusds:oauth2-oidc-sdk:${dependencyVersions.nimbusds_oauth_version}",
                 "com.nimbusds:nimbus-jose-jwt:${dependencyVersions.nimbusds_jwt_version}"
@@ -91,12 +91,12 @@ subprojects {
 
         sqs "software.amazon.awssdk:sqs:2.17.73"
 
-        s3 "com.amazonaws:aws-java-sdk-s3:1.12.101"
+        s3 "com.amazonaws:aws-java-sdk-s3:${dependencyVersions.aws_sdk_version}"
 
         tests "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit}",
                 "org.junit.jupiter:junit-jupiter-params:${dependencyVersions.junit}",
                 "org.mockito:mockito-core:4.0.0",
-                "org.awaitility:awaitility:4.1.0",
+                "org.awaitility:awaitility:4.1.1",
                 configurations.hamcrest
 
         test_runtime "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"

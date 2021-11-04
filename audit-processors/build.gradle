@@ -9,14 +9,20 @@ repositories {
     mavenCentral()
 }
 
+ext {
+    dependencyVersions = [
+        protobuf_version: "3.19.1",
+    ]
+}
+
 dependencies {
     implementation configurations.lambda,
             configurations.sqs,
             configurations.s3,
             project(":shared"),
-            "com.google.protobuf:protobuf-java:3.18.1",
-            "com.google.protobuf:protobuf-java-util:3.18.1",
-            "com.google.code.gson:gson:2.8.8"
+            "com.google.protobuf:protobuf-java:${dependencyVersions.protobuf_version}",
+            "com.google.protobuf:protobuf-java-util:${dependencyVersions.protobuf_version}",
+            "com.google.code.gson:gson:2.8.9"
 
     runtimeOnly configurations.logging_runtime
 
