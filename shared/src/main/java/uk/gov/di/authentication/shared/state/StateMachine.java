@@ -2,6 +2,7 @@ package uk.gov.di.authentication.shared.state;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -107,6 +108,12 @@ public class StateMachine<T, A, C> {
                         > 1) {
             throw handleNoTransitionContext(from, action);
         }
+        var sessionId =  context
+                .filter(c -> c instanceof UserContext)
+                .map(UserContext.class::cast)
+                .map(UserContext::getSession)
+                .map(Session::getSessionId)
+                .orElse(null);
         T to =
                 states.getOrDefault(from, emptyList()).stream()
                         .filter(
@@ -114,10 +121,15 @@ public class StateMachine<T, A, C> {
                                         t.getAction().equals(action)
                                                 && t.getCondition().isMet(context))
                         .findFirst()
-                        .orElseThrow(() -> handleBadStateTransition(from, action))
+                        .orElseThrow(() -> handleBadStateTransition(from, action, sessionId))
                         .getNextState();
 
-        LOGGER.info("Session transitioned from {} to {} on action {}", from, to, action);
+        LOGGER.info(
+                "Session transitioned from {} to {} on action {} for sessionId {}",
+                from,
+                to,
+                action,
+                sessionId);
 
         return to;
     }
@@ -597,8 +609,13 @@ public class StateMachine<T, A, C> {
         }
     }
 
-    private InvalidStateTransitionException handleBadStateTransition(T from, A action) {
-        LOGGER.error("Session attempted invalid transition from {} on action {}", from, action);
+    private InvalidStateTransitionException handleBadStateTransition(
+            T from, A action, String sessionId) {
+        LOGGER.error(
+                "Session attempted invalid transition from {} on action {} for sessionId {}",
+                from,
+                action,
+                sessionId);
         return new InvalidStateTransitionException();
     }
 
