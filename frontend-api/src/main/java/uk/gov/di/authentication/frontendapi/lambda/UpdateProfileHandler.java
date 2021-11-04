@@ -281,10 +281,6 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             LOGGER.error("Error parsing request for session: {}", session.getSessionId(), e);
             return generateErrorResponse(ErrorResponse.ERROR_1001, context);
         } catch (InvalidStateTransitionException e) {
-            LOGGER.error(
-                    "Invalid transition in user journey for session: {}",
-                    session.getSessionId(),
-                    e);
             return generateErrorResponse(ErrorResponse.ERROR_1017, context);
         }
         LOGGER.error(

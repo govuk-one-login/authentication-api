@@ -222,10 +222,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     userContext.getSession().getSessionId());
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
-            LOGGER.error(
-                    "Invalid transition in user journey for session: {}",
-                    userContext.getSession().getSessionId(),
-                    e);
             return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
         } catch (ClientNotFoundException e) {
             LOGGER.error(

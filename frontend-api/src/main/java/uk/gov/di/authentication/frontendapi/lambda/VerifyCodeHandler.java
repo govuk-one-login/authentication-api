@@ -173,10 +173,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
-            LOG.error(
-                    "Invalid transition in user journey for session: {}",
-                    userContext.getSession().getSessionId(),
-                    e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         } catch (ClientNotFoundException e) {
             LOG.error(

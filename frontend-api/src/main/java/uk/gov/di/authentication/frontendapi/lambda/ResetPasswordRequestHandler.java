@@ -154,10 +154,6 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                     e);
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
-            LOGGER.error(
-                    "Invalid transition in user journey for session: {}",
-                    userContext.getSession().getSessionId(),
-                    e);
             return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
         }
     }
