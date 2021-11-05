@@ -64,14 +64,14 @@ public class AuthoriseAccessTokenHandler
     @Override
     public AuthPolicy handleRequest(TokenAuthorizerContext input, Context context) {
         if (input.getType().equals(WARMUP_HEADER)) {
-            LOGGER.info("Warmup Request Received {}", input.getAuthorizationToken());
+            LOGGER.info("Warmup Request Received");
             try {
                 sleep(configurationService.getWarmupDelayMillis());
             } catch (InterruptedException e) {
                 LOGGER.error("Sleep was interrupted", e);
                 throw new RuntimeException("Sleep was interrupted", e);
             }
-            LOGGER.info("Instance warmed for request {}", input.getAuthorizationToken());
+            LOGGER.info("Instance warmed for request");
             throw new RuntimeException("Unauthorized");
         } else {
             LOGGER.info("Request received in AuthoriseAccessTokenHandler");
@@ -126,10 +126,7 @@ public class AuthoriseAccessTokenHandler
                 try {
                     dynamoService.getUserProfileFromPublicSubject(subject);
                 } catch (Exception e) {
-                    LOGGER.error(
-                            "Unable to retrieve UserProfile from Dynamo with given SubjectID: {}",
-                            subject,
-                            e);
+                    LOGGER.error("Unable to retrieve UserProfile from Dynamo with given SubjectID");
                     throw new RuntimeException("Unauthorized");
                 }
                 LOGGER.info("User found in Dynamo with given SubjectID");
@@ -146,7 +143,7 @@ public class AuthoriseAccessTokenHandler
                         AuthPolicy.PolicyDocument.getAllowAllPolicy(
                                 region, awsAccountId, restApiId, stage));
             } catch (ParseException | java.text.ParseException e) {
-                LOGGER.error("Unable to parse Access Token", e);
+                LOGGER.error("Unable to parse Access Token");
                 throw new RuntimeException("Unauthorized");
             }
         }

@@ -63,9 +63,6 @@ public class UpdatePasswordHandler
                 .orElseGet(
                         () -> {
                             LOGGER.info("UpdatePasswordHandler received request");
-                            LOGGER.info(
-                                    "Authorizer parameters received: {}",
-                                    input.getRequestContext().getAuthorizer());
                             context.getClientContext();
                             try {
                                 UpdatePasswordRequest updatePasswordRequest =
@@ -110,8 +107,7 @@ public class UpdatePasswordHandler
 
                             } catch (JsonProcessingException | IllegalArgumentException e) {
                                 LOGGER.error(
-                                        "UpdatePassword request is missing or contains invalid parameters.",
-                                        e);
+                                        "UpdatePassword request is missing or contains invalid parameters.");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1001);
                             }

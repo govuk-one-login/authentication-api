@@ -77,9 +77,6 @@ public class UpdateEmailHandler
                 .orElseGet(
                         () -> {
                             LOGGER.info("UpdateEmailHandler received request");
-                            LOGGER.info(
-                                    "Authorizer parameters received: {}",
-                                    input.getRequestContext().getAuthorizer());
                             try {
                                 UpdateEmailRequest updateInfoRequest =
                                         objectMapper.readValue(
