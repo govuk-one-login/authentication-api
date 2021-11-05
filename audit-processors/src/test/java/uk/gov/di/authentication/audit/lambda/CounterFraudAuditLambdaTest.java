@@ -24,8 +24,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.shared.matchers.LogEventMatcher.doesNotHaveObjectMessageProperty;
-import static uk.gov.di.authentication.shared.matchers.LogEventMatcher.hasObjectMessageProperty;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.doesNotHaveObjectMessageProperty;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.hasObjectMessageProperty;
 
 public class CounterFraudAuditLambdaTest {
 
