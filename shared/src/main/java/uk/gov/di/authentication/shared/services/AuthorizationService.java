@@ -183,7 +183,7 @@ public class AuthorizationService {
             }
             userContext = builder.withClient(clientRegistry).build();
         } catch (NoSuchElementException e) {
-            LOGGER.error("Error creating UserContext", e);
+            LOGGER.error("Error creating UserContext");
             throw new RuntimeException("Error when creating UserContext", e);
         }
         return userContext;

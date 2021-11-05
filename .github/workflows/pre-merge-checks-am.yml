@@ -1,7 +1,7 @@
 name: Pre-merge checks for Account Management
 on:
   pull_request:
-    paths: ['account-management-api/**', 'account-management-integration-tests/**', 'ci/terraform/account-management/**', '**/*.gradle*', '**/gradle-wrapper.properties']
+    paths: ['account-management-api/**', 'account-management-integration-tests/**', 'ci/terraform/account-management/**', '**/*.gradle*', '**/gradle-wrapper.properties', 'shared/**', 'build.gradle']
     types:
       - opened
       - reopened

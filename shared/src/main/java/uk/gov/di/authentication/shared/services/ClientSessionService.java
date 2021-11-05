@@ -41,7 +41,7 @@ public class ClientSessionService {
                     objectMapper.writeValueAsString(clientSession),
                     configurationService.getSessionExpiry());
         } catch (JsonProcessingException e) {
-            LOG.error("Error saving client session to Redis", e);
+            LOG.error("Error saving client session: {} to Redis", id);
             throw new RuntimeException(e);
         }
         LOG.info("Generated new ClientSession with ID: {}", id);
@@ -56,8 +56,7 @@ public class ClientSessionService {
         } catch (JsonProcessingException | IllegalArgumentException e) {
             LOG.error(
                     "Error getting client session from Redis with ClientSessionId: {}",
-                    clientSessionId,
-                    e);
+                    clientSessionId);
             throw new RuntimeException(e);
         }
     }
@@ -69,7 +68,7 @@ public class ClientSessionService {
                     objectMapper.writeValueAsString(clientSession),
                     configurationService.getSessionExpiry());
         } catch (JsonProcessingException e) {
-            LOG.error("Error saving client session to Redis", e);
+            LOG.error("Error saving client session: {} to Redis", clientSessionId);
             throw new RuntimeException(e);
         }
     }

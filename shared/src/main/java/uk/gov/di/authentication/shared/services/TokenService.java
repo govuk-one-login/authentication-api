@@ -170,7 +170,7 @@ public class TokenService {
         try {
             privateKeyJWT = PrivateKeyJWT.parse(requestString);
         } catch (ParseException e) {
-            LOGGER.error("Couldn't parse Private Key JWT", e);
+            LOGGER.error("Could not parse Private Key JWT");
             return Optional.of(OAuth2Error.INVALID_CLIENT);
         }
         if (hasPrivateKeyJwtExpired(privateKeyJWT.getClientAssertion())) {
@@ -295,7 +295,7 @@ public class TokenService {
                                             accessToken.getValue(), internalSubject.getValue())),
                     configService.getAccessTokenExpiry());
         } catch (JsonProcessingException e) {
-            LOGGER.error("Unable to save access token to Redis", e);
+            LOGGER.error("Unable to save access token to Redis");
             throw new RuntimeException(e);
         }
         return accessToken;
@@ -345,7 +345,7 @@ public class TokenService {
             redisConnectionService.saveWithExpiry(
                     redisKey, serializedTokenStore, configService.getSessionExpiry());
         } catch (JsonProcessingException e) {
-            LOGGER.error("Unable to create new TokenStore with RefreshToken", e);
+            LOGGER.error("Unable to create new TokenStore with RefreshToken");
             throw new RuntimeException(e);
         }
         return refreshToken;
