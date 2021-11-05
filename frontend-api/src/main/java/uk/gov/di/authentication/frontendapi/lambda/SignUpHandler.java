@@ -83,7 +83,9 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                     userContext.getSession().getSessionId());
             var nextState =
                     stateMachine.transition(
-                            userContext.getSession().getState(), USER_HAS_CREATED_A_PASSWORD);
+                            userContext.getSession().getState(),
+                            USER_HAS_CREATED_A_PASSWORD,
+                            userContext);
 
             Optional<ErrorResponse> passwordValidationErrors =
                     validationService.validatePassword(request.getPassword());

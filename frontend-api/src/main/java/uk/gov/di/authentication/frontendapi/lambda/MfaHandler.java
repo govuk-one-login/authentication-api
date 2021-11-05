@@ -109,7 +109,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     userContext.getSession().getSessionId());
 
             String email = request.getEmail().toLowerCase(Locale.ROOT);
-            boolean codeRequestValid = validateCodeRequestAttempts(email, userContext.getSession());
+            boolean codeRequestValid = validateCodeRequestAttempts(email, userContext);
             if (!codeRequestValid) {
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
@@ -173,7 +173,9 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
 
             var nextState =
                     stateMachine.transition(
-                            userContext.getSession().getState(), SYSTEM_HAS_SENT_MFA_CODE);
+                            userContext.getSession().getState(),
+                            SYSTEM_HAS_SENT_MFA_CODE,
+                            userContext);
 
             String code = codeGeneratorService.sixDigitCode();
             codeStorageService.saveOtpCode(
@@ -230,7 +232,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         }
     }
 
-    private boolean validateCodeRequestAttempts(String email, Session session) {
+    private boolean validateCodeRequestAttempts(String email, UserContext userContext) {
+        Session session = userContext.getSession();
         if (session.getCodeRequestCount() == configurationService.getCodeMaxRetries()) {
             LOGGER.info(
                     "User has requested too many OTP codes for session: {}",
@@ -238,7 +241,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             codeStorageService.saveBlockedForEmail(
                     email, CODE_REQUEST_BLOCKED_KEY_PREFIX, configurationService.getCodeExpiry());
             SessionState nextState =
-                    stateMachine.transition(session.getState(), SYSTEM_HAS_SENT_TOO_MANY_MFA_CODES);
+                    stateMachine.transition(
+                            session.getState(), SYSTEM_HAS_SENT_TOO_MANY_MFA_CODES, userContext);
             sessionService.save(session.setState(nextState).resetCodeRequestCount());
             return false;
         }
@@ -249,7 +253,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             SessionState nextState =
                     stateMachine.transition(
                             session.getState(),
-                            SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_MFA_VERIFICATION_CODES);
+                            SYSTEM_IS_BLOCKED_FROM_SENDING_ANY_MFA_VERIFICATION_CODES,
+                            userContext);
             sessionService.save(session.setState(nextState));
             return false;
         }
@@ -259,7 +264,9 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     session.getSessionId());
             SessionState nextState =
                     stateMachine.transition(
-                            session.getState(), USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES);
+                            session.getState(),
+                            USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES,
+                            userContext);
             sessionService.save(session.setState(nextState));
             return false;
         }

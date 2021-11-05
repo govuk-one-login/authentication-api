@@ -259,7 +259,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             SessionState nextState =
                     stateMachine.transition(
                             session.getState(),
-                            getSessionActionForMaxCodeRequests(notificationType));
+                            getSessionActionForMaxCodeRequests(notificationType),
+                            userContext);
             sessionService.save(session.setState(nextState));
             return false;
         }
@@ -270,7 +271,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             SessionState nextState =
                     stateMachine.transition(
                             session.getState(),
-                            getSessionActionForMaxCodeAttempts(notificationType));
+                            getSessionActionForMaxCodeAttempts(notificationType),
+                            userContext);
             sessionService.save(session.setState(nextState));
             return false;
         }
