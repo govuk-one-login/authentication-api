@@ -286,10 +286,9 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                                             .getTestClientEmailAllowlist()
                                             .contains(emailAddress)) {
                                 LOGGER.info(
-                                        "MfaHandler not sending message for TestClient {} {} email {} on TestClientEmailAllowlist with NotificationType {} for session {}",
+                                        "MfaHandler not sending message for TestClient {} {} on TestClientEmailAllowlist with NotificationType {} for session {}",
                                         clientRegistry.getClientID(),
                                         clientRegistry.getClientName(),
-                                        emailAddress,
                                         notificationType,
                                         userContext.getSession().getSessionId());
                                 return true;

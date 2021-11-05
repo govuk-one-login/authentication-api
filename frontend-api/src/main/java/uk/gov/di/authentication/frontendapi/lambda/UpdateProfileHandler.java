@@ -274,7 +274,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                     }
             }
         } catch (JsonProcessingException e) {
-            LOGGER.error("Error parsing request for session: {}", session.getSessionId(), e);
+            LOGGER.error("Error parsing request for session: {}", session.getSessionId());
             return generateErrorResponse(ErrorResponse.ERROR_1001, context);
         } catch (InvalidStateTransitionException e) {
             return generateErrorResponse(ErrorResponse.ERROR_1017, context);

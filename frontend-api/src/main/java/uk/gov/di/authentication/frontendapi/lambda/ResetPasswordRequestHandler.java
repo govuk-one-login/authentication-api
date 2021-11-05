@@ -150,8 +150,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         } catch (JsonProcessingException e) {
             LOGGER.error(
                     "Error parsing request for session: {}",
-                    userContext.getSession().getSessionId(),
-                    e);
+                    userContext.getSession().getSessionId());
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
             return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
