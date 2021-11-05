@@ -42,7 +42,7 @@ public class AuthorisationCodeService {
                     authorisationCodeExpiry);
             return authorizationCode;
         } catch (JsonProcessingException e) {
-            LOG.error("Error persisting auth code to cache", e);
+            LOG.error("Error persisting auth code to cache");
             throw new RuntimeException(e);
         }
     }
@@ -54,7 +54,7 @@ public class AuthorisationCodeService {
                             try {
                                 return objectMapper.readValue(s, AuthCodeExchangeData.class);
                             } catch (JsonProcessingException e) {
-                                LOG.error("Error deserialising auth code data from cache", e);
+                                LOG.error("Error deserialising auth code data from cache");
                                 throw new RuntimeException(e);
                             }
                         });
