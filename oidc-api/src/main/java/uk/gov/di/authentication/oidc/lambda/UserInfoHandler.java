@@ -79,8 +79,7 @@ public class UserInfoHandler
                                                 input.getHeaders().get("Authorization"));
                             } catch (UserInfoValidationException e) {
                                 LOGGER.error(
-                                        "UserInfoValidationException. Sending back UserInfoErrorResponse",
-                                        e);
+                                        "UserInfoValidationException. Sending back UserInfoErrorResponse");
                                 return generateApiGatewayProxyResponse(
                                         401,
                                         "",

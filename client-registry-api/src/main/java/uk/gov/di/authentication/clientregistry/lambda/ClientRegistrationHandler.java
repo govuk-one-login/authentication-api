@@ -129,8 +129,7 @@ public class ClientRegistrationHandler
                                         200, clientRegistrationResponse);
                             } catch (JsonProcessingException e) {
                                 LOGGER.error(
-                                        "Invalid Client registration request. Missing parameters from request",
-                                        e);
+                                        "Invalid Client registration request. Missing parameters from request");
                                 auditService.submitAuditEvent(
                                         REGISTER_CLIENT_REQUEST_ERROR,
                                         context.getAwsRequestId(),

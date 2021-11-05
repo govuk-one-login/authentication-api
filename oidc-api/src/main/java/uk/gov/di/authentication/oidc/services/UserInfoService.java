@@ -57,7 +57,7 @@ public class UserInfoService {
         try {
             accessToken = AccessToken.parse(authorizationHeader, AccessTokenType.BEARER);
         } catch (com.nimbusds.oauth2.sdk.ParseException e) {
-            LOGGER.error("Unable to parse AccessToken", e);
+            LOGGER.error("Unable to parse AccessToken");
             throw new UserInfoValidationException(
                     "Unable to parse AccessToken", BearerTokenError.INVALID_TOKEN);
         }
@@ -115,7 +115,7 @@ public class UserInfoService {
                             accessTokenStore.get().getInternalSubjectId());
             return populateUserInfo(userProfile, subject, scopes);
         } catch (ParseException e) {
-            LOGGER.error("Unable to parse AccessToken to SignedJWT", e);
+            LOGGER.error("Unable to parse AccessToken to SignedJWT");
             throw new UserInfoValidationException(
                     "Unable to parse AccessToken to SignedJWT", BearerTokenError.INVALID_TOKEN);
         }

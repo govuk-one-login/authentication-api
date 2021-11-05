@@ -109,8 +109,7 @@ public class AuthCodeHandler
                                                         sessionCookieIds.getSessionId())
                                                 .orElseThrow();
                             } catch (NoSuchElementException e) {
-                                LOGGER.error(
-                                        "SessionID not there for INPUT: {}", input.getHeaders());
+                                LOGGER.error("SessionID not found");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1000);
                             }
