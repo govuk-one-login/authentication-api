@@ -169,14 +169,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         } catch (JsonProcessingException e) {
             LOG.error(
                     "Error parsing request for session: {}",
-                    userContext.getSession().getSessionId(),
-                    e);
+                    userContext.getSession().getSessionId());
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         } catch (ClientNotFoundException e) {
-            LOG.error(
-                    "Client not found for session: {}", userContext.getSession().getSessionId(), e);
+            LOG.error("Client not found for session: {}", userContext.getSession().getSessionId());
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
     }
@@ -332,10 +330,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                                             .getTestClientEmailAllowlist()
                                             .contains(emailAddress)) {
                                 LOG.info(
-                                        "Using TestClient {} {} email {} on TestClientEmailAllowlist with NotificationType {} and session: {}",
+                                        "Using TestClient {} {} on TestClientEmailAllowlist with NotificationType {} and session: {}",
                                         clientRegistry.getClientID(),
                                         clientRegistry.getClientName(),
-                                        emailAddress,
                                         notificationType,
                                         userContext.getSession().getSessionId());
                                 switch (notificationType) {
@@ -349,10 +346,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                                                 .getTestClientVerifyPhoneNumberOTP();
                                     default:
                                         LOG.info(
-                                                "Returning the generated OTP for TestClient {} {} email {} with NotificationType {} and session: {}",
+                                                "Returning the generated OTP for TestClient {} {} with NotificationType {} and session: {}",
                                                 clientRegistry.getClientID(),
                                                 clientRegistry.getClientName(),
-                                                emailAddress,
                                                 notificationType,
                                                 userContext.getSession().getSessionId());
                                         return generatedOTPCode;

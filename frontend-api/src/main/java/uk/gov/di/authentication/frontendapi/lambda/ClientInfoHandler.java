@@ -153,8 +153,7 @@ public class ClientInfoHandler
                             } catch (ParseException | JsonProcessingException e) {
                                 LOGGER.error(
                                         "Error when calling ClientInfo for session: {}",
-                                        session.get().getSessionId(),
-                                        e);
+                                        session.get().getSessionId());
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1001);
                             }

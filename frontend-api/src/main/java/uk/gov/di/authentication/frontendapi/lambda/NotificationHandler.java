@@ -133,8 +133,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                 } catch (NotificationClientException e) {
                     LOG.error(
                             "Error sending with Notify using NotificationType: {}",
-                            notifyRequest.getNotificationType(),
-                            e);
+                            notifyRequest.getNotificationType());
                     throw new RuntimeException(
                             String.format(
                                     "Error sending with Notify using NotificationType: %s",
@@ -142,9 +141,9 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             e);
                 }
             } catch (JsonProcessingException e) {
-                LOG.error("Error when mapping message from queue to a NotifyRequest", e);
+                LOG.error("Error when mapping message from queue to a NotifyRequest");
                 throw new RuntimeException(
-                        "Error when mapping message from queue to a NotifyRequest", e);
+                        "Error when mapping message from queue to a NotifyRequest");
             }
         }
         return null;
@@ -176,7 +175,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             try {
                 s3Client.putObject(bucketName, key, otp);
             } catch (Exception e) {
-                LOG.error("Exception thrown when writing to S3 bucket", e);
+                LOG.error("Exception thrown when writing to S3 bucket");
             }
         }
     }

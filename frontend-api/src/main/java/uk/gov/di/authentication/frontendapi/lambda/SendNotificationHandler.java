@@ -189,20 +189,18 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         } catch (SdkClientException ex) {
             LOGGER.error(
                     "Error sending message to queue for session: {}",
-                    userContext.getSession().getSessionId(),
-                    ex);
+                    userContext.getSession().getSessionId());
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
         } catch (JsonProcessingException e) {
             LOGGER.error(
                     "Error parsing request for session: {}",
-                    userContext.getSession().getSessionId(),
-                    e);
+                    userContext.getSession().getSessionId());
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
             return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
         } catch (ClientNotFoundException e) {
             LOGGER.error(
-                    "Client not found for session: {}", userContext.getSession().getSessionId(), e);
+                    "Client not found for session: {}", userContext.getSession().getSessionId());
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
     }
@@ -336,10 +334,9 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                                             .getTestClientEmailAllowlist()
                                             .contains(emailAddress)) {
                                 LOGGER.info(
-                                        "SendNotificationHandler not sending message for TestClient {} {} email {} on TestClientEmailAllowlist with NotificationType {} for session {}",
+                                        "SendNotificationHandler not sending message for TestClient {} {} on TestClientEmailAllowlist with NotificationType {} for session {}",
                                         clientRegistry.getClientID(),
                                         clientRegistry.getClientName(),
-                                        emailAddress,
                                         notificationType,
                                         userContext.getSession().getSessionId());
                                 return true;
