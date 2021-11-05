@@ -20,7 +20,7 @@ public class AuditEventHelper {
                             try {
                                 return AuditEvent.parseFrom(payload);
                             } catch (InvalidProtocolBufferException e) {
-                                LOG.error("Could not parse AuditEvent payload", e);
+                                LOG.error("Could not parse AuditEvent payload");
                                 return null;
                             }
                         });
@@ -30,7 +30,7 @@ public class AuditEventHelper {
         try {
             return Optional.ofNullable(SignedAuditEvent.parseFrom(bytes));
         } catch (InvalidProtocolBufferException e) {
-            LOG.error("Could not parse SignedAuditEvent payload", e);
+            LOG.error("Could not parse SignedAuditEvent payload");
             return Optional.empty();
         }
     }
