@@ -305,7 +305,7 @@ public class TokenHandler
             publicSubject = new Subject(signedJwt.getJWTClaimsSet().getSubject());
             scopes = (List<String>) signedJwt.getJWTClaimsSet().getClaim("scope");
         } catch (java.text.ParseException e) {
-            LOG.error("Unable to parse RefreshToken", e);
+            LOG.error("Unable to parse RefreshToken");
             return generateApiGatewayProxyResponse(
                     400,
                     new ErrorObject(OAuth2Error.INVALID_GRANT_CODE, "Invalid Refresh token")
@@ -352,7 +352,7 @@ public class TokenHandler
                                                 currentRefreshToken.getValue())),
                         configurationService.getSessionExpiry());
             } catch (JsonProcessingException e) {
-                LOG.error("Unable to serialize refresh token store when updating", e);
+                LOG.error("Unable to serialize refresh token store when updating");
                 throw new RuntimeException(e);
             }
         } else {

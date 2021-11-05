@@ -148,7 +148,7 @@ public class LogoutHandler
                                             queryStringParameters, a, state))
                     .orElse(generateDefaultLogoutResponse(state));
         } catch (ParseException e) {
-            LOG.error("Unable to parse id_token_hint into SignedJWT", e);
+            LOG.error("Unable to parse id_token_hint into SignedJWT");
             return generateErrorLogoutResponse(
                     Optional.empty(),
                     new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid id_token_hint"));

@@ -146,8 +146,7 @@ public class UpdateClientConfigHandler
                                         ipAddress,
                                         AuditService.UNKNOWN);
                                 LOGGER.error(
-                                        "Invalid Client registration request. Missing parameters from request",
-                                        e);
+                                        "Invalid Client registration request. Missing parameters from request");
                                 return generateApiGatewayProxyResponse(
                                         400,
                                         OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString());
