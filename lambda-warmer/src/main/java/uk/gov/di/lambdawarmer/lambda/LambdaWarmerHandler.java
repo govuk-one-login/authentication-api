@@ -100,8 +100,8 @@ public class LambdaWarmerHandler implements RequestHandler<ScheduledEvent, Strin
             InvokeResult invokeResult = awsLambda.invoke(invokeRequest);
             return invokeResult;
         } catch (ServiceException e) {
-            LOGGER.error("Error invoking lambda", e);
-            throw new RuntimeException("Error invoking Lambda", e);
+            LOGGER.error("Error invoking lambda");
+            throw new RuntimeException("Error invoking Lambda");
         }
     }
 }
