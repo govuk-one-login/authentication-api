@@ -139,7 +139,7 @@ public class SendOtpNotificationHandler
                                 return generateApiGatewayProxyResponse(
                                         500, "Error sending message to queue");
                             } catch (JsonProcessingException e) {
-                                LOGGER.error("Error parsing request", e);
+                                LOGGER.error("Error parsing request");
                                 return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
                             }
                         });

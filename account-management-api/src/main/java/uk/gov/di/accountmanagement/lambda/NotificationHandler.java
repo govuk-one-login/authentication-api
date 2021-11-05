@@ -153,9 +153,9 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             e);
                 }
             } catch (JsonProcessingException e) {
-                LOGGER.error("Error when mapping message from queue to a NotifyReques", e);
+                LOGGER.error("Error when mapping message from queue to a NotifyRequest");
                 throw new RuntimeException(
-                        "Error when mapping message from queue to a NotifyRequest", e);
+                        "Error when mapping message from queue to a NotifyRequest");
             }
         }
         return null;
