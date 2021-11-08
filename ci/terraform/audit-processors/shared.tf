@@ -33,3 +33,7 @@ locals {
 data "aws_sns_topic" "event_stream" {
   name = "${var.environment}-events"
 }
+
+data "aws_sns_topic" "slack_events" {
+  name = "${var.environment}-slack-events"
+}
