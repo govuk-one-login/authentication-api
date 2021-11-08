@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.shared.matchers;
+package uk.gov.di.authentication.sharedtest.logging;
 
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.message.ObjectMessage;
