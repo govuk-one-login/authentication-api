@@ -89,7 +89,7 @@ subprojects {
                 "com.nimbusds:nimbus-jose-jwt:${dependencyVersions.nimbusds_jwt_version}"
 
 
-        sqs "software.amazon.awssdk:sqs:2.17.73"
+        sqs "software.amazon.awssdk:sqs:2.17.76"
 
         s3 "com.amazonaws:aws-java-sdk-s3:${dependencyVersions.aws_sdk_version}"
 
