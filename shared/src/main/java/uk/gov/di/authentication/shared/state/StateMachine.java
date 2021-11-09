@@ -7,12 +7,7 @@ import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.util.Collections.emptyList;
@@ -93,11 +88,19 @@ import static uk.gov.di.authentication.shared.state.conditions.TermsAndCondition
 public class StateMachine<T, A, C> {
 
     private final Map<T, List<Transition<T, A, C>>> states;
+    private final List<Transition<T, A, C>> anyStateTransitions;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StateMachine.class);
 
     public StateMachine(Map<T, List<Transition<T, A, C>>> states) {
+        this(states, List.of());
+    }
+
+    public StateMachine(
+            Map<T, List<Transition<T, A, C>>> states,
+            List<Transition<T, A, C>> anyStateTransitions) {
         this.states = Collections.unmodifiableMap(states);
+        this.anyStateTransitions = anyStateTransitions;
     }
 
     private T transition(T from, A action, Optional<C> context) {
@@ -557,6 +560,8 @@ public class StateMachine<T, A, C> {
                 .allow(
                         on(SYSTEM_HAS_SENT_MFA_CODE).then(MFA_SMS_CODE_SENT),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY).then(NEW))
+                .atAnyState()
+                .allow()
                 .build();
     }
 
@@ -570,6 +575,7 @@ public class StateMachine<T, A, C> {
 
     public static class Builder<T, A, C> {
         private final Map<T, List<Transition<T, A, C>>> states = new HashMap<>();
+        private final List<Transition<T, A, C>> anyStateTransitions = new ArrayList<>();
 
         public StateRuleBuilder<T, A, C> when(T state) {
             return new StateRuleBuilder<>(this, state);
@@ -579,8 +585,19 @@ public class StateMachine<T, A, C> {
             this.states.put(state, transitions);
         }
 
+        protected void addAnyRuleTransitions(List<Transition<T, A, C>> transitions) {
+            if (anyStateTransitions.size() > 0) {
+                throw new IllegalStateException("Default actions already assigned");
+            }
+            this.anyStateTransitions.addAll(transitions);
+        }
+
+        protected DefaultRuleBuilder<T, A, C> atAnyState() {
+            return new DefaultRuleBuilder<>(this);
+        }
+
         public StateMachine<T, A, C> build() {
-            return new StateMachine<>(states);
+            return new StateMachine<>(states, anyStateTransitions);
         }
     }
 
@@ -606,6 +623,23 @@ public class StateMachine<T, A, C> {
         public Builder<T, A, C> finalState() {
             stateMachineBuilder.addStateRule(state, Collections.emptyList());
             return stateMachineBuilder;
+        }
+    }
+
+    public static class DefaultRuleBuilder<T, A, C> {
+        private final Builder<T, A, C> stateMachineBuilder;
+
+        @SafeVarargs
+        public final Builder<T, A, C> allow(final Transition.Builder<T, A, C>... transitions) {
+            stateMachineBuilder.addAnyRuleTransitions(
+                    Arrays.asList(transitions).stream()
+                            .map(b -> b.build())
+                            .collect(Collectors.toList()));
+            return stateMachineBuilder;
+        }
+
+        protected DefaultRuleBuilder(Builder<T, A, C> stateMachineBuilder) {
+            this.stateMachineBuilder = stateMachineBuilder;
         }
     }
 
