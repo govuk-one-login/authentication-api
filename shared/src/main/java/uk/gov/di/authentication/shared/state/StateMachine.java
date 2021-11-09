@@ -124,7 +124,19 @@ public class StateMachine<T, A, C> {
                                         t.getAction().equals(action)
                                                 && t.getCondition().isMet(context))
                         .findFirst()
-                        .orElseThrow(() -> handleBadStateTransition(from, action, sessionId))
+                        .orElseGet(
+                                () ->
+                                        anyStateTransitions.stream()
+                                                .filter(
+                                                        t ->
+                                                                t.getAction().equals(action)
+                                                                        && t.getCondition()
+                                                                                .isMet(context))
+                                                .findFirst()
+                                                .orElseThrow(
+                                                        () ->
+                                                                handleBadStateTransition(
+                                                                        from, action, sessionId)))
                         .getNextState();
 
         LOGGER.info(
