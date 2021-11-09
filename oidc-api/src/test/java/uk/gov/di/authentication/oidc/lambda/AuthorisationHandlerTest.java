@@ -32,6 +32,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -171,15 +172,52 @@ class AuthorisationHandlerTest {
         when(clientSessionService.generateClientSession(any(ClientSession.class)))
                 .thenReturn("client-session-id");
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent response =
-                makeHandlerRequest(withCookieConsentRequestEvent("accept"));
+                makeHandlerRequest(withRequestEvent(Map.of("cookie_consent", "accept")));
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
         final String expectedCookieString =
                 "gs=a-session-id.client-session-id; Max-Age=3600; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
 
         assertThat(response, hasStatus(302));
         assertThat(uri.getQuery(), containsString("cookie_consent=accept"));
+        assertEquals(loginUrl.getAuthority(), uri.getAuthority());
+        assertEquals(expectedCookieString, response.getHeaders().get("Set-Cookie"));
+        verify(sessionService).save(eq(session));
+    }
+
+    @Test
+    void shouldDoLoginAndForwardGAParameter() throws ClientNotFoundException {
+        final URI loginUrl = URI.create("http://example.com");
+        final Session session = new Session("a-session-id");
+
+        when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
+                .thenReturn(Optional.empty());
+        when(authorizationService.isClientCookieConsentShared(eq(new ClientID("test-id"))))
+                .thenReturn(false);
+        when(configService.getLoginURI()).thenReturn(loginUrl);
+        when(configService.getDomainName()).thenReturn(domainName);
+        when(sessionService.createSession()).thenReturn(session);
+        when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
+        when(configService.getSessionCookieMaxAge()).thenReturn(3600);
+        when(clientSessionService.generateClientSession(any(ClientSession.class)))
+                .thenReturn("client-session-id");
+
+        new APIGatewayProxyRequestEvent();
+        APIGatewayProxyResponseEvent response =
+                makeHandlerRequest(
+                        withRequestEvent(
+                                Map.of(
+                                        "_ga",
+                                        "2.172053219.1139384417.1636392870-547301795.1635165988")));
+        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+        final String expectedCookieString =
+                "gs=a-session-id.client-session-id; Max-Age=3600; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
+
+        assertThat(response, hasStatus(302));
+        assertThat(
+                uri.getQuery(),
+                containsString("_ga=2.172053219.1139384417.1636392870-547301795.1635165988"));
         assertEquals(loginUrl.getAuthority(), uri.getAuthority());
         assertEquals(expectedCookieString, response.getHeaders().get("Set-Cookie"));
         verify(sessionService).save(eq(session));
@@ -337,7 +375,8 @@ class AuthorisationHandlerTest {
     void shouldReturnErrorWhenPromptParamNoneAndNotLoggedIn() {
         when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
-        APIGatewayProxyResponseEvent response = makeHandlerRequest(withPromptRequestEvent("none"));
+        APIGatewayProxyResponseEvent response =
+                makeHandlerRequest(withRequestEvent(Map.of("prompt", "none")));
         assertThat(response, hasStatus(302));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
@@ -367,7 +406,8 @@ class AuthorisationHandlerTest {
         when(authorizationService.buildUserContext(eq(session), any(ClientSession.class)))
                 .thenReturn(userContext);
 
-        APIGatewayProxyResponseEvent response = makeHandlerRequest(withPromptRequestEvent("none"));
+        APIGatewayProxyResponseEvent response =
+                makeHandlerRequest(withRequestEvent(Map.of("prompt", "none")));
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
         URI expectedUri =
@@ -411,7 +451,10 @@ class AuthorisationHandlerTest {
                 .thenReturn("client-session-id");
         when(configService.getDomainName()).thenReturn(domainName);
 
-        APIGatewayProxyResponseEvent response = makeHandlerRequest(withPromptRequestEvent("login"));
+        APIGatewayProxyResponseEvent response =
+                makeHandlerRequest(withRequestEvent(Map.of("prompt", "login")));
+        // APIGatewayProxyResponseEvent response =
+        // makeHandlerRequest(withRequestEvent(Map.of("prompt", "login")));
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
         assertThat(response, hasStatus(302));
@@ -448,7 +491,8 @@ class AuthorisationHandlerTest {
         when(authorizationService.buildUserContext(eq(session), any(ClientSession.class)))
                 .thenReturn(userContext);
 
-        APIGatewayProxyResponseEvent response = makeHandlerRequest(withPromptRequestEvent("login"));
+        APIGatewayProxyResponseEvent response =
+                makeHandlerRequest(withRequestEvent(Map.of("prompt", "login")));
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
         assertThat(response, hasStatus(302));
@@ -474,7 +518,7 @@ class AuthorisationHandlerTest {
         when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent response =
-                makeHandlerRequest(withPromptRequestEvent("unrecognised"));
+                makeHandlerRequest(withRequestEvent(Map.of("prompt", "unrecognised")));
         assertThat(response, hasStatus(302));
         assertEquals(
                 "http://localhost:8080?error=invalid_request&error_description=Invalid+request%3A+Invalid+prompt+parameter%3A+Unknown+prompt+type%3A+unrecognised&state=some-state",
@@ -500,7 +544,7 @@ class AuthorisationHandlerTest {
         when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent response =
-                makeHandlerRequest(withPromptRequestEvent("none login"));
+                makeHandlerRequest(withRequestEvent(Map.of("prompt", "none login")));
         assertThat(response, hasStatus(302));
         assertEquals(
                 "http://localhost:8080?error=invalid_request&error_description=Invalid+request%3A+Invalid+prompt+parameter%3A+Invalid+prompt%3A+none+login&state=some-state",
@@ -526,7 +570,7 @@ class AuthorisationHandlerTest {
         when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent response =
-                makeHandlerRequest(withPromptRequestEvent("login consent"));
+                makeHandlerRequest(withRequestEvent(Map.of("prompt", "login consent")));
         assertThat(response, hasStatus(302));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
@@ -552,7 +596,7 @@ class AuthorisationHandlerTest {
         when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent response =
-                makeHandlerRequest(withPromptRequestEvent("consent"));
+                makeHandlerRequest(withRequestEvent(Map.of("prompt", "consent")));
         assertThat(response, hasStatus(302));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
@@ -578,7 +622,7 @@ class AuthorisationHandlerTest {
         when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent response =
-                makeHandlerRequest(withPromptRequestEvent("select_account"));
+                makeHandlerRequest(withRequestEvent(Map.of("prompt", "select_account")));
         assertThat(response, hasStatus(302));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
@@ -688,47 +732,25 @@ class AuthorisationHandlerTest {
         return response;
     }
 
-    private APIGatewayProxyRequestEvent withPromptRequestEvent(String prompt) {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setQueryStringParameters(
-                Map.of(
-                        "client_id", "test-id",
-                        "redirect_uri", "http://localhost:8080",
-                        "scope", "email,openid,profile",
-                        "response_type", "code",
-                        "state", "some-state",
-                        "prompt", prompt));
-        event.setRequestContext(
-                new ProxyRequestContext()
-                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-        return event;
-    }
-
-    private APIGatewayProxyRequestEvent withCookieConsentRequestEvent(String cookieConsent) {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setQueryStringParameters(
-                Map.of(
-                        "client_id", "test-id",
-                        "redirect_uri", "http://localhost:8080",
-                        "scope", "email,openid,profile",
-                        "response_type", "code",
-                        "state", "some-state",
-                        "cookie_consent", cookieConsent));
-        event.setRequestContext(
-                new ProxyRequestContext()
-                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-        return event;
-    }
-
     private APIGatewayProxyRequestEvent withRequestEvent() {
+        return withRequestEvent(null);
+    }
+
+    private APIGatewayProxyRequestEvent withRequestEvent(Map<String, String> extraParams) {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setQueryStringParameters(
-                Map.of(
-                        "client_id", "test-id",
-                        "redirect_uri", "http://localhost:8080",
-                        "scope", "email,openid,profile",
-                        "response_type", "code",
-                        "state", "some-state"));
+
+        Map<String, String> requestParams = new HashMap<>();
+        requestParams.put("client_id", "test-id");
+        requestParams.put("redirect_uri", "http://localhost:8080");
+        requestParams.put("scope", "email,openid,profile");
+        requestParams.put("response_type", "code");
+        requestParams.put("state", "some-state");
+
+        if (extraParams != null && !extraParams.isEmpty()) {
+            requestParams.putAll(extraParams);
+        }
+
+        event.setQueryStringParameters(requestParams);
         event.setRequestContext(
                 new ProxyRequestContext()
                         .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));

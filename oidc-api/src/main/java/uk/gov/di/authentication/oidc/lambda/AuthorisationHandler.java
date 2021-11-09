@@ -42,6 +42,7 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static uk.gov.di.authentication.oidc.entity.RequestParameters.COOKIE_CONSENT;
+import static uk.gov.di.authentication.oidc.entity.RequestParameters.GA;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.INTERRUPT_STATES;
@@ -192,12 +193,7 @@ public class AuthorisationHandler
                 pair("session-action", sessionAction));
 
         if (existingSession.isEmpty()) {
-            return createSessionAndRedirect(
-                    session,
-                    authRequestParameters,
-                    authenticationRequest,
-                    authenticationRequest.getClientID(),
-                    configurationService.getLoginURI());
+            return createSessionAndRedirect(session, authRequestParameters, authenticationRequest);
         } else {
             return updateSessionAndRedirect(
                     authRequestParameters, authenticationRequest, session, sessionAction);
@@ -222,22 +218,14 @@ public class AuthorisationHandler
         } catch (StateMachine.InvalidStateTransitionException e) {
             throw new RuntimeException(e);
         }
-        URI redirectUri;
-        try {
-            URIBuilder redirectUriBuilder = new URIBuilder(configurationService.getLoginURI());
-            if (INTERRUPT_STATES.contains(nextState)) {
-                redirectUriBuilder.addParameter("interrupt", nextState.toString());
-            }
-            redirectUri = redirectUriBuilder.build();
-        } catch (URISyntaxException e) {
-            throw new RuntimeException("Error constructing redirect URI", e);
-        }
-        redirectUri =
-                checkToShareCookieConsent(
-                        authRequestParameters, authenticationRequest, redirectUri);
+
         session =
                 updateSessionId(
                         session, authenticationRequest.getClientID(), clientSessionID, nextState);
+
+        String redirectUri =
+                buildRedirectURI(authRequestParameters, authenticationRequest, nextState);
+
         return redirect(session, clientSessionID, redirectUri);
     }
 
@@ -267,9 +255,7 @@ public class AuthorisationHandler
     private APIGatewayProxyResponseEvent createSessionAndRedirect(
             Session session,
             Map<String, List<String>> authRequest,
-            AuthenticationRequest authenticationRequest,
-            ClientID clientId,
-            URI redirectURI) {
+            AuthenticationRequest authenticationRequest) {
         String clientSessionID =
                 clientSessionService.generateClientSession(
                         new ClientSession(
@@ -281,16 +267,51 @@ public class AuthorisationHandler
         LOGGER.info(
                 "Created session {} for client {} - client session id = {}",
                 session.getSessionId(),
-                clientId.getValue(),
+                authenticationRequest.getClientID().getValue(),
                 clientSessionID);
         sessionService.save(session);
         LOGGER.info("Session saved successfully {}", session.getSessionId());
-        redirectURI = checkToShareCookieConsent(authRequest, authenticationRequest, redirectURI);
+
+        var redirectURI = buildRedirectURI(authRequest, authenticationRequest, null);
         return redirect(session, clientSessionID, redirectURI);
     }
 
+    private String buildRedirectURI(
+            Map<String, List<String>> authRequestParameters,
+            AuthenticationRequest authenticationRequest,
+            SessionState nextState) {
+
+        URI redirectUri;
+        try {
+            URIBuilder redirectUriBuilder = new URIBuilder(configurationService.getLoginURI());
+
+            if (nextState != null && INTERRUPT_STATES.contains(nextState)) {
+                redirectUriBuilder.addParameter("interrupt", nextState.toString());
+            }
+
+            String cookieConsent =
+                    getCookieConsentValue(authRequestParameters, authenticationRequest);
+
+            if (cookieConsent != null && !cookieConsent.isEmpty()) {
+                redirectUriBuilder.addParameter(COOKIE_CONSENT, cookieConsent);
+            }
+
+            String gaValue = getGAUserIdValue(authRequestParameters);
+
+            if (gaValue != null && !gaValue.isEmpty()) {
+                redirectUriBuilder.addParameter(GA, gaValue);
+            }
+
+            redirectUri = redirectUriBuilder.build();
+        } catch (URISyntaxException e) {
+            throw new RuntimeException("Error constructing redirect URI", e);
+        }
+
+        return redirectUri.toString();
+    }
+
     private APIGatewayProxyResponseEvent redirect(
-            Session session, String clientSessionID, URI redirectURI) {
+            Session session, String clientSessionID, String redirectURI) {
         LOGGER.info(
                 "Redirecting for SessionId: {} and ClientSessionId: {}",
                 session.getSessionId(),
@@ -300,7 +321,7 @@ public class AuthorisationHandler
                 .withHeaders(
                         Map.of(
                                 ResponseHeaders.LOCATION,
-                                redirectURI.toString(),
+                                redirectURI,
                                 ResponseHeaders.SET_COOKIE,
                                 buildCookieString(
                                         session,
@@ -372,10 +393,10 @@ public class AuthorisationHandler
                 "gs", session.getSessionId(), clientSessionID, maxAge, domain, attributes);
     }
 
-    private URI checkToShareCookieConsent(
+    private String getCookieConsentValue(
             Map<String, List<String>> authRequestParameters,
-            AuthenticationRequest authenticationRequest,
-            URI redirectUri) {
+            AuthenticationRequest authenticationRequest) {
+
         if (authRequestParameters.containsKey(COOKIE_CONSENT)) {
             try {
                 if (authorizationService.isClientCookieConsentShared(
@@ -384,19 +405,26 @@ public class AuthorisationHandler
                     LOGGER.info(
                             "Sharing cookie_consent for client {}",
                             authenticationRequest.getClientID());
-                    redirectUri =
-                            new URIBuilder(redirectUri)
-                                    .addParameter(
-                                            COOKIE_CONSENT,
-                                            authRequestParameters.get(COOKIE_CONSENT).get(0))
-                                    .build();
+
+                    return authRequestParameters.get(COOKIE_CONSENT).get(0);
                 }
             } catch (ClientNotFoundException e) {
                 throw new RuntimeException("Client not found", e);
-            } catch (URISyntaxException e) {
-                throw new RuntimeException("Error constructing redirect URI", e);
             }
         }
-        return redirectUri;
+
+        return null;
+    }
+
+    private String getGAUserIdValue(Map<String, List<String>> authRequestParameters) {
+
+        if (authRequestParameters.containsKey(GA)) {
+            String gaId = authRequestParameters.get(GA).get(0);
+            LOGGER.info("GA value present in request {}", gaId);
+
+            return gaId;
+        }
+
+        return null;
     }
 }
