@@ -1,117 +1,31 @@
-data "aws_iam_policy_document" "lambda_can_assume_policy" {
-  version = "2012-10-17"
+module "account_notification_default_role" {
+  source      = "../modules/lambda-role"
+  environment = var.environment
+  role_name   = "account-management-default-role"
+  vpc_arn     = aws_vpc.account_management_vpc.arn
 
-  statement {
-    effect = "Allow"
-    principals {
-      identifiers = [
-        "lambda.amazonaws.com"
-      ]
-      type = "Service"
-    }
-
-    actions = [
-      "sts:AssumeRole"
-    ]
-  }
+  policies_to_attach = var.use_localstack ? [aws_iam_policy.parameter_policy.arn] : [
+    aws_iam_policy.lambda_kms_policy[0].arn,
+    aws_iam_policy.lambda_dynamo_policy[0].arn,
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0].arn,
+    aws_iam_policy.parameter_policy.arn
+  ]
 }
 
-resource "aws_iam_role" "lambda_iam_role" {
-  name = "${var.environment}-account-management-standard-lambda-role"
+module "account_notification_dynamo_sqs_role" {
+  source      = "../modules/lambda-role"
+  environment = var.environment
+  role_name   = "account-management-dynamo-sqs"
+  vpc_arn     = aws_vpc.account_management_vpc.arn
 
-  assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_policy.json
-
-  tags = local.default_tags
+  policies_to_attach = var.use_localstack ? [aws_iam_policy.parameter_policy.arn] : [
+    aws_iam_policy.lambda_dynamo_policy[0].arn,
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0].arn,
+    aws_iam_policy.parameter_policy.arn
+  ]
 }
 
-data "aws_iam_policy_document" "endpoint_logging_policy" {
-  version = "2012-10-17"
-
-  statement {
-    effect = "Allow"
-    actions = [
-      "logs:CreateLogStream",
-      "logs:PutLogEvents",
-    ]
-
-    resources = [
-      "arn:aws:logs:*:*:*",
-    ]
-  }
-}
-
-resource "aws_iam_policy" "endpoint_logging_policy" {
-  name        = "${var.environment}-account-management-standard-lambda-logging"
-  path        = "/"
-  description = "IAM policy for logging from a Account Management API lambdas"
-
-  policy = data.aws_iam_policy_document.endpoint_logging_policy.json
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_logs" {
-  role       = aws_iam_role.lambda_iam_role.name
-  policy_arn = aws_iam_policy.endpoint_logging_policy.arn
-}
-
-data "aws_iam_policy_document" "endpoint_xray_policy" {
-  version = "2012-10-17"
-
-  statement {
-    effect = "Allow"
-    actions = [
-      "xray:*"
-    ]
-
-    resources = [
-      "*",
-    ]
-  }
-}
-
-resource "aws_iam_policy" "endpoint_xray_policy" {
-  name        = "${var.environment}-account-management-standard-lambda-xray"
-  path        = "/"
-  description = "IAM policy for xray with an account management lambda"
-
-  policy = data.aws_iam_policy_document.endpoint_xray_policy.json
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_xray" {
-  role       = aws_iam_role.lambda_iam_role.name
-  policy_arn = aws_iam_policy.endpoint_xray_policy.arn
-}
-
-data "aws_iam_policy_document" "endpoint_networking_policy" {
-  version = "2012-10-17"
-
-  statement {
-    effect = "Allow"
-    actions = [
-      "ec2:DescribeNetworkInterfaces",
-      "ec2:CreateNetworkInterface",
-      "ec2:DeleteNetworkInterface",
-    ]
-    resources = ["*"]
-    condition {
-      test     = "ArnLikeIfExists"
-      variable = "ec2:Vpc"
-      values   = [aws_vpc.account_management_vpc.arn]
-    }
-  }
-}
-
-resource "aws_iam_policy" "endpoint_networking_policy" {
-  name        = "${var.environment}-account-management-standard-lambda-networking"
-  path        = "/"
-  description = "IAM policy for managing VPC connection for an account management lambda"
-
-  policy = data.aws_iam_policy_document.endpoint_networking_policy.json
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_networking" {
-  role       = aws_iam_role.lambda_iam_role.name
-  policy_arn = aws_iam_policy.endpoint_networking_policy.arn
-}
+### ID token key permissions
 
 data "aws_kms_key" "id_token_public_key" {
   key_id = "alias/${var.environment}-id-token-signing-key-alias"
@@ -141,11 +55,7 @@ resource "aws_iam_policy" "lambda_kms_policy" {
   policy = data.aws_iam_policy_document.kms_policy_document[0].json
 }
 
-resource "aws_iam_role_policy_attachment" "lambda_kms" {
-  count      = var.use_localstack ? 0 : 1
-  role       = aws_iam_role.lambda_iam_role.name
-  policy_arn = aws_iam_policy.lambda_kms_policy[0].arn
-}
+### DynamoDB permissions
 
 data "aws_dynamodb_table" "user_credentials_table" {
   name = "${var.environment}-user-credentials"
@@ -188,37 +98,6 @@ resource "aws_iam_policy" "lambda_dynamo_policy" {
   description = "IAM policy for managing Dynamo connection for an account management lambdas"
 
   policy = data.aws_iam_policy_document.dynamo_policy_document[0].json
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_dynamo" {
-  count      = var.use_localstack ? 0 : 1
-  role       = aws_iam_role.lambda_iam_role.name
-  policy_arn = aws_iam_policy.lambda_dynamo_policy[0].arn
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_sqs_dynamo" {
-  count      = var.use_localstack ? 0 : 1
-  role       = aws_iam_role.dynamo_sqs_lambda_iam_role.name
-  policy_arn = aws_iam_policy.lambda_dynamo_policy[0].arn
-}
-
-resource "aws_iam_role" "dynamo_sqs_lambda_iam_role" {
-  name = "${var.environment}-dynamo-sqs-account-management-lambda-role"
-
-  assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_policy.json
-  tags = {
-    environment = var.environment
-  }
-}
-
-resource "aws_iam_role_policy_attachment" "dynamo_sqs_lambda_logs" {
-  role       = aws_iam_role.dynamo_sqs_lambda_iam_role.name
-  policy_arn = aws_iam_policy.endpoint_logging_policy.arn
-}
-
-resource "aws_iam_role_policy_attachment" "dynamo_sqs_lambda_networking" {
-  role       = aws_iam_role.dynamo_sqs_lambda_iam_role.name
-  policy_arn = aws_iam_policy.endpoint_networking_policy.arn
 }
 
 ### Audit signing key permissions
@@ -276,16 +155,4 @@ resource "aws_iam_policy" "audit_signing_key_lambda_kms_signing_policy" {
   description = "IAM policy for managing KMS connection for a lambda which allows signing of audit payloads"
 
   policy = data.aws_iam_policy_document.account_management_audit_payload_kms_signing_policy_document[0].json
-}
-
-resource "aws_iam_role_policy_attachment" "audit_signing_key_lambda_dynamo" {
-  count      = var.use_localstack ? 0 : 1
-  role       = aws_iam_role.lambda_iam_role.name
-  policy_arn = aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0].arn
-}
-
-resource "aws_iam_role_policy_attachment" "audit_signing_key_lambda_sqs_dynamo" {
-  count      = var.use_localstack ? 0 : 1
-  role       = aws_iam_role.dynamo_sqs_lambda_iam_role.name
-  policy_arn = aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0].arn
 }

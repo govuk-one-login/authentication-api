@@ -1,3 +1,16 @@
+module "lambda_warmer_role" {
+  count  = var.keep_lambdas_warm ? 1 : 0
+  source = "../modules/lambda-role"
+
+  environment = var.environment
+  role_name   = "lambda-warmer"
+  vpc_arn     = aws_vpc.account_management_vpc.arn
+
+  policies_to_attach = [
+    aws_iam_policy.lambda_warmer_policy[0].arn
+  ]
+}
+
 data "aws_iam_policy_document" "warmer_can_execute_endpoint_lambda" {
   statement {
     sid = "AllowExecutionFromWarmer"
@@ -11,13 +24,6 @@ data "aws_iam_policy_document" "warmer_can_execute_endpoint_lambda" {
   }
 }
 
-resource "aws_iam_role" "lambda_warmer_role" {
-  count = var.keep_lambdas_warm ? 1 : 0
-
-  name               = "${aws_lambda_function.authorizer.function_name}-warmer-role"
-  assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_policy.json
-}
-
 resource "aws_iam_policy" "lambda_warmer_policy" {
   count = var.keep_lambdas_warm ? 1 : 0
 
@@ -26,86 +32,12 @@ resource "aws_iam_policy" "lambda_warmer_policy" {
   description = "Allow warmer to invoke its related function"
 }
 
-resource "aws_iam_role_policy_attachment" "lambda_warmer_execution" {
-  count = var.keep_lambdas_warm ? 1 : 0
-
-  role       = aws_iam_role.lambda_warmer_role[0].name
-  policy_arn = aws_iam_policy.lambda_warmer_policy[0].arn
-}
-
-data "aws_iam_policy_document" "lambda_logging_policy" {
-  version = "2012-10-17"
-
-  statement {
-    effect = "Allow"
-    actions = [
-      "logs:CreateLogStream",
-      "logs:PutLogEvents",
-    ]
-
-    resources = [
-      "arn:aws:logs:*:*:*",
-    ]
-  }
-}
-
-resource "aws_iam_policy" "lambda_warmer_logging_policy" {
-  count = var.keep_lambdas_warm ? 1 : 0
-
-  name        = "${aws_lambda_function.authorizer.function_name}-warmer-policy-logging"
-  path        = "/"
-  description = "IAM policy for logging from a warmer lambda"
-
-  policy = data.aws_iam_policy_document.lambda_logging_policy.json
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_warmer_logs" {
-  count = var.keep_lambdas_warm ? 1 : 0
-
-  role       = aws_iam_role.lambda_warmer_role[0].name
-  policy_arn = aws_iam_policy.lambda_warmer_logging_policy[0].arn
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_warmer_networking" {
-  count = var.keep_lambdas_warm ? 1 : 0
-
-  role       = aws_iam_role.lambda_warmer_role[0].name
-  policy_arn = aws_iam_policy.warmer_endpoint_networking_policy.arn
-}
-
-resource "aws_iam_policy" "warmer_endpoint_networking_policy" {
-  name        = "${aws_lambda_function.authorizer.function_name}-standard-warmer-lambda-networking"
-  path        = "/"
-  description = "IAM policy for managing VPC connection for a lambda"
-
-  policy = data.aws_iam_policy_document.warmer_endpoint_networking_policy.json
-}
-
-data "aws_iam_policy_document" "warmer_endpoint_networking_policy" {
-  version = "2012-10-17"
-
-  statement {
-    effect = "Allow"
-    actions = [
-      "ec2:DescribeNetworkInterfaces",
-      "ec2:CreateNetworkInterface",
-      "ec2:DeleteNetworkInterface",
-    ]
-    resources = ["*"]
-    condition {
-      test     = "ArnLikeIfExists"
-      variable = "ec2:Vpc"
-      values   = [aws_vpc.account_management_vpc.arn]
-    }
-  }
-}
-
 resource "aws_lambda_function" "warmer_function" {
   count = var.keep_lambdas_warm ? 1 : 0
 
   filename      = var.lambda_warmer_zip_file
   function_name = "${aws_lambda_function.authorizer.function_name}-lambda-warmer"
-  role          = aws_iam_role.lambda_warmer_role[0].arn
+  role          = module.lambda_warmer_role[0].arn
   handler       = "uk.gov.di.lambdawarmer.lambda.LambdaWarmerHandler::handleRequest"
   timeout       = 60
   memory_size   = 1024

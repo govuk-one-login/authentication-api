@@ -23,7 +23,7 @@ module "update_password" {
   security_group_id                      = aws_vpc.account_management_vpc.default_security_group_id
   subnet_id                              = aws_subnet.account_management_subnets.*.id
   environment                            = var.environment
-  lambda_role_arn                        = aws_iam_role.dynamo_sqs_lambda_iam_role.arn
+  lambda_role_arn                        = module.account_notification_dynamo_sqs_role.arn
   use_localstack                         = var.use_localstack
   default_tags                           = local.default_tags
   logging_endpoint_enabled               = var.logging_endpoint_enabled
