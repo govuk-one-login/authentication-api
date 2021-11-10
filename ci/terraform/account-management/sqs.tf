@@ -51,7 +51,7 @@ resource "aws_sqs_queue" "email_dead_letter_queue" {
   kms_master_key_id                 = var.use_localstack ? null : "alias/aws/sqs"
   kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
 
-  message_retention_seconds = 3600
+  message_retention_seconds = 3600 * 6
 
   tags = local.default_tags
 }
