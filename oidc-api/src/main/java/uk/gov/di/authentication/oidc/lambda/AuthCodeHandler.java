@@ -10,6 +10,8 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.message.BasicNameValuePair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
@@ -34,12 +36,14 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
 import static java.util.Objects.isNull;
 import static uk.gov.di.authentication.oidc.entity.RequestParameters.COOKIE_CONSENT;
+import static uk.gov.di.authentication.oidc.entity.RequestParameters.GA;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
@@ -50,13 +54,9 @@ public class AuthCodeHandler
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthCodeHandler.class);
 
-    public static final String COOKIE_PREFERENCES_NAME = "cookies_preferences_set";
-    public static final String COOKIE_CONSENT_ANALYTICS_TRUE = "\"analytics\":true";
-    public static final String COOKIE_CONSENT_ANALYTICS_FALSE = "\"analytics\":false";
     public static final String COOKIE_CONSENT_ACCEPT = "accept";
     public static final String COOKIE_CONSENT_REJECT = "reject";
     public static final String COOKIE_CONSENT_NOT_ENGAGED = "not-engaged";
-    public static final String COOKIE_CONSENT_PARAM_NAME = "cookie_consent";
 
     private final SessionService sessionService;
     private final AuthorisationCodeService authorisationCodeService;
@@ -198,20 +198,16 @@ public class AuthCodeHandler
 
                             try {
                                 AuthenticationSuccessResponse authenticationResponse;
-                                if (authorizationService.isClientCookieConsentShared(
-                                        authenticationRequest.getClientID())) {
-                                    authenticationResponse =
-                                            authorizationService.generateSuccessfulAuthResponse(
-                                                    authenticationRequest,
-                                                    authCode,
-                                                    COOKIE_CONSENT_PARAM_NAME,
-                                                    getCookieConsentSharedParamValue(
-                                                            input.getQueryStringParameters()));
-                                } else {
-                                    authenticationResponse =
-                                            authorizationService.generateSuccessfulAuthResponse(
-                                                    authenticationRequest, authCode);
-                                }
+
+                                List<NameValuePair> additionalParams =
+                                        getAdditionalQueryParams(
+                                                input.getQueryStringParameters(),
+                                                authenticationRequest);
+
+                                authenticationResponse =
+                                        authorizationService.generateSuccessfulAuthResponse(
+                                                authenticationRequest, authCode, additionalParams);
+
                                 sessionService.save(session.setState(nextState));
                                 LOGGER.info(
                                         "AuthCodeHandler successfully processed request for session: {}",
@@ -240,6 +236,35 @@ public class AuthCodeHandler
                         });
     }
 
+    private List<NameValuePair> getAdditionalQueryParams(
+            Map<String, String> queryParams, AuthenticationRequest authenticationRequest)
+            throws ClientNotFoundException {
+        List<NameValuePair> additionalParams = new ArrayList<>();
+
+        if (authorizationService.isClientCookieConsentShared(authenticationRequest.getClientID())) {
+
+            String cookieConsentValue = COOKIE_CONSENT_NOT_ENGAGED;
+
+            if (isValidQueryParam(queryParams, COOKIE_CONSENT)) {
+                cookieConsentValue = queryParams.get(COOKIE_CONSENT);
+            }
+
+            additionalParams.add(new BasicNameValuePair(COOKIE_CONSENT, cookieConsentValue));
+        }
+
+        if (isValidQueryParam(queryParams, GA)) {
+            additionalParams.add(new BasicNameValuePair(GA, queryParams.get(GA)));
+        }
+
+        return additionalParams;
+    }
+
+    private boolean isValidQueryParam(Map<String, String> queryParams, String queryParam) {
+        return queryParams != null
+                && queryParams.containsKey(queryParam)
+                && !queryParams.get(queryParam).isEmpty();
+    }
+
     private APIGatewayProxyResponseEvent generateInvalidClientRedirectError(
             Session session, URI redirectURI) {
         LOGGER.error(
@@ -260,12 +285,5 @@ public class AuthCodeHandler
         return new APIGatewayProxyResponseEvent()
                 .withStatusCode(302)
                 .withHeaders(Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()));
-    }
-
-    private String getCookieConsentSharedParamValue(Map<String, String> queryParams) {
-        if (!queryParams.containsKey(COOKIE_CONSENT) || queryParams.get(COOKIE_CONSENT).isEmpty()) {
-            return COOKIE_CONSENT_NOT_ENGAGED;
-        }
-        return queryParams.get(COOKIE_CONSENT);
     }
 }

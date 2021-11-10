@@ -41,8 +41,10 @@ import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -191,7 +193,7 @@ class UpdateProfileHandlerTest {
 
     @Test
     public void shouldReturn200WhenUpdatingProfileWithConsent()
-            throws ClientNotFoundException, JsonProcessingException {
+            throws ClientNotFoundException, JsonProcessingException, URISyntaxException {
         session.setState(SessionState.CONSENT_REQUIRED);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -213,7 +215,9 @@ class UpdateProfileHandlerTest {
         when(authorizationService.isClientRedirectUriValid(eq(clientID), eq(REDIRECT_URI)))
                 .thenReturn(true);
         when(authorizationService.generateSuccessfulAuthResponse(
-                        any(AuthenticationRequest.class), any(AuthorizationCode.class)))
+                        any(AuthenticationRequest.class),
+                        any(AuthorizationCode.class),
+                        any(List.class)))
                 .thenReturn(authSuccessResponse);
 
         event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));

@@ -453,8 +453,6 @@ class AuthorisationHandlerTest {
 
         APIGatewayProxyResponseEvent response =
                 makeHandlerRequest(withRequestEvent(Map.of("prompt", "login")));
-        // APIGatewayProxyResponseEvent response =
-        // makeHandlerRequest(withRequestEvent(Map.of("prompt", "login")));
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
         assertThat(response, hasStatus(302));

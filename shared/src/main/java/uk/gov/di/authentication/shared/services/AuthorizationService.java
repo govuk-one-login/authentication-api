@@ -9,6 +9,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
+import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,27 +70,19 @@ public class AuthorizationService {
     }
 
     public AuthenticationSuccessResponse generateSuccessfulAuthResponse(
-            AuthenticationRequest authRequest, AuthorizationCode authorizationCode) {
-        return new AuthenticationSuccessResponse(
-                authRequest.getRedirectionURI(),
-                authorizationCode,
-                null,
-                null,
-                authRequest.getState(),
-                null,
-                authRequest.getResponseMode());
-    }
-
-    public AuthenticationSuccessResponse generateSuccessfulAuthResponse(
             AuthenticationRequest authRequest,
             AuthorizationCode authorizationCode,
-            String additionalParamName,
-            String additionalParamValue)
+            List<NameValuePair> additionalParams)
             throws URISyntaxException {
+
+        URIBuilder redirectUri = new URIBuilder(authRequest.getRedirectionURI());
+
+        if (additionalParams != null && !additionalParams.isEmpty()) {
+            redirectUri.addParameters(additionalParams);
+        }
+
         return new AuthenticationSuccessResponse(
-                new URIBuilder(authRequest.getRedirectionURI())
-                        .addParameter(additionalParamName, additionalParamValue)
-                        .build(),
+                redirectUri.build(),
                 authorizationCode,
                 null,
                 null,
