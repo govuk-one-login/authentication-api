@@ -26,6 +26,7 @@ import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -90,7 +91,7 @@ class AuthorizationServiceTest {
     }
 
     @Test
-    void shouldGenerateSuccessfulAuthResponse() {
+    void shouldGenerateSuccessfulAuthResponse() throws URISyntaxException {
         ClientID clientID = new ClientID();
         AuthorizationCode authCode = new AuthorizationCode();
         State state = new State();
@@ -104,7 +105,7 @@ class AuthorizationServiceTest {
                         .build();
 
         AuthenticationSuccessResponse authSuccessResponse =
-                authorizationService.generateSuccessfulAuthResponse(authRequest, authCode);
+                authorizationService.generateSuccessfulAuthResponse(authRequest, authCode, null);
         assertThat(authSuccessResponse.getState(), equalTo(state));
         assertThat(authSuccessResponse.getAuthorizationCode(), equalTo(authCode));
         assertThat(authSuccessResponse.getRedirectionURI(), equalTo(REDIRECT_URI));

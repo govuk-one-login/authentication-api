@@ -64,7 +64,6 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.entity.RequestParameters.COOKIE_CONSENT;
 import static uk.gov.di.authentication.oidc.lambda.AuthCodeHandler.COOKIE_CONSENT_ACCEPT;
 import static uk.gov.di.authentication.oidc.lambda.AuthCodeHandler.COOKIE_CONSENT_NOT_ENGAGED;
-import static uk.gov.di.authentication.oidc.lambda.AuthCodeHandler.COOKIE_CONSENT_PARAM_NAME;
 import static uk.gov.di.authentication.oidc.lambda.AuthCodeHandler.COOKIE_CONSENT_REJECT;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
@@ -133,7 +132,7 @@ class AuthCodeHandlerTest {
             CredentialTrustLevel initialLevel,
             CredentialTrustLevel requestedLevel,
             CredentialTrustLevel finalLevel)
-            throws ClientNotFoundException {
+            throws ClientNotFoundException, URISyntaxException {
         ClientID clientID = new ClientID();
         AuthorizationCode authorizationCode = new AuthorizationCode();
         AuthenticationRequest authRequest =
@@ -154,7 +153,9 @@ class AuthCodeHandlerTest {
         when(authorisationCodeService.generateAuthorisationCode(eq(CLIENT_SESSION_ID), eq(EMAIL)))
                 .thenReturn(authorizationCode);
         when(authorizationService.generateSuccessfulAuthResponse(
-                        any(AuthenticationRequest.class), any(AuthorizationCode.class)))
+                        any(AuthenticationRequest.class),
+                        any(AuthorizationCode.class),
+                        any(List.class)))
                 .thenReturn(authSuccessResponse);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -169,7 +170,7 @@ class AuthCodeHandlerTest {
 
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                not(containsString(COOKIE_CONSENT_PARAM_NAME)));
+                not(containsString(COOKIE_CONSENT)));
 
         assertThat(session.getCurrentCredentialStrength(), equalTo(finalLevel));
 
@@ -201,7 +202,7 @@ class AuthCodeHandlerTest {
                 generateSuccessfulAuthResponse(
                         authRequest,
                         authorizationCode,
-                        COOKIE_CONSENT_PARAM_NAME,
+                        COOKIE_CONSENT,
                         returnedCookieConsentParamValue);
 
         when(authorizationService.isClientRedirectUriValid(eq(clientID), eq(REDIRECT_URI)))
@@ -213,8 +214,7 @@ class AuthCodeHandlerTest {
         when(authorizationService.generateSuccessfulAuthResponse(
                         any(AuthenticationRequest.class),
                         any(AuthorizationCode.class),
-                        any(String.class),
-                        any(String.class)))
+                        any(List.class)))
                 .thenCallRealMethod();
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -230,7 +230,7 @@ class AuthCodeHandlerTest {
 
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                containsString(COOKIE_CONSENT_PARAM_NAME + "=" + returnedCookieConsentParamValue));
+                containsString(COOKIE_CONSENT + "=" + returnedCookieConsentParamValue));
 
         assertThat(session.getCurrentCredentialStrength(), equalTo(MEDIUM_LEVEL));
 
@@ -330,7 +330,8 @@ class AuthCodeHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserTransitionsFromWrongState() throws ClientNotFoundException {
+    public void shouldReturn400IfUserTransitionsFromWrongState()
+            throws ClientNotFoundException, URISyntaxException {
         session.setState(SessionState.NEW);
 
         ClientID clientID = new ClientID();
@@ -352,7 +353,9 @@ class AuthCodeHandlerTest {
         when(authorisationCodeService.generateAuthorisationCode(eq(CLIENT_SESSION_ID), eq(EMAIL)))
                 .thenReturn(authorizationCode);
         when(authorizationService.generateSuccessfulAuthResponse(
-                        any(AuthenticationRequest.class), any(AuthorizationCode.class)))
+                        any(AuthenticationRequest.class),
+                        any(AuthorizationCode.class),
+                        any(List.class)))
                 .thenReturn(authSuccessResponse);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
