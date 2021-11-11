@@ -24,7 +24,7 @@ module "send_otp_notification" {
   authentication_vpc_arn                 = aws_vpc.account_management_vpc.arn
   security_group_id                      = aws_vpc.account_management_vpc.default_security_group_id
   subnet_id                              = aws_subnet.account_management_subnets.*.id
-  lambda_role_arn                        = aws_iam_role.dynamo_sqs_lambda_iam_role.arn
+  lambda_role_arn                        = module.account_notification_dynamo_sqs_role.arn
   logging_endpoint_enabled               = var.logging_endpoint_enabled
   logging_endpoint_arn                   = var.logging_endpoint_arn
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn

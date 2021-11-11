@@ -77,7 +77,7 @@ EOF
 resource "aws_lambda_function" "authorizer" {
   filename         = var.lambda_zip_file
   function_name    = "${var.environment}-api_gateway_authorizer"
-  role             = aws_iam_role.lambda_iam_role.arn
+  role             = module.account_notification_default_role.arn
   handler          = "uk.gov.di.accountmanagement.lambda.AuthoriseAccessTokenHandler::handleRequest"
   runtime          = "java11"
   source_code_hash = filebase64sha256(var.lambda_zip_file)
