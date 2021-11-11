@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.util.Collections.emptyList;
 import static uk.gov.di.authentication.shared.entity.SessionAction.ACCOUNT_LOCK_EXPIRED;
@@ -563,15 +564,21 @@ public class StateMachine<T, A, C> {
     public static class StateRuleBuilder<T, A, C> {
         private final Builder<T, A, C> stateMachineBuilder;
         private final T state;
+        private final List<Transition<T, A, C>> includes = new ArrayList<>();
 
         @SafeVarargs
         public final Builder<T, A, C> allow(final Transition.Builder<T, A, C>... transitions) {
             stateMachineBuilder.addStateRule(
                     state,
-                    Arrays.asList(transitions).stream()
-                            .map(b -> b.build())
+                    Stream.concat(Arrays.stream(transitions)
+                            .map(Transition.Builder::build), includes.stream())
                             .collect(Collectors.toList()));
             return stateMachineBuilder;
+        }
+
+        public final StateRuleBuilder<T, A, C> include(final List<Transition<T, A, C>>... includes) {
+            Arrays.stream(includes).forEach(this.includes::addAll);
+            return this;
         }
 
         protected StateRuleBuilder(Builder<T, A, C> stateMachineBuilder, T state) {
