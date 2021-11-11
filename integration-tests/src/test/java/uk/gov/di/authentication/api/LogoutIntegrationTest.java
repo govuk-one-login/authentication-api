@@ -35,7 +35,7 @@ import java.util.List;
 
 import static java.util.Collections.singletonList;
 
-public class LogoutIntegrationTest extends IntegrationTestEndpoints {
+public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String LOGOUT_ENDPOINT = "/logout";
     private static final String COOKIE = "Cookie";

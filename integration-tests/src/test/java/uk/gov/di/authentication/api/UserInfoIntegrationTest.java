@@ -34,7 +34,7 @@ import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class UserInfoIntegrationTest extends IntegrationTestEndpoints {
+public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String USERINFO_ENDPOINT = "/userinfo";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";

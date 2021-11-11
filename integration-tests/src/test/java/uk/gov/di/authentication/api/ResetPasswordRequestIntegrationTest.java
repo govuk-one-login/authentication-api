@@ -22,7 +22,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION
 import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
 import static uk.gov.di.authentication.shared.entity.SessionState.RESET_PASSWORD_LINK_SENT;
 
-public class ResetPasswordRequestIntegrationTest extends IntegrationTestEndpoints {
+public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String RESET_PASSWORD_ENDPOINT = "/reset-password-request";
 

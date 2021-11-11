@@ -39,7 +39,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_REQUIR
 import static uk.gov.di.authentication.shared.entity.SessionState.LOGGED_IN;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS;
 
-public class LoginIntegrationTest extends IntegrationTestEndpoints {
+public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String LOGIN_ENDPOINT = "/login";
     private static final String CLIENT_ID = "test-client-id";

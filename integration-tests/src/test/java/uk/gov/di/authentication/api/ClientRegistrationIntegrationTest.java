@@ -17,7 +17,7 @@ import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class ClientRegistrationIntegrationTest extends IntegrationTestEndpoints {
+public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String REGISTER_ENDPOINT = "/connect/register";
     private final ObjectMapper objectMapper = new ObjectMapper();

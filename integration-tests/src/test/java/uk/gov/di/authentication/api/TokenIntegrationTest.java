@@ -62,7 +62,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-public class TokenIntegrationTest extends IntegrationTestEndpoints {
+public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String TOKEN_ENDPOINT = "/token";
     private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";

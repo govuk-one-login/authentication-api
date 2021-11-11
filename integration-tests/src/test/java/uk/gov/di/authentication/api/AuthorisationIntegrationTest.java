@@ -53,7 +53,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION
 import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPLIFT_REQUIRED_CM;
 
-public class AuthorisationIntegrationTest extends IntegrationTestEndpoints {
+public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String AUTHORIZE_ENDPOINT = "/authorize";
 
