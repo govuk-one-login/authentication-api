@@ -29,7 +29,9 @@ locals {
   email_lambda_iam_role_arn              = data.terraform_remote_state.shared.outputs.email_lambda_iam_role_arn
   token_lambda_iam_role_arn              = data.terraform_remote_state.shared.outputs.token_lambda_iam_role_arn
   id_token_signing_key_alias_name        = data.terraform_remote_state.shared.outputs.id_token_signing_key_alias_name
+  id_token_signing_key_alias_arn         = data.terraform_remote_state.shared.outputs.id_token_signing_key_alias_arn
   audit_signing_key_alias_name           = data.terraform_remote_state.shared.outputs.audit_signing_key_alias_name
+  audit_signing_key_arn                  = data.terraform_remote_state.shared.outputs.audit_signing_key_arn
   sms_bucket_name                        = data.terraform_remote_state.shared.outputs.sms_bucket_name
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
   events_topic_encryption_key_arn        = data.terraform_remote_state.shared.outputs.events_topic_encryption_key_arn
