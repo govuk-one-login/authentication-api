@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
+import uk.gov.di.authentication.shared.domain.RequestHeaders;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -53,6 +54,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.PHONE_NUMBER_C
 import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
@@ -67,7 +69,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private final ValidationService validationService;
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine;
     private final AuditService auditService;
-    private static final String CLIENT_SESSION_ID_HEADER = "Client-Session-Id";
 
     protected VerifyCodeHandler(
             ConfigurationService configurationService,
@@ -157,7 +158,10 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     session,
                     codeRequest.getNotificationType(),
                     userContext.getClientSession(),
-                    input.getHeaders().get(CLIENT_SESSION_ID_HEADER),
+                    getHeaderValueFromHeaders(
+                            input.getHeaders(),
+                            RequestHeaders.CLIENT_SESSION_ID_HEADER,
+                            configurationService.getHeadersCaseInsensitive()),
                     input,
                     context,
                     userContext);

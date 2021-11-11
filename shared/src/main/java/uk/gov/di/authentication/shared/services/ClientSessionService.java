@@ -11,12 +11,14 @@ import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
+
 public class ClientSessionService {
 
     private static final Logger LOG = LoggerFactory.getLogger(ClientSessionService.class);
     public static final String CLIENT_SESSION_PREFIX = "client-session-";
-
-    private static final String CLIENT_SESSION_ID_HEADER = "Client-Session-Id";
 
     private final RedisConnectionService redisConnectionService;
     private final ConfigurationService configurationService;
@@ -30,6 +32,14 @@ public class ClientSessionService {
                         configurationService.getRedisPort(),
                         configurationService.getUseRedisTLS(),
                         configurationService.getRedisPassword());
+        objectMapper = ObjectMapperFactory.getInstance();
+    }
+
+    public ClientSessionService(
+            ConfigurationService configurationService,
+            RedisConnectionService redisConnectionService) {
+        this.configurationService = configurationService;
+        this.redisConnectionService = redisConnectionService;
         objectMapper = ObjectMapperFactory.getInstance();
     }
 
@@ -78,13 +88,22 @@ public class ClientSessionService {
     }
 
     public Optional<ClientSession> getClientSessionFromRequestHeaders(Map<String, String> headers) {
-        if (headers == null
-                || headers.isEmpty()
-                || !headers.containsKey(CLIENT_SESSION_ID_HEADER)) {
+        if (!headersContainValidHeader(
+                headers,
+                CLIENT_SESSION_ID_HEADER,
+                configurationService.getHeadersCaseInsensitive())) {
+            return Optional.empty();
+        }
+        String clientSessionId =
+                getHeaderValueFromHeaders(
+                        headers,
+                        CLIENT_SESSION_ID_HEADER,
+                        configurationService.getHeadersCaseInsensitive());
+        if (clientSessionId == null) {
+            LOG.error("Value not found for Client-Session-Id header");
             return Optional.empty();
         }
         try {
-            String clientSessionId = headers.get(CLIENT_SESSION_ID_HEADER);
             return Optional.of(getClientSession(clientSessionId));
         } catch (Exception e) {
             throw new RuntimeException(e);

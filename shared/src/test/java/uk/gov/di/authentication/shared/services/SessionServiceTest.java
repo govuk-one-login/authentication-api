@@ -36,7 +36,7 @@ class SessionServiceTest {
     private final SessionService sessionService = new SessionService(configuration, redis);
 
     @Test
-    public void shouldPersistSessionToRedisWithExpiry() throws JsonProcessingException {
+    void shouldPersistSessionToRedisWithExpiry() throws JsonProcessingException {
         when(configuration.getSessionExpiry()).thenReturn(1234L);
 
         var session = new Session("session-id").addClientSession("client-session-id");
@@ -48,7 +48,7 @@ class SessionServiceTest {
     }
 
     @Test
-    public void shouldRetrieveSessionUsingRequestHeaders() throws JsonProcessingException {
+    void shouldRetrieveSessionUsingRequestHeaders() throws JsonProcessingException {
         when(redis.keyExists("session-id")).thenReturn(true);
         when(redis.getValue("session-id")).thenReturn(generateSearlizedSession());
 
@@ -61,25 +61,35 @@ class SessionServiceTest {
     }
 
     @Test
-    public void shouldNotRetrieveSessionWithNoHeaders() {
+    void shouldNotRetrieveSessionForLowerCaseHeaderName() throws JsonProcessingException {
+        when(redis.keyExists("session-id")).thenReturn(true);
+        when(redis.getValue("session-id")).thenReturn(generateSearlizedSession());
+
+        var sessionInRedis =
+                sessionService.getSessionFromRequestHeaders(Map.of("session-id", "session-id"));
+        assertTrue(sessionInRedis.isEmpty());
+    }
+
+    @Test
+    void shouldNotRetrieveSessionWithNoHeaders() {
         var session = sessionService.getSessionFromRequestHeaders(Collections.emptyMap());
         assertTrue(session.isEmpty());
     }
 
     @Test
-    public void shouldNotRetrieveSessionWithNullHeaders() {
+    void shouldNotRetrieveSessionWithNullHeaders() {
         var session = sessionService.getSessionFromRequestHeaders(null);
         assertTrue(session.isEmpty());
     }
 
     @Test
-    public void shouldNotRetrieveSessionWithMissingHeader() {
+    void shouldNotRetrieveSessionWithMissingHeader() {
         var session = sessionService.getSessionFromRequestHeaders(Map.of("Something", "Else"));
         assertTrue(session.isEmpty());
     }
 
     @Test
-    public void shouldNotRetrieveSessionIfNotPresentInRedis() {
+    void shouldNotRetrieveSessionIfNotPresentInRedis() {
         when(redis.keyExists("session-id")).thenReturn(false);
 
         var session =

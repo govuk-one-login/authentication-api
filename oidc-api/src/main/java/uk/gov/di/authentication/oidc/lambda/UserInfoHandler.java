@@ -18,7 +18,10 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.MISSING_TOKEN;
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.AUTHORIZATION_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class UserInfoHandler
@@ -61,9 +64,10 @@ public class UserInfoHandler
                 .orElseGet(
                         () -> {
                             LOGGER.info("Request received to the UserInfoHandler");
-                            if (input.getHeaders() == null
-                                    || !input.getHeaders().containsKey("Authorization")
-                                    || input.getHeaders().get("Authorization").isEmpty()) {
+                            if (!headersContainValidHeader(
+                                    input.getHeaders(),
+                                    AUTHORIZATION_HEADER,
+                                    configurationService.getHeadersCaseInsensitive())) {
                                 LOGGER.error("AccessToken is missing from request");
                                 return generateApiGatewayProxyResponse(
                                         401,
@@ -76,7 +80,11 @@ public class UserInfoHandler
                             try {
                                 userInfo =
                                         userInfoService.processUserInfoRequest(
-                                                input.getHeaders().get("Authorization"));
+                                                getHeaderValueFromHeaders(
+                                                        input.getHeaders(),
+                                                        AUTHORIZATION_HEADER,
+                                                        configurationService
+                                                                .getHeadersCaseInsensitive()));
                             } catch (UserInfoValidationException e) {
                                 LOGGER.error(
                                         "UserInfoValidationException. Sending back UserInfoErrorResponse");
