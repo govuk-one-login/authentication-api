@@ -175,6 +175,29 @@ public class StateMachine<T, A, C> {
 
     public static StateMachine<SessionState, SessionAction, UserContext> userJourneyStateMachine(
             ConfigurationService configurationService) {
+
+        final List<Transition<SessionState, SessionAction, UserContext>> VALID_MFA_TRANSITIONS =
+                List.of(
+                        on(USER_ENTERED_VALID_MFA_CODE)
+                                .then(UPDATED_TERMS_AND_CONDITIONS)
+                                .ifCondition(
+                                        userHasNotAcceptedTermsAndConditionsVersion(
+                                                configurationService
+                                                        .getTermsAndConditionsVersion()))
+                                .build(),
+                        on(USER_ENTERED_VALID_MFA_CODE)
+                                .then(MFA_CODE_VERIFIED)
+                                .ifCondition(clientIsAnInternalService())
+                                .build(),
+                        on(USER_ENTERED_VALID_MFA_CODE)
+                                .then(CONSENT_REQUIRED)
+                                .ifCondition(userHasNotGivenConsent())
+                                .build(),
+                        on(USER_ENTERED_VALID_MFA_CODE)
+                                .then(MFA_CODE_VERIFIED)
+                                .byDefault()
+                                .build());
+
         return StateMachine.<SessionState, SessionAction, UserContext>builder()
                 .when(NEW)
                 .allow(
@@ -375,23 +398,11 @@ public class StateMachine<T, A, C> {
                                 .then(MFA_CODE_MAX_RETRIES_REACHED),
                         on(USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS).then(USER_NOT_FOUND))
                 .when(MFA_SMS_CODE_SENT)
+                .include(VALID_MFA_TRANSITIONS)
                 .allow(
                         on(USER_ENTERED_VALID_CREDENTIALS).then(MFA_SMS_CODE_SENT),
                         on(SYSTEM_HAS_SENT_MFA_CODE).then(MFA_SMS_CODE_SENT),
                         on(SYSTEM_HAS_SENT_TOO_MANY_MFA_CODES).then(MFA_SMS_MAX_CODES_SENT),
-                        on(USER_ENTERED_VALID_MFA_CODE)
-                                .then(UPDATED_TERMS_AND_CONDITIONS)
-                                .ifCondition(
-                                        userHasNotAcceptedTermsAndConditionsVersion(
-                                                configurationService
-                                                        .getTermsAndConditionsVersion())),
-                        on(USER_ENTERED_VALID_MFA_CODE)
-                                .then(MFA_CODE_VERIFIED)
-                                .ifCondition(clientIsAnInternalService()),
-                        on(USER_ENTERED_VALID_MFA_CODE)
-                                .then(CONSENT_REQUIRED)
-                                .ifCondition(userHasNotGivenConsent()),
-                        on(USER_ENTERED_VALID_MFA_CODE).then(MFA_CODE_VERIFIED).byDefault(),
                         on(USER_ENTERED_INVALID_MFA_CODE).then(MFA_CODE_NOT_VALID),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY)
                                 .then(UPLIFT_REQUIRED_CM)
@@ -417,20 +428,8 @@ public class StateMachine<T, A, C> {
                                 .then(UPLIFT_REQUIRED_CM)
                                 .ifCondition(upliftRequired()))
                 .when(MFA_CODE_NOT_VALID)
+                .include(VALID_MFA_TRANSITIONS)
                 .allow(
-                        on(USER_ENTERED_VALID_MFA_CODE)
-                                .then(UPDATED_TERMS_AND_CONDITIONS)
-                                .ifCondition(
-                                        userHasNotAcceptedTermsAndConditionsVersion(
-                                                configurationService
-                                                        .getTermsAndConditionsVersion())),
-                        on(USER_ENTERED_VALID_MFA_CODE)
-                                .then(MFA_CODE_VERIFIED)
-                                .ifCondition(clientIsAnInternalService()),
-                        on(USER_ENTERED_VALID_MFA_CODE)
-                                .then(CONSENT_REQUIRED)
-                                .ifCondition(userHasNotGivenConsent()),
-                        on(USER_ENTERED_VALID_MFA_CODE).then(MFA_CODE_VERIFIED).byDefault(),
                         on(USER_ENTERED_INVALID_MFA_CODE).then(MFA_CODE_NOT_VALID),
                         on(USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES)
                                 .then(MFA_CODE_MAX_RETRIES_REACHED),
@@ -570,13 +569,16 @@ public class StateMachine<T, A, C> {
         public final Builder<T, A, C> allow(final Transition.Builder<T, A, C>... transitions) {
             stateMachineBuilder.addStateRule(
                     state,
-                    Stream.concat(Arrays.stream(transitions)
-                            .map(Transition.Builder::build), includes.stream())
+                    Stream.concat(
+                                    Arrays.stream(transitions).map(Transition.Builder::build),
+                                    includes.stream())
                             .collect(Collectors.toList()));
             return stateMachineBuilder;
         }
 
-        public final StateRuleBuilder<T, A, C> include(final List<Transition<T, A, C>>... includes) {
+        @SafeVarargs
+        public final StateRuleBuilder<T, A, C> include(
+                final List<Transition<T, A, C>>... includes) {
             Arrays.stream(includes).forEach(this.includes::addAll);
             return this;
         }

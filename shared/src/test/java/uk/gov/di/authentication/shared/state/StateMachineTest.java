@@ -115,52 +115,51 @@ public class StateMachineTest {
 
     @Test
     void builderReturnsCorrectlyConfiguredMachine() {
-        final List<Transition<State, Action, Boolean>> A_TRANSITION_INCLUDE = List.of(
-                on(ACTION_COMMON_TO_SOME_STATES)
-                        .then(STATE_7)
-                        .build()
-        );
+        final List<Transition<State, Action, Boolean>> A_TRANSITION_INCLUDE =
+                List.of(on(ACTION_COMMON_TO_SOME_STATES).then(STATE_7).build());
 
-        var builtMachine = StateMachine.<State, Action, Boolean>builder()
-                .when(STATE_1)
-                .include(A_TRANSITION_INCLUDE)
-                .allow(
-                        on(MOVE_TO_2)
-                               .then(STATE_2)
-                )
-                .when(STATE_2)
-                .include(A_TRANSITION_INCLUDE)
-                .allow(
-                        on(CONDITIONAL_MOVE)
-                                .ifCondition(testCondition)
-                                .then(STATE_4),
-                        on(CONDITIONAL_MOVE)
-                                .ifCondition(testCondition)
-                                .then(STATE_5).byDefault(),
-                        on(MOVE_TO_3)
-                                .then(STATE_3)
-                )
-                .atAnyState()
-                .allow(
-                        on(ACTION_THAT_CAN_OCCUR_AT_ANY_STATE)
-                                .then(STATE_6)
-                )
-                .build();
-
+        var builtMachine =
+                StateMachine.<State, Action, Boolean>builder()
+                        .when(STATE_1)
+                        .include(A_TRANSITION_INCLUDE)
+                        .allow(on(MOVE_TO_2).then(STATE_2))
+                        .when(STATE_2)
+                        .include(A_TRANSITION_INCLUDE)
+                        .allow(
+                                on(CONDITIONAL_MOVE).ifCondition(testCondition).then(STATE_4),
+                                on(CONDITIONAL_MOVE)
+                                        .ifCondition(testCondition)
+                                        .then(STATE_5)
+                                        .byDefault(),
+                                on(MOVE_TO_3).then(STATE_3))
+                        .atAnyState()
+                        .allow(on(ACTION_THAT_CAN_OCCUR_AT_ANY_STATE).then(STATE_6))
+                        .build();
 
         assertThat(builtMachine.transition(STATE_1, MOVE_TO_2, true), equalTo(STATE_2));
-        assertThat(builtMachine.transition(STATE_1, ACTION_COMMON_TO_SOME_STATES, true), equalTo(STATE_7));
-        assertThat(builtMachine.transition(STATE_2, ACTION_COMMON_TO_SOME_STATES, true), equalTo(STATE_7));
+        assertThat(
+                builtMachine.transition(STATE_1, ACTION_COMMON_TO_SOME_STATES, true),
+                equalTo(STATE_7));
+        assertThat(
+                builtMachine.transition(STATE_2, ACTION_COMMON_TO_SOME_STATES, true),
+                equalTo(STATE_7));
         assertThat(builtMachine.transition(STATE_2, CONDITIONAL_MOVE, false), equalTo(STATE_5));
         assertThat(builtMachine.transition(STATE_2, MOVE_TO_3, false), equalTo(STATE_3));
-        assertThat(builtMachine.transition(STATE_1, ACTION_THAT_CAN_OCCUR_AT_ANY_STATE, true), equalTo(STATE_6));
-        assertThat(builtMachine.transition(STATE_2, ACTION_THAT_CAN_OCCUR_AT_ANY_STATE, true), equalTo(STATE_6));
-        assertThat(builtMachine.transition(STATE_3, ACTION_THAT_CAN_OCCUR_AT_ANY_STATE, true), equalTo(STATE_6));
-        assertThrows(StateMachine.InvalidStateTransitionException.class, () -> builtMachine.transition(STATE_3, ACTION_COMMON_TO_SOME_STATES, true));
+        assertThat(
+                builtMachine.transition(STATE_1, ACTION_THAT_CAN_OCCUR_AT_ANY_STATE, true),
+                equalTo(STATE_6));
+        assertThat(
+                builtMachine.transition(STATE_2, ACTION_THAT_CAN_OCCUR_AT_ANY_STATE, true),
+                equalTo(STATE_6));
+        assertThat(
+                builtMachine.transition(STATE_3, ACTION_THAT_CAN_OCCUR_AT_ANY_STATE, true),
+                equalTo(STATE_6));
+        assertThrows(
+                StateMachine.InvalidStateTransitionException.class,
+                () -> builtMachine.transition(STATE_3, ACTION_COMMON_TO_SOME_STATES, true));
     }
 
-    private static Transition.Builder<State, Action, Boolean> on(
-            Action action) {
+    private static Transition.Builder<State, Action, Boolean> on(Action action) {
         return Transition.<State, Action, Boolean>builder().on(action);
     }
 }
