@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.shared.matchers;
+package uk.gov.di.authentication.sharedtest.matchers;
 
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
