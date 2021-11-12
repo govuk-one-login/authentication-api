@@ -41,7 +41,8 @@ public abstract class ApiGatewayHandlerIntegrationTest {
     protected RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> handler;
     protected final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
     protected final Context context = mock(Context.class);
-    protected final ConfigurationService configurationService = ConfigurationService.getInstance();
+    protected final ConfigurationService configurationService =
+            new IntegrationTestConfigurationService();
 
     @BeforeEach
     void flushData() {
@@ -49,20 +50,26 @@ public abstract class ApiGatewayHandlerIntegrationTest {
         DynamoHelper.flushData();
     }
 
-    protected APIGatewayProxyResponseEvent makeRequest(Optional<Object> body, Map<String, String> headers,  Map<String, String> queryString) {
+    protected APIGatewayProxyResponseEvent makeRequest(
+            Optional<Object> body, Map<String, String> headers, Map<String, String> queryString) {
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
-        request
-                .withHeaders(headers)
-                .withQueryStringParameters(queryString);
-        body.ifPresent(o -> {
-            try {
-                request
-                        .withBody(objectMapper.writeValueAsString(o));
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException("Could not serialise test body", e);
-            }
-        });
+        request.withHeaders(headers).withQueryStringParameters(queryString);
+        body.ifPresent(
+                o -> {
+                    try {
+                        request.withBody(objectMapper.writeValueAsString(o));
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException("Could not serialise test body", e);
+                    }
+                });
 
         return handler.handleRequest(request, context);
+    }
+
+    public static class IntegrationTestConfigurationService extends ConfigurationService {
+        @Override
+        public String getRedisHost() {
+            return "localhost";
+        }
     }
 }

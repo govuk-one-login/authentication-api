@@ -5,7 +5,6 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCError;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.ClientBuilder;
 import jakarta.ws.rs.client.Invocation;
@@ -45,6 +44,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import static com.nimbusds.openid.connect.sdk.OIDCScopeValue.OPENID;
 import static com.nimbusds.openid.connect.sdk.Prompt.Type.LOGIN;
 import static com.nimbusds.openid.connect.sdk.Prompt.Type.NONE;
 import static java.lang.String.format;
@@ -55,13 +55,13 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPLIFT_REQUIRED_CM;
+import static uk.gov.di.authentication.shared.helpers.CookieHelper.getHttpCookieFromResponseHeaders;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -78,30 +78,33 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
     @BeforeEach
     public void setup() {
         registerClient(CLIENT_ID, "test-client", singletonList("openid"));
-        handler = new AuthorisationHandler(
-                configurationService,
-                new SessionService(configurationService),
-                new ClientSessionService(configurationService),
-                new AuthorizationService(configurationService),
-                new AuditService(
-                        Clock.systemUTC(),
-                        new SnsService(configurationService),
-                        new KmsConnectionService(configurationService.getLocalstackEndpointUri(),
-                                configurationService.getAwsRegion(),
-                                configurationService.getAuditSigningKeyAlias())),
-                userJourneyStateMachine());
+        handler =
+                new AuthorisationHandler(
+                        configurationService,
+                        new SessionService(configurationService),
+                        new ClientSessionService(configurationService),
+                        new AuthorizationService(configurationService),
+                        new AuditService(
+                                Clock.systemUTC(),
+                                new SnsService(configurationService),
+                                new KmsConnectionService(
+                                        configurationService.getLocalstackEndpointUri(),
+                                        configurationService.getAwsRegion(),
+                                        configurationService.getAuditSigningKeyAlias())),
+                        userJourneyStateMachine());
     }
 
     @Test
     public void shouldReturnUnmetAuthenticationRequirementsErrorWhenUsingInvalidClient() {
-        var response = makeRequest(
-                Optional.empty(),
-                constructHeaders(Optional.empty()),
-                constructQueryStringParameters(
-                        Optional.of(INVALID_CLIENT_ID),
+        var response =
+                makeRequest(
                         Optional.empty(),
-                        "openid",
-                        Optional.empty()));
+                        constructHeaders(Optional.empty()),
+                        constructQueryStringParameters(
+                                Optional.of(INVALID_CLIENT_ID),
+                                Optional.empty(),
+                                "openid",
+                                Optional.empty()));
         assertEquals(302, response.getStatusCode());
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
@@ -110,41 +113,58 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Test
     public void shouldRedirectToLoginWhenNoCookie() {
-        Response response =
-                doAuthorisationRequest(
-                        Optional.of(CLIENT_ID),
+        var response =
+                makeRequest(
                         Optional.empty(),
-                        Optional.empty(),
-                        "openid",
-                        Optional.of("Cl.Cm"));
-
-        assertEquals(302, response.getStatus());
+                        constructHeaders(Optional.empty()),
+                        constructQueryStringParameters(
+                                Optional.of(CLIENT_ID),
+                                Optional.empty(),
+                                "openid",
+                                Optional.of("Cl.Cm")));
+        assertEquals(302, response.getStatusCode());
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(configurationService.getLoginURI().toString()));
-        assertNotNull(response.getCookies().get("gs"));
+        assertThat(
+                getHttpCookieFromResponseHeaders(response.getHeaders(), "gs").isPresent(),
+                equalTo(true));
     }
 
     @Test
     public void shouldRedirectToLoginForAccountManagementClient() {
         registerClient(AM_CLIENT_ID, "am-client-name", List.of("openid", "am"));
-        Response response =
-                doAuthorisationRequest(
-                        Optional.of(AM_CLIENT_ID), Optional.empty(), Optional.empty(), "openid am");
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(Optional.empty()),
+                        constructQueryStringParameters(
+                                Optional.of(AM_CLIENT_ID),
+                                Optional.empty(),
+                                "openid am",
+                                Optional.empty()));
 
-        assertEquals(302, response.getStatus());
+        assertEquals(302, response.getStatusCode());
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(configurationService.getLoginURI().toString()));
-        assertNotNull(response.getCookies().get("gs"));
+        assertThat(
+                getHttpCookieFromResponseHeaders(response.getHeaders(), "gs").isPresent(),
+                equalTo(true));
     }
 
     @Test
     public void shouldReturnInvalidScopeErrorWhenNotAccountManagementClient() {
-        Response response =
-                doAuthorisationRequest(
-                        Optional.of(CLIENT_ID), Optional.empty(), Optional.empty(), "openid am");
-        assertEquals(302, response.getStatus());
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(Optional.empty()),
+                        constructQueryStringParameters(
+                                Optional.of(CLIENT_ID),
+                                Optional.empty(),
+                                "openid am",
+                                Optional.empty()));
+        assertEquals(302, response.getStatusCode());
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 containsString(
@@ -153,34 +173,42 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Test
     public void shouldRedirectToLoginWhenBadCookie() {
-        Response response =
-                doAuthorisationRequest(
-                        Optional.of(CLIENT_ID),
-                        Optional.of(new Cookie("gs", "this is bad")),
+        var response =
+                makeRequest(
                         Optional.empty(),
-                        "openid");
-
-        assertEquals(302, response.getStatus());
+                        constructHeaders(Optional.of(new Cookie("gs", "this is bad"))),
+                        constructQueryStringParameters(
+                                Optional.of(CLIENT_ID),
+                                Optional.empty(),
+                                "openid",
+                                Optional.empty()));
+        assertEquals(302, response.getStatusCode());
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(configurationService.getLoginURI().toString()));
-        assertNotNull(response.getCookies().get("gs"));
+        assertThat(
+                getHttpCookieFromResponseHeaders(response.getHeaders(), "gs").isPresent(),
+                equalTo(true));
     }
 
     @Test
     public void shouldRedirectToLoginWhenCookieHasUnknownSessionId() {
-        Response response =
-                doAuthorisationRequest(
-                        Optional.of(CLIENT_ID),
-                        Optional.of(new Cookie("gs", "123.456")),
+        var response =
+                makeRequest(
                         Optional.empty(),
-                        "openid");
-
-        assertEquals(302, response.getStatus());
+                        constructHeaders(Optional.of(new Cookie("gs", "123.456"))),
+                        constructQueryStringParameters(
+                                Optional.of(CLIENT_ID),
+                                Optional.empty(),
+                                "openid",
+                                Optional.empty()));
+        assertEquals(302, response.getStatusCode());
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(configurationService.getLoginURI().toString()));
-        assertNotNull(response.getCookies().get("gs"));
+        assertThat(
+                getHttpCookieFromResponseHeaders(response.getHeaders(), "gs").isPresent(),
+                equalTo(true));
     }
 
     @Test
@@ -189,19 +217,24 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
         RedisHelper.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         registerUserWithConsentedScope(Optional.empty());
 
-        Response response =
-                doAuthorisationRequest(
-                        Optional.of(CLIENT_ID),
-                        Optional.of(new Cookie("gs", format("%s.456", sessionId))),
+        var response =
+                makeRequest(
                         Optional.empty(),
-                        "openid");
-
-        assertEquals(302, response.getStatus());
+                        constructHeaders(
+                                Optional.of(new Cookie("gs", format("%s.456", sessionId)))),
+                        constructQueryStringParameters(
+                                Optional.of(CLIENT_ID),
+                                Optional.empty(),
+                                "openid",
+                                Optional.empty()));
+        assertEquals(302, response.getStatusCode());
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(configurationService.getLoginURI().toString()));
-        assertNotNull(response.getCookies().get("gs"));
-        assertThat(response.getCookies().get("gs").getValue(), not(startsWith(sessionId)));
+
+        var cookie = getHttpCookieFromResponseHeaders(response.getHeaders(), "gs");
+        assertThat(cookie.isPresent(), equalTo(true));
+        assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
     }
 
     @Test
@@ -209,30 +242,38 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
             throws Exception {
         String sessionId = givenAnExistingSession(AUTHENTICATED);
         RedisHelper.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
-        registerUserWithConsentedScope(Optional.of(new Scope(OIDCScopeValue.OPENID)));
+        registerUserWithConsentedScope(Optional.of(new Scope(OPENID)));
 
-        Response response =
-                doAuthorisationRequest(
-                        Optional.of(CLIENT_ID),
-                        Optional.of(new Cookie("gs", format("%s.456", sessionId))),
+        var response =
+                makeRequest(
                         Optional.empty(),
-                        "openid");
+                        constructHeaders(
+                                Optional.of(new Cookie("gs", format("%s.456", sessionId)))),
+                        constructQueryStringParameters(
+                                Optional.of(CLIENT_ID),
+                                Optional.empty(),
+                                "openid",
+                                Optional.empty()));
+        assertEquals(302, response.getStatusCode());
 
-        assertEquals(302, response.getStatus());
         // TODO: Update assertions to reflect code issuance, once we've written that code
-        assertNotNull(response.getCookies().get("gs"));
-        assertThat(response.getCookies().get("gs").getValue(), not(startsWith(sessionId)));
+        var cookie = getHttpCookieFromResponseHeaders(response.getHeaders(), "gs");
+        assertThat(cookie.isPresent(), equalTo(true));
+        assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
     }
 
     @Test
     public void shouldReturnLoginRequiredErrorWhenPromptNoneAndUserUnauthenticated() {
-        Response response =
-                doAuthorisationRequest(
-                        Optional.of(CLIENT_ID),
+        var response =
+                makeRequest(
                         Optional.empty(),
-                        Optional.of(NONE.toString()),
-                        "openid");
-        assertEquals(302, response.getStatus());
+                        constructHeaders(Optional.empty()),
+                        constructQueryStringParameters(
+                                Optional.of(CLIENT_ID),
+                                Optional.of(NONE.toString()),
+                                "openid",
+                                Optional.empty()));
+        assertEquals(302, response.getStatusCode());
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 containsString(OIDCError.LOGIN_REQUIRED_CODE));
@@ -242,18 +283,23 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
     public void shouldNotPromptForLoginWhenPromptNoneAndUserAuthenticated() throws Exception {
         String sessionId = givenAnExistingSession(AUTHENTICATED);
         RedisHelper.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
-        registerUserWithConsentedScope(Optional.of(new Scope(OIDCScopeValue.OPENID)));
+        registerUserWithConsentedScope(Optional.of(new Scope(OPENID)));
 
-        Response response =
-                doAuthorisationRequest(
-                        Optional.of(CLIENT_ID),
-                        Optional.of(new Cookie("gs", format("%s.456", sessionId))),
-                        Optional.of(NONE.toString()),
-                        OIDCScopeValue.OPENID.getValue());
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(new Cookie("gs", format("%s.456", sessionId)))),
+                        constructQueryStringParameters(
+                                Optional.of(CLIENT_ID),
+                                Optional.of(NONE.toString()),
+                                OPENID.getValue(),
+                                Optional.empty()));
 
-        assertEquals(302, response.getStatus());
-        assertNotNull(response.getCookies().get("gs"));
-        assertThat(response.getCookies().get("gs").getValue(), not(startsWith(sessionId)));
+        assertEquals(302, response.getStatusCode());
+        var cookie = getHttpCookieFromResponseHeaders(response.getHeaders(), "gs");
+        assertThat(cookie.isPresent(), equalTo(true));
+        assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(configurationService.getLoginURI().toString()));
@@ -265,20 +311,25 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
         RedisHelper.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         registerUserWithConsentedScope(Optional.empty());
 
-        Response response =
-                doAuthorisationRequest(
-                        Optional.of(CLIENT_ID),
-                        Optional.of(new Cookie("gs", format("%s.456", sessionId))),
-                        Optional.of(LOGIN.toString()),
-                        "openid");
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(new Cookie("gs", format("%s.456", sessionId)))),
+                        constructQueryStringParameters(
+                                Optional.of(CLIENT_ID),
+                                Optional.of(LOGIN.toString()),
+                                OPENID.getValue(),
+                                Optional.empty()));
 
-        assertEquals(302, response.getStatus());
-        assertNotNull(response.getCookies().get("gs"));
-        assertThat(response.getCookies().get("gs").getValue(), not(startsWith(sessionId)));
+        assertEquals(302, response.getStatusCode());
+        var cookie = getHttpCookieFromResponseHeaders(response.getHeaders(), "gs");
+        assertThat(cookie.isPresent(), equalTo(true));
+        assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(configurationService.getLoginURI().toString()));
-        String newSessionId = response.getCookies().get("gs").getValue().split("\\.")[0];
+        String newSessionId = cookie.get().getValue().split("\\.")[0];
         assertThat(
                 RedisHelper.getSession(newSessionId).getState(), equalTo(AUTHENTICATION_REQUIRED));
     }
@@ -289,20 +340,28 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
         RedisHelper.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         registerUserWithConsentedScope(Optional.empty());
 
-        Response response =
-                doAuthorisationRequest(
-                        Optional.of(CLIENT_ID),
-                        Optional.of(new Cookie("gs", format("%s.456", sessionId))),
+        var response =
+                makeRequest(
                         Optional.empty(),
-                        "openid");
+                        constructHeaders(
+                                Optional.of(new Cookie("gs", format("%s.456", sessionId)))),
+                        constructQueryStringParameters(
+                                Optional.of(CLIENT_ID),
+                                Optional.empty(),
+                                OPENID.getValue(),
+                                Optional.of(MEDIUM_LEVEL.getValue())));
 
-        assertEquals(302, response.getStatus());
-        assertNotNull(response.getCookies().get("gs"));
-        assertThat(response.getCookies().get("gs").getValue(), not(startsWith(sessionId)));
+        assertEquals(302, response.getStatusCode());
+
+        var cookie = getHttpCookieFromResponseHeaders(response.getHeaders(), "gs");
+        assertThat(cookie.isPresent(), equalTo(true));
+        assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
+
         String redirectUri = getHeaderValueByParamName(response, ResponseHeaders.LOCATION);
         assertThat(redirectUri, startsWith(configurationService.getLoginURI().toString()));
         assertThat(URI.create(redirectUri).getQuery(), equalTo("interrupt=UPLIFT_REQUIRED_CM"));
-        String newSessionId = response.getCookies().get("gs").getValue().split("\\.")[0];
+
+        String newSessionId = cookie.get().getValue().split("\\.")[0];
         assertThat(RedisHelper.getSession(newSessionId).getState(), equalTo(UPLIFT_REQUIRED_CM));
     }
 
@@ -312,20 +371,26 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
         RedisHelper.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         registerUserWithConsentedScope(Optional.empty());
 
-        Response response =
-                doAuthorisationRequest(
-                        Optional.of(CLIENT_ID),
-                        Optional.of(new Cookie("gs", format("%s.456", sessionId))),
-                        Optional.of(NONE.toString()),
-                        OIDCScopeValue.OPENID.getValue());
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(new Cookie("gs", format("%s.456", sessionId)))),
+                        constructQueryStringParameters(
+                                Optional.of(CLIENT_ID),
+                                Optional.of(NONE.toString()),
+                                OPENID.getValue(),
+                                Optional.empty()));
 
-        assertEquals(302, response.getStatus());
-        assertNotNull(response.getCookies().get("gs"));
-        assertThat(response.getCookies().get("gs").getValue(), not(startsWith(sessionId)));
+        var cookie = getHttpCookieFromResponseHeaders(response.getHeaders(), "gs");
+        assertThat(cookie.isPresent(), equalTo(true));
+        assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
+
         String redirectUri = getHeaderValueByParamName(response, ResponseHeaders.LOCATION);
         assertThat(redirectUri, startsWith(configurationService.getLoginURI().toString()));
         assertThat(URI.create(redirectUri).getQuery(), equalTo("interrupt=CONSENT_REQUIRED"));
-        String newSessionId = response.getCookies().get("gs").getValue().split("\\.")[0];
+
+        String newSessionId = cookie.get().getValue().split("\\.")[0];
         assertThat(RedisHelper.getSession(newSessionId).getState(), equalTo(CONSENT_REQUIRED));
     }
 
@@ -387,26 +452,33 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
         Nonce nonce = new Nonce();
         queryStringParameters.putAll(
                 Map.of(
-                        "response_type", "code",
-                        "redirect_uri", "localhost",
-                        "state", "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU",
-                        "nonce", nonce.getValue(),
-                        "client_id", clientId.orElse("test-client"),
-                        "scope", scopes));
+                        "response_type",
+                        "code",
+                        "redirect_uri",
+                        "localhost",
+                        "state",
+                        "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU",
+                        "nonce",
+                        nonce.getValue(),
+                        "client_id",
+                        clientId.orElse("test-client"),
+                        "scope",
+                        scopes));
 
         prompt.ifPresent(s -> queryStringParameters.put("prompt", s));
 
-        vtr.ifPresent(s -> {
-            JSONArray jsonArray = new JSONArray();
-            jsonArray.add(vtr.get());
-            queryStringParameters.put("vtr", jsonArray.toJSONString());
-        });
+        vtr.ifPresent(
+                s -> {
+                    JSONArray jsonArray = new JSONArray();
+                    jsonArray.add(vtr.get());
+                    queryStringParameters.put("vtr", jsonArray.toJSONString());
+                });
         return queryStringParameters;
     }
 
     private Map<String, String> constructHeaders(Optional<Cookie> cookie) {
         final Map<String, String> headers = new HashMap<>();
-        cookie.ifPresent(c  -> headers.put("Cookie", format("{0}={1}", c.getName(), c.getValue())));
+        cookie.ifPresent(c -> headers.put("Cookie", format("%s=%s", c.getName(), c.getValue())));
         return headers;
     }
 
@@ -414,10 +486,10 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
         return response.getHeaders().get(paramName).get(0).toString();
     }
 
-    private String getHeaderValueByParamName(APIGatewayProxyResponseEvent response, String paramName) {
+    private String getHeaderValueByParamName(
+            APIGatewayProxyResponseEvent response, String paramName) {
         return response.getHeaders().get(paramName);
     }
-
 
     private void registerUserWithConsentedScope(Optional<Scope> consentedScope) {
         DynamoHelper.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD);

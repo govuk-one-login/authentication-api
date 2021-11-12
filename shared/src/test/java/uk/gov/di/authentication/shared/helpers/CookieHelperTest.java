@@ -12,14 +12,20 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.REQUEST_COOKIE_HEADER;
+import static uk.gov.di.authentication.shared.helpers.CookieHelper.RESPONSE_COOKIE_HEADER;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.SessionCookieIds;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.getHttpCookieFromHeaders;
+import static uk.gov.di.authentication.shared.helpers.CookieHelper.getHttpCookieFromResponseHeaders;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.parseSessionCookie;
 
 public class CookieHelperTest {
 
     static Stream<String> inputs() {
         return Stream.of(REQUEST_COOKIE_HEADER, REQUEST_COOKIE_HEADER.toLowerCase());
+    }
+
+    static Stream<String> responseInputs() {
+        return Stream.of(RESPONSE_COOKIE_HEADER, RESPONSE_COOKIE_HEADER.toLowerCase());
     }
 
     @ParameterizedTest(name = "with header {0}")
@@ -85,6 +91,29 @@ public class CookieHelperTest {
         assertEmpty(getHttpCookieFromHeaders(null, "cookies_preferences_set"));
         assertEmpty(getHttpCookieFromHeaders(Map.of(), "cookies_preferences_set"));
         assertEmpty(getHttpCookieFromHeaders(Map.of("header", "value"), "cookies_preferences_set"));
+    }
+
+    @ParameterizedTest(name = "with header {0}")
+    @MethodSource("responseInputs")
+    void shouldReturnCookiePrefsFromValidResponseCookieStringWithMultipleCookies(String header) {
+        String cookieString =
+                "Version=1; gs=session-id.456;cookies_preferences_set={\"analytics\":false};name=ts";
+        Map<String, String> headers = Map.ofEntries(Map.entry(header, cookieString.toString()));
+
+        HttpCookie cookie =
+                getHttpCookieFromResponseHeaders(headers, "cookies_preferences_set").orElseThrow();
+
+        assertThat(cookie.getValue(), containsString("\"analytics\":false"));
+    }
+
+    @ParameterizedTest(name = "with header {0}")
+    @MethodSource("responseInputs")
+    void shouldReturnEmptyCookiePrefsIfResponseCookieNotPresent(String header) {
+        assertEmpty(getHttpCookieFromResponseHeaders(null, "cookies_preferences_set"));
+        assertEmpty(getHttpCookieFromResponseHeaders(Map.of(), "cookies_preferences_set"));
+        assertEmpty(
+                getHttpCookieFromResponseHeaders(
+                        Map.of("header", "value"), "cookies_preferences_set"));
     }
 
     private static void assertEmpty(Object input) {
