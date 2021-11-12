@@ -1,3 +1,41 @@
+module "oidc_token_role" {
+  source      = "../modules/lambda-role"
+  environment = var.environment
+  role_name   = "oidc-token"
+  vpc_arn     = local.authentication_vpc_arn
+
+  policies_to_attach = var.use_localstack ? [] : [
+    aws_iam_policy.oidc_token_kms_signing_policy[0].arn,
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0].arn,
+    aws_iam_policy.dynamo_access_policy[0].arn
+  ]
+}
+
+data "aws_iam_policy_document" "kms_signing_policy_document" {
+  count = var.use_localstack ? 0 : 1
+  statement {
+    sid    = "AllowAccessToKmsSigningKey"
+    effect = "Allow"
+
+    actions = [
+      "kms:Sign",
+      "kms:GetPublicKey",
+    ]
+    resources = [
+      local.id_token_signing_key_alias_arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "oidc_token_kms_signing_policy" {
+  count       = var.use_localstack ? 0 : 1
+  name        = "kms-signing-policy"
+  path        = "/${var.environment}/oidc-token/"
+  description = "IAM policy for managing KMS connection for a lambda which allows signing"
+
+  policy = data.aws_iam_policy_document.kms_signing_policy_document[0].json
+}
+
 module "token" {
   source = "../modules/endpoint-module"
 

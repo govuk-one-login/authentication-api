@@ -1,3 +1,10 @@
+module "oidc_email_role" {
+  source      = "../modules/lambda-role"
+  environment = var.environment
+  role_name   = "oidc-email"
+  vpc_arn     = local.authentication_vpc_arn
+}
+
 resource "aws_sqs_queue" "email_queue" {
   name                      = "${var.environment}-email-notification-queue"
   delay_seconds             = 10
