@@ -42,7 +42,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String COOKIE = "Cookie";
 
     @Test
-    public void shouldReturn302WithSuccessfullAuthorisationResponse() throws IOException {
+    public void shouldReturn302WithSuccessfulAuthorisationResponse() throws IOException {
         String sessionId = "some-session-id";
         String clientSessionId = "some-client-session-id";
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
