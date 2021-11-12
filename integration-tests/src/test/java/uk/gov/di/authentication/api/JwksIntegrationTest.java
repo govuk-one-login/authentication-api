@@ -11,7 +11,7 @@ import java.text.ParseException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class JwksIntegrationTest extends IntegrationTestEndpoints {
+public class JwksIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String JWKS_ENDPOINT = "/.well-known/jwks.json";
 

@@ -6,7 +6,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 
-import static uk.gov.di.authentication.api.IntegrationTestEndpoints.ROOT_RESOURCE_URL;
+import static uk.gov.di.authentication.api.ApiGatewayHandlerIntegrationTest.ROOT_RESOURCE_URL;
 
 public class RequestHelper {
 

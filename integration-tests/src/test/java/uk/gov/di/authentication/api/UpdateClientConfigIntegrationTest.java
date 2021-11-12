@@ -17,7 +17,7 @@ import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class UpdateClientConfigIntegrationTest extends IntegrationTestEndpoints {
+public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final String CLIENT_ID = "client-id-1";

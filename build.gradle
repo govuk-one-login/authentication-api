@@ -226,6 +226,7 @@ task oidcTerraform (type: Terraform) {
             environment "API_KEY", json.frontend_api_key.value
             environment "FRONTEND_API_GATEWAY_ID", json.frontend_api_gateway_root_id.value
             environment "FRONTEND_API_KEY", json.frontend_api_key.value
+            environment "EVENTS_SNS_TOPIC_ARN", json.events_sns_topic_arn.value
         }
     }
     dependsOn ":client-registry-api:buildZip"

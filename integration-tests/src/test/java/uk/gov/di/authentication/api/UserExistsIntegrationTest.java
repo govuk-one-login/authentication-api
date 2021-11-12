@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.USER_NOT_FOUND;
 
-public class UserExistsIntegrationTest extends IntegrationTestEndpoints {
+public class UserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String USEREXISTS_ENDPOINT = "/user-exists";
     private final ObjectMapper objectMapper = new ObjectMapper();

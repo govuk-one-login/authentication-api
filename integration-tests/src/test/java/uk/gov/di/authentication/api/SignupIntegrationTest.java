@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_VERIFIED;
 import static uk.gov.di.authentication.shared.entity.SessionState.TWO_FACTOR_REQUIRED;
 
-public class SignupIntegrationTest extends IntegrationTestEndpoints {
+public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String SIGNUP_ENDPOINT = "/signup";
     private final ObjectMapper objectMapper = new ObjectMapper();

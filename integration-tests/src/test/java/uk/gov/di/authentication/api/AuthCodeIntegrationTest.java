@@ -32,7 +32,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class AuthCodeIntegrationTest extends IntegrationTestEndpoints {
+public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String AUTH_CODE_ENDPOINT = "/auth-code";
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";

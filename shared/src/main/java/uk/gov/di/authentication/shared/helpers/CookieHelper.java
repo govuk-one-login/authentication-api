@@ -16,11 +16,22 @@ public class CookieHelper {
     private static final Logger LOGGER = LoggerFactory.getLogger(CookieHelper.class);
 
     public static final String REQUEST_COOKIE_HEADER = "Cookie";
+    public static final String RESPONSE_COOKIE_HEADER = "Set-Cookie";
     private static final String SESSION_ID = "a-session-id";
 
     public static Optional<HttpCookie> getHttpCookieFromHeaders(
             Map<String, String> headers, String cookieName) {
-        var cookieHeader = cookieHeader(headers);
+        return getHttpCookieFromHeaders(headers, cookieName, REQUEST_COOKIE_HEADER);
+    }
+
+    public static Optional<HttpCookie> getHttpCookieFromResponseHeaders(
+            Map<String, String> headers, String cookieName) {
+        return getHttpCookieFromHeaders(headers, cookieName, RESPONSE_COOKIE_HEADER);
+    }
+
+    public static Optional<HttpCookie> getHttpCookieFromHeaders(
+            Map<String, String> headers, String cookieName, String headerName) {
+        var cookieHeader = cookieHeader(headers, headerName);
 
         if (cookieHeader.isEmpty()) {
             return Optional.empty();
@@ -77,12 +88,12 @@ public class CookieHelper {
                 });
     }
 
-    private static Optional<String> cookieHeader(Map<String, String> headers) {
+    private static Optional<String> cookieHeader(Map<String, String> headers, String headerName) {
         if (headers == null) {
             return Optional.empty();
         }
 
-        return Stream.of(REQUEST_COOKIE_HEADER, REQUEST_COOKIE_HEADER.toLowerCase())
+        return Stream.of(headerName, headerName.toLowerCase())
                 .filter(headers.keySet()::contains)
                 .findFirst();
     }

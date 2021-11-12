@@ -17,6 +17,7 @@ dependencies {
             configurations.sqs,
             configurations.dynamodb,
             configurations.lettuce,
+            configurations.lambda,
             "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.13.0",
             project(":client-registry-api"),
             project(":frontend-api"),
@@ -36,11 +37,20 @@ test {
         showStandardStreams = false
     }
 
+    environment "AUDIT_SIGNING_KEY_ALIAS", "alias/local-audit-payload-signing-key-alias"
     environment "AWS_ACCESS_KEY_ID", "mock-access-key"
+    environment "AWS_REGION", "eu-west-2"
     environment "AWS_SECRET_ACCESS_KEY", "mock-secret-key "
-    environment "STUB_RELYING_PARTY_REDIRECT_URI", "https://di-auth-stub-relying-party-build.london.cloudapps.digital/"
-    environment "LOGIN_URI", "http://localhost:3000/"
+    environment "BASE_URL", "http://localhost"
+    environment "DOMAIN_NAME", "localhost"
+    environment "DYNAMO_ENDPOINT", "http://localhost:8000"
+    environment "ENVIRONMENT", "local"
+    environment "LOCALSTACK_ENDPOINT", "http://localhost:45678"
+    environment "LOGIN_URI", "http://localhost:3000"
+    environment "REDIS_KEY", "session"
     environment "RESET_PASSWORD_URL", "http://localhost:3000/reset-password?code="
+    environment "STUB_RELYING_PARTY_REDIRECT_URI", "https://di-auth-stub-relying-party-build.london.cloudapps.digital/"
+    environment "TERMS_CONDITIONS_VERSION", "1.0"
 
     dependsOn ":auditTerraform"
 }

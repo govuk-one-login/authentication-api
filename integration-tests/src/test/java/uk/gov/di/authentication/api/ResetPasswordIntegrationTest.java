@@ -19,8 +19,8 @@ import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.sharedtest.extensions.NotifyStubExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static uk.gov.di.authentication.api.IntegrationTestEndpoints.API_KEY;
-import static uk.gov.di.authentication.api.IntegrationTestEndpoints.FRONTEND_ROOT_RESOURCE_URL;
+import static uk.gov.di.authentication.api.ApiGatewayHandlerIntegrationTest.API_KEY;
+import static uk.gov.di.authentication.api.ApiGatewayHandlerIntegrationTest.FRONTEND_ROOT_RESOURCE_URL;
 
 public class ResetPasswordIntegrationTest {
 

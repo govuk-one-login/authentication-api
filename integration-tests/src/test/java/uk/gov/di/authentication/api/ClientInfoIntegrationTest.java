@@ -32,7 +32,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class ClientInfoIntegrationTest extends IntegrationTestEndpoints {
+public class ClientInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String CLIENTINFO_ENDPOINT = "/client-info";
 

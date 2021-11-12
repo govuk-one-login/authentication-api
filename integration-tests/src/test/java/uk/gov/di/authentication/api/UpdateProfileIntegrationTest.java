@@ -43,7 +43,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.ADDED_UNVERIFI
 import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_ADDED;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS_ACCEPTED;
 
-public class UpdateProfileIntegrationTest extends IntegrationTestEndpoints {
+public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String UPDATE_PROFILE_ENDPOINT = "/update-profile";
     private static final String EMAIL_ADDRESS = "test@test.com";

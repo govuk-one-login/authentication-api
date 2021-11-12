@@ -37,7 +37,7 @@ import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 
-public class VerifyCodeIntegrationTest extends IntegrationTestEndpoints {
+public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String VERIFY_CODE_ENDPOINT = "/verify-code";
     private static final String EMAIL_ADDRESS = "test@test.com";
