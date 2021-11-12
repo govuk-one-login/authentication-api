@@ -29,7 +29,7 @@ data "aws_iam_policy_document" "kms_signing_policy_document" {
 
 resource "aws_iam_policy" "oidc_token_kms_signing_policy" {
   count       = var.use_localstack ? 0 : 1
-  name        = "kms-signing-policy"
+  name_prefix = "kms-signing-policy"
   path        = "/${var.environment}/oidc-token/"
   description = "IAM policy for managing KMS connection for a lambda which allows signing"
 
