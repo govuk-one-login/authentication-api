@@ -6,11 +6,11 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.ws.rs.core.MultivaluedMap;
 import org.junit.jupiter.api.BeforeEach;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Map;
 import java.util.Optional;
@@ -41,6 +41,7 @@ public abstract class ApiGatewayHandlerIntegrationTest {
     protected RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> handler;
     protected final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
     protected final Context context = mock(Context.class);
+    protected final ConfigurationService configurationService = ConfigurationService.getInstance();
 
     @BeforeEach
     void flushData() {
@@ -48,11 +49,19 @@ public abstract class ApiGatewayHandlerIntegrationTest {
         DynamoHelper.flushData();
     }
 
-    protected APIGatewayProxyResponseEvent makeRequest(Object body, Map<String, String> headers) throws JsonProcessingException {
+    protected APIGatewayProxyResponseEvent makeRequest(Optional<Object> body, Map<String, String> headers,  Map<String, String> queryString) {
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         request
                 .withHeaders(headers)
-                .withBody(objectMapper.writeValueAsString(body));
+                .withQueryStringParameters(queryString);
+        body.ifPresent(o -> {
+            try {
+                request
+                        .withBody(objectMapper.writeValueAsString(o));
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException("Could not serialise test body", e);
+            }
+        });
 
         return handler.handleRequest(request, context);
     }

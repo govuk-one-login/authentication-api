@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.api;
 
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.openid.connect.sdk.Nonce;
@@ -19,19 +20,28 @@ import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.KeyPairHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.oidc.entity.ResponseHeaders;
+import uk.gov.di.authentication.oidc.lambda.AuthorisationHandler;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthorizationService;
+import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.KmsConnectionService;
+import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.SnsService;
 
 import java.net.URI;
 import java.security.KeyPair;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -52,6 +62,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPLIFT_REQUIRED_CM;
+import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
@@ -64,22 +75,34 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
     private static final String TEST_PASSWORD = "password";
     private static final KeyPair KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
 
-    private static final ConfigurationService configurationService = new ConfigurationService();
-
     @BeforeEach
     public void setup() {
         registerClient(CLIENT_ID, "test-client", singletonList("openid"));
+        handler = new AuthorisationHandler(
+                configurationService,
+                new SessionService(configurationService),
+                new ClientSessionService(configurationService),
+                new AuthorizationService(configurationService),
+                new AuditService(
+                        Clock.systemUTC(),
+                        new SnsService(configurationService),
+                        new KmsConnectionService(configurationService.getLocalstackEndpointUri(),
+                                configurationService.getAwsRegion(),
+                                configurationService.getAuditSigningKeyAlias())),
+                userJourneyStateMachine());
     }
 
     @Test
     public void shouldReturnUnmetAuthenticationRequirementsErrorWhenUsingInvalidClient() {
-        Response response =
-                doAuthorisationRequest(
+        var response = makeRequest(
+                Optional.empty(),
+                constructHeaders(Optional.empty()),
+                constructQueryStringParameters(
                         Optional.of(INVALID_CLIENT_ID),
                         Optional.empty(),
-                        Optional.empty(),
-                        "openid");
-        assertEquals(302, response.getStatus());
+                        "openid",
+                        Optional.empty()));
+        assertEquals(302, response.getStatusCode());
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 containsString(OAuth2Error.UNAUTHORIZED_CLIENT.getCode()));
@@ -355,9 +378,46 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
         return builder.get();
     }
 
+    private Map<String, String> constructQueryStringParameters(
+            Optional<String> clientId,
+            Optional<String> prompt,
+            String scopes,
+            Optional<String> vtr) {
+        final Map<String, String> queryStringParameters = new HashMap<>();
+        Nonce nonce = new Nonce();
+        queryStringParameters.putAll(
+                Map.of(
+                        "response_type", "code",
+                        "redirect_uri", "localhost",
+                        "state", "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU",
+                        "nonce", nonce.getValue(),
+                        "client_id", clientId.orElse("test-client"),
+                        "scope", scopes));
+
+        prompt.ifPresent(s -> queryStringParameters.put("prompt", s));
+
+        vtr.ifPresent(s -> {
+            JSONArray jsonArray = new JSONArray();
+            jsonArray.add(vtr.get());
+            queryStringParameters.put("vtr", jsonArray.toJSONString());
+        });
+        return queryStringParameters;
+    }
+
+    private Map<String, String> constructHeaders(Optional<Cookie> cookie) {
+        final Map<String, String> headers = new HashMap<>();
+        cookie.ifPresent(c  -> headers.put("Cookie", format("{0}={1}", c.getName(), c.getValue())));
+        return headers;
+    }
+
     private String getHeaderValueByParamName(Response response, String paramName) {
         return response.getHeaders().get(paramName).get(0).toString();
     }
+
+    private String getHeaderValueByParamName(APIGatewayProxyResponseEvent response, String paramName) {
+        return response.getHeaders().get(paramName);
+    }
+
 
     private void registerUserWithConsentedScope(Optional<Scope> consentedScope) {
         DynamoHelper.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD);

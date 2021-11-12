@@ -35,3 +35,7 @@ output "email_queue" {
 output "analytics_cookie_domain" {
   value = module.dns.service_domain_name
 }
+
+output "events_sns_topic_arn" {
+  value = aws_sns_topic.events.arn
+}
