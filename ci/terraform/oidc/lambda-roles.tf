@@ -51,7 +51,7 @@ data "aws_iam_policy_document" "kms_policy_document" {
 
 resource "aws_iam_policy" "oidc_default_id_token_public_key_kms_policy" {
   count       = var.use_localstack ? 0 : 1
-  name        = "-standard-lambda-kms-policy"
+  name_prefix = "id-token-kms-policy"
   path        = "/${var.environment}/oidc-default/"
   description = "IAM policy for managing ID token public signing key access"
 
@@ -72,8 +72,8 @@ data "aws_iam_policy_document" "audit_payload_kms_signing_policy_document" {
 
 resource "aws_iam_policy" "audit_signing_key_lambda_kms_signing_policy" {
   count       = var.use_localstack ? 0 : 1
-  name        = "${var.environment}-standard-lambda-audit-payload-kms-signing-policy"
-  path        = "/"
+  name_prefix = "audit-payload-kms-signing-policy"
+  path        = "/${var.environment}/oidc-default/"
   description = "IAM policy for managing KMS connection for a lambda which allows signing of audit payloads"
 
   policy = data.aws_iam_policy_document.audit_payload_kms_signing_policy_document[0].json
@@ -123,8 +123,8 @@ data "aws_iam_policy_document" "dynamo_access_policy_document" {
 
 resource "aws_iam_policy" "dynamo_access_policy" {
   count       = var.use_localstack ? 0 : 1
-  name        = "${var.environment}-standard-lambda-dynamo-policy"
-  path        = "/"
+  name_prefix = "dynamo-access-policy"
+  path        = "/${var.environment}/oidc-default/"
   description = "IAM policy for managing Dynamo connection for a lambda"
 
   policy = data.aws_iam_policy_document.dynamo_access_policy_document[0].json
