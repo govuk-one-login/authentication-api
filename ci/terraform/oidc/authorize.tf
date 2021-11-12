@@ -19,6 +19,7 @@ module "authorize" {
     ENVIRONMENT              = var.environment
     DYNAMO_ENDPOINT          = var.use_localstack ? var.lambda_dynamo_endpoint : null
     TERMS_CONDITIONS_VERSION = var.terms_and_conditions
+    HEADERS_CASE_INSENSITIVE = var.use_localstack ? "true" : "false"
   }
   handler_function_name                  = "uk.gov.di.authentication.oidc.lambda.AuthorisationHandler::handleRequest"
   rest_api_id                            = aws_api_gateway_rest_api.di_authentication_api.id
