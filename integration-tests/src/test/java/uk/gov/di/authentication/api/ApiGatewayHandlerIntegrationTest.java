@@ -12,6 +12,8 @@ import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
+import java.net.HttpCookie;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -64,6 +66,16 @@ public abstract class ApiGatewayHandlerIntegrationTest {
                 });
 
         return handler.handleRequest(request, context);
+    }
+
+    protected Map<String, String> constructHeaders(Optional<HttpCookie> cookie) {
+        final Map<String, String> headers = new HashMap<>();
+        cookie.ifPresent(c -> headers.put("Cookie", c.toString()));
+        return headers;
+    }
+
+    protected HttpCookie buildSessionCookie(String sessionID, String clientSessionID) {
+        return new HttpCookie("gs", sessionID + "." + clientSessionID);
     }
 
     public static class IntegrationTestConfigurationService extends ConfigurationService {

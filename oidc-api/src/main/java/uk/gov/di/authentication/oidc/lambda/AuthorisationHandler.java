@@ -77,13 +77,17 @@ public class AuthorisationHandler
         this.stateMachine = stateMachine;
     }
 
-    public AuthorisationHandler() {
-        configurationService = ConfigurationService.getInstance();
+    public AuthorisationHandler(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.authorizationService = new AuthorizationService(configurationService);
         this.auditService = new AuditService();
         this.stateMachine = userJourneyStateMachine();
+    }
+
+    public AuthorisationHandler() {
+        this(ConfigurationService.getInstance());
     }
 
     @Override
