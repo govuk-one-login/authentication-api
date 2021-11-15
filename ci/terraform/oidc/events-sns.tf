@@ -45,23 +45,3 @@ resource "aws_iam_policy" "lambda_sns_policy" {
 
   policy = data.aws_iam_policy_document.events_policy_document.json
 }
-
-resource "aws_iam_role_policy_attachment" "lambda_sns" {
-  role       = local.lambda_iam_role_name
-  policy_arn = aws_iam_policy.lambda_sns_policy.arn
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_sns_token" {
-  role       = local.lambda_iam_role_name
-  policy_arn = aws_iam_policy.lambda_sns_policy.arn
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_sns_sqs" {
-  role       = local.sqs_lambda_iam_role_name
-  policy_arn = aws_iam_policy.lambda_sns_policy.arn
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_sns_dynamo" {
-  role       = local.dynamo_sqs_lambda_iam_role_name
-  policy_arn = aws_iam_policy.lambda_sns_policy.arn
-}

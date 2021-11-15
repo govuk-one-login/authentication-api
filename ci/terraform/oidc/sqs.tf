@@ -47,7 +47,7 @@ data "aws_iam_policy_document" "email_queue_policy_document" {
 
     principals {
       type        = "AWS"
-      identifiers = [local.sqs_lambda_iam_role_arn, local.dynamo_sqs_lambda_iam_role_arn]
+      identifiers = [module.oidc_sqs_role.arn, module.oidc_dynamo_sqs_role.arn]
     }
 
     actions = [
@@ -67,7 +67,7 @@ data "aws_iam_policy_document" "email_queue_policy_document" {
 
     principals {
       type        = "AWS"
-      identifiers = [local.email_lambda_iam_role_arn]
+      identifiers = [module.oidc_email_role.arn]
     }
 
     actions = [
@@ -147,7 +147,7 @@ resource "aws_lambda_event_source_mapping" "lambda_sqs_mapping" {
 resource "aws_lambda_function" "email_sqs_lambda" {
   filename      = var.frontend_api_lambda_zip_file
   function_name = "${var.environment}-email-notification-sqs-lambda"
-  role          = local.email_lambda_iam_role_arn
+  role          = module.oidc_email_role.arn
   handler       = "uk.gov.di.authentication.frontendapi.lambda.NotificationHandler::handleRequest"
   timeout       = 30
   memory_size   = 512
