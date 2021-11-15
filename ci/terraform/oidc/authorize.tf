@@ -1,8 +1,6 @@
 module "authorize" {
   source = "../modules/endpoint-module"
 
-  count = var.use_localstack ? 0 : 1
-
   endpoint_name   = "authorize"
   path_part       = "authorize"
   endpoint_method = "GET"
