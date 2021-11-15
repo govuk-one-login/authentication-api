@@ -5,7 +5,6 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCError;
-import jakarta.ws.rs.core.Cookie;
 import jakarta.ws.rs.core.Response;
 import net.minidev.json.JSONArray;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,16 +19,10 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
-import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.AuthorizationService;
-import uk.gov.di.authentication.shared.services.ClientSessionService;
-import uk.gov.di.authentication.shared.services.KmsConnectionService;
-import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.shared.services.SnsService;
 
+import java.net.HttpCookie;
 import java.net.URI;
 import java.security.KeyPair;
-import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Base64;
@@ -42,7 +35,6 @@ import java.util.Set;
 import static com.nimbusds.openid.connect.sdk.OIDCScopeValue.OPENID;
 import static com.nimbusds.openid.connect.sdk.Prompt.Type.LOGIN;
 import static com.nimbusds.openid.connect.sdk.Prompt.Type.NONE;
-import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -56,7 +48,6 @@ import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION
 import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPLIFT_REQUIRED_CM;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.getHttpCookieFromResponseHeaders;
-import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -67,24 +58,12 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_PASSWORD = "password";
     private static final KeyPair KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+    public static final String DUMMY_CLIENT_SESSION_ID = "456";
 
     @BeforeEach
     void setup() {
         registerClient(CLIENT_ID, "test-client", singletonList("openid"));
-        handler =
-                new AuthorisationHandler(
-                        configurationService,
-                        new SessionService(configurationService),
-                        new ClientSessionService(configurationService),
-                        new AuthorizationService(configurationService),
-                        new AuditService(
-                                Clock.systemUTC(),
-                                new SnsService(configurationService),
-                                new KmsConnectionService(
-                                        configurationService.getLocalstackEndpointUri(),
-                                        configurationService.getAwsRegion(),
-                                        configurationService.getAuditSigningKeyAlias())),
-                        userJourneyStateMachine());
+        handler = new AuthorisationHandler(configurationService);
     }
 
     @Test
@@ -170,7 +149,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(
                         Optional.empty(),
-                        constructHeaders(Optional.of(new Cookie("gs", "this is bad"))),
+                        constructHeaders(Optional.of(new HttpCookie("gs", "this is bad"))),
                         constructQueryStringParameters(
                                 Optional.of(CLIENT_ID),
                                 Optional.empty(),
@@ -190,7 +169,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(
                         Optional.empty(),
-                        constructHeaders(Optional.of(new Cookie("gs", "123.456"))),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie("123", DUMMY_CLIENT_SESSION_ID))),
                         constructQueryStringParameters(
                                 Optional.of(CLIENT_ID),
                                 Optional.empty(),
@@ -215,7 +195,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(
-                                Optional.of(new Cookie("gs", format("%s.456", sessionId)))),
+                                Optional.of(
+                                        buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
                         constructQueryStringParameters(
                                 Optional.of(CLIENT_ID),
                                 Optional.empty(),
@@ -241,7 +222,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(
-                                Optional.of(new Cookie("gs", format("%s.456", sessionId)))),
+                                Optional.of(
+                                        buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
                         constructQueryStringParameters(
                                 Optional.of(CLIENT_ID),
                                 Optional.empty(),
@@ -282,7 +264,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(
-                                Optional.of(new Cookie("gs", format("%s.456", sessionId)))),
+                                Optional.of(
+                                        buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
                         constructQueryStringParameters(
                                 Optional.of(CLIENT_ID),
                                 Optional.of(NONE.toString()),
@@ -308,7 +291,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(
-                                Optional.of(new Cookie("gs", format("%s.456", sessionId)))),
+                                Optional.of(
+                                        buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
                         constructQueryStringParameters(
                                 Optional.of(CLIENT_ID),
                                 Optional.of(LOGIN.toString()),
@@ -337,7 +321,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(
-                                Optional.of(new Cookie("gs", format("%s.456", sessionId)))),
+                                Optional.of(
+                                        buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
                         constructQueryStringParameters(
                                 Optional.of(CLIENT_ID),
                                 Optional.empty(),
@@ -368,7 +353,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(
-                                Optional.of(new Cookie("gs", format("%s.456", sessionId)))),
+                                Optional.of(
+                                        buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
                         constructQueryStringParameters(
                                 Optional.of(CLIENT_ID),
                                 Optional.of(NONE.toString()),
@@ -431,12 +417,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     queryStringParameters.put("vtr", jsonArray.toJSONString());
                 });
         return queryStringParameters;
-    }
-
-    private Map<String, String> constructHeaders(Optional<Cookie> cookie) {
-        final Map<String, String> headers = new HashMap<>();
-        cookie.ifPresent(c -> headers.put("Cookie", format("%s=%s", c.getName(), c.getValue())));
-        return headers;
     }
 
     private String getHeaderValueByParamName(Response response, String paramName) {

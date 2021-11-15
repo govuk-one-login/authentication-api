@@ -82,13 +82,17 @@ public class AuthCodeHandler
         this.auditService = auditService;
     }
 
-    public AuthCodeHandler() {
-        configurationService = ConfigurationService.getInstance();
+    public AuthCodeHandler(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
         sessionService = new SessionService(configurationService);
         authorisationCodeService = new AuthorisationCodeService(configurationService);
         authorizationService = new AuthorizationService(configurationService);
         clientSessionService = new ClientSessionService(configurationService);
         auditService = new AuditService();
+    }
+
+    public AuthCodeHandler() {
+        this(ConfigurationService.getInstance());
     }
 
     @Override
