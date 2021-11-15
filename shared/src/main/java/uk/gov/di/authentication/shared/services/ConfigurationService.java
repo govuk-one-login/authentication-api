@@ -88,6 +88,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("FRONTEND_BASE_URL", "");
     }
 
+    public boolean getHeadersCaseInsensitive() {
+        return System.getenv().getOrDefault("HEADERS_CASE_INSENSITIVE", "false").equals("true");
+    }
+
     public long getIDTokenExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("ID_TOKEN_EXPIRY", "120"));
     }

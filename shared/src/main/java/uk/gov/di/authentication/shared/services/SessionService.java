@@ -11,11 +11,13 @@ import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
+
 public class SessionService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SessionService.class);
-
-    private static final String SESSION_ID_HEADER = "Session-Id";
 
     private static final ObjectMapper OBJECT_MAPPER = ObjectMapperFactory.getInstance();
 
@@ -66,12 +68,21 @@ public class SessionService {
     }
 
     public Optional<Session> getSessionFromRequestHeaders(Map<String, String> headers) {
-        if (headers == null || headers.isEmpty() || !headers.containsKey(SESSION_ID_HEADER)) {
+        if (!headersContainValidHeader(
+                headers, SESSION_ID_HEADER, configurationService.getHeadersCaseInsensitive())) {
             LOGGER.error("Headers are missing Session-Id header");
             return Optional.empty();
         }
+        String sessionId =
+                getHeaderValueFromHeaders(
+                        headers,
+                        SESSION_ID_HEADER,
+                        configurationService.getHeadersCaseInsensitive());
+        if (sessionId == null) {
+            LOGGER.error("Value not found for Session-Id header");
+            return Optional.empty();
+        }
         try {
-            String sessionId = headers.get(SESSION_ID_HEADER);
             return readSessionFromRedis(sessionId);
         } catch (Exception e) {
             throw new RuntimeException(e);
