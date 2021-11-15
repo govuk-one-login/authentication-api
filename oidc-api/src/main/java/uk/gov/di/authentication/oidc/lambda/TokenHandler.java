@@ -83,14 +83,14 @@ public class TokenHandler
         this.redisConnectionService = redisConnectionService;
     }
 
-    public TokenHandler() {
-        configurationService = ConfigurationService.getInstance();
-        clientService =
+    public TokenHandler(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
+        this.clientService =
                 new DynamoClientService(
                         configurationService.getAwsRegion(),
                         configurationService.getEnvironment(),
                         configurationService.getDynamoEndpointUri());
-        tokenService =
+        this.tokenService =
                 new TokenService(
                         configurationService,
                         new RedisConnectionService(configurationService),
@@ -102,6 +102,10 @@ public class TokenHandler
                 new TokenValidationService(
                         configurationService, new KmsConnectionService(configurationService));
         this.redisConnectionService = new RedisConnectionService(configurationService);
+    }
+
+    public TokenHandler() {
+        this(ConfigurationService.getInstance());
     }
 
     @Override
