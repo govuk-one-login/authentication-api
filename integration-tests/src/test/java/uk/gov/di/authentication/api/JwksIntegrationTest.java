@@ -1,27 +1,31 @@
 package uk.gov.di.authentication.api;
 
 import com.nimbusds.jose.jwk.JWKSet;
-import jakarta.ws.rs.client.Client;
-import jakarta.ws.rs.client.ClientBuilder;
-import jakarta.ws.rs.core.Response;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.oidc.lambda.JwksHandler;
 
 import java.text.ParseException;
+import java.util.Map;
+import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasSize;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class JwksIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    private static final String JWKS_ENDPOINT = "/.well-known/jwks.json";
+    @BeforeEach
+    void setup() {
+        handler = new JwksHandler(configurationService);
+    }
 
     @Test
     public void shouldReturn200AndClientInfoResponseForValidClient() throws ParseException {
-        Client client = ClientBuilder.newClient();
-        Response response = client.target(ROOT_RESOURCE_URL + JWKS_ENDPOINT).request().get();
 
-        assertEquals(200, response.getStatus());
-        String responseString = response.readEntity(String.class);
-        assertTrue(JWKSet.parse(responseString).getKeys().size() == 1);
+        var response = makeRequest(Optional.empty(), Map.of(), Map.of());
+
+        assertThat(response, hasStatus(200));
+        assertThat(JWKSet.parse(response.getBody()).getKeys(), hasSize(1));
     }
 }

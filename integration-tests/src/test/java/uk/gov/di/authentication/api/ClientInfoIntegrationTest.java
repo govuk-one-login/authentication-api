@@ -8,13 +8,10 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
-import jakarta.ws.rs.client.Client;
-import jakarta.ws.rs.client.ClientBuilder;
-import jakarta.ws.rs.core.MultivaluedHashMap;
-import jakarta.ws.rs.core.MultivaluedMap;
-import jakarta.ws.rs.core.Response;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.ClientInfoResponse;
+import uk.gov.di.authentication.frontendapi.lambda.ClientInfoHandler;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.KeyPairHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
@@ -24,17 +21,19 @@ import java.io.IOException;
 import java.net.URI;
 import java.security.KeyPair;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class ClientInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
-
-    private static final String CLIENTINFO_ENDPOINT = "/client-info";
 
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String CLIENT_ID = "test-client-id";
@@ -44,19 +43,17 @@ public class ClientInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    @BeforeEach
+    void setup() {
+        handler = new ClientInfoHandler(configurationService);
+    }
+
     @Test
     public void shouldReturn400WhenClientSessionIdMissing() {
+        var headers = Map.of("X-API-Key", FRONTEND_API_KEY);
 
-        Client client = ClientBuilder.newClient();
-        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
-        headers.add("X-API-Key", FRONTEND_API_KEY);
-
-        Response response =
-                client.target(FRONTEND_ROOT_RESOURCE_URL + CLIENTINFO_ENDPOINT)
-                        .request()
-                        .headers(headers)
-                        .get();
-        assertEquals(400, response.getStatus());
+        var response = makeRequest(Optional.empty(), headers, Map.of());
+        assertThat(response, hasStatus(400));
     }
 
     @Test
@@ -77,25 +74,18 @@ public class ClientInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
 
-        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
-        headers.add("Session-Id", sessionId);
-        headers.add("Client-Session-Id", CLIENT_SESSION_ID);
-        headers.add("X-API-Key", FRONTEND_API_KEY);
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Session-Id", sessionId);
+        headers.put("Client-Session-Id", CLIENT_SESSION_ID);
+        headers.put("X-API-Key", FRONTEND_API_KEY);
 
-        Client client = ClientBuilder.newClient();
-        Response response =
-                client.target(FRONTEND_ROOT_RESOURCE_URL + CLIENTINFO_ENDPOINT)
-                        .request()
-                        .headers(headers)
-                        .get();
+        var response = makeRequest(Optional.empty(), headers, Map.of());
+        assertThat(response, hasStatus(200));
 
-        assertEquals(200, response.getStatus());
-
-        String responseString = response.readEntity(String.class);
         ClientInfoResponse clientInfoResponse =
-                objectMapper.readValue(responseString, ClientInfoResponse.class);
-        assertEquals(CLIENT_ID, clientInfoResponse.getClientId());
-        assertEquals(TEST_CLIENT_NAME, clientInfoResponse.getClientName());
+                objectMapper.readValue(response.getBody(), ClientInfoResponse.class);
+        assertThat(clientInfoResponse.getClientId(), equalTo(CLIENT_ID));
+        assertThat(clientInfoResponse.getClientName(), equalTo(TEST_CLIENT_NAME));
         assertThat(clientInfoResponse.getScopes(), hasItem("openid"));
         assertThat(clientInfoResponse.getScopes(), hasSize(1));
     }
