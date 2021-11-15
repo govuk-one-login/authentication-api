@@ -28,11 +28,15 @@ public class JwksHandler
         this.configurationService = configurationService;
     }
 
-    public JwksHandler() {
-        this.configurationService = ConfigurationService.getInstance();
+    public JwksHandler(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
         this.tokenValidationService =
                 new TokenValidationService(
                         configurationService, new KmsConnectionService(configurationService));
+    }
+
+    public JwksHandler() {
+        this(ConfigurationService.getInstance());
     }
 
     @Override
