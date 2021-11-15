@@ -1,11 +1,14 @@
 package uk.gov.di.authentication.shared.services;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -19,51 +22,83 @@ public class ValidationServiceTest {
 
     private final ValidationService validationService = new ValidationService();
 
-    @Test
-    public void shouldRejectEmptyEmail() {
-        assertEquals(
-                Optional.of(ErrorResponse.ERROR_1003), validationService.validateEmailAddress(""));
+    private static Stream<String> blankEmailAddresses() {
+        return Stream.of("", "  ", "\t\t", System.lineSeparator() + System.lineSeparator(), null);
     }
 
-    @Test
-    public void shouldRejectBlankEmail() {
-        var spacesEmail = "  ";
-        var tabsEmail = "\t\t";
-        var newlinesEmail = System.lineSeparator() + System.lineSeparator();
+    @ParameterizedTest
+    @MethodSource("blankEmailAddresses")
+    public void shouldRejectBlankEmail(String emailAddress) {
 
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1003),
-                validationService.validateEmailAddress(spacesEmail));
-        assertEquals(
-                Optional.of(ErrorResponse.ERROR_1003),
-                validationService.validateEmailAddress(tabsEmail));
-        assertEquals(
-                Optional.of(ErrorResponse.ERROR_1003),
-                validationService.validateEmailAddress(newlinesEmail));
+                validationService.validateEmailAddress(emailAddress));
     }
 
-    @Test
-    public void shouldRejectMalformattedEmail() {
-        var noAtsEmail = "test.example.gov.uk";
-        var multipleAtsEmail = "test@example@gov.uk";
-        var noDotsEmail = "test@examplegovuk";
-
-        assertEquals(
-                Optional.of(ErrorResponse.ERROR_1004),
-                validationService.validateEmailAddress(noAtsEmail));
-        assertEquals(
-                Optional.of(ErrorResponse.ERROR_1004),
-                validationService.validateEmailAddress(multipleAtsEmail));
-        assertEquals(
-                Optional.of(ErrorResponse.ERROR_1004),
-                validationService.validateEmailAddress(noDotsEmail));
+    private static Stream<String> invalidEmailAddresses() {
+        return Stream.of(
+                "test.example.gov.uk",
+                "test@example@gov.uk",
+                "test@examplegovuk",
+                "testµ@example.gov.uk",
+                "email@123.123.123.123",
+                "email@[123.123.123.123]",
+                "plainaddress",
+                "@no-local-part.com",
+                "Outlook Contact <outlook-contact@domain.com>",
+                "no-at.domain.com",
+                "no-tld@domain",
+                ";beginning-semicolon@domain.co.uk",
+                "middle-semicolon@domain.co;uk",
+                "trailing-semicolon@domain.com;",
+                "\"email+leading-quotes@domain.com",
+                "email+middle\"-quotes@domain.com",
+                "quoted-local-part\"@domain.com",
+                "\"quoted@domain.com\"",
+                "lots-of-dots@domain..gov..uk",
+                "two-dots..in-local@domain.com",
+                "multiple@domains@domain.com",
+                "spaces in local@domain.com",
+                "spaces-in-domain@dom ain.com",
+                "underscores-in-domain@dom_ain.com",
+                "pipe-in-domain@example.com|gov.uk",
+                "comma,in-local@gov.uk",
+                "comma-in-domain@domain,gov.uk",
+                "pound-sign-in-local£@domain.com",
+                "local-with-’-apostrophe@domain.com",
+                "local-with-”-quotes@domain.com",
+                "domain-starts-with-a-dot@.domain.com",
+                "brackets(in)local@domain.com",
+                "incorrect-punycode@xn---something.com");
     }
 
-    @Test
-    public void shouldAcceptValidEmail() {
-        var validEmail = "test@example.gov.uk";
+    @ParameterizedTest
+    @MethodSource("invalidEmailAddresses")
+    public void shouldRejectMalformattedEmail(String emailAddress) {
 
-        assertTrue(validationService.validateEmailAddress(validEmail).isEmpty());
+        assertEquals(
+                Optional.of(ErrorResponse.ERROR_1004),
+                validationService.validateEmailAddress(emailAddress));
+    }
+
+    private static Stream<String> validEmailAddresses() {
+        return Stream.of(
+                "test@example.gov.uk",
+                "test@example.com",
+                "test@example.info",
+                "email@domain.com",
+                "email@domain.COM",
+                "firstname.lastname@domain.com",
+                "firstname.o\'lastname@domain.com",
+                "email@subdomain.domain.com",
+                "firstname+lastname@domain.com");
+    }
+
+    @ParameterizedTest
+    @MethodSource("validEmailAddresses")
+    public void shouldAcceptValidEmail(String emailAddress) {
+
+        assertTrue(validationService.validateEmailAddress(emailAddress).isEmpty());
     }
 
     @Test
@@ -86,44 +121,17 @@ public class ValidationServiceTest {
                 Optional.of(ErrorResponse.ERROR_1005), validationService.validatePassword(null));
     }
 
-    @Test
-    public void shouldReturnErrorIfPhoneNumberContainsLetter() {
-        assertEquals(
-                Optional.of(ErrorResponse.ERROR_1012),
-                validationService.validatePhoneNumber("0123456789A"));
+    private static Stream<String> invalidPhoneNumbers() {
+        return Stream.of(
+                "0123456789A", "0123456789", "012345678999", "01234567891", "202-456-1111");
     }
 
-    @Test
-    public void shouldReturnErrorIfPhoneNumberIsLessThan10Characters() {
+    @ParameterizedTest
+    @MethodSource("invalidPhoneNumbers")
+    public void shouldReturnErrorIfMobileNumberIsInvalid(String phoneNumber) {
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1012),
-                validationService.validatePhoneNumber("0123456789"));
-    }
-
-    @Test
-    public void shouldReturnErrorIfPhoneNumberIsTooLong() {
-        assertEquals(
-                Optional.of(ErrorResponse.ERROR_1012),
-                validationService.validatePhoneNumber("012345678999"));
-    }
-
-    @Test
-    public void shouldReturnErrorIfPhoneNumberIsNotAMobile() {
-        assertEquals(
-                Optional.of(ErrorResponse.ERROR_1012),
-                validationService.validatePhoneNumber("01234567891"));
-    }
-
-    @Test
-    public void shouldNotReturnErrorIsPhoneNumberIsValid() {
-        assertEquals(Optional.empty(), validationService.validatePhoneNumber("07123456789"));
-    }
-
-    @Test
-    public void shouldReturnErrorIfPhoneNumberContainsNonnumericCharacters() {
-        assertEquals(
-                Optional.of(ErrorResponse.ERROR_1012),
-                validationService.validatePhoneNumber("202-456-1111"));
+                validationService.validatePhoneNumber(phoneNumber));
     }
 
     @Test
