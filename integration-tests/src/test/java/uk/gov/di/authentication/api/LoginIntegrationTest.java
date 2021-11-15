@@ -1,25 +1,22 @@
 package uk.gov.di.authentication.api;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
-import jakarta.ws.rs.core.MultivaluedHashMap;
-import jakarta.ws.rs.core.MultivaluedMap;
-import jakarta.ws.rs.core.Response;
 import net.minidev.json.JSONArray;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.entity.LoginRequest;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
+import uk.gov.di.authentication.frontendapi.lambda.LoginHandler;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
-import uk.gov.di.authentication.helpers.RequestHelper;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.SessionState;
@@ -27,9 +24,13 @@ import uk.gov.di.authentication.shared.entity.SessionState;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.helpers.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
@@ -38,21 +39,24 @@ import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION
 import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.LOGGED_IN;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    private static final String LOGIN_ENDPOINT = "/login";
     private static final String CLIENT_ID = "test-client-id";
     private static final String REDIRECT_URI = "http://localhost/redirect";
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final String CURRENT_TERMS_AND_CONDITIONS = "1.0";
     private static final String OLD_TERMS_AND_CONDITIONS = "0.1";
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    @BeforeEach
+    void setup() {
+        handler = new LoginHandler(configurationService);
+    }
 
     @ParameterizedTest
     @MethodSource("vectorOfTrustEndStates")
-    public void shouldReturnCorrectStateForClientsTrustLevel(
+    void shouldReturnCorrectStateForClientsTrustLevel(
             CredentialTrustLevel level,
             String termsAndConditionsVersion,
             SessionState expectedState)
@@ -96,21 +100,17 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "https://test.com",
                 "public");
 
-        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
-        headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", FRONTEND_API_KEY);
-        headers.add("Client-Session-Id", CLIENT_SESSION_ID);
-        Response response =
-                RequestHelper.request(
-                        FRONTEND_ROOT_RESOURCE_URL,
-                        LOGIN_ENDPOINT,
-                        new LoginRequest(email, password),
-                        headers);
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Session-Id", sessionId);
+        headers.put("X-API-Key", FRONTEND_API_KEY);
+        headers.put("Client-Session-Id", CLIENT_SESSION_ID);
 
-        assertEquals(200, response.getStatus());
+        var response =
+                makeRequest(Optional.of(new LoginRequest(email, password)), headers, Map.of());
+        assertThat(response, hasStatus(200));
 
-        String responseString = response.readEntity(String.class);
-        LoginResponse loginResponse = objectMapper.readValue(responseString, LoginResponse.class);
+        LoginResponse loginResponse =
+                objectMapper.readValue(response.getBody(), LoginResponse.class);
         assertEquals(expectedState, loginResponse.getSessionState());
     }
 
@@ -125,24 +125,18 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    public void shouldCallLoginEndpointAndReturn401henUserHasInvalidCredentials()
-            throws IOException {
+    void shouldCallLoginEndpointAndReturn401henUserHasInvalidCredentials() throws IOException {
         String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
         String password = "password-1";
         DynamoHelper.signUp(email, "wrong-password");
         String sessionId = RedisHelper.createSession();
         RedisHelper.setSessionState(sessionId, AUTHENTICATION_REQUIRED);
-        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
-        headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", FRONTEND_API_KEY);
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Session-Id", sessionId);
+        headers.put("X-API-Key", FRONTEND_API_KEY);
 
-        Response response =
-                RequestHelper.request(
-                        FRONTEND_ROOT_RESOURCE_URL,
-                        LOGIN_ENDPOINT,
-                        new LoginRequest(email, password),
-                        headers);
-
-        assertEquals(401, response.getStatus());
+        var response =
+                makeRequest(Optional.of(new LoginRequest(email, password)), headers, Map.of());
+        assertThat(response, hasStatus(401));
     }
 }
