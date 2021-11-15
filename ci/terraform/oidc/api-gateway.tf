@@ -119,8 +119,8 @@ resource "aws_api_gateway_deployment" "deployment" {
     redeployment = sha1(jsonencode([
       module.auth-code.integration_trigger_value,
       module.auth-code.method_trigger_value,
-      var.use_localstack ? null : module.authorize[0].integration_trigger_value,
-      var.use_localstack ? null : module.authorize[0].method_trigger_value,
+      module.authorize.integration_trigger_value,
+      module.authorize.method_trigger_value,
       module.jwks.integration_trigger_value,
       module.jwks.method_trigger_value,
       module.logout.integration_trigger_value,
