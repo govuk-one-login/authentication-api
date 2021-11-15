@@ -25,18 +25,18 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasClientId;
-import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasEmail;
-import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasEventName;
-import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasIpAddress;
-import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasMetadataPair;
-import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasPhoneNumber;
-import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasRequestId;
-import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasSessionId;
-import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasSubjectId;
-import static uk.gov.di.authentication.shared.matchers.AuditMessageMatcher.hasTimestamp;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.AuditServiceTest.TestEvents.TEST_EVENT_ONE;
+import static uk.gov.di.authentication.sharedtest.matchers.AuditMessageMatcher.hasClientId;
+import static uk.gov.di.authentication.sharedtest.matchers.AuditMessageMatcher.hasEmail;
+import static uk.gov.di.authentication.sharedtest.matchers.AuditMessageMatcher.hasEventName;
+import static uk.gov.di.authentication.sharedtest.matchers.AuditMessageMatcher.hasIpAddress;
+import static uk.gov.di.authentication.sharedtest.matchers.AuditMessageMatcher.hasMetadataPair;
+import static uk.gov.di.authentication.sharedtest.matchers.AuditMessageMatcher.hasPhoneNumber;
+import static uk.gov.di.authentication.sharedtest.matchers.AuditMessageMatcher.hasRequestId;
+import static uk.gov.di.authentication.sharedtest.matchers.AuditMessageMatcher.hasSessionId;
+import static uk.gov.di.authentication.sharedtest.matchers.AuditMessageMatcher.hasSubjectId;
+import static uk.gov.di.authentication.sharedtest.matchers.AuditMessageMatcher.hasTimestamp;
 
 class AuditServiceTest {
 
