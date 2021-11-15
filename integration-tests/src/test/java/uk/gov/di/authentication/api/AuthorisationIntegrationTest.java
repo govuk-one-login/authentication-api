@@ -5,14 +5,9 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCError;
-import jakarta.ws.rs.client.Client;
-import jakarta.ws.rs.client.ClientBuilder;
-import jakarta.ws.rs.client.Invocation;
-import jakarta.ws.rs.client.WebTarget;
 import jakarta.ws.rs.core.Cookie;
 import jakarta.ws.rs.core.Response;
 import net.minidev.json.JSONArray;
-import org.glassfish.jersey.client.ClientProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
@@ -54,7 +49,6 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
@@ -62,11 +56,10 @@ import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION
 import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPLIFT_REQUIRED_CM;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.getHttpCookieFromResponseHeaders;
+import static uk.gov.di.authentication.shared.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
-
-    private static final String AUTHORIZE_ENDPOINT = "/authorize";
 
     private static final String CLIENT_ID = "test-client";
     private static final String AM_CLIENT_ID = "am-test-client";
@@ -105,7 +98,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 Optional.empty(),
                                 "openid",
                                 Optional.empty()));
-        assertEquals(302, response.getStatusCode());
+
+        assertThat(response, hasStatus(302));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 containsString(OAuth2Error.UNAUTHORIZED_CLIENT.getCode()));
@@ -122,7 +116,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 Optional.empty(),
                                 "openid",
                                 Optional.of("Cl.Cm")));
-        assertEquals(302, response.getStatusCode());
+        assertThat(response, hasStatus(302));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(configurationService.getLoginURI().toString()));
@@ -144,7 +138,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 "openid am",
                                 Optional.empty()));
 
-        assertEquals(302, response.getStatusCode());
+        assertThat(response, hasStatus(302));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(configurationService.getLoginURI().toString()));
@@ -164,7 +158,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 Optional.empty(),
                                 "openid am",
                                 Optional.empty()));
-        assertEquals(302, response.getStatusCode());
+        assertThat(response, hasStatus(302));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 containsString(
@@ -182,7 +176,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 Optional.empty(),
                                 "openid",
                                 Optional.empty()));
-        assertEquals(302, response.getStatusCode());
+        assertThat(response, hasStatus(302));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(configurationService.getLoginURI().toString()));
@@ -202,7 +196,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 Optional.empty(),
                                 "openid",
                                 Optional.empty()));
-        assertEquals(302, response.getStatusCode());
+        assertThat(response, hasStatus(302));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(configurationService.getLoginURI().toString()));
@@ -227,7 +221,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 Optional.empty(),
                                 "openid",
                                 Optional.empty()));
-        assertEquals(302, response.getStatusCode());
+        assertThat(response, hasStatus(302));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(configurationService.getLoginURI().toString()));
@@ -253,7 +247,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 Optional.empty(),
                                 "openid",
                                 Optional.empty()));
-        assertEquals(302, response.getStatusCode());
+        assertThat(response, hasStatus(302));
 
         // TODO: Update assertions to reflect code issuance, once we've written that code
         var cookie = getHttpCookieFromResponseHeaders(response.getHeaders(), "gs");
@@ -272,7 +266,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 Optional.of(NONE.toString()),
                                 "openid",
                                 Optional.empty()));
-        assertEquals(302, response.getStatusCode());
+        assertThat(response, hasStatus(302));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 containsString(OIDCError.LOGIN_REQUIRED_CODE));
@@ -295,7 +289,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 OPENID.getValue(),
                                 Optional.empty()));
 
-        assertEquals(302, response.getStatusCode());
+        assertThat(response, hasStatus(302));
         var cookie = getHttpCookieFromResponseHeaders(response.getHeaders(), "gs");
         assertThat(cookie.isPresent(), equalTo(true));
         assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
@@ -321,7 +315,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 OPENID.getValue(),
                                 Optional.empty()));
 
-        assertEquals(302, response.getStatusCode());
+        assertThat(response, hasStatus(302));
         var cookie = getHttpCookieFromResponseHeaders(response.getHeaders(), "gs");
         assertThat(cookie.isPresent(), equalTo(true));
         assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
@@ -350,7 +344,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 OPENID.getValue(),
                                 Optional.of(MEDIUM_LEVEL.getValue())));
 
-        assertEquals(302, response.getStatusCode());
+        assertThat(response, hasStatus(302));
 
         var cookie = getHttpCookieFromResponseHeaders(response.getHeaders(), "gs");
         assertThat(cookie.isPresent(), equalTo(true));
@@ -381,6 +375,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 OPENID.getValue(),
                                 Optional.empty()));
 
+        assertThat(response, hasStatus(302));
+
         var cookie = getHttpCookieFromResponseHeaders(response.getHeaders(), "gs");
         assertThat(cookie.isPresent(), equalTo(true));
         assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
@@ -402,44 +398,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String sessionId = RedisHelper.createSession();
         RedisHelper.setSessionState(sessionId, initialState, credentialTrustLevel);
         return sessionId;
-    }
-
-    private Response doAuthorisationRequest(
-            Optional<String> clientId,
-            Optional<Cookie> cookie,
-            Optional<String> prompt,
-            String scopes) {
-        return doAuthorisationRequest(clientId, cookie, prompt, scopes, Optional.empty());
-    }
-
-    private Response doAuthorisationRequest(
-            Optional<String> clientId,
-            Optional<Cookie> cookie,
-            Optional<String> prompt,
-            String scopes,
-            Optional<String> vtr) {
-        Client client = ClientBuilder.newClient();
-        Nonce nonce = new Nonce();
-        WebTarget webTarget =
-                client.target(ROOT_RESOURCE_URL + AUTHORIZE_ENDPOINT)
-                        .queryParam("response_type", "code")
-                        .queryParam("redirect_uri", "localhost")
-                        .queryParam("state", "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU")
-                        .queryParam("nonce", nonce.getValue())
-                        .queryParam("client_id", clientId.orElse("test-client"))
-                        .queryParam("scope", scopes)
-                        .property(ClientProperties.FOLLOW_REDIRECTS, Boolean.FALSE);
-        if (prompt.isPresent()) {
-            webTarget = webTarget.queryParam("prompt", prompt.get());
-        }
-        if (vtr.isPresent()) {
-            JSONArray jsonArray = new JSONArray();
-            jsonArray.add(vtr.get());
-            webTarget = webTarget.queryParam("vtr", jsonArray.toJSONString());
-        }
-        Invocation.Builder builder = webTarget.request();
-        cookie.ifPresent(builder::cookie);
-        return builder.get();
     }
 
     private Map<String, String> constructQueryStringParameters(
