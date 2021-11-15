@@ -8,6 +8,7 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 
 import java.util.Optional;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.MOBILE;
@@ -23,7 +24,12 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_
 
 public class ValidationService {
 
-    private static final Pattern EMAIL_REGEX = Pattern.compile("[^@]+@[^@]+\\.[^@]*");
+    private static final Pattern EMAIL_NOTIFY_REGEX =
+            Pattern.compile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~\\-]+@([^.@][^@\\s]+)$");
+    private static final Pattern HOSTNAME_REGEX =
+            Pattern.compile("^(xn|[a-z0-9]+)(-?-[a-z0-9]+)*$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern TLD_PART_REGEX =
+            Pattern.compile("^([a-z]{2,63}|xn--([a-z0-9]+-)*[a-z0-9]+)$", Pattern.CASE_INSENSITIVE);
     private static final Pattern PASSWORD_REGEX = Pattern.compile(".*\\d.*");
 
     public Optional<ErrorResponse> validateEmailAddressUpdate(
@@ -39,10 +45,27 @@ public class ValidationService {
     }
 
     public Optional<ErrorResponse> validateEmailAddress(String email) {
-        if (email.isBlank()) {
+        if (email == null || email.isBlank()) {
             return Optional.of(ErrorResponse.ERROR_1003);
         }
-        if (!email.isBlank() && !EMAIL_REGEX.matcher(email).matches()) {
+        Matcher matcher = EMAIL_NOTIFY_REGEX.matcher(email);
+        if (!matcher.matches()) {
+            return Optional.of(ErrorResponse.ERROR_1004);
+        }
+        if (email.contains("..")) {
+            return Optional.of(ErrorResponse.ERROR_1004);
+        }
+        var hostname = matcher.group(1);
+        String[] parts = hostname.split("\\.");
+        if (parts.length < 2) {
+            return Optional.of(ErrorResponse.ERROR_1004);
+        }
+        for (String part : parts) {
+            if (!HOSTNAME_REGEX.matcher(part).matches()) {
+                return Optional.of(ErrorResponse.ERROR_1004);
+            }
+        }
+        if (!TLD_PART_REGEX.matcher(parts[parts.length - 1]).matches()) {
             return Optional.of(ErrorResponse.ERROR_1004);
         }
         return Optional.empty();
