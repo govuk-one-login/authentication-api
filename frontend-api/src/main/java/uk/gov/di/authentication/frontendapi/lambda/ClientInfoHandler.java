@@ -54,16 +54,20 @@ public class ClientInfoHandler
         this.auditService = auditService;
     }
 
-    public ClientInfoHandler() {
-        configurationService = ConfigurationService.getInstance();
-        clientSessionService = new ClientSessionService(configurationService);
-        clientService =
+    public ClientInfoHandler(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
+        this.clientSessionService = new ClientSessionService(configurationService);
+        this.clientService =
                 new DynamoClientService(
                         configurationService.getAwsRegion(),
                         configurationService.getEnvironment(),
                         configurationService.getDynamoEndpointUri());
         this.sessionService = new SessionService(configurationService);
         this.auditService = new AuditService();
+    }
+
+    public ClientInfoHandler() {
+        this(ConfigurationService.getInstance());
     }
 
     @Override
