@@ -45,8 +45,7 @@ public class ClientRegistrationHandler
         this.auditService = auditService;
     }
 
-    public ClientRegistrationHandler() {
-        ConfigurationService configurationService = ConfigurationService.getInstance();
+    public ClientRegistrationHandler(ConfigurationService configurationService) {
         this.clientService =
                 new DynamoClientService(
                         configurationService.getAwsRegion(),
@@ -54,6 +53,10 @@ public class ClientRegistrationHandler
                         configurationService.getDynamoEndpointUri());
         this.validationService = new ClientConfigValidationService();
         this.auditService = new AuditService();
+    }
+
+    public ClientRegistrationHandler() {
+        this(ConfigurationService.getInstance());
     }
 
     @Override
