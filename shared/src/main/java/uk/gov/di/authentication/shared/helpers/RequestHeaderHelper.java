@@ -36,7 +36,7 @@ public final class RequestHeaderHelper {
                     matchLowerCase);
             return true;
         } else {
-            LOGGER.error("Header {} is missing, matchLowerCase={}", headerName, matchLowerCase);
+            LOGGER.warn("Header {} is missing, matchLowerCase={}", headerName, matchLowerCase);
             return false;
         }
     }

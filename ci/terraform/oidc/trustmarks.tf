@@ -7,12 +7,13 @@ module "trustmarks" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT             = var.environment
-    BASE_URL                = local.api_base_url
-    EVENTS_SNS_TOPIC_ARN    = aws_sns_topic.events.arn
-    AUDIT_SIGNING_KEY_ALIAS = local.audit_signing_key_alias_name
-    LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
-    DYNAMO_ENDPOINT         = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    ENVIRONMENT              = var.environment
+    BASE_URL                 = local.api_base_url
+    EVENTS_SNS_TOPIC_ARN     = aws_sns_topic.events.arn
+    AUDIT_SIGNING_KEY_ALIAS  = local.audit_signing_key_alias_name
+    LOCALSTACK_ENDPOINT      = var.use_localstack ? var.localstack_endpoint : null
+    DYNAMO_ENDPOINT          = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    HEADERS_CASE_INSENSITIVE = var.use_localstack ? "true" : "false"
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.TrustMarkHandler::handleRequest"
 
