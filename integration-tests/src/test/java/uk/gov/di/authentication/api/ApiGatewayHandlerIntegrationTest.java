@@ -82,10 +82,18 @@ public abstract class ApiGatewayHandlerIntegrationTest {
         return handler.handleRequest(request, context);
     }
 
-    protected Map<String, String> constructHeaders(Optional<HttpCookie> cookie) {
+    protected Map<String, String> constructOidcHeaders(Optional<HttpCookie> cookie) {
         final Map<String, String> headers = new HashMap<>();
         cookie.ifPresent(c -> headers.put("Cookie", c.toString()));
         return headers;
+    }
+
+    protected Map<String, String> constructFrontendHeaders(
+            String sessionId, String clientSessionId) {
+        return Map.of(
+                "Session-Id", sessionId,
+                "Client-Session-Id", clientSessionId,
+                "X-API-Key", FRONTEND_API_KEY);
     }
 
     protected HttpCookie buildSessionCookie(String sessionID, String clientSessionID) {

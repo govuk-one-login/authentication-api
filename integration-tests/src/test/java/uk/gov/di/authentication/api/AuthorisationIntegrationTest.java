@@ -71,7 +71,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(
                         Optional.empty(),
-                        constructHeaders(Optional.empty()),
+                        constructOidcHeaders(Optional.empty()),
                         constructQueryStringParameters(
                                 Optional.of(INVALID_CLIENT_ID),
                                 Optional.empty(),
@@ -89,7 +89,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(
                         Optional.empty(),
-                        constructHeaders(Optional.empty()),
+                        constructOidcHeaders(Optional.empty()),
                         constructQueryStringParameters(
                                 Optional.of(CLIENT_ID),
                                 Optional.empty(),
@@ -110,7 +110,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(
                         Optional.empty(),
-                        constructHeaders(Optional.empty()),
+                        constructOidcHeaders(Optional.empty()),
                         constructQueryStringParameters(
                                 Optional.of(AM_CLIENT_ID),
                                 Optional.empty(),
@@ -131,7 +131,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(
                         Optional.empty(),
-                        constructHeaders(Optional.empty()),
+                        constructOidcHeaders(Optional.empty()),
                         constructQueryStringParameters(
                                 Optional.of(CLIENT_ID),
                                 Optional.empty(),
@@ -149,7 +149,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(
                         Optional.empty(),
-                        constructHeaders(Optional.of(new HttpCookie("gs", "this is bad"))),
+                        constructOidcHeaders(Optional.of(new HttpCookie("gs", "this is bad"))),
                         constructQueryStringParameters(
                                 Optional.of(CLIENT_ID),
                                 Optional.empty(),
@@ -169,7 +169,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(
                         Optional.empty(),
-                        constructHeaders(
+                        constructOidcHeaders(
                                 Optional.of(buildSessionCookie("123", DUMMY_CLIENT_SESSION_ID))),
                         constructQueryStringParameters(
                                 Optional.of(CLIENT_ID),
@@ -194,7 +194,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(
                         Optional.empty(),
-                        constructHeaders(
+                        constructOidcHeaders(
                                 Optional.of(
                                         buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
                         constructQueryStringParameters(
@@ -221,7 +221,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(
                         Optional.empty(),
-                        constructHeaders(
+                        constructOidcHeaders(
                                 Optional.of(
                                         buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
                         constructQueryStringParameters(
@@ -242,7 +242,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(
                         Optional.empty(),
-                        constructHeaders(Optional.empty()),
+                        constructOidcHeaders(Optional.empty()),
                         constructQueryStringParameters(
                                 Optional.of(CLIENT_ID),
                                 Optional.of(NONE.toString()),
@@ -263,7 +263,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(
                         Optional.empty(),
-                        constructHeaders(
+                        constructOidcHeaders(
                                 Optional.of(
                                         buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
                         constructQueryStringParameters(
@@ -290,7 +290,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(
                         Optional.empty(),
-                        constructHeaders(
+                        constructOidcHeaders(
                                 Optional.of(
                                         buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
                         constructQueryStringParameters(
@@ -320,7 +320,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(
                         Optional.empty(),
-                        constructHeaders(
+                        constructOidcHeaders(
                                 Optional.of(
                                         buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
                         constructQueryStringParameters(
@@ -352,7 +352,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(
                         Optional.empty(),
-                        constructHeaders(
+                        constructOidcHeaders(
                                 Optional.of(
                                         buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
                         constructQueryStringParameters(

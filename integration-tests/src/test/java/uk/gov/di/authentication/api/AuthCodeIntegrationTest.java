@@ -55,7 +55,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(
                         Optional.empty(),
-                        constructHeaders(
+                        constructOidcHeaders(
                                 Optional.of(buildSessionCookie(sessionId, clientSessionId))),
                         Map.of());
 

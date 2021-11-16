@@ -59,7 +59,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(
                         Optional.empty(),
-                        constructHeaders(
+                        constructOidcHeaders(
                                 Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
                         Map.of(
                                 "id_token_hint",
@@ -85,7 +85,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(
                         Optional.empty(),
-                        constructHeaders(
+                        constructOidcHeaders(
                                 Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
                         Map.of("id_token_hint", signedJWT.serialize(), "state", STATE));
 
@@ -105,7 +105,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(
                         Optional.empty(),
-                        constructHeaders(
+                        constructOidcHeaders(
                                 Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
                         Map.of(
                                 "id_token_hint",
