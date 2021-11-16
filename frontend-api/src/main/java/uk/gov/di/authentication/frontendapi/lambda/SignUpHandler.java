@@ -66,7 +66,11 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
     }
 
     public SignUpHandler() {
-        super(SignupRequest.class, ConfigurationService.getInstance());
+        this(ConfigurationService.getInstance());
+    }
+
+    public SignUpHandler(ConfigurationService configurationService) {
+        super(SignupRequest.class, configurationService);
         this.validationService = new ValidationService();
         this.auditService = new AuditService();
     }

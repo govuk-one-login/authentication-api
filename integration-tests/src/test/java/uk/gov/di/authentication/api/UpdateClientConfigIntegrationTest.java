@@ -1,29 +1,33 @@
 package uk.gov.di.authentication.api;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
-import jakarta.ws.rs.client.ClientBuilder;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.MultivaluedHashMap;
-import jakarta.ws.rs.core.Response;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
+import uk.gov.di.authentication.clientregistry.lambda.UpdateClientConfigHandler;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 
+import java.util.Map;
+import java.util.Optional;
+
 import static java.util.Collections.singletonList;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
     private static final String CLIENT_ID = "client-id-1";
-    private static final String BASE_UPDATE_ENDPOINT = "/connect/register";
     private static final String VALID_PUBLIC_CERT =
             "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxt91w8GsMDdklOpS8ZXAsIM1ztQZd5QT/bRCQahZJeS1a6Os4hbuKwzHlz52zfTNp7BL4RB/KOcRIPhOQLgqeyM+bVngRa1EIfTkugJHS2/gu2Xv0aelwvXj8FZgAPRPD+ps2wiV4tUehrFIsRyHZM3yOp9g6qapCcxF7l0E1PlVkKPcPNmxn2oFiqnP6ZThGbE+N2avdXHcySIqt/v6Hbmk8cDHzSExazW7j/XvA+xnp0nQ5m2GisCZul5If5edCTXD0tKzx/I/gtEG4gkv9kENWOt4grP8/0zjNAl2ac6kpRny3tY5RkKBKCOB1VHwq2lUTSNKs32O1BsA5ByyYQIDAQAB";
+
+    @BeforeEach
+    void setup() {
+        handler = new UpdateClientConfigHandler(configurationService);
+    }
 
     @Test
     public void shouldUpdateClientNameSuccessfully() throws JsonProcessingException {
@@ -42,19 +46,18 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
         UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
         updateRequest.setClientName("new-client-name");
 
-        Response response =
-                ClientBuilder.newClient()
-                        .target(ROOT_RESOURCE_URL + BASE_UPDATE_ENDPOINT + "/" + CLIENT_ID)
-                        .request(MediaType.APPLICATION_JSON)
-                        .headers(new MultivaluedHashMap<>())
-                        .put(Entity.entity(updateRequest, MediaType.APPLICATION_JSON));
+        var response =
+                makeRequest(
+                        Optional.of(updateRequest),
+                        Map.of(),
+                        Map.of(),
+                        Map.of("clientId", CLIENT_ID));
 
-        assertEquals(200, response.getStatus());
+        assertThat(response, hasStatus(200));
         ClientRegistrationResponse clientResponse =
-                objectMapper.readValue(
-                        response.readEntity(String.class), ClientRegistrationResponse.class);
-        assertEquals("new-client-name", clientResponse.getClientName());
-        assertEquals(CLIENT_ID, clientResponse.getClientId());
+                objectMapper.readValue(response.getBody(), ClientRegistrationResponse.class);
+        assertThat(clientResponse.getClientName(), equalTo("new-client-name"));
+        assertThat(clientResponse.getClientId(), equalTo(CLIENT_ID));
     }
 
     @Test
@@ -62,16 +65,16 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
         UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
         updateRequest.setClientName("new-client-name");
 
-        Response response =
-                ClientBuilder.newClient()
-                        .target(ROOT_RESOURCE_URL + BASE_UPDATE_ENDPOINT + "/" + CLIENT_ID)
-                        .request(MediaType.APPLICATION_JSON)
-                        .headers(new MultivaluedHashMap<>())
-                        .put(Entity.entity(updateRequest, MediaType.APPLICATION_JSON));
+        var response =
+                makeRequest(
+                        Optional.of(updateRequest),
+                        Map.of(),
+                        Map.of(),
+                        Map.of("clientId", CLIENT_ID));
 
-        assertEquals(400, response.getStatus());
-        assertEquals(
-                OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString(),
-                response.readEntity(String.class));
+        assertThat(response, hasStatus(400));
+        assertThat(
+                response.getBody(),
+                equalTo(OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString()));
     }
 }
