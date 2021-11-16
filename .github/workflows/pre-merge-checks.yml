@@ -66,15 +66,6 @@ jobs:
         with:
           java-version: '11'
           distribution: 'adopt'
-      - name: Cache Gradle packages
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
       - name: Run Integration Tests
         run: |
           ./gradlew --no-daemon :integration-tests:test
