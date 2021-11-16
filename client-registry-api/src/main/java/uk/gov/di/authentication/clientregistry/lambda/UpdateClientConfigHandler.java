@@ -46,7 +46,10 @@ public class UpdateClientConfigHandler
     }
 
     public UpdateClientConfigHandler() {
-        ConfigurationService configurationService = ConfigurationService.getInstance();
+        this(ConfigurationService.getInstance());
+    }
+
+    public UpdateClientConfigHandler(ConfigurationService configurationService) {
         this.clientService =
                 new DynamoClientService(
                         configurationService.getAwsRegion(),
