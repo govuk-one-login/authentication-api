@@ -109,3 +109,11 @@ output "lambda_parameter_encryption_key_id" {
 output "lambda_parameter_encryption_alias_id" {
   value = aws_kms_alias.parameter_store_key_alias.id
 }
+
+output "redis_ssm_parameter_policy" {
+  value = aws_iam_policy.parameter_policy.arn
+}
+
+output "pepper_ssm_parameter_policy" {
+  value = aws_iam_policy.pepper_parameter_policy.arn
+}
