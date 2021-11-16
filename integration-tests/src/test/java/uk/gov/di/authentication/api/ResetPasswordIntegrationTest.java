@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.api;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,6 +10,7 @@ import uk.gov.di.authentication.frontendapi.entity.ResetPasswordWithCodeRequest;
 import uk.gov.di.authentication.frontendapi.lambda.ResetPasswordHandler;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.sharedtest.extensions.NotifyStubExtension;
 
 import java.util.HashMap;
@@ -27,11 +27,9 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     private static final String PASSWORD = "Pa55word";
     private static final String CODE = "0123456789";
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
-
     @RegisterExtension
     public static final NotifyStubExtension notifyStub =
-            new NotifyStubExtension(8888, objectMapper);
+            new NotifyStubExtension(8888, ObjectMapperFactory.getInstance());
 
     @BeforeEach
     public void setUp() {
