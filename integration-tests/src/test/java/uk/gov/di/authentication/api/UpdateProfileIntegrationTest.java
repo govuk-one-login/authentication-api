@@ -1,23 +1,17 @@
 package uk.gov.di.authentication.api;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
-import jakarta.ws.rs.client.ClientBuilder;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.MultivaluedHashMap;
-import jakarta.ws.rs.core.MultivaluedMap;
-import jakarta.ws.rs.core.Response;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
+import uk.gov.di.authentication.frontendapi.lambda.UpdateProfileHandler;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
-import uk.gov.di.authentication.helpers.RequestHelper;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ServiceType;
@@ -30,11 +24,13 @@ import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 import static java.util.Collections.singletonList;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.ADD_PHONE_NUMBER;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.CAPTURE_CONSENT;
@@ -42,13 +38,17 @@ import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDA
 import static uk.gov.di.authentication.shared.entity.SessionState.ADDED_UNVERIFIED_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_ADDED;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS_ACCEPTED;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    private static final String UPDATE_PROFILE_ENDPOINT = "/update-profile";
     private static final String EMAIL_ADDRESS = "test@test.com";
     private static final String CLIENT_ID = "test-id";
-    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @BeforeEach
+    void setup() {
+        handler = new UpdateProfileHandler(configurationService);
+    }
 
     @Test
     public void shouldCallUpdateProfileEndpointToUpdatePhoneNumberAndReturn200()
@@ -56,21 +56,19 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
         String sessionId = RedisHelper.createSession();
         String clientSessionId = IdGenerator.generate();
         setUpTest(sessionId, clientSessionId, SessionState.TWO_FACTOR_REQUIRED);
-        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
-        headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", FRONTEND_API_KEY);
         UpdateProfileRequest request =
                 new UpdateProfileRequest(EMAIL_ADDRESS, ADD_PHONE_NUMBER, "07123456789");
 
-        Response response =
-                RequestHelper.request(
-                        FRONTEND_ROOT_RESOURCE_URL, UPDATE_PROFILE_ENDPOINT, request, headers);
+        var response =
+                makeRequest(
+                        Optional.of(request),
+                        constructFrontendHeaders(sessionId, clientSessionId),
+                        Map.of());
 
-        assertEquals(200, response.getStatus());
-        String responseString = response.readEntity(String.class);
+        assertThat(response, hasStatus(200));
         BaseAPIResponse baseAPIResponse =
-                objectMapper.readValue(responseString, BaseAPIResponse.class);
-        assertEquals(ADDED_UNVERIFIED_PHONE_NUMBER, baseAPIResponse.getSessionState());
+                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
+        assertThat(baseAPIResponse.getSessionState(), equalTo(ADDED_UNVERIFIED_PHONE_NUMBER));
     }
 
     @Test
@@ -80,22 +78,16 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
         AuthenticationRequest authRequest =
                 setUpTest(sessionId, clientSessionId, SessionState.CONSENT_REQUIRED);
         RedisHelper.createClientSession(clientSessionId, authRequest.toParameters());
-        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
-        headers.add("Session-Id", sessionId);
-        headers.add("Client-Session-Id", clientSessionId);
-        headers.add("X-API-Key", FRONTEND_API_KEY);
-
         UpdateProfileRequest request =
                 new UpdateProfileRequest(EMAIL_ADDRESS, CAPTURE_CONSENT, String.valueOf(true));
 
-        Response response =
-                ClientBuilder.newClient()
-                        .target(FRONTEND_ROOT_RESOURCE_URL + UPDATE_PROFILE_ENDPOINT)
-                        .request(MediaType.APPLICATION_JSON)
-                        .headers(headers)
-                        .post(Entity.entity(request, MediaType.APPLICATION_JSON));
+        var response =
+                makeRequest(
+                        Optional.of(request),
+                        constructFrontendHeaders(sessionId, clientSessionId),
+                        Map.of());
 
-        assertEquals(200, response.getStatus());
+        assertThat(response, hasStatus(200));
         Optional<ClientConsent> consent =
                 DynamoHelper.getUserConsents(EMAIL_ADDRESS)
                         .flatMap(
@@ -105,10 +97,9 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
                                                 .findFirst());
         assertTrue(consent.get().getClaims().containsAll(OIDCScopeValue.OPENID.getClaimNames()));
         assertTrue(consent.get().getClaims().containsAll(OIDCScopeValue.EMAIL.getClaimNames()));
-        String responseString = response.readEntity(String.class);
         BaseAPIResponse baseAPIResponse =
-                objectMapper.readValue(responseString, BaseAPIResponse.class);
-        assertEquals(CONSENT_ADDED, baseAPIResponse.getSessionState());
+                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
+        assertThat(baseAPIResponse.getSessionState(), equalTo(CONSENT_ADDED));
     }
 
     @Test
@@ -116,27 +107,21 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
         String sessionId = RedisHelper.createSession();
         String clientSessionId = IdGenerator.generate();
         setUpTest(sessionId, clientSessionId, SessionState.UPDATED_TERMS_AND_CONDITIONS);
-        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
-        headers.add("Session-Id", sessionId);
-        headers.add("Client-Session-Id", clientSessionId);
-        headers.add("X-API-Key", FRONTEND_API_KEY);
 
         UpdateProfileRequest request =
                 new UpdateProfileRequest(EMAIL_ADDRESS, UPDATE_TERMS_CONDS, String.valueOf(true));
 
-        Response response =
-                ClientBuilder.newClient()
-                        .target(FRONTEND_ROOT_RESOURCE_URL + UPDATE_PROFILE_ENDPOINT)
-                        .request(MediaType.APPLICATION_JSON)
-                        .headers(headers)
-                        .post(Entity.entity(request, MediaType.APPLICATION_JSON));
+        var response =
+                makeRequest(
+                        Optional.of(request),
+                        constructFrontendHeaders(sessionId, clientSessionId),
+                        Map.of());
 
-        assertEquals(200, response.getStatus());
-
-        String responseString = response.readEntity(String.class);
+        assertThat(response, hasStatus(200));
         BaseAPIResponse baseAPIResponse =
-                objectMapper.readValue(responseString, BaseAPIResponse.class);
-        assertEquals(UPDATED_TERMS_AND_CONDITIONS_ACCEPTED, baseAPIResponse.getSessionState());
+                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
+        assertThat(
+                baseAPIResponse.getSessionState(), equalTo(UPDATED_TERMS_AND_CONDITIONS_ACCEPTED));
     }
 
     private AuthenticationRequest setUpTest(

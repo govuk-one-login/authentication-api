@@ -26,7 +26,6 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.StateMachine.InvalidStateTransitionException;
@@ -55,9 +54,6 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
     private static final Logger LOGGER = LoggerFactory.getLogger(UpdateProfileHandler.class);
 
-    private final AuthenticationService authenticationService;
-    private final SessionService sessionService;
-    private final ConfigurationService configurationService;
     private final AuditService auditService;
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine;
 
@@ -76,22 +72,16 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 clientSessionService,
                 clientService,
                 authenticationService);
-        this.authenticationService = authenticationService;
-        this.sessionService = sessionService;
-        this.configurationService = configurationService;
         this.auditService = auditService;
         this.stateMachine = stateMachine;
     }
 
     public UpdateProfileHandler() {
-        super(UpdateProfileRequest.class, ConfigurationService.getInstance());
-        configurationService = ConfigurationService.getInstance();
-        this.authenticationService =
-                new DynamoService(
-                        configurationService.getAwsRegion(),
-                        configurationService.getEnvironment(),
-                        configurationService.getDynamoEndpointUri());
-        sessionService = new SessionService(configurationService);
+        this(ConfigurationService.getInstance());
+    }
+
+    public UpdateProfileHandler(ConfigurationService configurationService) {
+        super(UpdateProfileRequest.class, configurationService);
         auditService = new AuditService();
         this.stateMachine = userJourneyStateMachine();
     }
