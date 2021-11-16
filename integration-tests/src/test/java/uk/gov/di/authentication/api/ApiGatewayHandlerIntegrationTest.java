@@ -58,10 +58,14 @@ public abstract class ApiGatewayHandlerIntegrationTest {
         request.withHeaders(headers).withQueryStringParameters(queryString);
         body.ifPresent(
                 o -> {
-                    try {
-                        request.withBody(objectMapper.writeValueAsString(o));
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException("Could not serialise test body", e);
+                    if (o instanceof String) {
+                        request.withBody((String) o);
+                    } else {
+                        try {
+                            request.withBody(objectMapper.writeValueAsString(o));
+                        } catch (JsonProcessingException e) {
+                            throw new RuntimeException("Could not serialise test body", e);
+                        }
                     }
                 });
 

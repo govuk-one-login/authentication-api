@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.api;
 
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
@@ -24,21 +25,16 @@ import com.nimbusds.oauth2.sdk.util.URLUtils;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
-import jakarta.ws.rs.client.Client;
-import jakarta.ws.rs.client.ClientBuilder;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.client.Invocation;
-import jakarta.ws.rs.client.WebTarget;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import net.minidev.json.JSONObject;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.KeyPairHelper;
 import uk.gov.di.authentication.helpers.KmsHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
-import uk.gov.di.authentication.shared.entity.AccessTokenStore;
+import uk.gov.di.authentication.oidc.lambda.TokenHandler;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
+import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 
@@ -54,13 +50,15 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
 import static java.util.Collections.singletonList;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
@@ -70,18 +68,23 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final String REDIRECT_URI = "http://localhost/redirect";
 
+    @BeforeEach
+    void setup() {
+        handler = new TokenHandler(configurationService);
+    }
+
     @Test
-    public void shouldCallTokenResourceAndReturnAccessAndRefreshToken()
+    void shouldCallTokenResourceAndReturnAccessAndRefreshToken()
             throws JOSEException, ParseException {
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
         setUpDynamo(keyPair, scope, new Subject());
-        Response response = generateTokenRequest(keyPair, scope);
+        var response = generateTokenRequest(keyPair, scope);
 
-        assertEquals(200, response.getStatus());
-        JSONObject jsonResponse = JSONObjectUtils.parse(response.readEntity(String.class));
+        assertThat(response, hasStatus(200));
+        JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
         assertNotNull(
                 TokenResponse.parse(jsonResponse)
                         .toSuccessResponse()
@@ -95,15 +98,15 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    public void shouldCallTokenResourceAndOnlyReturnAccessTokenWithoutOfflineAccessScope()
+    void shouldCallTokenResourceAndOnlyReturnAccessTokenWithoutOfflineAccessScope()
             throws JOSEException, ParseException {
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         Scope scope = new Scope(OIDCScopeValue.OPENID.getValue());
         setUpDynamo(keyPair, scope, new Subject());
-        Response response = generateTokenRequest(keyPair, scope);
+        var response = generateTokenRequest(keyPair, scope);
 
-        assertEquals(200, response.getStatus());
-        JSONObject jsonResponse = JSONObjectUtils.parse(response.readEntity(String.class));
+        assertThat(response, hasStatus(200));
+        JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
         assertNull(
                 TokenResponse.parse(jsonResponse)
                         .toSuccessResponse()
@@ -117,8 +120,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    public void shouldCallTokenResourceWithRefreshTokenGrantAndReturn200()
-            throws JOSEException, JsonProcessingException {
+    void shouldCallTokenResourceWithRefreshTokenGrantAndReturn200()
+            throws JOSEException, JsonProcessingException, ParseException {
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
@@ -128,8 +131,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         setUpDynamo(keyPair, scope, internalSubject);
         SignedJWT signedJWT = generateSignedRefreshToken(scope, publicSubject);
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
-        AccessTokenStore tokenStore =
-                new AccessTokenStore(refreshToken.getValue(), internalSubject.getValue());
+        RefreshTokenStore tokenStore =
+                new RefreshTokenStore(List.of(refreshToken.getValue()), internalSubject.getValue());
         RedisHelper.addToRedis(
                 REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + publicSubject.getValue(),
                 new ObjectMapper().writeValueAsString(tokenStore),
@@ -150,29 +153,22 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         customParams.put("refresh_token", Collections.singletonList(refreshToken.getValue()));
         Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
         privateKeyParams.putAll(customParams);
-        Client client = ClientBuilder.newClient();
-        WebTarget webTarget = client.target(ROOT_RESOURCE_URL + TOKEN_ENDPOINT);
-        Invocation.Builder invocationBuilder = webTarget.request(MediaType.TEXT_PLAIN);
         String requestParams = URLUtils.serializeParameters(privateKeyParams);
-        Response response =
-                invocationBuilder.post(Entity.entity(requestParams, MediaType.TEXT_PLAIN));
+        var response = makeRequest(Optional.of(requestParams), Map.of(), Map.of());
 
-        //  Commented out due to same reason as LogoutIntegration test. It's an issue with KSM
-        // running inside localstack which causes the Caused by:
-        // java.security.NoSuchAlgorithmException: EC KeyFactory not available error.
-        //        assertEquals(200, response.getStatus());
-        //        JSONObject jsonResponse =
-        // JSONObjectUtils.parse(response.readEntity(String.class));
-        //        assertNotNull(
-        //                TokenResponse.parse(jsonResponse)
-        //                        .toSuccessResponse()
-        //                        .getTokens()
-        //                        .getRefreshToken());
-        //        assertNotNull(
-        //                TokenResponse.parse(jsonResponse)
-        //                        .toSuccessResponse()
-        //                        .getTokens()
-        //                        .getBearerAccessToken());
+        assertThat(response, hasStatus(200));
+        JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
+
+        assertNotNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getRefreshToken());
+        assertNotNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getBearerAccessToken());
     }
 
     private SignedJWT generateSignedRefreshToken(Scope scope, Subject publicSubject) {
@@ -226,7 +222,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 .build();
     }
 
-    private Response generateTokenRequest(KeyPair keyPair, Scope scope) throws JOSEException {
+    private APIGatewayProxyResponseEvent generateTokenRequest(KeyPair keyPair, Scope scope)
+            throws JOSEException {
         PrivateKey privateKey = keyPair.getPrivate();
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(5);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
@@ -248,10 +245,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         customParams.put("redirect_uri", Collections.singletonList(REDIRECT_URI));
         Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
         privateKeyParams.putAll(customParams);
-        Client client = ClientBuilder.newClient();
-        WebTarget webTarget = client.target(ROOT_RESOURCE_URL + TOKEN_ENDPOINT);
-        Invocation.Builder invocationBuilder = webTarget.request(MediaType.TEXT_PLAIN);
+
         String requestParams = URLUtils.serializeParameters(privateKeyParams);
-        return invocationBuilder.post(Entity.entity(requestParams, MediaType.TEXT_PLAIN));
+        return makeRequest(Optional.of(requestParams), Map.of(), Map.of());
     }
 }
