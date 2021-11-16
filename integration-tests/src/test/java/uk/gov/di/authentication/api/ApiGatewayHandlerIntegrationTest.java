@@ -88,6 +88,24 @@ public abstract class ApiGatewayHandlerIntegrationTest {
         return headers;
     }
 
+    protected Map<String, String> constructFrontendHeaders(String sessionId) {
+        return constructFrontendHeaders(sessionId, Optional.empty());
+    }
+
+    protected Map<String, String> constructFrontendHeaders(
+            String sessionId, String clientSessionId) {
+        return constructFrontendHeaders(sessionId, Optional.of(clientSessionId));
+    }
+
+    protected Map<String, String> constructFrontendHeaders(
+            String sessionId, Optional<String> clientSessionId) {
+        var headers = new HashMap<String, String>();
+        headers.put("Session-Id", sessionId);
+        headers.put("X-API-Key", FRONTEND_API_KEY);
+        clientSessionId.ifPresent(id -> headers.put("Client-Session-Id", id));
+        return headers;
+    }
+
     protected HttpCookie buildSessionCookie(String sessionID, String clientSessionID) {
         return new HttpCookie("gs", sessionID + "." + clientSessionID);
     }
