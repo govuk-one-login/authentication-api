@@ -3,6 +3,10 @@ module "oidc_email_role" {
   environment = var.environment
   role_name   = "oidc-email"
   vpc_arn     = local.authentication_vpc_arn
+
+  policies_to_attach = [
+    aws_iam_policy.s3_smoketest_policy.arn
+  ]
 }
 
 resource "aws_sqs_queue" "email_queue" {
@@ -203,4 +207,33 @@ resource "aws_lambda_alias" "sqs_lambda_active" {
   description      = "Alias pointing at active version of Lambda"
   function_name    = aws_lambda_function.email_sqs_lambda.arn
   function_version = aws_lambda_function.email_sqs_lambda.version
+}
+
+### Smoketest codes S3
+
+data "aws_s3_bucket" "smoketest_sms_bucket" {
+  bucket = "${var.environment}-smoke-test-sms-codes"
+}
+
+resource "aws_iam_policy" "s3_smoketest_policy" {
+  name_prefix = "s3-smoketest-access"
+  path        = "/${var.environment}/"
+  description = "IAM policy for managing S3 connection to the S3 Smoketest bucket"
+
+  policy = data.aws_iam_policy_document.s3_smoketest_policy_document.json
+}
+
+data "aws_iam_policy_document" "s3_smoketest_policy_document" {
+  statement {
+    sid    = "AllowAccessToWriteToS3"
+    effect = "Allow"
+
+    actions = [
+      "s3:PutObject",
+    ]
+    resources = [
+      data.aws_s3_bucket.smoketest_sms_bucket.arn,
+      "${data.aws_s3_bucket.smoketest_sms_bucket.arn}/*",
+    ]
+  }
 }

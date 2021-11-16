@@ -93,7 +93,7 @@ data "aws_iam_policy_document" "pepper_parameter_policy" {
 }
 
 resource "aws_iam_policy" "pepper_parameter_policy" {
-  policy      = data.aws_iam_policy_document.pepper_parameter_policy[0].json
+  policy      = data.aws_iam_policy_document.pepper_parameter_policy.json
   path        = "/${var.environment}/lambda-parameters/"
   name_prefix = "pepper-parameter-store-policy"
 }
