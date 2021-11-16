@@ -13,39 +13,122 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
-import jakarta.ws.rs.client.Client;
-import jakarta.ws.rs.client.ClientBuilder;
-import jakarta.ws.rs.core.MultivaluedHashMap;
-import jakarta.ws.rs.core.MultivaluedMap;
-import jakarta.ws.rs.core.Response;
-import org.glassfish.jersey.client.ClientProperties;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.KmsHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
+import uk.gov.di.authentication.oidc.lambda.LogoutHandler;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 
 import java.io.IOException;
-import java.net.HttpCookie;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import static java.util.Collections.singletonList;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.hasEntry;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.isRedirect;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.isRedirectTo;
+import static uk.gov.di.authentication.sharedtest.matchers.UriMatcher.baseUri;
+import static uk.gov.di.authentication.sharedtest.matchers.UriMatcher.redirectQueryParameters;
 
 public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    private static final String LOGOUT_ENDPOINT = "/logout";
-    private static final String COOKIE = "Cookie";
     private static final String BASE_URL = System.getenv().getOrDefault("BASE_URL", "rubbish");
+    public static final String STATE = "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU";
+    public static final String REDIRECT_URL =
+            "https://di-auth-stub-relying-party-build.london.cloudapps.digital/";
+    public static final String SESSION_ID = "session-id";
+    public static final String CLIENT_SESSION_ID = "client-session-id";
+
+    @BeforeEach
+    void setup() {
+        handler = new LogoutHandler(configurationService);
+    }
 
     @Test
-    public void shouldReturn302AndRedirectToClientLogoutUri() throws IOException, ParseException {
+    void shouldReturn302AndRedirectToSpecifiedClientLogoutUri() throws IOException, ParseException {
+        var signedJWT = setupClientAndSession(SESSION_ID, CLIENT_SESSION_ID);
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        Map.of(
+                                "id_token_hint",
+                                signedJWT.serialize(),
+                                "post_logout_redirect_uri",
+                                REDIRECT_URL,
+                                "state",
+                                STATE));
+
+        assertThat(response, isRedirect());
+        assertThat(
+                response,
+                isRedirectTo(
+                        allOf(
+                                baseUri(URI.create(REDIRECT_URL)),
+                                redirectQueryParameters(hasEntry("state", STATE)))));
+    }
+
+    @Test
+    void shouldReturn302AndRedirectToDefaultLogoutUriWhenNoRedirectSpecified()
+            throws IOException, ParseException {
+        var signedJWT = setupClientAndSession(SESSION_ID, CLIENT_SESSION_ID);
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        Map.of("id_token_hint", signedJWT.serialize(), "state", STATE));
+
+        assertThat(response, isRedirect());
+        assertThat(
+                response,
+                isRedirectTo(
+                        allOf(
+                                baseUri(configurationService.getDefaultLogoutURI()),
+                                redirectQueryParameters(hasEntry("state", STATE)))));
+    }
+
+    @Test
+    void shouldReturn302AndRedirectToDefaultLogoutUriWhenInvalidRedirectSpecified()
+            throws IOException, ParseException {
+        var signedJWT = setupClientAndSession(SESSION_ID, CLIENT_SESSION_ID);
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        Map.of(
+                                "id_token_hint",
+                                signedJWT.serialize(),
+                                "post_logout_redirect_uri",
+                                "https://example.com/invalid-logout-url",
+                                "state",
+                                STATE));
+
+        assertThat(response, isRedirect());
+        assertThat(
+                response,
+                isRedirectTo(
+                        allOf(
+                                baseUri(configurationService.getDefaultLogoutURI()),
+                                redirectQueryParameters(hasEntry("state", STATE)),
+                                redirectQueryParameters(
+                                        hasEntry("error_code", "invalid_request")))));
+    }
+
+    private SignedJWT setupClientAndSession(String sessionId, String clientSessionId)
+            throws ParseException, IOException {
         Nonce nonce = new Nonce();
-        String sessionId = "session-id";
-        String clientSessionId = "client-session-id";
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(10);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         IDTokenClaimsSet idTokenClaims =
@@ -71,33 +154,12 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 singletonList("client-1"),
                 singletonList("openid"),
                 "public-key",
-                singletonList("https://di-auth-stub-relying-party-build.london.cloudapps.digital/"),
+                singletonList(REDIRECT_URL),
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public");
-        Client client = ClientBuilder.newClient();
-        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
-        headers.add(COOKIE, buildCookieString(sessionId, clientSessionId));
-        Response response =
-                client.target(ROOT_RESOURCE_URL + LOGOUT_ENDPOINT)
-                        .queryParam("id_token_hint", signedJWT.serialize())
-                        .queryParam(
-                                "post_logout_redirect_uri",
-                                "https://di-auth-stub-relying-party-build.london.cloudapps.digital/")
-                        .queryParam("state", "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU")
-                        .property(ClientProperties.FOLLOW_REDIRECTS, Boolean.FALSE)
-                        .request()
-                        .headers(headers)
-                        .get();
 
-        //        assertEquals(302, response.getStatus());
-        //        assertTrue(
-        //                response.getHeaders()
-        //                        .get("Location")
-        //                        .contains(
-        //
-        // "https://di-auth-stub-relying-party-build.london.cloudapps.digital/?state="
-        //                                        + "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU"));
+        return signedJWT;
     }
 
     private AuthenticationRequest generateAuthRequest(Nonce nonce) {
@@ -113,10 +175,5 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 .state(state)
                 .nonce(nonce)
                 .build();
-    }
-
-    private String buildCookieString(String sessionID, String clientSessionID) {
-        var cookie = new HttpCookie("gs", sessionID + "." + clientSessionID);
-        return cookie.toString();
     }
 }

@@ -74,8 +74,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.auditService = auditService;
     }
 
-    public LoginHandler() {
-        super(LoginRequest.class, ConfigurationService.getInstance());
+    public LoginHandler(ConfigurationService configurationService) {
+        super(LoginRequest.class, configurationService);
         this.codeStorageService =
                 new CodeStorageService(
                         new RedisConnectionService(ConfigurationService.getInstance()));
@@ -84,6 +84,10 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         new DynamoService(ConfigurationService.getInstance()),
                         ConfigurationService.getInstance());
         this.auditService = new AuditService();
+    }
+
+    public LoginHandler() {
+        this(ConfigurationService.getInstance());
     }
 
     @Override
