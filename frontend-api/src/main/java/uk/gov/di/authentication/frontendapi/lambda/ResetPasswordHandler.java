@@ -97,11 +97,17 @@ public class ResetPasswordHandler
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1021);
                                 }
-                                codeStorageService.deleteSubjectWithPasswordResetCode(
-                                        resetPasswordWithCodeRequest.getCode());
                                 UserCredentials userCredentials =
                                         authenticationService.getUserCredentialsFromSubject(
                                                 subject.get());
+                                if (userCredentials
+                                        .getPassword()
+                                        .equals(resetPasswordWithCodeRequest.getPassword())) {
+                                    return generateApiGatewayProxyErrorResponse(
+                                            400, ErrorResponse.ERROR_1024);
+                                }
+                                codeStorageService.deleteSubjectWithPasswordResetCode(
+                                        resetPasswordWithCodeRequest.getCode());
                                 authenticationService.updatePassword(
                                         userCredentials.getEmail(),
                                         resetPasswordWithCodeRequest.getPassword());

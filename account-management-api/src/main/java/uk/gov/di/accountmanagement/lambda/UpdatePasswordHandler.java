@@ -79,6 +79,19 @@ public class UpdatePasswordHandler
                                         new Subject(userProfile.getPublicSubjectID()),
                                         authorizerParams);
 
+                                String currentPassword =
+                                        dynamoService
+                                                .getUserCredentialsFromEmail(
+                                                        updatePasswordRequest.getEmail())
+                                                .getPassword();
+
+                                if (updatePasswordRequest
+                                        .getNewPassword()
+                                        .equals(currentPassword)) {
+                                    return generateApiGatewayProxyErrorResponse(
+                                            400, ErrorResponse.ERROR_1024);
+                                }
+
                                 dynamoService.updatePassword(
                                         updatePasswordRequest.getEmail(),
                                         updatePasswordRequest.getNewPassword());

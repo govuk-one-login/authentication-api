@@ -91,6 +91,26 @@ class ResetPasswordHandlerTest {
     }
 
     @Test
+    public void shouldReturn400IfNewPasswordEqualsExistingPassword()
+            throws JsonProcessingException {
+        when(codeStorageService.getSubjectWithPasswordResetCode(CODE))
+                .thenReturn(Optional.of(SUBJECT));
+        when(authenticationService.getUserCredentialsFromSubject(SUBJECT))
+                .thenReturn(generateUserCredentials(NEW_PASSWORD));
+        NotifyRequest notifyRequest =
+                new NotifyRequest(EMAIL, NotificationType.PASSWORD_RESET_CONFIRMATION);
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setBody(format("{ \"code\": \"%s\", \"password\": \"%s\"}", CODE, NEW_PASSWORD));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1024));
+        verify(sqsClient, never()).send(new ObjectMapper().writeValueAsString(notifyRequest));
+        verify(authenticationService, never()).updatePassword(EMAIL, NEW_PASSWORD);
+        verify(codeStorageService, never()).deleteSubjectWithPasswordResetCode(CODE);
+    }
+
+    @Test
     public void shouldReturn400WhenCodeIsInvalid() {
         when(codeStorageService.getSubjectWithPasswordResetCode(CODE)).thenReturn(Optional.empty());
 
@@ -122,9 +142,10 @@ class ResetPasswordHandlerTest {
     }
 
     private UserCredentials generateUserCredentials() {
-        return new UserCredentials()
-                .setEmail(EMAIL)
-                .setPassword("old-password1")
-                .setSubjectID(SUBJECT);
+        return generateUserCredentials("old-password1");
+    }
+
+    private UserCredentials generateUserCredentials(String password) {
+        return new UserCredentials().setEmail(EMAIL).setPassword(password).setSubjectID(SUBJECT);
     }
 }
