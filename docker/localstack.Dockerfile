@@ -2,8 +2,8 @@
 #
 # Container used to run tasks requiring Localstack in the build pipeline.
 
-FROM localstack/localstack:0.12.20@sha256:ae2c8cbf90ec8dace5d34ff5690b049f030021a0c1a2f8e49bcb8cd6986fae52
+FROM localstack/localstack:0.13.0@sha256:7bfc0f198875d734f158b4a981f4f8d0e218afccb8fd503a173dfb19b1be0d5e
 
 COPY localstack/*.sh /docker-entrypoint-initaws.d/
 
-RUN apk add argon2 argon2-dev
+RUN apt install argon2
