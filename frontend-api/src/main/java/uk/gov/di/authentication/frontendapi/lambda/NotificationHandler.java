@@ -66,6 +66,9 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
         for (SQSMessage msg : event.getRecords()) {
             try {
+                LOG.info("Received message: {}", msg);
+                LOG.info("Notify URL is: {}", configService.getNotifyApiUrl());
+                LOG.info("Notify API Key is: {}", configService.getNotifyApiUrl());
                 NotifyRequest notifyRequest =
                         objectMapper.readValue(msg.getBody(), NotifyRequest.class);
                 try {

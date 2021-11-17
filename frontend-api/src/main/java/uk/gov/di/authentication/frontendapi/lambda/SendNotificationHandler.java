@@ -226,10 +226,11 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 notificationType);
         sessionService.save(session.setState(nextState).incrementCodeRequestCount());
         if (!isTestClientAndAllowedEmail(userContext, notificationType)) {
-            sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+            var messageId = sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
             LOGGER.info(
-                    "SendNotificationHandler successfully processed request for session {}",
-                    session.getSessionId());
+                    "SendNotificationHandler successfully processed request for session {}, messageId ={}",
+                    session.getSessionId(),
+                    messageId);
         }
         return generateApiGatewayProxyResponse(200, new BaseAPIResponse(session.getState()));
     }

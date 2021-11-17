@@ -3,7 +3,6 @@ package uk.gov.di.authentication.queuehandlers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -30,7 +29,7 @@ public class SendNotificationIntegrationTest {
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@example.com";
     private static final int VERIFICATION_CODE_LENGTH = 6;
 
-    private static final AwsSqsClient client =
+    private final AwsSqsClient client =
             new AwsSqsClient(
                     "eu-west-2",
                     "http://localhost:45678/123456789012/local-email-notification-queue",
@@ -39,17 +38,12 @@ public class SendNotificationIntegrationTest {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @RegisterExtension
-    public static final NotifyStubExtension notifyStub =
-            new NotifyStubExtension(8888, objectMapper);
+    public final NotifyStubExtension notifyStub = new NotifyStubExtension(8888, objectMapper);
 
     @BeforeEach
     public void setUp() {
+        client.purge();
         notifyStub.init();
-    }
-
-    @AfterEach
-    public void resetStub() {
-        notifyStub.reset();
     }
 
     @Test

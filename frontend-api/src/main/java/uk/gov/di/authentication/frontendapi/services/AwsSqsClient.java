@@ -6,6 +6,7 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.SqsClientBuilder;
+import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
 import java.net.URI;
@@ -30,10 +31,16 @@ public class AwsSqsClient {
         this.queueUrl = queueUrl;
     }
 
-    public void send(final String event) throws SdkClientException {
+    public String send(final String event) throws SdkClientException {
         SendMessageRequest messageRequest =
                 SendMessageRequest.builder().queueUrl(queueUrl).messageBody(event).build();
 
-        client.sendMessage(messageRequest);
+        var result = client.sendMessage(messageRequest);
+        return result.messageId();
+    }
+
+    public void purge() {
+        PurgeQueueRequest request = PurgeQueueRequest.builder().queueUrl(queueUrl).build();
+        client.purgeQueue(request);
     }
 }
