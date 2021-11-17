@@ -85,11 +85,14 @@ jobs:
           name: account-management-integration-test-reports
           path: account-management-integration-tests/build/reports/tests/test/
           retention-days: 5
+      - name: Extract Cloudwatch logs
+        if: failure()
+        run: ./get-lambda-logs.sh
       - name: Upload Docker Container Logs
         uses: actions/upload-artifact@v2
         if: failure()
         with:
-          name: docker-container-logs
+          name: account-management-docker-container-logs
           path: logs/
           retention-days: 5
       - name: Stop Services
