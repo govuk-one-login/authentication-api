@@ -58,7 +58,7 @@ public class SendNotificationIntegrationTest {
                 objectMapper.writeValueAsString(
                         new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "162534")));
 
-        JsonNode request = notifyStub.waitForRequest(60);
+        JsonNode request = notifyStub.waitForRequest(90);
         JsonNode personalisation = request.get("personalisation");
         assertEquals(TEST_EMAIL_ADDRESS, request.get("email_address").asText());
         assertEquals(TEST_EMAIL_ADDRESS, personalisation.get("email-address").asText());
@@ -73,7 +73,7 @@ public class SendNotificationIntegrationTest {
                 objectMapper.writeValueAsString(
                         new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "162534")));
 
-        JsonNode request = notifyStub.waitForRequest(60);
+        JsonNode request = notifyStub.waitForRequest(90);
         JsonNode personalisation = request.get("personalisation");
         assertEquals(TEST_PHONE_NUMBER, request.get("phone_number").asText());
         assertEquals(
@@ -86,7 +86,7 @@ public class SendNotificationIntegrationTest {
                 objectMapper.writeValueAsString(
                         new NotifyRequest(TEST_PHONE_NUMBER, MFA_SMS, "162534")));
 
-        JsonNode request = notifyStub.waitForRequest(60);
+        JsonNode request = notifyStub.waitForRequest(90);
         JsonNode personalisation = request.get("personalisation");
         assertEquals(TEST_PHONE_NUMBER, request.get("phone_number").asText());
         assertEquals(
@@ -102,7 +102,7 @@ public class SendNotificationIntegrationTest {
                 objectMapper.writeValueAsString(
                         new NotifyRequest(TEST_EMAIL_ADDRESS, RESET_PASSWORD, code)));
 
-        JsonNode request = notifyStub.waitForRequest(60);
+        JsonNode request = notifyStub.waitForRequest(90);
         JsonNode personalisation = request.get("personalisation");
         assertThat(personalisation.get("reset-password-link").asText(), containsString(code));
         assertThat(
@@ -117,7 +117,7 @@ public class SendNotificationIntegrationTest {
                 objectMapper.writeValueAsString(
                         new NotifyRequest(TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION)));
 
-        JsonNode request = notifyStub.waitForRequest(60);
+        JsonNode request = notifyStub.waitForRequest(90);
         JsonNode personalisation = request.get("personalisation");
         assertEquals(TEST_EMAIL_ADDRESS, request.get("email_address").asText());
         assertEquals("http://localhost:3000/", personalisation.get("sign-in-page-url").asText());
