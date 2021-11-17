@@ -85,6 +85,13 @@ jobs:
           name: integration-test-reports
           path: integration-tests/build/reports/tests/test/
           retention-days: 5
+      - name: Upload Docker Container Logs
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: docker-container-logs
+          path: logs/
+          retention-days: 5
       - name: Stop Services
         if: always()
         run: |
