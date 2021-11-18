@@ -38,14 +38,12 @@ public class UserInfoHandler
     }
 
     public UserInfoHandler() {
-        this(ConfigurationService.getInstance());
-    }
-
-    public UserInfoHandler(ConfigurationService configurationService) {
-        this.configurationService = configurationService;
-        this.userInfoService =
+        configurationService = ConfigurationService.getInstance();
+        RedisConnectionService redisConnectionService =
+                new RedisConnectionService(configurationService);
+        userInfoService =
                 new UserInfoService(
-                        new RedisConnectionService(configurationService),
+                        redisConnectionService,
                         new DynamoService(
                                 configurationService.getAwsRegion(),
                                 configurationService.getEnvironment(),
