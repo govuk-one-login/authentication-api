@@ -63,11 +63,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
     }
 
     public CheckUserExistsHandler() {
-        this(ConfigurationService.getInstance());
-    }
-
-    public CheckUserExistsHandler(ConfigurationService configurationService) {
-        super(CheckUserExistsRequest.class, configurationService);
+        super(CheckUserExistsRequest.class, ConfigurationService.getInstance());
         this.validationService = new ValidationService();
         this.auditService = new AuditService();
     }
