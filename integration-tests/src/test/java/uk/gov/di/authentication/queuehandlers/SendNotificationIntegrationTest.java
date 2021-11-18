@@ -48,6 +48,7 @@ public class SendNotificationIntegrationTest {
 
     @BeforeEach
     public void setUp() {
+        notifyStub.reset();
         notifyStub.init();
         client.purge();
     }

@@ -2,6 +2,7 @@ package uk.gov.di.authentication.api;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
@@ -24,6 +25,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
 import static uk.gov.di.authentication.shared.entity.SessionState.RESET_PASSWORD_LINK_SENT;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
+@Disabled
 public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @RegisterExtension
