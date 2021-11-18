@@ -13,7 +13,6 @@ import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.sharedtest.extensions.NotifyStubExtension;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -51,11 +50,12 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         String sessionId = RedisHelper.createSession();
         RedisHelper.addEmailToSession(sessionId, email);
         RedisHelper.setSessionState(sessionId, AUTHENTICATION_REQUIRED);
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Session-Id", sessionId);
-        headers.put("X-API-Key", FRONTEND_API_KEY);
 
-        var response = makeRequest(Optional.of(new ResetPasswordRequest(email)), headers, Map.of());
+        var response =
+                makeRequest(
+                        Optional.of(new ResetPasswordRequest(email)),
+                        constructFrontendHeaders(sessionId),
+                        Map.of());
         notifyStub.waitForRequest(60);
 
         assertThat(response, hasStatus(200));
@@ -75,11 +75,12 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         String sessionId = RedisHelper.createSession();
         RedisHelper.addEmailToSession(sessionId, email);
         RedisHelper.setSessionState(sessionId, NEW);
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Session-Id", sessionId);
-        headers.put("X-API-Key", FRONTEND_API_KEY);
 
-        var response = makeRequest(Optional.of(new ResetPasswordRequest(email)), headers, Map.of());
+        var response =
+                makeRequest(
+                        Optional.of(new ResetPasswordRequest(email)),
+                        constructFrontendHeaders(sessionId),
+                        Map.of());
 
         assertThat(response, hasStatus(400));
     }
