@@ -54,18 +54,8 @@ public abstract class ApiGatewayHandlerIntegrationTest {
 
     protected APIGatewayProxyResponseEvent makeRequest(
             Optional<Object> body, Map<String, String> headers, Map<String, String> queryString) {
-        return makeRequest(body, headers, queryString, Map.of());
-    }
-
-    protected APIGatewayProxyResponseEvent makeRequest(
-            Optional<Object> body,
-            Map<String, String> headers,
-            Map<String, String> queryString,
-            Map<String, String> pathParams) {
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
-        request.withHeaders(headers)
-                .withQueryStringParameters(queryString)
-                .withPathParameters(pathParams);
+        request.withHeaders(headers).withQueryStringParameters(queryString);
         body.ifPresent(
                 o -> {
                     if (o instanceof String) {

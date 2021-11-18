@@ -1,56 +1,50 @@
 package uk.gov.di.authentication.api;
 
-import org.junit.jupiter.api.BeforeEach;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.ws.rs.core.MultivaluedHashMap;
+import jakarta.ws.rs.core.MultivaluedMap;
+import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.SignupRequest;
-import uk.gov.di.authentication.frontendapi.lambda.SignUpHandler;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
+import uk.gov.di.authentication.helpers.RequestHelper;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_VERIFIED;
 import static uk.gov.di.authentication.shared.entity.SessionState.TWO_FACTOR_REQUIRED;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    @BeforeEach
-    void setup() {
-        handler = new SignUpHandler(configurationService);
-    }
+    private static final String SIGNUP_ENDPOINT = "/signup";
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
-    void shouldReturn200WhenValidSignUpRequest() throws IOException {
+    public void shouldCallSignupEndpointAndReturn200() throws IOException {
         String sessionId = RedisHelper.createSession();
 
         RedisHelper.setSessionState(sessionId, EMAIL_CODE_VERIFIED);
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Session-Id", sessionId);
-        headers.put("X-API-Key", FRONTEND_API_KEY);
+        SignupRequest request =
+                new SignupRequest("joe.bloggs+5@digital.cabinet-office.gov.uk", "password-1");
+        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
+        headers.add("Session-Id", sessionId);
+        headers.add("X-API-Key", FRONTEND_API_KEY);
 
-        var response =
-                makeRequest(
-                        Optional.of(
-                                new SignupRequest(
-                                        "joe.bloggs+5@digital.cabinet-office.gov.uk",
-                                        "password-1")),
-                        headers,
-                        Map.of());
+        Response response =
+                RequestHelper.request(
+                        FRONTEND_ROOT_RESOURCE_URL, SIGNUP_ENDPOINT, request, headers);
 
-        assertThat(response, hasStatus(200));
+        assertEquals(200, response.getStatus());
 
+        String responseString = response.readEntity(String.class);
         BaseAPIResponse BaseAPIResponse =
-                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
-        assertThat(BaseAPIResponse.getSessionState(), equalTo(TWO_FACTOR_REQUIRED));
+                objectMapper.readValue(responseString, BaseAPIResponse.class);
+        assertEquals(TWO_FACTOR_REQUIRED, BaseAPIResponse.getSessionState());
         assertTrue(DynamoHelper.userExists("joe.bloggs+5@digital.cabinet-office.gov.uk"));
     }
 }

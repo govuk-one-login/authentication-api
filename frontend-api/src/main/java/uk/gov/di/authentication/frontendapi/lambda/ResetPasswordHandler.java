@@ -52,10 +52,7 @@ public class ResetPasswordHandler
     }
 
     public ResetPasswordHandler() {
-        this(ConfigurationService.getInstance());
-    }
-
-    public ResetPasswordHandler(ConfigurationService configurationService) {
+        ConfigurationService configurationService = ConfigurationService.getInstance();
         this.authenticationService = new DynamoService(configurationService);
         this.sqsClient =
                 new AwsSqsClient(

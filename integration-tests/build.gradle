@@ -50,7 +50,6 @@ test {
     environment "LOGIN_URI", "http://localhost:3000"
     environment "REDIS_KEY", "session"
     environment "RESET_PASSWORD_URL", "http://localhost:3000/reset-password?code="
-    environment "SQS_ENDPOINT", "http://localhost:45678"
     environment "STUB_RELYING_PARTY_REDIRECT_URI", "https://di-auth-stub-relying-party-build.london.cloudapps.digital/"
     environment "TERMS_CONDITIONS_VERSION", "1.0"
 

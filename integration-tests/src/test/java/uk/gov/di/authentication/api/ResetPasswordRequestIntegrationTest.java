@@ -1,38 +1,39 @@
 package uk.gov.di.authentication.api;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.ws.rs.core.MultivaluedHashMap;
+import jakarta.ws.rs.core.MultivaluedMap;
+import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
-import uk.gov.di.authentication.frontendapi.lambda.ResetPasswordRequestHandler;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
+import uk.gov.di.authentication.helpers.RequestHelper;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.sharedtest.extensions.NotifyStubExtension;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
 import static uk.gov.di.authentication.shared.entity.SessionState.RESET_PASSWORD_LINK_SENT;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
+    private static final String RESET_PASSWORD_ENDPOINT = "/reset-password-request";
+
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
     @RegisterExtension
     public static final NotifyStubExtension notifyStub =
-            new NotifyStubExtension(8888, ObjectMapperFactory.getInstance());
+            new NotifyStubExtension(8888, objectMapper);
 
     @BeforeEach
     public void setUp() {
-        handler = new ResetPasswordRequestHandler(configurationService);
         notifyStub.init();
     }
 
@@ -51,18 +52,24 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         String sessionId = RedisHelper.createSession();
         RedisHelper.addEmailToSession(sessionId, email);
         RedisHelper.setSessionState(sessionId, AUTHENTICATION_REQUIRED);
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Session-Id", sessionId);
-        headers.put("X-API-Key", FRONTEND_API_KEY);
+        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
+        headers.add("Session-Id", sessionId);
+        headers.add("X-API-Key", FRONTEND_API_KEY);
+        Response response =
+                RequestHelper.request(
+                        FRONTEND_ROOT_RESOURCE_URL,
+                        RESET_PASSWORD_ENDPOINT,
+                        new ResetPasswordRequest(email),
+                        headers);
 
-        var response = makeRequest(Optional.of(new ResetPasswordRequest(email)), headers, Map.of());
         notifyStub.waitForRequest(60);
 
-        assertThat(response, hasStatus(200));
+        assertEquals(200, response.getStatus());
 
+        String responseString = response.readEntity(String.class);
         BaseAPIResponse resetPasswordResponse =
-                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
-        assertThat(resetPasswordResponse.getSessionState(), equalTo(RESET_PASSWORD_LINK_SENT));
+                objectMapper.readValue(responseString, BaseAPIResponse.class);
+        assertEquals(RESET_PASSWORD_LINK_SENT, resetPasswordResponse.getSessionState());
     }
 
     @Test
@@ -75,12 +82,17 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         String sessionId = RedisHelper.createSession();
         RedisHelper.addEmailToSession(sessionId, email);
         RedisHelper.setSessionState(sessionId, NEW);
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Session-Id", sessionId);
-        headers.put("X-API-Key", FRONTEND_API_KEY);
+        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
+        headers.add("Session-Id", sessionId);
+        headers.add("X-API-Key", FRONTEND_API_KEY);
 
-        var response = makeRequest(Optional.of(new ResetPasswordRequest(email)), headers, Map.of());
+        Response response =
+                RequestHelper.request(
+                        FRONTEND_ROOT_RESOURCE_URL,
+                        RESET_PASSWORD_ENDPOINT,
+                        new ResetPasswordRequest(email),
+                        headers);
 
-        assertThat(response, hasStatus(400));
+        assertEquals(400, response.getStatus());
     }
 }

@@ -82,11 +82,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     }
 
     public ResetPasswordRequestHandler() {
-        this(ConfigurationService.getInstance());
-    }
-
-    public ResetPasswordRequestHandler(ConfigurationService configurationService) {
-        super(ResetPasswordRequest.class, configurationService);
+        super(ResetPasswordRequest.class, ConfigurationService.getInstance());
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
