@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.api;
+package uk.gov.di.authentication.sharedtest.basetest;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
