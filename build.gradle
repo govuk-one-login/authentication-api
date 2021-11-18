@@ -227,6 +227,9 @@ task oidcTerraform (type: Terraform) {
             environment "EVENTS_SNS_TOPIC_ARN", json.events_sns_topic_arn.value
             environment "EMAIL_QUEUE_URL", json.email_queue.value
         }
+        allprojects.findAll {it.name == "account-management-integration-tests"}.first().tasks.getByName("test") {
+            environment "EVENTS_SNS_TOPIC_ARN", json.events_sns_topic_arn.value
+        }
     }
     dependsOn ":client-registry-api:buildZip"
     dependsOn ":frontend-api:buildZip"

@@ -1,17 +1,24 @@
 package uk.gov.di.accountmanagement.api;
 
-import jakarta.ws.rs.core.Response;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.entity.AuthenticateRequest;
-import uk.gov.di.accountmanagement.helpers.RequestHelper;
-import uk.gov.di.authentication.frontendapi.entity.LoginRequest;
+import uk.gov.di.accountmanagement.lambda.AuthenticateHandler;
+import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import java.util.Map;
+import java.util.Optional;
 
-public class AuthenticateIntegrationTest extends IntegrationTestEndpoints {
+import static org.hamcrest.MatcherAssert.assertThat;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-    private static final String LOGIN_ENDPOINT = "/authenticate";
+public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+
+    @BeforeEach
+    void setup() {
+        handler = new AuthenticateHandler(configurationService);
+    }
 
     @Test
     public void shouldCallLoginEndpointAndReturn204WhenLoginIsSuccessful() {
@@ -19,11 +26,11 @@ public class AuthenticateIntegrationTest extends IntegrationTestEndpoints {
         String password = "password-1";
         DynamoHelper.signUp(email, password);
 
-        Response response =
-                RequestHelper.buildRequest(
-                        LOGIN_ENDPOINT, new AuthenticateRequest(email, password));
+        var response =
+                makeRequest(
+                        Optional.of(new AuthenticateRequest(email, password)), Map.of(), Map.of());
 
-        assertEquals(204, response.getStatus());
+        assertThat(response, hasStatus(204));
     }
 
     @Test
@@ -32,9 +39,10 @@ public class AuthenticateIntegrationTest extends IntegrationTestEndpoints {
         String password = "password-1";
         DynamoHelper.signUp(email, "wrong-password");
 
-        Response response =
-                RequestHelper.buildRequest(LOGIN_ENDPOINT, new LoginRequest(email, password));
+        var response =
+                makeRequest(
+                        Optional.of(new AuthenticateRequest(email, password)), Map.of(), Map.of());
 
-        assertEquals(401, response.getStatus());
+        assertThat(response, hasStatus(401));
     }
 }

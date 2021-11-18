@@ -37,7 +37,10 @@ public class AuthenticateHandler
     }
 
     public AuthenticateHandler() {
-        ConfigurationService configurationService = ConfigurationService.getInstance();
+        this(ConfigurationService.getInstance());
+    }
+
+    public AuthenticateHandler(ConfigurationService configurationService) {
         this.authenticationService =
                 new DynamoService(
                         configurationService.getAwsRegion(),
