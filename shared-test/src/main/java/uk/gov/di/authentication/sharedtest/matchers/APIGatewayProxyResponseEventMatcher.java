@@ -4,26 +4,22 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.hamcrest.Description;
-import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
-import java.net.URI;
 import java.util.function.Function;
 
-import static org.hamcrest.Matchers.equalTo;
-
-public class APIGatewayProxyResponseEventMatcher<T, M extends Matcher>
+public class APIGatewayProxyResponseEventMatcher<T>
         extends TypeSafeDiagnosingMatcher<APIGatewayProxyResponseEvent> {
 
     private final String name;
     private final Function<APIGatewayProxyResponseEvent, T> mapper;
-    private final M matcher;
+    private final T expected;
 
     private APIGatewayProxyResponseEventMatcher(
-            String name, Function<APIGatewayProxyResponseEvent, T> mapper, M matcher) {
+            String name, Function<APIGatewayProxyResponseEvent, T> mapper, T expected) {
         this.name = name;
         this.mapper = mapper;
-        this.matcher = matcher;
+        this.expected = expected;
     }
 
     @Override
@@ -31,7 +27,7 @@ public class APIGatewayProxyResponseEventMatcher<T, M extends Matcher>
             APIGatewayProxyResponseEvent item, Description mismatchDescription) {
         var actual = mapper.apply(item);
 
-        boolean matched = matcher.matches(actual);
+        boolean matched = actual.equals(expected);
 
         if (!matched) {
             mismatchDescription.appendText(description(actual));
@@ -42,52 +38,30 @@ public class APIGatewayProxyResponseEventMatcher<T, M extends Matcher>
 
     @Override
     public void describeTo(Description description) {
-        description.appendDescriptionOf(matcher);
+        description.appendText(description(expected));
     }
 
     private String description(T value) {
         return "an APIGatewayProxyResponseEvent with " + name + ": " + value;
     }
 
-    public static APIGatewayProxyResponseEventMatcher<Integer, Matcher<Integer>> hasStatus(
-            int statusCode) {
+    public static APIGatewayProxyResponseEventMatcher<Integer> hasStatus(int statusCode) {
         return new APIGatewayProxyResponseEventMatcher<>(
-                "status code", APIGatewayProxyResponseEvent::getStatusCode, equalTo(statusCode));
+                "status code", APIGatewayProxyResponseEvent::getStatusCode, statusCode);
     }
 
-    public static APIGatewayProxyResponseEventMatcher<Integer, Matcher<Integer>> hasStatus(
-            Matcher<Integer> statusCodeMatcher) {
+    public static APIGatewayProxyResponseEventMatcher<String> hasBody(String body) {
         return new APIGatewayProxyResponseEventMatcher<>(
-                "status code", APIGatewayProxyResponseEvent::getStatusCode, statusCodeMatcher);
+                "body", APIGatewayProxyResponseEvent::getBody, body);
     }
 
-    public static APIGatewayProxyResponseEventMatcher<String, Matcher<String>> hasBody(
-            String body) {
-        return new APIGatewayProxyResponseEventMatcher<>(
-                "body", APIGatewayProxyResponseEvent::getBody, equalTo(body));
-    }
-
-    public static APIGatewayProxyResponseEventMatcher<String, Matcher<String>> hasJsonBody(
-            Object body) {
+    public static APIGatewayProxyResponseEventMatcher<String> hasJsonBody(Object body) {
         try {
             var expectedValue = new ObjectMapper().writeValueAsString(body);
             return new APIGatewayProxyResponseEventMatcher<>(
-                    "body", APIGatewayProxyResponseEvent::getBody, equalTo(expectedValue));
+                    "body", APIGatewayProxyResponseEvent::getBody, expectedValue);
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    public static APIGatewayProxyResponseEventMatcher<Integer, Matcher<Integer>> isRedirect() {
-        return hasStatus(302);
-    }
-
-    public static APIGatewayProxyResponseEventMatcher<URI, Matcher<URI>> isRedirectTo(
-            Matcher<URI> expected) {
-        return new APIGatewayProxyResponseEventMatcher<>(
-                "redirect to",
-                apiGatewayProxyResponseEvent ->
-                        URI.create(apiGatewayProxyResponseEvent.getHeaders().get("Location")),
-                expected);
     }
 }
