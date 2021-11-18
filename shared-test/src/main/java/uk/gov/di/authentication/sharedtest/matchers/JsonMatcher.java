@@ -7,6 +7,7 @@ import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import java.util.function.Function;
 
+import static java.lang.String.format;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -29,7 +30,7 @@ public class JsonMatcher<T> extends TypeSafeDiagnosingMatcher<JsonNode> {
         boolean matched = matcher.matches(actual);
 
         if (!matched) {
-            mismatchDescription.appendText(description(actual));
+            mismatchDescription.appendText(description(actual, item.toPrettyString()));
         }
 
         return matched;
@@ -40,8 +41,8 @@ public class JsonMatcher<T> extends TypeSafeDiagnosingMatcher<JsonNode> {
         description.appendDescriptionOf(matcher);
     }
 
-    private String description(T value) {
-        return "a Json object with " + name + ": " + value;
+    private String description(T value, String actualJson) {
+        return format("a Json object with %s: %s (%s)", name, value, actualJson);
     }
 
     public static JsonMatcher<JsonNode> hasField(final String fieldName) {

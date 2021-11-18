@@ -48,24 +48,27 @@ public class AwsSqsClient {
     }
 
     public void purge() {
-        GetQueueAttributesRequest attributesRequest = GetQueueAttributesRequest
-                .builder()
-                .queueUrl(queueUrl)
-                .attributeNames(QueueAttributeName.APPROXIMATE_NUMBER_OF_MESSAGES)
-                .build();
+        GetQueueAttributesRequest attributesRequest =
+                GetQueueAttributesRequest.builder()
+                        .queueUrl(queueUrl)
+                        .attributeNames(QueueAttributeName.APPROXIMATE_NUMBER_OF_MESSAGES)
+                        .build();
         var result = client.getQueueAttributes(attributesRequest);
-        result.getValueForField(QueueAttributeName.APPROXIMATE_NUMBER_OF_MESSAGES.name(), Integer.class)
-                .ifPresent( count -> {
-                    LOG.info("Found {} messages in the queue", count);
-                    if (count > 0) {
-                        PurgeQueueRequest request = PurgeQueueRequest.builder().queueUrl(queueUrl).build();
-                        client.purgeQueue(request);
-                    }
-                    try {
-                        sleep(60000);
-                    } catch (InterruptedException ignored) {
+        result.getValueForField(
+                        QueueAttributeName.APPROXIMATE_NUMBER_OF_MESSAGES.name(), Integer.class)
+                .ifPresent(
+                        count -> {
+                            LOG.info("Found {} messages in the queue", count);
+                            if (count > 0) {
+                                PurgeQueueRequest request =
+                                        PurgeQueueRequest.builder().queueUrl(queueUrl).build();
+                                client.purgeQueue(request);
+                            }
+                            try {
+                                sleep(60000);
+                            } catch (InterruptedException ignored) {
 
-                    }
-                });
+                            }
+                        });
     }
 }

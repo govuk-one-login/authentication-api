@@ -15,6 +15,7 @@ import uk.gov.di.authentication.sharedtest.extensions.NotifyStubExtension;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
@@ -67,13 +68,21 @@ public class SendNotificationIntegrationTest {
         JsonNode personalisation = request.get("personalisation");
 
         assertThat(
-                personalisation, hasFieldWithValue("email_address", equalTo(TEST_EMAIL_ADDRESS)));
-        assertThat(
-                personalisation, hasFieldWithValue("email-address", equalTo(TEST_EMAIL_ADDRESS)));
+                personalisation,
+                allOf(
+                        hasField("email_address"),
+                        hasFieldWithValue("email_address", equalTo(TEST_EMAIL_ADDRESS))));
         assertThat(
                 personalisation,
-                hasFieldWithValue(
-                        "validation-code", withLength(equalTo(VERIFICATION_CODE_LENGTH))));
+                allOf(
+                        hasField("email-address"),
+                        hasFieldWithValue("email-address", equalTo(TEST_EMAIL_ADDRESS))));
+        assertThat(
+                personalisation,
+                allOf(
+                        hasField("validation-code"),
+                        hasFieldWithValue(
+                                "validation-code", withLength(equalTo(VERIFICATION_CODE_LENGTH)))));
     }
 
     @Test
@@ -87,11 +96,17 @@ public class SendNotificationIntegrationTest {
         assertThat(request, hasField("personalisation"));
         JsonNode personalisation = request.get("personalisation");
 
-        assertThat(personalisation, hasFieldWithValue("phone_number", equalTo(TEST_PHONE_NUMBER)));
         assertThat(
                 personalisation,
-                hasFieldWithValue(
-                        "validation-code", withLength(equalTo(VERIFICATION_CODE_LENGTH))));
+                allOf(
+                        hasField("phone_number"),
+                        hasFieldWithValue("phone_number", equalTo(TEST_PHONE_NUMBER))));
+        assertThat(
+                personalisation,
+                allOf(
+                        hasField("validation-code"),
+                        hasFieldWithValue(
+                                "validation-code", withLength(equalTo(VERIFICATION_CODE_LENGTH)))));
     }
 
     @Test
@@ -103,11 +118,17 @@ public class SendNotificationIntegrationTest {
         JsonNode request = notifyStub.waitForRequest(120);
         assertThat(request, hasField("personalisation"));
         JsonNode personalisation = request.get("personalisation");
-        assertThat(personalisation, hasFieldWithValue("phone_number", equalTo(TEST_PHONE_NUMBER)));
         assertThat(
                 personalisation,
-                hasFieldWithValue(
-                        "validation-code", withLength(equalTo(VERIFICATION_CODE_LENGTH))));
+                allOf(
+                        hasField("phone_number"),
+                        hasFieldWithValue("phone_number", equalTo(TEST_PHONE_NUMBER))));
+        assertThat(
+                personalisation,
+                allOf(
+                        hasField("validation-code"),
+                        hasFieldWithValue(
+                                "validation-code", withLength(equalTo(VERIFICATION_CODE_LENGTH)))));
     }
 
     @Test
@@ -122,12 +143,18 @@ public class SendNotificationIntegrationTest {
         JsonNode request = notifyStub.waitForRequest(120);
         assertThat(request, hasField("personalisation"));
         JsonNode personalisation = request.get("personalisation");
-        assertThat(personalisation, hasFieldWithValue("reset-password-link", containsString(code)));
         assertThat(
                 personalisation,
-                hasFieldWithValue(
-                        "reset-password-link",
-                        startsWith("http://localhost:3000/reset-password?code=")));
+                allOf(
+                        hasField("reset-password-link"),
+                        hasFieldWithValue("reset-password-link", containsString(code))));
+        assertThat(
+                personalisation,
+                allOf(
+                        hasField("reset-password-link"),
+                        hasFieldWithValue(
+                                "reset-password-link",
+                                startsWith("http://localhost:3000/reset-password?code="))));
     }
 
     @Test
@@ -141,9 +168,14 @@ public class SendNotificationIntegrationTest {
         assertThat(request, hasField("personalisation"));
         JsonNode personalisation = request.get("personalisation");
         assertThat(
-                personalisation, hasFieldWithValue("email_address", equalTo(TEST_EMAIL_ADDRESS)));
+                personalisation,
+                allOf(
+                        hasField("email_address"),
+                        hasFieldWithValue("email_address", equalTo(TEST_EMAIL_ADDRESS))));
         assertThat(
                 personalisation,
-                hasFieldWithValue("sign-in-page-url", equalTo("http://localhost:3000/")));
+                allOf(
+                        hasField("sign-in-page-url"),
+                        hasFieldWithValue("sign-in-page-url", equalTo("http://localhost:3000/"))));
     }
 }
