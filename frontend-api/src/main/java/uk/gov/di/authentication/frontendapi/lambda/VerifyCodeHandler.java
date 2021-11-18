@@ -94,10 +94,13 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     }
 
     public VerifyCodeHandler() {
-        super(VerifyCodeRequest.class, ConfigurationService.getInstance());
+        this(ConfigurationService.getInstance());
+    }
+
+    public VerifyCodeHandler(ConfigurationService configurationService) {
+        super(VerifyCodeRequest.class, configurationService);
         this.codeStorageService =
-                new CodeStorageService(
-                        new RedisConnectionService(ConfigurationService.getInstance()));
+                new CodeStorageService(new RedisConnectionService(configurationService));
         this.validationService = new ValidationService();
         this.stateMachine = userJourneyStateMachine();
         this.auditService = new AuditService();

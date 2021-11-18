@@ -8,14 +8,12 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
-import jakarta.ws.rs.core.MultivaluedHashMap;
-import jakarta.ws.rs.core.MultivaluedMap;
-import jakarta.ws.rs.core.Response;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
+import uk.gov.di.authentication.frontendapi.lambda.VerifyCodeHandler;
 import uk.gov.di.authentication.helpers.DynamoHelper;
 import uk.gov.di.authentication.helpers.RedisHelper;
-import uk.gov.di.authentication.helpers.RequestHelper;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -23,28 +21,34 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 
 import java.io.IOException;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.Collections.singletonList;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    private static final String VERIFY_CODE_ENDPOINT = "/verify-code";
     private static final String EMAIL_ADDRESS = "test@test.com";
     private static final String CLIENT_ID = "test-client-id";
     private static final String REDIRECT_URI = "http://localhost/redirect";
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
-    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+
+    @BeforeEach
+    void setup() {
+        handler = new VerifyCodeHandler(configurationService);
+    }
 
     @Test
     public void shouldCallVerifyCodeEndpointToVerifyEmailCodeAndReturn200() throws IOException {
@@ -53,14 +57,12 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, code);
 
-        Response response =
-                RequestHelper.request(
-                        FRONTEND_ROOT_RESOURCE_URL,
-                        VERIFY_CODE_ENDPOINT,
-                        codeRequest,
-                        withHeaders(sessionId));
-
-        assertEquals(200, response.getStatus());
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+        assertThat(response, hasStatus(200));
     }
 
     @Test
@@ -74,16 +76,16 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         TimeUnit.SECONDS.sleep(3);
 
-        Response response =
-                RequestHelper.request(
-                        FRONTEND_ROOT_RESOURCE_URL,
-                        VERIFY_CODE_ENDPOINT,
-                        codeRequest,
-                        withHeaders(sessionId));
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
 
-        assertEquals(400, response.getStatus());
+        assertThat(response, hasStatus(400));
+
         BaseAPIResponse codeResponse =
-                objectMapper.readValue(response.readEntity(String.class), BaseAPIResponse.class);
+                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
         assertEquals(SessionState.EMAIL_CODE_NOT_VALID, codeResponse.getSessionState());
     }
 
@@ -95,29 +97,27 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, code);
 
-        Response response =
-                RequestHelper.request(
-                        FRONTEND_ROOT_RESOURCE_URL,
-                        VERIFY_CODE_ENDPOINT,
-                        codeRequest,
-                        withHeaders(sessionId));
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
 
-        assertEquals(200, response.getStatus());
+        assertThat(response, hasStatus(200));
         BaseAPIResponse codeResponse1 =
-                objectMapper.readValue(response.readEntity(String.class), BaseAPIResponse.class);
+                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
         assertEquals(SessionState.EMAIL_CODE_VERIFIED, codeResponse1.getSessionState());
 
-        Response response2 =
-                RequestHelper.request(
-                        FRONTEND_ROOT_RESOURCE_URL,
-                        VERIFY_CODE_ENDPOINT,
-                        codeRequest,
-                        withHeaders(sessionId));
+        var response2 =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
 
-        assertEquals(400, response2.getStatus());
+        assertThat(response2, hasStatus(400));
 
         BaseAPIResponse codeResponse =
-                objectMapper.readValue(response2.readEntity(String.class), BaseAPIResponse.class);
+                objectMapper.readValue(response2.getBody(), BaseAPIResponse.class);
         assertEquals(SessionState.EMAIL_CODE_NOT_VALID, codeResponse.getSessionState());
     }
 
@@ -135,16 +135,16 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         VerifyCodeRequest codeRequest =
                 new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
 
-        Response response =
-                RequestHelper.request(
-                        FRONTEND_ROOT_RESOURCE_URL,
-                        VERIFY_CODE_ENDPOINT,
-                        codeRequest,
-                        withHeaders(sessionId));
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
 
-        assertEquals(200, response.getStatus());
+        assertThat(response, hasStatus(200));
+
         BaseAPIResponse codeResponse =
-                objectMapper.readValue(response.readEntity(String.class), BaseAPIResponse.class);
+                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
         assertEquals(SessionState.PHONE_NUMBER_CODE_VERIFIED, codeResponse.getSessionState());
     }
 
@@ -158,16 +158,16 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         VerifyCodeRequest codeRequest =
                 new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
 
-        Response response =
-                RequestHelper.request(
-                        FRONTEND_ROOT_RESOURCE_URL,
-                        VERIFY_CODE_ENDPOINT,
-                        codeRequest,
-                        withHeaders(sessionId));
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
 
-        assertEquals(200, response.getStatus());
+        assertThat(response, hasStatus(200));
+
         BaseAPIResponse codeResponse =
-                objectMapper.readValue(response.readEntity(String.class), BaseAPIResponse.class);
+                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
         assertEquals(SessionState.CONSENT_REQUIRED, codeResponse.getSessionState());
     }
 
@@ -184,17 +184,16 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         TimeUnit.SECONDS.sleep(3);
 
-        Response response =
-                RequestHelper.request(
-                        FRONTEND_ROOT_RESOURCE_URL,
-                        VERIFY_CODE_ENDPOINT,
-                        codeRequest,
-                        withHeaders(sessionId));
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
 
-        assertEquals(400, response.getStatus());
+        assertThat(response, hasStatus(400));
 
         BaseAPIResponse codeResponse =
-                objectMapper.readValue(response.readEntity(String.class), BaseAPIResponse.class);
+                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
         assertEquals(SessionState.PHONE_NUMBER_CODE_NOT_VALID, codeResponse.getSessionState());
     }
 
@@ -204,21 +203,18 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
         RedisHelper.setSessionState(sessionId, SessionState.PHONE_NUMBER_CODE_NOT_VALID);
         RedisHelper.blockPhoneCode(EMAIL_ADDRESS);
-        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
-        headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", FRONTEND_API_KEY);
 
         VerifyCodeRequest codeRequest =
                 new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, "123456");
 
-        Response response =
-                RequestHelper.request(
-                        FRONTEND_ROOT_RESOURCE_URL, VERIFY_CODE_ENDPOINT, codeRequest, headers);
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest), constructFrontendHeaders(sessionId), Map.of());
 
-        assertEquals(400, response.getStatus());
+        assertThat(response, hasStatus(400));
 
         BaseAPIResponse codeResponse =
-                objectMapper.readValue(response.readEntity(String.class), BaseAPIResponse.class);
+                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
         assertEquals(
                 SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED, codeResponse.getSessionState());
     }
@@ -229,20 +225,17 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         RedisHelper.setSessionState(sessionId, SessionState.EMAIL_CODE_NOT_VALID);
         RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
         RedisHelper.blockPhoneCode(EMAIL_ADDRESS);
-        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
-        headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", FRONTEND_API_KEY);
 
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, "123456");
 
-        Response response =
-                RequestHelper.request(
-                        FRONTEND_ROOT_RESOURCE_URL, VERIFY_CODE_ENDPOINT, codeRequest, headers);
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest), constructFrontendHeaders(sessionId), Map.of());
 
-        assertEquals(400, response.getStatus());
+        assertThat(response, hasStatus(400));
 
         BaseAPIResponse codeResponse =
-                objectMapper.readValue(response.readEntity(String.class), BaseAPIResponse.class);
+                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
         assertEquals(SessionState.EMAIL_CODE_MAX_RETRIES_REACHED, codeResponse.getSessionState());
     }
 
@@ -254,17 +247,17 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, code);
 
-        Response response =
-                RequestHelper.request(
-                        FRONTEND_ROOT_RESOURCE_URL,
-                        VERIFY_CODE_ENDPOINT,
-                        codeRequest,
-                        withHeaders(sessionId));
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
 
-        assertEquals(400, response.getStatus());
+        assertThat(response, hasStatus(400));
+
         assertEquals(
                 new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1017),
-                response.readEntity(String.class));
+                response.getBody());
     }
 
     @Test
@@ -277,17 +270,17 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                 new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
         DynamoHelper.signUp(EMAIL_ADDRESS, "password");
 
-        Response response =
-                RequestHelper.request(
-                        FRONTEND_ROOT_RESOURCE_URL,
-                        VERIFY_CODE_ENDPOINT,
-                        codeRequest,
-                        withHeaders(sessionId));
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
 
-        assertEquals(400, response.getStatus());
+        assertThat(response, hasStatus(400));
+
         assertEquals(
                 new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1017),
-                response.readEntity(String.class));
+                response.getBody());
     }
 
     @Test
@@ -310,17 +303,16 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         String code = RedisHelper.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code);
 
-        Response response =
-                RequestHelper.request(
-                        FRONTEND_ROOT_RESOURCE_URL,
-                        VERIFY_CODE_ENDPOINT,
-                        codeRequest,
-                        withHeaders(sessionId));
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
 
-        assertEquals(200, response.getStatus());
+        assertThat(response, hasStatus(200));
 
         BaseAPIResponse codeResponse =
-                objectMapper.readValue(response.readEntity(String.class), BaseAPIResponse.class);
+                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
         assertEquals(SessionState.MFA_CODE_VERIFIED, codeResponse.getSessionState());
     }
 
@@ -339,17 +331,16 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         String code = RedisHelper.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code);
 
-        Response response =
-                RequestHelper.request(
-                        FRONTEND_ROOT_RESOURCE_URL,
-                        VERIFY_CODE_ENDPOINT,
-                        codeRequest,
-                        withHeaders(sessionId));
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
 
-        assertEquals(200, response.getStatus());
+        assertThat(response, hasStatus(200));
 
         BaseAPIResponse codeResponse =
-                objectMapper.readValue(response.readEntity(String.class), BaseAPIResponse.class);
+                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
         assertEquals(SessionState.UPDATED_TERMS_AND_CONDITIONS, codeResponse.getSessionState());
     }
 
@@ -361,17 +352,16 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code);
 
-        Response response =
-                RequestHelper.request(
-                        FRONTEND_ROOT_RESOURCE_URL,
-                        VERIFY_CODE_ENDPOINT,
-                        codeRequest,
-                        withHeaders(sessionId));
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
 
-        assertEquals(400, response.getStatus());
+        assertThat(response, hasStatus(400));
         assertEquals(
                 new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1017),
-                response.readEntity(String.class));
+                response.getBody());
     }
 
     private void setUpTestWithoutSignUp(String sessionId, Scope scope, SessionState sessionState) {
@@ -411,13 +401,5 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         scope.add(OIDCScopeValue.OPENID);
         scope.add(OIDCScopeValue.EMAIL);
         return scope;
-    }
-
-    private MultivaluedMap<String, Object> withHeaders(String sessionId) {
-        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
-        headers.add("Session-Id", sessionId);
-        headers.add("X-API-Key", FRONTEND_API_KEY);
-        headers.add("Client-Session-Id", CLIENT_SESSION_ID);
-        return headers;
     }
 }
