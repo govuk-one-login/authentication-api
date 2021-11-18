@@ -29,7 +29,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @RegisterExtension
     public static final NotifyStubExtension notifyStub =
-            new NotifyStubExtension(8888, ObjectMapperFactory.getInstance());
+            new NotifyStubExtension(19999, ObjectMapperFactory.getInstance());
 
     @BeforeEach
     public void setUp() {

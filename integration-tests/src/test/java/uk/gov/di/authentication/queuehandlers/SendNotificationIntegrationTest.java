@@ -43,11 +43,12 @@ public class SendNotificationIntegrationTest {
 
     @RegisterExtension
     public static final NotifyStubExtension notifyStub =
-            new NotifyStubExtension(8888, objectMapper);
+            new NotifyStubExtension(19999, objectMapper);
 
     @BeforeEach
     public void setUp() {
         notifyStub.init();
+        client.purge();
     }
 
     @AfterEach

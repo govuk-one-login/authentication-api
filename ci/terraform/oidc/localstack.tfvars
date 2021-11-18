@@ -13,5 +13,5 @@ test_client_verify_phone_number_otp = "123456"
 test_clients_enabled                = "true"
 client_registry_api_enabled         = true
 terms_and_conditions                = "1.0"
-notify_url                          = "http://notify.internal:8888"
+notify_url                          = "http://notify.internal:19999"
 notify_api_key                      = "test-0123456789-0123456789-0123456789-0123456789-0123456789"

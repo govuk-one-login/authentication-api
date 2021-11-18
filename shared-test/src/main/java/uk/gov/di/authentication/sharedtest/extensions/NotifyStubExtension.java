@@ -32,11 +32,11 @@ public class NotifyStubExtension extends HttpStubExtension {
                         + "    \"body\": \"MESSAGE TEXT\",\n"
                         + "    \"from_email\": \"SENDER EMAIL\""
                         + "  },"
-                        + "  \"uri\": \"http://localhost:8888/v2/notifications/a-message-id\","
+                        + "  \"uri\": \"http://localhost:19999/v2/notifications/a-message-id\","
                         + "  \"template\": {"
                         + "    \"id\": \"f33517ff-2a88-4f6e-b855-c550268ce08a\","
                         + "    \"version\": 1,"
-                        + "    \"uri\": \"http://localhost:8888/v2/template/f33517ff-2a88-4f6e-b855-c550268ce08a\""
+                        + "    \"uri\": \"http://localhost:19999/v2/template/f33517ff-2a88-4f6e-b855-c550268ce08a\""
                         + "  }"
                         + "}");
         register(
@@ -50,11 +50,11 @@ public class NotifyStubExtension extends HttpStubExtension {
                         + "    \"body\": \"MESSAGE TEXT\",\n"
                         + "    \"from_number\": \"SENDER\""
                         + "  },"
-                        + "  \"uri\": \"http://localhost:8888/v2/notifications/a-message-id\","
+                        + "  \"uri\": \"http://localhost:19999/v2/notifications/a-message-id\","
                         + "  \"template\": {"
                         + "    \"id\": \"f33517ff-2a88-4f6e-b855-c550268ce08a\","
                         + "    \"version\": 1,"
-                        + "    \"uri\": \"http://localhost:8888/v2/template/f33517ff-2a88-4f6e-b855-c550268ce08a\""
+                        + "    \"uri\": \"http://localhost:19999/v2/template/f33517ff-2a88-4f6e-b855-c550268ce08a\""
                         + "  }"
                         + "}");
     }
