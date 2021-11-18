@@ -13,6 +13,7 @@ import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -23,6 +24,7 @@ import java.util.Map;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -40,6 +42,7 @@ class UpdatePasswordHandlerTest {
     private UpdatePasswordHandler handler;
     private static final String EXISTING_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String NEW_PASSWORD = "password2";
+    private static final String CURRENT_PASSWORD = "password1";
     private static final Subject SUBJECT = new Subject();
 
     @BeforeEach
@@ -50,7 +53,10 @@ class UpdatePasswordHandlerTest {
     @Test
     public void shouldReturn204ForValidRequest() throws JsonProcessingException {
         UserProfile userProfile = new UserProfile().setPublicSubjectID(SUBJECT.getValue());
+        UserCredentials userCredentials = new UserCredentials().setPassword(CURRENT_PASSWORD);
         when(dynamoService.getUserProfileByEmail(EXISTING_EMAIL_ADDRESS)).thenReturn(userProfile);
+        when(dynamoService.getUserCredentialsFromEmail(EXISTING_EMAIL_ADDRESS))
+                .thenReturn(userCredentials);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
                 format(
@@ -101,5 +107,47 @@ class UpdatePasswordHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
 
         verifyNoInteractions(auditService);
+    }
+
+    @Test
+    public void shouldReturn400WhenNewPasswordEqualsExistingPassword()
+            throws JsonProcessingException {
+        UserProfile userProfile = new UserProfile().setPublicSubjectID(SUBJECT.getValue());
+        UserCredentials userCredentials = new UserCredentials().setPassword(NEW_PASSWORD);
+        when(dynamoService.getUserProfileByEmail(EXISTING_EMAIL_ADDRESS)).thenReturn(userProfile);
+        when(dynamoService.getUserCredentialsFromEmail(EXISTING_EMAIL_ADDRESS))
+                .thenReturn(userCredentials);
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"newPassword\": \"%s\" }",
+                        EXISTING_EMAIL_ADDRESS, NEW_PASSWORD));
+        APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
+                new APIGatewayProxyRequestEvent.ProxyRequestContext();
+        Map<String, Object> authorizerParams = new HashMap<>();
+        authorizerParams.put("principalId", SUBJECT.getValue());
+        proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
+        proxyRequestContext.setAuthorizer(authorizerParams);
+        event.setRequestContext(proxyRequestContext);
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1024));
+        verify(dynamoService, never()).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
+        NotifyRequest notifyRequest =
+                new NotifyRequest(EXISTING_EMAIL_ADDRESS, NotificationType.PASSWORD_UPDATED);
+        verify(sqsClient, never()).send(new ObjectMapper().writeValueAsString(notifyRequest));
+
+        verify(auditService, never())
+                .submitAuditEvent(
+                        AccountManagementAuditableEvent.UPDATE_PASSWORD,
+                        context.getAwsRequestId(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        userProfile.getSubjectID(),
+                        userProfile.getEmail(),
+                        "123.123.123.123",
+                        userProfile.getPhoneNumber());
     }
 }
