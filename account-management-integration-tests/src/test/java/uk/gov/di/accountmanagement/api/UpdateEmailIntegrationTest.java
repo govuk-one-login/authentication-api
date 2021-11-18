@@ -8,7 +8,7 @@ import jakarta.ws.rs.core.MultivaluedHashMap;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.entity.UpdateEmailRequest;
-import uk.gov.di.accountmanagement.helpers.DynamoHelper;
+import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
 
 import java.util.Map;
 

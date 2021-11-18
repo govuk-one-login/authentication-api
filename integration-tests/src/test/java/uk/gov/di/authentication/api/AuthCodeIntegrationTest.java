@@ -9,13 +9,13 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.helpers.DynamoHelper;
-import uk.gov.di.authentication.helpers.KeyPairHelper;
-import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.oidc.entity.ResponseHeaders;
 import uk.gov.di.authentication.oidc.lambda.AuthCodeHandler;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
+import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
+import uk.gov.di.authentication.sharedtest.helper.RedisHelper;
 
 import java.io.IOException;
 import java.net.URI;

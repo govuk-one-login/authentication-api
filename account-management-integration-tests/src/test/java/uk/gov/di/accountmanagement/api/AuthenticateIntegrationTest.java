@@ -3,9 +3,9 @@ package uk.gov.di.accountmanagement.api;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.entity.AuthenticateRequest;
-import uk.gov.di.accountmanagement.helpers.DynamoHelper;
 import uk.gov.di.accountmanagement.helpers.RequestHelper;
 import uk.gov.di.authentication.frontendapi.entity.LoginRequest;
+import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

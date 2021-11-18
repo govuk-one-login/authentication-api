@@ -11,13 +11,13 @@ import com.nimbusds.openid.connect.sdk.UserInfoErrorResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.helpers.DynamoHelper;
-import uk.gov.di.authentication.helpers.KeyPairHelper;
-import uk.gov.di.authentication.helpers.KmsHelper;
-import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.oidc.lambda.UserInfoHandler;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
+import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
+import uk.gov.di.authentication.sharedtest.helper.KmsHelper;
+import uk.gov.di.authentication.sharedtest.helper.RedisHelper;
 
 import java.security.KeyPair;
 import java.time.LocalDateTime;

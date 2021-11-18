@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.helpers;
+package uk.gov.di.authentication.sharedtest.helper;
 
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;

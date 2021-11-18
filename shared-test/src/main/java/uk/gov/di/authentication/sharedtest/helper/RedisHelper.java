@@ -1,4 +1,4 @@
-package uk.gov.di.accountmanagement.helpers;
+package uk.gov.di.authentication.sharedtest.helper;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
@@ -8,6 +8,7 @@ import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
 import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
@@ -22,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
+import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.services.AuthorisationCodeService.AUTH_CODE_PREFIX;
@@ -107,12 +110,27 @@ public class RedisHelper {
     }
 
     public static void setSessionState(String sessionId, SessionState state) {
+        setSessionState(sessionId, state, null);
+    }
+
+    public static void setSessionState(
+            String sessionId, SessionState state, CredentialTrustLevel credentialTrustLevel) {
         try (RedisConnectionService redis =
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
             Session session = OBJECT_MAPPER.readValue(redis.getValue(sessionId), Session.class);
             session.setState(state);
+            session.setCurrentCredentialStrength(credentialTrustLevel);
             redis.saveWithExpiry(
                     session.getSessionId(), OBJECT_MAPPER.writeValueAsString(session), 3600);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Session getSession(String sessionId) {
+        try (RedisConnectionService redis =
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
+            return OBJECT_MAPPER.readValue(redis.getValue(sessionId), Session.class);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -129,6 +147,16 @@ public class RedisHelper {
         }
     }
 
+    public static void generateAndSavePasswordResetCode(
+            String subjectId, String code, long codeExpiryTime) {
+        try (RedisConnectionService redis =
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
+
+            new CodeStorageService(redis)
+                    .savePasswordResetCode(subjectId, code, codeExpiryTime, RESET_PASSWORD);
+        }
+    }
+
     public static String generateAndSavePhoneNumberCode(String email, long codeExpiryTime) {
         try (RedisConnectionService redis =
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
@@ -136,6 +164,17 @@ public class RedisHelper {
             var code = new CodeGeneratorService().sixDigitCode();
             new CodeStorageService(redis)
                     .saveOtpCode(email, code, codeExpiryTime, VERIFY_PHONE_NUMBER);
+
+            return code;
+        }
+    }
+
+    public static String generateAndSaveMfaCode(String email, long codeExpiryTime) {
+        try (RedisConnectionService redis =
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
+
+            var code = new CodeGeneratorService().sixDigitCode();
+            new CodeStorageService(redis).saveOtpCode(email, code, codeExpiryTime, MFA_SMS);
 
             return code;
         }
@@ -149,10 +188,11 @@ public class RedisHelper {
         }
     }
 
-    public static void addAccessTokenToRedis(String accessToken, String subject, Long expiry) {
-        RedisConnectionService redis =
-                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD);
-        redis.saveWithExpiry(accessToken, subject, expiry);
+    public static void addToRedis(String key, String value, Long expiry) {
+        try (RedisConnectionService redis =
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD)) {
+            redis.saveWithExpiry(key, value, expiry);
+        }
     }
 
     public static void flushData() {

@@ -6,9 +6,9 @@ import uk.gov.di.authentication.frontendapi.entity.BaseFrontendRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.frontendapi.lambda.CheckUserExistsHandler;
-import uk.gov.di.authentication.helpers.DynamoHelper;
-import uk.gov.di.authentication.helpers.RedisHelper;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
+import uk.gov.di.authentication.sharedtest.helper.RedisHelper;
 
 import java.io.IOException;
 import java.util.Map;

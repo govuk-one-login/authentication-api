@@ -1,8 +1,8 @@
 package uk.gov.di.accountmanagement.api;
 
 import org.junit.jupiter.api.BeforeEach;
-import uk.gov.di.accountmanagement.helpers.DynamoHelper;
-import uk.gov.di.accountmanagement.helpers.RedisHelper;
+import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
+import uk.gov.di.authentication.sharedtest.helper.RedisHelper;
 
 import java.util.Optional;
 
