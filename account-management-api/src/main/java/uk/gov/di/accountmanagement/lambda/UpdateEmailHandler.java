@@ -44,17 +44,7 @@ public class UpdateEmailHandler
     private final AuditService auditService;
 
     public UpdateEmailHandler() {
-        ConfigurationService configurationService = ConfigurationService.getInstance();
-        this.dynamoService = new DynamoService(configurationService);
-        this.sqsClient =
-                new AwsSqsClient(
-                        configurationService.getAwsRegion(),
-                        configurationService.getEmailQueueUri(),
-                        configurationService.getSqsEndpointUri());
-        this.validationService = new ValidationService();
-        this.codeStorageService =
-                new CodeStorageService(new RedisConnectionService(configurationService));
-        this.auditService = new AuditService();
+        this(ConfigurationService.getInstance());
     }
 
     public UpdateEmailHandler(
@@ -68,6 +58,19 @@ public class UpdateEmailHandler
         this.validationService = validationService;
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
+    }
+
+    public UpdateEmailHandler(ConfigurationService configurationService) {
+        this.dynamoService = new DynamoService(configurationService);
+        this.sqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEmailQueueUri(),
+                        configurationService.getSqsEndpointUri());
+        this.validationService = new ValidationService();
+        this.codeStorageService =
+                new CodeStorageService(new RedisConnectionService(configurationService));
+        this.auditService = new AuditService();
     }
 
     @Override
