@@ -30,11 +30,7 @@ public class SendNotificationIntegrationTest {
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@example.com";
     private static final int VERIFICATION_CODE_LENGTH = 6;
 
-    private static final AwsSqsClient client =
-            new AwsSqsClient(
-                    "eu-west-2",
-                    "http://localhost:45678/123456789012/local-email-notification-queue",
-                    Optional.of("http://localhost:45678/"));
+    private AwsSqsClient client;
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -45,6 +41,11 @@ public class SendNotificationIntegrationTest {
     @BeforeEach
     public void setUp() {
         notifyStub.init();
+        client =
+                new AwsSqsClient(
+                        "eu-west-2",
+                        "http://localhost:45678/123456789012/local-email-notification-queue",
+                        Optional.of("http://localhost:45678/"));
     }
 
     @AfterEach
