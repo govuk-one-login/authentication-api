@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -100,9 +101,10 @@ public class ResetPasswordHandler
                                 UserCredentials userCredentials =
                                         authenticationService.getUserCredentialsFromSubject(
                                                 subject.get());
-                                if (userCredentials
-                                        .getPassword()
-                                        .equals(resetPasswordWithCodeRequest.getPassword())) {
+                                if (verifyPassword(
+                                        userCredentials.getPassword(),
+                                        resetPasswordWithCodeRequest.getPassword())) {
+                                    LOGGER.info("New password is the same as the old password");
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1024);
                                 }
@@ -138,5 +140,9 @@ public class ResetPasswordHandler
 
     private String serialiseRequest(Object request) throws JsonProcessingException {
         return objectMapper.writeValueAsString(request);
+    }
+
+    private static boolean verifyPassword(String hashedPassword, String password) {
+        return Argon2MatcherHelper.matchRawStringWithEncoded(password, hashedPassword);
     }
 }

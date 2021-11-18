@@ -16,6 +16,7 @@ import uk.gov.di.accountmanagement.entity.UpdatePasswordRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -85,9 +86,9 @@ public class UpdatePasswordHandler
                                                         updatePasswordRequest.getEmail())
                                                 .getPassword();
 
-                                if (updatePasswordRequest
-                                        .getNewPassword()
-                                        .equals(currentPassword)) {
+                                if (verifyPassword(
+                                        currentPassword, updatePasswordRequest.getNewPassword())) {
+                                    LOGGER.info("New password is the same as the old password");
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1024);
                                 }
@@ -125,5 +126,9 @@ public class UpdatePasswordHandler
                                         400, ErrorResponse.ERROR_1001);
                             }
                         });
+    }
+
+    private static boolean verifyPassword(String hashedPassword, String password) {
+        return Argon2MatcherHelper.matchRawStringWithEncoded(password, hashedPassword);
     }
 }
