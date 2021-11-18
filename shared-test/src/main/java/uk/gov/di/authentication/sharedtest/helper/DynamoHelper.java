@@ -37,10 +37,11 @@ public class DynamoHelper {
         signUp(email, password, new Subject());
     }
 
-    public static void signUp(String email, String password, Subject subject) {
+    public static String signUp(String email, String password, Subject subject) {
         TermsAndConditions termsAndConditions =
                 new TermsAndConditions("1.0", LocalDateTime.now(ZoneId.of("UTC")).toString());
         DYNAMO_SERVICE.signUp(email, password, subject, termsAndConditions);
+        return DYNAMO_SERVICE.getUserProfileByEmail(email).getPublicSubjectID();
     }
 
     public static void updateConsent(String email, ClientConsent clientConsent) {

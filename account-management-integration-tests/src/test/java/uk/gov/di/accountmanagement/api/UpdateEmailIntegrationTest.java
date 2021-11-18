@@ -7,6 +7,7 @@ import uk.gov.di.accountmanagement.entity.UpdateEmailRequest;
 import uk.gov.di.accountmanagement.lambda.UpdateEmailHandler;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
+import uk.gov.di.authentication.sharedtest.helper.RedisHelper;
 
 import java.util.Map;
 import java.util.Optional;
@@ -18,7 +19,6 @@ public class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
     private static final String EXISTING_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String NEW_EMAIL_ADDRESS = "joe.b@digital.cabinet-office.gov.uk";
-    private static final String OTP = "123456";
     private static final Subject SUBJECT = new Subject();
 
     @BeforeEach
@@ -27,16 +27,18 @@ public class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest
     }
 
     @Test
-    public void shouldCallLoginEndpointAndReturn204WhenLoginIsSuccessful() {
-        DynamoHelper.signUp(EXISTING_EMAIL_ADDRESS, "password-1", SUBJECT);
-
+    public void shouldCallUpdateEmailEndpointAndReturn204WhenLoginIsSuccessful() {
+        String publicSubjectID = DynamoHelper.signUp(EXISTING_EMAIL_ADDRESS, "password-1", SUBJECT);
+        String otp = RedisHelper.generateAndSaveEmailCode(NEW_EMAIL_ADDRESS, 300);
         var response =
                 makeRequest(
                         Optional.of(
                                 new UpdateEmailRequest(
-                                        EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS, OTP)),
+                                        EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS, otp)),
                         Map.of(),
-                        Map.of());
+                        Map.of(),
+                        Map.of(),
+                        Map.of("principalId", publicSubjectID));
 
         assertThat(response, hasStatus(204));
     }

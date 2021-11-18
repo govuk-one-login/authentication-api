@@ -16,6 +16,7 @@ import java.net.HttpCookie;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.mockito.Mockito.mock;
 
@@ -62,10 +63,24 @@ public abstract class ApiGatewayHandlerIntegrationTest {
             Map<String, String> headers,
             Map<String, String> queryString,
             Map<String, String> pathParams) {
+        return makeRequest(body, headers, queryString, pathParams, Map.of());
+    }
+
+    protected APIGatewayProxyResponseEvent makeRequest(
+            Optional<Object> body,
+            Map<String, String> headers,
+            Map<String, String> queryString,
+            Map<String, String> pathParams,
+            Map<String, Object> authorizerParams) {
+        String requestId = UUID.randomUUID().toString();
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         request.withHeaders(headers)
                 .withQueryStringParameters(queryString)
-                .withPathParameters(pathParams);
+                .withPathParameters(pathParams)
+                .withRequestContext(
+                        new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                                .withRequestId(requestId));
+        request.getRequestContext().setAuthorizer(authorizerParams);
         body.ifPresent(
                 o -> {
                     if (o instanceof String) {
