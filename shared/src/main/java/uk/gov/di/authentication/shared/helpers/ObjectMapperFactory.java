@@ -16,8 +16,8 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -54,8 +54,7 @@ public class ObjectMapperFactory {
     }
 
     public static class ValidatingBeanDeserializer extends BeanDeserializer {
-        private static final Logger LOGGER =
-                LoggerFactory.getLogger(ValidatingBeanDeserializer.class);
+        private static final Logger LOGGER = LogManager.getLogger(ValidatingBeanDeserializer.class);
         private final Validator validator;
 
         public ValidatingBeanDeserializer(BeanDeserializerBase src) {

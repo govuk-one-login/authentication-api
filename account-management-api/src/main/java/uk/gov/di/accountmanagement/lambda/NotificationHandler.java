@@ -6,8 +6,8 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.NotificationService;
@@ -22,7 +22,7 @@ import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildUR
 
 public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(NotificationHandler.class);
+    private static final Logger LOGGER = LogManager.getLogger(NotificationHandler.class);
     private final NotificationService notificationService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ConfigurationService configService;

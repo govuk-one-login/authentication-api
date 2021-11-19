@@ -3,8 +3,8 @@ package uk.gov.di.authentication.shared.services;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 
@@ -12,7 +12,7 @@ import java.util.Optional;
 
 public class AuthorisationCodeService {
 
-    private static final Logger LOG = LoggerFactory.getLogger(AuthorisationCodeService.class);
+    private static final Logger LOG = LogManager.getLogger(AuthorisationCodeService.class);
     public static final String AUTH_CODE_PREFIX = "auth-code-";
 
     private final RedisConnectionService redisConnectionService;

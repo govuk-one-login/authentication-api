@@ -11,8 +11,8 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -36,7 +36,7 @@ public class AuthorizationService {
     private static final String CLIENT_ID = "client_id";
     private final DynamoClientService dynamoClientService;
     private final DynamoService dynamoService;
-    private static final Logger LOGGER = LoggerFactory.getLogger(AuthorizationService.class);
+    private static final Logger LOGGER = LogManager.getLogger(AuthorizationService.class);
 
     public AuthorizationService(
             DynamoClientService dynamoClientService, DynamoService dynamoService) {

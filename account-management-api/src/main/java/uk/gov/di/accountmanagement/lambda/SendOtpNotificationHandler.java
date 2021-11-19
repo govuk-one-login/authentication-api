@@ -6,8 +6,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
@@ -36,7 +36,7 @@ import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair
 public class SendOtpNotificationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SendOtpNotificationHandler.class);
+    private static final Logger LOGGER = LogManager.getLogger(SendOtpNotificationHandler.class);
 
     private final ConfigurationService configurationService;
     private final ValidationService validationService;

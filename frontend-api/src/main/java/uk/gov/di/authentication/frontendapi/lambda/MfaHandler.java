@@ -5,8 +5,8 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.frontendapi.services.AwsSqsClient;
@@ -52,7 +52,7 @@ import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStat
 public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(MfaHandler.class);
+    private static final Logger LOGGER = LogManager.getLogger(MfaHandler.class);
 
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;

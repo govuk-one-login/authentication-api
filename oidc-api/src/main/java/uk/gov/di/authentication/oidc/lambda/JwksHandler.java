@@ -5,8 +5,8 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.jwk.JWKSet;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
@@ -19,7 +19,7 @@ public class JwksHandler
 
     private final TokenValidationService tokenValidationService;
     private final ConfigurationService configurationService;
-    private static final Logger LOG = LoggerFactory.getLogger(JwksHandler.class);
+    private static final Logger LOG = LogManager.getLogger(JwksHandler.class);
 
     public JwksHandler(
             TokenValidationService tokenValidationService,

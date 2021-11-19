@@ -6,8 +6,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.AuthenticateRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -24,7 +24,7 @@ import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 public class AuthenticateHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(AuthenticateHandler.class);
+    private static final Logger LOGGER = LogManager.getLogger(AuthenticateHandler.class);
 
     private final AuthenticationService authenticationService;
     private final ObjectMapper objectMapper = new ObjectMapper();

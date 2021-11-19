@@ -2,12 +2,12 @@ package uk.gov.di.authentication.shared.helpers;
 
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class PhoneNumberHelper {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(PhoneNumberHelper.class);
+    private static final Logger LOGGER = LogManager.getLogger(PhoneNumberHelper.class);
 
     public static String formatPhoneNumber(String phoneNumber) {
         PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();

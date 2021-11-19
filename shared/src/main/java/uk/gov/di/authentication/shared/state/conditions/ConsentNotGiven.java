@@ -2,8 +2,8 @@ package uk.gov.di.authentication.shared.state.conditions;
 
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -17,7 +17,7 @@ import java.util.Optional;
 
 public class ConsentNotGiven implements Condition<UserContext> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ConsentNotGiven.class);
+    private static final Logger LOG = LogManager.getLogger(ConsentNotGiven.class);
 
     @Override
     public boolean isMet(Optional<UserContext> context) {

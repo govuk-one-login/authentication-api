@@ -13,8 +13,8 @@ import com.nimbusds.oauth2.sdk.id.Issuer;
 import com.nimbusds.openid.connect.sdk.SubjectType;
 import com.nimbusds.openid.connect.sdk.claims.ClaimType;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -30,7 +30,7 @@ import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 public class WellknownHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(WellknownHandler.class);
+    private static final Logger LOG = LogManager.getLogger(WellknownHandler.class);
 
     private final ConfigurationService configService;
     private final String baseUrl;

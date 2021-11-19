@@ -1,8 +1,8 @@
 package uk.gov.di.authentication.audit.helper;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditPayload.AuditEvent;
 import uk.gov.di.audit.AuditPayload.SignedAuditEvent;
 
@@ -10,7 +10,7 @@ import java.util.Optional;
 
 public class AuditEventHelper {
 
-    private static final Logger LOG = LoggerFactory.getLogger(AuditEventHelper.class);
+    private static final Logger LOG = LogManager.getLogger(AuditEventHelper.class);
 
     public static Optional<AuditEvent> extractPayload(Optional<SignedAuditEvent> signedAuditEvent) {
         return signedAuditEvent

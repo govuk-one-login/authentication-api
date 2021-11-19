@@ -10,8 +10,8 @@ import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.AccessTokenType;
 import com.nimbusds.oauth2.sdk.token.BearerTokenError;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -37,7 +37,7 @@ public class UserInfoService {
     private final DynamoClientService clientService;
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(UserInfoService.class);
+    private static final Logger LOGGER = LogManager.getLogger(UserInfoService.class);
 
     public UserInfoService(
             RedisConnectionService redisConnectionService,

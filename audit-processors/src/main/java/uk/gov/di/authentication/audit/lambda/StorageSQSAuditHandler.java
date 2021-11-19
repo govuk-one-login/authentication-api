@@ -7,8 +7,8 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
 import com.google.gson.JsonParser;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditPayload.AuditEvent;
 import uk.gov.di.audit.AuditPayload.SignedAuditEvent;
 import uk.gov.di.authentication.audit.helper.AuditEventHelper;
@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 
 public class StorageSQSAuditHandler implements RequestHandler<SQSEvent, Object> {
 
-    protected final Logger LOG = LoggerFactory.getLogger(getClass());
+    protected final Logger LOG = LogManager.getLogger(getClass());
     private final KmsConnectionService kmsConnectionService;
     private final ConfigurationService service;
     private final S3Service s3service;

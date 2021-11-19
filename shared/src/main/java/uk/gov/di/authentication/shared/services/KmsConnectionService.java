@@ -9,8 +9,8 @@ import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;
 import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
 import com.amazonaws.services.kms.model.VerifyRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.nio.ByteBuffer;
 import java.util.Optional;
@@ -18,7 +18,7 @@ import java.util.Optional;
 public class KmsConnectionService {
 
     private final AWSKMS kmsClient;
-    private static final Logger LOGGER = LoggerFactory.getLogger(KmsConnectionService.class);
+    private static final Logger LOGGER = LogManager.getLogger(KmsConnectionService.class);
 
     public KmsConnectionService(ConfigurationService configurationService) {
         this(

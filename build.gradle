@@ -67,7 +67,6 @@ subprojects {
 
         lambda "com.amazonaws:aws-lambda-java-core:${dependencyVersions.aws_lambda_core_version}",
                 "com.amazonaws:aws-lambda-java-events:${dependencyVersions.aws_lambda_events_version}",
-                "org.apache.logging.log4j:log4j-slf4j18-impl:2.13.0",
                 "com.amazonaws:aws-lambda-java-log4j2:1.2.0"
 
         lambda_tests "com.amazonaws:aws-lambda-java-tests:1.1.0"
@@ -75,8 +74,7 @@ subprojects {
         lettuce "org.apache.commons:commons-pool2:2.11.1",
                 "io.lettuce:lettuce-core:6.1.5.RELEASE"
 
-        logging_runtime "org.apache.logging.log4j:log4j-slf4j18-impl:2.13.0",
-                "com.amazonaws:aws-lambda-java-log4j2:1.2.0"
+        logging_runtime "com.amazonaws:aws-lambda-java-log4j2:1.2.0"
 
         jackson "com.fasterxml.jackson.core:jackson-core:${dependencyVersions.jackson_version}",
                 "com.fasterxml.jackson.core:jackson-databind:${dependencyVersions.jackson_version}",

@@ -7,8 +7,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.ConstraintViolationException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordWithCodeRequest;
 import uk.gov.di.authentication.frontendapi.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -39,7 +39,7 @@ public class ResetPasswordHandler
     private final ValidationService validationService;
     private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ResetPasswordHandler.class);
+    private static final Logger LOGGER = LogManager.getLogger(ResetPasswordHandler.class);
 
     public ResetPasswordHandler(
             AuthenticationService authenticationService,
