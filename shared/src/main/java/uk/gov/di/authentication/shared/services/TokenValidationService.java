@@ -17,12 +17,12 @@ import com.nimbusds.jwt.util.DateUtils;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMException;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.security.Provider;
 import java.security.PublicKey;
@@ -36,7 +36,7 @@ public class TokenValidationService {
 
     private final ConfigurationService configService;
     private final KmsConnectionService kmsConnectionService;
-    private static final Logger LOGGER = LoggerFactory.getLogger(TokenValidationService.class);
+    private static final Logger LOGGER = LogManager.getLogger(TokenValidationService.class);
 
     public TokenValidationService(
             ConfigurationService configService, KmsConnectionService kmsConnectionService) {

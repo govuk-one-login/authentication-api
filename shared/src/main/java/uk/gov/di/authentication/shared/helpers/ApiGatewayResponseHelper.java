@@ -4,8 +4,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.HttpHeaders;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 
 import java.util.List;
@@ -28,7 +28,7 @@ public class ApiGatewayResponseHelper {
             "max-age=31536000; includeSubDomains";
     private static final String X_FRAME_OPTIONS_HEADER_VALUE = "DENY";
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ApiGatewayResponseHelper.class);
+    private static final Logger LOGGER = LogManager.getLogger(ApiGatewayResponseHelper.class);
 
     public static <T> APIGatewayProxyResponseEvent generateApiGatewayProxyResponse(
             int statusCode, T body) throws JsonProcessingException {

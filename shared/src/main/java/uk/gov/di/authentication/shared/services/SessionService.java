@@ -1,8 +1,8 @@
 package uk.gov.di.authentication.shared.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
@@ -17,7 +17,7 @@ import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.header
 
 public class SessionService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SessionService.class);
+    private static final Logger LOGGER = LogManager.getLogger(SessionService.class);
 
     private static final ObjectMapper OBJECT_MAPPER = ObjectMapperFactory.getInstance();
 

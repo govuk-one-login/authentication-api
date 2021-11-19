@@ -8,8 +8,8 @@ import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import org.apache.http.client.utils.URIBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -33,7 +33,7 @@ import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 public class LogoutHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(LogoutHandler.class);
+    private static final Logger LOG = LogManager.getLogger(LogoutHandler.class);
 
     private final ConfigurationService configurationService;
     private final SessionService sessionService;

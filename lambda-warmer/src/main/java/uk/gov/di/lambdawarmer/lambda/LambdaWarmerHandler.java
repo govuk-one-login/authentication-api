@@ -9,8 +9,8 @@ import com.amazonaws.services.lambda.model.ServiceException;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,7 +24,7 @@ import static java.text.MessageFormat.format;
 
 public class LambdaWarmerHandler implements RequestHandler<ScheduledEvent, String> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(LambdaWarmerHandler.class);
+    private static final Logger LOGGER = LogManager.getLogger(LambdaWarmerHandler.class);
     private final ConfigurationService configurationService;
     private final AWSLambda awsLambda;
 

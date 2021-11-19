@@ -2,8 +2,8 @@ package uk.gov.di.authentication.shared.state.conditions;
 
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.state.Condition;
@@ -16,7 +16,7 @@ import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LE
 
 public class ClientDoesNotRequireMfa implements Condition<UserContext> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ClientDoesNotRequireMfa.class);
+    private static final Logger LOG = LogManager.getLogger(ClientDoesNotRequireMfa.class);
 
     @Override
     public boolean isMet(Optional<UserContext> context) {

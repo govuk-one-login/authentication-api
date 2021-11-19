@@ -6,8 +6,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
 import uk.gov.di.authentication.shared.domain.RequestHeaders;
@@ -62,7 +62,7 @@ import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStat
 public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(VerifyCodeHandler.class);
+    private static final Logger LOG = LogManager.getLogger(VerifyCodeHandler.class);
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final CodeStorageService codeStorageService;

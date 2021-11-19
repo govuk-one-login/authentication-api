@@ -1,7 +1,7 @@
 package uk.gov.di.authentication.shared.state;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
@@ -97,7 +97,7 @@ public class StateMachine<T, A, C> {
     private final Map<T, List<Transition<T, A, C>>> states;
     private final List<Transition<T, A, C>> anyStateTransitions;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(StateMachine.class);
+    private static final Logger LOGGER = LogManager.getLogger(StateMachine.class);
 
     public StateMachine(Map<T, List<Transition<T, A, C>>> states) {
         this(states, List.of());

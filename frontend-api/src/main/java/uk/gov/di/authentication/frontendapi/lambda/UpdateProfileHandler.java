@@ -8,8 +8,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
@@ -52,7 +52,7 @@ import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStat
 public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(UpdateProfileHandler.class);
+    private static final Logger LOGGER = LogManager.getLogger(UpdateProfileHandler.class);
 
     private final AuditService auditService;
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine;

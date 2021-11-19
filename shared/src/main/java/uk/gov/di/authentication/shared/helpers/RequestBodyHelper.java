@@ -3,8 +3,8 @@ package uk.gov.di.authentication.shared.helpers;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.nio.charset.Charset;
 import java.util.HashMap;
@@ -12,7 +12,7 @@ import java.util.Map;
 
 public class RequestBodyHelper {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(RequestBodyHelper.class);
+    private static final Logger LOGGER = LogManager.getLogger(RequestBodyHelper.class);
 
     public static Map<String, String> parseRequestBody(String body) {
         Map<String, String> query_pairs = new HashMap<>();

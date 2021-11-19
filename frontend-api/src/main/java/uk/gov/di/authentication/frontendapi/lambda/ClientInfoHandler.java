@@ -7,8 +7,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ClientInfoResponse;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -34,7 +34,7 @@ import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 public class ClientInfoHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ClientInfoHandler.class);
+    private static final Logger LOGGER = LogManager.getLogger(ClientInfoHandler.class);
     private final ConfigurationService configurationService;
     private final ClientSessionService clientSessionService;
     private final ClientService clientService;

@@ -6,8 +6,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.openid.connect.sdk.UserInfoErrorResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.services.UserInfoService;
 import uk.gov.di.authentication.shared.exceptions.UserInfoValidationException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -27,7 +27,7 @@ import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 public class UserInfoHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(UserInfoHandler.class);
+    private static final Logger LOGGER = LogManager.getLogger(UserInfoHandler.class);
     private final ConfigurationService configurationService;
     private final UserInfoService userInfoService;
 

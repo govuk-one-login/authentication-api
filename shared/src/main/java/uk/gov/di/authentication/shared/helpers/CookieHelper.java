@@ -1,7 +1,7 @@
 package uk.gov.di.authentication.shared.helpers;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.net.HttpCookie;
 import java.util.Arrays;
@@ -13,7 +13,7 @@ import static java.lang.String.format;
 
 public class CookieHelper {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(CookieHelper.class);
+    private static final Logger LOGGER = LogManager.getLogger(CookieHelper.class);
 
     public static final String REQUEST_COOKIE_HEADER = "Cookie";
     public static final String RESPONSE_COOKIE_HEADER = "Set-Cookie";

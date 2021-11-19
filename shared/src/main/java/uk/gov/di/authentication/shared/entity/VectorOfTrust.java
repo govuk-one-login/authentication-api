@@ -4,8 +4,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import net.minidev.json.JSONArray;
 import net.minidev.json.parser.JSONParser;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,7 +16,7 @@ import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.retrie
 
 public class VectorOfTrust {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(VectorOfTrust.class);
+    private static final Logger LOGGER = LogManager.getLogger(VectorOfTrust.class);
 
     @JsonProperty("credential_trust_level")
     private final CredentialTrustLevel credentialTrustLevel;

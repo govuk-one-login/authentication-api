@@ -1,9 +1,9 @@
 package uk.gov.di.authentication.frontendapi.services;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.bouncycastle.crypto.generators.BCrypt;
 import org.bouncycastle.crypto.generators.OpenBSDBCrypt;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -13,7 +13,7 @@ import java.util.Optional;
 
 public class UserMigrationService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(UserMigrationService.class);
+    private static final Logger LOGGER = LogManager.getLogger(UserMigrationService.class);
 
     private final AuthenticationService authenticationService;
     private final ConfigurationService configurationService;

@@ -11,8 +11,8 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
 import org.apache.commons.lang3.tuple.Pair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 
 public class DataMigrationHandler implements RequestHandler<S3Event, String> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(DataMigrationHandler.class);
+    private static final Logger LOG = LogManager.getLogger(DataMigrationHandler.class);
     private static final int BATCH_SIZE = 1000;
 
     private final AuthenticationService authenticationService;

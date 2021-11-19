@@ -7,8 +7,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
@@ -40,7 +40,7 @@ public class UpdateEmailHandler
     private final AwsSqsClient sqsClient;
     private final ValidationService validationService;
     private final CodeStorageService codeStorageService;
-    private static final Logger LOGGER = LoggerFactory.getLogger(UpdateEmailHandler.class);
+    private static final Logger LOGGER = LogManager.getLogger(UpdateEmailHandler.class);
     private final AuditService auditService;
 
     public UpdateEmailHandler() {

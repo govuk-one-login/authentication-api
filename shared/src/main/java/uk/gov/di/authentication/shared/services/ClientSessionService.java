@@ -2,8 +2,8 @@ package uk.gov.di.authentication.shared.services;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
@@ -17,7 +17,7 @@ import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.header
 
 public class ClientSessionService {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ClientSessionService.class);
+    private static final Logger LOG = LogManager.getLogger(ClientSessionService.class);
     public static final String CLIENT_SESSION_PREFIX = "client-session-";
 
     private final RedisConnectionService redisConnectionService;

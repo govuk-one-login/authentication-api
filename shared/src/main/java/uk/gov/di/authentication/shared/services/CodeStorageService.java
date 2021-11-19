@@ -1,7 +1,7 @@
 package uk.gov.di.authentication.shared.services;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.helpers.HashHelper;
 
@@ -15,7 +15,7 @@ public class CodeStorageService {
     public static final String CODE_BLOCKED_KEY_PREFIX = "code-blocked:";
     public static final String PASSWORD_RESET_BLOCKED_KEY_PREFIX = "password-reset-blocked:";
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(CodeStorageService.class);
+    private static final Logger LOGGER = LogManager.getLogger(CodeStorageService.class);
     private final RedisConnectionService redisConnectionService;
     private static final String EMAIL_KEY_PREFIX = "email-code:";
     private static final String PHONE_NUMBER_KEY_PREFIX = "phone-number-code:";
