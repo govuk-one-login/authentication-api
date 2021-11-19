@@ -15,6 +15,7 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
@@ -113,7 +114,8 @@ class UpdatePasswordHandlerTest {
     public void shouldReturn400WhenNewPasswordEqualsExistingPassword()
             throws JsonProcessingException {
         UserProfile userProfile = new UserProfile().setPublicSubjectID(SUBJECT.getValue());
-        UserCredentials userCredentials = new UserCredentials().setPassword(NEW_PASSWORD);
+        UserCredentials userCredentials =
+                new UserCredentials().setPassword(Argon2EncoderHelper.argon2Hash(NEW_PASSWORD));
         when(dynamoService.getUserProfileByEmail(EXISTING_EMAIL_ADDRESS)).thenReturn(userProfile);
         when(dynamoService.getUserCredentialsFromEmail(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(userCredentials);

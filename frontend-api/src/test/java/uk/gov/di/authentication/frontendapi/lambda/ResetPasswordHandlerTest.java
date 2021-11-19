@@ -12,6 +12,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ValidationService;
@@ -96,7 +97,7 @@ class ResetPasswordHandlerTest {
         when(codeStorageService.getSubjectWithPasswordResetCode(CODE))
                 .thenReturn(Optional.of(SUBJECT));
         when(authenticationService.getUserCredentialsFromSubject(SUBJECT))
-                .thenReturn(generateUserCredentials(NEW_PASSWORD));
+                .thenReturn(generateUserCredentials(Argon2EncoderHelper.argon2Hash(NEW_PASSWORD)));
         NotifyRequest notifyRequest =
                 new NotifyRequest(EMAIL, NotificationType.PASSWORD_RESET_CONFIRMATION);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
