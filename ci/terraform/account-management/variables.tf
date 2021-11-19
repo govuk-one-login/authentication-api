@@ -146,6 +146,12 @@ variable "dlq_alarm_threshold" {
   description = "The number of messages on a DLQ before a Cloudwatch alarm is generated"
 }
 
+variable "waf_alarm_blocked_reqeuest_threshold" {
+  default     = 20
+  type        = number
+  description = "The number of blocked requests caught by the WAF before a Cloudwatch alarm is generated"
+}
+
 variable "lambda_min_concurrency" {
   default     = 10
   type        = number
