@@ -27,6 +27,7 @@ import java.util.Locale;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public abstract class BaseFrontendHandler<T>
@@ -99,6 +100,8 @@ public abstract class BaseFrontendHandler<T>
         if (session.isEmpty()) {
             LOG.error("Session cannot be found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        } else {
+            attachSessionIdToLogs(session.get());
         }
         final T request;
         try {

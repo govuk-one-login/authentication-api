@@ -46,6 +46,7 @@ import static uk.gov.di.authentication.oidc.entity.RequestParameters.GA;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.INTERRUPT_STATES;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
@@ -184,6 +185,8 @@ public class AuthorisationHandler
         }
 
         var session = existingSession.orElseGet(sessionService::createSession);
+
+        attachSessionIdToLogs(session);
 
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_INITIATED,
