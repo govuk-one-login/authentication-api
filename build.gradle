@@ -93,7 +93,7 @@ subprojects {
 
         tests "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit}",
                 "org.junit.jupiter:junit-jupiter-params:${dependencyVersions.junit}",
-                "org.mockito:mockito-core:4.0.0",
+                "org.mockito:mockito-core:4.1.0",
                 "org.awaitility:awaitility:4.1.1",
                 configurations.hamcrest
 
