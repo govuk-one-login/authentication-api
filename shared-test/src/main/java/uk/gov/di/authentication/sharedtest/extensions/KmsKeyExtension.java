@@ -1,5 +1,13 @@
-package uk.gov.di.authentication.sharedtest.helper;
+package uk.gov.di.authentication.sharedtest.extensions;
 
+import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.services.kms.AWSKMS;
+import com.amazonaws.services.kms.AWSKMSClientBuilder;
+import com.amazonaws.services.kms.model.CreateAliasRequest;
+import com.amazonaws.services.kms.model.CreateKeyRequest;
+import com.amazonaws.services.kms.model.DescribeKeyRequest;
+import com.amazonaws.services.kms.model.KeySpec;
+import com.amazonaws.services.kms.model.NotFoundException;
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;
 import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
@@ -10,25 +18,28 @@ import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.nio.ByteBuffer;
 import java.util.Optional;
 
-public class KmsHelper {
+public class KmsKeyExtension implements BeforeAllCallback {
 
     private static final String REGION = System.getenv().getOrDefault("AWS_REGION", "eu-west-2");
-    private static final String BASE_URL = System.getenv().getOrDefault("BASE_URL", "rubbish");
     private static final String LOCALSTACK_ENDPOINT =
             System.getenv().getOrDefault("LOCALSTACK_ENDPOINT", "http://localhost:45678");
     private static final String TOKEN_SIGNING_KEY_ALIAS =
             System.getenv().get("TOKEN_SIGNING_KEY_ALIAS");
 
-    private static final KmsConnectionService KMS_CONNECTION_SERVICE =
+    private final KmsConnectionService kmsConnectionService =
             new KmsConnectionService(
                     Optional.of(LOCALSTACK_ENDPOINT), REGION, TOKEN_SIGNING_KEY_ALIAS);
 
-    public static SignedJWT signIdToken(JWTClaimsSet claimsSet) {
+    private AWSKMS kms;
+
+    public SignedJWT signIdToken(JWTClaimsSet claimsSet) {
         try {
             JWSHeader jwsHeader =
                     new JWSHeader.Builder(JWSAlgorithm.ES256)
@@ -42,7 +53,7 @@ public class KmsHelper {
             signRequest.setMessage(messageToSign);
             signRequest.setKeyId(TOKEN_SIGNING_KEY_ALIAS);
             signRequest.setSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256.toString());
-            SignResult signResult = KMS_CONNECTION_SERVICE.sign(signRequest);
+            SignResult signResult = kmsConnectionService.sign(signRequest);
             String signature =
                     Base64URL.encode(
                                     ECDSA.transcodeSignatureToConcat(
@@ -55,7 +66,7 @@ public class KmsHelper {
         }
     }
 
-    public static SignedJWT signAccessToken(JWTClaimsSet claimsSet) {
+    public SignedJWT signAccessToken(JWTClaimsSet claimsSet) {
         try {
             JWSHeader jwsHeader =
                     new JWSHeader.Builder(JWSAlgorithm.ES256)
@@ -69,7 +80,7 @@ public class KmsHelper {
             signRequest.setMessage(messageToSign);
             signRequest.setKeyId(TOKEN_SIGNING_KEY_ALIAS);
             signRequest.setSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256.toString());
-            SignResult signResult = KMS_CONNECTION_SERVICE.sign(signRequest);
+            SignResult signResult = kmsConnectionService.sign(signRequest);
             String signature =
                     Base64URL.encode(
                                     ECDSA.transcodeSignatureToConcat(
@@ -79,6 +90,46 @@ public class KmsHelper {
             return SignedJWT.parse(message + "." + signature);
         } catch (Exception e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void beforeAll(ExtensionContext context) throws Exception {
+        kms =
+                AWSKMSClientBuilder.standard()
+                        .withEndpointConfiguration(
+                                new AwsClientBuilder.EndpointConfiguration(
+                                        LOCALSTACK_ENDPOINT, REGION))
+                        .build();
+
+        if (!keyExists(TOKEN_SIGNING_KEY_ALIAS)) {
+            createTokenSigningKey(TOKEN_SIGNING_KEY_ALIAS);
+        }
+    }
+
+    private void createTokenSigningKey(String keyAlias) {
+        CreateKeyRequest keyRequest =
+                new CreateKeyRequest()
+                        .withKeySpec(KeySpec.ECC_NIST_P256)
+                        .withKeyUsage("SIGN_VERIFY");
+
+        var keyResponse = kms.createKey(keyRequest);
+
+        CreateAliasRequest aliasRequest =
+                new CreateAliasRequest()
+                        .withAliasName(keyAlias)
+                        .withTargetKeyId(keyResponse.getKeyMetadata().getKeyId());
+
+        kms.createAlias(aliasRequest);
+    }
+
+    private boolean keyExists(String keyAlias) {
+        try {
+            var request = new DescribeKeyRequest().withKeyId(keyAlias);
+            kms.describeKey(request);
+            return true;
+        } catch (NotFoundException ignored) {
+            return false;
         }
     }
 }

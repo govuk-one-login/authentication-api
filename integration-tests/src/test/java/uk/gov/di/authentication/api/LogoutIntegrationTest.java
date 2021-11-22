@@ -18,7 +18,6 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.lambda.LogoutHandler;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.KmsHelper;
 
 import java.io.IOException;
 import java.net.URI;
@@ -138,7 +137,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         expiryDate,
                         new Date());
         idTokenClaims.setNonce(nonce);
-        SignedJWT signedJWT = KmsHelper.signIdToken(idTokenClaims.toJWTClaimsSet());
+        SignedJWT signedJWT = tokenSigner.signIdToken(idTokenClaims.toJWTClaimsSet());
         redis.createSession(sessionId);
         redis.addAuthRequestToSession(
                 clientSessionId,

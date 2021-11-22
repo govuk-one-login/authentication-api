@@ -16,7 +16,6 @@ import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
-import uk.gov.di.authentication.sharedtest.helper.KmsHelper;
 
 import java.security.KeyPair;
 import java.time.LocalDateTime;
@@ -71,7 +70,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .subject(publicSubject.getValue())
                         .jwtID(UUID.randomUUID().toString())
                         .build();
-        SignedJWT signedJWT = KmsHelper.signAccessToken(claimsSet);
+        SignedJWT signedJWT = tokenSigner.signAccessToken(claimsSet);
         AccessToken accessToken = new BearerAccessToken(signedJWT.serialize());
         AccessTokenStore accessTokenStore =
                 new AccessTokenStore(accessToken.getValue(), internalSubject.getValue());

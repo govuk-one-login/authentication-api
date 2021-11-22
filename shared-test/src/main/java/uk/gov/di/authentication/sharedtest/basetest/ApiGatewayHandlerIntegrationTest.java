@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.extensions.ClientStoreExtension;
+import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.authentication.sharedtest.extensions.RedisExtension;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
@@ -57,6 +58,8 @@ public abstract class ApiGatewayHandlerIntegrationTest {
 
     @RegisterExtension
     protected static final ClientStoreExtension clientStore = new ClientStoreExtension();
+
+    @RegisterExtension protected static final KmsKeyExtension tokenSigner = new KmsKeyExtension();
 
     protected APIGatewayProxyResponseEvent makeRequest(
             Optional<Object> body, Map<String, String> headers, Map<String, String> queryString) {

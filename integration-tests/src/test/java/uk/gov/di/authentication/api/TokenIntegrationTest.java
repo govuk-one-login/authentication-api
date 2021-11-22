@@ -35,7 +35,6 @@ import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
-import uk.gov.di.authentication.sharedtest.helper.KmsHelper;
 
 import java.net.URI;
 import java.security.KeyPair;
@@ -184,7 +183,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .subject(publicSubject.getValue())
                         .jwtID(UUID.randomUUID().toString())
                         .build();
-        return KmsHelper.signAccessToken(claimsSet);
+        return tokenSigner.signAccessToken(claimsSet);
     }
 
     private void setUpDynamo(KeyPair keyPair, Scope scope, Subject internalSubject) {
