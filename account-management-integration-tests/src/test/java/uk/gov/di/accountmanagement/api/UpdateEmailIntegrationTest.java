@@ -12,7 +12,6 @@ import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.NotifyStubExtension;
 import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
-import uk.gov.di.authentication.sharedtest.helper.RedisHelper;
 
 import java.util.Map;
 import java.util.Optional;
@@ -48,7 +47,7 @@ public class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest
     public void shouldCallUpdateEmailEndpointAndReturn204WhenLoginIsSuccessful()
             throws JsonProcessingException {
         String publicSubjectID = DynamoHelper.signUp(EXISTING_EMAIL_ADDRESS, "password-1", SUBJECT);
-        String otp = RedisHelper.generateAndSaveEmailCode(NEW_EMAIL_ADDRESS, 300);
+        String otp = redis.generateAndSaveEmailCode(NEW_EMAIL_ADDRESS, 300);
         var response =
                 makeRequest(
                         Optional.of(

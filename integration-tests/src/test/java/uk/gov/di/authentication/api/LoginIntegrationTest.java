@@ -20,7 +20,6 @@ import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
-import uk.gov.di.authentication.sharedtest.helper.RedisHelper;
 
 import java.io.IOException;
 import java.net.URI;
@@ -68,8 +67,8 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         DynamoHelper.signUp(email, password);
         DynamoHelper.addPhoneNumber(email, phoneNumber);
         DynamoHelper.updateTermsAndConditions(email, termsAndConditionsVersion);
-        String sessionId = RedisHelper.createSession();
-        RedisHelper.setSessionState(sessionId, AUTHENTICATION_REQUIRED);
+        String sessionId = redis.createSession();
+        redis.setSessionState(sessionId, AUTHENTICATION_REQUIRED);
 
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
@@ -87,7 +86,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             builder.customParameter("vtr", jsonArray.toJSONString());
         }
         AuthenticationRequest authRequest = builder.build();
-        RedisHelper.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
+        redis.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
         DynamoHelper.registerClient(
                 CLIENT_ID,
                 "The test client",
@@ -130,8 +129,8 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
         String password = "password-1";
         DynamoHelper.signUp(email, "wrong-password");
-        String sessionId = RedisHelper.createSession();
-        RedisHelper.setSessionState(sessionId, AUTHENTICATION_REQUIRED);
+        String sessionId = redis.createSession();
+        redis.setSessionState(sessionId, AUTHENTICATION_REQUIRED);
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
         headers.put("X-API-Key", FRONTEND_API_KEY);

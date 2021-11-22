@@ -37,7 +37,6 @@ import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegration
 import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.authentication.sharedtest.helper.KmsHelper;
-import uk.gov.di.authentication.sharedtest.helper.RedisHelper;
 
 import java.net.URI;
 import java.security.KeyPair;
@@ -76,7 +75,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldCallTokenResourceAndReturnAccessAndRefreshToken()
-            throws JOSEException, ParseException {
+            throws JOSEException, ParseException, JsonProcessingException {
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         Scope scope =
                 new Scope(
@@ -100,7 +99,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldCallTokenResourceAndOnlyReturnAccessTokenWithoutOfflineAccessScope()
-            throws JOSEException, ParseException {
+            throws JOSEException, ParseException, JsonProcessingException {
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         Scope scope = new Scope(OIDCScopeValue.OPENID.getValue());
         setUpDynamo(keyPair, scope, new Subject());
@@ -134,7 +133,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
         RefreshTokenStore tokenStore =
                 new RefreshTokenStore(List.of(refreshToken.getValue()), internalSubject.getValue());
-        RedisHelper.addToRedis(
+        redis.addToRedis(
                 REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + publicSubject.getValue(),
                 new ObjectMapper().writeValueAsString(tokenStore),
                 900L);
@@ -224,7 +223,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private APIGatewayProxyResponseEvent generateTokenRequest(KeyPair keyPair, Scope scope)
-            throws JOSEException {
+            throws JOSEException, JsonProcessingException {
         PrivateKey privateKey = keyPair.getPrivate();
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(5);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
@@ -236,7 +235,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new PrivateKeyJWT(
                         claimsSet, JWSAlgorithm.RS256, (RSAPrivateKey) privateKey, null, null);
         String code = new AuthorizationCode().toString();
-        RedisHelper.addAuthCodeAndCreateClientSession(
+        redis.addAuthCodeAndCreateClientSession(
                 code, "a-client-session-id", TEST_EMAIL, generateAuthRequest(scope).toParameters());
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(

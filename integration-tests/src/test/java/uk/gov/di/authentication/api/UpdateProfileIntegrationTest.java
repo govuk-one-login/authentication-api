@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.api;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -18,7 +19,6 @@ import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
-import uk.gov.di.authentication.sharedtest.helper.RedisHelper;
 
 import java.io.IOException;
 import java.net.URI;
@@ -54,7 +54,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
     @Test
     public void shouldCallUpdateProfileEndpointToUpdatePhoneNumberAndReturn200()
             throws IOException {
-        String sessionId = RedisHelper.createSession();
+        String sessionId = redis.createSession();
         String clientSessionId = IdGenerator.generate();
         setUpTest(sessionId, clientSessionId, SessionState.TWO_FACTOR_REQUIRED);
         UpdateProfileRequest request =
@@ -74,11 +74,11 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Test
     public void shouldCallUpdateProfileToUpdateConsentAndReturn200() throws IOException {
-        String sessionId = RedisHelper.createSession();
+        String sessionId = redis.createSession();
         String clientSessionId = IdGenerator.generate();
         AuthenticationRequest authRequest =
                 setUpTest(sessionId, clientSessionId, SessionState.CONSENT_REQUIRED);
-        RedisHelper.createClientSession(clientSessionId, authRequest.toParameters());
+        redis.createClientSession(clientSessionId, authRequest.toParameters());
         UpdateProfileRequest request =
                 new UpdateProfileRequest(EMAIL_ADDRESS, CAPTURE_CONSENT, String.valueOf(true));
 
@@ -105,7 +105,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Test
     public void shouldCallUpdateProfileToApproveTermsAndConditonsAndReturn200() throws IOException {
-        String sessionId = RedisHelper.createSession();
+        String sessionId = redis.createSession();
         String clientSessionId = IdGenerator.generate();
         setUpTest(sessionId, clientSessionId, SessionState.UPDATED_TERMS_AND_CONDITIONS);
 
@@ -126,12 +126,13 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     private AuthenticationRequest setUpTest(
-            String sessionId, String clientSessionId, SessionState sessionState) {
+            String sessionId, String clientSessionId, SessionState sessionState)
+            throws JsonProcessingException {
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         scope.add(OIDCScopeValue.EMAIL);
-        RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
-        RedisHelper.setSessionState(sessionId, sessionState);
+        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        redis.setSessionState(sessionId, sessionState);
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE,
@@ -140,7 +141,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
                                 URI.create("http://localhost/redirect"))
                         .nonce(new Nonce())
                         .build();
-        RedisHelper.createClientSession(clientSessionId, authRequest.toParameters());
+        redis.createClientSession(clientSessionId, authRequest.toParameters());
         DynamoHelper.registerClient(
                 CLIENT_ID,
                 "test-client",

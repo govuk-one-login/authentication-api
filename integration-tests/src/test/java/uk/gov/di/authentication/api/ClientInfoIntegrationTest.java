@@ -16,7 +16,6 @@ import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
-import uk.gov.di.authentication.sharedtest.helper.RedisHelper;
 
 import java.io.IOException;
 import java.net.URI;
@@ -59,7 +58,7 @@ public class ClientInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     @Test
     public void shouldReturn200AndClientInfoResponseForValidClient() throws IOException {
-        String sessionId = RedisHelper.createSession();
+        String sessionId = redis.createSession();
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         AuthenticationRequest authRequest =
@@ -71,7 +70,7 @@ public class ClientInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         .nonce(new Nonce())
                         .state(new State())
                         .build();
-        RedisHelper.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
+        redis.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
 
         registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
 

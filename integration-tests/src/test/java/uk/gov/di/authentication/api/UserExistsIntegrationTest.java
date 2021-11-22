@@ -9,7 +9,6 @@ import uk.gov.di.authentication.frontendapi.lambda.CheckUserExistsHandler;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
-import uk.gov.di.authentication.sharedtest.helper.RedisHelper;
 
 import java.io.IOException;
 import java.util.Map;
@@ -34,9 +33,9 @@ public class UserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     public void shouldCallUserExistsEndpointAndReturnAuthenticationRequestStateWhenUserExists()
             throws IOException {
         String emailAddress = "joe.bloggs+1@digital.cabinet-office.gov.uk";
-        String sessionId = RedisHelper.createSession();
+        String sessionId = redis.createSession();
         DynamoHelper.signUp(emailAddress, "password-1");
-        RedisHelper.setSessionState(sessionId, SessionState.NEW);
+        redis.setSessionState(sessionId, SessionState.NEW);
 
         CheckUserExistsRequest request = new CheckUserExistsRequest(emailAddress);
 
@@ -55,8 +54,8 @@ public class UserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     public void shouldCallUserExistsEndpointAndReturnUserNotFoundStateWhenUserDoesNotExist()
             throws IOException {
         String emailAddress = "joe.bloggs+2@digital.cabinet-office.gov.uk";
-        String sessionId = RedisHelper.createSession();
-        RedisHelper.setSessionState(sessionId, SessionState.NEW);
+        String sessionId = redis.createSession();
+        redis.setSessionState(sessionId, SessionState.NEW);
         BaseFrontendRequest request = new CheckUserExistsRequest(emailAddress);
 
         var response =
