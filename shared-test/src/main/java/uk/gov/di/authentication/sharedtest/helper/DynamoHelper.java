@@ -65,34 +65,6 @@ public class DynamoHelper {
         DYNAMO_SERVICE.updateTermsAndConditions(email, version);
     }
 
-    public static void registerClient(
-            String clientID,
-            String clientName,
-            List<String> redirectUris,
-            List<String> contacts,
-            List<String> scopes,
-            String publicKey,
-            List<String> postLogoutRedirectUris,
-            String serviceType,
-            String sectorIdentifierUri,
-            String subjectType) {
-        DYNAMO_CLIENT_SERVICE.addClient(
-                clientID,
-                clientName,
-                redirectUris,
-                contacts,
-                scopes,
-                publicKey,
-                postLogoutRedirectUris,
-                serviceType,
-                sectorIdentifierUri,
-                subjectType);
-    }
-
-    public static boolean clientExists(String clientID) {
-        return DYNAMO_CLIENT_SERVICE.isValidClient(clientID);
-    }
-
     public static void flushData() {
         AmazonDynamoDB dynamoDB =
                 AmazonDynamoDBClientBuilder.standard()

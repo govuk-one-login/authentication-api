@@ -9,7 +9,6 @@ import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse
 import uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
 
 import java.util.Map;
 import java.util.Optional;
@@ -50,6 +49,6 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
                 objectMapper.readValue(response.getBody(), ClientRegistrationResponse.class);
 
         assertThat(response, hasStatus(200));
-        assertTrue(DynamoHelper.clientExists(clientResponse.getClientId()));
+        assertTrue(clientStore.clientExists(clientResponse.getClientId()));
     }
 }

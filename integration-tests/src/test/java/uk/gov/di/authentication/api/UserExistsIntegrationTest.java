@@ -8,7 +8,6 @@ import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.frontendapi.lambda.CheckUserExistsHandler;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
 
 import java.io.IOException;
 import java.util.Map;
@@ -34,7 +33,7 @@ public class UserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest 
             throws IOException {
         String emailAddress = "joe.bloggs+1@digital.cabinet-office.gov.uk";
         String sessionId = redis.createSession();
-        DynamoHelper.signUp(emailAddress, "password-1");
+        userStore.signUp(emailAddress, "password-1");
         redis.setSessionState(sessionId, SessionState.NEW);
 
         CheckUserExistsRequest request = new CheckUserExistsRequest(emailAddress);

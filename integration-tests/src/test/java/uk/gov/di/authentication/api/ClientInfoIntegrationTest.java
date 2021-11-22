@@ -14,7 +14,6 @@ import uk.gov.di.authentication.frontendapi.entity.ClientInfoResponse;
 import uk.gov.di.authentication.frontendapi.lambda.ClientInfoHandler;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.io.IOException;
@@ -91,7 +90,7 @@ public class ClientInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     }
 
     private void registerClient(KeyPair keyPair) {
-        DynamoHelper.registerClient(
+        clientStore.registerClient(
                 CLIENT_ID,
                 TEST_CLIENT_NAME,
                 singletonList(REDIRECT_URI),

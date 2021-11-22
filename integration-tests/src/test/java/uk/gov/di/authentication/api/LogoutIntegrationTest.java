@@ -18,7 +18,6 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.lambda.LogoutHandler;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
 import uk.gov.di.authentication.sharedtest.helper.KmsHelper;
 
 import java.io.IOException;
@@ -147,7 +146,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 generateAuthRequest(nonce).toParameters(),
                 "joe.bloggs@digital.cabinet-office.gov.uk");
         redis.addIDTokenToSession(clientSessionId, signedJWT.serialize());
-        DynamoHelper.registerClient(
+        clientStore.registerClient(
                 "client-id",
                 "client-name",
                 singletonList("http://localhost:8080/redirect"),

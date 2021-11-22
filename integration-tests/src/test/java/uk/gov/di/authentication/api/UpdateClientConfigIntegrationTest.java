@@ -9,7 +9,6 @@ import uk.gov.di.authentication.clientregistry.lambda.UpdateClientConfigHandler;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
 
 import java.util.Map;
 import java.util.Optional;
@@ -32,7 +31,7 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
 
     @Test
     public void shouldUpdateClientNameSuccessfully() throws JsonProcessingException {
-        DynamoHelper.registerClient(
+        clientStore.registerClient(
                 CLIENT_ID,
                 "The test client",
                 singletonList("http://localhost:1000/redirect"),

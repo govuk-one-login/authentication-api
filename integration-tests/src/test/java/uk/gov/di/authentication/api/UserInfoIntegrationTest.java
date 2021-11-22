@@ -15,7 +15,6 @@ import uk.gov.di.authentication.oidc.lambda.UserInfoHandler;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.authentication.sharedtest.helper.KmsHelper;
 
@@ -114,11 +113,11 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private void setUpDynamo(Subject internalSubject) {
-        DynamoHelper.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD, internalSubject);
-        DynamoHelper.addPhoneNumber(TEST_EMAIL_ADDRESS, TEST_PHONE_NUMBER);
-        DynamoHelper.setPhoneNumberVerified(TEST_EMAIL_ADDRESS, true);
+        userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD, internalSubject);
+        userStore.addPhoneNumber(TEST_EMAIL_ADDRESS, TEST_PHONE_NUMBER);
+        userStore.setPhoneNumberVerified(TEST_EMAIL_ADDRESS, true);
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-        DynamoHelper.registerClient(
+        clientStore.registerClient(
                 CLIENT_ID,
                 "test-client",
                 singletonList("redirect-url"),

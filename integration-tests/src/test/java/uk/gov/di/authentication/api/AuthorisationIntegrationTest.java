@@ -17,7 +17,6 @@ import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.net.HttpCookie;
@@ -428,7 +427,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private void registerUserWithConsentedScope(Optional<Scope> consentedScope) {
-        DynamoHelper.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD);
+        userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD);
         consentedScope.ifPresent(
                 scope -> {
                     Set<String> claims = ValidScopes.getClaimsForListOfScopes(scope.toStringList());
@@ -437,12 +436,12 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                     CLIENT_ID,
                                     claims,
                                     LocalDateTime.now(ZoneId.of("UTC")).toString());
-                    DynamoHelper.updateConsent(TEST_EMAIL_ADDRESS, clientConsent);
+                    userStore.updateConsent(TEST_EMAIL_ADDRESS, clientConsent);
                 });
     }
 
     private void registerClient(String clientId, String clientName, List<String> scopes) {
-        DynamoHelper.registerClient(
+        clientStore.registerClient(
                 clientId,
                 clientName,
                 singletonList("localhost"),
