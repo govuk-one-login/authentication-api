@@ -16,7 +16,6 @@ import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
-import uk.gov.di.authentication.sharedtest.helper.RedisHelper;
 
 import java.io.IOException;
 import java.net.URI;
@@ -47,9 +46,9 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String sessionId = "some-session-id";
         String clientSessionId = "some-client-session-id";
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-        RedisHelper.createSession(sessionId);
-        RedisHelper.setSessionState(sessionId, SessionState.MFA_CODE_VERIFIED);
-        RedisHelper.addAuthRequestToSession(
+        redis.createSession(sessionId);
+        redis.setSessionState(sessionId, SessionState.MFA_CODE_VERIFIED);
+        redis.addAuthRequestToSession(
                 clientSessionId, sessionId, generateAuthRequest().toParameters(), EMAIL);
         setUpDynamo(keyPair);
 

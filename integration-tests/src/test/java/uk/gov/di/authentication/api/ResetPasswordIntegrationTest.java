@@ -12,7 +12,6 @@ import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.NotifyStubExtension;
 import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
-import uk.gov.di.authentication.sharedtest.helper.RedisHelper;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -48,7 +47,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         String subject = "new-subject";
         ResetPasswordWithCodeRequest requestBody = new ResetPasswordWithCodeRequest(CODE, PASSWORD);
         DynamoHelper.signUp(EMAIL_ADDRESS, "password-1", new Subject(subject));
-        RedisHelper.generateAndSavePasswordResetCode(subject, CODE, 900l);
+        redis.generateAndSavePasswordResetCode(subject, CODE, 900l);
         Map<String, String> headers = new HashMap<>();
         headers.put("X-API-Key", API_KEY);
 

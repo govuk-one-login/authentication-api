@@ -20,7 +20,6 @@ import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
 import uk.gov.di.authentication.sharedtest.helper.KmsHelper;
-import uk.gov.di.authentication.sharedtest.helper.RedisHelper;
 
 import java.io.IOException;
 import java.net.URI;
@@ -141,13 +140,13 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         new Date());
         idTokenClaims.setNonce(nonce);
         SignedJWT signedJWT = KmsHelper.signIdToken(idTokenClaims.toJWTClaimsSet());
-        RedisHelper.createSession(sessionId);
-        RedisHelper.addAuthRequestToSession(
+        redis.createSession(sessionId);
+        redis.addAuthRequestToSession(
                 clientSessionId,
                 sessionId,
                 generateAuthRequest(nonce).toParameters(),
                 "joe.bloggs@digital.cabinet-office.gov.uk");
-        RedisHelper.addIDTokenToSession(clientSessionId, signedJWT.serialize());
+        redis.addIDTokenToSession(clientSessionId, signedJWT.serialize());
         DynamoHelper.registerClient(
                 "client-id",
                 "client-name",

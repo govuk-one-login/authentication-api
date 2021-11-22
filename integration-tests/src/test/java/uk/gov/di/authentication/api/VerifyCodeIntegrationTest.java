@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.api;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -21,7 +22,6 @@ import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
-import uk.gov.di.authentication.sharedtest.helper.RedisHelper;
 
 import java.io.IOException;
 import java.net.URI;
@@ -53,9 +53,9 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     @Test
     public void shouldCallVerifyCodeEndpointToVerifyEmailCodeAndReturn200() throws IOException {
-        String sessionId = RedisHelper.createSession();
+        String sessionId = redis.createSession();
         setUpTestWithoutSignUp(sessionId, withScope(), SessionState.VERIFY_EMAIL_CODE_SENT);
-        String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
+        String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, code);
 
         var response =
@@ -69,10 +69,10 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     @Test
     public void shouldCallVerifyCodeEndpointAndReturn400WitUpdatedStateWhenEmailCodeHasExpired()
             throws IOException, InterruptedException {
-        String sessionId = RedisHelper.createSession();
+        String sessionId = redis.createSession();
         setUpTestWithoutSignUp(sessionId, withScope(), SessionState.VERIFY_EMAIL_CODE_SENT);
 
-        String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 2);
+        String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 2);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, code);
 
         TimeUnit.SECONDS.sleep(3);
@@ -93,9 +93,9 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     @Test
     public void shouldReturn400WithNewStateWhenUserTriesEmailCodeThatTheyHaveAlreadyUsed()
             throws IOException {
-        String sessionId = RedisHelper.createSession();
+        String sessionId = redis.createSession();
         setUpTestWithoutSignUp(sessionId, withScope(), SessionState.VERIFY_EMAIL_CODE_SENT);
-        String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
+        String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, code);
 
         var response =
@@ -124,7 +124,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     @Test
     public void shouldCallVerifyCodeEndpointToVerifyPhoneCodeAndReturn200() throws IOException {
-        String sessionId = RedisHelper.createSession();
+        String sessionId = redis.createSession();
         Scope scope = withScope();
         setUpTestWithoutClientConsent(sessionId, scope, SessionState.VERIFY_PHONE_NUMBER_CODE_SENT);
         Set<String> claims = ValidScopes.getClaimsForListOfScopes(scope.toStringList());
@@ -132,7 +132,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                 new ClientConsent(
                         CLIENT_ID, claims, LocalDateTime.now(ZoneId.of("UTC")).toString());
         DynamoHelper.updateConsent(EMAIL_ADDRESS, clientConsent);
-        String code = RedisHelper.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
+        String code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest =
                 new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
 
@@ -152,10 +152,10 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     @Test
     public void shouldCallVerifyCodeEndpointToVerifyPhoneCodeAndReturnConsentRequiredState()
             throws IOException {
-        String sessionId = RedisHelper.createSession();
+        String sessionId = redis.createSession();
         setUpTestWithoutClientConsent(
                 sessionId, withScope(), SessionState.VERIFY_PHONE_NUMBER_CODE_SENT);
-        String code = RedisHelper.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
+        String code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest =
                 new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
 
@@ -176,10 +176,10 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     public void
             shouldCallVerifyCodeEndpointAndReturn400WitUpdatedStateWhenPhoneNumberCodeHasExpired()
                     throws IOException, InterruptedException {
-        String sessionId = RedisHelper.createSession();
+        String sessionId = redis.createSession();
         setUpTestWithoutSignUp(sessionId, withScope(), SessionState.VERIFY_PHONE_NUMBER_CODE_SENT);
 
-        String code = RedisHelper.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 2);
+        String code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 2);
         VerifyCodeRequest codeRequest =
                 new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
 
@@ -200,10 +200,10 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     @Test
     public void shouldReturnMaxCodesReachedIfPhoneNumberCodeIsBlocked() throws IOException {
-        String sessionId = RedisHelper.createSession();
-        RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
-        RedisHelper.setSessionState(sessionId, SessionState.PHONE_NUMBER_CODE_NOT_VALID);
-        RedisHelper.blockPhoneCode(EMAIL_ADDRESS);
+        String sessionId = redis.createSession();
+        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        redis.setSessionState(sessionId, SessionState.PHONE_NUMBER_CODE_NOT_VALID);
+        redis.blockPhoneCode(EMAIL_ADDRESS);
 
         VerifyCodeRequest codeRequest =
                 new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, "123456");
@@ -222,10 +222,10 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     @Test
     public void shouldReturnMaxCodesReachedIfEmailCodeIsBlocked() throws IOException {
-        String sessionId = RedisHelper.createSession();
-        RedisHelper.setSessionState(sessionId, SessionState.EMAIL_CODE_NOT_VALID);
-        RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
-        RedisHelper.blockPhoneCode(EMAIL_ADDRESS);
+        String sessionId = redis.createSession();
+        redis.setSessionState(sessionId, SessionState.EMAIL_CODE_NOT_VALID);
+        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        redis.blockPhoneCode(EMAIL_ADDRESS);
 
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, "123456");
 
@@ -242,10 +242,10 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     @Test
     public void shouldReturn400IfStateTransitionIsInvalid() throws IOException {
-        String sessionId = RedisHelper.createSession();
+        String sessionId = redis.createSession();
         setUpTestWithoutSignUp(sessionId, withScope(), SessionState.NEW);
 
-        String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
+        String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, code);
 
         var response =
@@ -263,10 +263,10 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     @Test
     public void shouldReturn400IfStateTransitionIsInvalid_PhoneNumber() throws IOException {
-        String sessionId = RedisHelper.createSession();
+        String sessionId = redis.createSession();
         setUpTestWithoutSignUp(sessionId, withScope(), SessionState.NEW);
 
-        String code = RedisHelper.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
+        String code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest =
                 new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
         DynamoHelper.signUp(EMAIL_ADDRESS, "password");
@@ -287,7 +287,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     @Test
     public void shouldReturnStateOfMfaCodeVerifiedWhenUserHasAcceptedCurrentTermsAndConditions()
             throws IOException {
-        String sessionId = RedisHelper.createSession();
+        String sessionId = redis.createSession();
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         scope.add(OIDCScopeValue.EMAIL);
@@ -301,7 +301,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         LocalDateTime.now().toString());
         DynamoHelper.updateConsent(EMAIL_ADDRESS, clientConsent);
 
-        String code = RedisHelper.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
+        String code = redis.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code);
 
         var response =
@@ -320,7 +320,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     @Test
     public void shouldReturnStateOfUpdatedTermsAndConditionsWhenUserHasNotAcceptedCurrentVersion()
             throws IOException {
-        String sessionId = RedisHelper.createSession();
+        String sessionId = redis.createSession();
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         scope.add(OIDCScopeValue.EMAIL);
@@ -329,7 +329,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         DynamoHelper.updateTermsAndConditions(EMAIL_ADDRESS, "0.1");
 
-        String code = RedisHelper.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
+        String code = redis.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code);
 
         var response =
@@ -347,10 +347,10 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     @Test
     public void shouldReturn400IfStateTransitionIsInvalid_SMS() throws IOException {
-        String sessionId = RedisHelper.createSession();
+        String sessionId = redis.createSession();
         setUpTestWithoutSignUp(sessionId, withScope(), SessionState.NEW);
 
-        String code = RedisHelper.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
+        String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code);
 
         var response =
@@ -365,9 +365,10 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                 response.getBody());
     }
 
-    private void setUpTestWithoutSignUp(String sessionId, Scope scope, SessionState sessionState) {
-        RedisHelper.addEmailToSession(sessionId, EMAIL_ADDRESS);
-        RedisHelper.setSessionState(sessionId, sessionState);
+    private void setUpTestWithoutSignUp(String sessionId, Scope scope, SessionState sessionState)
+            throws JsonProcessingException {
+        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        redis.setSessionState(sessionId, sessionState);
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE,
@@ -377,7 +378,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         .nonce(new Nonce())
                         .state(new State())
                         .build();
-        RedisHelper.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
+        redis.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
         DynamoHelper.registerClient(
                 CLIENT_ID,
                 "test-client",
@@ -392,7 +393,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     }
 
     private void setUpTestWithoutClientConsent(
-            String sessionId, Scope scope, SessionState sessionState) {
+            String sessionId, Scope scope, SessionState sessionState)
+            throws JsonProcessingException {
         setUpTestWithoutSignUp(sessionId, scope, sessionState);
         DynamoHelper.signUp(EMAIL_ADDRESS, "password");
     }

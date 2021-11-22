@@ -11,7 +11,6 @@ import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.NotifyStubExtension;
 import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
-import uk.gov.di.authentication.sharedtest.helper.RedisHelper;
 
 import java.io.IOException;
 import java.util.Map;
@@ -48,9 +47,9 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         String phoneNumber = "01234567890";
         DynamoHelper.signUp(email, password);
         DynamoHelper.addPhoneNumber(email, phoneNumber);
-        String sessionId = RedisHelper.createSession();
-        RedisHelper.addEmailToSession(sessionId, email);
-        RedisHelper.setSessionState(sessionId, AUTHENTICATION_REQUIRED);
+        String sessionId = redis.createSession();
+        redis.addEmailToSession(sessionId, email);
+        redis.setSessionState(sessionId, AUTHENTICATION_REQUIRED);
 
         var response =
                 makeRequest(
@@ -73,9 +72,9 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         String phoneNumber = "01234567890";
         DynamoHelper.signUp(email, password);
         DynamoHelper.addPhoneNumber(email, phoneNumber);
-        String sessionId = RedisHelper.createSession();
-        RedisHelper.addEmailToSession(sessionId, email);
-        RedisHelper.setSessionState(sessionId, NEW);
+        String sessionId = redis.createSession();
+        redis.addEmailToSession(sessionId, email);
+        redis.setSessionState(sessionId, NEW);
 
         var response =
                 makeRequest(

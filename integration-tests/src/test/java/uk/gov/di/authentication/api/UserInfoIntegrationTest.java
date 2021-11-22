@@ -18,7 +18,6 @@ import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegration
 import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.authentication.sharedtest.helper.KmsHelper;
-import uk.gov.di.authentication.sharedtest.helper.RedisHelper;
 
 import java.security.KeyPair;
 import java.time.LocalDateTime;
@@ -78,7 +77,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         AccessTokenStore accessTokenStore =
                 new AccessTokenStore(accessToken.getValue(), internalSubject.getValue());
         String accessTokenStoreString = new ObjectMapper().writeValueAsString(accessTokenStore);
-        RedisHelper.addToRedis(
+        redis.addToRedis(
                 ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + publicSubject,
                 accessTokenStoreString,
                 300L);

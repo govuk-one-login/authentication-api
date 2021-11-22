@@ -7,7 +7,6 @@ import uk.gov.di.authentication.frontendapi.lambda.SignUpHandler;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
-import uk.gov.di.authentication.sharedtest.helper.RedisHelper;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -30,9 +29,9 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturn200WhenValidSignUpRequest() throws IOException {
-        String sessionId = RedisHelper.createSession();
+        String sessionId = redis.createSession();
 
-        RedisHelper.setSessionState(sessionId, EMAIL_CODE_VERIFIED);
+        redis.setSessionState(sessionId, EMAIL_CODE_VERIFIED);
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);

@@ -19,7 +19,6 @@ import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
-import uk.gov.di.authentication.sharedtest.helper.RedisHelper;
 
 import java.net.HttpCookie;
 import java.net.URI;
@@ -189,7 +188,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldRedirectToLoginWhenSessionFromCookieIsNotAuthenticated() throws Exception {
         String sessionId = givenAnExistingSession(AUTHENTICATION_REQUIRED);
-        RedisHelper.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         registerUserWithConsentedScope(Optional.empty());
 
         var response =
@@ -216,7 +215,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldIssueAuthorisationCodeWhenSessionFromCookieIsAuthenticated() throws Exception {
         String sessionId = givenAnExistingSession(AUTHENTICATED);
-        RedisHelper.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         registerUserWithConsentedScope(Optional.of(new Scope(OPENID)));
 
         var response =
@@ -258,7 +257,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldNotPromptForLoginWhenPromptNoneAndUserAuthenticated() throws Exception {
         String sessionId = givenAnExistingSession(AUTHENTICATED);
-        RedisHelper.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         registerUserWithConsentedScope(Optional.of(new Scope(OPENID)));
 
         var response =
@@ -285,7 +284,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldPromptForLoginWhenPromptLoginAndUserAuthenticated() throws Exception {
         String sessionId = givenAnExistingSession(AUTHENTICATED);
-        RedisHelper.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         registerUserWithConsentedScope(Optional.empty());
 
         var response =
@@ -308,14 +307,13 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(configurationService.getLoginURI().toString()));
         String newSessionId = cookie.get().getValue().split("\\.")[0];
-        assertThat(
-                RedisHelper.getSession(newSessionId).getState(), equalTo(AUTHENTICATION_REQUIRED));
+        assertThat(redis.getSession(newSessionId).getState(), equalTo(AUTHENTICATION_REQUIRED));
     }
 
     @Test
     void shouldRequireUpliftWhenHighCredentialLevelOfTrustRequested() throws Exception {
         String sessionId = givenAnExistingSession(AUTHENTICATED, LOW_LEVEL);
-        RedisHelper.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         registerUserWithConsentedScope(Optional.empty());
 
         var response =
@@ -341,13 +339,13 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(URI.create(redirectUri).getQuery(), equalTo("interrupt=UPLIFT_REQUIRED_CM"));
 
         String newSessionId = cookie.get().getValue().split("\\.")[0];
-        assertThat(RedisHelper.getSession(newSessionId).getState(), equalTo(UPLIFT_REQUIRED_CM));
+        assertThat(redis.getSession(newSessionId).getState(), equalTo(UPLIFT_REQUIRED_CM));
     }
 
     @Test
     void shouldRequireConsentWhenUserAuthenticatedAndConsentIsNotGiven() throws Exception {
         String sessionId = givenAnExistingSession(AUTHENTICATED);
-        RedisHelper.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         registerUserWithConsentedScope(Optional.empty());
 
         var response =
@@ -373,7 +371,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(URI.create(redirectUri).getQuery(), equalTo("interrupt=CONSENT_REQUIRED"));
 
         String newSessionId = cookie.get().getValue().split("\\.")[0];
-        assertThat(RedisHelper.getSession(newSessionId).getState(), equalTo(CONSENT_REQUIRED));
+        assertThat(redis.getSession(newSessionId).getState(), equalTo(CONSENT_REQUIRED));
     }
 
     private String givenAnExistingSession(SessionState initialState) throws Exception {
@@ -382,8 +380,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private String givenAnExistingSession(
             SessionState initialState, CredentialTrustLevel credentialTrustLevel) throws Exception {
-        String sessionId = RedisHelper.createSession();
-        RedisHelper.setSessionState(sessionId, initialState, credentialTrustLevel);
+        String sessionId = redis.createSession();
+        redis.setSessionState(sessionId, initialState, credentialTrustLevel);
         return sessionId;
     }
 
