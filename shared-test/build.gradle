@@ -13,6 +13,10 @@ dependencies {
     implementation configurations.tests,
             configurations.lambda,
             configurations.glassfish,
+            configurations.nimbus,
+            configurations.jackson,
+            configurations.lettuce,
+            configurations.dynamodb,
             "org.eclipse.jetty:jetty-server:11.0.7",
             "com.google.protobuf:protobuf-java:3.18.1",
             project(":shared")

@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.helpers;
+package uk.gov.di.authentication.sharedtest.helper;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;

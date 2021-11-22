@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.helpers;
+package uk.gov.di.authentication.sharedtest.helper;
 
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
