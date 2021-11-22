@@ -18,6 +18,11 @@ import static com.amazonaws.services.dynamodbv2.model.ScalarAttributeType.S;
 
 public class ClientStoreExtension extends DynamoExtension implements AfterEachCallback {
 
+    public static final String CLIENT_REGISTRY_TABLE = "local-client-registry";
+    public static final String CLIENT_ID_FIELD = "ClientID";
+    public static final String CLIENT_NAME_FIELD = "ClientName";
+    public static final String CLIENT_NAME_INDEX = "ClientNameIndex";
+
     private final DynamoClientService dynamoClientService =
             new DynamoClientService(REGION, ENVIRONMENT, Optional.of(DYNAMO_ENDPOINT));
 
@@ -51,13 +56,13 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
 
     @Override
     public void afterEach(ExtensionContext context) throws Exception {
-        clearDynamoTable(dynamoDB, "local-client-registry", "ClientID");
+        clearDynamoTable(dynamoDB, CLIENT_REGISTRY_TABLE, CLIENT_ID_FIELD);
     }
 
     @Override
     protected void createTables() {
-        if (!tableExists("local-client-registry")) {
-            createClientRegistryTable("local-client-registry");
+        if (!tableExists(CLIENT_REGISTRY_TABLE)) {
+            createClientRegistryTable(CLIENT_REGISTRY_TABLE);
         }
     }
 
@@ -65,14 +70,15 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
         CreateTableRequest request =
                 new CreateTableRequest()
                         .withTableName(tableName)
-                        .withKeySchema(new KeySchemaElement("ClientID", HASH))
+                        .withKeySchema(new KeySchemaElement(CLIENT_ID_FIELD, HASH))
                         .withAttributeDefinitions(
-                                new AttributeDefinition("ClientID", S),
-                                new AttributeDefinition("ClientName", S))
+                                new AttributeDefinition(CLIENT_ID_FIELD, S),
+                                new AttributeDefinition(CLIENT_NAME_FIELD, S))
                         .withGlobalSecondaryIndexes(
                                 new GlobalSecondaryIndex()
-                                        .withIndexName("ClientNameIndex")
-                                        .withKeySchema(new KeySchemaElement("ClientName", HASH))
+                                        .withIndexName(CLIENT_NAME_INDEX)
+                                        .withKeySchema(
+                                                new KeySchemaElement(CLIENT_NAME_FIELD, HASH))
                                         .withProjection(new Projection().withProjectionType(ALL)));
         dynamoDB.createTable(request);
     }

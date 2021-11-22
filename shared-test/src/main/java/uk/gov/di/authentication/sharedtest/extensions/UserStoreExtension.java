@@ -23,6 +23,14 @@ import static com.amazonaws.services.dynamodbv2.model.ScalarAttributeType.S;
 
 public class UserStoreExtension extends DynamoExtension implements AfterEachCallback {
 
+    public static final String USER_CREDENTIALS_TABLE = "local-user-credentials";
+    public static final String USER_PROFILE_TABLE = "local-user-profile";
+    public static final String EMAIL_FIELD = "Email";
+    public static final String SUBJECT_ID_FIELD = "SubjectID";
+    public static final String PUBLIC_SUBJECT_ID_FIELD = "PublicSubjectID";
+    public static final String SUBJECT_ID_INDEX = "SubjectIDIndex";
+    public static final String PUBLIC_SUBJECT_ID_INDEX = "PublicSubjectIDIndex";
+
     private final DynamoService dynamoService =
             new DynamoService(REGION, ENVIRONMENT, Optional.of(DYNAMO_ENDPOINT));
 
@@ -64,18 +72,18 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
 
     @Override
     public void afterEach(ExtensionContext context) throws Exception {
-        clearDynamoTable(dynamoDB, "local-user-credentials", "Email");
-        clearDynamoTable(dynamoDB, "local-user-profile", "Email");
+        clearDynamoTable(dynamoDB, USER_CREDENTIALS_TABLE, EMAIL_FIELD);
+        clearDynamoTable(dynamoDB, USER_PROFILE_TABLE, EMAIL_FIELD);
     }
 
     @Override
     protected void createTables() {
-        if (!tableExists("local-user-profile")) {
-            createUserProfileTable("local-user-profile");
+        if (!tableExists(USER_PROFILE_TABLE)) {
+            createUserProfileTable(USER_PROFILE_TABLE);
         }
 
-        if (!tableExists("local-user-credentials")) {
-            createUserCredentialsTable("local-user-credentials");
+        if (!tableExists(USER_CREDENTIALS_TABLE)) {
+            createUserCredentialsTable(USER_CREDENTIALS_TABLE);
         }
     }
 
@@ -83,14 +91,14 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         CreateTableRequest request =
                 new CreateTableRequest()
                         .withTableName(tableName)
-                        .withKeySchema(new KeySchemaElement("Email", HASH))
+                        .withKeySchema(new KeySchemaElement(EMAIL_FIELD, HASH))
                         .withAttributeDefinitions(
-                                new AttributeDefinition("Email", S),
-                                new AttributeDefinition("SubjectID", S))
+                                new AttributeDefinition(EMAIL_FIELD, S),
+                                new AttributeDefinition(SUBJECT_ID_FIELD, S))
                         .withGlobalSecondaryIndexes(
                                 new GlobalSecondaryIndex()
-                                        .withIndexName("SubjectIDIndex")
-                                        .withKeySchema(new KeySchemaElement("SubjectID", HASH))
+                                        .withIndexName(SUBJECT_ID_INDEX)
+                                        .withKeySchema(new KeySchemaElement(SUBJECT_ID_FIELD, HASH))
                                         .withProjection(new Projection().withProjectionType(ALL)));
         dynamoDB.createTable(request);
     }
@@ -99,20 +107,20 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         CreateTableRequest request =
                 new CreateTableRequest()
                         .withTableName(tableName)
-                        .withKeySchema(new KeySchemaElement("Email", HASH))
+                        .withKeySchema(new KeySchemaElement(EMAIL_FIELD, HASH))
                         .withAttributeDefinitions(
-                                new AttributeDefinition("Email", S),
-                                new AttributeDefinition("SubjectID", S),
-                                new AttributeDefinition("PublicSubjectID", S))
+                                new AttributeDefinition(EMAIL_FIELD, S),
+                                new AttributeDefinition(SUBJECT_ID_FIELD, S),
+                                new AttributeDefinition(PUBLIC_SUBJECT_ID_FIELD, S))
                         .withGlobalSecondaryIndexes(
                                 new GlobalSecondaryIndex()
-                                        .withIndexName("SubjectIDIndex")
-                                        .withKeySchema(new KeySchemaElement("SubjectID", HASH))
+                                        .withIndexName(SUBJECT_ID_INDEX)
+                                        .withKeySchema(new KeySchemaElement(SUBJECT_ID_FIELD, HASH))
                                         .withProjection(new Projection().withProjectionType(ALL)),
                                 new GlobalSecondaryIndex()
-                                        .withIndexName("PublicSubjectIDIndex")
+                                        .withIndexName(PUBLIC_SUBJECT_ID_INDEX)
                                         .withKeySchema(
-                                                new KeySchemaElement("PublicSubjectID", HASH))
+                                                new KeySchemaElement(PUBLIC_SUBJECT_ID_FIELD, HASH))
                                         .withProjection(new Projection().withProjectionType(ALL)));
         dynamoDB.createTable(request);
     }

@@ -15,7 +15,8 @@ import java.util.Map;
 public abstract class DynamoExtension implements BeforeAllCallback {
 
     protected static final String REGION = System.getenv().getOrDefault("AWS_REGION", "eu-west-2");
-    protected static final String ENVIRONMENT = System.getenv().getOrDefault("ENVIRONMENT", "local");
+    protected static final String ENVIRONMENT =
+            System.getenv().getOrDefault("ENVIRONMENT", "local");
     protected static final String DYNAMO_ENDPOINT =
             System.getenv().getOrDefault("DYNAMO_ENDPOINT", "http://localhost:8000");
 
