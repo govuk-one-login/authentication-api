@@ -16,6 +16,7 @@ dependencies {
             configurations.tests,
             configurations.sqs,
             configurations.dynamodb,
+            configurations.lambda,
             configurations.lettuce,
             "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.13.0",
             project(":client-registry-api"),
@@ -32,8 +33,17 @@ test {
     filter {
         includeTestsMatching "*"
     }
+    environment "AUDIT_SIGNING_KEY_ALIAS", "alias/local-audit-payload-signing-key-alias"
     environment "AWS_ACCESS_KEY_ID", "mock-access-key"
+    environment "AWS_REGION", "eu-west-2"
     environment "AWS_SECRET_ACCESS_KEY", "mock-secret-key "
+    environment "BASE_URL", "http://localhost"
+    environment "DYNAMO_ENDPOINT", "http://localhost:8000"
+    environment "ENVIRONMENT", "local"
+    environment "HEADERS_CASE_INSENSITIVE", "true"
+    environment "LOCALSTACK_ENDPOINT", "http://localhost:45678"
+    environment "REDIS_KEY", "account-management"
+    environment "SQS_ENDPOINT", "http://localhost:45678"
 
     testLogging {
         showStandardStreams = false

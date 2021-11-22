@@ -1,47 +1,70 @@
 package uk.gov.di.accountmanagement.api;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import jakarta.ws.rs.client.ClientBuilder;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.MultivaluedHashMap;
-import jakarta.ws.rs.core.Response;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.accountmanagement.entity.UpdateEmailRequest;
+import uk.gov.di.accountmanagement.lambda.UpdateEmailHandler;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.NotifyStubExtension;
 import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
+import uk.gov.di.authentication.sharedtest.helper.RedisHelper;
 
 import java.util.Map;
+import java.util.Optional;
 
-import static uk.gov.di.accountmanagement.api.IntegrationTestEndpoints.ROOT_RESOURCE_URL;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.hasField;
+import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.hasFieldWithValue;
 
-public class UpdateEmailIntegrationTest {
+public class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    private static final String UPDATE_EMAIL_ENDPOINT = "/update-email";
     private static final String EXISTING_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String NEW_EMAIL_ADDRESS = "joe.b@digital.cabinet-office.gov.uk";
-    private static final String OTP = "123456";
     private static final Subject SUBJECT = new Subject();
 
+    @RegisterExtension
+    private static final NotifyStubExtension notify =
+            new NotifyStubExtension(8888, ObjectMapperFactory.getInstance());
+
+    @BeforeEach
+    void setup() {
+        handler = new UpdateEmailHandler(configurationService);
+        notify.init();
+    }
+
+    @AfterEach
+    void resetStub() {
+        notify.reset();
+    }
+
     @Test
-    public void shouldCallLoginEndpointAndReturn204WhenLoginIsSuccessful() {
-        DynamoHelper.signUp(EXISTING_EMAIL_ADDRESS, "password-1", SUBJECT);
+    public void shouldCallUpdateEmailEndpointAndReturn204WhenLoginIsSuccessful()
+            throws JsonProcessingException {
+        String publicSubjectID = DynamoHelper.signUp(EXISTING_EMAIL_ADDRESS, "password-1", SUBJECT);
+        String otp = RedisHelper.generateAndSaveEmailCode(NEW_EMAIL_ADDRESS, 300);
+        var response =
+                makeRequest(
+                        Optional.of(
+                                new UpdateEmailRequest(
+                                        EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS, otp)),
+                        Map.of(),
+                        Map.of(),
+                        Map.of(),
+                        Map.of("principalId", publicSubjectID));
 
-        Response response =
-                ClientBuilder.newClient()
-                        .target(ROOT_RESOURCE_URL + UPDATE_EMAIL_ENDPOINT)
-                        .request(MediaType.APPLICATION_JSON)
-                        .headers(new MultivaluedHashMap<>())
-                        .buildPost(
-                                Entity.entity(
-                                        new UpdateEmailRequest(
-                                                EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS, OTP),
-                                        MediaType.APPLICATION_JSON))
-                        .property("authorizer", Map.of("principalId", SUBJECT.getValue()))
-                        .invoke();
+        assertThat(response, hasStatus(204));
 
-        //        TODO: This test does not work currently as the api gateway doesn't pass on the
-        // authorizer property to the requestContext. We have to do this manually as the authorizer
-        // is not supported in the free version of Localstack.
-        //        assertEquals(204, response.getStatus());
+        var notifyRequest = notify.waitForRequest(60);
+
+        assertThat(notifyRequest, hasField("personalisation"));
+        var personalisation = notifyRequest.get("personalisation");
+        assertThat(personalisation, hasFieldWithValue("email-address", equalTo(NEW_EMAIL_ADDRESS)));
     }
 }
