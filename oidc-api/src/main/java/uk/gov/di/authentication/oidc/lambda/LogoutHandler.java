@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class LogoutHandler
@@ -99,6 +100,8 @@ public class LogoutHandler
 
     private APIGatewayProxyResponseEvent processLogoutRequest(
             Session session, APIGatewayProxyRequestEvent input, Optional<String> state) {
+
+        attachSessionIdToLogs(session);
 
         CookieHelper.SessionCookieIds sessionCookieIds =
                 CookieHelper.parseSessionCookie(input.getHeaders()).get();

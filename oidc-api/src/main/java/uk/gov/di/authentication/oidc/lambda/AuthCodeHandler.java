@@ -46,6 +46,7 @@ import static uk.gov.di.authentication.oidc.entity.RequestParameters.COOKIE_CONS
 import static uk.gov.di.authentication.oidc.entity.RequestParameters.GA;
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
@@ -117,6 +118,8 @@ public class AuthCodeHandler
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1000);
                             }
+
+                            attachSessionIdToLogs(session);
 
                             LOGGER.info(
                                     "AuthCodeHandler processing request for session: {}",

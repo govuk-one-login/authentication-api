@@ -1,7 +1,9 @@
 <Configuration status="WARN">
     <Appenders>
         <Lambda name="Lambda">
-            <JsonLayout compact="true" eventEol="true" objectMessageAsJsonObject="true" />
+            <JsonLayout compact="true" eventEol="true" objectMessageAsJsonObject="true" >
+                <KeyValuePair key="session-id" value="$${ctx:sessionId:-unknown}"/>
+            </JsonLayout>
         </Lambda>
     </Appenders>
     <Loggers>
