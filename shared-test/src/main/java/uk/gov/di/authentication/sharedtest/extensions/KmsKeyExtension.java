@@ -11,6 +11,7 @@ import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 import static com.amazonaws.services.kms.model.KeySpec.ECC_NIST_P256;
+import static com.amazonaws.services.kms.model.KeyUsageType.SIGN_VERIFY;
 
 public class KmsKeyExtension implements BeforeAllCallback {
 
@@ -41,7 +42,7 @@ public class KmsKeyExtension implements BeforeAllCallback {
 
     protected void createTokenSigningKey(String keyAlias) {
         CreateKeyRequest keyRequest =
-                new CreateKeyRequest().withKeySpec(ECC_NIST_P256).withKeyUsage("SIGN_VERIFY");
+                new CreateKeyRequest().withKeySpec(ECC_NIST_P256).withKeyUsage(SIGN_VERIFY);
 
         var keyResponse = kms.createKey(keyRequest);
 
