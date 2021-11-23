@@ -23,7 +23,7 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        handler = new SignUpHandler(configurationService);
+        handler = new SignUpHandler(TEST_CONFIGURATION_SERVICE);
     }
 
     @Test

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.extensions.ClientStoreExtension;
+import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.authentication.sharedtest.extensions.RedisExtension;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
@@ -41,12 +42,12 @@ public abstract class ApiGatewayHandlerIntegrationTest {
                                     Optional.ofNullable(
                                                     System.getenv().get("FRONTEND_API_GATEWAY_ID"))
                                             .orElse("")));
+    protected static final ConfigurationService TEST_CONFIGURATION_SERVICE =
+            new IntegrationTestConfigurationService();
 
     protected RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> handler;
     protected final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
     protected final Context context = mock(Context.class);
-    protected final ConfigurationService configurationService =
-            new IntegrationTestConfigurationService();
 
     @RegisterExtension
     protected static final RedisExtension redis =
@@ -57,6 +58,10 @@ public abstract class ApiGatewayHandlerIntegrationTest {
 
     @RegisterExtension
     protected static final ClientStoreExtension clientStore = new ClientStoreExtension();
+
+    @RegisterExtension
+    protected static final KmsKeyExtension auditSigningKey =
+            new KmsKeyExtension(TEST_CONFIGURATION_SERVICE.getAuditSigningKeyAlias());
 
     protected APIGatewayProxyResponseEvent makeRequest(
             Optional<Object> body, Map<String, String> headers, Map<String, String> queryString) {

@@ -25,7 +25,7 @@ public class UserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     @BeforeEach
     void setup() {
-        handler = new CheckUserExistsHandler(configurationService);
+        handler = new CheckUserExistsHandler(TEST_CONFIGURATION_SERVICE);
     }
 
     @Test

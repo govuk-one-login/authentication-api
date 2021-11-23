@@ -26,7 +26,7 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
 
     @BeforeEach
     void setup() {
-        handler = new UpdateClientConfigHandler(configurationService);
+        handler = new UpdateClientConfigHandler(TEST_CONFIGURATION_SERVICE);
     }
 
     @Test

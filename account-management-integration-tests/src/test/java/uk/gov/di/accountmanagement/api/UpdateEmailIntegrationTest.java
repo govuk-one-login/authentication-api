@@ -33,7 +33,7 @@ public class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
     @BeforeEach
     void setup() {
-        handler = new UpdateEmailHandler(configurationService);
+        handler = new UpdateEmailHandler(TEST_CONFIGURATION_SERVICE);
         notify.init();
     }
 

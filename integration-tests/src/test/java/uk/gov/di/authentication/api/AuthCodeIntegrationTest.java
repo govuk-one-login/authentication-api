@@ -37,7 +37,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        handler = new AuthCodeHandler(configurationService);
+        handler = new AuthCodeHandler(TEST_CONFIGURATION_SERVICE);
     }
 
     @Test

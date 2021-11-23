@@ -26,7 +26,7 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
 
     @BeforeEach
     void setup() {
-        handler = new ClientRegistrationHandler(configurationService);
+        handler = new ClientRegistrationHandler(TEST_CONFIGURATION_SERVICE);
     }
 
     @Test

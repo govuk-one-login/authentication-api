@@ -73,7 +73,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        handler = new TokenHandler(configurationService);
+        handler = new TokenHandler(TEST_CONFIGURATION_SERVICE);
     }
 
     @Test

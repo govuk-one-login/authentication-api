@@ -50,7 +50,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        handler = new LoginHandler(configurationService);
+        handler = new LoginHandler(TEST_CONFIGURATION_SERVICE);
     }
 
     @ParameterizedTest

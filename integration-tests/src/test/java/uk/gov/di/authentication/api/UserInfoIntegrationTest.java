@@ -51,7 +51,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        handler = new UserInfoHandler(configurationService);
+        handler = new UserInfoHandler(TEST_CONFIGURATION_SERVICE);
     }
 
     @Test
