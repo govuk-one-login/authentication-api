@@ -75,7 +75,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .subject(publicSubject.getValue())
                         .jwtID(UUID.randomUUID().toString())
                         .build();
-        SignedJWT signedJWT = tokenSigner.signAccessToken(claimsSet);
+        SignedJWT signedJWT = tokenSigner.signJwt(claimsSet);
         AccessToken accessToken = new BearerAccessToken(signedJWT.serialize());
         AccessTokenStore accessTokenStore =
                 new AccessTokenStore(accessToken.getValue(), internalSubject.getValue());

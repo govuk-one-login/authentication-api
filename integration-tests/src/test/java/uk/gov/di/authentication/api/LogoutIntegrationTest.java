@@ -142,7 +142,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         expiryDate,
                         new Date());
         idTokenClaims.setNonce(nonce);
-        SignedJWT signedJWT = tokenSigner.signIdToken(idTokenClaims.toJWTClaimsSet());
+        SignedJWT signedJWT = tokenSigner.signJwt(idTokenClaims.toJWTClaimsSet());
         redis.createSession(sessionId);
         redis.addAuthRequestToSession(
                 clientSessionId,

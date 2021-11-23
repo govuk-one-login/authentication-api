@@ -188,7 +188,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .subject(publicSubject.getValue())
                         .jwtID(UUID.randomUUID().toString())
                         .build();
-        return tokenSigner.signAccessToken(claimsSet);
+        return tokenSigner.signJwt(claimsSet);
     }
 
     private void setUpDynamo(KeyPair keyPair, Scope scope, Subject internalSubject) {

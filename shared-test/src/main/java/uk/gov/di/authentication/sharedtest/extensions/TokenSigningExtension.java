@@ -28,7 +28,7 @@ public class TokenSigningExtension extends KmsKeyExtension {
         super(TOKEN_SIGNING_KEY_ALIAS);
     }
 
-    public SignedJWT signIdToken(JWTClaimsSet claimsSet) {
+    public SignedJWT signJwt(JWTClaimsSet claimsSet) {
         try {
             JWSHeader jwsHeader =
                     new JWSHeader.Builder(JWSAlgorithm.ES256)
@@ -51,33 +51,6 @@ public class TokenSigningExtension extends KmsKeyExtension {
                             .toString();
             return SignedJWT.parse(message + "." + signature);
         } catch (java.text.ParseException | JOSEException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public SignedJWT signAccessToken(JWTClaimsSet claimsSet) {
-        try {
-            JWSHeader jwsHeader =
-                    new JWSHeader.Builder(JWSAlgorithm.ES256)
-                            .keyID(TOKEN_SIGNING_KEY_ALIAS)
-                            .build();
-            Base64URL encodedHeader = jwsHeader.toBase64URL();
-            Base64URL encodedClaims = Base64URL.encode(claimsSet.toString());
-            String message = encodedHeader + "." + encodedClaims;
-            ByteBuffer messageToSign = ByteBuffer.wrap(message.getBytes());
-            SignRequest signRequest = new SignRequest();
-            signRequest.setMessage(messageToSign);
-            signRequest.setKeyId(TOKEN_SIGNING_KEY_ALIAS);
-            signRequest.setSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256.toString());
-            SignResult signResult = kmsConnectionService.sign(signRequest);
-            String signature =
-                    Base64URL.encode(
-                                    ECDSA.transcodeSignatureToConcat(
-                                            signResult.getSignature().array(),
-                                            ECDSA.getSignatureByteArrayLength(JWSAlgorithm.ES256)))
-                            .toString();
-            return SignedJWT.parse(message + "." + signature);
-        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
