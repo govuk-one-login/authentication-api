@@ -19,4 +19,8 @@ public class PersistentIdHelper {
         LOG.info("PersistentID on request: {}", headers.get(PERSISTENT_ID_HEADER_NAME));
         return headers.get(PERSISTENT_ID_HEADER_NAME);
     }
+
+    public static String extractPersistentIdFromCookieHeader(Map<String, String> headers) {
+        return CookieHelper.parsePersistentCookie(headers).orElse(PERSISTENT_ID_UNKNOWN_VALUE);
+    }
 }

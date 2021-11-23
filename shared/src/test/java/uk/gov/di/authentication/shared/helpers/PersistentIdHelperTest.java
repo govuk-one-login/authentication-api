@@ -37,4 +37,24 @@ class PersistentIdHelperTest {
 
         assertThat(persistentId, equalTo(PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE));
     }
+
+    @Test
+    void shouldReturnPersistentIdFromCookieHeaderWhenExists() {
+        String cookieString =
+                "Version=1; di-persistent-session-id=a-persistent-id;gs=session-id.456;cookies_preferences_set={\"analytics\":true};name=ts";
+        Map<String, String> inputHeaders = Map.of(CookieHelper.REQUEST_COOKIE_HEADER, cookieString);
+        String persistentId = PersistentIdHelper.extractPersistentIdFromCookieHeader(inputHeaders);
+
+        assertThat(persistentId, equalTo("a-persistent-id"));
+    }
+
+    @Test
+    void shouldReturnUnknownWhenPersistentCookieIsNotPresent() {
+        String cookieString =
+                "Version=1; gs=session-id.456;cookies_preferences_set={\"analytics\":true};name=ts";
+        Map<String, String> inputHeaders = Map.of(CookieHelper.REQUEST_COOKIE_HEADER, cookieString);
+        String persistentId = PersistentIdHelper.extractPersistentIdFromCookieHeader(inputHeaders);
+
+        assertThat(persistentId, equalTo(PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE));
+    }
 }
