@@ -23,12 +23,14 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -365,6 +367,19 @@ class AuthorizationServiceTest {
 
         assertEquals(userContext.getSession(), session);
         assertEquals(userContext.getClientSession(), clientSession);
+    }
+
+    @Test
+    void shouldGetPersistentCookieIdFromExistingCookie() {
+        Map<String, String> requestCookieHeader =
+                Map.of(
+                        CookieHelper.REQUEST_COOKIE_HEADER,
+                        "di-persistent-session-id=some-persistent-id;gs=session-id.456");
+
+        String persistentSessionId =
+                authorizationService.getExistingOrCreateNewPersistentSessionId(requestCookieHeader);
+
+        assertEquals(persistentSessionId, "some-persistent-id");
     }
 
     private ClientRegistry generateClientRegistry(String redirectURI, String clientID) {

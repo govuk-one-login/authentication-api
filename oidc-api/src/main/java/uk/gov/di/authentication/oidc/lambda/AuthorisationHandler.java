@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthorizationService;
@@ -40,7 +41,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static java.lang.String.format;
 import static uk.gov.di.authentication.oidc.entity.RequestParameters.COOKIE_CONSENT;
 import static uk.gov.di.authentication.oidc.entity.RequestParameters.GA;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY;
@@ -148,7 +148,10 @@ public class AuthorisationHandler
                                                                             input.getHeaders()),
                                                             authRequest,
                                                             context,
-                                                            ipAddress));
+                                                            ipAddress,
+                                                            authorizationService
+                                                                    .getExistingOrCreateNewPersistentSessionId(
+                                                                            input.getHeaders())));
                         });
     }
 
@@ -157,7 +160,8 @@ public class AuthorisationHandler
             Optional<Session> existingSession,
             AuthenticationRequest authenticationRequest,
             Context context,
-            String ipAddress) {
+            String ipAddress,
+            String persistentSessionId) {
         final SessionAction sessionAction;
         if (authenticationRequest.getPrompt() != null) {
             if (authenticationRequest.getPrompt().contains(Prompt.Type.CONSENT)
@@ -197,10 +201,15 @@ public class AuthorisationHandler
                 pair("session-action", sessionAction));
 
         if (existingSession.isEmpty()) {
-            return createSessionAndRedirect(session, authRequestParameters, authenticationRequest);
+            return createSessionAndRedirect(
+                    session, authRequestParameters, authenticationRequest, persistentSessionId);
         } else {
             return updateSessionAndRedirect(
-                    authRequestParameters, authenticationRequest, session, sessionAction);
+                    authRequestParameters,
+                    authenticationRequest,
+                    session,
+                    sessionAction,
+                    persistentSessionId);
         }
     }
 
@@ -208,7 +217,8 @@ public class AuthorisationHandler
             Map<String, List<String>> authRequestParameters,
             AuthenticationRequest authenticationRequest,
             Session session,
-            SessionAction sessionAction) {
+            SessionAction sessionAction,
+            String persistentSessionId) {
         ClientSession clientSession =
                 new ClientSession(
                         authRequestParameters,
@@ -230,7 +240,7 @@ public class AuthorisationHandler
         String redirectUri =
                 buildRedirectURI(authRequestParameters, authenticationRequest, nextState);
 
-        return redirect(session, clientSessionID, redirectUri);
+        return redirect(session, clientSessionID, redirectUri, persistentSessionId);
     }
 
     private boolean isUserAuthenticated(Optional<Session> existingSession) {
@@ -259,7 +269,8 @@ public class AuthorisationHandler
     private APIGatewayProxyResponseEvent createSessionAndRedirect(
             Session session,
             Map<String, List<String>> authRequest,
-            AuthenticationRequest authenticationRequest) {
+            AuthenticationRequest authenticationRequest,
+            String persistentSessionId) {
         String clientSessionID =
                 clientSessionService.generateClientSession(
                         new ClientSession(
@@ -277,7 +288,7 @@ public class AuthorisationHandler
         LOGGER.info("Session saved successfully {}", session.getSessionId());
 
         var redirectURI = buildRedirectURI(authRequest, authenticationRequest, null);
-        return redirect(session, clientSessionID, redirectURI);
+        return redirect(session, clientSessionID, redirectURI, persistentSessionId);
     }
 
     private String buildRedirectURI(
@@ -315,24 +326,32 @@ public class AuthorisationHandler
     }
 
     private APIGatewayProxyResponseEvent redirect(
-            Session session, String clientSessionID, String redirectURI) {
+            Session session,
+            String clientSessionID,
+            String redirectURI,
+            String persistentSessionId) {
         LOGGER.info(
                 "Redirecting for SessionId: {} and ClientSessionId: {}",
                 session.getSessionId(),
                 clientSessionID);
+        List<String> cookies =
+                List.of(
+                        CookieHelper.buildCookieString(
+                                CookieHelper.SESSION_COOKIE_NAME,
+                                session.getSessionId() + "." + clientSessionID,
+                                configurationService.getSessionCookieMaxAge(),
+                                configurationService.getSessionCookieAttributes(),
+                                configurationService.getDomainName()),
+                        CookieHelper.buildCookieString(
+                                CookieHelper.PERSISTENT_COOKIE_NAME,
+                                persistentSessionId,
+                                configurationService.getPersistentCookieMaxAge(),
+                                configurationService.getSessionCookieAttributes(),
+                                configurationService.getDomainName()));
         return new APIGatewayProxyResponseEvent()
                 .withStatusCode(302)
-                .withHeaders(
-                        Map.of(
-                                ResponseHeaders.LOCATION,
-                                redirectURI,
-                                ResponseHeaders.SET_COOKIE,
-                                buildCookieString(
-                                        session,
-                                        configurationService.getSessionCookieMaxAge(),
-                                        configurationService.getSessionCookieAttributes(),
-                                        clientSessionID,
-                                        configurationService.getDomainName())));
+                .withHeaders(Map.of(ResponseHeaders.LOCATION, redirectURI))
+                .withMultiValueHeaders(Map.of(ResponseHeaders.SET_COOKIE, cookies));
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(
@@ -384,17 +403,6 @@ public class AuthorisationHandler
             APIGatewayProxyRequestEvent input) {
         return input.getQueryStringParameters().entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, entry -> List.of(entry.getValue())));
-    }
-
-    private String buildCookieString(
-            Session session,
-            Integer maxAge,
-            String attributes,
-            String clientSessionID,
-            String domain) {
-        return format(
-                "%s=%s.%s; Max-Age=%d; Domain=%s; %s",
-                "gs", session.getSessionId(), clientSessionID, maxAge, domain, attributes);
     }
 
     private String getCookieConsentValue(

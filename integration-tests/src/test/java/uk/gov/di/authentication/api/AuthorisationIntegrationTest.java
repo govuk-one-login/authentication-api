@@ -47,7 +47,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPLIFT_REQUIRED_CM;
-import static uk.gov.di.authentication.shared.helpers.CookieHelper.getHttpCookieFromResponseHeaders;
+import static uk.gov.di.authentication.shared.helpers.CookieHelper.getHttpCookieFromMultiValueResponseHeaders;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -100,8 +100,41 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(configurationService.getLoginURI().toString()));
         assertThat(
-                getHttpCookieFromResponseHeaders(response.getHeaders(), "gs").isPresent(),
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
+                        .isPresent(),
                 equalTo(true));
+    }
+
+    @Test
+    void shouldRedirectToLoginWithSamePersistentCookieValueInRequest() {
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(
+                                        new HttpCookie(
+                                                "di-persistent-session-id",
+                                                "persistent-id-value"))),
+                        constructQueryStringParameters(
+                                Optional.of(CLIENT_ID),
+                                Optional.empty(),
+                                "openid",
+                                Optional.of("Cl.Cm")));
+        assertThat(response, hasStatus(302));
+        assertThat(
+                getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
+                startsWith(configurationService.getLoginURI().toString()));
+        assertThat(
+                response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).size(), equalTo(2));
+        assertThat(
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
+                        .isPresent(),
+                equalTo(true));
+        var persistentCookie =
+                getHttpCookieFromMultiValueResponseHeaders(
+                        response.getMultiValueHeaders(), "di-persistent-session-id");
+        assertThat(persistentCookie.isPresent(), equalTo(true));
+        assertThat(persistentCookie.get().getValue(), equalTo("persistent-id-value"));
     }
 
     @Test
@@ -122,7 +155,13 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(configurationService.getLoginURI().toString()));
         assertThat(
-                getHttpCookieFromResponseHeaders(response.getHeaders(), "gs").isPresent(),
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
+                        .isPresent(),
+                equalTo(true));
+        assertThat(
+                getHttpCookieFromMultiValueResponseHeaders(
+                                response.getMultiValueHeaders(), "di-persistent-session-id")
+                        .isPresent(),
                 equalTo(true));
     }
 
@@ -160,7 +199,13 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(configurationService.getLoginURI().toString()));
         assertThat(
-                getHttpCookieFromResponseHeaders(response.getHeaders(), "gs").isPresent(),
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
+                        .isPresent(),
+                equalTo(true));
+        assertThat(
+                getHttpCookieFromMultiValueResponseHeaders(
+                                response.getMultiValueHeaders(), "di-persistent-session-id")
+                        .isPresent(),
                 equalTo(true));
     }
 
@@ -181,7 +226,13 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(configurationService.getLoginURI().toString()));
         assertThat(
-                getHttpCookieFromResponseHeaders(response.getHeaders(), "gs").isPresent(),
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
+                        .isPresent(),
+                equalTo(true));
+        assertThat(
+                getHttpCookieFromMultiValueResponseHeaders(
+                                response.getMultiValueHeaders(), "di-persistent-session-id")
+                        .isPresent(),
                 equalTo(true));
     }
 
@@ -206,8 +257,13 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(configurationService.getLoginURI().toString()));
-
-        var cookie = getHttpCookieFromResponseHeaders(response.getHeaders(), "gs");
+        var cookie =
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
+        assertThat(
+                getHttpCookieFromMultiValueResponseHeaders(
+                                response.getMultiValueHeaders(), "di-persistent-session-id")
+                        .isPresent(),
+                equalTo(true));
         assertThat(cookie.isPresent(), equalTo(true));
         assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
     }
@@ -232,7 +288,13 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(302));
 
         // TODO: Update assertions to reflect code issuance, once we've written that code
-        var cookie = getHttpCookieFromResponseHeaders(response.getHeaders(), "gs");
+        var cookie =
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
+        assertThat(
+                getHttpCookieFromMultiValueResponseHeaders(
+                                response.getMultiValueHeaders(), "di-persistent-session-id")
+                        .isPresent(),
+                equalTo(true));
         assertThat(cookie.isPresent(), equalTo(true));
         assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
     }
@@ -273,7 +335,13 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 Optional.empty()));
 
         assertThat(response, hasStatus(302));
-        var cookie = getHttpCookieFromResponseHeaders(response.getHeaders(), "gs");
+        var cookie =
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
+        assertThat(
+                getHttpCookieFromMultiValueResponseHeaders(
+                                response.getMultiValueHeaders(), "di-persistent-session-id")
+                        .isPresent(),
+                equalTo(true));
         assertThat(cookie.isPresent(), equalTo(true));
         assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
         assertThat(
@@ -300,7 +368,13 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 Optional.empty()));
 
         assertThat(response, hasStatus(302));
-        var cookie = getHttpCookieFromResponseHeaders(response.getHeaders(), "gs");
+        var cookie =
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
+        assertThat(
+                getHttpCookieFromMultiValueResponseHeaders(
+                                response.getMultiValueHeaders(), "di-persistent-session-id")
+                        .isPresent(),
+                equalTo(true));
         assertThat(cookie.isPresent(), equalTo(true));
         assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
         assertThat(
@@ -331,7 +405,13 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(302));
 
-        var cookie = getHttpCookieFromResponseHeaders(response.getHeaders(), "gs");
+        var cookie =
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
+        assertThat(
+                getHttpCookieFromMultiValueResponseHeaders(
+                                response.getMultiValueHeaders(), "di-persistent-session-id")
+                        .isPresent(),
+                equalTo(true));
         assertThat(cookie.isPresent(), equalTo(true));
         assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
 
@@ -363,7 +443,13 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(302));
 
-        var cookie = getHttpCookieFromResponseHeaders(response.getHeaders(), "gs");
+        var cookie =
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
+        assertThat(
+                getHttpCookieFromMultiValueResponseHeaders(
+                                response.getMultiValueHeaders(), "di-persistent-session-id")
+                        .isPresent(),
+                equalTo(true));
         assertThat(cookie.isPresent(), equalTo(true));
         assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
 
