@@ -12,6 +12,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.extensions.ClientStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.authentication.sharedtest.extensions.RedisExtension;
+import uk.gov.di.authentication.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
 import java.net.HttpCookie;
@@ -62,6 +63,9 @@ public abstract class ApiGatewayHandlerIntegrationTest {
     @RegisterExtension
     protected static final KmsKeyExtension auditSigningKey =
             new KmsKeyExtension(TEST_CONFIGURATION_SERVICE.getAuditSigningKeyAlias());
+
+    @RegisterExtension
+    protected static final SnsTopicExtension auditTopic = new SnsTopicExtension("local-events");
 
     protected APIGatewayProxyResponseEvent makeRequest(
             Optional<Object> body, Map<String, String> headers, Map<String, String> queryString) {

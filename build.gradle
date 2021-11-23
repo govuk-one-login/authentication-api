@@ -46,6 +46,7 @@ subprojects {
         logging_runtime
         nimbus
         s3
+        sns
         sqs
         tests
         test_runtime
@@ -86,6 +87,7 @@ subprojects {
         nimbus "com.nimbusds:oauth2-oidc-sdk:${dependencyVersions.nimbusds_oauth_version}",
                 "com.nimbusds:nimbus-jose-jwt:${dependencyVersions.nimbusds_jwt_version}"
 
+        sns "com.amazonaws:aws-java-sdk-sns:${dependencyVersions.aws_sdk_version}"
 
         sqs "software.amazon.awssdk:sqs:2.17.73"
 
