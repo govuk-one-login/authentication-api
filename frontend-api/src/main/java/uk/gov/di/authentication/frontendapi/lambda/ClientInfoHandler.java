@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -150,6 +151,8 @@ public class ClientInfoHandler
                                         AuditService.UNKNOWN,
                                         AuditService.UNKNOWN,
                                         IpAddressHelper.extractIpAddress(input),
+                                        PersistentIdHelper.extractPersistentIdFromHeaders(
+                                                input.getHeaders()),
                                         AuditService.UNKNOWN);
 
                                 return generateApiGatewayProxyResponse(200, clientInfoResponse);

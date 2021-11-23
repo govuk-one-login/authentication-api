@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -33,6 +34,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URI;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -114,12 +116,16 @@ public class MfaHandlerTest {
     @Test
     public void shouldReturn200ForSuccessfulMfaRequest() throws JsonProcessingException {
         usingValidSession();
+        String persistentId = "some-persistent-id-value";
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
+        headers.put("Session-Id", session.getSessionId());
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(PHONE_NUMBER));
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
         NotifyRequest notifyRequest = new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(headers);
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
@@ -138,7 +144,8 @@ public class MfaHandlerTest {
                         AuditService.UNKNOWN,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
-                        PHONE_NUMBER);
+                        PHONE_NUMBER,
+                        persistentId);
     }
 
     @Test
@@ -170,7 +177,8 @@ public class MfaHandlerTest {
                         AuditService.UNKNOWN,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
-                        PHONE_NUMBER);
+                        PHONE_NUMBER,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
     }
 
     @Test
@@ -213,7 +221,8 @@ public class MfaHandlerTest {
                         AuditService.UNKNOWN,
                         "wrong.email@gov.uk",
                         "123.123.123.123",
-                        AuditService.UNKNOWN);
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
     }
 
     @Test
@@ -239,7 +248,8 @@ public class MfaHandlerTest {
                         AuditService.UNKNOWN,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
-                        AuditService.UNKNOWN);
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
     }
 
     @Test
@@ -301,7 +311,8 @@ public class MfaHandlerTest {
                         AuditService.UNKNOWN,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
-                        AuditService.UNKNOWN);
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
     }
 
     @Test
@@ -334,7 +345,8 @@ public class MfaHandlerTest {
                         AuditService.UNKNOWN,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
-                        AuditService.UNKNOWN);
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
     }
 
     @Test
@@ -366,7 +378,8 @@ public class MfaHandlerTest {
                         AuditService.UNKNOWN,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
-                        AuditService.UNKNOWN);
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
     }
 
     @Test
@@ -399,7 +412,8 @@ public class MfaHandlerTest {
                         AuditService.UNKNOWN,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
-                        PHONE_NUMBER);
+                        PHONE_NUMBER,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
     }
 
     private void usingValidSession() {

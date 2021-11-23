@@ -30,6 +30,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AuthorizationService;
@@ -44,6 +45,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -129,8 +131,12 @@ class UpdateProfileHandlerTest {
     @Test
     public void shouldReturn200WhenUpdatingPhoneNumber() {
         usingValidSession();
+        String persistentId = "some-persistent-id-value";
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
+        headers.put("Session-Id", session.getSessionId());
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(headers);
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
@@ -150,7 +156,8 @@ class UpdateProfileHandlerTest {
                         "",
                         TEST_EMAIL_ADDRESS,
                         "",
-                        PHONE_NUMBER);
+                        PHONE_NUMBER,
+                        persistentId);
     }
 
     @Test
@@ -188,7 +195,8 @@ class UpdateProfileHandlerTest {
                         "",
                         TEST_EMAIL_ADDRESS,
                         "",
-                        "");
+                        "",
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
     }
 
     @Test
@@ -250,7 +258,8 @@ class UpdateProfileHandlerTest {
                         "",
                         TEST_EMAIL_ADDRESS,
                         "",
-                        "");
+                        "",
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
         BaseAPIResponse codeResponse =
                 new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
         assertThat(codeResponse.getSessionState(), equalTo(CONSENT_ADDED));
@@ -275,7 +284,7 @@ class UpdateProfileHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_PROFILE_REQUEST_ERROR, "request-id", "", "", "", "", "", "");
+                        UPDATE_PROFILE_REQUEST_ERROR, "request-id", "", "", "", "", "", "", "");
     }
 
     @Test
@@ -295,7 +304,7 @@ class UpdateProfileHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_PROFILE_REQUEST_ERROR, "request-id", "", "", "", "", "", "");
+                        UPDATE_PROFILE_REQUEST_ERROR, "request-id", "", "", "", "", "", "", "");
     }
 
     private void usingValidSession() {
@@ -324,7 +333,7 @@ class UpdateProfileHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_PROFILE_REQUEST_RECEIVED, "request-id", "", "", "", "", "", "");
+                        UPDATE_PROFILE_REQUEST_RECEIVED, "request-id", "", "", "", "", "", "", "");
 
         return response;
     }

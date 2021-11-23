@@ -74,6 +74,7 @@ public class UpdateClientConfigHandler
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
                                     ipAddress,
+                                    AuditService.UNKNOWN,
                                     AuditService.UNKNOWN);
                             try {
                                 String clientId = input.getPathParameters().get("clientId");
@@ -93,6 +94,7 @@ public class UpdateClientConfigHandler
                                             AuditService.UNKNOWN,
                                             AuditService.UNKNOWN,
                                             ipAddress,
+                                            AuditService.UNKNOWN,
                                             AuditService.UNKNOWN);
                                     LOGGER.error(
                                             "Invalid update Client config request. Invalid CliendId: {}",
@@ -119,6 +121,7 @@ public class UpdateClientConfigHandler
                                             AuditService.UNKNOWN,
                                             AuditService.UNKNOWN,
                                             ipAddress,
+                                            AuditService.UNKNOWN,
                                             AuditService.UNKNOWN);
                                     return generateApiGatewayProxyResponse(
                                             400, errorResponse.get().toJSONObject().toJSONString());
@@ -147,6 +150,7 @@ public class UpdateClientConfigHandler
                                         AuditService.UNKNOWN,
                                         AuditService.UNKNOWN,
                                         ipAddress,
+                                        AuditService.UNKNOWN,
                                         AuditService.UNKNOWN);
                                 LOGGER.error(
                                         "Invalid Client registration request. Missing parameters from request");

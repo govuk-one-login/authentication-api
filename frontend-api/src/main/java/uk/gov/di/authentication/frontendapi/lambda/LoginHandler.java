@@ -20,6 +20,7 @@ import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -100,9 +101,10 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 "Request received to the LoginHandler with session: {}",
                 userContext.getSession().getSessionId());
         try {
+            String persistentSessionId =
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
             UserProfile userProfile =
                     authenticationService.getUserProfileByEmail(request.getEmail());
-
             if (Objects.isNull(userProfile)) {
                 LOGGER.error(
                         "The user does not have an account for session: {}",
@@ -116,6 +118,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         IpAddressHelper.extractIpAddress(input),
+                        persistentSessionId,
                         AuditService.UNKNOWN);
 
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
@@ -143,6 +146,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         userProfile.getSubjectID(),
                         userProfile.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
+                        persistentSessionId,
                         userProfile.getPhoneNumber());
 
                 sessionService.save(userContext.getSession().setState(nextState));
@@ -190,6 +194,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         AuditService.UNKNOWN,
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
+                        persistentSessionId,
                         AuditService.UNKNOWN);
 
                 return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
@@ -236,6 +241,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     userProfile.getSubjectID(),
                     userProfile.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
+                    persistentSessionId,
                     userProfile.getPhoneNumber());
 
             return generateApiGatewayProxyResponse(

@@ -16,6 +16,7 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -174,6 +175,7 @@ public class SendOtpNotificationHandler
                 sendNotificationRequest.getEmail(),
                 IpAddressHelper.extractIpAddress(input),
                 sendNotificationRequest.getPhoneNumber(),
+                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
                 pair("notification-type", sendNotificationRequest.getNotificationType()));
 
         LOGGER.info("Generating successful API response");

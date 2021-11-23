@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -28,6 +29,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.ValidationService;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -99,6 +101,10 @@ class ResetPasswordRequestHandlerTest {
 
     @Test
     void shouldReturn200AndPutMessageOnQueueForAValidRequest() throws JsonProcessingException {
+        String persistentId = "some-persistent-id-value";
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
+        headers.put("Session-Id", session.getSessionId());
         Subject subject = new Subject("subject_1");
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
@@ -111,7 +117,7 @@ class ResetPasswordRequestHandlerTest {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(headers);
         event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -135,7 +141,8 @@ class ResetPasswordRequestHandlerTest {
                         AuditService.UNKNOWN,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
-                        AuditService.UNKNOWN);
+                        AuditService.UNKNOWN,
+                        persistentId);
     }
 
     @Test

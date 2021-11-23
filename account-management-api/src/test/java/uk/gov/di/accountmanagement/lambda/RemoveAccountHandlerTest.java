@@ -12,6 +12,7 @@ import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 
@@ -45,6 +46,7 @@ class RemoveAccountHandlerTest {
 
     @Test
     public void shouldReturn204IfAccountRemovalIsSuccessful() throws JsonProcessingException {
+        String persistentIdValue = "some-persistent-session-id";
         UserProfile userProfile = new UserProfile().setPublicSubjectID(SUBJECT.getValue());
         when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
@@ -57,6 +59,7 @@ class RemoveAccountHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(proxyRequestContext);
         event.setBody(format("{ \"email\": \"%s\" }", EMAIL));
+        event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentIdValue));
 
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -73,6 +76,7 @@ class RemoveAccountHandlerTest {
                         userProfile.getSubjectID(),
                         userProfile.getEmail(),
                         "123.123.123.123",
+                        persistentIdValue,
                         userProfile.getPhoneNumber());
 
         assertThat(result, hasStatus(204));

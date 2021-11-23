@@ -13,6 +13,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -21,6 +22,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.ValidationService;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -50,7 +52,7 @@ class CheckUserExistsHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
 
     private CheckUserExistsHandler handler;
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final Session session = new Session(IdGenerator.generate()).setState(SessionState.NEW);
 
@@ -73,11 +75,15 @@ class CheckUserExistsHandlerTest {
     @Test
     public void shouldReturn200IfUserExists() throws JsonProcessingException {
         usingValidSession();
+        String persistentId = "some-persistent-id-value";
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
+        headers.put("Session-Id", session.getSessionId());
         when(authenticationService.userExists(eq("joe.bloggs@digital.cabinet-office.gov.uk")))
                 .thenReturn(true);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"email\": \"joe.bloggs@digital.cabinet-office.gov.uk\" }");
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(headers);
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -98,7 +104,8 @@ class CheckUserExistsHandlerTest {
                         auditService.UNKNOWN,
                         "joe.bloggs@digital.cabinet-office.gov.uk",
                         "123.123.123.123",
-                        AuditService.UNKNOWN);
+                        "",
+                        persistentId);
     }
 
     @Test
@@ -130,7 +137,8 @@ class CheckUserExistsHandlerTest {
                         auditService.UNKNOWN,
                         "joe.bloggs@digital.cabinet-office.gov.uk",
                         "123.123.123.123",
-                        AuditService.UNKNOWN);
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
     }
 
     @Test
@@ -185,7 +193,8 @@ class CheckUserExistsHandlerTest {
                         auditService.UNKNOWN,
                         "joe.bloggs",
                         "123.123.123.123",
-                        AuditService.UNKNOWN);
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
     }
 
     @Test
@@ -218,7 +227,8 @@ class CheckUserExistsHandlerTest {
                         auditService.UNKNOWN,
                         "joe.bloggs",
                         "123.123.123.123",
-                        AuditService.UNKNOWN);
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
     }
 
     private void usingValidSession() {

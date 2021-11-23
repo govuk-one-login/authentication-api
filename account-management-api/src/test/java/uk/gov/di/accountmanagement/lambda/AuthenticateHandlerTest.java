@@ -7,9 +7,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -39,11 +41,13 @@ class AuthenticateHandlerTest {
 
     @Test
     public void shouldReturn204IfLoginIsSuccessful() {
+        String persistentIdValue = "some-persistent-session-id";
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentIdValue));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -58,6 +62,7 @@ class AuthenticateHandlerTest {
                         AuditService.UNKNOWN,
                         EMAIL,
                         "123.123.123.123",
+                        persistentIdValue,
                         AuditService.UNKNOWN);
     }
 

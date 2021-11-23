@@ -25,6 +25,7 @@ import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper.SessionCookieIds;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.AuthorizationService;
@@ -227,7 +228,9 @@ public class AuthCodeHandler
                                         AuditService.UNKNOWN,
                                         session.getEmailAddress(),
                                         IpAddressHelper.extractIpAddress(input),
-                                        AuditService.UNKNOWN);
+                                        AuditService.UNKNOWN,
+                                        PersistentIdHelper.extractPersistentIdFromCookieHeader(
+                                                input.getHeaders()));
                                 return new APIGatewayProxyResponseEvent()
                                         .withStatusCode(302)
                                         .withHeaders(

@@ -15,6 +15,7 @@ import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -76,6 +77,7 @@ class SendOtpNotificationHandlerTest {
 
     @Test
     void shouldReturn204AndPutMessageOnQueueForAValidEmailRequest() throws JsonProcessingException {
+        String persistentIdValue = "some-persistent-session-id";
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
         NotifyRequest notifyRequest =
@@ -84,7 +86,7 @@ class SendOtpNotificationHandlerTest {
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of());
+        event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentIdValue));
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setBody(
                 format(
@@ -109,6 +111,7 @@ class SendOtpNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         null,
+                        persistentIdValue,
                         pair("notification-type", VERIFY_EMAIL));
     }
 
@@ -148,6 +151,7 @@ class SendOtpNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         TEST_PHONE_NUMBER,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("notification-type", VERIFY_PHONE_NUMBER));
     }
 

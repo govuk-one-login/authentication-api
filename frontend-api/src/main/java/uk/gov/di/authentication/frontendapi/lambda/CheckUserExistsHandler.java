@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -94,6 +95,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             String emailAddress = request.getEmail().toLowerCase();
             Optional<ErrorResponse> errorResponse =
                     validationService.validateEmailAddress(emailAddress);
+            String persistentSessionId =
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
             if (errorResponse.isPresent()) {
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.CHECK_USER_INVALID_EMAIL,
@@ -106,7 +109,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                         AuditService.UNKNOWN,
                         emailAddress,
                         IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN);
+                        AuditService.UNKNOWN,
+                        persistentSessionId);
                 LOG.error(
                         "Encountered an error while processing request for session {}; errorResponse is {}",
                         userContext.getSession().getSessionId(),
@@ -134,7 +138,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                         AuditService.UNKNOWN,
                         emailAddress,
                         IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN);
+                        AuditService.UNKNOWN,
+                        persistentSessionId);
             } else {
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL,
@@ -147,7 +152,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                         AuditService.UNKNOWN,
                         emailAddress,
                         IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN);
+                        AuditService.UNKNOWN,
+                        persistentSessionId);
             }
             CheckUserExistsResponse checkUserExistsResponse =
                     new CheckUserExistsResponse(

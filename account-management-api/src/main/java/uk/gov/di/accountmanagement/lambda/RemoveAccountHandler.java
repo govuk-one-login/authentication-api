@@ -17,6 +17,7 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -101,6 +102,8 @@ public class RemoveAccountHandler
                                         userProfile.getSubjectID(),
                                         userProfile.getEmail(),
                                         IpAddressHelper.extractIpAddress(input),
+                                        PersistentIdHelper.extractPersistentIdFromHeaders(
+                                                input.getHeaders()),
                                         userProfile.getPhoneNumber());
 
                                 return generateEmptySuccessApiGatewayResponse();
