@@ -95,11 +95,11 @@ public class AuthorizationService {
         Optional<ClientRegistry> client =
                 dynamoClientService.getClient(authRequest.getClientID().toString());
         if (client.isEmpty()) {
-            LOGGER.error("Invalid client: {}", authRequest.getClientID());
+            LOGGER.warn("Invalid client: {}", authRequest.getClientID());
             return Optional.of(OAuth2Error.UNAUTHORIZED_CLIENT);
         }
         if (!client.get().getRedirectUrls().contains(authRequest.getRedirectionURI().toString())) {
-            LOGGER.error(
+            LOGGER.warn(
                     "Invalid Redirect URI for Client {}. Redirect URI in request {}",
                     client.get().getClientID(),
                     authRequest.getRedirectionURI().toString());
