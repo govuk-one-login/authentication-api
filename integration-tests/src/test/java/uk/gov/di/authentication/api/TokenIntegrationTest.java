@@ -28,14 +28,15 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.oidc.lambda.TokenHandler;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
-import uk.gov.di.authentication.sharedtest.helper.KmsHelper;
 
 import java.net.URI;
 import java.security.KeyPair;
@@ -66,6 +67,9 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String CLIENT_ID = "test-id";
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final String REDIRECT_URI = "http://localhost/redirect";
+
+    @RegisterExtension
+    protected static final TokenSigningExtension tokenSigner = new TokenSigningExtension();
 
     @BeforeEach
     void setup() {
@@ -184,7 +188,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .subject(publicSubject.getValue())
                         .jwtID(UUID.randomUUID().toString())
                         .build();
-        return KmsHelper.signAccessToken(claimsSet);
+        return tokenSigner.signJwt(claimsSet);
     }
 
     private void setUpDynamo(KeyPair keyPair, Scope scope, Subject internalSubject) {
