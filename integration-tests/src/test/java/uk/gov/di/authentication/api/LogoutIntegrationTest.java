@@ -15,9 +15,11 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.oidc.lambda.LogoutHandler;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
 
 import java.io.IOException;
 import java.net.URI;
@@ -45,6 +47,9 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             "https://di-auth-stub-relying-party-build.london.cloudapps.digital/";
     public static final String SESSION_ID = "session-id";
     public static final String CLIENT_SESSION_ID = "client-session-id";
+
+    @RegisterExtension
+    protected static final TokenSigningExtension tokenSigner = new TokenSigningExtension();
 
     @BeforeEach
     void setup() {

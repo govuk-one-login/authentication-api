@@ -11,10 +11,12 @@ import com.nimbusds.openid.connect.sdk.UserInfoErrorResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.oidc.lambda.UserInfoHandler;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.security.KeyPair;
@@ -43,6 +45,9 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String TEST_PASSWORD = "password-1";
     private static final String CLIENT_ID = "client-id-one";
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
+
+    @RegisterExtension
+    protected static final TokenSigningExtension tokenSigner = new TokenSigningExtension();
 
     @BeforeEach
     void setup() {
