@@ -20,11 +20,14 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.authentication.shared.helpers.CookieHelper;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -189,5 +192,9 @@ public class AuthorizationService {
             }
         }
         return true;
+    }
+
+    public String getExistingOrCreateNewPersistentSessionId(Map<String, String> headers) {
+        return CookieHelper.parsePersistentCookie(headers).orElse(IdGenerator.generate());
     }
 }

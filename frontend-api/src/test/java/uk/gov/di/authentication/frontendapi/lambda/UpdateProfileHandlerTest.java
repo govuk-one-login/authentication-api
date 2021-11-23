@@ -220,7 +220,15 @@ class UpdateProfileHandlerTest {
                         any(List.class)))
                 .thenReturn(authSuccessResponse);
 
-        event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
+        event.setHeaders(
+                Map.of(
+                        COOKIE,
+                        buildCookieString(
+                                "gs",
+                                SESSION_ID + "." + CLIENT_SESSION_ID,
+                                3600,
+                                "Secure; HttpOnly;",
+                                "domain")));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",

@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
@@ -44,7 +45,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.shared.helpers.CookieHelper.buildCookieString;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class LogoutHandlerTest {
@@ -360,5 +360,11 @@ class LogoutHandlerTest {
                 .setPostLogoutRedirectUrls(singletonList(CLIENT_LOGOUT_URI.toString()))
                 .setScopes(singletonList("openid"))
                 .setRedirectUrls(singletonList("http://localhost/redirect"));
+    }
+
+    private static String buildCookieString(String clientSessionId) {
+        return format(
+                "%s=%s.%s; Max-Age=%d; %s",
+                "gs", "a-session-id", clientSessionId, 3600, "Secure; HttpOnly;");
     }
 }
