@@ -18,7 +18,6 @@ import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
 
 import java.io.IOException;
 import java.net.URI;
@@ -90,7 +89,8 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         assertThat(response, hasStatus(200));
         Optional<ClientConsent> consent =
-                DynamoHelper.getUserConsents(EMAIL_ADDRESS)
+                userStore
+                        .getUserConsents(EMAIL_ADDRESS)
                         .flatMap(
                                 list ->
                                         list.stream()
@@ -142,7 +142,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         .nonce(new Nonce())
                         .build();
         redis.createClientSession(clientSessionId, authRequest.toParameters());
-        DynamoHelper.registerClient(
+        clientStore.registerClient(
                 CLIENT_ID,
                 "test-client",
                 singletonList("redirect-url"),
@@ -154,8 +154,8 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 "https://test.com",
                 "public");
         Set<String> claims = ValidScopes.getClaimsForListOfScopes(scope.toStringList());
-        DynamoHelper.signUp(EMAIL_ADDRESS, "password");
-        DynamoHelper.updateConsent(
+        userStore.signUp(EMAIL_ADDRESS, "password");
+        userStore.updateConsent(
                 EMAIL_ADDRESS,
                 new ClientConsent(
                         CLIENT_ID, claims, LocalDateTime.now(ZoneId.of("UTC")).toString()));

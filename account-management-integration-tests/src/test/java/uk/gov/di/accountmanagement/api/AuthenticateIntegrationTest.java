@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.entity.AuthenticateRequest;
 import uk.gov.di.accountmanagement.lambda.AuthenticateHandler;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
 
 import java.util.Map;
 import java.util.Optional;
@@ -24,7 +23,7 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
     public void shouldCallLoginEndpointAndReturn204WhenLoginIsSuccessful() {
         String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         String password = "password-1";
-        DynamoHelper.signUp(email, password);
+        userStore.signUp(email, password);
 
         var response =
                 makeRequest(
@@ -37,7 +36,7 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
     public void shouldCallLoginEndpointAndReturn401henUserHasInvalidCredentials() {
         String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
         String password = "password-1";
-        DynamoHelper.signUp(email, "wrong-password");
+        userStore.signUp(email, "wrong-password");
 
         var response =
                 makeRequest(

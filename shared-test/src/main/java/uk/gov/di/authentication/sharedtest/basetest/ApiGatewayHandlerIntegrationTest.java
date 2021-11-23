@@ -6,12 +6,12 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.sharedtest.extensions.ClientStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.RedisExtension;
-import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
+import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
 import java.net.HttpCookie;
 import java.util.HashMap;
@@ -52,10 +52,11 @@ public abstract class ApiGatewayHandlerIntegrationTest {
     protected static final RedisExtension redis =
             new RedisExtension(ObjectMapperFactory.getInstance());
 
-    @BeforeEach
-    void flushData() {
-        DynamoHelper.flushData();
-    }
+    @RegisterExtension
+    protected static final UserStoreExtension userStore = new UserStoreExtension();
+
+    @RegisterExtension
+    protected static final ClientStoreExtension clientStore = new ClientStoreExtension();
 
     protected APIGatewayProxyResponseEvent makeRequest(
             Optional<Object> body, Map<String, String> headers, Map<String, String> queryString) {

@@ -19,7 +19,6 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
 
 import java.io.IOException;
 import java.net.URI;
@@ -64,9 +63,9 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         String password = "password-1";
         String phoneNumber = "01234567890";
-        DynamoHelper.signUp(email, password);
-        DynamoHelper.addPhoneNumber(email, phoneNumber);
-        DynamoHelper.updateTermsAndConditions(email, termsAndConditionsVersion);
+        userStore.signUp(email, password);
+        userStore.addPhoneNumber(email, phoneNumber);
+        userStore.updateTermsAndConditions(email, termsAndConditionsVersion);
         String sessionId = redis.createSession();
         redis.setSessionState(sessionId, AUTHENTICATION_REQUIRED);
 
@@ -87,7 +86,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
         AuthenticationRequest authRequest = builder.build();
         redis.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
-        DynamoHelper.registerClient(
+        clientStore.registerClient(
                 CLIENT_ID,
                 "The test client",
                 singletonList(REDIRECT_URI),
@@ -128,7 +127,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldCallLoginEndpointAndReturn401henUserHasInvalidCredentials() throws IOException {
         String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
         String password = "password-1";
-        DynamoHelper.signUp(email, "wrong-password");
+        userStore.signUp(email, "wrong-password");
         String sessionId = redis.createSession();
         redis.setSessionState(sessionId, AUTHENTICATION_REQUIRED);
         Map<String, String> headers = new HashMap<>();

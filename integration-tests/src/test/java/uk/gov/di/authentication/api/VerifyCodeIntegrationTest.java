@@ -21,7 +21,6 @@ import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
 
 import java.io.IOException;
 import java.net.URI;
@@ -131,7 +130,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         ClientConsent clientConsent =
                 new ClientConsent(
                         CLIENT_ID, claims, LocalDateTime.now(ZoneId.of("UTC")).toString());
-        DynamoHelper.updateConsent(EMAIL_ADDRESS, clientConsent);
+        userStore.updateConsent(EMAIL_ADDRESS, clientConsent);
         String code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest =
                 new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
@@ -269,7 +268,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         String code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest =
                 new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
-        DynamoHelper.signUp(EMAIL_ADDRESS, "password");
+        userStore.signUp(EMAIL_ADDRESS, "password");
 
         var response =
                 makeRequest(
@@ -293,13 +292,13 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         scope.add(OIDCScopeValue.EMAIL);
         scope.add(OIDCScopeValue.PHONE);
         setUpTestWithoutClientConsent(sessionId, withScope(), SessionState.MFA_SMS_CODE_SENT);
-        DynamoHelper.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
+        userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
         ClientConsent clientConsent =
                 new ClientConsent(
                         CLIENT_ID,
                         ValidScopes.getClaimsForListOfScopes(scope.toStringList()),
                         LocalDateTime.now().toString());
-        DynamoHelper.updateConsent(EMAIL_ADDRESS, clientConsent);
+        userStore.updateConsent(EMAIL_ADDRESS, clientConsent);
 
         String code = redis.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code);
@@ -327,7 +326,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         scope.add(OIDCScopeValue.PHONE);
         setUpTestWithoutClientConsent(sessionId, scope, SessionState.MFA_SMS_CODE_SENT);
 
-        DynamoHelper.updateTermsAndConditions(EMAIL_ADDRESS, "0.1");
+        userStore.updateTermsAndConditions(EMAIL_ADDRESS, "0.1");
 
         String code = redis.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code);
@@ -379,7 +378,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         .state(new State())
                         .build();
         redis.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
-        DynamoHelper.registerClient(
+        clientStore.registerClient(
                 CLIENT_ID,
                 "test-client",
                 singletonList("redirect-url"),
@@ -396,7 +395,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
             String sessionId, Scope scope, SessionState sessionState)
             throws JsonProcessingException {
         setUpTestWithoutSignUp(sessionId, scope, sessionState);
-        DynamoHelper.signUp(EMAIL_ADDRESS, "password");
+        userStore.signUp(EMAIL_ADDRESS, "password");
     }
 
     private Scope withScope() {

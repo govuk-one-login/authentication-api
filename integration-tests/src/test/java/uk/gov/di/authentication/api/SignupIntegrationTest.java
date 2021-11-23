@@ -6,7 +6,6 @@ import uk.gov.di.authentication.frontendapi.entity.SignupRequest;
 import uk.gov.di.authentication.frontendapi.lambda.SignUpHandler;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -51,6 +50,6 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         BaseAPIResponse BaseAPIResponse =
                 objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
         assertThat(BaseAPIResponse.getSessionState(), equalTo(TWO_FACTOR_REQUIRED));
-        assertTrue(DynamoHelper.userExists("joe.bloggs+5@digital.cabinet-office.gov.uk"));
+        assertTrue(userStore.userExists("joe.bloggs+5@digital.cabinet-office.gov.uk"));
     }
 }

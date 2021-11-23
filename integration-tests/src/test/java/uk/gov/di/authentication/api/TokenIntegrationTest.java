@@ -34,7 +34,6 @@ import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.DynamoHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.authentication.sharedtest.helper.KmsHelper;
 
@@ -189,7 +188,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private void setUpDynamo(KeyPair keyPair, Scope scope, Subject internalSubject) {
-        DynamoHelper.registerClient(
+        clientStore.registerClient(
                 CLIENT_ID,
                 "test-client",
                 singletonList(REDIRECT_URI),
@@ -200,12 +199,12 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public");
-        DynamoHelper.signUp(TEST_EMAIL, "password-1", internalSubject);
+        userStore.signUp(TEST_EMAIL, "password-1", internalSubject);
         Set<String> claims = ValidScopes.getClaimsForListOfScopes(scope.toStringList());
         ClientConsent clientConsent =
                 new ClientConsent(
                         CLIENT_ID, claims, LocalDateTime.now(ZoneId.of("UTC")).toString());
-        DynamoHelper.updateConsent(TEST_EMAIL, clientConsent);
+        userStore.updateConsent(TEST_EMAIL, clientConsent);
     }
 
     private AuthenticationRequest generateAuthRequest(Scope scope) {
