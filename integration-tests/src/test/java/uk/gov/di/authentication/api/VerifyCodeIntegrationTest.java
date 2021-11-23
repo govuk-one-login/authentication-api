@@ -47,7 +47,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     @BeforeEach
     void setup() {
-        handler = new VerifyCodeHandler(configurationService);
+        handler = new VerifyCodeHandler(TEST_CONFIGURATION_SERVICE);
     }
 
     @Test

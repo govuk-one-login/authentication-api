@@ -18,7 +18,7 @@ public class JwksIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        handler = new JwksHandler(configurationService);
+        handler = new JwksHandler(TEST_CONFIGURATION_SERVICE);
     }
 
     @Test

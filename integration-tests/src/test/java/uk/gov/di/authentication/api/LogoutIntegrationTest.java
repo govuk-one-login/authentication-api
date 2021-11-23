@@ -53,7 +53,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        handler = new LogoutHandler(configurationService);
+        handler = new LogoutHandler(TEST_CONFIGURATION_SERVICE);
     }
 
     @Test
@@ -97,7 +97,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 response,
                 isRedirectTo(
                         allOf(
-                                baseUri(configurationService.getDefaultLogoutURI()),
+                                baseUri(TEST_CONFIGURATION_SERVICE.getDefaultLogoutURI()),
                                 redirectQueryParameters(hasEntry("state", STATE)))));
     }
 
@@ -123,7 +123,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 response,
                 isRedirectTo(
                         allOf(
-                                baseUri(configurationService.getDefaultLogoutURI()),
+                                baseUri(TEST_CONFIGURATION_SERVICE.getDefaultLogoutURI()),
                                 redirectQueryParameters(hasEntry("state", STATE)),
                                 redirectQueryParameters(
                                         hasEntry("error_code", "invalid_request")))));

@@ -16,7 +16,7 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
     @BeforeEach
     void setup() {
-        handler = new AuthenticateHandler(configurationService);
+        handler = new AuthenticateHandler(TEST_CONFIGURATION_SERVICE);
     }
 
     @Test

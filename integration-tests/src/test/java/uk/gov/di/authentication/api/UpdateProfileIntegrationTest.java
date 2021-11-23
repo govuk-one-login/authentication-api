@@ -47,7 +47,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @BeforeEach
     void setup() {
-        handler = new UpdateProfileHandler(configurationService);
+        handler = new UpdateProfileHandler(TEST_CONFIGURATION_SERVICE);
     }
 
     @Test

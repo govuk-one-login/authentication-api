@@ -62,7 +62,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @BeforeEach
     void setup() {
         registerClient(CLIENT_ID, "test-client", singletonList("openid"));
-        handler = new AuthorisationHandler(configurationService);
+        handler = new AuthorisationHandler(TEST_CONFIGURATION_SERVICE);
     }
 
     @Test
@@ -97,7 +97,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(302));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
-                startsWith(configurationService.getLoginURI().toString()));
+                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
         assertThat(
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
                         .isPresent(),
@@ -122,7 +122,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(302));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
-                startsWith(configurationService.getLoginURI().toString()));
+                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
         assertThat(
                 response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).size(), equalTo(2));
         assertThat(
@@ -152,7 +152,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(302));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
-                startsWith(configurationService.getLoginURI().toString()));
+                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
         assertThat(
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
                         .isPresent(),
@@ -196,7 +196,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(302));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
-                startsWith(configurationService.getLoginURI().toString()));
+                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
         assertThat(
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
                         .isPresent(),
@@ -223,7 +223,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(302));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
-                startsWith(configurationService.getLoginURI().toString()));
+                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
         assertThat(
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
                         .isPresent(),
@@ -255,7 +255,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(302));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
-                startsWith(configurationService.getLoginURI().toString()));
+                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
         var cookie =
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
         assertThat(
@@ -345,7 +345,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
-                startsWith(configurationService.getLoginURI().toString()));
+                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
     }
 
     @Test
@@ -378,7 +378,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
-                startsWith(configurationService.getLoginURI().toString()));
+                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
         String newSessionId = cookie.get().getValue().split("\\.")[0];
         assertThat(redis.getSession(newSessionId).getState(), equalTo(AUTHENTICATION_REQUIRED));
     }
@@ -414,7 +414,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
 
         String redirectUri = getHeaderValueByParamName(response, ResponseHeaders.LOCATION);
-        assertThat(redirectUri, startsWith(configurationService.getLoginURI().toString()));
+        assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
         assertThat(URI.create(redirectUri).getQuery(), equalTo("interrupt=UPLIFT_REQUIRED_CM"));
 
         String newSessionId = cookie.get().getValue().split("\\.")[0];
@@ -452,7 +452,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
 
         String redirectUri = getHeaderValueByParamName(response, ResponseHeaders.LOCATION);
-        assertThat(redirectUri, startsWith(configurationService.getLoginURI().toString()));
+        assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
         assertThat(URI.create(redirectUri).getQuery(), equalTo("interrupt=CONSENT_REQUIRED"));
 
         String newSessionId = cookie.get().getValue().split("\\.")[0];

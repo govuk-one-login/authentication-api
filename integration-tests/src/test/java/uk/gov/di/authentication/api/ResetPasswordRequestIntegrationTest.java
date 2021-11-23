@@ -30,7 +30,7 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
 
     @BeforeEach
     public void setUp() {
-        handler = new ResetPasswordRequestHandler(configurationService);
+        handler = new ResetPasswordRequestHandler(TEST_CONFIGURATION_SERVICE);
         notifyStub.init();
     }
 

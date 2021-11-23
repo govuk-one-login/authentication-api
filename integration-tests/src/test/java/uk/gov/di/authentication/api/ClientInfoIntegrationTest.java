@@ -44,7 +44,7 @@ public class ClientInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     @BeforeEach
     void setup() {
-        handler = new ClientInfoHandler(configurationService);
+        handler = new ClientInfoHandler(TEST_CONFIGURATION_SERVICE);
     }
 
     @Test
