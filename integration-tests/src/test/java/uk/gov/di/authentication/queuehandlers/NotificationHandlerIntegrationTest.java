@@ -20,7 +20,7 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASS
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 
-public class SendNotificationIntegrationTest extends NotifyIntegrationTest {
+public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
 
     private static final String TEST_PHONE_NUMBER = "01234567811";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@example.com";
