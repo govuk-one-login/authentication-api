@@ -68,6 +68,24 @@ class ResetPasswordHandlerTest {
     }
 
     @Test
+    public void shouldReturn204ForSuccessfulMigratedUserRequest() throws JsonProcessingException {
+        when(codeStorageService.getSubjectWithPasswordResetCode(CODE))
+                .thenReturn(Optional.of(SUBJECT));
+        when(authenticationService.getUserCredentialsFromSubject(SUBJECT))
+                .thenReturn(generateMigratedUserCredentials());
+        NotifyRequest notifyRequest =
+                new NotifyRequest(EMAIL, NotificationType.PASSWORD_RESET_CONFIRMATION);
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setBody(format("{ \"code\": \"%s\", \"password\": \"%s\"}", CODE, NEW_PASSWORD));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(204));
+        verify(sqsClient, times(1)).send(new ObjectMapper().writeValueAsString(notifyRequest));
+        verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
+        verify(codeStorageService, times(1)).deleteSubjectWithPasswordResetCode(CODE);
+    }
+
+    @Test
     public void shouldReturn400ForRequestIsMissingParameters() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(format("{ \"code\": \"%s\"}", CODE));
@@ -148,5 +166,12 @@ class ResetPasswordHandlerTest {
 
     private UserCredentials generateUserCredentials(String password) {
         return new UserCredentials().setEmail(EMAIL).setPassword(password).setSubjectID(SUBJECT);
+    }
+
+    private UserCredentials generateMigratedUserCredentials() {
+        return new UserCredentials()
+                .setEmail(EMAIL)
+                .setMigratedPassword("old-password1")
+                .setSubjectID(SUBJECT);
     }
 }
