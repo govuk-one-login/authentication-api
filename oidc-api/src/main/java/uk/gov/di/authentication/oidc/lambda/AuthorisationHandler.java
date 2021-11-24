@@ -391,7 +391,7 @@ public class AuthorisationHandler
                 AuditService.UNKNOWN,
                 pair("description", errorObject.getDescription()));
 
-        LOGGER.error(
+        LOGGER.warn(
                 "Returning error response: {} {}",
                 errorObject.getCode(),
                 errorObject.getDescription());
