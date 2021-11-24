@@ -73,7 +73,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
     public SignUpHandler(ConfigurationService configurationService) {
         super(SignupRequest.class, configurationService);
         this.validationService = new ValidationService();
-        this.auditService = new AuditService();
+        this.auditService = new AuditService(configurationService);
     }
 
     @Override

@@ -52,7 +52,7 @@ public class ClientRegistrationHandler
                         configurationService.getEnvironment(),
                         configurationService.getDynamoEndpointUri());
         this.validationService = new ClientConfigValidationService();
-        this.auditService = new AuditService();
+        this.auditService = new AuditService(configurationService);
     }
 
     public ClientRegistrationHandler() {

@@ -83,7 +83,7 @@ public class AuthorisationHandler
         this.sessionService = new SessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.authorizationService = new AuthorizationService(configurationService);
-        this.auditService = new AuditService();
+        this.auditService = new AuditService(configurationService);
         this.stateMachine = userJourneyStateMachine();
     }
 

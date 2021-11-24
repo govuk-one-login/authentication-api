@@ -31,15 +31,14 @@ public class AuditService {
         this.kmsConnectionService = kmsConnectionService;
     }
 
-    public AuditService() {
+    public AuditService(ConfigurationService configurationService) {
         this.clock = Clock.systemUTC();
-        var configService = ConfigurationService.getInstance();
-        this.snsService = new SnsService(configService);
+        this.snsService = new SnsService(configurationService);
         this.kmsConnectionService =
                 new KmsConnectionService(
-                        configService.getLocalstackEndpointUri(),
-                        configService.getAwsRegion(),
-                        configService.getAuditSigningKeyAlias());
+                        configurationService.getLocalstackEndpointUri(),
+                        configurationService.getAwsRegion(),
+                        configurationService.getAuditSigningKeyAlias());
     }
 
     public void submitAuditEvent(

@@ -104,7 +104,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 new CodeStorageService(new RedisConnectionService(configurationService));
         this.validationService = new ValidationService();
         this.stateMachine = userJourneyStateMachine();
-        this.auditService = new AuditService();
+        this.auditService = new AuditService(configurationService);
     }
 
     @Override

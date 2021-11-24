@@ -90,7 +90,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
-        this.auditService = new AuditService();
+        this.auditService = new AuditService(configurationService);
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),

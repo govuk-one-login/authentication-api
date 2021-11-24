@@ -48,7 +48,7 @@ public class UpdatePasswordHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
-        this.auditService = new AuditService();
+        this.auditService = new AuditService(configurationService);
     }
 
     public UpdatePasswordHandler(

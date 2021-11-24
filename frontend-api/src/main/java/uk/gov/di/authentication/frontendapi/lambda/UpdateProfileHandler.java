@@ -83,7 +83,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
     public UpdateProfileHandler(ConfigurationService configurationService) {
         super(UpdateProfileRequest.class, configurationService);
-        auditService = new AuditService();
+        auditService = new AuditService(configurationService);
         this.stateMachine = userJourneyStateMachine();
     }
 

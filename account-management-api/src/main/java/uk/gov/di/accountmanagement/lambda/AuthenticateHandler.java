@@ -47,7 +47,7 @@ public class AuthenticateHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEnvironment(),
                         configurationService.getDynamoEndpointUri());
-        this.auditService = new AuditService();
+        this.auditService = new AuditService(configurationService);
     }
 
     @Override

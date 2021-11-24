@@ -55,7 +55,7 @@ public class UpdatePhoneNumberHandler
         this.validationService = new ValidationService();
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
-        this.auditService = new AuditService();
+        this.auditService = new AuditService(configurationService);
     }
 
     public UpdatePhoneNumberHandler(
