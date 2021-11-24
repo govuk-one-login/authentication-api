@@ -112,19 +112,26 @@ public class AuthorizationService {
                             authRequest.getRedirectionURI().toString()));
         }
         if (!authRequest.getResponseType().toString().equals("code")) {
+            LOGGER.warn(
+                    "Unsupported responseType included in request. Expected responseType of code");
             return Optional.of(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE);
         }
         if (!areScopesValid(authRequest.getScope().toStringList())
                 || !client.get().getScopes().containsAll(authRequest.getScope().toStringList())) {
+            LOGGER.warn(
+                    "Invalid scopes in authRequest. Scopes in request: {}",
+                    authRequest.getScope().toStringList());
             return Optional.of(OAuth2Error.INVALID_SCOPE);
         }
         if (authRequest.getNonce() == null) {
+            LOGGER.warn("Nonce is missing from authRequest");
             return Optional.of(
                     new ErrorObject(
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "Request is missing nonce parameter"));
         }
         if (authRequest.getState() == null) {
+            LOGGER.warn("State is missing from authRequest");
             return Optional.of(
                     new ErrorObject(
                             OAuth2Error.INVALID_REQUEST_CODE,
@@ -135,6 +142,7 @@ public class AuthorizationService {
             VectorOfTrust vectorOfTrust =
                     VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
         } catch (IllegalArgumentException e) {
+            LOGGER.warn("vtr in AuthRequest is not valid. vtr in request: {}", authRequestVtr);
             return Optional.of(
                     new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
         }
