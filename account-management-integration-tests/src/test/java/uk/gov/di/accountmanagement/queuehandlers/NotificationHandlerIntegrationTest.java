@@ -37,9 +37,8 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
         JsonNode request = notifyStub.waitForRequest(60);
 
         assertThat(request, hasField("personalisation"));
+        assertThat(request, hasFieldWithValue("email_address", equalTo(TEST_EMAIL_ADDRESS)));
         JsonNode personalisation = request.get("personalisation");
-        assertThat(
-                personalisation, hasFieldWithValue("email_address", equalTo(TEST_EMAIL_ADDRESS)));
         assertThat(
                 personalisation, hasFieldWithValue("email-address", equalTo(TEST_EMAIL_ADDRESS)));
         assertThat(personalisation, hasFieldWithValue("validation-code", equalTo(CODE)));
@@ -54,9 +53,9 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
         handler.handleRequest(createSqsEvent(notifyRequest), mock(Context.class));
 
         JsonNode request = notifyStub.waitForRequest(60);
+        assertThat(request, hasFieldWithValue("phone_number", equalTo(TEST_PHONE_NUMBER)));
         assertThat(request, hasField("personalisation"));
         JsonNode personalisation = request.get("personalisation");
-        assertThat(personalisation, hasFieldWithValue("phone_number", equalTo(TEST_PHONE_NUMBER)));
         assertThat(personalisation, hasFieldWithValue("validation-code", equalTo(CODE)));
     }
 }
