@@ -68,9 +68,13 @@ public abstract class NotifyIntegrationTest {
     protected static class TestConfigurationService extends ConfigurationService {
 
         private final NotifyStubExtension notifyStubExtension;
+        private final String notifyApiKey;
 
         public TestConfigurationService(NotifyStubExtension notifyStub) {
             this.notifyStubExtension = notifyStub;
+            byte[] bytes = new byte[36];
+            new SecureRandom().nextBytes(bytes);
+            this.notifyApiKey = Hex.encodeHexString(bytes);
         }
 
         @Override
@@ -85,9 +89,17 @@ public abstract class NotifyIntegrationTest {
 
         @Override
         public String getNotifyApiKey() {
-            byte[] bytes = new byte[36];
-            new SecureRandom().nextBytes(bytes);
-            return Hex.encodeHexString(bytes);
+            return notifyApiKey;
+        }
+
+        @Override
+        public String getAccountManagementURI() {
+            return "http://localhost:3000/";
+        }
+
+        @Override
+        public String getFrontendBaseUrl() {
+            return "http://localhost:3000/reset-password?code=";
         }
     }
 }
