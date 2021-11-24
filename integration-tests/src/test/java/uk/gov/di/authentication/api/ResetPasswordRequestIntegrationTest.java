@@ -1,22 +1,22 @@
 package uk.gov.di.authentication.api;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
 import uk.gov.di.authentication.frontendapi.lambda.ResetPasswordRequestHandler;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.extensions.NotifyStubExtension;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasSize;
+import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
 import static uk.gov.di.authentication.shared.entity.SessionState.RESET_PASSWORD_LINK_SENT;
@@ -24,19 +24,9 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    @RegisterExtension
-    public static final NotifyStubExtension notifyStub =
-            new NotifyStubExtension(8888, ObjectMapperFactory.getInstance());
-
     @BeforeEach
     public void setUp() {
         handler = new ResetPasswordRequestHandler(TEST_CONFIGURATION_SERVICE);
-        notifyStub.init();
-    }
-
-    @AfterEach
-    public void resetStub() {
-        notifyStub.reset();
     }
 
     @Test
@@ -55,9 +45,14 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
                         Optional.of(new ResetPasswordRequest(email)),
                         constructFrontendHeaders(sessionId),
                         Map.of());
-        notifyStub.waitForRequest(60);
 
         assertThat(response, hasStatus(200));
+
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
+
+        assertThat(requests, hasSize(1));
+        assertThat(requests.get(0).getDestination(), equalTo(email));
+        assertThat(requests.get(0).getNotificationType(), equalTo(RESET_PASSWORD));
 
         BaseAPIResponse resetPasswordResponse =
                 objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
@@ -82,5 +77,8 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
                         Map.of());
 
         assertThat(response, hasStatus(400));
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
+
+        assertThat(requests, hasSize(0));
     }
 }

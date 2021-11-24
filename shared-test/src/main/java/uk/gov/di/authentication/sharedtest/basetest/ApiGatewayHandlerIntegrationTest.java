@@ -44,8 +44,13 @@ public abstract class ApiGatewayHandlerIntegrationTest {
                                     Optional.ofNullable(
                                                     System.getenv().get("FRONTEND_API_GATEWAY_ID"))
                                             .orElse("")));
+
+    @RegisterExtension
+    protected static final SqsQueueExtension notificationsQueue =
+            new SqsQueueExtension("notification-queue");
+
     protected static final ConfigurationService TEST_CONFIGURATION_SERVICE =
-            new IntegrationTestConfigurationService();
+            new IntegrationTestConfigurationService(notificationsQueue);
 
     protected RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> handler;
     protected final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
@@ -67,10 +72,6 @@ public abstract class ApiGatewayHandlerIntegrationTest {
 
     @RegisterExtension
     protected static final SnsTopicExtension auditTopic = new SnsTopicExtension("local-events");
-
-    @RegisterExtension
-    protected static final SqsQueueExtension notificationsQueue =
-            new SqsQueueExtension("local-email-notification-queue");
 
     protected APIGatewayProxyResponseEvent makeRequest(
             Optional<Object> body, Map<String, String> headers, Map<String, String> queryString) {
@@ -145,9 +146,21 @@ public abstract class ApiGatewayHandlerIntegrationTest {
     }
 
     public static class IntegrationTestConfigurationService extends ConfigurationService {
+
+        private SqsQueueExtension notificationQueue;
+
+        public IntegrationTestConfigurationService(SqsQueueExtension notificationQueue) {
+            this.notificationQueue = notificationQueue;
+        }
+
         @Override
         public String getRedisHost() {
             return "localhost";
+        }
+
+        @Override
+        public String getEmailQueueUri() {
+            return notificationQueue.getQueueUrl();
         }
     }
 }
