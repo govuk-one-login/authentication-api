@@ -12,6 +12,7 @@ import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.AuthenticateRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -89,6 +90,8 @@ public class AuthenticateHandler
                                         AuditService.UNKNOWN,
                                         loginRequest.getEmail(),
                                         IpAddressHelper.extractIpAddress(input),
+                                        PersistentIdHelper.extractPersistentIdFromHeaders(
+                                                input.getHeaders()),
                                         AuditService.UNKNOWN);
 
                                 return generateEmptySuccessApiGatewayResponse();

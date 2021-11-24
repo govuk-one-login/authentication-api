@@ -24,6 +24,7 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -234,6 +235,7 @@ class VerifyCodeRequestHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("notification-type", VERIFY_EMAIL.name()));
     }
 
@@ -273,6 +275,7 @@ class VerifyCodeRequestHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("notification-type", VERIFY_PHONE_NUMBER.name()));
     }
 
@@ -395,6 +398,7 @@ class VerifyCodeRequestHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("notification-type", VERIFY_PHONE_NUMBER.name()));
     }
 
@@ -454,6 +458,7 @@ class VerifyCodeRequestHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("notification-type", VERIFY_EMAIL.name()));
     }
 
@@ -508,6 +513,7 @@ class VerifyCodeRequestHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("notification-type", MFA_SMS.name()));
     }
 
@@ -597,6 +603,7 @@ class VerifyCodeRequestHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("notification-type", MFA_SMS.name()));
     }
 

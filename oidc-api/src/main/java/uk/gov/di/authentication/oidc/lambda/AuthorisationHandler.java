@@ -97,6 +97,9 @@ public class AuthorisationHandler
         return isWarming(input)
                 .orElseGet(
                         () -> {
+                            String persistentSessionId =
+                                    authorizationService.getExistingOrCreateNewPersistentSessionId(
+                                            input.getHeaders());
                             String ipAddress = IpAddressHelper.extractIpAddress(input);
                             auditService.submitAuditEvent(
                                     OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
@@ -106,7 +109,8 @@ public class AuthorisationHandler
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
                                     ipAddress,
-                                    AuditService.UNKNOWN);
+                                    AuditService.UNKNOWN,
+                                    persistentSessionId);
                             LOGGER.info("Received authentication request");
 
                             Map<String, List<String>> queryStringParameters =
@@ -131,7 +135,8 @@ public class AuthorisationHandler
                                         e.getResponseMode(),
                                         e.getErrorObject(),
                                         context,
-                                        ipAddress);
+                                        ipAddress,
+                                        persistentSessionId);
                             }
                             Optional<ErrorObject> error =
                                     authorizationService.validateAuthRequest(authRequest);
@@ -139,7 +144,11 @@ public class AuthorisationHandler
                             return error.map(
                                             e ->
                                                     generateErrorResponse(
-                                                            authRequest, e, context, ipAddress))
+                                                            authRequest,
+                                                            e,
+                                                            context,
+                                                            ipAddress,
+                                                            persistentSessionId))
                                     .orElseGet(
                                             () ->
                                                     getOrCreateSessionAndRedirect(
@@ -150,9 +159,7 @@ public class AuthorisationHandler
                                                             authRequest,
                                                             context,
                                                             ipAddress,
-                                                            authorizationService
-                                                                    .getExistingOrCreateNewPersistentSessionId(
-                                                                            input.getHeaders())));
+                                                            persistentSessionId));
                         });
     }
 
@@ -171,12 +178,17 @@ public class AuthorisationHandler
                         authenticationRequest,
                         OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS,
                         context,
-                        ipAddress);
+                        ipAddress,
+                        persistentSessionId);
             }
             if (authenticationRequest.getPrompt().contains(Prompt.Type.NONE)
                     && !isUserAuthenticated(existingSession)) {
                 return generateErrorResponse(
-                        authenticationRequest, OIDCError.LOGIN_REQUIRED, context, ipAddress);
+                        authenticationRequest,
+                        OIDCError.LOGIN_REQUIRED,
+                        context,
+                        ipAddress,
+                        persistentSessionId);
             }
             if (authenticationRequest.getPrompt().contains(Prompt.Type.LOGIN)
                     && isUserAuthenticated(existingSession)) {
@@ -201,6 +213,7 @@ public class AuthorisationHandler
                 AuditService.UNKNOWN,
                 ipAddress,
                 AuditService.UNKNOWN,
+                persistentSessionId,
                 pair("session-action", sessionAction));
 
         if (existingSession.isEmpty()) {
@@ -361,7 +374,8 @@ public class AuthorisationHandler
             AuthenticationRequest authRequest,
             ErrorObject errorObject,
             Context context,
-            String ipAddress) {
+            String ipAddress,
+            String persistentSessionId) {
 
         return generateErrorResponse(
                 authRequest.getRedirectionURI(),
@@ -369,7 +383,8 @@ public class AuthorisationHandler
                 authRequest.getResponseMode(),
                 errorObject,
                 context,
-                ipAddress);
+                ipAddress,
+                persistentSessionId);
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(
@@ -378,7 +393,8 @@ public class AuthorisationHandler
             ResponseMode responseMode,
             ErrorObject errorObject,
             Context context,
-            String ipAddress) {
+            String ipAddress,
+            String persistentSessionId) {
 
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR,
@@ -389,6 +405,7 @@ public class AuthorisationHandler
                 AuditService.UNKNOWN,
                 ipAddress,
                 AuditService.UNKNOWN,
+                persistentSessionId,
                 pair("description", errorObject.getDescription()));
 
         LOGGER.warn(

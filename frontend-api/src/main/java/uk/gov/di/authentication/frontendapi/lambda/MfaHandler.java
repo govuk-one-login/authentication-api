@@ -20,6 +20,7 @@ import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -107,7 +108,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             LOGGER.info(
                     "MfaHandler received request for session: {}",
                     userContext.getSession().getSessionId());
-
+            String persistentSessionId =
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
             String email = request.getEmail().toLowerCase(Locale.ROOT);
             boolean codeRequestValid = validateCodeRequestAttempts(email, userContext);
             if (!codeRequestValid) {
@@ -122,7 +124,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         AuditService.UNKNOWN,
                         email,
                         IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN);
+                        AuditService.UNKNOWN,
+                        persistentSessionId);
 
                 return generateApiGatewayProxyResponse(
                         400, new BaseAPIResponse(userContext.getSession().getState()));
@@ -144,7 +147,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         AuditService.UNKNOWN,
                         email,
                         IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN);
+                        AuditService.UNKNOWN,
+                        persistentSessionId);
 
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1000);
             }
@@ -166,7 +170,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         AuditService.UNKNOWN,
                         email,
                         IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN);
+                        AuditService.UNKNOWN,
+                        persistentSessionId);
 
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1014);
             }
@@ -197,7 +202,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         AuditService.UNKNOWN,
                         email,
                         IpAddressHelper.extractIpAddress(input),
-                        phoneNumber);
+                        phoneNumber,
+                        persistentSessionId);
             } else {
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.MFA_CODE_SENT_FOR_TEST_CLIENT,
@@ -210,7 +216,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         AuditService.UNKNOWN,
                         email,
                         IpAddressHelper.extractIpAddress(input),
-                        phoneNumber);
+                        phoneNumber,
+                        persistentSessionId);
             }
             LOGGER.info(
                     "MfaHandler successfully processed request for session: {}",

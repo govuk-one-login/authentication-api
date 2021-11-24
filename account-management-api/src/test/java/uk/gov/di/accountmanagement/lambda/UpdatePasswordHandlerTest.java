@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
@@ -53,6 +54,7 @@ class UpdatePasswordHandlerTest {
 
     @Test
     public void shouldReturn204ForValidRequest() throws JsonProcessingException {
+        String persistentIdValue = "some-persistent-session-id";
         UserProfile userProfile = new UserProfile().setPublicSubjectID(SUBJECT.getValue());
         UserCredentials userCredentials = new UserCredentials().setPassword(CURRENT_PASSWORD);
         when(dynamoService.getUserProfileByEmail(EXISTING_EMAIL_ADDRESS)).thenReturn(userProfile);
@@ -63,6 +65,7 @@ class UpdatePasswordHandlerTest {
                 format(
                         "{ \"email\": \"%s\", \"newPassword\": \"%s\" }",
                         EXISTING_EMAIL_ADDRESS, NEW_PASSWORD));
+        event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentIdValue));
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
                 new APIGatewayProxyRequestEvent.ProxyRequestContext();
         Map<String, Object> authorizerParams = new HashMap<>();
@@ -88,6 +91,7 @@ class UpdatePasswordHandlerTest {
                         userProfile.getSubjectID(),
                         userProfile.getEmail(),
                         "123.123.123.123",
+                        persistentIdValue,
                         userProfile.getPhoneNumber());
     }
 
@@ -150,6 +154,7 @@ class UpdatePasswordHandlerTest {
                         userProfile.getSubjectID(),
                         userProfile.getEmail(),
                         "123.123.123.123",
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         userProfile.getPhoneNumber());
     }
 }

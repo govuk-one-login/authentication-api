@@ -51,6 +51,7 @@ public class AuditService {
             String email,
             String ipAddress,
             String phoneNumber,
+            String persistentSessionId,
             MetadataPair... metadataPairs) {
         snsService.publishAuditMessage(
                 generateLogLine(
@@ -62,6 +63,7 @@ public class AuditService {
                         email,
                         ipAddress,
                         phoneNumber,
+                        persistentSessionId,
                         metadataPairs));
     }
 
@@ -74,6 +76,7 @@ public class AuditService {
             String email,
             String ipAddress,
             String phoneNumber,
+            String persistentSessionId,
             MetadataPair... metadataPairs) {
         var uniqueId = UUID.randomUUID();
         var timestamp = clock.instant().toString();

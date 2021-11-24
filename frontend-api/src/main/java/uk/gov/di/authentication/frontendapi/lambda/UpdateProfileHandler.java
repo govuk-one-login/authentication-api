@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -96,6 +97,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
                 AuditService.UNKNOWN);
     }
 
@@ -104,6 +106,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         auditService.submitAuditEvent(
                 UPDATE_PROFILE_REQUEST_ERROR,
                 context.getAwsRequestId(),
+                AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
@@ -124,6 +127,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 "UpdateProfileHandler processing request for session: {}", session.getSessionId());
 
         String ipAddress = IpAddressHelper.extractIpAddress(input);
+        String persistentSessionId =
+                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
 
         try {
             if (!session.validateSession(request.getEmail())) {
@@ -155,7 +160,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                         .orElse(AuditService.UNKNOWN),
                                 email,
                                 ipAddress,
-                                request.getProfileInformation());
+                                request.getProfileInformation(),
+                                persistentSessionId);
                         sessionService.save(session.setState(nextState));
                         LOGGER.info(
                                 "Phone number updated and session state changed. Session: {}, Session state {}",
@@ -216,7 +222,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                 ipAddress,
                                 userProfile
                                         .map(UserProfile::getPhoneNumber)
-                                        .orElse(AuditService.UNKNOWN));
+                                        .orElse(AuditService.UNKNOWN),
+                                persistentSessionId);
 
                         LOGGER.info(
                                 "Consent updated for ClientID {} and session state changed. Session state {}, session {}",
@@ -244,7 +251,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                 ipAddress,
                                 userProfile
                                         .map(UserProfile::getPhoneNumber)
-                                        .orElse(AuditService.UNKNOWN));
+                                        .orElse(AuditService.UNKNOWN),
+                                persistentSessionId);
                         LOGGER.info(
                                 "Updated terms and conditions for session: {} for Version {}",
                                 session.getSessionId(),

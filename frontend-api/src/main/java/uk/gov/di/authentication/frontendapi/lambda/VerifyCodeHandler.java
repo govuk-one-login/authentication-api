@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -266,6 +267,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     session.getEmailAddress(),
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
                     pair("notification-type", notificationType.name()));
 
             codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
@@ -294,6 +296,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     session.getEmailAddress(),
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
                     pair("notification-type", notificationType.name()));
 
             codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
@@ -315,6 +318,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     session.getEmailAddress(),
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
                     pair("notification-type", notificationType.name()));
 
             blockCodeForSessionAndResetCount(session);

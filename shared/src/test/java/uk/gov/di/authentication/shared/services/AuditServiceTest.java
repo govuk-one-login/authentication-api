@@ -77,7 +77,8 @@ class AuditServiceTest {
                 "subject-id",
                 "email",
                 "ip-address",
-                "phone-number");
+                "phone-number",
+                "persistent-session-id");
 
         verify(snsService).publishAuditMessage(messageCaptor.capture());
         var serialisedAuditMessage = messageCaptor.getValue();
@@ -107,6 +108,7 @@ class AuditServiceTest {
                 "subject-id",
                 "email",
                 "ip-address",
+                "persistent-session-id",
                 "phone-number");
 
         verify(kmsConnectionService).sign(signingRequestCaptor.capture());
@@ -134,6 +136,7 @@ class AuditServiceTest {
                 "email",
                 "ip-address",
                 "phone-number",
+                "persistent-session-id",
                 pair("key", "value"),
                 pair("key2", "value2"));
 

@@ -98,7 +98,7 @@ class UpdateClientConfigHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_CLIENT_REQUEST_ERROR, "request-id", "", "", "", "", "", "");
+                        UPDATE_CLIENT_REQUEST_ERROR, "request-id", "", "", "", "", "", "", "");
     }
 
     @Test
@@ -112,7 +112,7 @@ class UpdateClientConfigHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_CLIENT_REQUEST_ERROR, "request-id", "", "", "", "", "", "");
+                        UPDATE_CLIENT_REQUEST_ERROR, "request-id", "", "", "", "", "", "", "");
     }
 
     @Test
@@ -128,7 +128,15 @@ class UpdateClientConfigHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_CLIENT_REQUEST_ERROR, "request-id", "", CLIENT_ID, "", "", "", "");
+                        UPDATE_CLIENT_REQUEST_ERROR,
+                        "request-id",
+                        "",
+                        CLIENT_ID,
+                        "",
+                        "",
+                        "",
+                        "",
+                        "");
     }
 
     @Test
@@ -151,7 +159,15 @@ class UpdateClientConfigHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_CLIENT_REQUEST_ERROR, "request-id", "", CLIENT_ID, "", "", "", "");
+                        UPDATE_CLIENT_REQUEST_ERROR,
+                        "request-id",
+                        "",
+                        CLIENT_ID,
+                        "",
+                        "",
+                        "",
+                        "",
+                        "");
     }
 
     @Test
@@ -171,7 +187,15 @@ class UpdateClientConfigHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_CLIENT_REQUEST_ERROR, "request-id", "", CLIENT_ID, "", "", "", "");
+                        UPDATE_CLIENT_REQUEST_ERROR,
+                        "request-id",
+                        "",
+                        CLIENT_ID,
+                        "",
+                        "",
+                        "",
+                        "",
+                        "");
     }
 
     private ClientRegistry createClientRegistry() {
@@ -192,7 +216,7 @@ class UpdateClientConfigHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_CLIENT_REQUEST_RECEIVED, "request-id", "", "", "", "", "", "");
+                        UPDATE_CLIENT_REQUEST_RECEIVED, "request-id", "", "", "", "", "", "", "");
 
         return response;
     }

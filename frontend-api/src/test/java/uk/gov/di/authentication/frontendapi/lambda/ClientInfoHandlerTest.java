@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -28,6 +29,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URI;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -85,8 +87,12 @@ public class ClientInfoHandlerTest {
     public void shouldReturn200WithClientInfoResponseForKnownClientSessionId()
             throws JsonProcessingException {
         usingValidClientSession();
+        String persistentId = "some-persistent-id-value";
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
+        headers.put(CLIENT_SESSION_ID_HEADER, KNOWN_CLIENT_SESSION_ID);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(CLIENT_SESSION_ID_HEADER, KNOWN_CLIENT_SESSION_ID));
+        event.setHeaders(headers);
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -107,6 +113,7 @@ public class ClientInfoHandlerTest {
                         auditService.UNKNOWN,
                         auditService.UNKNOWN,
                         "123.123.123.123",
+                        persistentId,
                         AuditService.UNKNOWN);
     }
 

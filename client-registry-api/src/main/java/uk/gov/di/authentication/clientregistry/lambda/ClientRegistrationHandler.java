@@ -74,6 +74,7 @@ public class ClientRegistrationHandler
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
                                     ipAddress,
+                                    AuditService.UNKNOWN,
                                     AuditService.UNKNOWN);
 
                             try {
@@ -97,6 +98,7 @@ public class ClientRegistrationHandler
                                             AuditService.UNKNOWN,
                                             AuditService.UNKNOWN,
                                             ipAddress,
+                                            AuditService.UNKNOWN,
                                             AuditService.UNKNOWN);
 
                                     return generateApiGatewayProxyResponse(
@@ -141,6 +143,7 @@ public class ClientRegistrationHandler
                                         AuditService.UNKNOWN,
                                         AuditService.UNKNOWN,
                                         ipAddress,
+                                        AuditService.UNKNOWN,
                                         AuditService.UNKNOWN);
 
                                 return generateApiGatewayProxyResponse(

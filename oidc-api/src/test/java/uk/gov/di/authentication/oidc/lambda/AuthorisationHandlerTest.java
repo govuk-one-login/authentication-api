@@ -76,6 +76,7 @@ class AuthorisationHandlerTest {
     private static final String EXPECTED_PERSISTENT_COOKIE_STRING =
             "di-persistent-session-id=a-persistent-session-id; Max-Age=34190000; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
     private static final URI LOGIN_URL = URI.create("https://example.com");
+    private static final String PERSISTENT_SESSION_ID = "a-persistent-session-id";
 
     private AuthorisationHandler handler;
 
@@ -90,7 +91,7 @@ class AuthorisationHandlerTest {
         when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         when(authorizationService.getExistingOrCreateNewPersistentSessionId(any()))
-                .thenReturn("a-persistent-session-id");
+                .thenReturn(PERSISTENT_SESSION_ID);
         when(sessionService.createSession()).thenReturn(new Session("new-session"));
         handler =
                 new AuthorisationHandler(
@@ -260,6 +261,7 @@ class AuthorisationHandlerTest {
                         "",
                         "123.123.123.123",
                         "",
+                        PERSISTENT_SESSION_ID,
                         pair("description", "Invalid request: Missing response_type parameter"));
     }
 
@@ -295,6 +297,7 @@ class AuthorisationHandlerTest {
                         "",
                         "123.123.123.123",
                         "",
+                        PERSISTENT_SESSION_ID,
                         pair("description", OAuth2Error.INVALID_SCOPE.getDescription()));
     }
 
@@ -329,6 +332,7 @@ class AuthorisationHandlerTest {
                         AuditService.UNKNOWN,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID,
                         pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY));
     }
 
@@ -373,6 +377,7 @@ class AuthorisationHandlerTest {
                         AuditService.UNKNOWN,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID,
                         pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY));
     }
 
@@ -395,6 +400,7 @@ class AuthorisationHandlerTest {
                         "",
                         "123.123.123.123",
                         "",
+                        PERSISTENT_SESSION_ID,
                         pair("description", OIDCError.LOGIN_REQUIRED.getDescription()));
     }
 
@@ -441,6 +447,7 @@ class AuthorisationHandlerTest {
                         AuditService.UNKNOWN,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID,
                         pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY));
     }
 
@@ -482,6 +489,7 @@ class AuthorisationHandlerTest {
                         AuditService.UNKNOWN,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID,
                         pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY));
     }
 
@@ -519,6 +527,7 @@ class AuthorisationHandlerTest {
                         AuditService.UNKNOWN,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID,
                         pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED));
     }
 
@@ -541,6 +550,7 @@ class AuthorisationHandlerTest {
                         "",
                         "123.123.123.123",
                         "",
+                        PERSISTENT_SESSION_ID,
                         pair(
                                 "description",
                                 "Invalid request: Invalid prompt parameter: Unknown prompt type: unrecognised"));
@@ -565,6 +575,7 @@ class AuthorisationHandlerTest {
                         "",
                         "123.123.123.123",
                         "",
+                        PERSISTENT_SESSION_ID,
                         pair(
                                 "description",
                                 "Invalid request: Invalid prompt parameter: Invalid prompt: none login"));
@@ -589,6 +600,7 @@ class AuthorisationHandlerTest {
                         "",
                         "123.123.123.123",
                         "",
+                        PERSISTENT_SESSION_ID,
                         pair(
                                 "description",
                                 OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS.getDescription()));
@@ -613,6 +625,7 @@ class AuthorisationHandlerTest {
                         "",
                         "123.123.123.123",
                         "",
+                        PERSISTENT_SESSION_ID,
                         pair(
                                 "description",
                                 OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS.getDescription()));
@@ -637,6 +650,7 @@ class AuthorisationHandlerTest {
                         "",
                         "123.123.123.123",
                         "",
+                        PERSISTENT_SESSION_ID,
                         pair(
                                 "description",
                                 OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS.getDescription()));
@@ -677,6 +691,7 @@ class AuthorisationHandlerTest {
                         AuditService.UNKNOWN,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID,
                         pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY));
     }
 
@@ -713,6 +728,7 @@ class AuthorisationHandlerTest {
                         AuditService.UNKNOWN,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID,
                         pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY));
     }
 
@@ -728,7 +744,8 @@ class AuthorisationHandlerTest {
                         "",
                         "",
                         "123.123.123.123",
-                        "");
+                        "",
+                        PERSISTENT_SESSION_ID);
 
         return response;
     }

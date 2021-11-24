@@ -17,6 +17,7 @@ import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -108,7 +109,8 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                             AuditService.UNKNOWN,
                             request.getEmail(),
                             IpAddressHelper.extractIpAddress(input),
-                            AuditService.UNKNOWN);
+                            AuditService.UNKNOWN,
+                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
                     LOG.info(
                             "User already exists for session: {}",
@@ -134,7 +136,8 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                         AuditService.UNKNOWN,
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN);
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
                 sessionService.save(
                         userContext

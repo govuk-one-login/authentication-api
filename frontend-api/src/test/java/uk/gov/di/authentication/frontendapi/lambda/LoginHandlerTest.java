@@ -28,6 +28,7 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -38,6 +39,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URI;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -108,6 +110,10 @@ class LoginHandlerTest {
 
     @Test
     public void shouldReturn200IfLoginIsSuccessful() throws JsonProcessingException {
+        String persistentId = "some-persistent-id-value";
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
+        headers.put("Session-Id", session.getSessionId());
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
         when(userMigrationService.userHasBeenPartlyMigrated(
@@ -119,7 +125,7 @@ class LoginHandlerTest {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(headers);
         event.setBody(
                 format(
                         "{ \"password\": \"%s\", \"email\": \"%s\" }",
@@ -145,6 +151,7 @@ class LoginHandlerTest {
                         userProfile.getSubjectID(),
                         userProfile.getEmail(),
                         "123.123.123.123",
+                        persistentId,
                         userProfile.getPhoneNumber());
     }
 
@@ -261,6 +268,7 @@ class LoginHandlerTest {
                         userProfile.getSubjectID(),
                         userProfile.getEmail(),
                         "123.123.123.123",
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         userProfile.getPhoneNumber());
     }
 
@@ -319,6 +327,7 @@ class LoginHandlerTest {
                         "",
                         EMAIL,
                         "123.123.123.123",
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         "");
 
         assertThat(result, hasStatus(401));
@@ -395,6 +404,7 @@ class LoginHandlerTest {
                         "",
                         "",
                         "123.123.123.123",
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         "");
 
         assertThat(result, hasStatus(400));

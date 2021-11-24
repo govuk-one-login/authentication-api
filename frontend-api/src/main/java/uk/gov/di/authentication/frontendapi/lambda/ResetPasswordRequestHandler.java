@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -135,7 +136,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                     AuditService.UNKNOWN,
                     request.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN);
+                    AuditService.UNKNOWN,
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
             Optional<ErrorResponse> errorResponse =
                     validatePasswordResetCount(request.getEmail(), userContext);
