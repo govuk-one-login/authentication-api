@@ -1,23 +1,22 @@
 package uk.gov.di.authentication.api;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordWithCodeRequest;
 import uk.gov.di.authentication.frontendapi.lambda.ResetPasswordHandler;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.extensions.NotifyStubExtension;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasSize;
+import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -26,23 +25,13 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     private static final String PASSWORD = "Pa55word";
     private static final String CODE = "0123456789";
 
-    @RegisterExtension
-    public static final NotifyStubExtension notifyStub =
-            new NotifyStubExtension(8888, ObjectMapperFactory.getInstance());
-
     @BeforeEach
     public void setUp() {
         handler = new ResetPasswordHandler(TEST_CONFIGURATION_SERVICE);
-        notifyStub.init();
-    }
-
-    @AfterEach
-    public void resetStub() {
-        notifyStub.reset();
     }
 
     @Test
-    public void shouldUpdatePasswordAndReturn204() throws JsonProcessingException {
+    public void shouldUpdatePasswordAndReturn204() {
         String subject = "new-subject";
         ResetPasswordWithCodeRequest requestBody = new ResetPasswordWithCodeRequest(CODE, PASSWORD);
         userStore.signUp(EMAIL_ADDRESS, "password-1", new Subject(subject));
@@ -51,9 +40,13 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         headers.put("X-API-Key", API_KEY);
 
         var response = makeRequest(Optional.of(requestBody), headers, Map.of());
-        var notifyResponse = notifyStub.waitForRequest(60);
 
         assertThat(response, hasStatus(204));
-        assertThat(notifyResponse.get("email_address").asText(), equalTo(EMAIL_ADDRESS));
+
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
+
+        assertThat(requests, hasSize(1));
+        assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
+        assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
     }
 }

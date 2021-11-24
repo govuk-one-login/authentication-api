@@ -13,6 +13,7 @@ import uk.gov.di.authentication.sharedtest.extensions.ClientStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.authentication.sharedtest.extensions.RedisExtension;
 import uk.gov.di.authentication.sharedtest.extensions.SnsTopicExtension;
+import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
 import java.net.HttpCookie;
@@ -43,8 +44,13 @@ public abstract class ApiGatewayHandlerIntegrationTest {
                                     Optional.ofNullable(
                                                     System.getenv().get("FRONTEND_API_GATEWAY_ID"))
                                             .orElse("")));
+
+    @RegisterExtension
+    protected static final SqsQueueExtension notificationsQueue =
+            new SqsQueueExtension("notification-queue");
+
     protected static final ConfigurationService TEST_CONFIGURATION_SERVICE =
-            new IntegrationTestConfigurationService();
+            new IntegrationTestConfigurationService(notificationsQueue);
 
     protected RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> handler;
     protected final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
@@ -140,9 +146,21 @@ public abstract class ApiGatewayHandlerIntegrationTest {
     }
 
     public static class IntegrationTestConfigurationService extends ConfigurationService {
+
+        private SqsQueueExtension notificationQueue;
+
+        public IntegrationTestConfigurationService(SqsQueueExtension notificationQueue) {
+            this.notificationQueue = notificationQueue;
+        }
+
         @Override
         public String getRedisHost() {
             return "localhost";
+        }
+
+        @Override
+        public String getEmailQueueUri() {
+            return notificationQueue.getQueueUrl();
         }
     }
 }
