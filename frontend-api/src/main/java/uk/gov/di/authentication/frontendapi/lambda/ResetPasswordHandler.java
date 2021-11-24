@@ -101,12 +101,16 @@ public class ResetPasswordHandler
                                 UserCredentials userCredentials =
                                         authenticationService.getUserCredentialsFromSubject(
                                                 subject.get());
-                                if (verifyPassword(
-                                        userCredentials.getPassword(),
-                                        resetPasswordWithCodeRequest.getPassword())) {
-                                    LOGGER.info("New password is the same as the old password");
-                                    return generateApiGatewayProxyErrorResponse(
-                                            400, ErrorResponse.ERROR_1024);
+                                if (userCredentials.getPassword() != null) {
+                                    if (verifyPassword(
+                                            userCredentials.getPassword(),
+                                            resetPasswordWithCodeRequest.getPassword())) {
+                                        LOGGER.info("New password is the same as the old password");
+                                        return generateApiGatewayProxyErrorResponse(
+                                                400, ErrorResponse.ERROR_1024);
+                                    }
+                                } else {
+                                    LOGGER.info("Resetting password for migrated user");
                                 }
                                 codeStorageService.deleteSubjectWithPasswordResetCode(
                                         resetPasswordWithCodeRequest.getCode());
