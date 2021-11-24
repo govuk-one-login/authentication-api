@@ -38,7 +38,7 @@ class AuditPayloadConsistencyTest {
 
         assertThat(
                 eventWithSignature("signature", realObject),
-                hasHashValue("c988acfe4e7f90d39d5749f8842573d8d091cdd9e5e5a5d79ca65b59508e82a5"));
+                hasHashValue("095bd41170c4a4cd37e347a9a5b9a5d4da575e72373a7a96bb551f63c4014cd2"));
     }
 
     public SignedAuditEvent eventWithSignature(String signature, AuditEvent event) {

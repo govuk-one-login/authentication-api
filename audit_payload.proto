@@ -18,6 +18,7 @@ message AuditEvent {
   User user = 7;
   map<string, string> platform = 8;
   map<string, string> extensions = 9;
+  string persistent_session_id = 10;
 
   message User {
     string id = 1;
