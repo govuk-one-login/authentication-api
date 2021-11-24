@@ -734,6 +734,19 @@ public final class AuditPayload {
                 java.lang.String key, java.lang.String defaultValue);
         /** <code>map&lt;string, string&gt; extensions = 9;</code> */
         java.lang.String getExtensionsOrThrow(java.lang.String key);
+
+        /**
+         * <code>string persistent_session_id = 10;</code>
+         *
+         * @return The persistentSessionId.
+         */
+        java.lang.String getPersistentSessionId();
+        /**
+         * <code>string persistent_session_id = 10;</code>
+         *
+         * @return The bytes for persistentSessionId.
+         */
+        com.google.protobuf.ByteString getPersistentSessionIdBytes();
     }
     /** Protobuf type {@code uk.gov.di.audit.AuditEvent} */
     public static final class AuditEvent extends com.google.protobuf.GeneratedMessageV3
@@ -753,6 +766,7 @@ public final class AuditPayload {
             clientId_ = "";
             timestamp_ = "";
             eventName_ = "";
+            persistentSessionId_ = "";
         }
 
         @java.lang.Override
@@ -882,6 +896,13 @@ public final class AuditPayload {
                                 extensions_
                                         .getMutableMap()
                                         .put(extensions__.getKey(), extensions__.getValue());
+                                break;
+                            }
+                        case 82:
+                            {
+                                java.lang.String s = input.readStringRequireUtf8();
+
+                                persistentSessionId_ = s;
                                 break;
                             }
                         default:
@@ -2373,6 +2394,43 @@ public final class AuditPayload {
             return map.get(key);
         }
 
+        public static final int PERSISTENT_SESSION_ID_FIELD_NUMBER = 10;
+        private volatile java.lang.Object persistentSessionId_;
+        /**
+         * <code>string persistent_session_id = 10;</code>
+         *
+         * @return The persistentSessionId.
+         */
+        @java.lang.Override
+        public java.lang.String getPersistentSessionId() {
+            java.lang.Object ref = persistentSessionId_;
+            if (ref instanceof java.lang.String) {
+                return (java.lang.String) ref;
+            } else {
+                com.google.protobuf.ByteString bs = (com.google.protobuf.ByteString) ref;
+                java.lang.String s = bs.toStringUtf8();
+                persistentSessionId_ = s;
+                return s;
+            }
+        }
+        /**
+         * <code>string persistent_session_id = 10;</code>
+         *
+         * @return The bytes for persistentSessionId.
+         */
+        @java.lang.Override
+        public com.google.protobuf.ByteString getPersistentSessionIdBytes() {
+            java.lang.Object ref = persistentSessionId_;
+            if (ref instanceof java.lang.String) {
+                com.google.protobuf.ByteString b =
+                        com.google.protobuf.ByteString.copyFromUtf8((java.lang.String) ref);
+                persistentSessionId_ = b;
+                return b;
+            } else {
+                return (com.google.protobuf.ByteString) ref;
+            }
+        }
+
         private byte memoizedIsInitialized = -1;
 
         @java.lang.Override
@@ -2413,6 +2471,10 @@ public final class AuditPayload {
                     output, internalGetPlatform(), PlatformDefaultEntryHolder.defaultEntry, 8);
             com.google.protobuf.GeneratedMessageV3.serializeStringMapTo(
                     output, internalGetExtensions(), ExtensionsDefaultEntryHolder.defaultEntry, 9);
+            if (!getPersistentSessionIdBytes().isEmpty()) {
+                com.google.protobuf.GeneratedMessageV3.writeString(
+                        output, 10, persistentSessionId_);
+            }
             unknownFields.writeTo(output);
         }
 
@@ -2463,6 +2525,11 @@ public final class AuditPayload {
                                 .build();
                 size += com.google.protobuf.CodedOutputStream.computeMessageSize(9, extensions__);
             }
+            if (!getPersistentSessionIdBytes().isEmpty()) {
+                size +=
+                        com.google.protobuf.GeneratedMessageV3.computeStringSize(
+                                10, persistentSessionId_);
+            }
             size += unknownFields.getSerializedSize();
             memoizedSize = size;
             return size;
@@ -2491,6 +2558,7 @@ public final class AuditPayload {
             }
             if (!internalGetPlatform().equals(other.internalGetPlatform())) return false;
             if (!internalGetExtensions().equals(other.internalGetExtensions())) return false;
+            if (!getPersistentSessionId().equals(other.getPersistentSessionId())) return false;
             if (!unknownFields.equals(other.unknownFields)) return false;
             return true;
         }
@@ -2526,6 +2594,8 @@ public final class AuditPayload {
                 hash = (37 * hash) + EXTENSIONS_FIELD_NUMBER;
                 hash = (53 * hash) + internalGetExtensions().hashCode();
             }
+            hash = (37 * hash) + PERSISTENT_SESSION_ID_FIELD_NUMBER;
+            hash = (53 * hash) + getPersistentSessionId().hashCode();
             hash = (29 * hash) + unknownFields.hashCode();
             memoizedHashCode = hash;
             return hash;
@@ -2713,6 +2783,8 @@ public final class AuditPayload {
                 }
                 internalGetMutablePlatform().clear();
                 internalGetMutableExtensions().clear();
+                persistentSessionId_ = "";
+
                 return this;
             }
 
@@ -2756,6 +2828,7 @@ public final class AuditPayload {
                 result.platform_.makeImmutable();
                 result.extensions_ = internalGetExtensions();
                 result.extensions_.makeImmutable();
+                result.persistentSessionId_ = persistentSessionId_;
                 onBuilt();
                 return result;
             }
@@ -2837,6 +2910,10 @@ public final class AuditPayload {
                 }
                 internalGetMutablePlatform().mergeFrom(other.internalGetPlatform());
                 internalGetMutableExtensions().mergeFrom(other.internalGetExtensions());
+                if (!other.getPersistentSessionId().isEmpty()) {
+                    persistentSessionId_ = other.persistentSessionId_;
+                    onChanged();
+                }
                 this.mergeUnknownFields(other.unknownFields);
                 onChanged();
                 return this;
@@ -3659,6 +3736,82 @@ public final class AuditPayload {
                 return this;
             }
 
+            private java.lang.Object persistentSessionId_ = "";
+            /**
+             * <code>string persistent_session_id = 10;</code>
+             *
+             * @return The persistentSessionId.
+             */
+            public java.lang.String getPersistentSessionId() {
+                java.lang.Object ref = persistentSessionId_;
+                if (!(ref instanceof java.lang.String)) {
+                    com.google.protobuf.ByteString bs = (com.google.protobuf.ByteString) ref;
+                    java.lang.String s = bs.toStringUtf8();
+                    persistentSessionId_ = s;
+                    return s;
+                } else {
+                    return (java.lang.String) ref;
+                }
+            }
+            /**
+             * <code>string persistent_session_id = 10;</code>
+             *
+             * @return The bytes for persistentSessionId.
+             */
+            public com.google.protobuf.ByteString getPersistentSessionIdBytes() {
+                java.lang.Object ref = persistentSessionId_;
+                if (ref instanceof String) {
+                    com.google.protobuf.ByteString b =
+                            com.google.protobuf.ByteString.copyFromUtf8((java.lang.String) ref);
+                    persistentSessionId_ = b;
+                    return b;
+                } else {
+                    return (com.google.protobuf.ByteString) ref;
+                }
+            }
+            /**
+             * <code>string persistent_session_id = 10;</code>
+             *
+             * @param value The persistentSessionId to set.
+             * @return This builder for chaining.
+             */
+            public Builder setPersistentSessionId(java.lang.String value) {
+                if (value == null) {
+                    throw new NullPointerException();
+                }
+
+                persistentSessionId_ = value;
+                onChanged();
+                return this;
+            }
+            /**
+             * <code>string persistent_session_id = 10;</code>
+             *
+             * @return This builder for chaining.
+             */
+            public Builder clearPersistentSessionId() {
+
+                persistentSessionId_ = getDefaultInstance().getPersistentSessionId();
+                onChanged();
+                return this;
+            }
+            /**
+             * <code>string persistent_session_id = 10;</code>
+             *
+             * @param value The bytes for persistentSessionId to set.
+             * @return This builder for chaining.
+             */
+            public Builder setPersistentSessionIdBytes(com.google.protobuf.ByteString value) {
+                if (value == null) {
+                    throw new NullPointerException();
+                }
+                checkByteStringIsUtf8(value);
+
+                persistentSessionId_ = value;
+                onChanged();
+                return this;
+            }
+
             @java.lang.Override
             public final Builder setUnknownFields(
                     final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -3742,19 +3895,20 @@ public final class AuditPayload {
         java.lang.String[] descriptorData = {
             "\n\023audit_payload.proto\022\017uk.gov.di.audit\"6"
                     + "\n\020SignedAuditEvent\022\021\n\tsignature\030\001 \001(\014\022\017\n"
-                    + "\007payload\030\002 \001(\014\"\337\003\n\nAuditEvent\022\020\n\010event_i"
+                    + "\007payload\030\002 \001(\014\"\376\003\n\nAuditEvent\022\020\n\010event_i"
                     + "d\030\001 \001(\t\022\022\n\nrequest_id\030\002 \001(\t\022\022\n\nsession_i"
                     + "d\030\003 \001(\t\022\021\n\tclient_id\030\004 \001(\t\022\021\n\ttimestamp\030"
                     + "\005 \001(\t\022\022\n\nevent_name\030\006 \001(\t\022.\n\004user\030\007 \001(\0132"
                     + " .uk.gov.di.audit.AuditEvent.User\022;\n\010pla"
                     + "tform\030\010 \003(\0132).uk.gov.di.audit.AuditEvent"
                     + ".PlatformEntry\022?\n\nextensions\030\t \003(\0132+.uk."
-                    + "gov.di.audit.AuditEvent.ExtensionsEntry\032"
-                    + "/\n\rPlatformEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002"
-                    + " \001(\t:\0028\001\0321\n\017ExtensionsEntry\022\013\n\003key\030\001 \001(\t"
-                    + "\022\r\n\005value\030\002 \001(\t:\0028\001\032K\n\004User\022\n\n\002id\030\001 \001(\t\022"
-                    + "\r\n\005email\030\002 \001(\t\022\022\n\nip_address\030\003 \001(\t\022\024\n\014ph"
-                    + "one_number\030\004 \001(\tb\006proto3"
+                    + "gov.di.audit.AuditEvent.ExtensionsEntry\022"
+                    + "\035\n\025persistent_session_id\030\n \001(\t\032/\n\rPlatfo"
+                    + "rmEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\032"
+                    + "1\n\017ExtensionsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value"
+                    + "\030\002 \001(\t:\0028\001\032K\n\004User\022\n\n\002id\030\001 \001(\t\022\r\n\005email\030"
+                    + "\002 \001(\t\022\022\n\nip_address\030\003 \001(\t\022\024\n\014phone_numbe"
+                    + "r\030\004 \001(\tb\006proto3"
         };
         descriptor =
                 com.google.protobuf.Descriptors.FileDescriptor.internalBuildGeneratedFileFrom(
@@ -3782,6 +3936,7 @@ public final class AuditPayload {
                             "User",
                             "Platform",
                             "Extensions",
+                            "PersistentSessionId",
                         });
         internal_static_uk_gov_di_audit_AuditEvent_PlatformEntry_descriptor =
                 internal_static_uk_gov_di_audit_AuditEvent_descriptor.getNestedTypes().get(0);
