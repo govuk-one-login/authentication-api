@@ -88,6 +88,7 @@ public class AuditService {
                         .setRequestId(Optional.ofNullable(requestId).orElse(UNKNOWN))
                         .setSessionId(Optional.ofNullable(sessionId).orElse(UNKNOWN))
                         .setClientId(Optional.ofNullable(clientId).orElse(UNKNOWN))
+                        .setPersistentSessionId(persistentSessionId)
                         .setUser(
                                 AuditEvent.User.newBuilder()
                                         .setId(Optional.ofNullable(subjectId).orElse(UNKNOWN))

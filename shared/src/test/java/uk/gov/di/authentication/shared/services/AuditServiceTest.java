@@ -32,6 +32,7 @@ import static uk.gov.di.authentication.sharedtest.matchers.AuditMessageMatcher.h
 import static uk.gov.di.authentication.sharedtest.matchers.AuditMessageMatcher.hasEventName;
 import static uk.gov.di.authentication.sharedtest.matchers.AuditMessageMatcher.hasIpAddress;
 import static uk.gov.di.authentication.sharedtest.matchers.AuditMessageMatcher.hasMetadataPair;
+import static uk.gov.di.authentication.sharedtest.matchers.AuditMessageMatcher.hasPersistentSessionId;
 import static uk.gov.di.authentication.sharedtest.matchers.AuditMessageMatcher.hasPhoneNumber;
 import static uk.gov.di.authentication.sharedtest.matchers.AuditMessageMatcher.hasRequestId;
 import static uk.gov.di.authentication.sharedtest.matchers.AuditMessageMatcher.hasSessionId;
@@ -87,6 +88,7 @@ class AuditServiceTest {
         assertThat(serialisedAuditMessage, hasEventName(TEST_EVENT_ONE.toString()));
         assertThat(serialisedAuditMessage, hasRequestId("request-id"));
         assertThat(serialisedAuditMessage, hasSessionId("session-id"));
+        assertThat(serialisedAuditMessage, hasPersistentSessionId("persistent-session-id"));
         assertThat(serialisedAuditMessage, hasClientId("client-id"));
         assertThat(serialisedAuditMessage, hasSubjectId("subject-id"));
         assertThat(serialisedAuditMessage, hasEmail("email"));
