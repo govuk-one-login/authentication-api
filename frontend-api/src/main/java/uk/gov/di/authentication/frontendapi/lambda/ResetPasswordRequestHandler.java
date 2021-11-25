@@ -11,6 +11,7 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
 import uk.gov.di.authentication.frontendapi.services.AwsSqsClient;
+import uk.gov.di.authentication.frontendapi.services.ResetPasswordService;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -54,6 +55,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
     private final AuditService auditService;
+    private final ResetPasswordService resetPasswordService;
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             userJourneyStateMachine();
 
@@ -67,7 +69,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             AwsSqsClient sqsClient,
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService,
-            AuditService auditService) {
+            AuditService auditService,
+            ResetPasswordService resetPasswordService) {
         super(
                 ResetPasswordRequest.class,
                 configurationService,
@@ -80,6 +83,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
+        this.resetPasswordService = resetPasswordService;
     }
 
     public ResetPasswordRequestHandler() {
@@ -98,6 +102,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
         this.auditService = new AuditService(configurationService);
+        this.resetPasswordService = new ResetPasswordService(configurationService);
     }
 
     @Override
@@ -173,7 +178,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                         userContext);
         String subjectId = authenticationService.getSubjectFromEmail(email).getValue();
         String code = codeGeneratorService.twentyByteEncodedRandomCode();
-        NotifyRequest notifyRequest = new NotifyRequest(email, notificationType, code);
+        String resetPasswordLink = resetPasswordService.buildResetPasswordLink(code);
+        NotifyRequest notifyRequest = new NotifyRequest(email, notificationType, resetPasswordLink);
         codeStorageService.savePasswordResetCode(
                 subjectId,
                 code,

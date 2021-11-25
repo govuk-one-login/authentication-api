@@ -16,9 +16,6 @@ import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -115,8 +112,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             break;
                         case RESET_PASSWORD:
                             notifyPersonalisation.put(
-                                    "reset-password-link",
-                                    buildResetPasswordLink(notifyRequest.getCode()));
+                                    "reset-password-link", notifyRequest.getCode());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,
@@ -157,19 +153,6 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             }
         }
         return null;
-    }
-
-    private String buildResetPasswordLink(String code) {
-        LocalDateTime localDateTime =
-                LocalDateTime.now().plusSeconds(configurationService.getCodeExpiry());
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
-        return buildURI(
-                        configurationService.getFrontendBaseUrl(),
-                        configurationService.getResetPasswordRoute()
-                                + code
-                                + "."
-                                + expiryDate.toInstant().toEpochMilli())
-                .toString();
     }
 
     private void writeTestClientOtpToS3(String otp, String destination) {
