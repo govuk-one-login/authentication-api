@@ -37,26 +37,34 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     private final NotificationService notificationService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final AmazonS3 s3Client;
-    private final ConfigurationService configService;
+    private final ConfigurationService configurationService;
 
     public NotificationHandler(
             NotificationService notificationService,
-            ConfigurationService configService,
+            ConfigurationService configurationService,
             AmazonS3 s3Client) {
         this.notificationService = notificationService;
-        this.configService = configService;
+        this.configurationService = configurationService;
         this.s3Client = s3Client;
     }
 
     public NotificationHandler() {
-        this.configService = ConfigurationService.getInstance();
+        this(ConfigurationService.getInstance());
+    }
+
+    public NotificationHandler(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
         NotificationClient client =
-                configService
+                configurationService
                         .getNotifyApiUrl()
-                        .map(url -> new NotificationClient(configService.getNotifyApiKey(), url))
-                        .orElse(new NotificationClient(configService.getNotifyApiKey()));
+                        .map(
+                                url ->
+                                        new NotificationClient(
+                                                configurationService.getNotifyApiKey(), url))
+                        .orElse(new NotificationClient(configurationService.getNotifyApiKey()));
         this.notificationService = new NotificationService(client);
-        this.s3Client = AmazonS3Client.builder().withRegion(configService.getAwsRegion()).build();
+        this.s3Client =
+                AmazonS3Client.builder().withRegion(configurationService.getAwsRegion()).build();
     }
 
     @Override
@@ -73,7 +81,8 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                         case ACCOUNT_CREATED_CONFIRMATION:
                             notifyPersonalisation.put(
                                     "sign-in-page-url",
-                                    buildURI(configService.getAccountManagementURI()).toString());
+                                    buildURI(configurationService.getAccountManagementURI())
+                                            .toString());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,
@@ -119,8 +128,9 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             passwordResetConfirmationPersonalisation.put(
                                     "customer-support-link",
                                     buildURI(
-                                                    configService.getFrontendBaseUrl(),
-                                                    configService.getCustomerSupportLinkRoute())
+                                                    configurationService.getFrontendBaseUrl(),
+                                                    configurationService
+                                                            .getCustomerSupportLinkRoute())
                                             .toString());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
@@ -151,11 +161,11 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
     private String buildResetPasswordLink(String code) {
         LocalDateTime localDateTime =
-                LocalDateTime.now().plusSeconds(configService.getCodeExpiry());
+                LocalDateTime.now().plusSeconds(configurationService.getCodeExpiry());
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         return buildURI(
-                        configService.getFrontendBaseUrl(),
-                        configService.getResetPasswordRoute()
+                        configurationService.getFrontendBaseUrl(),
+                        configurationService.getResetPasswordRoute()
                                 + code
                                 + "."
                                 + expiryDate.toInstant().toEpochMilli())
@@ -164,14 +174,14 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
     private void writeTestClientOtpToS3(String otp, String destination) {
         Boolean isNotifyTestNumber =
-                configService
+                configurationService
                         .getNotifyTestPhoneNumber()
                         .map(t -> t.equals(destination))
                         .orElse(false);
         if (isNotifyTestNumber) {
             LOG.info("Notify Test Number used in request. Writing to S3 bucket");
-            String key = configService.getNotifyTestPhoneNumber().get();
-            String bucketName = configService.getSmoketestBucketName();
+            String key = configurationService.getNotifyTestPhoneNumber().get();
+            String bucketName = configurationService.getSmoketestBucketName();
             try {
                 s3Client.putObject(bucketName, key, otp);
             } catch (Exception e) {

@@ -25,21 +25,30 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     private static final Logger LOGGER = LogManager.getLogger(NotificationHandler.class);
     private final NotificationService notificationService;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final ConfigurationService configService;
+    private final ConfigurationService configurationService;
 
     public NotificationHandler(
             NotificationService notificationService, ConfigurationService configService) {
         this.notificationService = notificationService;
-        this.configService = configService;
+        this.configurationService = configService;
     }
 
     public NotificationHandler() {
-        this.configService = ConfigurationService.getInstance();
+        this(ConfigurationService.getInstance());
+    }
+
+    public NotificationHandler(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
         NotificationClient client =
-                configService
+                this.configurationService
                         .getNotifyApiUrl()
-                        .map(url -> new NotificationClient(configService.getNotifyApiKey(), url))
-                        .orElse(new NotificationClient(configService.getNotifyApiKey()));
+                        .map(
+                                url ->
+                                        new NotificationClient(
+                                                this.configurationService.getNotifyApiKey(), url))
+                        .orElse(
+                                new NotificationClient(
+                                        this.configurationService.getNotifyApiKey()));
         this.notificationService = new NotificationService(client);
     }
 
@@ -84,8 +93,9 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             emailUpdatePersonalisation.put(
                                     "customer-support-link",
                                     buildURI(
-                                                    configService.getFrontendBaseUrl(),
-                                                    configService.getCustomerSupportLinkRoute())
+                                                    configurationService.getFrontendBaseUrl(),
+                                                    configurationService
+                                                            .getCustomerSupportLinkRoute())
                                             .toString());
                             LOGGER.info("Sending EMAIL_UPDATED email using Notify");
                             notificationService.sendEmail(
@@ -101,8 +111,9 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             accountDeletedPersonalisation.put(
                                     "customer-support-link",
                                     buildURI(
-                                                    configService.getFrontendBaseUrl(),
-                                                    configService.getCustomerSupportLinkRoute())
+                                                    configurationService.getFrontendBaseUrl(),
+                                                    configurationService
+                                                            .getCustomerSupportLinkRoute())
                                             .toString());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
@@ -117,8 +128,9 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             phoneNumberUpdatedPersonalisation.put(
                                     "customer-support-link",
                                     buildURI(
-                                                    configService.getFrontendBaseUrl(),
-                                                    configService.getCustomerSupportLinkRoute())
+                                                    configurationService.getFrontendBaseUrl(),
+                                                    configurationService
+                                                            .getCustomerSupportLinkRoute())
                                             .toString());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
@@ -133,8 +145,9 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             passwordUpdatedPersonalisation.put(
                                     "customer-support-link",
                                     buildURI(
-                                                    configService.getFrontendBaseUrl(),
-                                                    configService.getCustomerSupportLinkRoute())
+                                                    configurationService.getFrontendBaseUrl(),
+                                                    configurationService
+                                                            .getCustomerSupportLinkRoute())
                                             .toString());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),

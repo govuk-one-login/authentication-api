@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import uk.gov.di.authentication.sharedtest.httpstub.HttpStubExtension;
 
+import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -19,44 +20,53 @@ public class NotifyStubExtension extends HttpStubExtension {
         this.objectMapper = objectMapper;
     }
 
+    public NotifyStubExtension(ObjectMapper objectMapper) {
+        super();
+        this.objectMapper = objectMapper;
+    }
+
     public void init() {
         register(
                 "/v2/notifications/email",
                 201,
                 "application/json",
-                "{"
-                        + "  \"id\": \"740e5834-3a29-46b4-9a6f-16142fde533a\","
-                        + "  \"reference\": \"STRING\","
-                        + "  \"content\": {"
-                        + "    \"subject\": \"SUBJECT TEXT\","
-                        + "    \"body\": \"MESSAGE TEXT\",\n"
-                        + "    \"from_email\": \"SENDER EMAIL\""
-                        + "  },"
-                        + "  \"uri\": \"http://localhost:8888/v2/notifications/a-message-id\","
-                        + "  \"template\": {"
-                        + "    \"id\": \"f33517ff-2a88-4f6e-b855-c550268ce08a\","
-                        + "    \"version\": 1,"
-                        + "    \"uri\": \"http://localhost:8888/v2/template/f33517ff-2a88-4f6e-b855-c550268ce08a\""
-                        + "  }"
-                        + "}");
+                format(
+                        "{"
+                                + "  \"id\": \"740e5834-3a29-46b4-9a6f-16142fde533a\","
+                                + "  \"reference\": \"STRING\","
+                                + "  \"content\": {"
+                                + "    \"subject\": \"SUBJECT TEXT\","
+                                + "    \"body\": \"MESSAGE TEXT\",\n"
+                                + "    \"from_email\": \"SENDER EMAIL\""
+                                + "  },"
+                                + "  \"uri\": \"http://localhost:%1$d/v2/notifications/a-message-id\","
+                                + "  \"template\": {"
+                                + "    \"id\": \"f33517ff-2a88-4f6e-b855-c550268ce08a\","
+                                + "    \"version\": 1,"
+                                + "    \"uri\": \"http://localhost:%1$d/v2/template/f33517ff-2a88-4f6e-b855-c550268ce08a\""
+                                + "  }"
+                                + "}",
+                        getHttpPort()));
         register(
                 "/v2/notifications/sms",
                 201,
                 "application/json",
-                "{"
-                        + "  \"id\": \"740e5834-3a29-46b4-9a6f-16142fde533a\","
-                        + "  \"reference\": \"STRING\","
-                        + "  \"content\": {"
-                        + "    \"body\": \"MESSAGE TEXT\",\n"
-                        + "    \"from_number\": \"SENDER\""
-                        + "  },"
-                        + "  \"uri\": \"http://localhost:8888/v2/notifications/a-message-id\","
-                        + "  \"template\": {"
-                        + "    \"id\": \"f33517ff-2a88-4f6e-b855-c550268ce08a\","
-                        + "    \"version\": 1,"
-                        + "    \"uri\": \"http://localhost:8888/v2/template/f33517ff-2a88-4f6e-b855-c550268ce08a\""
-                        + "  }"
-                        + "}");
+                format(
+                        "{"
+                                + "  \"id\": \"740e5834-3a29-46b4-9a6f-16142fde533a\","
+                                + "  \"reference\": \"STRING\","
+                                + "  \"content\": {"
+                                + "    \"body\": \"MESSAGE TEXT\",\n"
+                                + "    \"from_number\": \"SENDER\""
+                                + "  },"
+                                + "  \"uri\": \"http://localhost:%1$d}/v2/notifications/a-message-id\","
+                                + "  \"template\": {"
+                                + "    \"id\": \"f33517ff-2a88-4f6e-b855-c550268ce08a\","
+                                + "    \"version\": 1,"
+                                + "    \"uri\": \"http://localhost:%1$d/v2/template/f33517ff-2a88-4f6e-b855-c550268ce08a\""
+                                + "  }"
+                                + "}",
+                        getHttpPort()));
     }
 
     public JsonNode waitForRequest(int timeoutInSeconds) throws JsonProcessingException {
