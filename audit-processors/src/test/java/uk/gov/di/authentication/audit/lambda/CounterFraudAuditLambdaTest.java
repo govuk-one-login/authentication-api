@@ -50,6 +50,7 @@ public class CounterFraudAuditLambdaTest {
                         .setClientId("test-client-id")
                         .setTimestamp("test-timestamp")
                         .setEventName("test-event-name")
+                        .setPersistentSessionId("test-persistent-session-id")
                         .build();
 
         handler.handleAuditEvent(payload);
@@ -62,6 +63,9 @@ public class CounterFraudAuditLambdaTest {
         assertThat(logEvent, hasObjectMessageProperty("client-id", "test-client-id"));
         assertThat(logEvent, hasObjectMessageProperty("timestamp", "test-timestamp"));
         assertThat(logEvent, hasObjectMessageProperty("event-name", "test-event-name"));
+        assertThat(
+                logEvent,
+                hasObjectMessageProperty("persistent-session-id", "test-persistent-session-id"));
     }
 
     @Test
