@@ -23,15 +23,21 @@ public class AuditService {
     private final Clock clock;
     private final SnsService snsService;
     private final KmsConnectionService kmsConnectionService;
+    private final ConfigurationService configurationService;
 
     public AuditService(
-            Clock clock, SnsService snsService, KmsConnectionService kmsConnectionService) {
+            Clock clock,
+            SnsService snsService,
+            KmsConnectionService kmsConnectionService,
+            ConfigurationService configurationService) {
         this.clock = clock;
         this.snsService = snsService;
         this.kmsConnectionService = kmsConnectionService;
+        this.configurationService = configurationService;
     }
 
     public AuditService(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
         this.clock = Clock.systemUTC();
         this.snsService = new SnsService(configurationService);
         this.kmsConnectionService =
@@ -116,7 +122,7 @@ public class AuditService {
 
     private byte[] signPayload(byte[] payload) {
         SignRequest signRequest = new SignRequest();
-        signRequest.setKeyId(ConfigurationService.getInstance().getAuditSigningKeyAlias());
+        signRequest.setKeyId(configurationService.getAuditSigningKeyAlias());
         signRequest.setMessage(ByteBuffer.wrap(payload));
         signRequest.setSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256.toString());
 

@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.sharedtest.extensions;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
+import com.amazonaws.services.dynamodbv2.model.BillingMode;
 import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
 import com.amazonaws.services.dynamodbv2.model.GlobalSecondaryIndex;
 import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
@@ -23,8 +24,7 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
     public static final String CLIENT_NAME_FIELD = "ClientName";
     public static final String CLIENT_NAME_INDEX = "ClientNameIndex";
 
-    private final DynamoClientService dynamoClientService =
-            new DynamoClientService(REGION, ENVIRONMENT, Optional.of(DYNAMO_ENDPOINT));
+    private DynamoClientService dynamoClientService;
 
     public void registerClient(
             String clientID,
@@ -55,6 +55,13 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
     }
 
     @Override
+    public void beforeAll(ExtensionContext context) throws Exception {
+        super.beforeAll(context);
+        dynamoClientService =
+                new DynamoClientService(REGION, ENVIRONMENT, Optional.of(DYNAMO_ENDPOINT));
+    }
+
+    @Override
     public void afterEach(ExtensionContext context) throws Exception {
         clearDynamoTable(dynamoDB, CLIENT_REGISTRY_TABLE, CLIENT_ID_FIELD);
     }
@@ -71,6 +78,7 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 new CreateTableRequest()
                         .withTableName(tableName)
                         .withKeySchema(new KeySchemaElement(CLIENT_ID_FIELD, HASH))
+                        .withBillingMode(BillingMode.PAY_PER_REQUEST)
                         .withAttributeDefinitions(
                                 new AttributeDefinition(CLIENT_ID_FIELD, S),
                                 new AttributeDefinition(CLIENT_NAME_FIELD, S))

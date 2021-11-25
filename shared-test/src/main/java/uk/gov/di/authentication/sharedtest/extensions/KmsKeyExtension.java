@@ -5,13 +5,14 @@ import com.amazonaws.services.kms.AWSKMS;
 import com.amazonaws.services.kms.AWSKMSClientBuilder;
 import com.amazonaws.services.kms.model.CreateAliasRequest;
 import com.amazonaws.services.kms.model.CreateKeyRequest;
+import com.amazonaws.services.kms.model.CustomerMasterKeySpec;
 import com.amazonaws.services.kms.model.DescribeKeyRequest;
 import com.amazonaws.services.kms.model.NotFoundException;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
-import static com.amazonaws.services.kms.model.KeySpec.ECC_NIST_P256;
 import static com.amazonaws.services.kms.model.KeyUsageType.SIGN_VERIFY;
+import static java.text.MessageFormat.format;
 
 public class KmsKeyExtension implements BeforeAllCallback {
 
@@ -20,10 +21,12 @@ public class KmsKeyExtension implements BeforeAllCallback {
             System.getenv().getOrDefault("LOCALSTACK_ENDPOINT", "http://localhost:45678");
 
     protected AWSKMS kms;
-    protected final String keyAlias;
+    protected final String keyAliasSuffix;
 
-    public KmsKeyExtension(String keyAlias) {
-        this.keyAlias = keyAlias;
+    private String keyAlias;
+
+    public KmsKeyExtension(String keyAliasSuffix) {
+        this.keyAliasSuffix = keyAliasSuffix;
     }
 
     @Override
@@ -35,6 +38,12 @@ public class KmsKeyExtension implements BeforeAllCallback {
                                         LOCALSTACK_ENDPOINT, REGION))
                         .build();
 
+        keyAlias =
+                format(
+                        "alias/{0}-{1}",
+                        context.getTestClass().map(Class::getSimpleName).orElse("unknown"),
+                        keyAliasSuffix);
+
         if (!keyExists(keyAlias)) {
             createTokenSigningKey(keyAlias);
         }
@@ -42,7 +51,9 @@ public class KmsKeyExtension implements BeforeAllCallback {
 
     protected void createTokenSigningKey(String keyAlias) {
         CreateKeyRequest keyRequest =
-                new CreateKeyRequest().withKeySpec(ECC_NIST_P256).withKeyUsage(SIGN_VERIFY);
+                new CreateKeyRequest()
+                        .withCustomerMasterKeySpec(CustomerMasterKeySpec.ECC_NIST_P256)
+                        .withKeyUsage(SIGN_VERIFY);
 
         var keyResponse = kms.createKey(keyRequest);
 
@@ -62,5 +73,9 @@ public class KmsKeyExtension implements BeforeAllCallback {
         } catch (NotFoundException ignored) {
             return false;
         }
+    }
+
+    public String getKeyAlias() {
+        return keyAlias;
     }
 }

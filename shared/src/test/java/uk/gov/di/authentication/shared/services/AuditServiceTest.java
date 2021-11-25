@@ -67,7 +67,12 @@ class AuditServiceTest {
 
     @Test
     void shouldLogAuditEvent() {
-        var auditService = new AuditService(FIXED_CLOCK, snsService, kmsConnectionService);
+        var auditService =
+                new AuditService(
+                        FIXED_CLOCK,
+                        snsService,
+                        kmsConnectionService,
+                        mock(ConfigurationService.class));
 
         auditService.submitAuditEvent(
                 TEST_EVENT_ONE,
@@ -96,7 +101,12 @@ class AuditServiceTest {
 
     @Test
     void shouldSignAuditEventPayload() throws InvalidProtocolBufferException {
-        var auditService = new AuditService(FIXED_CLOCK, snsService, kmsConnectionService);
+        var auditService =
+                new AuditService(
+                        FIXED_CLOCK,
+                        snsService,
+                        kmsConnectionService,
+                        mock(ConfigurationService.class));
 
         var signingRequestCaptor = ArgumentCaptor.forClass(SignRequest.class);
 
@@ -125,7 +135,12 @@ class AuditServiceTest {
 
     @Test
     void shouldLogAuditEventWithMetadataPairsAttached() {
-        var auditService = new AuditService(FIXED_CLOCK, snsService, kmsConnectionService);
+        var auditService =
+                new AuditService(
+                        FIXED_CLOCK,
+                        snsService,
+                        kmsConnectionService,
+                        mock(ConfigurationService.class));
 
         auditService.submitAuditEvent(
                 TEST_EVENT_ONE,

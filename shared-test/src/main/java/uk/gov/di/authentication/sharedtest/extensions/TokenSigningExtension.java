@@ -10,6 +10,7 @@ import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.nio.ByteBuffer;
@@ -17,30 +18,30 @@ import java.util.Optional;
 
 public class TokenSigningExtension extends KmsKeyExtension {
 
-    private static final String TOKEN_SIGNING_KEY_ALIAS =
-            System.getenv().get("TOKEN_SIGNING_KEY_ALIAS");
-
-    private final KmsConnectionService kmsConnectionService =
-            new KmsConnectionService(
-                    Optional.of(LOCALSTACK_ENDPOINT), REGION, TOKEN_SIGNING_KEY_ALIAS);
+    private KmsConnectionService kmsConnectionService;
 
     public TokenSigningExtension() {
-        super(TOKEN_SIGNING_KEY_ALIAS);
+        super("token-signing-key");
+    }
+
+    @Override
+    public void beforeAll(ExtensionContext context) {
+        super.beforeAll(context);
+        kmsConnectionService =
+                new KmsConnectionService(Optional.of(LOCALSTACK_ENDPOINT), REGION, getKeyAlias());
     }
 
     public SignedJWT signJwt(JWTClaimsSet claimsSet) {
         try {
             JWSHeader jwsHeader =
-                    new JWSHeader.Builder(JWSAlgorithm.ES256)
-                            .keyID(TOKEN_SIGNING_KEY_ALIAS)
-                            .build();
+                    new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(getKeyAlias()).build();
             Base64URL encodedHeader = jwsHeader.toBase64URL();
             Base64URL encodedClaims = Base64URL.encode(claimsSet.toString());
             String message = encodedHeader + "." + encodedClaims;
             ByteBuffer messageToSign = ByteBuffer.wrap(message.getBytes());
             SignRequest signRequest = new SignRequest();
             signRequest.setMessage(messageToSign);
-            signRequest.setKeyId(TOKEN_SIGNING_KEY_ALIAS);
+            signRequest.setKeyId(getKeyAlias());
             signRequest.setSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256.toString());
             SignResult signResult = kmsConnectionService.sign(signRequest);
             String signature =
