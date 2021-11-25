@@ -78,12 +78,10 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     public LoginHandler(ConfigurationService configurationService) {
         super(LoginRequest.class, configurationService);
         this.codeStorageService =
-                new CodeStorageService(
-                        new RedisConnectionService(ConfigurationService.getInstance()));
+                new CodeStorageService(new RedisConnectionService(configurationService));
         this.userMigrationService =
                 new UserMigrationService(
-                        new DynamoService(ConfigurationService.getInstance()),
-                        ConfigurationService.getInstance());
+                        new DynamoService(configurationService), configurationService);
         this.auditService = new AuditService(configurationService);
     }
 

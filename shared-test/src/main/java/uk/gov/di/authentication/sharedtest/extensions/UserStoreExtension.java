@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.sharedtest.extensions;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
+import com.amazonaws.services.dynamodbv2.model.BillingMode;
 import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
 import com.amazonaws.services.dynamodbv2.model.GlobalSecondaryIndex;
 import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
@@ -31,8 +32,7 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
     public static final String SUBJECT_ID_INDEX = "SubjectIDIndex";
     public static final String PUBLIC_SUBJECT_ID_INDEX = "PublicSubjectIDIndex";
 
-    private final DynamoService dynamoService =
-            new DynamoService(REGION, ENVIRONMENT, Optional.of(DYNAMO_ENDPOINT));
+    private DynamoService dynamoService;
 
     public boolean userExists(String email) {
         return dynamoService.userExists(email);
@@ -71,6 +71,12 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
     }
 
     @Override
+    public void beforeAll(ExtensionContext context) throws Exception {
+        super.beforeAll(context);
+        dynamoService = new DynamoService(REGION, ENVIRONMENT, Optional.of(DYNAMO_ENDPOINT));
+    }
+
+    @Override
     public void afterEach(ExtensionContext context) throws Exception {
         clearDynamoTable(dynamoDB, USER_CREDENTIALS_TABLE, EMAIL_FIELD);
         clearDynamoTable(dynamoDB, USER_PROFILE_TABLE, EMAIL_FIELD);
@@ -92,6 +98,7 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
                 new CreateTableRequest()
                         .withTableName(tableName)
                         .withKeySchema(new KeySchemaElement(EMAIL_FIELD, HASH))
+                        .withBillingMode(BillingMode.PAY_PER_REQUEST)
                         .withAttributeDefinitions(
                                 new AttributeDefinition(EMAIL_FIELD, S),
                                 new AttributeDefinition(SUBJECT_ID_FIELD, S))
@@ -108,6 +115,7 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
                 new CreateTableRequest()
                         .withTableName(tableName)
                         .withKeySchema(new KeySchemaElement(EMAIL_FIELD, HASH))
+                        .withBillingMode(BillingMode.PAY_PER_REQUEST)
                         .withAttributeDefinitions(
                                 new AttributeDefinition(EMAIL_FIELD, S),
                                 new AttributeDefinition(SUBJECT_ID_FIELD, S),

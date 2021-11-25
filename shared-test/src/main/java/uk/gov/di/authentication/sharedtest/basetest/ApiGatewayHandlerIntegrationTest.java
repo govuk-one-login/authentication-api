@@ -14,6 +14,7 @@ import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.authentication.sharedtest.extensions.RedisExtension;
 import uk.gov.di.authentication.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
+import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
 import java.net.HttpCookie;
@@ -49,8 +50,19 @@ public abstract class ApiGatewayHandlerIntegrationTest {
     protected static final SqsQueueExtension notificationsQueue =
             new SqsQueueExtension("notification-queue");
 
+    @RegisterExtension
+    protected static final SnsTopicExtension auditTopic = new SnsTopicExtension("local-events");
+
+    @RegisterExtension
+    protected static final KmsKeyExtension auditSigningKey =
+            new KmsKeyExtension("audit-signing-key");
+
+    @RegisterExtension
+    protected static final TokenSigningExtension tokenSigner = new TokenSigningExtension();
+
     protected static final ConfigurationService TEST_CONFIGURATION_SERVICE =
-            new IntegrationTestConfigurationService(notificationsQueue);
+            new IntegrationTestConfigurationService(
+                    auditTopic, notificationsQueue, auditSigningKey, tokenSigner);
 
     protected RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> handler;
     protected final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
@@ -65,13 +77,6 @@ public abstract class ApiGatewayHandlerIntegrationTest {
 
     @RegisterExtension
     protected static final ClientStoreExtension clientStore = new ClientStoreExtension();
-
-    @RegisterExtension
-    protected static final KmsKeyExtension auditSigningKey =
-            new KmsKeyExtension(TEST_CONFIGURATION_SERVICE.getAuditSigningKeyAlias());
-
-    @RegisterExtension
-    protected static final SnsTopicExtension auditTopic = new SnsTopicExtension("local-events");
 
     protected APIGatewayProxyResponseEvent makeRequest(
             Optional<Object> body, Map<String, String> headers, Map<String, String> queryString) {
@@ -147,10 +152,20 @@ public abstract class ApiGatewayHandlerIntegrationTest {
 
     public static class IntegrationTestConfigurationService extends ConfigurationService {
 
-        private SqsQueueExtension notificationQueue;
+        private final SqsQueueExtension notificationQueue;
+        private final KmsKeyExtension auditSigningKey;
+        private final TokenSigningExtension tokenSigningKey;
+        private final SnsTopicExtension auditEventTopic;
 
-        public IntegrationTestConfigurationService(SqsQueueExtension notificationQueue) {
+        public IntegrationTestConfigurationService(
+                SnsTopicExtension auditEventTopic,
+                SqsQueueExtension notificationQueue,
+                KmsKeyExtension auditSigningKey,
+                TokenSigningExtension tokenSigningKey) {
+            this.auditEventTopic = auditEventTopic;
             this.notificationQueue = notificationQueue;
+            this.tokenSigningKey = tokenSigningKey;
+            this.auditSigningKey = auditSigningKey;
         }
 
         @Override
@@ -161,6 +176,36 @@ public abstract class ApiGatewayHandlerIntegrationTest {
         @Override
         public String getEmailQueueUri() {
             return notificationQueue.getQueueUrl();
+        }
+
+        @Override
+        public String getEventsSnsTopicArn() {
+            return auditEventTopic.getTopicArn();
+        }
+
+        @Override
+        public Optional<String> getRedisPassword() {
+            return Optional.empty();
+        }
+
+        @Override
+        public int getRedisPort() {
+            return 6379;
+        }
+
+        @Override
+        public boolean getUseRedisTLS() {
+            return false;
+        }
+
+        @Override
+        public String getAuditSigningKeyAlias() {
+            return auditSigningKey.getKeyAlias();
+        }
+
+        @Override
+        public String getTokenSigningKeyAlias() {
+            return tokenSigningKey.getKeyAlias();
         }
     }
 }
