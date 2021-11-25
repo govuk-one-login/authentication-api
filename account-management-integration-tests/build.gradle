@@ -60,7 +60,6 @@ test {
                 project(":shared").sourceSets.main.output)
     }
     dependsOn ":composeUp"
-    finalizedBy "jacocoTestReport"
 }
 
 jacocoTestReport {
