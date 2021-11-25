@@ -90,7 +90,7 @@ public class AuthCodeHandler
         authorisationCodeService = new AuthorisationCodeService(configurationService);
         authorizationService = new AuthorizationService(configurationService);
         clientSessionService = new ClientSessionService(configurationService);
-        auditService = new AuditService();
+        auditService = new AuditService(configurationService);
     }
 
     public AuthCodeHandler() {

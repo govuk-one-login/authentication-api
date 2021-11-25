@@ -64,7 +64,7 @@ public class ClientInfoHandler
                         configurationService.getEnvironment(),
                         configurationService.getDynamoEndpointUri());
         this.sessionService = new SessionService(configurationService);
-        this.auditService = new AuditService();
+        this.auditService = new AuditService(configurationService);
     }
 
     public ClientInfoHandler() {

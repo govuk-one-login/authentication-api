@@ -84,7 +84,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 new UserMigrationService(
                         new DynamoService(ConfigurationService.getInstance()),
                         ConfigurationService.getInstance());
-        this.auditService = new AuditService();
+        this.auditService = new AuditService(configurationService);
     }
 
     public LoginHandler() {

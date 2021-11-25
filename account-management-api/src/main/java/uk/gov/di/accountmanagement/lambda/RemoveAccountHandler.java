@@ -61,7 +61,7 @@ public class RemoveAccountHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
-        this.auditService = new AuditService();
+        this.auditService = new AuditService(configurationService);
     }
 
     @Override

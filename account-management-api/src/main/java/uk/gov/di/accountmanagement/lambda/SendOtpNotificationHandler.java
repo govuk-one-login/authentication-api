@@ -77,7 +77,7 @@ public class SendOtpNotificationHandler
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
         this.dynamoService = new DynamoService(configurationService);
-        this.auditService = new AuditService();
+        this.auditService = new AuditService(configurationService);
     }
 
     @Override
