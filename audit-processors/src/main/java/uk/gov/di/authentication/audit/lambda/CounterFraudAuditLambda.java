@@ -32,6 +32,7 @@ public class CounterFraudAuditLambda extends BaseAuditHandler {
         eventData.put("client-id", auditEvent.getClientId());
         eventData.put("timestamp", auditEvent.getTimestamp());
         eventData.put("event-name", auditEvent.getEventName());
+        eventData.put("persistent-session-id", auditEvent.getPersistentSessionId());
 
         User user = auditEvent.getUser();
 
