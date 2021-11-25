@@ -116,9 +116,9 @@ public class UpdatePasswordHandler
                                         userProfile.getSubjectID(),
                                         userProfile.getEmail(),
                                         IpAddressHelper.extractIpAddress(input),
+                                        userProfile.getPhoneNumber(),
                                         PersistentIdHelper.extractPersistentIdFromHeaders(
-                                                input.getHeaders()),
-                                        userProfile.getPhoneNumber());
+                                                input.getHeaders()));
 
                                 return generateEmptySuccessApiGatewayResponse();
 

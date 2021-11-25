@@ -62,8 +62,8 @@ class AuthenticateHandlerTest {
                         AuditService.UNKNOWN,
                         EMAIL,
                         "123.123.123.123",
-                        persistentIdValue,
-                        AuditService.UNKNOWN);
+                        AuditService.UNKNOWN,
+                        persistentIdValue);
     }
 
     @Test

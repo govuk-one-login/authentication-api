@@ -76,8 +76,8 @@ class RemoveAccountHandlerTest {
                         userProfile.getSubjectID(),
                         userProfile.getEmail(),
                         "123.123.123.123",
-                        persistentIdValue,
-                        userProfile.getPhoneNumber());
+                        userProfile.getPhoneNumber(),
+                        persistentIdValue);
 
         assertThat(result, hasStatus(204));
     }

@@ -104,8 +104,8 @@ class UpdateEmailHandlerTest {
                         userProfile.getSubjectID(),
                         userProfile.getEmail(),
                         "123.123.123.123",
-                        persistentIdValue,
-                        userProfile.getPhoneNumber());
+                        userProfile.getPhoneNumber(),
+                        persistentIdValue);
     }
 
     @Test

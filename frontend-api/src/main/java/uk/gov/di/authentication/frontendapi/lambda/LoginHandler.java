@@ -118,8 +118,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         IpAddressHelper.extractIpAddress(input),
-                        persistentSessionId,
-                        AuditService.UNKNOWN);
+                        AuditService.UNKNOWN,
+                        persistentSessionId);
 
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
             }
@@ -146,8 +146,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         userProfile.getSubjectID(),
                         userProfile.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
-                        persistentSessionId,
-                        userProfile.getPhoneNumber());
+                        userProfile.getPhoneNumber(),
+                        persistentSessionId);
 
                 sessionService.save(userContext.getSession().setState(nextState));
                 return generateApiGatewayProxyResponse(
@@ -194,8 +194,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         AuditService.UNKNOWN,
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
-                        persistentSessionId,
-                        AuditService.UNKNOWN);
+                        AuditService.UNKNOWN,
+                        persistentSessionId);
 
                 return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
             }
@@ -241,8 +241,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     userProfile.getSubjectID(),
                     userProfile.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
-                    persistentSessionId,
-                    userProfile.getPhoneNumber());
+                    userProfile.getPhoneNumber(),
+                    persistentSessionId);
 
             return generateApiGatewayProxyResponse(
                     200, new LoginResponse(concatPhoneNumber, userContext.getSession().getState()));
