@@ -1,0 +1,31 @@
+package uk.gov.di.authentication.frontendapi.services;
+
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
+
+import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
+
+public class ResetPasswordService {
+
+    private ConfigurationService configurationService;
+
+    public ResetPasswordService(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
+    }
+
+    public String buildResetPasswordLink(String code) {
+        LocalDateTime localDateTime =
+                LocalDateTime.now().plusSeconds(configurationService.getCodeExpiry());
+        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        return buildURI(
+                        configurationService.getFrontendBaseUrl(),
+                        configurationService.getResetPasswordRoute()
+                                + code
+                                + "."
+                                + expiryDate.toInstant().toEpochMilli())
+                .toString();
+    }
+}
