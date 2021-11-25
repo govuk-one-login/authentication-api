@@ -151,8 +151,8 @@ class LoginHandlerTest {
                         userProfile.getSubjectID(),
                         userProfile.getEmail(),
                         "123.123.123.123",
-                        persistentId,
-                        userProfile.getPhoneNumber());
+                        userProfile.getPhoneNumber(),
+                        persistentId);
     }
 
     @Test
@@ -268,8 +268,8 @@ class LoginHandlerTest {
                         userProfile.getSubjectID(),
                         userProfile.getEmail(),
                         "123.123.123.123",
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        userProfile.getPhoneNumber());
+                        userProfile.getPhoneNumber(),
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
     }
 
     @Test
@@ -327,8 +327,8 @@ class LoginHandlerTest {
                         "",
                         EMAIL,
                         "123.123.123.123",
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        "");
+                        "",
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
 
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
@@ -404,8 +404,8 @@ class LoginHandlerTest {
                         "",
                         "",
                         "123.123.123.123",
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        "");
+                        "",
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));

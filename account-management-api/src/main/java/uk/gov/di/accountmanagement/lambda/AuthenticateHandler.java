@@ -90,9 +90,9 @@ public class AuthenticateHandler
                                         AuditService.UNKNOWN,
                                         loginRequest.getEmail(),
                                         IpAddressHelper.extractIpAddress(input),
+                                        AuditService.UNKNOWN,
                                         PersistentIdHelper.extractPersistentIdFromHeaders(
-                                                input.getHeaders()),
-                                        AuditService.UNKNOWN);
+                                                input.getHeaders()));
 
                                 return generateEmptySuccessApiGatewayResponse();
                             } catch (JsonProcessingException e) {

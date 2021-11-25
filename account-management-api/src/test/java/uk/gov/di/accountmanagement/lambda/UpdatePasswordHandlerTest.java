@@ -91,8 +91,8 @@ class UpdatePasswordHandlerTest {
                         userProfile.getSubjectID(),
                         userProfile.getEmail(),
                         "123.123.123.123",
-                        persistentIdValue,
-                        userProfile.getPhoneNumber());
+                        userProfile.getPhoneNumber(),
+                        persistentIdValue);
     }
 
     @Test
@@ -154,7 +154,7 @@ class UpdatePasswordHandlerTest {
                         userProfile.getSubjectID(),
                         userProfile.getEmail(),
                         "123.123.123.123",
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        userProfile.getPhoneNumber());
+                        userProfile.getPhoneNumber(),
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
     }
 }

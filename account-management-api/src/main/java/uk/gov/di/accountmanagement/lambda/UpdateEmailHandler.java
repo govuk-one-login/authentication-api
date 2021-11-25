@@ -140,9 +140,9 @@ public class UpdateEmailHandler
                                         userProfile.getSubjectID(),
                                         userProfile.getEmail(),
                                         IpAddressHelper.extractIpAddress(input),
+                                        userProfile.getPhoneNumber(),
                                         PersistentIdHelper.extractPersistentIdFromHeaders(
-                                                input.getHeaders()),
-                                        userProfile.getPhoneNumber());
+                                                input.getHeaders()));
 
                                 LOGGER.info(
                                         "Message successfully added to queue. Generating successful gateway response");
