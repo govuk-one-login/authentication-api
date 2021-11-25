@@ -39,41 +39,8 @@ startup() {
 
 run-integration-tests() {
   run_integration_tests_start_seconds=$SECONDS
-  TEST_ENVIRONMENT=localstack
-  if [[ ! -z ${SANDPIT+x} && ${SANDPIT} -eq 1 ]]; then
-    printf "\nRunning against sandpit, AWS credentials are required.\n"
-    TEST_ENVIRONMENT=sandpit
-  else
-    printf "\nRunning against localstack.  Starting Docker services...\n"
-  fi
-
-  if [[ -z ${IN_GITHUB_ACTIONS+x} ||  ${IN_GITHUB_ACTIONS} -eq 0 ]]; then
-    ./gradlew --no-daemon integration-tests:test -PterraformEnvironment=${TEST_ENVIRONMENT}
-    EXIT_CODE=$?
-  else
-    ./gradlew integration-tests:test -PterraformEnvironment=${TEST_ENVIRONMENT}
-    EXIT_CODE=$?
-  fi
+  ./gradlew :integration-tests:test :account-management-integration-tests:test :composeDownForced
+  EXIT_CODE=$?
   record_timings "run-integration-tests" $run_integration_tests_start_seconds $SECONDS false
-  return ${EXIT_CODE}
-}
-
-run-account-management-integration-tests() {
-  run_am_integration_tests_start_seconds=$SECONDS
-  if [[ ! -z ${SANDPIT+x} && ${SANDPIT} -eq 1 ]]; then
-    printf "\nRunning against sandpit, AWS credentials are required.\n"
-    TEST_ENVIRONMENT=sandpit
-  else
-    printf "\nRunning against localstack.  Starting Docker services...\n"
-  fi
-
-  if [[ -z ${IN_GITHUB_ACTIONS+x} ||  ${IN_GITHUB_ACTIONS} -eq 0 ]]; then
-    ./gradlew --no-daemon account-management-integration-tests:test -PterraformEnvironment=${TEST_ENVIRONMENT}
-    EXIT_CODE=$?
-  else
-    ./gradlew account-management-integration-tests:test -PterraformEnvironment=${TEST_ENVIRONMENT}
-    EXIT_CODE=$?
-  fi
-  record_timings "run-account-management-integration-tests" $run_am_integration_tests_start_seconds $SECONDS false
   return ${EXIT_CODE}
 }

@@ -14,9 +14,8 @@ function usage() {
 
   Options:
     -u  run the unit tests
-    -i  run the integration tests
+    -i  run all integration tests
     -g  running in GitHub actions
-    -t  terraform all modules
     -s  run against sandpit
 USAGE
 }
@@ -39,15 +38,6 @@ while getopts "uigts" opt; do
     i)
       RUN_INTEGRATION=1
       ;;
-    g)
-      IN_GITHUB_ACTIONS=1
-      ;;
-    t)
-      TF_ACCOUNT_MANAGEMENT=1
-      ;;
-    s)
-      SANDPIT=1
-      ;;
     *)
       usage
       exit 1
@@ -59,10 +49,12 @@ auth_api_pre_commit_start_seconds=$SECONDS
 
 if [[ ${RUN_UNIT} -eq 1 ]]; then
   printf "\nRunning build and unit tests...\n"
+  run_unit_tests_start_seconds=$SECONDS
   set +e
-  ./gradlew clean build -x integration-tests:test -x account-management-integration-tests:test
+  ./gradlew --parallel clean build -x integration-tests:test -x account-management-integration-tests:test
   build_and_test_exit_code=$?
   set -e
+  record_timings "run-unit-tests" run_unit_tests_start_seconds $SECONDS false
   if [ ${build_and_test_exit_code} -ne 0 ]; then
     printf "\nBuild and test failed.\n"
     exit 1
@@ -77,13 +69,6 @@ if [ ${RUN_INTEGRATION} -eq 1 ] || [ ${TF_ACCOUNT_MANAGEMENT} -eq 1 ]; then
       build_and_test_exit_code=$?
       set -e
   fi
-  if [[ ${build_and_test_exit_code} -eq 0 && ${TF_ACCOUNT_MANAGEMENT} -eq 1 ]]; then
-      set +e
-      run-account-management-integration-tests
-      build_and_test_exit_code=$?
-      set -e
-  fi
-  ./gradlew composeDownForced
 fi
 
 record_timings "auth api pre-commit total" auth_api_pre_commit_start_seconds $SECONDS true
