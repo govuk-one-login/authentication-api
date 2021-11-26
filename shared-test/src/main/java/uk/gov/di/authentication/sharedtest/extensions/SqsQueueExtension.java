@@ -19,11 +19,8 @@ import java.util.stream.Collectors;
 
 import static java.text.MessageFormat.format;
 
-public class SqsQueueExtension implements BeforeAllCallback {
+public class SqsQueueExtension extends BaseAwsResourceExtension implements BeforeAllCallback {
 
-    protected static final String REGION = System.getenv().getOrDefault("AWS_REGION", "eu-west-2");
-    protected static final String LOCALSTACK_ENDPOINT =
-            System.getenv().getOrDefault("LOCALSTACK_ENDPOINT", "http://localhost:45678");
     public static final int DEFAULT_NUMBER_OF_MESSAGES = 10;
 
     private final String queueNameSuffix;

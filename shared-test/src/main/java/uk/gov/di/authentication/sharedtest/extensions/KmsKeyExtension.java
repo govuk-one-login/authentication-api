@@ -14,11 +14,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import static com.amazonaws.services.kms.model.KeyUsageType.SIGN_VERIFY;
 import static java.text.MessageFormat.format;
 
-public class KmsKeyExtension implements BeforeAllCallback {
-
-    protected static final String REGION = System.getenv().getOrDefault("AWS_REGION", "eu-west-2");
-    protected static final String LOCALSTACK_ENDPOINT =
-            System.getenv().getOrDefault("LOCALSTACK_ENDPOINT", "http://localhost:45678");
+public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeAllCallback {
 
     protected AWSKMS kms;
     protected final String keyAliasSuffix;
