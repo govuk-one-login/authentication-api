@@ -29,7 +29,7 @@ class ResetPasswordServiceTest {
     }
 
     @Test
-    public void shouldReturnPasswordResetLink() {
+    void shouldReturnPasswordResetLink() {
         String passwordResetLink = resetPasswordService.buildResetPasswordLink(CODE);
         String[] splitPasswordLink = passwordResetLink.split("\\.");
 
