@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
+import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 
@@ -37,6 +38,8 @@ public class NotificationHandlerTest {
     private static final String NOTIFY_PHONE_NUMBER = "01234567899";
     private static final String TEMPLATE_ID = "fdsfdssd";
     private static final String BUCKET_NAME = "test-s3-bucket";
+    private static final String TEST_RESET_PASSWORD_LINK =
+            "https://localhost:8080/frontend?reset-password?code=123456.54353464565";
     private static final String FRONTEND_BASE_URL = "https://localhost:8080/frontend";
     private static final String CUSTOMER_SUPPORT_LINK_URL =
             "https://localhost:8080/frontend/support";
@@ -49,14 +52,14 @@ public class NotificationHandlerTest {
     private ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         when(configService.getNotifyTestPhoneNumber()).thenReturn(Optional.of(NOTIFY_PHONE_NUMBER));
         when(configService.getSmoketestBucketName()).thenReturn(BUCKET_NAME);
         handler = new NotificationHandler(notificationService, configService, s3Client);
     }
 
     @Test
-    public void shouldSuccessfullyProcessEmailMessageFromSQSQueue()
+    void shouldSuccessfullyProcessEmailMessageFromSQSQueue()
             throws JsonProcessingException, NotificationClientException {
         when(notificationService.getNotificationTemplateId(VERIFY_EMAIL)).thenReturn(TEMPLATE_ID);
 
@@ -74,7 +77,7 @@ public class NotificationHandlerTest {
     }
 
     @Test
-    public void shouldSuccessfullyProcessResetPasswordConfirmationFromSQSQueue()
+    void shouldSuccessfullyProcessResetPasswordConfirmationFromSQSQueue()
             throws JsonProcessingException, NotificationClientException {
         when(notificationService.getNotificationTemplateId(PASSWORD_RESET_CONFIRMATION))
                 .thenReturn(TEMPLATE_ID);
@@ -95,7 +98,25 @@ public class NotificationHandlerTest {
     }
 
     @Test
-    public void shouldSuccessfullyProcessAccountCreatedConfirmationFromSQSQueue()
+    void shouldSuccessfullyProcessResetPasswordEmailFromSQSQueue()
+            throws JsonProcessingException, NotificationClientException {
+        when(notificationService.getNotificationTemplateId(RESET_PASSWORD)).thenReturn(TEMPLATE_ID);
+
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_EMAIL_ADDRESS, RESET_PASSWORD, TEST_RESET_PASSWORD_LINK);
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        Map<String, Object> personalisation = new HashMap<>();
+        personalisation.put("reset-password-link", TEST_RESET_PASSWORD_LINK);
+
+        verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, TEMPLATE_ID);
+    }
+
+    @Test
+    void shouldSuccessfullyProcessAccountCreatedConfirmationFromSQSQueue()
             throws JsonProcessingException, NotificationClientException {
         String accountManagementUrl = "http://account-management/";
         String baseUrl = "http://account-management";
@@ -117,7 +138,7 @@ public class NotificationHandlerTest {
     }
 
     @Test
-    public void shouldSuccessfullyProcessPhoneMessageFromSQSQueue()
+    void shouldSuccessfullyProcessPhoneMessageFromSQSQueue()
             throws JsonProcessingException, NotificationClientException {
         when(notificationService.getNotificationTemplateId(VERIFY_PHONE_NUMBER))
                 .thenReturn(TEMPLATE_ID);
@@ -137,7 +158,7 @@ public class NotificationHandlerTest {
     }
 
     @Test
-    public void shouldThrowExceptionIfUnableToProcessMessageFromQueue() {
+    void shouldThrowExceptionIfUnableToProcessMessageFromQueue() {
         SQSEvent sqsEvent = generateSQSEvent("");
 
         RuntimeException exception =
@@ -151,7 +172,7 @@ public class NotificationHandlerTest {
     }
 
     @Test
-    public void shouldThrowExceptionIfNotifyIsUnableToSendEmail()
+    void shouldThrowExceptionIfNotifyIsUnableToSendEmail()
             throws JsonProcessingException, NotificationClientException {
         when(notificationService.getNotificationTemplateId(VERIFY_EMAIL)).thenReturn(TEMPLATE_ID);
 
@@ -178,7 +199,7 @@ public class NotificationHandlerTest {
     }
 
     @Test
-    public void shouldThrowExceptionIfNotifyIsUnableToSendText()
+    void shouldThrowExceptionIfNotifyIsUnableToSendText()
             throws JsonProcessingException, NotificationClientException {
         when(notificationService.getNotificationTemplateId(VERIFY_PHONE_NUMBER))
                 .thenReturn(TEMPLATE_ID);
@@ -206,7 +227,7 @@ public class NotificationHandlerTest {
     }
 
     @Test
-    public void shouldSuccessfullyProcessPhoneMessageFromSQSQueueAndWriteToS3WhenTestClient()
+    void shouldSuccessfullyProcessPhoneMessageFromSQSQueueAndWriteToS3WhenTestClient()
             throws JsonProcessingException, NotificationClientException {
         when(notificationService.getNotificationTemplateId(VERIFY_PHONE_NUMBER))
                 .thenReturn(TEMPLATE_ID);
@@ -227,7 +248,7 @@ public class NotificationHandlerTest {
     }
 
     @Test
-    public void shouldSuccessfullyProcessMfaessageFromSQSQueue()
+    void shouldSuccessfullyProcessMfaessageFromSQSQueue()
             throws JsonProcessingException, NotificationClientException {
         when(notificationService.getNotificationTemplateId(MFA_SMS)).thenReturn(TEMPLATE_ID);
 
@@ -245,7 +266,7 @@ public class NotificationHandlerTest {
     }
 
     @Test
-    public void shouldSuccessfullyProcessMfaMessageFromSQSQueueAndWriteToS3WhenTestClient()
+    void shouldSuccessfullyProcessMfaMessageFromSQSQueueAndWriteToS3WhenTestClient()
             throws JsonProcessingException, NotificationClientException {
         when(notificationService.getNotificationTemplateId(MFA_SMS)).thenReturn(TEMPLATE_ID);
 

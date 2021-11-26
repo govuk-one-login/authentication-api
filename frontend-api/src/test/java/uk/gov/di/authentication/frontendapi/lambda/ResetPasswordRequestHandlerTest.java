@@ -12,6 +12,7 @@ import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.services.AwsSqsClient;
+import uk.gov.di.authentication.frontendapi.services.ResetPasswordService;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
@@ -62,6 +63,8 @@ class ResetPasswordRequestHandlerTest {
 
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_SIX_DIGIT_CODE = "123456";
+    private static final String TEST_RESET_PASSWORD_LINK =
+            "https://localhost:8080/frontend?reset-password?code=123456.54353464565";
     private static final long CODE_EXPIRY_TIME = 900;
     private final ValidationService validationService = mock(ValidationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -71,6 +74,7 @@ class ResetPasswordRequestHandlerTest {
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
+    private final ResetPasswordService resetPasswordService = mock(ResetPasswordService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final Context context = mock(Context.class);
@@ -90,7 +94,8 @@ class ResetPasswordRequestHandlerTest {
                     awsSqsClient,
                     codeGeneratorService,
                     codeStorageService,
-                    auditService);
+                    auditService,
+                    resetPasswordService);
 
     @BeforeEach
     void setup() {
@@ -109,8 +114,10 @@ class ResetPasswordRequestHandlerTest {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
         when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
+        when(resetPasswordService.buildResetPasswordLink(TEST_SIX_DIGIT_CODE))
+                .thenReturn(TEST_RESET_PASSWORD_LINK);
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, RESET_PASSWORD, TEST_SIX_DIGIT_CODE);
+                new NotifyRequest(TEST_EMAIL_ADDRESS, RESET_PASSWORD, TEST_RESET_PASSWORD_LINK);
         ObjectMapper objectMapper = new ObjectMapper();
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
@@ -199,8 +206,10 @@ class ResetPasswordRequestHandlerTest {
         when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
+        when(resetPasswordService.buildResetPasswordLink(TEST_SIX_DIGIT_CODE))
+                .thenReturn(TEST_RESET_PASSWORD_LINK);
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, RESET_PASSWORD, TEST_SIX_DIGIT_CODE);
+                new NotifyRequest(TEST_EMAIL_ADDRESS, RESET_PASSWORD, TEST_RESET_PASSWORD_LINK);
         ObjectMapper objectMapper = new ObjectMapper();
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
         Mockito.doThrow(SdkClientException.class).when(awsSqsClient).send(eq(serialisedRequest));

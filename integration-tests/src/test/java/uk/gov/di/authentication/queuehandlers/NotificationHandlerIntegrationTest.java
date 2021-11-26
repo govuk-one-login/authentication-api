@@ -98,9 +98,11 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
     void shouldCallNotifyWhenValidResetPasswordRequestIsAddedToQueue()
             throws JsonProcessingException {
         String code = new CodeGeneratorService().twentyByteEncodedRandomCode();
+        String resetPasswordLink = "http://localhost:3000/reset-password?code=" + code;
 
         handler.handleRequest(
-                createSqsEvent(new NotifyRequest(TEST_EMAIL_ADDRESS, RESET_PASSWORD, code)),
+                createSqsEvent(
+                        new NotifyRequest(TEST_EMAIL_ADDRESS, RESET_PASSWORD, resetPasswordLink)),
                 mock(Context.class));
 
         JsonNode request = notifyStub.waitForRequest(60);
@@ -111,9 +113,7 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
         JsonNode personalisation = request.get("personalisation");
         assertThat(
                 personalisation,
-                hasFieldWithValue(
-                        "reset-password-link",
-                        startsWith("http://localhost:3000/reset-password?code=")));
+                hasFieldWithValue("reset-password-link", startsWith(resetPasswordLink)));
         assertThat(personalisation, hasFieldWithValue("reset-password-link", containsString(code)));
     }
 

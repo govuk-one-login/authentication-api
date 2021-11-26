@@ -16,6 +16,7 @@ import java.util.Optional;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
@@ -53,6 +54,8 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         assertThat(requests, hasSize(1));
         assertThat(requests.get(0).getDestination(), equalTo(email));
         assertThat(requests.get(0).getNotificationType(), equalTo(RESET_PASSWORD));
+        assertTrue(
+                requests.get(0).getCode().startsWith("http://localhost:3000/reset-password?code="));
 
         BaseAPIResponse resetPasswordResponse =
                 objectMapper.readValue(response.getBody(), BaseAPIResponse.class);

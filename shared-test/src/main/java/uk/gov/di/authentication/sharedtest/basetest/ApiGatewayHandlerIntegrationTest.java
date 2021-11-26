@@ -207,5 +207,10 @@ public abstract class ApiGatewayHandlerIntegrationTest {
         public String getTokenSigningKeyAlias() {
             return tokenSigningKey.getKeyAlias();
         }
+
+        @Override
+        public String getFrontendBaseUrl() {
+            return "http://localhost:3000/reset-password?code=";
+        }
     }
 }
