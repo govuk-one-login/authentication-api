@@ -21,7 +21,7 @@ dependencies {
             configurations.lettuce,
             configurations.hamcrest,
             configurations.sns,
-            "com.amazonaws:aws-java-sdk-ssm:${dependencyVersions.aws_sdk_version}",
+            configurations.ssm,
             "com.googlecode.libphonenumber:libphonenumber:8.12.36",
             "com.google.protobuf:protobuf-java:3.18.1"
 
