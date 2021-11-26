@@ -129,7 +129,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                         userContext.getSession().getSessionId());
                 return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
             }
-
+            String persistentSessionId =
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
                     context.getAwsRequestId(),
@@ -142,7 +143,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                     request.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                    persistentSessionId);
 
             Optional<ErrorResponse> errorResponse =
                     validatePasswordResetCount(request.getEmail(), userContext);
@@ -150,7 +151,10 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
             return processPasswordResetRequest(
-                    request.getEmail(), NotificationType.RESET_PASSWORD, userContext);
+                    request.getEmail(),
+                    NotificationType.RESET_PASSWORD,
+                    userContext,
+                    persistentSessionId);
 
         } catch (SdkClientException ex) {
             LOGGER.error(
@@ -169,7 +173,10 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     }
 
     private APIGatewayProxyResponseEvent processPasswordResetRequest(
-            String email, NotificationType notificationType, UserContext userContext)
+            String email,
+            NotificationType notificationType,
+            UserContext userContext,
+            String persistentSessionId)
             throws JsonProcessingException {
         SessionState nextState =
                 stateMachine.transition(
@@ -178,7 +185,9 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                         userContext);
         String subjectId = authenticationService.getSubjectFromEmail(email).getValue();
         String code = codeGeneratorService.twentyByteEncodedRandomCode();
-        String resetPasswordLink = resetPasswordService.buildResetPasswordLink(code);
+        String resetPasswordLink =
+                resetPasswordService.buildResetPasswordLink(
+                        code, userContext.getSession().getSessionId(), persistentSessionId);
         NotifyRequest notifyRequest = new NotifyRequest(email, notificationType, resetPasswordLink);
         codeStorageService.savePasswordResetCode(
                 subjectId,

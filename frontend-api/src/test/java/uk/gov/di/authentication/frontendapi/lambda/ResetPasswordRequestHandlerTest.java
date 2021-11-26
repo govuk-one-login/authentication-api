@@ -114,7 +114,8 @@ class ResetPasswordRequestHandlerTest {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
         when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
-        when(resetPasswordService.buildResetPasswordLink(TEST_SIX_DIGIT_CODE))
+        when(resetPasswordService.buildResetPasswordLink(
+                        TEST_SIX_DIGIT_CODE, session.getSessionId(), persistentId))
                 .thenReturn(TEST_RESET_PASSWORD_LINK);
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, RESET_PASSWORD, TEST_RESET_PASSWORD_LINK);
@@ -202,11 +203,13 @@ class ResetPasswordRequestHandlerTest {
 
     @Test
     public void shouldReturn500IfMessageCannotBeSentToQueue() throws JsonProcessingException {
+        String persistentId = "some-persistent-id-value";
         Subject subject = new Subject("subject_1");
         when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
-        when(resetPasswordService.buildResetPasswordLink(TEST_SIX_DIGIT_CODE))
+        when(resetPasswordService.buildResetPasswordLink(
+                        TEST_SIX_DIGIT_CODE, session.getSessionId(), persistentId))
                 .thenReturn(TEST_RESET_PASSWORD_LINK);
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, RESET_PASSWORD, TEST_RESET_PASSWORD_LINK);
@@ -216,7 +219,10 @@ class ResetPasswordRequestHandlerTest {
 
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
+        headers.put("Session-Id", session.getSessionId());
+        event.setHeaders(headers);
         event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
