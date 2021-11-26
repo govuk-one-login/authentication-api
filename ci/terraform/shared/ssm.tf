@@ -77,13 +77,11 @@ resource "aws_ssm_parameter" "redis_port" {
 }
 
 resource "aws_ssm_parameter" "password_pepper" {
-  count  = var.password_pepper == null ? 0 : 1
   name   = "${var.environment}-password-pepper"
   type   = "SecureString"
   key_id = aws_kms_alias.parameter_store_key_alias.id
   value  = var.password_pepper
 }
-
 
 data "aws_iam_policy_document" "redis_parameter_policy" {
   statement {
@@ -140,7 +138,6 @@ resource "aws_iam_role_policy_attachment" "dynamo_sqs_lambda_iam_role_parameters
 }
 
 data "aws_iam_policy_document" "pepper_parameter_policy" {
-  count = var.password_pepper == null ? 0 : 1
   statement {
     sid    = "AllowGetParameters"
     effect = "Allow"
@@ -151,7 +148,7 @@ data "aws_iam_policy_document" "pepper_parameter_policy" {
     ]
 
     resources = [
-      aws_ssm_parameter.password_pepper[0].arn
+      aws_ssm_parameter.password_pepper.arn
     ]
   }
   statement {
@@ -170,14 +167,12 @@ data "aws_iam_policy_document" "pepper_parameter_policy" {
 }
 
 resource "aws_iam_policy" "pepper_parameter_policy" {
-  count       = var.password_pepper == null ? 0 : 1
-  policy      = data.aws_iam_policy_document.pepper_parameter_policy[0].json
+  policy      = data.aws_iam_policy_document.pepper_parameter_policy.json
   path        = "/${var.environment}/lambda-parameters/"
   name_prefix = "pepper-parameter-store-policy"
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_iam_role_pepper_parameters" {
-  count      = var.password_pepper == null ? 0 : 1
-  policy_arn = aws_iam_policy.pepper_parameter_policy[0].arn
+  policy_arn = aws_iam_policy.pepper_parameter_policy.arn
   role       = aws_iam_role.lambda_iam_role.name
 }

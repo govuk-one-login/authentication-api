@@ -3,6 +3,10 @@ module "oidc_email_role" {
   environment = var.environment
   role_name   = "oidc-email"
   vpc_arn     = local.authentication_vpc_arn
+
+  policies_to_attach = [
+    aws_iam_policy.s3_smoketest_policy.arn
+  ]
 }
 
 resource "aws_sqs_queue" "email_queue" {
@@ -47,7 +51,7 @@ data "aws_iam_policy_document" "email_queue_policy_document" {
 
     principals {
       type        = "AWS"
-      identifiers = [local.sqs_lambda_iam_role_arn, local.dynamo_sqs_lambda_iam_role_arn]
+      identifiers = [module.oidc_sqs_role.arn, module.oidc_dynamo_sqs_role.arn]
     }
 
     actions = [
@@ -67,7 +71,7 @@ data "aws_iam_policy_document" "email_queue_policy_document" {
 
     principals {
       type        = "AWS"
-      identifiers = [local.email_lambda_iam_role_arn]
+      identifiers = [module.oidc_email_role.arn]
     }
 
     actions = [
@@ -147,7 +151,7 @@ resource "aws_lambda_event_source_mapping" "lambda_sqs_mapping" {
 resource "aws_lambda_function" "email_sqs_lambda" {
   filename      = var.frontend_api_lambda_zip_file
   function_name = "${var.environment}-email-notification-sqs-lambda"
-  role          = local.email_lambda_iam_role_arn
+  role          = module.oidc_email_role.arn
   handler       = "uk.gov.di.authentication.frontendapi.lambda.NotificationHandler::handleRequest"
   timeout       = 30
   memory_size   = 512
@@ -203,4 +207,33 @@ resource "aws_lambda_alias" "sqs_lambda_active" {
   description      = "Alias pointing at active version of Lambda"
   function_name    = aws_lambda_function.email_sqs_lambda.arn
   function_version = aws_lambda_function.email_sqs_lambda.version
+}
+
+### Smoketest codes S3
+
+data "aws_s3_bucket" "smoketest_sms_bucket" {
+  bucket = "${var.environment}-smoke-test-sms-codes"
+}
+
+resource "aws_iam_policy" "s3_smoketest_policy" {
+  name_prefix = "s3-smoketest-access"
+  path        = "/${var.environment}/"
+  description = "IAM policy for managing S3 connection to the S3 Smoketest bucket"
+
+  policy = data.aws_iam_policy_document.s3_smoketest_policy_document.json
+}
+
+data "aws_iam_policy_document" "s3_smoketest_policy_document" {
+  statement {
+    sid    = "AllowAccessToWriteToS3"
+    effect = "Allow"
+
+    actions = [
+      "s3:PutObject",
+    ]
+    resources = [
+      data.aws_s3_bucket.smoketest_sms_bucket.arn,
+      "${data.aws_s3_bucket.smoketest_sms_bucket.arn}/*",
+    ]
+  }
 }
