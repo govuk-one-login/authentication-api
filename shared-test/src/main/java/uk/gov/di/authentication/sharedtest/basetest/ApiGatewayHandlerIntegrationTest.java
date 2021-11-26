@@ -129,20 +129,29 @@ public abstract class ApiGatewayHandlerIntegrationTest {
     }
 
     protected Map<String, String> constructFrontendHeaders(String sessionId) {
-        return constructFrontendHeaders(sessionId, Optional.empty());
+        return constructFrontendHeaders(sessionId, Optional.empty(), Optional.empty());
     }
 
     protected Map<String, String> constructFrontendHeaders(
             String sessionId, String clientSessionId) {
-        return constructFrontendHeaders(sessionId, Optional.of(clientSessionId));
+        return constructFrontendHeaders(sessionId, Optional.of(clientSessionId), Optional.empty());
     }
 
     protected Map<String, String> constructFrontendHeaders(
-            String sessionId, Optional<String> clientSessionId) {
+            String sessionId, String clientSessionId, String persistentSessionId) {
+        return constructFrontendHeaders(
+                sessionId, Optional.ofNullable(clientSessionId), Optional.of(persistentSessionId));
+    }
+
+    protected Map<String, String> constructFrontendHeaders(
+            String sessionId,
+            Optional<String> clientSessionId,
+            Optional<String> persistentSessionId) {
         var headers = new HashMap<String, String>();
         headers.put("Session-Id", sessionId);
         headers.put("X-API-Key", FRONTEND_API_KEY);
         clientSessionId.ifPresent(id -> headers.put("Client-Session-Id", id));
+        persistentSessionId.ifPresent(id -> headers.put("di-persistent-session-id", id));
         return headers;
     }
 

@@ -16,7 +16,8 @@ public class ResetPasswordService {
         this.configurationService = configurationService;
     }
 
-    public String buildResetPasswordLink(String code) {
+    public String buildResetPasswordLink(
+            String code, String sessionID, String persistentSessionId) {
         LocalDateTime localDateTime =
                 LocalDateTime.now().plusSeconds(configurationService.getCodeExpiry());
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
@@ -25,7 +26,11 @@ public class ResetPasswordService {
                         configurationService.getResetPasswordRoute()
                                 + code
                                 + "."
-                                + expiryDate.toInstant().toEpochMilli())
+                                + expiryDate.toInstant().toEpochMilli()
+                                + "."
+                                + sessionID
+                                + "."
+                                + persistentSessionId)
                 .toString();
     }
 }

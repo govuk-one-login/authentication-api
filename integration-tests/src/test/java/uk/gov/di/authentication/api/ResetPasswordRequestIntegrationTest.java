@@ -38,13 +38,14 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         userStore.signUp(email, password);
         userStore.addPhoneNumber(email, phoneNumber);
         String sessionId = redis.createSession();
+        String persistentSessionId = "test-persistent-id";
         redis.addEmailToSession(sessionId, email);
         redis.setSessionState(sessionId, AUTHENTICATION_REQUIRED);
 
         var response =
                 makeRequest(
                         Optional.of(new ResetPasswordRequest(email)),
-                        constructFrontendHeaders(sessionId),
+                        constructFrontendHeaders(sessionId, null, persistentSessionId),
                         Map.of());
 
         assertThat(response, hasStatus(200));
@@ -56,6 +57,12 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         assertThat(requests.get(0).getNotificationType(), equalTo(RESET_PASSWORD));
         assertTrue(
                 requests.get(0).getCode().startsWith("http://localhost:3000/reset-password?code="));
+
+        String[] resetLinkSplit = requests.get(0).getCode().split("\\.");
+
+        assertThat(resetLinkSplit.length, equalTo(4));
+        assertThat(resetLinkSplit[2], equalTo(sessionId));
+        assertThat(resetLinkSplit[3], equalTo(persistentSessionId));
 
         BaseAPIResponse resetPasswordResponse =
                 objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
