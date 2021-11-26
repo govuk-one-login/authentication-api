@@ -8,11 +8,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 
 import static java.text.MessageFormat.format;
 
-public class SnsTopicExtension implements BeforeAllCallback {
-
-    protected static final String REGION = System.getenv().getOrDefault("AWS_REGION", "eu-west-2");
-    protected static final String LOCALSTACK_ENDPOINT =
-            System.getenv().getOrDefault("LOCALSTACK_ENDPOINT", "http://localhost:45678");
+public class SnsTopicExtension extends BaseAwsResourceExtension implements BeforeAllCallback {
 
     private final String topicNameSuffix;
     private final AmazonSNS snsClient;
