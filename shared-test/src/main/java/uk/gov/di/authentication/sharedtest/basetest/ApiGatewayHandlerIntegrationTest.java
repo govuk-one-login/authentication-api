@@ -11,6 +11,7 @@ import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.extensions.ClientStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
+import uk.gov.di.authentication.sharedtest.extensions.ParameterStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.RedisExtension;
 import uk.gov.di.authentication.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
@@ -59,6 +60,20 @@ public abstract class ApiGatewayHandlerIntegrationTest {
 
     @RegisterExtension
     protected static final TokenSigningExtension tokenSigner = new TokenSigningExtension();
+
+    @RegisterExtension
+    protected static final ParameterStoreExtension configurationParameters =
+            new ParameterStoreExtension(
+                    Map.of(
+                            "local-session-redis-master-host", "localhost",
+                            "local-session-redis-password", "null",
+                            "local-session-redis-port", "6379",
+                            "local-session-redis-tls", "false",
+                            "local-account-management-redis-master-host", "localhost",
+                            "local-account-management-redis-password", "null",
+                            "local-account-management-redis-port", "6379",
+                            "local-account-management-redis-tls", "false",
+                            "local-password-pepper", "pepper"));
 
     protected static final ConfigurationService TEST_CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
@@ -169,11 +184,6 @@ public abstract class ApiGatewayHandlerIntegrationTest {
         }
 
         @Override
-        public String getRedisHost() {
-            return "localhost";
-        }
-
-        @Override
         public String getEmailQueueUri() {
             return notificationQueue.getQueueUrl();
         }
@@ -181,21 +191,6 @@ public abstract class ApiGatewayHandlerIntegrationTest {
         @Override
         public String getEventsSnsTopicArn() {
             return auditEventTopic.getTopicArn();
-        }
-
-        @Override
-        public Optional<String> getRedisPassword() {
-            return Optional.empty();
-        }
-
-        @Override
-        public int getRedisPort() {
-            return 6379;
-        }
-
-        @Override
-        public boolean getUseRedisTLS() {
-            return false;
         }
 
         @Override
