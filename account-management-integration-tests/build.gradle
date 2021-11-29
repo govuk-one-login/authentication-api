@@ -1,5 +1,6 @@
 plugins {
     id "java"
+    id "jacoco"
 }
 
 group "uk.gov.di"
@@ -19,10 +20,7 @@ dependencies {
             configurations.lambda,
             configurations.lettuce,
             "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.13.0",
-            project(":client-registry-api"),
-            project(":frontend-api"),
             project(":account-management-api"),
-            project(":oidc-api"),
             project(":shared"),
             project(":shared-test")
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
@@ -49,4 +47,14 @@ test {
         showStandardStreams = false
     }
     dependsOn ":composeUp"
+    finalizedBy "jacocoTestReport"
+}
+
+jacocoTestReport {
+    additionalSourceDirs.from(project(":shared").sourceSets.main.java)
+    additionalClassDirs.from(project(":shared").sourceSets.main.output)
+    sourceDirectories.from(
+            project(":account-management-api").sourceSets.main.java)
+    classDirectories.from(
+            project(":account-management-api").sourceSets.main.output)
 }

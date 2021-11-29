@@ -18,8 +18,9 @@ dependencies {
             configurations.nimbus,
             configurations.dynamodb,
             configurations.bouncycastle,
-            project(":shared"),
-            project(":client-registry-api")
+            project(":shared")
+
+    runtimeOnly configurations.logging_runtime
 
     testImplementation configurations.tests,
             configurations.lambda_tests,

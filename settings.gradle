@@ -4,11 +4,11 @@ include 'audit-processors'
 include 'lambda-warmer'
 include 'client-registry-api'
 include 'frontend-api'
-include 'integration-tests'
-include 'account-management-integration-tests'
 include 'oidc-api'
 include 'shared'
 include 'shared-test'
+include 'z-integration-tests'
+include 'account-management-integration-tests'
 
 rootProject.name = 'di-authentication-api'
 

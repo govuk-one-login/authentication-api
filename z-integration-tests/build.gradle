@@ -1,5 +1,6 @@
 plugins {
     id "java"
+    id "jacoco"
 }
 
 group "uk.gov.di"
@@ -21,7 +22,6 @@ dependencies {
             "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.13.0",
             project(":client-registry-api"),
             project(":frontend-api"),
-            project(":account-management-api"),
             project(":oidc-api"),
             project(":shared"),
             project(":shared-test")
@@ -30,13 +30,10 @@ dependencies {
 
 test {
     useJUnitPlatform()
-    filter {
-        includeTestsMatching "*"
-    }
-    testLogging {
-        showStandardStreams = false
-    }
 
+    jacoco {
+
+    }
     environment "AUDIT_SIGNING_KEY_ALIAS", "alias/local-audit-payload-signing-key-alias"
     environment "AWS_ACCESS_KEY_ID", "mock-access-key"
     environment "AWS_REGION", "eu-west-2"
@@ -57,4 +54,29 @@ test {
     environment "HEADERS_CASE_INSENSITIVE", "true"
 
     dependsOn ":composeUp"
+    finalizedBy "jacocoTestReport"
 }
+
+jacocoTestReport {
+    reports {
+        xml.enabled true
+    }
+
+    sourceDirectories.from = [
+        project(":frontend-api").sourceSets.main.java,
+        project(":oidc-api").sourceSets.main.java,
+        project(":client-registry-api").sourceSets.main.java,
+        project(":shared").sourceSets.main.java
+    ]
+    classDirectories.from = [
+        project(":client-registry-api").sourceSets.main.output,
+        project(":frontend-api").sourceSets.main.output,
+        project(":oidc-api").sourceSets.main.output,
+        project(":shared").sourceSets.main.output
+    ]
+
+    doLast {
+        logger.lifecycle(classDirectories.dump())
+    }
+}
+

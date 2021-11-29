@@ -4,12 +4,11 @@ plugins {
     id "com.diffplug.spotless" version "5.17.1"
     id "com.avast.gradle.docker-compose" version "0.14.9"
     id "org.sonarqube" version "3.3"
-    id "jacoco"
 }
 
 apply plugin: "java"
 apply plugin: "application"
-apply plugin: "idea"
+//apply plugin: "idea"
 
 ext {
     dependencyVersions = [
@@ -138,135 +137,9 @@ dockerCompose {
     projectName = rootProject.rootDir.name
 }
 
-compileJava.dependsOn "spotlessApply"
+//compileJava.dependsOn "spotlessApply"
 
-clean.dependsOn "composeDown"
-
-abstract class Terraform extends DefaultTask {
-
-    Terraform() {
-        group = "terraform"
-    }
-
-    @Input
-    abstract MapProperty<String, String> getEnvironmentVars()
-
-    @InputDirectory
-    abstract DirectoryProperty getTerraformDirectory()
-
-    @Input
-    abstract Property<String> getEnvironmentName()
-
-    @Internal
-    Object terraformOutputs
-
-    @TaskAction
-    void apply() {
-        def tfEnvironment = [
-            "TF_DATA_DIR": "${project.buildDir}/terraform/${environmentName.get()}-${terraformDirectory.get().asFile.name}",
-            "TF_IN_AUTOMATION": "1"
-        ] + environmentVars.get()
-
-        logger.lifecycle("Running Terraform Initialise...")
-        project.exec {
-            executable "terraform"
-            workingDir terraformDirectory.asFile
-            environment tfEnvironment
-            args "init", "-backend-config=${environmentName.get()}.hcl"
-        }
-
-        logger.lifecycle("Applying ${terraformDirectory.getAsFile().get().name} Terraform (run gradle with --info to see output)...")
-        project.exec {
-            logging.captureStandardOutput(LogLevel.INFO)
-            executable "terraform"
-            workingDir terraformDirectory.asFile
-            environment tfEnvironment
-            args "apply", "-auto-approve", "-var-file=${environmentName.get()}.tfvars"
-        }
-
-        logger.lifecycle("Getting Terraform Outputs!")
-        new ByteArrayOutputStream().withStream { os ->
-            project.exec {
-                standardOutput os
-                executable "terraform"
-                workingDir terraformDirectory.asFile
-                environment tfEnvironment
-                args "output", "-json"
-            }
-            this.terraformOutputs = new groovy.json.JsonSlurper().parse(os.toByteArray())
-        }
-        logger.lifecycle("Terraform Complete!")
-    }
-
-    protected Object outputs() {
-        return this.terraformOutputs
-    }
-}
-
-task sharedTerraform (type: Terraform) {
-    terraformDirectory = layout.projectDirectory.dir("ci/terraform/shared")
-    environmentName = terraformEnvironment
-    environmentVars = awsCredentialsEnvironment
-
-    if (terraformEnvironment == "localstack") {
-        dependsOn "composeUp"
-    }
-    dependsOn ":lambda-warmer:buildZip"
-    dependsOn ":account-migrations:buildZip"
-}
-
-task oidcTerraform (type: Terraform) {
-    terraformDirectory = layout.projectDirectory.dir("ci/terraform/oidc")
-    environmentName = project.properties["terraformEnvironment"] ?: "localstack"
-    environmentVars = awsCredentialsEnvironment
-
-    doLast {
-        def json = outputs()
-        allprojects.findAll {it.name == "integration-tests"}.first().tasks.getByName("test") {
-            environment "API_GATEWAY_ID", json.api_gateway_root_id.value
-            environment "TOKEN_SIGNING_KEY_ALIAS", json.token_signing_key_alias.value
-            environment "BASE_URL", json.base_url.value
-            environment "API_KEY", json.frontend_api_key.value
-            environment "FRONTEND_API_GATEWAY_ID", json.frontend_api_gateway_root_id.value
-            environment "FRONTEND_API_KEY", json.frontend_api_key.value
-            environment "EVENTS_SNS_TOPIC_ARN", json.events_sns_topic_arn.value
-            environment "EMAIL_QUEUE_URL", json.email_queue.value
-        }
-        allprojects.findAll {it.name == "account-management-integration-tests"}.first().tasks.getByName("test") {
-            environment "EVENTS_SNS_TOPIC_ARN", json.events_sns_topic_arn.value
-        }
-    }
-    dependsOn ":client-registry-api:buildZip"
-    dependsOn ":frontend-api:buildZip"
-    dependsOn ":oidc-api:buildZip"
-    dependsOn "sharedTerraform"
-}
-
-task auditTerraform (type: Terraform) {
-    terraformDirectory = layout.projectDirectory.dir("ci/terraform/audit-processors")
-    environmentName = project.properties["terraformEnvironment"] ?: "localstack"
-    environmentVars = awsCredentialsEnvironment
-
-    dependsOn ":audit-processors:buildZip"
-    dependsOn "oidcTerraform"
-}
-
-task acctMgmtTerraform (type: Terraform) {
-    terraformDirectory = layout.projectDirectory.dir("ci/terraform/account-management")
-    environmentName = project.properties["terraformEnvironment"] ?: "localstack"
-    environmentVars = awsCredentialsEnvironment
-
-    doLast {
-        def json = outputs()
-        allprojects.findAll {it.name == "account-management-integration-tests"}.first().tasks.getByName("test") {
-            environment "API_GATEWAY_ID", json.api_gateway_root_id.value
-            environment "BASE_URL", json.base_url.value
-            environment "EMAIL_QUEUE_URL", json.email_queue.value
-        }
-    }
-    dependsOn ":account-management-api:buildZip"
-    dependsOn "auditTerraform"
-}
+//clean.dependsOn "composeDown"
 
 sonarqube {
     properties {
@@ -276,9 +149,3 @@ sonarqube {
     }
 }
 
-jacocoTestReport {
-    reports {
-        xml.enabled true
-    }
-    dependsOn "test"
-}
