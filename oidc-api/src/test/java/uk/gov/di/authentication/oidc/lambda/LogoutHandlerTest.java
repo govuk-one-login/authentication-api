@@ -17,12 +17,16 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.shared.helpers.CookieHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
@@ -45,6 +49,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class LogoutHandlerTest {
@@ -54,6 +59,7 @@ class LogoutHandlerTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
+    private final AuditService auditService = mock(AuditService.class);
     private final TokenValidationService tokenValidationService =
             mock(TokenValidationService.class);
 
@@ -61,6 +67,7 @@ class LogoutHandlerTest {
     private static final String COOKIE = "Cookie";
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "client-session-id";
+    private static final String PERSISTENT_SESSION_ID = "persistent-session-id";
     private static final URI DEFAULT_LOGOUT_URI =
             URI.create("https://di-authentication-frontend.london.cloudapps.digital/signed-out");
     private static final URI CLIENT_LOGOUT_URI = URI.create("http://localhost/logout");
@@ -78,7 +85,8 @@ class LogoutHandlerTest {
                         sessionService,
                         dynamoClientService,
                         clientSessionService,
-                        tokenValidationService);
+                        tokenValidationService,
+                        auditService);
         when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
@@ -86,6 +94,7 @@ class LogoutHandlerTest {
                 TokenGeneratorHelper.generateIDToken(
                         "client-id", SUBJECT, "http://localhost-rp", ecSigningKey);
         session = generateSession().setEmailAddress(EMAIL);
+        when(context.getAwsRequestId()).thenReturn("aws-session-id");
     }
 
     @Test
@@ -96,6 +105,7 @@ class LogoutHandlerTest {
                 .thenReturn(true);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setQueryStringParameters(
                 Map.of(
                         "id_token_hint", signedIDToken.serialize(),
@@ -107,7 +117,7 @@ class LogoutHandlerTest {
         setupClientSessionToken(signedIDToken);
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
-        verify(sessionService, times(1)).deleteSessionFromRedis(SESSION_ID);
+        verify(sessionService).deleteSessionFromRedis(SESSION_ID);
         verify(clientSessionService).deleteClientSessionFromRedis(CLIENT_SESSION_ID);
         verify(clientSessionService).deleteClientSessionFromRedis("client-session-id-2");
         verify(clientSessionService).deleteClientSessionFromRedis("client-session-id-3");
@@ -115,6 +125,18 @@ class LogoutHandlerTest {
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 equalTo(CLIENT_LOGOUT_URI + "?state=" + STATE));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.LOG_OUT_SUCCESS,
+                        "aws-session-id",
+                        SESSION_ID,
+                        "client-id",
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID);
     }
 
     @Test
@@ -125,6 +147,7 @@ class LogoutHandlerTest {
                 .thenReturn(true);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setQueryStringParameters(
                 Map.of(
                         "id_token_hint",
@@ -141,6 +164,18 @@ class LogoutHandlerTest {
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 equalTo(CLIENT_LOGOUT_URI.toString()));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.LOG_OUT_SUCCESS,
+                        "aws-session-id",
+                        SESSION_ID,
+                        "client-id",
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID);
     }
 
     @Test
@@ -152,6 +187,7 @@ class LogoutHandlerTest {
                         CLIENT_LOGOUT_URI.toString(),
                         "state",
                         STATE.toString()));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
         assertThat(response, hasStatus(302));
@@ -159,6 +195,18 @@ class LogoutHandlerTest {
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 equalTo(DEFAULT_LOGOUT_URI + "?state=" + STATE));
         verify(sessionService, times(0)).deleteSessionFromRedis(SESSION_ID);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.LOG_OUT_SUCCESS,
+                        "aws-session-id",
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
     }
 
     @Test
@@ -172,6 +220,7 @@ class LogoutHandlerTest {
                         CLIENT_LOGOUT_URI.toString(),
                         "state",
                         STATE.toString()));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(Map.of(COOKIE, buildCookieString("invalid-client-session-id")));
         generateSessionFromCookie(session);
 
@@ -187,6 +236,18 @@ class LogoutHandlerTest {
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 equalTo(expectedUri.toString()));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.LOG_OUT_SUCCESS,
+                        "aws-session-id",
+                        SESSION_ID,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID);
     }
 
     @Test
@@ -198,6 +259,7 @@ class LogoutHandlerTest {
                 Map.of(
                         "id_token_hint", signedIDToken.serialize(),
                         "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString()));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         generateSessionFromCookie(session);
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
@@ -213,6 +275,18 @@ class LogoutHandlerTest {
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 equalTo(expectedUri.toString()));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.LOG_OUT_SUCCESS,
+                        "aws-session-id",
+                        SESSION_ID,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID);
     }
 
     @Test
@@ -230,6 +304,7 @@ class LogoutHandlerTest {
                 Map.of(
                         "id_token_hint", signedJWT.serialize(),
                         "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString()));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
         session.getClientSessions().add(CLIENT_SESSION_ID);
         generateSessionFromCookie(session);
@@ -248,6 +323,18 @@ class LogoutHandlerTest {
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 equalTo(expectedUri.toString()));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.LOG_OUT_SUCCESS,
+                        "aws-session-id",
+                        SESSION_ID,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID);
     }
 
     @Test
@@ -267,6 +354,7 @@ class LogoutHandlerTest {
                         "id_token_hint", signedJWT.serialize(),
                         "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString(),
                         "state", STATE.toString()));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
         session.getClientSessions().add(CLIENT_SESSION_ID);
         generateSessionFromCookie(session);
@@ -285,6 +373,18 @@ class LogoutHandlerTest {
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 equalTo(expectedUri.toString()));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.LOG_OUT_SUCCESS,
+                        "aws-session-id",
+                        SESSION_ID,
+                        "invalid-client-id",
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID);
     }
 
     @Test
@@ -302,6 +402,7 @@ class LogoutHandlerTest {
                         "id_token_hint", signedIDToken.serialize(),
                         "post_logout_redirect_uri", "http://localhost/invalidlogout",
                         "state", STATE.toString()));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         session.getClientSessions().add(CLIENT_SESSION_ID);
         setupClientSessionToken(signedIDToken);
         generateSessionFromCookie(session);
@@ -321,6 +422,18 @@ class LogoutHandlerTest {
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 equalTo(expectedUri.toString()));
         verify(sessionService, times(1)).deleteSessionFromRedis(SESSION_ID);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.LOG_OUT_SUCCESS,
+                        "aws-session-id",
+                        SESSION_ID,
+                        "client-id",
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID);
     }
 
     private void setupClientSessionToken(JWT idToken) {
@@ -364,7 +477,12 @@ class LogoutHandlerTest {
 
     private static String buildCookieString(String clientSessionId) {
         return format(
-                "%s=%s.%s; Max-Age=%d; %s",
-                "gs", "a-session-id", clientSessionId, 3600, "Secure; HttpOnly;");
+                "gs=%s.%s; %s=%s; Max-Age=%d; %s",
+                SESSION_ID,
+                clientSessionId,
+                CookieHelper.PERSISTENT_COOKIE_NAME,
+                PERSISTENT_SESSION_ID,
+                3600,
+                "Secure; HttpOnly;");
     }
 }
