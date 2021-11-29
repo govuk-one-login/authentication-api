@@ -8,7 +8,7 @@ import uk.gov.di.authentication.frontendapi.lambda.ResetPasswordHandler;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
-import java.util.HashMap;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -31,15 +31,17 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
-    public void shouldUpdatePasswordAndReturn204() {
+    public void shouldUpdatePasswordAndReturn204() throws IOException {
         String subject = "new-subject";
-        ResetPasswordWithCodeRequest requestBody = new ResetPasswordWithCodeRequest(CODE, PASSWORD);
+        String sessionId = redis.createSession();
         userStore.signUp(EMAIL_ADDRESS, "password-1", new Subject(subject));
         redis.generateAndSavePasswordResetCode(subject, CODE, 900l);
-        Map<String, String> headers = new HashMap<>();
-        headers.put("X-API-Key", API_KEY);
 
-        var response = makeRequest(Optional.of(requestBody), headers, Map.of());
+        var response =
+                makeRequest(
+                        Optional.of(new ResetPasswordWithCodeRequest(CODE, PASSWORD)),
+                        constructFrontendHeaders(sessionId),
+                        Map.of());
 
         assertThat(response, hasStatus(204));
 
