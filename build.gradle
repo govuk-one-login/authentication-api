@@ -19,7 +19,7 @@ ext {
         aws_lambda_events_version: "3.11.0",
         nimbusds_oauth_version: "9.20",
         nimbusds_jwt_version: "9.15.1",
-        junit: "5.8.1",
+        junit: "5.8.2",
         jackson_version: "2.13.0",
         glassfish_version: "3.0.3",
     ]
