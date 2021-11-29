@@ -71,7 +71,7 @@ subprojects {
                 "com.amazonaws:aws-lambda-java-events:${dependencyVersions.aws_lambda_events_version}",
                 "com.amazonaws:aws-lambda-java-log4j2:1.2.0"
 
-        lambda_tests "com.amazonaws:aws-lambda-java-tests:1.1.0"
+        lambda_tests "com.amazonaws:aws-lambda-java-tests:1.1.1"
 
         lettuce "org.apache.commons:commons-pool2:2.11.1",
                 "io.lettuce:lettuce-core:6.1.5.RELEASE"
