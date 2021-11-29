@@ -23,7 +23,7 @@ data "aws_iam_policy_document" "kms_signing_policy_document" {
       "kms:GetPublicKey",
     ]
     resources = [
-      local.id_token_signing_key_alias_arn
+      local.id_token_signing_key_arn
     ]
   }
 }

@@ -60,8 +60,8 @@ output "id_token_signing_key_alias_name" {
   value = aws_kms_alias.id_token_signing_key_alias.name
 }
 
-output "id_token_signing_key_alias_arn" {
-  value = aws_kms_alias.id_token_signing_key_alias.arn
+output "id_token_signing_key_arn" {
+  value = aws_kms_key.id_token_signing_key.arn
 }
 
 output "audit_signing_key_alias_name" {
