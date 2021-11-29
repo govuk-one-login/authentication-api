@@ -20,6 +20,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
+import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -29,8 +30,10 @@ import uk.gov.di.authentication.shared.services.ValidationService;
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class UpdateEmailHandler
@@ -80,6 +83,10 @@ public class UpdateEmailHandler
         return isWarming(input)
                 .orElseGet(
                         () -> {
+                            String sessionId =
+                                    RequestHeaderHelper.getHeaderValueOrElse(
+                                            input.getHeaders(), SESSION_ID_HEADER, "");
+                            attachSessionIdToLogs(sessionId);
                             LOGGER.info("UpdateEmailHandler received request");
                             try {
                                 UpdateEmailRequest updateInfoRequest =
@@ -135,7 +142,7 @@ public class UpdateEmailHandler
                                 auditService.submitAuditEvent(
                                         AccountManagementAuditableEvent.UPDATE_EMAIL,
                                         context.getAwsRequestId(),
-                                        AuditService.UNKNOWN,
+                                        sessionId,
                                         AuditService.UNKNOWN,
                                         userProfile.getSubjectID(),
                                         userProfile.getEmail(),
