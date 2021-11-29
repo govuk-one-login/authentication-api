@@ -55,7 +55,7 @@ data "aws_iam_policy_document" "kms_policy_document" {
     sid       = "AllowAccessToKmsSigningKey"
     effect    = "Allow"
     actions   = ["kms:GetPublicKey"]
-    resources = [local.id_token_signing_key_alias_arn]
+    resources = [local.id_token_signing_key_arn]
   }
 }
 
