@@ -9,14 +9,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.ConstraintViolationException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordWithCodeRequest;
 import uk.gov.di.authentication.frontendapi.services.AwsSqsClient;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -40,6 +45,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordWithC
     private final AwsSqsClient sqsClient;
     private final CodeStorageService codeStorageService;
     private final ValidationService validationService;
+    private final AuditService auditService;
     private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
 
     private static final Logger LOGGER = LogManager.getLogger(ResetPasswordHandler.class);
@@ -52,7 +58,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordWithC
             ConfigurationService configurationService,
             SessionService sessionService,
             ClientSessionService clientSessionService,
-            ClientService clientService) {
+            ClientService clientService,
+            AuditService auditService) {
         super(
                 ResetPasswordWithCodeRequest.class,
                 configurationService,
@@ -64,6 +71,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordWithC
         this.sqsClient = sqsClient;
         this.codeStorageService = codeStorageService;
         this.validationService = validationService;
+        this.auditService = auditService;
     }
 
     public ResetPasswordHandler() {
@@ -81,6 +89,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordWithC
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
         this.validationService = new ValidationService();
+        this.auditService = new AuditService(configurationService);
     }
 
     @Override
@@ -130,6 +139,19 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordWithC
                             NotificationType.PASSWORD_RESET_CONFIRMATION);
             LOGGER.info("Placing message on queue");
             sqsClient.send(serialiseRequest(notifyRequest));
+            auditService.submitAuditEvent(
+                    FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
+                    context.getAwsRequestId(),
+                    userContext.getSession().getSessionId(),
+                    userContext
+                            .getClient()
+                            .map(ClientRegistry::getClientID)
+                            .orElse(AuditService.UNKNOWN),
+                    AuditService.UNKNOWN,
+                    userCredentials.getEmail(),
+                    IpAddressHelper.extractIpAddress(input),
+                    AuditService.UNKNOWN,
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
         } catch (JsonProcessingException | ConstraintViolationException e) {
             LOGGER.error("Incorrect parameters in ResetPassword request");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
