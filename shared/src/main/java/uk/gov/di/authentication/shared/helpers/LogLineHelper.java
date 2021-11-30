@@ -8,4 +8,8 @@ public class LogLineHelper {
     public static void attachSessionIdToLogs(Session session) {
         ThreadContext.put("sessionId", session.getSessionId());
     }
+
+    public static void attachSessionIdToLogs(String sessionId) {
+        ThreadContext.put("sessionId", sessionId);
+    }
 }

@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.shared.helpers;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -11,6 +12,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueOrElse;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
 
 class RequestHeaderHelperTest {
@@ -78,12 +80,30 @@ class RequestHeaderHelperTest {
 
     @ParameterizedTest
     @MethodSource("headersTestParameters")
-    void doIt(
+    void testGetHeaderValueFromHeaders(
             Map<String, String> headers,
             String headerName,
             boolean matchLowerCase,
             boolean expectedValidity,
             String expectedValue) {
         assertEquals(expectedValue, getHeaderValueFromHeaders(headers, headerName, matchLowerCase));
+    }
+
+    @Test
+    void testGetHeaderValueOrElse() {
+        assertEquals("headers null", getHeaderValueOrElse(null, "Session-Id", "headers null"));
+        assertEquals(
+                "headers missing",
+                getHeaderValueOrElse(Collections.emptyMap(), "Session-Id", "headers missing"));
+        assertEquals(
+                "session-id-123",
+                getHeaderValueOrElse(MAP_TWO_ENTRIES_UPPER_CASE, "Session-Id", ""));
+        assertEquals(
+                "missing",
+                getHeaderValueOrElse(MAP_TWO_ENTRIES_UPPER_CASE, "Missing-Header", "missing"));
+        assertEquals(
+                "lower case missing",
+                getHeaderValueOrElse(
+                        MAP_TWO_ENTRIES_UPPER_CASE, "session-id", "lower case missing"));
     }
 }

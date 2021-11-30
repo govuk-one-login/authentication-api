@@ -53,4 +53,10 @@ public final class RequestHeaderHelper {
             return null;
         }
     }
+
+    public static String getHeaderValueOrElse(
+            Map<String, String> headers, String headerName, String orElse) {
+        String headerValue = getHeaderValueFromHeaders(headers, headerName, false);
+        return headerValue != null ? headerValue : orElse;
+    }
 }

@@ -13,13 +13,16 @@ import uk.gov.di.accountmanagement.entity.AuthenticateRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class AuthenticateHandler
@@ -56,6 +59,10 @@ public class AuthenticateHandler
         return isWarming(input)
                 .orElseGet(
                         () -> {
+                            String sessionId =
+                                    RequestHeaderHelper.getHeaderValueOrElse(
+                                            input.getHeaders(), SESSION_ID_HEADER, "");
+                            attachSessionIdToLogs(sessionId);
                             LOGGER.info("Request received to the AuthenticateHandler");
 
                             try {
@@ -85,7 +92,7 @@ public class AuthenticateHandler
                                         AccountManagementAuditableEvent
                                                 .ACCOUNT_MANAGEMENT_AUTHENTICATE,
                                         context.getAwsRequestId(),
-                                        AuditService.UNKNOWN,
+                                        sessionId,
                                         AuditService.UNKNOWN,
                                         AuditService.UNKNOWN,
                                         loginRequest.getEmail(),

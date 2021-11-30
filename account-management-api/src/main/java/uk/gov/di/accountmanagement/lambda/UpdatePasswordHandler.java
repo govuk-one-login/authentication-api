@@ -20,14 +20,17 @@ import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
+import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
 import java.util.Map;
 
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class UpdatePasswordHandler
@@ -64,6 +67,10 @@ public class UpdatePasswordHandler
         return isWarming(input)
                 .orElseGet(
                         () -> {
+                            String sessionId =
+                                    RequestHeaderHelper.getHeaderValueOrElse(
+                                            input.getHeaders(), SESSION_ID_HEADER, "");
+                            attachSessionIdToLogs(sessionId);
                             LOGGER.info("UpdatePasswordHandler received request");
                             context.getClientContext();
                             try {
@@ -111,7 +118,7 @@ public class UpdatePasswordHandler
                                 auditService.submitAuditEvent(
                                         AccountManagementAuditableEvent.UPDATE_PASSWORD,
                                         context.getAwsRequestId(),
-                                        AuditService.UNKNOWN,
+                                        sessionId,
                                         AuditService.UNKNOWN,
                                         userProfile.getSubjectID(),
                                         userProfile.getEmail(),
