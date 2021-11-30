@@ -1,5 +1,6 @@
 plugins {
     id "java"
+    id "jacoco"
 }
 
 group "uk.gov.di"
@@ -48,5 +49,22 @@ test {
     testLogging {
         showStandardStreams = false
     }
+
+    doLast {
+        tasks.getByName("jacocoTestReport").sourceDirectories.from(
+                project(":account-management-api").sourceSets.main.java,
+                project(":shared").sourceSets.main.java)
+
+        tasks.getByName("jacocoTestReport").classDirectories.from(
+                project(":account-management-api").sourceSets.main.output,
+                project(":shared").sourceSets.main.output)
+    }
     dependsOn ":composeUp"
+    finalizedBy "jacocoTestReport"
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled true
+    }
 }
