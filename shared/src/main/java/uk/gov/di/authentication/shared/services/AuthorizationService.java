@@ -142,7 +142,10 @@ public class AuthorizationService {
             VectorOfTrust vectorOfTrust =
                     VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
         } catch (IllegalArgumentException e) {
-            LOGGER.warn("vtr in AuthRequest is not valid. vtr in request: {}", authRequestVtr);
+            LOGGER.warn(
+                    "vtr in AuthRequest is not valid. vtr in request: {}. IllegalArgumentException: {}",
+                    authRequestVtr,
+                    e);
             return Optional.of(
                     new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
         }
