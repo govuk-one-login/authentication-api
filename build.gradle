@@ -76,7 +76,8 @@ subprojects {
         lettuce "org.apache.commons:commons-pool2:2.11.1",
                 "io.lettuce:lettuce-core:6.1.5.RELEASE"
 
-        logging_runtime "com.amazonaws:aws-lambda-java-log4j2:1.2.0"
+        logging_runtime "com.amazonaws:aws-lambda-java-log4j2:1.2.0",
+                "org.slf4j:slf4j-nop:1.7.32"
 
         jackson "com.fasterxml.jackson.core:jackson-core:${dependencyVersions.jackson_version}",
                 "com.fasterxml.jackson.core:jackson-databind:${dependencyVersions.jackson_version}",
