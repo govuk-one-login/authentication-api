@@ -8,6 +8,7 @@ import java.util.Collections;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
@@ -21,6 +22,7 @@ class VectorOfTrustTest {
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         Collections.singletonList(jsonArray.toJSONString()));
         assertThat(vectorOfTrust.getCredentialTrustLevel(), equalTo(MEDIUM_LEVEL));
+        assertNull(vectorOfTrust.getLevelOfConfidence());
     }
 
     @Test
@@ -30,6 +32,7 @@ class VectorOfTrustTest {
         assertThat(
                 vectorOfTrust.getCredentialTrustLevel(),
                 equalTo(CredentialTrustLevel.getDefault()));
+        assertNull(vectorOfTrust.getLevelOfConfidence());
     }
 
     @Test
@@ -41,6 +44,7 @@ class VectorOfTrustTest {
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         Collections.singletonList(jsonArray.toJSONString()));
         assertThat(vectorOfTrust.getCredentialTrustLevel(), equalTo(LOW_LEVEL));
+        assertNull(vectorOfTrust.getLevelOfConfidence());
     }
 
     @Test
@@ -51,6 +55,7 @@ class VectorOfTrustTest {
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         Collections.singletonList(jsonArray.toJSONString()));
         assertThat(vectorOfTrust.getCredentialTrustLevel(), equalTo(LOW_LEVEL));
+        assertNull(vectorOfTrust.getLevelOfConfidence());
     }
 
     @Test
