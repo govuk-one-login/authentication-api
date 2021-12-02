@@ -105,6 +105,27 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
+    void shouldRedirectToLoginWhenNoCookieAndIdentityVectorsAreIncludedInRequest() {
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(Optional.empty()),
+                        constructQueryStringParameters(
+                                Optional.of(CLIENT_ID),
+                                Optional.empty(),
+                                "openid",
+                                Optional.of("Pl.Cl.Cm")));
+        assertThat(response, hasStatus(302));
+        assertThat(
+                getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
+                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        assertThat(
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
+                        .isPresent(),
+                equalTo(true));
+    }
+
+    @Test
     void shouldRedirectToLoginWithSamePersistentCookieValueInRequest() {
         var response =
                 makeRequest(

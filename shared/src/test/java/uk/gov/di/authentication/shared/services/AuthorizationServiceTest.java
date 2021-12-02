@@ -114,6 +114,68 @@ class AuthorizationServiceTest {
     }
 
     @Test
+    void shouldSuccessfullyValidateAuthRequestWhenIdentityValuesAreIncludedInVtrAttribute() {
+        ClientID clientID = new ClientID();
+        State state = new State();
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.add("Pl.Cm.Cl");
+        jsonArray.add("Pl.Cl");
+        when(dynamoClientService.getClient(clientID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), clientID.toString())));
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        AuthenticationRequest authRequest =
+                generateAuthRequest(
+                        clientID,
+                        REDIRECT_URI.toString(),
+                        responseType,
+                        scope,
+                        jsonArray,
+                        state,
+                        new Nonce());
+        Optional<ErrorObject> errorObject = authorizationService.validateAuthRequest(authRequest);
+
+        assertThat(errorObject, equalTo(Optional.empty()));
+    }
+
+    @Test
+    void shouldReturnErrorWhenInvalidVtrAttributeIsSentInRequest() {
+        ClientID clientID = new ClientID();
+        State state = new State();
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.add("Cm.Cl.Pl");
+        jsonArray.add("Pl.Cl");
+        when(dynamoClientService.getClient(clientID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), clientID.toString())));
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        AuthenticationRequest authRequest =
+                generateAuthRequest(
+                        clientID,
+                        REDIRECT_URI.toString(),
+                        responseType,
+                        scope,
+                        jsonArray,
+                        state,
+                        new Nonce());
+        Optional<ErrorObject> errorObject = authorizationService.validateAuthRequest(authRequest);
+
+        assertThat(
+                errorObject.get(),
+                equalTo(
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid")));
+    }
+
+    @Test
     void shouldSuccessfullyValidateAuthRequest() {
         ClientID clientID = new ClientID();
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
@@ -402,6 +464,19 @@ class AuthorizationServiceTest {
         jsonArray.add("Cm.Cl");
         jsonArray.add("Cl");
         State state = new State();
+        Nonce nonce = new Nonce();
+        return generateAuthRequest(
+                clientID, redirectUri, responseType, scope, jsonArray, state, nonce);
+    }
+
+    private AuthenticationRequest generateAuthRequest(
+            ClientID clientID,
+            String redirectUri,
+            ResponseType responseType,
+            Scope scope,
+            JSONArray jsonArray,
+            State state,
+            Nonce nonce) {
         return new AuthenticationRequest.Builder(
                         responseType, scope, new ClientID(clientID), URI.create(redirectUri))
                 .state(state)
