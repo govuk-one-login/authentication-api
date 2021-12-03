@@ -6,7 +6,6 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCError;
 import jakarta.ws.rs.core.Response;
-import net.minidev.json.JSONArray;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.lambda.AuthorisationHandler;
@@ -47,6 +46,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION
 import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPLIFT_REQUIRED_CM;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.getHttpCookieFromMultiValueResponseHeaders;
+import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -515,12 +515,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         prompt.ifPresent(s -> queryStringParameters.put("prompt", s));
 
-        vtr.ifPresent(
-                s -> {
-                    JSONArray jsonArray = new JSONArray();
-                    jsonArray.add(vtr.get());
-                    queryStringParameters.put("vtr", jsonArray.toJSONString());
-                });
+        vtr.ifPresent(s -> queryStringParameters.put("vtr", jsonArrayOf(vtr.get())));
         return queryStringParameters;
     }
 

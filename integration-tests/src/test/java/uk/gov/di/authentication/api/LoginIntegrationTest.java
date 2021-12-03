@@ -6,7 +6,6 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
-import net.minidev.json.JSONArray;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -37,6 +36,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION
 import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.LOGGED_IN;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS;
+import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -80,9 +80,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 URI.create(REDIRECT_URI))
                         .nonce(new Nonce());
         if (level != null) {
-            JSONArray jsonArray = new JSONArray();
-            jsonArray.add(level.getValue());
-            builder.customParameter("vtr", jsonArray.toJSONString());
+            builder.customParameter("vtr", jsonArrayOf(level.getValue()));
         }
         AuthenticationRequest authRequest = builder.build();
         redis.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());

@@ -7,7 +7,6 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
-import net.minidev.json.JSONArray;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
@@ -42,6 +41,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPLIFT_REQUIRED_CM;
 import static uk.gov.di.authentication.shared.entity.SessionState.USER_NOT_FOUND;
 import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
+import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 
 public class StateMachineJourneyTest {
 
@@ -224,10 +224,8 @@ public class StateMachineJourneyTest {
     }
 
     public static VectorOfTrust generateLowLevelVectorOfTrust() {
-        JSONArray jsonArray = new JSONArray();
-        jsonArray.add("Cl");
         return VectorOfTrust.parseFromAuthRequestAttribute(
-                Collections.singletonList(jsonArray.toJSONString()));
+                Collections.singletonList(jsonArrayOf("Cl")));
     }
 
     public static AuthenticationRequest generateAuthRequest(String vtr) {
@@ -238,12 +236,10 @@ public class StateMachineJourneyTest {
         scope.add(OIDCScopeValue.OPENID);
         scope.add("phone");
         scope.add("email");
-        JSONArray jsonArray = new JSONArray();
-        jsonArray.add(vtr);
         return new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
                 .state(state)
                 .nonce(nonce)
-                .customParameter("vtr", jsonArray.toJSONString())
+                .customParameter("vtr", jsonArrayOf(vtr))
                 .build();
     }
 }
