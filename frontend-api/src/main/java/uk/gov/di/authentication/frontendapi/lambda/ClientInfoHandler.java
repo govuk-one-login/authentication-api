@@ -30,6 +30,7 @@ import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class ClientInfoHandler
@@ -83,6 +84,9 @@ public class ClientInfoHandler
                             if (session.isEmpty()) {
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1000);
+                            } else {
+                                attachSessionIdToLogs(session.get());
+                                LOGGER.info("ClientInfo session retrieved");
                             }
 
                             Optional<ClientSession> clientSession =
@@ -90,9 +94,7 @@ public class ClientInfoHandler
                                             input.getHeaders());
 
                             if (clientSession.isEmpty()) {
-                                LOGGER.info(
-                                        "ClientSession not found for session: {}",
-                                        session.get().getSessionId());
+                                LOGGER.info("ClientSession not found");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1018);
                             }
@@ -116,9 +118,7 @@ public class ClientInfoHandler
 
                                 if (optionalClientRegistry.isEmpty()) {
                                     LOGGER.error(
-                                            "ClientId: {} not found in ClientRegistry for session: {}",
-                                            clientID,
-                                            session.get().getSessionId());
+                                            "ClientId: {} not found in ClientRegistry", clientID);
                                     return generateApiGatewayProxyErrorResponse(
                                             403, ErrorResponse.ERROR_1015);
                                 }
@@ -134,14 +134,13 @@ public class ClientInfoHandler
                                                 state);
 
                                 LOGGER.info(
-                                        "Found Client Info for ClientID: {} ClientName {} Scopes {} Redirect Uri {} Service Type {} State {} for session: {}",
+                                        "Found Client Info for ClientID: {} ClientName {} Scopes {} Redirect Uri {} Service Type {} State {}",
                                         clientRegistry.getClientID(),
                                         clientRegistry.getClientName(),
                                         scopes,
                                         redirectUri,
                                         clientRegistry.getServiceType(),
-                                        state,
-                                        session.get().getSessionId());
+                                        state);
 
                                 auditService.submitAuditEvent(
                                         FrontendAuditableEvent.CLIENT_INFO_FOUND,
@@ -158,9 +157,7 @@ public class ClientInfoHandler
                                 return generateApiGatewayProxyResponse(200, clientInfoResponse);
 
                             } catch (ParseException | JsonProcessingException e) {
-                                LOGGER.error(
-                                        "Error when calling ClientInfo for session: {}",
-                                        session.get().getSessionId());
+                                LOGGER.error("Error when calling ClientInfo");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1001);
                             }
