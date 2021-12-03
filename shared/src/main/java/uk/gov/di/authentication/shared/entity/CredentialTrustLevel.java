@@ -39,6 +39,14 @@ public enum CredentialTrustLevel {
                 .orElseThrow(() -> new IllegalArgumentException("Invalid CredentialTrustLevel"));
     }
 
+    public static CredentialTrustLevel retrieveCredentialTrustLevel(String vtrSets) {
+
+        return Arrays.stream(values())
+                .filter(tl -> vtrSets.equals(tl.getValue()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Invalid CredentialTrustLevel"));
+    }
+
     public static CredentialTrustLevel getDefault() {
         return MEDIUM_LEVEL;
     }

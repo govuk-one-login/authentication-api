@@ -119,6 +119,17 @@ class VectorOfTrustTest {
     }
 
     @Test
+    void shouldThrowWhenTooManyValuesInVector() {
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.add("Cl.Cm.Cl");
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        VectorOfTrust.parseFromAuthRequestAttribute(
+                                Collections.singletonList(jsonArray.toJSONString())));
+    }
+
+    @Test
     void shouldThrowWhenOnlyIdentityLevelIsSentInRequest() {
         JSONArray jsonArray = new JSONArray();
         jsonArray.add("Pm");
@@ -130,18 +141,18 @@ class VectorOfTrustTest {
     }
 
     @Test
-    void shouldParseVectorWhenCredentialTrustLevelsAreOrderedDifferently() {
+    void shouldThrowWhenCredentialTrustLevelsAreOrderedIncorrectly() {
         JSONArray jsonArray = new JSONArray();
         jsonArray.add("Pm.Cm.Cl");
-        VectorOfTrust vectorOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArray.toJSONString()));
-        assertThat(vectorOfTrust.getCredentialTrustLevel(), equalTo(MEDIUM_LEVEL));
-        assertThat(vectorOfTrust.getLevelOfConfidence(), equalTo(LevelOfConfidence.MEDIUM_LEVEL));
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        VectorOfTrust.parseFromAuthRequestAttribute(
+                                Collections.singletonList(jsonArray.toJSONString())));
     }
 
     @Test
-    void shouldParseValidStringAndReThrowIfInvalidValueIsPresent() {
+    void shouldThrowWhenMultipleIdentityValuesArePresentInVector() {
         JSONArray jsonArray = new JSONArray();
         jsonArray.add("Pl.Pb");
         assertThrows(

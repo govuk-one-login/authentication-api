@@ -120,7 +120,7 @@ class AuthorizationServiceTest {
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         JSONArray jsonArray = new JSONArray();
-        jsonArray.add("Pl.Cm.Cl");
+        jsonArray.add("Pl.Cl.Cm");
         jsonArray.add("Pl.Cl");
         when(dynamoClientService.getClient(clientID.toString()))
                 .thenReturn(
@@ -461,7 +461,7 @@ class AuthorizationServiceTest {
     private AuthenticationRequest generateAuthRequest(
             ClientID clientID, String redirectUri, ResponseType responseType, Scope scope) {
         JSONArray jsonArray = new JSONArray();
-        jsonArray.add("Cm.Cl");
+        jsonArray.add("Cl.Cm");
         jsonArray.add("Cl");
         State state = new State();
         Nonce nonce = new Nonce();
