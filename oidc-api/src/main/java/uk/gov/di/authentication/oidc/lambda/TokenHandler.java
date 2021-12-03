@@ -235,8 +235,7 @@ public class TokenHandler
                             String vot =
                                     clientSession
                                             .getEffectiveVectorOfTrust()
-                                            .getCredentialTrustLevel()
-                                            .getValue();
+                                            .retrieveVectorOfTrustForToken();
 
                             OIDCTokenResponse tokenResponse =
                                     tokenService.generateTokenResponse(

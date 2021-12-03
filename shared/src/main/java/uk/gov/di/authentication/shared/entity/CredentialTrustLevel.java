@@ -1,8 +1,6 @@
 package uk.gov.di.authentication.shared.entity;
 
 import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
 
 public enum CredentialTrustLevel {
     LOW_LEVEL("Cl"),
@@ -18,23 +16,10 @@ public enum CredentialTrustLevel {
         return value;
     }
 
-    public static CredentialTrustLevel retrieveCredentialTrustLevel(List<String> vtrSets) {
+    public static CredentialTrustLevel retrieveCredentialTrustLevel(String vtrSets) {
 
         return Arrays.stream(values())
-                .filter(
-                        tl ->
-                                vtrSets.stream()
-                                        .anyMatch(
-                                                set ->
-                                                        new HashSet<>(
-                                                                        Arrays.asList(
-                                                                                set.split("\\.")))
-                                                                .equals(
-                                                                        new HashSet<>(
-                                                                                Arrays.asList(
-                                                                                        tl.getValue()
-                                                                                                .split(
-                                                                                                        "\\."))))))
+                .filter(tl -> vtrSets.equals(tl.getValue()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Invalid CredentialTrustLevel"));
     }

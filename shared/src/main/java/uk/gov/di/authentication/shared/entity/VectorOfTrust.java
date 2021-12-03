@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import static java.lang.String.format;
 import static net.minidev.json.parser.JSONParser.DEFAULT_PERMISSIVE_MODE;
 
 public class VectorOfTrust {
@@ -63,11 +62,7 @@ public class VectorOfTrust {
             LOGGER.error("Error when parsing vtr attribute", e);
             throw new IllegalArgumentException("Invalid VTR attribute", e);
         }
-        List<String> vtrSets = new ArrayList<>();
-        for (int i = 0; i < vtrJsonArray.size(); i++) {
-            vtrSets.add((String) vtrJsonArray.get(i));
-        }
-        VectorOfTrust vectorOfTrust = parseVtrSet(vtrSets);
+        VectorOfTrust vectorOfTrust = parseVtrSet(vtrJsonArray);
         LOGGER.info("VTR has been processed at vectorOfTrust: {}", vectorOfTrust.toString());
 
         return vectorOfTrust;
@@ -77,34 +72,35 @@ public class VectorOfTrust {
         return new VectorOfTrust(CredentialTrustLevel.getDefault());
     }
 
-    private static VectorOfTrust parseVtrSet(List<String> vtrSet) {
-        List<VectorOfTrust> vectorOfTrusts = new ArrayList<>();
-        for (String vtr : vtrSet) {
-            LevelOfConfidence loc = null;
-            CredentialTrustLevel ctl;
-            String[] splitVtr = vtr.split("\\.");
+    public String retrieveVectorOfTrustForToken() {
+        if (Objects.isNull(levelOfConfidence)) {
+            return credentialTrustLevel.getValue();
+        } else {
+            return levelOfConfidence.getValue() + "." + credentialTrustLevel.getValue();
+        }
+    }
 
-            List<String> levelOfConfidence =
+    private static VectorOfTrust parseVtrSet(JSONArray vtrJsonArray) {
+        List<VectorOfTrust> vectorOfTrusts = new ArrayList<>();
+        for (Object obj : vtrJsonArray) {
+            String vtr = (String) obj;
+            var splitVtr = vtr.split("\\.");
+
+            List<LevelOfConfidence> levelOfConfidence =
                     Arrays.stream(splitVtr)
-                            .filter((a) -> a.startsWith("P"))
+                            .filter(a -> a.startsWith("P"))
+                            .map(LevelOfConfidence::retrieveLevelOfConfidence)
                             .collect(Collectors.toList());
-            if (splitVtr.length > 3 || (splitVtr.length == 3 && levelOfConfidence.isEmpty())) {
-                throw new IllegalArgumentException(
-                        format("Invalid number of attributes in VTR, %s", vtr));
-            }
-            if (!levelOfConfidence.isEmpty()) {
-                if (levelOfConfidence.size() > 1 || !vtr.startsWith("P")) {
-                    throw new IllegalArgumentException(
-                            format("Invalid Identity vector value exists in VTS: %s", vtr));
-                }
-                loc = LevelOfConfidence.retrieveLevelOfConfidence(levelOfConfidence.get(0));
-                ctl =
-                        CredentialTrustLevel.retrieveCredentialTrustLevel(
-                                List.of(vtr.substring(vtr.indexOf(".") + 1)));
+            if (levelOfConfidence.isEmpty()) {
+                var ctl = CredentialTrustLevel.retrieveCredentialTrustLevel(vtr);
+                vectorOfTrusts.add(new VectorOfTrust(ctl));
             } else {
-                ctl = CredentialTrustLevel.retrieveCredentialTrustLevel(List.of(vtr));
+                var loc = levelOfConfidence.get(0);
+                var ctl =
+                        CredentialTrustLevel.retrieveCredentialTrustLevel(
+                                vtr.substring(vtr.indexOf(".") + 1));
+                vectorOfTrusts.add(new VectorOfTrust(ctl, loc));
             }
-            vectorOfTrusts.add(new VectorOfTrust(ctl, loc));
         }
 
         return vectorOfTrusts.stream()

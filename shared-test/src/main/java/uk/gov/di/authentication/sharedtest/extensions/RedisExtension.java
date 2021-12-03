@@ -165,7 +165,8 @@ public class RedisExtension
             String authCode,
             String clientSessionId,
             String email,
-            Map<String, List<String>> authRequest)
+            Map<String, List<String>> authRequest,
+            VectorOfTrust vtr)
             throws JsonProcessingException {
         redis.saveWithExpiry(
                 AUTH_CODE_PREFIX.concat(authCode),
@@ -177,8 +178,7 @@ public class RedisExtension
         redis.saveWithExpiry(
                 CLIENT_SESSION_PREFIX.concat(clientSessionId),
                 objectMapper.writeValueAsString(
-                        new ClientSession(
-                                authRequest, LocalDateTime.now(), VectorOfTrust.getDefaults())),
+                        new ClientSession(authRequest, LocalDateTime.now(), vtr)),
                 300);
     }
 
