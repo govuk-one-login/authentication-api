@@ -179,4 +179,27 @@ class VectorOfTrustTest {
                 IllegalArgumentException.class,
                 () -> VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList("")));
     }
+
+    @Test
+    void shouldReturnCorrectlyFormattedVectorOfTrustForTokenWhenIdentityValuesArePresent() {
+        String vectorString = "Pm.Cl.Cm";
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.add(vectorString);
+        VectorOfTrust vectorOfTrust =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        Collections.singletonList(jsonArray.toJSONString()));
+        assertThat(vectorOfTrust.retrieveVectorOfTrustForToken(), equalTo(vectorString));
+    }
+
+    @Test
+    void
+            shouldReturnCorrectlyFormattedVectorOfTrustForTokenWhenOnlyCredentialTrustLevelIsPresent() {
+        String vectorString = "Cl.Cm";
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.add(vectorString);
+        VectorOfTrust vectorOfTrust =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        Collections.singletonList(jsonArray.toJSONString()));
+        assertThat(vectorOfTrust.retrieveVectorOfTrustForToken(), equalTo(vectorString));
+    }
 }

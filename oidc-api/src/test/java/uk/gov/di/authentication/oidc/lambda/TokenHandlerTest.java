@@ -30,8 +30,11 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
+import net.minidev.json.JSONArray;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -67,6 +70,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -129,10 +133,16 @@ public class TokenHandlerTest {
                         redisConnectionService);
     }
 
-    @Test
-    public void shouldReturn200ForSuccessfulTokenRequest() throws JOSEException {
-        VectorOfTrust vot = mock(VectorOfTrust.class);
-        when(vot.getCredentialTrustLevel()).thenReturn(CredentialTrustLevel.MEDIUM_LEVEL);
+    private static Stream<String> validVectorValues() {
+        return Stream.of(
+                "Cl.Cm", "Cl", "Pm.Cl.Cm", "Pm.Cl", "Pl.Cl.Cm", "Pl.Cl", "Ph.Cl", "Ph.Cl.Cm");
+    }
+
+    @ParameterizedTest
+    @MethodSource("validVectorValues")
+    public void shouldReturn200ForSuccessfulTokenRequest(String vectorValue) throws JOSEException {
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.add(vectorValue);
         KeyPair keyPair = generateRsaKeyPair();
         UserProfile userProfile = generateUserProfile();
         SignedJWT signedJWT =
@@ -163,11 +173,14 @@ public class TokenHandlerTest {
                                 new AuthCodeExchangeData()
                                         .setEmail(TEST_EMAIL)
                                         .setClientSessionId(CLIENT_SESSION_ID)));
-
+        AuthenticationRequest authenticationRequest = generateAuthRequest(jsonArray.toJSONString());
+        VectorOfTrust vtr =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        authenticationRequest.getCustomParameter("vtr"));
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(
                         new ClientSession(
-                                generateAuthRequest().toParameters(), LocalDateTime.now(), vot));
+                                authenticationRequest.toParameters(), LocalDateTime.now(), vtr));
         when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
@@ -175,7 +188,7 @@ public class TokenHandlerTest {
                         SCOPES,
                         Map.of("nonce", NONCE),
                         PUBLIC_SUBJECT,
-                        VOT,
+                        vtr.retrieveVectorOfTrustForToken(),
                         userProfile.getClientConsent(),
                         clientRegistry.isInternalService()))
                 .thenReturn(tokenResponse);
@@ -486,6 +499,7 @@ public class TokenHandlerTest {
     private ClientRegistry generateClientRegistry(KeyPair keyPair) {
         return new ClientRegistry()
                 .setClientID(CLIENT_ID)
+                .setInternalService(false)
                 .setClientName("test-client")
                 .setRedirectUrls(singletonList(REDIRECT_URI))
                 .setScopes(SCOPES.toStringList())
@@ -547,6 +561,13 @@ public class TokenHandlerTest {
     }
 
     private AuthenticationRequest generateAuthRequest() {
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.add("Cl.Cm");
+        jsonArray.add("Cl");
+        return generateAuthRequest(jsonArray.toJSONString());
+    }
+
+    private AuthenticationRequest generateAuthRequest(String vtr) {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         State state = new State();
         return new AuthenticationRequest.Builder(
@@ -556,6 +577,7 @@ public class TokenHandlerTest {
                         URI.create(REDIRECT_URI))
                 .state(state)
                 .nonce(NONCE)
+                .customParameter("vtr", vtr)
                 .build();
     }
 
