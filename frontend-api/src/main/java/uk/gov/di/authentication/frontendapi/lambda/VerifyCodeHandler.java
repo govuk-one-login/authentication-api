@@ -13,13 +13,13 @@ import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
 import uk.gov.di.authentication.shared.domain.RequestHeaders;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -44,7 +44,12 @@ import static java.util.Map.entry;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
-import static uk.gov.di.authentication.shared.entity.SessionAction.*;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_MFA_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE;
+import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES;
 import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_VERIFIED;
@@ -161,7 +166,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             processCodeSessionState(
                     session,
                     codeRequest.getNotificationType(),
-                    userContext.getClientSession(),
                     getHeaderValueFromHeaders(
                             input.getHeaders(),
                             RequestHeaders.CLIENT_SESSION_ID_HEADER,
@@ -246,11 +250,16 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private void processCodeSessionState(
             Session session,
             NotificationType notificationType,
-            ClientSession clientSession,
             String clientSessionId,
             APIGatewayProxyRequestEvent input,
             Context context,
             UserContext userContext) {
+        var subjectId =
+                userContext
+                        .getUserProfile()
+                        .map(UserProfile::getSubjectID)
+                        .orElse(AuditService.UNKNOWN);
+
         if (notificationType.equals(VERIFY_PHONE_NUMBER)
                 && List.of(PHONE_NUMBER_CODE_VERIFIED, CONSENT_REQUIRED)
                         .contains(session.getState())) {
@@ -263,7 +272,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             .getClient()
                             .map(ClientRegistry::getClientID)
                             .orElse(AuditService.UNKNOWN),
-                    AuditService.UNKNOWN,
+                    subjectId,
                     session.getEmailAddress(),
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
@@ -274,7 +283,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             authenticationService.updatePhoneNumberVerifiedStatus(session.getEmailAddress(), true);
             clientSessionService.saveClientSession(
                     clientSessionId,
-                    clientSession.setEffectiveVectorOfTrust(VectorOfTrust.getDefaults()));
+                    userContext
+                            .getClientSession()
+                            .setEffectiveVectorOfTrust(VectorOfTrust.getDefaults()));
             sessionService.save(
                     session.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL));
         } else if (List.of(
@@ -292,7 +303,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             .getClient()
                             .map(ClientRegistry::getClientID)
                             .orElse(AuditService.UNKNOWN),
-                    AuditService.UNKNOWN,
+                    subjectId,
                     session.getEmailAddress(),
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
@@ -314,7 +325,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             .getClient()
                             .map(ClientRegistry::getClientID)
                             .orElse(AuditService.UNKNOWN),
-                    AuditService.UNKNOWN,
+                    subjectId,
                     session.getEmailAddress(),
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,

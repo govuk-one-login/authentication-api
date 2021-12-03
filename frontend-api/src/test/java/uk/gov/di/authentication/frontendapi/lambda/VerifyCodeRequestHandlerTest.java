@@ -147,6 +147,8 @@ class VerifyCodeRequestHandlerTest {
         when(authenticationService.getUserProfileFromEmail(eq(TEST_CLIENT_EMAIL)))
                 .thenReturn(Optional.of(userProfile));
 
+        when(userProfile.getSubjectID()).thenReturn("test-subject-id");
+
         when(stateMachine.transition(
                         eq(VERIFY_EMAIL_CODE_SENT),
                         eq(USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE),
@@ -231,7 +233,7 @@ class VerifyCodeRequestHandlerTest {
                         context.getAwsRequestId(),
                         session.getSessionId(),
                         CLIENT_ID,
-                        AuditService.UNKNOWN,
+                        "test-subject-id",
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
@@ -271,7 +273,7 @@ class VerifyCodeRequestHandlerTest {
                         context.getAwsRequestId(),
                         session.getSessionId(),
                         CLIENT_ID,
-                        AuditService.UNKNOWN,
+                        "test-subject-id",
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
@@ -394,7 +396,7 @@ class VerifyCodeRequestHandlerTest {
                         context.getAwsRequestId(),
                         session.getSessionId(),
                         CLIENT_ID,
-                        AuditService.UNKNOWN,
+                        "test-subject-id",
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
@@ -454,7 +456,7 @@ class VerifyCodeRequestHandlerTest {
                         context.getAwsRequestId(),
                         session.getSessionId(),
                         CLIENT_ID,
-                        AuditService.UNKNOWN,
+                        "test-subject-id",
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
@@ -509,7 +511,7 @@ class VerifyCodeRequestHandlerTest {
                         context.getAwsRequestId(),
                         session.getSessionId(),
                         CLIENT_ID,
-                        AuditService.UNKNOWN,
+                        "test-subject-id",
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
@@ -599,7 +601,7 @@ class VerifyCodeRequestHandlerTest {
                         context.getAwsRequestId(),
                         session.getSessionId(),
                         CLIENT_ID,
-                        AuditService.UNKNOWN,
+                        "test-subject-id",
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
