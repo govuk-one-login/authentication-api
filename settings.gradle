@@ -11,4 +11,5 @@ include 'shared'
 include 'shared-test'
 
 rootProject.name = 'di-authentication-api'
+include 'ipv-api'
 

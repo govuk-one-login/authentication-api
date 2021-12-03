@@ -2,6 +2,7 @@ package uk.gov.di.authentication.frontendapi.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotNull;
+import uk.gov.di.authentication.shared.entity.BaseFrontendRequest;
 
 public class UpdateProfileRequest extends BaseFrontendRequest {
 
