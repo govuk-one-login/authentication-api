@@ -105,7 +105,8 @@ public class TokenService {
         AccessToken accessToken =
                 generateAndStoreAccessToken(
                         clientID, internalSubject, scopesForToken, publicSubject);
-        AccessTokenHash accessTokenHash = AccessTokenHash.compute(accessToken, TOKEN_ALGORITHM);
+        AccessTokenHash accessTokenHash =
+                AccessTokenHash.compute(accessToken, TOKEN_ALGORITHM, null);
         SignedJWT idToken =
                 generateIDToken(
                         clientID, publicSubject, additionalTokenClaims, accessTokenHash, vot);
@@ -256,7 +257,7 @@ public class TokenService {
         idTokenClaims.setAccessTokenHash(accessTokenHash);
         idTokenClaims.putAll(additionalTokenClaims);
         idTokenClaims.setClaim("vot", vot);
-        idTokenClaims.setClaim("vtm", trustMarkUri);
+        idTokenClaims.setClaim("vtm", trustMarkUri.toString());
         try {
             return generateSignedJWT(idTokenClaims.toJWTClaimsSet());
         } catch (com.nimbusds.oauth2.sdk.ParseException e) {

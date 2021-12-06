@@ -28,6 +28,7 @@ import com.nimbusds.oauth2.sdk.util.URLUtils;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
+import com.nimbusds.openid.connect.sdk.claims.AccessTokenHash;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
@@ -56,7 +57,6 @@ import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -64,6 +64,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 
 public class TokenServiceTest {
 
@@ -84,10 +85,12 @@ public class TokenServiceTest {
                     OIDCScopeValue.EMAIL,
                     OIDCScopeValue.PHONE,
                     OIDCScopeValue.OFFLINE_ACCESS);
+    private Nonce nonce;
     private static final String CLIENT_ID = "client-id";
     private static final String AUTH_CODE = new AuthorizationCode().toString();
     private static final String REDIRECT_URI = "http://localhost/redirect";
-    private static final String BASE_URL = "http://example.com";
+    private static final String TOKEN_URI = "http://localhost/token";
+    private static final String BASE_URL = "https://example.com";
     private static final String KEY_ID = "14342354354353";
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
@@ -99,12 +102,12 @@ public class TokenServiceTest {
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
         when(configurationService.getIDTokenExpiry()).thenReturn(120L);
         when(configurationService.getSessionExpiry()).thenReturn(300L);
+        nonce = new Nonce();
     }
 
     @Test
     public void shouldGenerateTokenResponseWithRefreshToken()
             throws ParseException, JOSEException, JsonProcessingException {
-        Nonce nonce = new Nonce();
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
         createSignedIdToken();
         createSignedAccessToken();
@@ -128,22 +131,9 @@ public class TokenServiceTest {
                                         LocalDateTime.now(ZoneId.of("UTC")).toString())),
                         false);
 
-        assertEquals(
-                BASE_URL, tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getIssuer());
-        assertEquals(
-                PUBLIC_SUBJECT.getValue(),
-                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("sub"));
+        assertSuccessfullTokenResponse(tokenResponse);
+
         assertNotNull(tokenResponse.getOIDCTokens().getRefreshToken());
-        String accessTokenKey = ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT;
-        AccessTokenStore accessTokenStore =
-                new AccessTokenStore(
-                        tokenResponse.getOIDCTokens().getAccessToken().getValue(),
-                        INTERNAL_SUBJECT.getValue());
-        verify(redisConnectionService)
-                .saveWithExpiry(
-                        accessTokenKey,
-                        new ObjectMapper().writeValueAsString(accessTokenStore),
-                        300L);
         String refreshTokenKey = REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT;
         RefreshTokenStore refreshTokenStore =
                 new RefreshTokenStore(
@@ -154,15 +144,11 @@ public class TokenServiceTest {
                         refreshTokenKey,
                         new ObjectMapper().writeValueAsString(refreshTokenStore),
                         300L);
-        assertEquals(
-                nonce.getValue(),
-                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("nonce"));
     }
 
     @Test
     public void shouldGenerateTokenResponseWithoutRefreshTokenWhenOfflineAccessScopeIsMissing()
             throws ParseException, JOSEException, JsonProcessingException {
-        Nonce nonce = new Nonce();
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
         createSignedIdToken();
@@ -186,56 +172,37 @@ public class TokenServiceTest {
                                         LocalDateTime.now(ZoneId.of("UTC")).toString())),
                         false);
 
-        assertEquals(
-                BASE_URL, tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getIssuer());
-        assertEquals(
-                PUBLIC_SUBJECT.getValue(),
-                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("sub"));
+        assertSuccessfullTokenResponse(tokenResponse);
+
         assertNull(tokenResponse.getOIDCTokens().getRefreshToken());
-        String accessTokenKey = ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT;
-        AccessTokenStore accessTokenStore =
-                new AccessTokenStore(
-                        tokenResponse.getOIDCTokens().getAccessToken().getValue(),
-                        INTERNAL_SUBJECT.getValue());
-        verify(redisConnectionService)
-                .saveWithExpiry(
-                        accessTokenKey,
-                        new ObjectMapper().writeValueAsString(accessTokenStore),
-                        300L);
-        assertEquals(
-                nonce.getValue(),
-                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("nonce"));
     }
 
     @Test
-    public void shouldSuccessfullyValidatePrivateKeyJWT() throws JOSEException, ParseException {
+    public void shouldSuccessfullyValidatePrivateKeyJWT() throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
         String publicKey = Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded());
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(5);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         String requestParams = generateSerialisedPrivateKeyJWT(keyPair, expiryDate.getTime());
         assertThat(
-                tokenService.validatePrivateKeyJWT(
-                        requestParams, publicKey, "http://localhost/token", CLIENT_ID),
+                tokenService.validatePrivateKeyJWT(requestParams, publicKey, TOKEN_URI, CLIENT_ID),
                 equalTo(Optional.empty()));
     }
 
     @Test
-    public void shouldFailToValidatePrivateKeyJWTIfExpired() throws JOSEException, ParseException {
+    public void shouldFailToValidatePrivateKeyJWTIfExpired() throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
         String publicKey = Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded());
         LocalDateTime localDateTime = LocalDateTime.now().minusMinutes(2);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         String requestParams = generateSerialisedPrivateKeyJWT(keyPair, expiryDate.getTime());
         assertThat(
-                tokenService.validatePrivateKeyJWT(
-                        requestParams, publicKey, "http://localhost/token", CLIENT_ID),
+                tokenService.validatePrivateKeyJWT(requestParams, publicKey, TOKEN_URI, CLIENT_ID),
                 equalTo(Optional.of(OAuth2Error.INVALID_GRANT)));
     }
 
     @Test
-    public void shouldFailToValidatePrivateKeyJWTIfInvalidClientId()
-            throws JOSEException, ParseException {
+    public void shouldFailToValidatePrivateKeyJWTIfInvalidClientId() throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
         String publicKey = Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded());
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(5);
@@ -243,13 +210,12 @@ public class TokenServiceTest {
         String requestParams = generateSerialisedPrivateKeyJWT(keyPair, expiryDate.getTime());
         assertThat(
                 tokenService.validatePrivateKeyJWT(
-                        requestParams, publicKey, "http://localhost/token", "wrong-client-id"),
+                        requestParams, publicKey, TOKEN_URI, "wrong-client-id"),
                 equalTo(Optional.of(OAuth2Error.INVALID_CLIENT)));
     }
 
     @Test
-    public void shouldReturnErrorIfUnableToValidatePrivateKeyJWTSignature()
-            throws JOSEException, ParseException {
+    public void shouldReturnErrorIfUnableToValidatePrivateKeyJWTSignature() throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
         KeyPair keyPairTwo = generateRsaKeyPair();
         String publicKey =
@@ -258,8 +224,7 @@ public class TokenServiceTest {
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         String requestParams = generateSerialisedPrivateKeyJWT(keyPair, expiryDate.getTime());
         assertThat(
-                tokenService.validatePrivateKeyJWT(
-                        requestParams, publicKey, "http://localhost/token", CLIENT_ID),
+                tokenService.validatePrivateKeyJWT(requestParams, publicKey, TOKEN_URI, CLIENT_ID),
                 equalTo(Optional.of(OAuth2Error.INVALID_CLIENT)));
     }
 
@@ -401,8 +366,7 @@ public class TokenServiceTest {
     private String generateSerialisedPrivateKeyJWT(KeyPair keyPair, long expiryTime)
             throws JOSEException {
         JWTAuthenticationClaimsSet claimsSet =
-                new JWTAuthenticationClaimsSet(
-                        new ClientID(CLIENT_ID), new Audience("http://localhost/token"));
+                new JWTAuthenticationClaimsSet(new ClientID(CLIENT_ID), new Audience(TOKEN_URI));
         claimsSet.getExpirationTime().setTime(expiryTime);
         PrivateKeyJWT privateKeyJWT =
                 new PrivateKeyJWT(
@@ -472,5 +436,43 @@ public class TokenServiceTest {
         }
         kpg.initialize(2048);
         return kpg.generateKeyPair();
+    }
+
+    private void assertSuccessfullTokenResponse(OIDCTokenResponse tokenResponse)
+            throws ParseException, JsonProcessingException {
+        String accessTokenKey = ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT;
+        assertNotNull(tokenResponse.getOIDCTokens().getAccessToken());
+        AccessTokenStore accessTokenStore =
+                new AccessTokenStore(
+                        tokenResponse.getOIDCTokens().getAccessToken().getValue(),
+                        INTERNAL_SUBJECT.getValue());
+        verify(redisConnectionService)
+                .saveWithExpiry(
+                        accessTokenKey,
+                        new ObjectMapper().writeValueAsString(accessTokenStore),
+                        300L);
+        assertThat(
+                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaims().size(),
+                equalTo(9));
+        assertThat(
+                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("sub"),
+                equalTo(PUBLIC_SUBJECT.getValue()));
+        assertThat(
+                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("nonce"),
+                equalTo(nonce.getValue()));
+        assertThat(
+                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("vtm"),
+                equalTo(buildURI(BASE_URL, "/trustmark").toString()));
+        assertThat(
+                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getIssuer(),
+                equalTo(BASE_URL));
+        assertThat(
+                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("at_hash"),
+                equalTo(
+                        AccessTokenHash.compute(
+                                        tokenResponse.getOIDCTokens().getAccessToken(),
+                                        JWSAlgorithm.ES256,
+                                        null)
+                                .toString()));
     }
 }
