@@ -1,6 +1,8 @@
 package uk.gov.di.authentication.shared.entity;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public enum LevelOfConfidence {
     LOW_LEVEL("Pl"),
@@ -25,5 +27,11 @@ public enum LevelOfConfidence {
                 .findFirst()
                 .orElseThrow(
                         () -> new IllegalArgumentException("Invalid LevelOfConfidence provided"));
+    }
+
+    public static List<String> getAllLevelOfConfidenceValues() {
+        return Arrays.stream(LevelOfConfidence.values())
+                .map(LevelOfConfidence::getValue)
+                .collect(Collectors.toList());
     }
 }

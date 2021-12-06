@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.entity.TrustMarkResponse;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.List;
@@ -41,7 +42,8 @@ class TrustMarkHandlerTest {
                         configurationService.getBaseURL().orElseThrow(),
                         List.of(
                                 CredentialTrustLevel.LOW_LEVEL.getValue(),
-                                CredentialTrustLevel.MEDIUM_LEVEL.getValue()));
+                                CredentialTrustLevel.MEDIUM_LEVEL.getValue()),
+                        LevelOfConfidence.getAllLevelOfConfidenceValues());
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -54,5 +56,6 @@ class TrustMarkHandlerTest {
         assertEquals(response.getIdp(), trustMarkResponse.getIdp());
         assertEquals(response.getTrustMark(), trustMarkResponse.getTrustMark());
         assertEquals(response.getC(), trustMarkResponse.getC());
+        assertEquals(response.getP(), trustMarkResponse.getP());
     }
 }

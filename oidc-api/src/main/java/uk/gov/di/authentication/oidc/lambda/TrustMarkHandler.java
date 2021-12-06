@@ -10,6 +10,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.TrustMarkResponse;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Arrays;
@@ -56,6 +57,7 @@ public class TrustMarkHandler
                 configurationService.getBaseURL().orElseThrow(),
                 Arrays.asList(
                         CredentialTrustLevel.LOW_LEVEL.getValue(),
-                        CredentialTrustLevel.MEDIUM_LEVEL.getValue()));
+                        CredentialTrustLevel.MEDIUM_LEVEL.getValue()),
+                LevelOfConfidence.getAllLevelOfConfidenceValues());
     }
 }
