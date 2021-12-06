@@ -14,13 +14,18 @@ public class TrustMarkResponse {
     @JsonProperty("C")
     private List<String> c;
 
+    @JsonProperty("P")
+    private List<String> p;
+
     public TrustMarkResponse(
             @JsonProperty(required = true, value = "idp") String idp,
             @JsonProperty(required = true, value = "trustmark_provider") String trustMark,
-            @JsonProperty(required = true, value = "C") List<String> c) {
+            @JsonProperty(required = true, value = "C") List<String> c,
+            @JsonProperty(required = true, value = "P") List<String> p) {
         this.idp = idp;
         this.trustMark = trustMark;
         this.c = c;
+        this.p = p;
     }
 
     public String getIdp() {
@@ -33,5 +38,9 @@ public class TrustMarkResponse {
 
     public List<String> getC() {
         return c;
+    }
+
+    public List<String> getP() {
+        return p;
     }
 }

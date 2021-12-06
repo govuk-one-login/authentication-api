@@ -5,6 +5,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.List;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -34,6 +35,23 @@ class LevelOfConfidenceTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> LevelOfConfidence.retrieveLevelOfConfidence(vtrSet));
+    }
+
+    @Test
+    void shouldReturnLevelOfConfidenceValuesFromLowestToHighest() {
+        List<String> allLevelOfConfidenceValues = LevelOfConfidence.getAllLevelOfConfidenceValues();
+
+        assertThat(
+                allLevelOfConfidenceValues.get(0), equalTo(LevelOfConfidence.LOW_LEVEL.getValue()));
+        assertThat(
+                allLevelOfConfidenceValues.get(1),
+                equalTo(LevelOfConfidence.MEDIUM_LEVEL.getValue()));
+        assertThat(
+                allLevelOfConfidenceValues.get(2),
+                equalTo(LevelOfConfidence.HIGH_LEVEL.getValue()));
+        assertThat(
+                allLevelOfConfidenceValues.get(3),
+                equalTo(LevelOfConfidence.VERY_HIGH_LEVEL.getValue()));
     }
 
     private static Stream<Arguments> validLevelOfConfidence() {
