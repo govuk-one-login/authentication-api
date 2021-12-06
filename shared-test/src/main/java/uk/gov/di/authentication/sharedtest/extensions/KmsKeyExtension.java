@@ -45,6 +45,8 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
         }
     }
 
+    // https://github.com/aws/aws-sdk/issues/125
+    @SuppressWarnings("deprecation")
     protected void createTokenSigningKey(String keyAlias) {
         CreateKeyRequest keyRequest =
                 new CreateKeyRequest()
