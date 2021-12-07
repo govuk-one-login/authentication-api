@@ -17,7 +17,7 @@ variable "client_registry_api_lambda_zip_file" {
 }
 
 variable "ipv_api_lambda_zip_file" {
-  default     = "../../../ipv-api/build/distributions/client-registry-api.zip"
+  default     = "../../../ipv-api/build/distributions/ipv-api.zip"
   description = "Location of the ipv API Lambda ZIP file"
   type        = string
 }
