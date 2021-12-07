@@ -121,7 +121,7 @@ spotless {
 }
 
 dockerCompose {
-    buildBeforeUp = true
+    buildBeforeUp = false
     forceRecreate = false
 
     startedServices = [
