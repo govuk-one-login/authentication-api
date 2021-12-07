@@ -204,6 +204,7 @@ class UpdateClientConfigHandlerTest {
         clientRegistry.setClientID(CLIENT_ID);
         clientRegistry.setPublicKey("public-key");
         clientRegistry.setScopes(SCOPES);
+        clientRegistry.setSubjectType("Public");
         clientRegistry.setRedirectUrls(singletonList("http://localhost/redirect"));
         clientRegistry.setContacts(singletonList("contant-name"));
         clientRegistry.setPostLogoutRedirectUrls(singletonList("localhost/logout"));

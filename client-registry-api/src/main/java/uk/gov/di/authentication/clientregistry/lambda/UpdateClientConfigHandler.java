@@ -137,7 +137,8 @@ public class UpdateClientConfigHandler
                                                 clientRegistry.getContacts(),
                                                 clientRegistry.getScopes(),
                                                 clientRegistry.getPostLogoutRedirectUrls(),
-                                                clientRegistry.getServiceType());
+                                                clientRegistry.getServiceType(),
+                                                clientRegistry.getSubjectType());
                                 LOGGER.info("Client with ClientId {} has been updated", clientId);
                                 return generateApiGatewayProxyResponse(
                                         200, clientRegistrationResponse);

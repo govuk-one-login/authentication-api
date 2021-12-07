@@ -63,7 +63,7 @@ class ClientRegistrationHandlerTest {
             throws JsonProcessingException {
         String clientId = UUID.randomUUID().toString();
         String sectorIdentifierUri = "https://test.com";
-        String subjectType = "public";
+        String subjectType = "pairwise";
         String clientName = "test-client";
         List<String> redirectUris = List.of("http://localhost:8080/redirect-uri");
         List<String> contacts = List.of("joe.bloggs@test.com");
@@ -76,7 +76,7 @@ class ClientRegistrationHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
 
         event.setBody(
-                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"],  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"service_type\": \"MANDATORY\", \"sector_identifier_uri\": \"https://test.com\", \"subject_type\": \"public\"}");
+                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"],  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"service_type\": \"MANDATORY\", \"sector_identifier_uri\": \"https://test.com\", \"subject_type\": \"pairwise\"}");
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
         assertThat(result, hasStatus(200));
@@ -85,7 +85,7 @@ class ClientRegistrationHandlerTest {
         assertThat(clientRegistrationResponseResult.getClientId(), equalTo(clientId));
         assertThat(
                 clientRegistrationResponseResult.getTokenAuthMethod(), equalTo("private_key_jwt"));
-        assertThat(clientRegistrationResponseResult.getSubjectType(), equalTo("Public"));
+        assertThat(clientRegistrationResponseResult.getSubjectType(), equalTo(subjectType));
         assertThat(clientRegistrationResponseResult.getScopes(), equalTo(singletonList("openid")));
         verify(clientService)
                 .addClient(

@@ -128,7 +128,8 @@ public class ClientRegistrationHandler
                                                 clientRegistrationRequest.getScopes(),
                                                 clientRegistrationRequest
                                                         .getPostLogoutRedirectUris(),
-                                                clientRegistrationRequest.getServiceType());
+                                                clientRegistrationRequest.getServiceType(),
+                                                clientRegistrationRequest.getSubjectType());
                                 LOGGER.info("Generating successful Client registration response");
                                 return generateApiGatewayProxyResponse(
                                         200, clientRegistrationResponse);
