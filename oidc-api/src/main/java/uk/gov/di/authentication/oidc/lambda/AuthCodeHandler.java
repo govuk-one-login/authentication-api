@@ -59,7 +59,6 @@ public class AuthCodeHandler
 
     private final SessionService sessionService;
     private final AuthorisationCodeService authorisationCodeService;
-    private final ConfigurationService configurationService;
     private final AuthorizationService authorizationService;
     private final ClientSessionService clientSessionService;
     private final AuditService auditService;
@@ -69,20 +68,17 @@ public class AuthCodeHandler
     public AuthCodeHandler(
             SessionService sessionService,
             AuthorisationCodeService authorisationCodeService,
-            ConfigurationService configurationService,
             AuthorizationService authorizationService,
             ClientSessionService clientSessionService,
             AuditService auditService) {
         this.sessionService = sessionService;
         this.authorisationCodeService = authorisationCodeService;
-        this.configurationService = configurationService;
         this.authorizationService = authorizationService;
         this.clientSessionService = clientSessionService;
         this.auditService = auditService;
     }
 
     public AuthCodeHandler(ConfigurationService configurationService) {
-        this.configurationService = configurationService;
         sessionService = new SessionService(configurationService);
         authorisationCodeService = new AuthorisationCodeService(configurationService);
         authorizationService = new AuthorizationService(configurationService);

@@ -35,7 +35,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.AuthorizationService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URI;
@@ -79,8 +78,8 @@ class AuthCodeHandlerTest {
     private static final String COOKIE = "Cookie";
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
+    private static final ClientID CLIENT_ID = new ClientID();
     private final AuthorizationService authorizationService = mock(AuthorizationService.class);
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuthorisationCodeService authorisationCodeService =
             mock(AuthorisationCodeService.class);
     private final SessionService sessionService = mock(SessionService.class);
@@ -99,12 +98,11 @@ class AuthCodeHandlerTest {
                     .setCurrentCredentialStrength(MEDIUM_LEVEL);
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         handler =
                 new AuthCodeHandler(
                         sessionService,
                         authorisationCodeService,
-                        configurationService,
                         authorizationService,
                         clientSessionService,
                         auditService);
@@ -126,15 +124,13 @@ class AuthCodeHandlerTest {
 
     @ParameterizedTest
     @MethodSource("upliftTestParameters")
-    public void shouldGenerateSuccessfulAuthResponseAndUpliftAsNecessary(
+    void shouldGenerateSuccessfulAuthResponseAndUpliftAsNecessary(
             CredentialTrustLevel initialLevel,
             CredentialTrustLevel requestedLevel,
             CredentialTrustLevel finalLevel)
             throws ClientNotFoundException, URISyntaxException {
-        ClientID clientID = new ClientID();
         AuthorizationCode authorizationCode = new AuthorizationCode();
-        AuthenticationRequest authRequest =
-                generateValidSessionAndAuthRequest(clientID, new State(), requestedLevel);
+        AuthenticationRequest authRequest = generateValidSessionAndAuthRequest(requestedLevel);
         session.setCurrentCredentialStrength(initialLevel);
         AuthenticationSuccessResponse authSuccessResponse =
                 new AuthenticationSuccessResponse(
@@ -146,7 +142,7 @@ class AuthCodeHandlerTest {
                         null,
                         authRequest.getResponseMode());
 
-        when(authorizationService.isClientRedirectUriValid(eq(clientID), eq(REDIRECT_URI)))
+        when(authorizationService.isClientRedirectUriValid(eq(CLIENT_ID), eq(REDIRECT_URI)))
                 .thenReturn(true);
         when(authorisationCodeService.generateAuthorisationCode(eq(CLIENT_SESSION_ID), eq(EMAIL)))
                 .thenReturn(authorizationCode);
@@ -156,10 +152,7 @@ class AuthCodeHandlerTest {
                         any(List.class)))
                 .thenReturn(authSuccessResponse);
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(COOKIE, buildCookieString()));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+        APIGatewayProxyResponseEvent response = generateApiRequest(Optional.empty());
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -177,7 +170,7 @@ class AuthCodeHandlerTest {
                         OidcAuditableEvent.AUTH_CODE_ISSUED,
                         "aws-session-id",
                         SESSION_ID,
-                        clientID.getValue(),
+                        CLIENT_ID.getValue(),
                         AuditService.UNKNOWN,
                         EMAIL,
                         "123.123.123.123",
@@ -187,20 +180,18 @@ class AuthCodeHandlerTest {
 
     @ParameterizedTest
     @MethodSource("validCookieConsentTestParameters")
-    public void shouldGenerateSuccessfulAuthResponseWithConsentParams(String cookieValue)
+    void shouldGenerateSuccessfulAuthResponseWithConsentParams(String cookieValue)
             throws ClientNotFoundException, URISyntaxException {
-        ClientID clientID = new ClientID();
         AuthorizationCode authorizationCode = new AuthorizationCode();
-        AuthenticationRequest authRequest =
-                generateValidSessionAndAuthRequest(clientID, new State(), MEDIUM_LEVEL);
+        AuthenticationRequest authRequest = generateValidSessionAndAuthRequest(MEDIUM_LEVEL);
         session.setCurrentCredentialStrength(MEDIUM_LEVEL);
         AuthenticationSuccessResponse authSuccessResponse =
                 generateSuccessfulAuthResponse(
                         authRequest, authorizationCode, COOKIE_CONSENT, cookieValue);
 
-        when(authorizationService.isClientRedirectUriValid(eq(clientID), eq(REDIRECT_URI)))
+        when(authorizationService.isClientRedirectUriValid(eq(CLIENT_ID), eq(REDIRECT_URI)))
                 .thenReturn(true);
-        when(authorizationService.isClientCookieConsentShared(eq(clientID))).thenReturn(true);
+        when(authorizationService.isClientCookieConsentShared(eq(CLIENT_ID))).thenReturn(true);
         when(authorisationCodeService.generateAuthorisationCode(eq(CLIENT_SESSION_ID), eq(EMAIL)))
                 .thenReturn(authorizationCode);
         when(authorizationService.isValidCookieConsentValue(cookieValue)).thenReturn(true);
@@ -210,11 +201,7 @@ class AuthCodeHandlerTest {
                         any(List.class)))
                 .thenCallRealMethod();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(COOKIE, buildCookieString()));
-        event.setQueryStringParameters(Map.of(COOKIE_CONSENT, cookieValue));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+        APIGatewayProxyResponseEvent response = generateApiRequest(Optional.of(cookieValue));
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -232,7 +219,7 @@ class AuthCodeHandlerTest {
                         OidcAuditableEvent.AUTH_CODE_ISSUED,
                         "aws-session-id",
                         SESSION_ID,
-                        clientID.getValue(),
+                        CLIENT_ID.getValue(),
                         AuditService.UNKNOWN,
                         EMAIL,
                         "123.123.123.123",
@@ -244,13 +231,12 @@ class AuthCodeHandlerTest {
     void shouldSetCookieConsentToNotEnagegedWhenInvalidCookieValueIsPassed()
             throws ClientNotFoundException, URISyntaxException {
         String invalidCookieValue = "rubbish-cookie-consent";
-        ClientID clientID = new ClientID();
         AuthorizationCode authorizationCode = new AuthorizationCode();
         session.setCurrentCredentialStrength(MEDIUM_LEVEL);
-
-        when(authorizationService.isClientRedirectUriValid(eq(clientID), eq(REDIRECT_URI)))
+        generateValidSessionAndAuthRequest(MEDIUM_LEVEL);
+        when(authorizationService.isClientRedirectUriValid(eq(CLIENT_ID), eq(REDIRECT_URI)))
                 .thenReturn(true);
-        when(authorizationService.isClientCookieConsentShared(eq(clientID))).thenReturn(true);
+        when(authorizationService.isClientCookieConsentShared(eq(CLIENT_ID))).thenReturn(true);
         when(authorisationCodeService.generateAuthorisationCode(eq(CLIENT_SESSION_ID), eq(EMAIL)))
                 .thenReturn(authorizationCode);
         when(authorizationService.isValidCookieConsentValue(invalidCookieValue)).thenReturn(false);
@@ -260,11 +246,7 @@ class AuthCodeHandlerTest {
                         any(List.class)))
                 .thenCallRealMethod();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(COOKIE, buildCookieString()));
-        event.setQueryStringParameters(Map.of(COOKIE_CONSENT, invalidCookieValue));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+        APIGatewayProxyResponseEvent response = generateApiRequest(Optional.of(invalidCookieValue));
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -277,7 +259,7 @@ class AuthCodeHandlerTest {
                         OidcAuditableEvent.AUTH_CODE_ISSUED,
                         "aws-session-id",
                         SESSION_ID,
-                        clientID.getValue(),
+                        CLIENT_ID.getValue(),
                         AuditService.UNKNOWN,
                         EMAIL,
                         "123.123.123.123",
@@ -286,10 +268,8 @@ class AuthCodeHandlerTest {
     }
 
     @Test
-    public void shouldGenerateErrorResponseWhenSessionIsNotFound() {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(COOKIE, buildCookieString()));
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+    void shouldGenerateErrorResponseWhenSessionIsNotFound() {
+        APIGatewayProxyResponseEvent response = generateApiRequest(Optional.empty());
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1000));
@@ -298,15 +278,11 @@ class AuthCodeHandlerTest {
     }
 
     @Test
-    public void shouldGenerateErrorResponseWhenRedirectUriIsInvalid()
-            throws ClientNotFoundException {
-        ClientID clientID = new ClientID();
-        generateValidSessionAndAuthRequest(clientID, new State(), MEDIUM_LEVEL);
-        when(authorizationService.isClientRedirectUriValid(eq(new ClientID()), eq(REDIRECT_URI)))
+    void shouldGenerateErrorResponseWhenRedirectUriIsInvalid() throws ClientNotFoundException {
+        generateValidSessionAndAuthRequest(MEDIUM_LEVEL);
+        when(authorizationService.isClientRedirectUriValid(eq(CLIENT_ID), eq(REDIRECT_URI)))
                 .thenReturn(false);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(COOKIE, buildCookieString()));
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+        APIGatewayProxyResponseEvent response = generateApiRequest(Optional.empty());
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1016));
@@ -315,23 +291,19 @@ class AuthCodeHandlerTest {
     }
 
     @Test
-    public void shouldGenerateErrorResponseWhenClientIsNotFound() throws ClientNotFoundException {
-        State state = new State();
+    void shouldGenerateErrorResponseWhenClientIsNotFound() throws ClientNotFoundException {
         AuthenticationErrorResponse authenticationErrorResponse =
                 new AuthenticationErrorResponse(
                         REDIRECT_URI, OAuth2Error.INVALID_CLIENT, null, null);
         when(authorizationService.generateAuthenticationErrorResponse(
                         any(AuthenticationRequest.class), eq(OAuth2Error.INVALID_CLIENT)))
                 .thenReturn(authenticationErrorResponse);
-        ClientID clientID = new ClientID();
-        generateValidSessionAndAuthRequest(clientID, state, MEDIUM_LEVEL);
+        generateValidSessionAndAuthRequest(MEDIUM_LEVEL);
         doThrow(ClientNotFoundException.class)
                 .when(authorizationService)
-                .isClientRedirectUriValid(eq(clientID), eq(REDIRECT_URI));
+                .isClientRedirectUriValid(eq(CLIENT_ID), eq(REDIRECT_URI));
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(COOKIE, buildCookieString()));
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+        APIGatewayProxyResponseEvent response = generateApiRequest(Optional.empty());
 
         assertThat(response, hasStatus(302));
         assertEquals(
@@ -342,7 +314,7 @@ class AuthCodeHandlerTest {
     }
 
     @Test
-    public void shouldGenerateErrorResponseIfUnableToParseAuthRequest() {
+    void shouldGenerateErrorResponseIfUnableToParseAuthRequest() {
         AuthenticationErrorResponse authenticationErrorResponse =
                 new AuthenticationErrorResponse(
                         REDIRECT_URI, OAuth2Error.INVALID_REQUEST, null, null);
@@ -356,9 +328,7 @@ class AuthCodeHandlerTest {
         customParams.put("redirect_uri", singletonList("http://localhost/redirect"));
         customParams.put("client_id", singletonList(new ClientID().toString()));
         generateValidSession(customParams, MEDIUM_LEVEL);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(COOKIE, buildCookieString()));
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+        APIGatewayProxyResponseEvent response = generateApiRequest(Optional.empty());
 
         assertThat(response, hasStatus(302));
         assertEquals(
@@ -369,14 +339,12 @@ class AuthCodeHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserTransitionsFromWrongState()
+    void shouldReturn400IfUserTransitionsFromWrongState()
             throws ClientNotFoundException, URISyntaxException {
         session.setState(SessionState.NEW);
 
-        ClientID clientID = new ClientID();
         AuthorizationCode authorizationCode = new AuthorizationCode();
-        AuthenticationRequest authRequest =
-                generateValidSessionAndAuthRequest(clientID, new State(), MEDIUM_LEVEL);
+        AuthenticationRequest authRequest = generateValidSessionAndAuthRequest(MEDIUM_LEVEL);
         AuthenticationSuccessResponse authSuccessResponse =
                 new AuthenticationSuccessResponse(
                         authRequest.getRedirectionURI(),
@@ -387,7 +355,7 @@ class AuthCodeHandlerTest {
                         null,
                         null);
 
-        when(authorizationService.isClientRedirectUriValid(eq(clientID), eq(REDIRECT_URI)))
+        when(authorizationService.isClientRedirectUriValid(eq(CLIENT_ID), eq(REDIRECT_URI)))
                 .thenReturn(true);
         when(authorisationCodeService.generateAuthorisationCode(eq(CLIENT_SESSION_ID), eq(EMAIL)))
                 .thenReturn(authorizationCode);
@@ -397,9 +365,7 @@ class AuthCodeHandlerTest {
                         any(List.class)))
                 .thenReturn(authSuccessResponse);
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(COOKIE, buildCookieString()));
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+        APIGatewayProxyResponseEvent response = generateApiRequest(Optional.empty());
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1017));
@@ -408,14 +374,14 @@ class AuthCodeHandlerTest {
     }
 
     private AuthenticationRequest generateValidSessionAndAuthRequest(
-            ClientID clientID, State state, CredentialTrustLevel requestedLevel) {
+            CredentialTrustLevel requestedLevel) {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope();
         Nonce nonce = new Nonce();
         scope.add(OIDCScopeValue.OPENID);
         AuthenticationRequest authRequest =
-                new AuthenticationRequest.Builder(responseType, scope, clientID, REDIRECT_URI)
-                        .state(state)
+                new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
+                        .state(new State())
                         .nonce(nonce)
                         .build();
         generateValidSession(authRequest.toParameters(), requestedLevel);
@@ -448,6 +414,15 @@ class AuthCodeHandlerTest {
                 authRequest.getState(),
                 null,
                 authRequest.getResponseMode());
+    }
+
+    private APIGatewayProxyResponseEvent generateApiRequest(Optional<String> cookieConsent) {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of(COOKIE, buildCookieString()));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        cookieConsent.ifPresent(c -> event.setQueryStringParameters(Map.of(COOKIE_CONSENT, c)));
+
+        return handler.handleRequest(event, context);
     }
 
     private static String buildCookieString() {
