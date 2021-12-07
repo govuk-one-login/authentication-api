@@ -433,11 +433,12 @@ public class AuthorisationHandler
             try {
                 if (authorizationService.isClientCookieConsentShared(
                                 authenticationRequest.getClientID())
-                        && !authRequestParameters.get(COOKIE_CONSENT).isEmpty()) {
+                        && !authRequestParameters.get(COOKIE_CONSENT).isEmpty()
+                        && authorizationService.isValidCookieConsentValue(
+                                authRequestParameters.get(COOKIE_CONSENT).get(0))) {
                     LOGGER.info(
                             "Sharing cookie_consent for client {}",
                             authenticationRequest.getClientID());
-
                     return authRequestParameters.get(COOKIE_CONSENT).get(0);
                 }
             } catch (ClientNotFoundException e) {

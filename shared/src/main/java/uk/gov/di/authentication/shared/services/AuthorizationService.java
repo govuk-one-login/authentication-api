@@ -39,6 +39,10 @@ public class AuthorizationService {
     private static final String CLIENT_ID = "client_id";
     private final DynamoClientService dynamoClientService;
     private final DynamoService dynamoService;
+    public static final String COOKIE_CONSENT_ACCEPT = "accept";
+    public static final String COOKIE_CONSENT_REJECT = "reject";
+    public static final String COOKIE_CONSENT_NOT_ENGAGED = "not-engaged";
+
     private static final Logger LOGGER = LogManager.getLogger(AuthorizationService.class);
 
     public AuthorizationService(
@@ -207,5 +211,10 @@ public class AuthorizationService {
 
     public String getExistingOrCreateNewPersistentSessionId(Map<String, String> headers) {
         return CookieHelper.parsePersistentCookie(headers).orElse(IdGenerator.generate());
+    }
+
+    public boolean isValidCookieConsentValue(String cookieConsent) {
+        return List.of(COOKIE_CONSENT_ACCEPT, COOKIE_CONSENT_REJECT, COOKIE_CONSENT_NOT_ENGAGED)
+                .contains(cookieConsent);
     }
 }

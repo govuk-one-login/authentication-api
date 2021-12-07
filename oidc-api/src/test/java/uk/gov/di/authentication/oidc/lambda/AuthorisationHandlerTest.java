@@ -42,6 +42,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -173,6 +174,7 @@ class AuthorisationHandlerTest {
         when(sessionService.createSession()).thenReturn(session);
         when(clientSessionService.generateClientSession(any(ClientSession.class)))
                 .thenReturn("client-session-id");
+        when(authorizationService.isValidCookieConsentValue("accept")).thenReturn(true);
 
         new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent response =
@@ -181,6 +183,37 @@ class AuthorisationHandlerTest {
 
         assertThat(response, hasStatus(302));
         assertThat(uri.getQuery(), containsString("cookie_consent=accept"));
+        assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
+        assertTrue(
+                response.getMultiValueHeaders()
+                        .get(ResponseHeaders.SET_COOKIE)
+                        .contains(EXPECTED_SESSION_COOKIE_STRING));
+        assertTrue(
+                response.getMultiValueHeaders()
+                        .get(ResponseHeaders.SET_COOKIE)
+                        .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
+        verify(sessionService).save(eq(session));
+    }
+
+    @Test
+    void shouldDoLoginAndNotForwardCookieConsentWhenValueIsInvalid()
+            throws ClientNotFoundException {
+        final Session session = new Session("a-session-id");
+
+        when(authorizationService.isClientCookieConsentShared(eq(new ClientID("test-id"))))
+                .thenReturn(true);
+        when(sessionService.createSession()).thenReturn(session);
+        when(clientSessionService.generateClientSession(any(ClientSession.class)))
+                .thenReturn("client-session-id");
+        when(authorizationService.isValidCookieConsentValue("rubbish")).thenReturn(false);
+
+        new APIGatewayProxyRequestEvent();
+        APIGatewayProxyResponseEvent response =
+                makeHandlerRequest(withRequestEvent(Map.of("cookie_consent", "rubbish")));
+        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+
+        assertThat(response, hasStatus(302));
+        assertNull(uri.getQuery());
         assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
         assertTrue(
                 response.getMultiValueHeaders()

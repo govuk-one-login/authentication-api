@@ -63,11 +63,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.entity.RequestParameters.COOKIE_CONSENT;
-import static uk.gov.di.authentication.oidc.lambda.AuthCodeHandler.COOKIE_CONSENT_ACCEPT;
-import static uk.gov.di.authentication.oidc.lambda.AuthCodeHandler.COOKIE_CONSENT_NOT_ENGAGED;
-import static uk.gov.di.authentication.oidc.lambda.AuthCodeHandler.COOKIE_CONSENT_REJECT;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
+import static uk.gov.di.authentication.shared.services.AuthorizationService.COOKIE_CONSENT_ACCEPT;
+import static uk.gov.di.authentication.shared.services.AuthorizationService.COOKIE_CONSENT_NOT_ENGAGED;
+import static uk.gov.di.authentication.shared.services.AuthorizationService.COOKIE_CONSENT_REJECT;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -120,12 +120,8 @@ class AuthCodeHandlerTest {
                 arguments(MEDIUM_LEVEL, LOW_LEVEL, MEDIUM_LEVEL));
     }
 
-    private static Stream<Arguments> cookieConsentTestParameters() {
-        return Stream.of(
-                arguments("", Boolean.TRUE, COOKIE_CONSENT_NOT_ENGAGED),
-                arguments(COOKIE_CONSENT_NOT_ENGAGED, Boolean.TRUE, COOKIE_CONSENT_NOT_ENGAGED),
-                arguments(COOKIE_CONSENT_ACCEPT, Boolean.TRUE, COOKIE_CONSENT_ACCEPT),
-                arguments(COOKIE_CONSENT_REJECT, Boolean.TRUE, COOKIE_CONSENT_REJECT));
+    private static Stream<String> validCookieConsentTestParameters() {
+        return Stream.of(COOKIE_CONSENT_NOT_ENGAGED, COOKIE_CONSENT_ACCEPT, COOKIE_CONSENT_REJECT);
     }
 
     @ParameterizedTest
@@ -190,11 +186,8 @@ class AuthCodeHandlerTest {
     }
 
     @ParameterizedTest
-    @MethodSource("cookieConsentTestParameters")
-    public void shouldGenerateSuccessfulAuthResponseWithConsentParams(
-            String cookieValue,
-            boolean clientRegistryCookieConsentValue,
-            String returnedCookieConsentParamValue)
+    @MethodSource("validCookieConsentTestParameters")
+    public void shouldGenerateSuccessfulAuthResponseWithConsentParams(String cookieValue)
             throws ClientNotFoundException, URISyntaxException {
         ClientID clientID = new ClientID();
         AuthorizationCode authorizationCode = new AuthorizationCode();
@@ -203,17 +196,14 @@ class AuthCodeHandlerTest {
         session.setCurrentCredentialStrength(MEDIUM_LEVEL);
         AuthenticationSuccessResponse authSuccessResponse =
                 generateSuccessfulAuthResponse(
-                        authRequest,
-                        authorizationCode,
-                        COOKIE_CONSENT,
-                        returnedCookieConsentParamValue);
+                        authRequest, authorizationCode, COOKIE_CONSENT, cookieValue);
 
         when(authorizationService.isClientRedirectUriValid(eq(clientID), eq(REDIRECT_URI)))
                 .thenReturn(true);
-        when(authorizationService.isClientCookieConsentShared(eq(clientID)))
-                .thenReturn(clientRegistryCookieConsentValue);
+        when(authorizationService.isClientCookieConsentShared(eq(clientID))).thenReturn(true);
         when(authorisationCodeService.generateAuthorisationCode(eq(CLIENT_SESSION_ID), eq(EMAIL)))
                 .thenReturn(authorizationCode);
+        when(authorizationService.isValidCookieConsentValue(cookieValue)).thenReturn(true);
         when(authorizationService.generateSuccessfulAuthResponse(
                         any(AuthenticationRequest.class),
                         any(AuthorizationCode.class),
@@ -233,8 +223,53 @@ class AuthCodeHandlerTest {
 
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                containsString(COOKIE_CONSENT + "=" + returnedCookieConsentParamValue));
+                containsString(COOKIE_CONSENT + "=" + cookieValue));
 
+        assertThat(session.getCurrentCredentialStrength(), equalTo(MEDIUM_LEVEL));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTH_CODE_ISSUED,
+                        "aws-session-id",
+                        SESSION_ID,
+                        clientID.getValue(),
+                        AuditService.UNKNOWN,
+                        EMAIL,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID);
+    }
+
+    @Test
+    void shouldSetCookieConsentToNotEnagegedWhenInvalidCookieValueIsPassed()
+            throws ClientNotFoundException, URISyntaxException {
+        String invalidCookieValue = "rubbish-cookie-consent";
+        ClientID clientID = new ClientID();
+        AuthorizationCode authorizationCode = new AuthorizationCode();
+        session.setCurrentCredentialStrength(MEDIUM_LEVEL);
+
+        when(authorizationService.isClientRedirectUriValid(eq(clientID), eq(REDIRECT_URI)))
+                .thenReturn(true);
+        when(authorizationService.isClientCookieConsentShared(eq(clientID))).thenReturn(true);
+        when(authorisationCodeService.generateAuthorisationCode(eq(CLIENT_SESSION_ID), eq(EMAIL)))
+                .thenReturn(authorizationCode);
+        when(authorizationService.isValidCookieConsentValue(invalidCookieValue)).thenReturn(false);
+        when(authorizationService.generateSuccessfulAuthResponse(
+                        any(AuthenticationRequest.class),
+                        any(AuthorizationCode.class),
+                        any(List.class)))
+                .thenCallRealMethod();
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of(COOKIE, buildCookieString()));
+        event.setQueryStringParameters(Map.of(COOKIE_CONSENT, invalidCookieValue));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+
+        assertThat(response, hasStatus(302));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                containsString(COOKIE_CONSENT + "=" + COOKIE_CONSENT_NOT_ENGAGED));
         assertThat(session.getCurrentCredentialStrength(), equalTo(MEDIUM_LEVEL));
 
         verify(auditService)

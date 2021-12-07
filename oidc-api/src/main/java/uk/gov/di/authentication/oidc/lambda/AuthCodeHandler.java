@@ -49,16 +49,13 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_IS
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
+import static uk.gov.di.authentication.shared.services.AuthorizationService.COOKIE_CONSENT_NOT_ENGAGED;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class AuthCodeHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOGGER = LogManager.getLogger(AuthCodeHandler.class);
-
-    public static final String COOKIE_CONSENT_ACCEPT = "accept";
-    public static final String COOKIE_CONSENT_REJECT = "reject";
-    public static final String COOKIE_CONSENT_NOT_ENGAGED = "not-engaged";
 
     private final SessionService sessionService;
     private final AuthorisationCodeService authorisationCodeService;
@@ -255,7 +252,9 @@ public class AuthCodeHandler
 
             String cookieConsentValue = COOKIE_CONSENT_NOT_ENGAGED;
 
-            if (isValidQueryParam(queryParams, COOKIE_CONSENT)) {
+            if (isValidQueryParam(queryParams, COOKIE_CONSENT)
+                    && authorizationService.isValidCookieConsentValue(
+                            queryParams.get(COOKIE_CONSENT))) {
                 cookieConsentValue = queryParams.get(COOKIE_CONSENT);
             }
 
