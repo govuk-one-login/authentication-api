@@ -123,6 +123,38 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build
+    services:
+      localstack:
+        image: localstack/localstack:0.12.20
+        env:
+          SERVICES: "lambda, apigateway, iam, ec2, sqs, s3, sts, kms, sns, ssm"
+          EDGE_PORT: "45678"
+          EXTERNAL_HOSTNAME: localhost
+          DEFAULT_REGION: eu-west-2
+          TEST_AWS_ACCOUNT_ID: 123456789012
+          KMS_PROVIDER: local-kms
+        options: >-
+          --add-host "notify.internal:host-gateway"
+        ports:
+          - 45678:45678
+      redis:
+        image: redis:6.0.5-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+      dynamodb:
+        image: amazon/dynamodb-local:latest
+        options: >-
+          --health-cmd "curl http://localhost:8000"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 8000:8000
     steps:
       - name: Check out repository code
         uses: actions/checkout@v2
@@ -151,7 +183,7 @@ jobs:
           key: ${{ runner.os }}-build-${{ github.sha }}
       - name: Run Integration Tests
         run: |
-          ./gradlew :integration-tests:test :integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck
+          ./gradlew :integration-tests:test :integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
       - name: Upload Integration Test Reports
         uses: actions/upload-artifact@v2
         if: failure()
@@ -161,7 +193,7 @@ jobs:
           retention-days: 5
       - name: Run Account Management Integration Tests
         run: |
-          ./gradlew :account-management-integration-tests:test :integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck
+          ./gradlew :account-management-integration-tests:test :integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
       - name: Upload Account Management Integration Test Reports
         uses: actions/upload-artifact@v2
         if: failure()
@@ -169,17 +201,6 @@ jobs:
           name: account-management-integration-test-reports
           path: account-management-integration-tests/build/reports/tests/test/
           retention-days: 5
-      - name: Upload Docker Container Logs
-        uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: docker-container-logs
-          path: logs/
-          retention-days: 5
-      - name: Stop Services
-        if: always()
-        run: |
-          ./gradlew --no-daemon :composeDownForced
       - name: Cache Test Reports
         uses: actions/cache@v2
         with:
@@ -246,4 +267,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: ./gradlew sonarqube --info -x test -x account-management-integration-tests:test -x spotlessApply -x spotlessCheck
+        run: ./gradlew sonarqube -x test -x account-management-integration-tests:test -x spotlessApply -x spotlessCheck
