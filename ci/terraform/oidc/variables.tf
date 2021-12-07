@@ -16,6 +16,12 @@ variable "client_registry_api_lambda_zip_file" {
   type        = string
 }
 
+variable "ipv_api_lambda_zip_file" {
+  default     = "../../../ipv-api/build/distributions/client-registry-api.zip"
+  description = "Location of the ipv API Lambda ZIP file"
+  type        = string
+}
+
 variable "lambda_warmer_zip_file" {
   default     = "../../../lambda-warmer/build/distributions/lambda-warmer.zip"
   description = "Location of the Lambda Warmer ZIP file"
@@ -198,4 +204,16 @@ variable "test_clients_enabled" {
 
 variable "client_registry_api_enabled" {
   default = true
+}
+
+variable "ipv_authorisation_uri" {
+  type = string
+}
+
+variable "ipv_authorisation_callback_uri" {
+  type = string
+}
+
+variable "ipv_authorisation_client_id" {
+  type = string
 }

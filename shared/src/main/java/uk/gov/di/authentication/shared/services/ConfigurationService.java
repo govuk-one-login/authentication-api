@@ -96,6 +96,18 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Long.parseLong(System.getenv().getOrDefault("ID_TOKEN_EXPIRY", "120"));
     }
 
+    public URI getIPVAuthorisationURI() {
+        return URI.create(System.getenv().getOrDefault("IPV_AUTHORISATION_URI", ""));
+    }
+
+    public URI getIPVAuthorisationCallbackURI() {
+        return URI.create(System.getenv().getOrDefault("IPV_AUTHORISATION_CALLBACK_URI", ""));
+    }
+
+    public String getIPVAuthorisationClientId() {
+        return System.getenv().getOrDefault("IPV_AUTHORISATION_CLIENT_ID", "");
+    }
+
     public URI getLoginURI() {
         return URI.create(System.getenv("LOGIN_URI"));
     }

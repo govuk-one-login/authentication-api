@@ -18,6 +18,9 @@ params:
   TEST_CLIENT_VERIFY_EMAIL_OTP: ((test-client-verify-email-otp))
   TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP: ((test-client-verify-phone-number-otp))
   TEST_CLIENTS_ENABLED: false
+  IPV_AUTHORISATION_URI: undefined
+  IPV_AUTHORISATION_CALLBACK_URI: undefined
+  IPV_AUTHORISATION_CLIENT_ID: undefined
 inputs:
   - name: api-src
   - name: oidc-api-release
@@ -61,6 +64,9 @@ run:
         -var "test_client_verify_phone_number_otp=${TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP}" \
         -var "test_clients_enabled=${TEST_CLIENTS_ENABLED}" \
         -var "notify_test_phone_number=${NOTIFY_PHONE_NUMBER}" \
+        -var "ipv_authorisation_uri=${IPV_AUTHORISATION_URI}" \
+        -var "ipv_authorisation_callback_uri=${IPV_AUTHORISATION_CALLBACK_URI}" \
+        -var "ipv_authorisation_client_id=${IPV_AUTHORISATION_CLIENT_ID}" \
         -var-file "${DEPLOY_ENVIRONMENT}-overrides.tfvars" \
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-terraform-outputs.json
