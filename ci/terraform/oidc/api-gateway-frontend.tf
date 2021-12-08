@@ -58,6 +58,8 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
       module.reset-password-request.method_trigger_value,
       var.ipv_api_enabled ? module.ipv-authorize[0].integration_trigger_value : null,
       var.ipv_api_enabled ? module.ipv-authorize[0].method_trigger_value : null,
+      var.ipv_api_enabled ? module.ipv-callback[0].integration_trigger_value : null,
+      var.ipv_api_enabled ? module.ipv-callback[0].method_trigger_value : null,
     ]))
   }
 
