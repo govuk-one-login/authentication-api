@@ -3,11 +3,15 @@ package uk.gov.di.authentication.clientregistry.services;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.client.RegistrationError;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -15,6 +19,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_POST_LOGOUT_URI;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_SCOPE;
+import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_SUBJECT_TYPE;
 import static uk.gov.di.authentication.shared.entity.ServiceType.MANDATORY;
 
 class ClientConfigValidationServiceTest {
@@ -25,7 +30,7 @@ class ClientConfigValidationServiceTest {
             "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxt91w8GsMDdklOpS8ZXAsIM1ztQZd5QT/bRCQahZJeS1a6Os4hbuKwzHlz52zfTNp7BL4RB/KOcRIPhOQLgqeyM+bVngRa1EIfTkugJHS2/gu2Xv0aelwvXj8FZgAPRPD+ps2wiV4tUehrFIsRyHZM3yOp9g6qapCcxF7l0E1PlVkKPcPNmxn2oFiqnP6ZThGbE+N2avdXHcySIqt/v6Hbmk8cDHzSExazW7j/XvA+xnp0nQ5m2GisCZul5If5edCTXD0tKzx/I/gtEG4gkv9kENWOt4grP8/0zjNAl2ac6kpRny3tY5RkKBKCOB1VHwq2lUTSNKs32O1BsA5ByyYQIDAQAB";
 
     @Test
-    public void shouldPassValidationForValidRegistrationRequest() {
+    void shouldPassValidationForValidRegistrationRequest() {
         Optional<ErrorObject> errorResponse =
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
@@ -40,7 +45,7 @@ class ClientConfigValidationServiceTest {
     }
 
     @Test
-    public void shouldReturnErrorForInvalidPostLogoutUriInRegistrationRequest() {
+    void shouldReturnErrorForInvalidPostLogoutUriInRegistrationRequest() {
         Optional<ErrorObject> errorResponse =
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
@@ -55,7 +60,7 @@ class ClientConfigValidationServiceTest {
     }
 
     @Test
-    public void shouldReturnErrorForInvalidRedirectUriInRegistrationequest() {
+    void shouldReturnErrorForInvalidRedirectUriInRegistrationequest() {
         Optional<ErrorObject> errorResponse =
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
@@ -70,7 +75,7 @@ class ClientConfigValidationServiceTest {
     }
 
     @Test
-    public void shouldReturnErrorForInvalidPublicKeyInRegistrationRequest() {
+    void shouldReturnErrorForInvalidPublicKeyInRegistrationRequest() {
         Optional<ErrorObject> errorResponse =
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
@@ -85,7 +90,7 @@ class ClientConfigValidationServiceTest {
     }
 
     @Test
-    public void shouldReturnErrorForInvalidScopesInRegistrationRequest() {
+    void shouldReturnErrorForInvalidScopesInRegistrationRequest() {
         Optional<ErrorObject> errorResponse =
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
@@ -100,7 +105,7 @@ class ClientConfigValidationServiceTest {
     }
 
     @Test
-    public void shouldReturnErrorForPrivateScopeInRegistrationRequest() {
+    void shouldReturnErrorForPrivateScopeInRegistrationRequest() {
         Optional<ErrorObject> errorResponse =
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
@@ -114,8 +119,33 @@ class ClientConfigValidationServiceTest {
         assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
     }
 
+    @ParameterizedTest
+    @MethodSource("subjectTypes")
+    void shouldCorrectlyValidateSubjectTypeInRegistrationRequest(
+            String subjectType, Optional<ErrorObject> expectedResult) {
+        Optional<ErrorObject> errorResponse =
+                validationService.validateClientRegistrationConfig(
+                        generateClientRegRequest(
+                                singletonList("http://localhost:1000/redirect"),
+                                VALID_PUBLIC_CERT,
+                                singletonList("openid"),
+                                singletonList("http://localhost/post-redirect-logout"),
+                                String.valueOf(MANDATORY),
+                                "http://test.com",
+                                subjectType));
+        assertThat(errorResponse, equalTo(expectedResult));
+    }
+
+    private static Stream<Arguments> subjectTypes() {
+        return Stream.of(
+                Arguments.of("public", Optional.empty()),
+                Arguments.of("pairwise", Optional.empty()),
+                Arguments.of("PUBLIC", Optional.of(INVALID_SUBJECT_TYPE)),
+                Arguments.of("PAIRWISE", Optional.of(INVALID_SUBJECT_TYPE)));
+    }
+
     @Test
-    public void shouldPassValidationForValidUpdateRequest() {
+    void shouldPassValidationForValidUpdateRequest() {
         Optional<ErrorObject> errorResponse =
                 validationService.validateClientUpdateConfig(
                         generateClientUpdateRequest(
@@ -128,14 +158,14 @@ class ClientConfigValidationServiceTest {
     }
 
     @Test
-    public void shouldReturnOptionalEmptyForEmptyUpdateRequest() {
+    void shouldReturnOptionalEmptyForEmptyUpdateRequest() {
         Optional<ErrorObject> errorResponse =
                 validationService.validateClientUpdateConfig(new UpdateClientConfigRequest());
         assertThat(errorResponse, equalTo(Optional.empty()));
     }
 
     @Test
-    public void shouldReturnErrorForInvalidPostLogoutUriInUpdateRequest() {
+    void shouldReturnErrorForInvalidPostLogoutUriInUpdateRequest() {
         Optional<ErrorObject> errorResponse =
                 validationService.validateClientUpdateConfig(
                         generateClientUpdateRequest(
@@ -148,7 +178,7 @@ class ClientConfigValidationServiceTest {
     }
 
     @Test
-    public void shouldReturnErrorForInvalidRedirectUriInUpdateRequest() {
+    void shouldReturnErrorForInvalidRedirectUriInUpdateRequest() {
         Optional<ErrorObject> errorResponse =
                 validationService.validateClientUpdateConfig(
                         generateClientUpdateRequest(
@@ -161,7 +191,7 @@ class ClientConfigValidationServiceTest {
     }
 
     @Test
-    public void shouldReturnErrorForInvalidPublicKeyInUpdateRequest() {
+    void shouldReturnErrorForInvalidPublicKeyInUpdateRequest() {
         Optional<ErrorObject> errorResponse =
                 validationService.validateClientUpdateConfig(
                         generateClientUpdateRequest(
@@ -174,7 +204,7 @@ class ClientConfigValidationServiceTest {
     }
 
     @Test
-    public void shouldReturnErrorForInvalidScopesInUpdateRequest() {
+    void shouldReturnErrorForInvalidScopesInUpdateRequest() {
         Optional<ErrorObject> errorResponse =
                 validationService.validateClientUpdateConfig(
                         generateClientUpdateRequest(
