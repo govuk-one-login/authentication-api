@@ -2,6 +2,7 @@ package uk.gov.di.authentication.clientregistry.services;
 
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.client.RegistrationError;
+import com.nimbusds.openid.connect.sdk.SubjectType;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
@@ -27,6 +28,8 @@ public class ClientConfigValidationService {
             new ErrorObject("invalid_client_metadata", "Invalid Public Key");
     public static final ErrorObject INVALID_SERVICE_TYPE =
             new ErrorObject("invalid_client_metadata", "Invalid Service Type");
+    public static final ErrorObject INVALID_SUBJECT_TYPE =
+            new ErrorObject("invalid_client_metadata", "Invalid Subject Type");
 
     public Optional<ErrorObject> validateClientRegistrationConfig(
             ClientRegistrationRequest registrationRequest) {
@@ -46,6 +49,9 @@ public class ClientConfigValidationService {
         }
         if (!isValidServiceType(registrationRequest.getServiceType())) {
             return Optional.of(INVALID_SERVICE_TYPE);
+        }
+        if (!isValidSubjectType(registrationRequest.getSubjectType())) {
+            return Optional.of(INVALID_SUBJECT_TYPE);
         }
         return Optional.empty();
     }
@@ -115,5 +121,10 @@ public class ClientConfigValidationService {
     private boolean isValidServiceType(String serviceType) {
         return serviceType.equalsIgnoreCase(String.valueOf(MANDATORY))
                 || serviceType.equalsIgnoreCase(String.valueOf(OPTIONAL));
+    }
+
+    private boolean isValidSubjectType(String subjectType) {
+        return List.of(SubjectType.PUBLIC.toString(), SubjectType.PAIRWISE.toString())
+                .contains(subjectType);
     }
 }
