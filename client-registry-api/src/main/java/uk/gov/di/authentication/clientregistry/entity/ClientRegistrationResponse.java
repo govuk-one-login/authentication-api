@@ -25,7 +25,7 @@ public class ClientRegistrationResponse {
     private final List<String> postLogoutRedirectUris;
 
     @JsonProperty("subject_type")
-    private final String subjectType = "Public";
+    private final String subjectType;
 
     @JsonProperty("token_endpoint_auth_method")
     private final String tokenAuthMethod = "private_key_jwt";
@@ -43,7 +43,8 @@ public class ClientRegistrationResponse {
             @JsonProperty(required = true, value = "contacts") List<String> contacts,
             @JsonProperty(required = true, value = "scopes") List<String> scopes,
             @JsonProperty(value = "post_logout_redirect_uris") List<String> postLogoutRedirectUris,
-            @JsonProperty(required = true, value = "service_type") String serviceType) {
+            @JsonProperty(required = true, value = "service_type") String serviceType,
+            @JsonProperty(required = true, value = "subject_type") String subjectType) {
         this.clientName = clientName;
         this.clientId = clientId;
         this.redirectUris = redirectUris;
@@ -51,6 +52,7 @@ public class ClientRegistrationResponse {
         this.scopes = scopes;
         this.postLogoutRedirectUris = postLogoutRedirectUris;
         this.serviceType = serviceType;
+        this.subjectType = subjectType;
     }
 
     public String getClientName() {
