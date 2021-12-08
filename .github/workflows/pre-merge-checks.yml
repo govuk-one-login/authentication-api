@@ -18,18 +18,9 @@ jobs:
         with:
           java-version: '11'
           distribution: 'adopt'
-      - name: Cache Gradle packages
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+          cache: 'gradle'
       - name: Run Spotless
         run: ./gradlew --no-daemon spotlessCheck
-
 
   build:
     runs-on: ubuntu-latest
@@ -41,15 +32,7 @@ jobs:
         with:
           java-version: '11'
           distribution: 'adopt'
-      - name: Cache Gradle packages
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+          cache: 'gradle'
       - name: Build Cache
         uses: actions/cache@v2
         with:
@@ -74,15 +57,7 @@ jobs:
         with:
           java-version: '11'
           distribution: 'adopt'
-      - name: Cache Gradle packages
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+          cache: 'gradle'
       - name: Build Cache
         uses: actions/cache@v2
         with:
@@ -163,15 +138,7 @@ jobs:
         with:
           java-version: '11'
           distribution: 'adopt'
-      - name: Cache Gradle packages
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+          cache: 'gradle'
       - name: Build Cache
         uses: actions/cache@v2
         with:
@@ -224,15 +191,7 @@ jobs:
         with:
           java-version: '11'
           distribution: 'adopt'
-      - name: Cache Gradle packages
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+          cache: 'gradle'
       - name: Build Cache
         uses: actions/cache@v2
         with:
