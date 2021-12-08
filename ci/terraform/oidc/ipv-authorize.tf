@@ -1,4 +1,5 @@
 module "ipv-authorize" {
+  count  = var.ipv_api_enabled ? 1 : 0
   source = "../modules/endpoint-module"
 
   endpoint_name   = "ipv-authorize"
@@ -20,7 +21,7 @@ module "ipv-authorize" {
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.IPVAuthorisationHandler::handleRequest"
 
-  create_endpoint                        = var.environment == "build"
+  create_endpoint                        = true
   rest_api_id                            = aws_api_gateway_rest_api.di_authentication_frontend_api.id
   root_resource_id                       = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id
   execution_arn                          = aws_api_gateway_rest_api.di_authentication_frontend_api.execution_arn
