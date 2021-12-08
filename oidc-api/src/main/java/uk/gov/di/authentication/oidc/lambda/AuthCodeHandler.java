@@ -49,6 +49,7 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_IS
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
+import static uk.gov.di.authentication.shared.services.AuthorizationService.COOKIE_CONSENT_NOT_ENGAGED;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class AuthCodeHandler
@@ -56,13 +57,8 @@ public class AuthCodeHandler
 
     private static final Logger LOGGER = LogManager.getLogger(AuthCodeHandler.class);
 
-    public static final String COOKIE_CONSENT_ACCEPT = "accept";
-    public static final String COOKIE_CONSENT_REJECT = "reject";
-    public static final String COOKIE_CONSENT_NOT_ENGAGED = "not-engaged";
-
     private final SessionService sessionService;
     private final AuthorisationCodeService authorisationCodeService;
-    private final ConfigurationService configurationService;
     private final AuthorizationService authorizationService;
     private final ClientSessionService clientSessionService;
     private final AuditService auditService;
@@ -72,20 +68,17 @@ public class AuthCodeHandler
     public AuthCodeHandler(
             SessionService sessionService,
             AuthorisationCodeService authorisationCodeService,
-            ConfigurationService configurationService,
             AuthorizationService authorizationService,
             ClientSessionService clientSessionService,
             AuditService auditService) {
         this.sessionService = sessionService;
         this.authorisationCodeService = authorisationCodeService;
-        this.configurationService = configurationService;
         this.authorizationService = authorizationService;
         this.clientSessionService = clientSessionService;
         this.auditService = auditService;
     }
 
     public AuthCodeHandler(ConfigurationService configurationService) {
-        this.configurationService = configurationService;
         sessionService = new SessionService(configurationService);
         authorisationCodeService = new AuthorisationCodeService(configurationService);
         authorizationService = new AuthorizationService(configurationService);
@@ -255,7 +248,9 @@ public class AuthCodeHandler
 
             String cookieConsentValue = COOKIE_CONSENT_NOT_ENGAGED;
 
-            if (isValidQueryParam(queryParams, COOKIE_CONSENT)) {
+            if (isValidQueryParam(queryParams, COOKIE_CONSENT)
+                    && authorizationService.isValidCookieConsentValue(
+                            queryParams.get(COOKIE_CONSENT))) {
                 cookieConsentValue = queryParams.get(COOKIE_CONSENT);
             }
 
