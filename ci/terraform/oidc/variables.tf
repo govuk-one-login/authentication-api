@@ -207,7 +207,7 @@ variable "client_registry_api_enabled" {
 }
 
 variable "ipv_api_enabled" {
-  default = true
+  default = false
 }
 
 variable "ipv_authorisation_uri" {
