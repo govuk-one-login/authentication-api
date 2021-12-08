@@ -1,25 +1,24 @@
-module "ipv-authorize" {
+module "ipv-callback" {
   count  = var.ipv_api_enabled ? 1 : 0
   source = "../modules/endpoint-module"
 
-  endpoint_name   = "ipv-authorize"
-  path_part       = "ipv-authorize"
+  endpoint_name   = "ipv-callback"
+  path_part       = "ipv-callback"
   endpoint_method = "GET"
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT                    = var.environment
-    BASE_URL                       = local.frontend_api_base_url
-    EVENTS_SNS_TOPIC_ARN           = aws_sns_topic.events.arn
-    AUDIT_SIGNING_KEY_ALIAS        = local.audit_signing_key_alias_name
-    LOCALSTACK_ENDPOINT            = var.use_localstack ? var.localstack_endpoint : null
-    REDIS_KEY                      = local.redis_key
-    DYNAMO_ENDPOINT                = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    IPV_AUTHORISATION_URI          = var.ipv_authorisation_uri
-    IPV_AUTHORISATION_CALLBACK_URI = var.ipv_authorisation_callback_uri
-    IPV_AUTHORISATION_CLIENT_ID    = var.ipv_authorisation_client_id
+    ENVIRONMENT                 = var.environment
+    BASE_URL                    = local.frontend_api_base_url
+    EVENTS_SNS_TOPIC_ARN        = aws_sns_topic.events.arn
+    AUDIT_SIGNING_KEY_ALIAS     = local.audit_signing_key_alias_name
+    LOGIN_URI                   = module.dns.frontend_url
+    LOCALSTACK_ENDPOINT         = var.use_localstack ? var.localstack_endpoint : null
+    REDIS_KEY                   = local.redis_key
+    DYNAMO_ENDPOINT             = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    IPV_AUTHORISATION_CLIENT_ID = var.ipv_authorisation_client_id
   }
-  handler_function_name = "uk.gov.di.authentication.ipv.lambda.IPVAuthorisationHandler::handleRequest"
+  handler_function_name = "uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler::handleRequest"
 
   create_endpoint                        = true
   rest_api_id                            = aws_api_gateway_rest_api.di_authentication_frontend_api.id
@@ -36,7 +35,6 @@ module "ipv-authorize" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
-  api_key_required                       = true
 
   keep_lambda_warm             = var.keep_lambdas_warm
   warmer_handler_function_name = "uk.gov.di.lambdawarmer.lambda.LambdaWarmerHandler::handleRequest"
