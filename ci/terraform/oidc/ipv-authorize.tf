@@ -4,7 +4,7 @@ module "ipv-authorize" {
 
   endpoint_name   = "ipv-authorize"
   path_part       = "ipv-authorize"
-  endpoint_method = "GET"
+  endpoint_method = "POST"
   environment     = var.environment
 
   handler_environment_variables = {
