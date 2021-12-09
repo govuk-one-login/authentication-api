@@ -27,7 +27,7 @@ public class AuthorisationResponseService {
         this.redisConnectionService = redisConnectionService;
     }
 
-    public Optional<ErrorObject> validateResponse(Map<String, String> headers) {
+    public Optional<ErrorObject> validateResponse(Map<String, String> headers, String sessionId) {
         if (headers == null || headers.isEmpty()) {
             LOG.warn("No Query parameters in IPV Authorisation response");
             return Optional.of(
@@ -44,6 +44,12 @@ public class AuthorisationResponseService {
                     new ErrorObject(
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "No state param present in Authorisation response"));
+        }
+        if (!isStateValid(sessionId, headers.get("state"))) {
+            return Optional.of(
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_CODE,
+                            "Invalid state param present in Authorisation response"));
         }
         if (!headers.containsKey("code") || headers.get("code").isEmpty()) {
             LOG.warn("No code param in IPV Authorisation response");
@@ -66,5 +72,19 @@ public class AuthorisationResponseService {
             LOG.error("Unable to state to Redis");
             throw new RuntimeException(e);
         }
+    }
+
+    private boolean isStateValid(String sessionId, String responseState) {
+        var value = redisConnectionService.getValue(STATE_STORAGE_PREFIX + sessionId);
+        if (value == null) {
+            return false;
+        }
+        State storedState;
+        try {
+            storedState = new ObjectMapper().readValue(value, State.class);
+        } catch (JsonProcessingException e) {
+            return false;
+        }
+        return responseState.equals(storedState.getValue());
     }
 }

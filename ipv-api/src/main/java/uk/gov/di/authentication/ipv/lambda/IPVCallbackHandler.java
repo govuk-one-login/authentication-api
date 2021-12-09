@@ -62,16 +62,6 @@ public class IPVCallbackHandler
                 .orElseGet(
                         () -> {
                             LOG.info("Request received to IPVCallbackHandler");
-                            Optional<ErrorObject> errorObject =
-                                    responseService.validateResponse(
-                                            input.getQueryStringParameters());
-                            if (errorObject.isPresent()) {
-                                LOG.error(
-                                        "Error in IPV AuthorisationResponse. ErrorCode: {}. ErrorDescription: {}",
-                                        errorObject.get().getCode(),
-                                        errorObject.get().getDescription());
-                                throw new RuntimeException("Error in IPV AuthorisationResponse");
-                            }
                             CookieHelper.SessionCookieIds sessionCookieIds;
                             try {
                                 sessionCookieIds =
@@ -80,6 +70,17 @@ public class IPVCallbackHandler
                             } catch (NoSuchElementException e) {
                                 LOG.error("SessionID not found in cookie");
                                 throw new RuntimeException(e);
+                            }
+                            Optional<ErrorObject> errorObject =
+                                    responseService.validateResponse(
+                                            input.getQueryStringParameters(),
+                                            sessionCookieIds.getSessionId());
+                            if (errorObject.isPresent()) {
+                                LOG.error(
+                                        "Error in IPV AuthorisationResponse. ErrorCode: {}. ErrorDescription: {}",
+                                        errorObject.get().getCode(),
+                                        errorObject.get().getDescription());
+                                throw new RuntimeException("Error in IPV AuthorisationResponse");
                             }
                             TokenRequest tokenRequest =
                                     ipvTokenService.constructTokenRequest(

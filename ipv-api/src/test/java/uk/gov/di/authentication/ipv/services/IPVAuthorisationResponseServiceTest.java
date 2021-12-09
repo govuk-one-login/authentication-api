@@ -27,6 +27,7 @@ class IPVAuthorisationResponseServiceTest {
 
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final State STATE = new State();
+    private static final String SESSION_ID = "session-id";
     private static final Long SESSION_EXPIRY = 3600L;
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final RedisConnectionService redisConnectionService =
@@ -35,8 +36,10 @@ class IPVAuthorisationResponseServiceTest {
             new AuthorisationResponseService(configurationService, redisConnectionService);
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws JsonProcessingException {
         when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
+        when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + SESSION_ID))
+                .thenReturn(new ObjectMapper().writeValueAsString(STATE));
     }
 
     @Test
@@ -46,7 +49,7 @@ class IPVAuthorisationResponseServiceTest {
         responseHeaders.put("state", STATE.getValue());
 
         assertThat(
-                authorisationResponseService.validateResponse(responseHeaders),
+                authorisationResponseService.validateResponse(responseHeaders, SESSION_ID),
                 equalTo(Optional.empty()));
     }
 
@@ -61,14 +64,14 @@ class IPVAuthorisationResponseServiceTest {
         responseHeaders.put("error", errorObject.toString());
 
         assertThat(
-                authorisationResponseService.validateResponse(responseHeaders),
+                authorisationResponseService.validateResponse(responseHeaders, SESSION_ID),
                 equalTo(Optional.of(new ErrorObject(errorObject.getCode()))));
     }
 
     @Test
     void shouldReturnErrorObjectWhenResponseContainsNoQueryParams() {
         assertThat(
-                authorisationResponseService.validateResponse(Collections.emptyMap()),
+                authorisationResponseService.validateResponse(Collections.emptyMap(), SESSION_ID),
                 equalTo(
                         Optional.of(
                                 new ErrorObject(
@@ -82,7 +85,7 @@ class IPVAuthorisationResponseServiceTest {
         responseHeaders.put("code", AUTH_CODE.getValue());
 
         assertThat(
-                authorisationResponseService.validateResponse(responseHeaders),
+                authorisationResponseService.validateResponse(responseHeaders, SESSION_ID),
                 equalTo(
                         Optional.of(
                                 new ErrorObject(
@@ -96,12 +99,31 @@ class IPVAuthorisationResponseServiceTest {
         responseHeaders.put("state", STATE.getValue());
 
         assertThat(
-                authorisationResponseService.validateResponse(responseHeaders),
+                authorisationResponseService.validateResponse(responseHeaders, SESSION_ID),
                 equalTo(
                         Optional.of(
                                 new ErrorObject(
                                         OAuth2Error.INVALID_REQUEST_CODE,
                                         "No code param present in Authorisation response"))));
+    }
+
+    @Test
+    void shouldReturnErrorObjectWhenStateInResponseIsDifferentToStoredState()
+            throws JsonProcessingException {
+        State differentState = new State();
+        when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + SESSION_ID))
+                .thenReturn(new ObjectMapper().writeValueAsString(STATE));
+        Map<String, String> responseHeaders = new HashMap<>();
+        responseHeaders.put("state", differentState.getValue());
+        responseHeaders.put("code", AUTH_CODE.getValue());
+
+        assertThat(
+                authorisationResponseService.validateResponse(responseHeaders, SESSION_ID),
+                equalTo(
+                        Optional.of(
+                                new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Invalid state param present in Authorisation response"))));
     }
 
     @Test

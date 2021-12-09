@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.api;
 
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
+import com.nimbusds.oauth2.sdk.id.State;
 import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,13 +40,15 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     void shouldReturn200AndClientInfoResponseForValidClient() throws IOException {
         String sessionId = "some-session-id";
         String clientSessionId = "some-client-session-id";
+        State state = new State();
         redis.createSession(sessionId);
+        redis.addStateToRedis(state, sessionId);
         var response =
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(
                                 Optional.of(buildSessionCookie(sessionId, clientSessionId))),
-                        constructQueryStringParameters());
+                        constructQueryStringParameters(state));
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -53,14 +56,10 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
     }
 
-    private Map<String, String> constructQueryStringParameters() {
+    private Map<String, String> constructQueryStringParameters(State state) {
         final Map<String, String> queryStringParameters = new HashMap<>();
         queryStringParameters.putAll(
-                Map.of(
-                        "state",
-                        "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU",
-                        "code",
-                        new AuthorizationCode().getValue()));
+                Map.of("state", state.getValue(), "code", new AuthorizationCode().getValue()));
         return queryStringParameters;
     }
 

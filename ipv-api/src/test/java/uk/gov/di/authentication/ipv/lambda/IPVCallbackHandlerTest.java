@@ -60,7 +60,8 @@ class IPVCallbackHandlerTest {
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
         responseHeaders.put("state", STATE.getValue());
-        when(responseService.validateResponse(responseHeaders)).thenReturn(Optional.empty());
+        when(responseService.validateResponse(responseHeaders, SESSION_ID))
+                .thenReturn(Optional.empty());
         when(ipvTokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
         when(ipvTokenService.sendTokenRequest(tokenRequest)).thenReturn(successfulTokenResponse);
 
@@ -83,7 +84,7 @@ class IPVCallbackHandlerTest {
         responseHeaders.put("state", STATE.getValue());
         responseHeaders.put("error", errorObject.toString());
 
-        when(responseService.validateResponse(responseHeaders))
+        when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.of(new ErrorObject(errorObject.getCode())));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
