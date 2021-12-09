@@ -16,6 +16,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.IPVAuthorisationRequest;
 import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
+import uk.gov.di.authentication.ipv.services.AuthorisationResponseService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.SessionAction;
@@ -29,6 +30,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -46,6 +48,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
 
     private static final String IPV_AUTHORIZE_ROUTE = "/authorize";
     private final AuditService auditService;
+    private final AuthorisationResponseService authorisationService;
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             userJourneyStateMachine();
 
@@ -55,7 +58,8 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
-            AuditService auditService) {
+            AuditService auditService,
+            AuthorisationResponseService authorisationService) {
         super(
                 IPVAuthorisationRequest.class,
                 configurationService,
@@ -64,6 +68,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                 clientService,
                 authenticationService);
         this.auditService = auditService;
+        this.authorisationService = authorisationService;
     }
 
     public IPVAuthorisationHandler() {
@@ -73,6 +78,9 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
     public IPVAuthorisationHandler(ConfigurationService configurationService) {
         super(IPVAuthorisationRequest.class, configurationService);
         this.auditService = new AuditService(configurationService);
+        this.authorisationService =
+                new AuthorisationResponseService(
+                        configurationService, new RedisConnectionService(configurationService));
     }
 
     @Override
@@ -89,13 +97,13 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                             userContext.getClientSession().getAuthRequestParams());
 
             ClientID clientID = new ClientID(configurationService.getIPVAuthorisationClientId());
-
+            State state = new State();
             AuthorizationRequest ipvAuthorisationRequest =
                     new AuthorizationRequest.Builder(
                                     new ResponseType(ResponseType.Value.CODE), clientID)
                             .scope(authRequest.getScope())
                             .customParameter("nonce", IdGenerator.generate())
-                            .state(new State())
+                            .state(state)
                             .redirectionURI(configurationService.getIPVAuthorisationCallbackURI())
                             .endpointURI(
                                     buildURI(
@@ -104,7 +112,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                                                     .toString(),
                                             IPV_AUTHORIZE_ROUTE))
                             .build();
-
+            authorisationService.storeState(userContext.getSession().getSessionId(), state);
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
                     context.getAwsRequestId(),

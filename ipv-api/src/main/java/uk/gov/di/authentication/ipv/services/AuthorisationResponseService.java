@@ -1,9 +1,14 @@
 package uk.gov.di.authentication.ipv.services;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.id.State;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 
 import java.util.Map;
 import java.util.Optional;
@@ -11,6 +16,16 @@ import java.util.Optional;
 public class AuthorisationResponseService {
 
     private static final Logger LOG = LogManager.getLogger(AuthorisationResponseService.class);
+    private final ConfigurationService configurationService;
+    private final RedisConnectionService redisConnectionService;
+    public static final String STATE_STORAGE_PREFIX = "state:";
+
+    public AuthorisationResponseService(
+            ConfigurationService configurationService,
+            RedisConnectionService redisConnectionService) {
+        this.configurationService = configurationService;
+        this.redisConnectionService = redisConnectionService;
+    }
 
     public Optional<ErrorObject> validateResponse(Map<String, String> headers) {
         if (headers == null || headers.isEmpty()) {
@@ -39,5 +54,17 @@ public class AuthorisationResponseService {
         }
 
         return Optional.empty();
+    }
+
+    public void storeState(String sessionId, State state) {
+        try {
+            redisConnectionService.saveWithExpiry(
+                    STATE_STORAGE_PREFIX + sessionId,
+                    new ObjectMapper().writeValueAsString(state),
+                    configurationService.getSessionExpiry());
+        } catch (JsonProcessingException e) {
+            LOG.error("Unable to state to Redis");
+            throw new RuntimeException(e);
+        }
     }
 }

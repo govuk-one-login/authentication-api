@@ -47,7 +47,9 @@ public class IPVCallbackHandler
 
     public IPVCallbackHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
-        this.responseService = new AuthorisationResponseService();
+        this.responseService =
+                new AuthorisationResponseService(
+                        configurationService, new RedisConnectionService(configurationService));
         this.ipvTokenService =
                 new IPVTokenService(
                         configurationService, new RedisConnectionService(configurationService));
