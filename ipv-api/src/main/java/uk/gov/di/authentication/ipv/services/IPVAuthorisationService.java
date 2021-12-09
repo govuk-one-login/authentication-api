@@ -64,27 +64,34 @@ public class IPVAuthorisationService {
 
     public void storeState(String sessionId, State state) {
         try {
+            LOG.info("Saving state to Redis: {}", state);
             redisConnectionService.saveWithExpiry(
                     STATE_STORAGE_PREFIX + sessionId,
                     new ObjectMapper().writeValueAsString(state),
                     configurationService.getSessionExpiry());
         } catch (JsonProcessingException e) {
-            LOG.error("Unable to state to Redis");
+            LOG.error("Unable to save state to Redis");
             throw new RuntimeException(e);
         }
     }
 
     private boolean isStateValid(String sessionId, String responseState) {
-        var value = redisConnectionService.getValue(STATE_STORAGE_PREFIX + sessionId);
-        if (value == null) {
+        var value =
+                Optional.ofNullable(
+                        redisConnectionService.getValue(STATE_STORAGE_PREFIX + sessionId));
+        if (value.isEmpty()) {
+            LOG.info("No state found in Redis");
             return false;
         }
         State storedState;
         try {
-            storedState = new ObjectMapper().readValue(value, State.class);
+            storedState = new ObjectMapper().readValue(value.get(), State.class);
         } catch (JsonProcessingException e) {
+            LOG.info("Error when deserializing state from redis");
             return false;
         }
+        LOG.info("Response state: {}", responseState);
+        LOG.info("Stored state: {}", storedState);
         return responseState.equals(storedState.getValue());
     }
 }
