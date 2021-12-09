@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.ipv.services;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
@@ -11,9 +13,11 @@ import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.token.AccessToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 
 import java.io.IOException;
 import java.security.KeyPairGenerator;
@@ -31,11 +35,16 @@ import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildUR
 public class IPVTokenService {
 
     private final ConfigurationService configurationService;
+    private final RedisConnectionService redisConnectionService;
     private static final String TOKEN_PATH = "token";
+    public static final String IPV_ACCESS_TOKEN_PREFIX = "IPV_ACCESS_TOKEN:";
     private static final Logger LOG = LogManager.getLogger(IPVTokenService.class);
 
-    public IPVTokenService(ConfigurationService configurationService) {
+    public IPVTokenService(
+            ConfigurationService configurationService,
+            RedisConnectionService redisConnectionService) {
         this.configurationService = configurationService;
+        this.redisConnectionService = redisConnectionService;
     }
 
     public TokenRequest constructTokenRequest(String authCode) {
@@ -67,6 +76,18 @@ public class IPVTokenService {
             throw new RuntimeException(e);
         } catch (ParseException e) {
             LOG.error("Error whilst parsing TokenResponse", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void saveAccessTokenToRedis(AccessToken accessToken, String sessionId) {
+        try {
+            redisConnectionService.saveWithExpiry(
+                    IPV_ACCESS_TOKEN_PREFIX + sessionId,
+                    new ObjectMapper().writeValueAsString(accessToken),
+                    configurationService.getAccessTokenExpiry());
+        } catch (JsonProcessingException e) {
+            LOG.error("Unable to save access token to Redis");
             throw new RuntimeException(e);
         }
     }

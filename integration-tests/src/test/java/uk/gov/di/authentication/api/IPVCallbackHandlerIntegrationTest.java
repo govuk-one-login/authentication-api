@@ -11,9 +11,9 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.IPVStubExtension;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -36,10 +36,16 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     }
 
     @Test
-    void shouldReturn200AndClientInfoResponseForValidClient() {
+    void shouldReturn200AndClientInfoResponseForValidClient() throws IOException {
+        String sessionId = "some-session-id";
+        String clientSessionId = "some-client-session-id";
+        redis.createSession(sessionId);
         var response =
                 makeRequest(
-                        Optional.empty(), Collections.EMPTY_MAP, constructQueryStringParameters());
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(sessionId, clientSessionId))),
+                        constructQueryStringParameters());
 
         assertThat(response, hasStatus(302));
         assertThat(
