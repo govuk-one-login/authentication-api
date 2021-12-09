@@ -15,6 +15,7 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
+import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionState;
@@ -35,8 +36,11 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -62,6 +66,7 @@ public class IPVAuthorisationHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private IPVAuthorisationService authorisationService = mock(IPVAuthorisationService.class);
 
     private IPVAuthorisationHandler handler;
 
@@ -76,10 +81,12 @@ public class IPVAuthorisationHandlerTest {
                         clientSessionService,
                         clientService,
                         authenticationService,
-                        auditService);
+                        auditService,
+                        authorisationService);
         when(configService.getIPVAuthorisationClientId()).thenReturn(IPV_CLIENT_ID);
         when(configService.getIPVAuthorisationCallbackURI()).thenReturn(IPV_CALLBACK_URI);
         when(configService.getIPVAuthorisationURI()).thenReturn(IPV_AUTHORISATION_URI);
+        when(configService.getSessionExpiry()).thenReturn(3600L);
     }
 
     @Test
@@ -105,6 +112,7 @@ public class IPVAuthorisationHandlerTest {
 
         assertEquals(body.getSessionState(), SessionState.IPV_REQUIRED);
         assertThat(body.getRedirectUri(), startsWith(IPV_AUTHORISATION_URI + "/authorize"));
+        verify(authorisationService).storeState(eq(session.getSessionId()), any(State.class));
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {

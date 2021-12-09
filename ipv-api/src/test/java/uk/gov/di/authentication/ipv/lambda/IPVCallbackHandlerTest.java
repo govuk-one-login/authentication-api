@@ -13,7 +13,7 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.Tokens;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.ipv.services.AuthorisationResponseService;
+import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -35,8 +35,7 @@ class IPVCallbackHandlerTest {
 
     private final Context context = mock(Context.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
-    private final AuthorisationResponseService responseService =
-            mock(AuthorisationResponseService.class);
+    private final IPVAuthorisationService responseService = mock(IPVAuthorisationService.class);
     private final IPVTokenService ipvTokenService = mock(IPVTokenService.class);
     private static final URI LOGIN_URL = URI.create("https://example.com");
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
@@ -60,7 +59,8 @@ class IPVCallbackHandlerTest {
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
         responseHeaders.put("state", STATE.getValue());
-        when(responseService.validateResponse(responseHeaders)).thenReturn(Optional.empty());
+        when(responseService.validateResponse(responseHeaders, SESSION_ID))
+                .thenReturn(Optional.empty());
         when(ipvTokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
         when(ipvTokenService.sendTokenRequest(tokenRequest)).thenReturn(successfulTokenResponse);
 
@@ -83,7 +83,7 @@ class IPVCallbackHandlerTest {
         responseHeaders.put("state", STATE.getValue());
         responseHeaders.put("error", errorObject.toString());
 
-        when(responseService.validateResponse(responseHeaders))
+        when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.of(new ErrorObject(errorObject.getCode())));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();

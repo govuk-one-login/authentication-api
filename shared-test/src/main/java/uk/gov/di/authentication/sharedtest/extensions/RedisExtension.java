@@ -2,6 +2,7 @@ package uk.gov.di.authentication.sharedtest.extensions;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.oauth2.sdk.id.State;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
@@ -60,6 +61,10 @@ public class RedisExtension
 
     public String createSession() throws IOException {
         return createSession(IdGenerator.generate());
+    }
+
+    public void addStateToRedis(State state, String sessionId) throws JsonProcessingException {
+        redis.saveWithExpiry("state:" + sessionId, objectMapper.writeValueAsString(state), 3600);
     }
 
     public void addAuthRequestToSession(
