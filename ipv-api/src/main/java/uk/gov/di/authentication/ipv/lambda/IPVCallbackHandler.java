@@ -13,10 +13,13 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.ipv.services.AuthorisationResponseService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
+import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 
 import java.net.URISyntaxException;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
@@ -45,7 +48,9 @@ public class IPVCallbackHandler
     public IPVCallbackHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.responseService = new AuthorisationResponseService();
-        this.ipvTokenService = new IPVTokenService(configurationService);
+        this.ipvTokenService =
+                new IPVTokenService(
+                        configurationService, new RedisConnectionService(configurationService));
     }
 
     @Override
@@ -59,20 +64,35 @@ public class IPVCallbackHandler
                                     responseService.validateResponse(
                                             input.getQueryStringParameters());
                             if (errorObject.isPresent()) {
-                                LOG.error("Error in IPV AuthorisationResponse");
-                                // TODO - Do something with this error object
-                                return new APIGatewayProxyResponseEvent()
-                                        .withStatusCode(302)
-                                        .withHeaders(
-                                                Map.of(
-                                                        ResponseHeaders.LOCATION,
-                                                        buildRedirectUri()));
+                                LOG.error(
+                                        "Error in IPV AuthorisationResponse. ErrorCode: {}. ErrorDescription: {}",
+                                        errorObject.get().getCode(),
+                                        errorObject.get().getDescription());
+                                throw new RuntimeException("Error in IPV AuthorisationResponse");
+                            }
+                            CookieHelper.SessionCookieIds sessionCookieIds;
+                            try {
+                                sessionCookieIds =
+                                        CookieHelper.parseSessionCookie(input.getHeaders())
+                                                .orElseThrow();
+                            } catch (NoSuchElementException e) {
+                                LOG.error("SessionID not found in cookie");
+                                throw new RuntimeException(e);
                             }
                             TokenRequest tokenRequest =
                                     ipvTokenService.constructTokenRequest(
                                             input.getQueryStringParameters().get("code"));
                             TokenResponse tokenResponse =
                                     ipvTokenService.sendTokenRequest(tokenRequest);
+                            if (!tokenResponse.indicatesSuccess()) {
+                                LOG.error(
+                                        "IPV TokenResponse was not successful: {}",
+                                        tokenResponse.toErrorResponse().toJSONObject());
+                                throw new RuntimeException("IPV TokenResponse was not successful");
+                            }
+                            ipvTokenService.saveAccessTokenToRedis(
+                                    tokenResponse.toSuccessResponse().getTokens().getAccessToken(),
+                                    sessionCookieIds.getSessionId());
 
                             return new APIGatewayProxyResponseEvent()
                                     .withStatusCode(302)

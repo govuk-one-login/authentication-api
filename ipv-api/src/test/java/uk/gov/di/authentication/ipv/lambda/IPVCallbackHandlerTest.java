@@ -22,8 +22,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -38,6 +40,9 @@ class IPVCallbackHandlerTest {
     private final IPVTokenService ipvTokenService = mock(IPVTokenService.class);
     private static final URI LOGIN_URL = URI.create("https://example.com");
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
+    private static final String COOKIE = "Cookie";
+    private static final String SESSION_ID = "a-session-id";
+    private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final State STATE = new State();
     private IPVCallbackHandler handler;
 
@@ -61,6 +66,7 @@ class IPVCallbackHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(responseHeaders);
+        event.setHeaders(Map.of(COOKIE, buildCookieString()));
         APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
 
         assertThat(response, hasStatus(302));
@@ -68,7 +74,7 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToLoginUriWhenResponseContainsError() {
+    void shouldThrowWhenAuthnResponseContainsError() {
         ErrorObject errorObject =
                 new ErrorObject(
                         "invalid_request_redirect_uri", "redirect_uri param must be provided");
@@ -81,15 +87,24 @@ class IPVCallbackHandlerTest {
                 .thenReturn(Optional.of(new ErrorObject(errorObject.getCode())));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of(COOKIE, buildCookieString()));
         event.setQueryStringParameters(responseHeaders);
-        APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
 
-        assertThat(response, hasStatus(302));
-        assertThat(response.getHeaders().get("Location"), equalTo(LOGIN_URL.toString()));
+        assertThrows(
+                RuntimeException.class,
+                () -> handler.handleRequest(event, context),
+                "Expected to throw exception");
+
         verifyNoInteractions(ipvTokenService);
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
         return handler.handleRequest(event, context);
+    }
+
+    private static String buildCookieString() {
+        return format(
+                "%s=%s.%s; Max-Age=%d; %s",
+                "gs", SESSION_ID, CLIENT_SESSION_ID, 3600, "Secure; HttpOnly;");
     }
 }
