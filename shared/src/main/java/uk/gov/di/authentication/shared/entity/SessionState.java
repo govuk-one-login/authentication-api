@@ -35,7 +35,8 @@ public enum SessionState {
     CONSENT_REQUIRED,
     CONSENT_ADDED,
     ACCOUNT_TEMPORARILY_LOCKED,
-    UPLIFT_REQUIRED_CM;
+    UPLIFT_REQUIRED_CM,
+    IPV_REQUIRED;
 
     public static List<SessionState> INTERRUPT_STATES =
             List.of(

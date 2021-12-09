@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
@@ -14,6 +15,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.IPVAuthorisationRequest;
+import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.SessionAction;
@@ -31,9 +33,9 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.UserContext;
 
-import java.util.Map;
-
+import static uk.gov.di.authentication.shared.entity.SessionState.IPV_REQUIRED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisationRequest>
@@ -114,13 +116,14 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                     "IPVAuthorisationHandler successfully processed request, redirect URI {}",
                     ipvAuthorisationRequest.toURI().toString());
 
-            return new APIGatewayProxyResponseEvent()
-                    .withStatusCode(302)
-                    .withHeaders(Map.of("Location", ipvAuthorisationRequest.toURI().toString()));
+            return generateApiGatewayProxyResponse(
+                    200,
+                    new IPVAuthorisationResponse(
+                            IPV_REQUIRED, ipvAuthorisationRequest.toURI().toString()));
 
         } catch (StateMachine.InvalidStateTransitionException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
-        } catch (ParseException e) {
+        } catch (ParseException | JsonProcessingException e) {
             LOG.error("Could not parse authentication request from client");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }

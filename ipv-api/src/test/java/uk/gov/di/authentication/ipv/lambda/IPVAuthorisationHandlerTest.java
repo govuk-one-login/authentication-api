@@ -3,6 +3,8 @@ package uk.gov.di.authentication.ipv.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -12,8 +14,10 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -30,6 +34,7 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -78,7 +83,7 @@ public class IPVAuthorisationHandlerTest {
     }
 
     @Test
-    void shouldRedirectToIPV() {
+    void shouldReturn200AndRedirectURI() throws JsonProcessingException {
 
         usingValidSession();
         usingValidClientSession(TEST_CLIENT_ID);
@@ -93,10 +98,13 @@ public class IPVAuthorisationHandlerTest {
 
         APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
 
-        assertThat(response, hasStatus(302));
-        assertThat(
-                response.getHeaders().get("Location"),
-                startsWith(IPV_AUTHORISATION_URI.toString()));
+        assertThat(response, hasStatus(200));
+
+        IPVAuthorisationResponse body =
+                new ObjectMapper().readValue(response.getBody(), IPVAuthorisationResponse.class);
+
+        assertEquals(body.getSessionState(), SessionState.IPV_REQUIRED);
+        assertThat(body.getRedirectUri(), startsWith(IPV_AUTHORISATION_URI.toString()));
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
