@@ -90,8 +90,11 @@ public class IPVAuthorisationService {
             LOG.info("Error when deserializing state from redis");
             return false;
         }
-        LOG.info("Response state: {}", responseState);
-        LOG.info("Stored state: {}", storedState);
+        LOG.info(
+                "Response state: {} and Stored state: {}. Are equal: {}",
+                responseState,
+                storedState.getValue(),
+                responseState.equals(storedState.getValue()));
         return responseState.equals(storedState.getValue());
     }
 }
