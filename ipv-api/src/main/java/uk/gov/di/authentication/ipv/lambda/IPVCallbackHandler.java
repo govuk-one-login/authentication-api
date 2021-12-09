@@ -5,10 +5,13 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.TokenRequest;
+import com.nimbusds.oauth2.sdk.TokenResponse;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.ipv.services.AuthorisationResponseService;
+import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -24,6 +27,7 @@ public class IPVCallbackHandler
     private static final Logger LOG = LogManager.getLogger(IPVCallbackHandler.class);
     private final ConfigurationService configurationService;
     private final AuthorisationResponseService responseService;
+    private final IPVTokenService ipvTokenService;
 
     public IPVCallbackHandler() {
         this(ConfigurationService.getInstance());
@@ -31,14 +35,17 @@ public class IPVCallbackHandler
 
     public IPVCallbackHandler(
             ConfigurationService configurationService,
-            AuthorisationResponseService responseService) {
+            AuthorisationResponseService responseService,
+            IPVTokenService ipvTokenService) {
         this.configurationService = configurationService;
         this.responseService = responseService;
+        this.ipvTokenService = ipvTokenService;
     }
 
     public IPVCallbackHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.responseService = new AuthorisationResponseService();
+        this.ipvTokenService = new IPVTokenService(configurationService);
     }
 
     @Override
@@ -61,6 +68,12 @@ public class IPVCallbackHandler
                                                         ResponseHeaders.LOCATION,
                                                         buildRedirectUri()));
                             }
+                            TokenRequest tokenRequest =
+                                    ipvTokenService.constructTokenRequest(
+                                            input.getQueryStringParameters().get("code"));
+                            TokenResponse tokenResponse =
+                                    ipvTokenService.sendTokenRequest(tokenRequest);
+
                             return new APIGatewayProxyResponseEvent()
                                     .withStatusCode(302)
                                     .withHeaders(
