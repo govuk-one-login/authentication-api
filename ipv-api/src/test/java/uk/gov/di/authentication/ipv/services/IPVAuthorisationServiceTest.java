@@ -21,9 +21,9 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.ipv.services.AuthorisationResponseService.STATE_STORAGE_PREFIX;
+import static uk.gov.di.authentication.ipv.services.IPVAuthorisationService.STATE_STORAGE_PREFIX;
 
-class IPVAuthorisationResponseServiceTest {
+class IPVAuthorisationServiceTest {
 
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final State STATE = new State();
@@ -32,8 +32,8 @@ class IPVAuthorisationResponseServiceTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
-    private final AuthorisationResponseService authorisationResponseService =
-            new AuthorisationResponseService(configurationService, redisConnectionService);
+    private final IPVAuthorisationService IPVAuthorisationService =
+            new IPVAuthorisationService(configurationService, redisConnectionService);
 
     @BeforeEach
     void setUp() throws JsonProcessingException {
@@ -49,7 +49,7 @@ class IPVAuthorisationResponseServiceTest {
         responseHeaders.put("state", STATE.getValue());
 
         assertThat(
-                authorisationResponseService.validateResponse(responseHeaders, SESSION_ID),
+                IPVAuthorisationService.validateResponse(responseHeaders, SESSION_ID),
                 equalTo(Optional.empty()));
     }
 
@@ -64,14 +64,14 @@ class IPVAuthorisationResponseServiceTest {
         responseHeaders.put("error", errorObject.toString());
 
         assertThat(
-                authorisationResponseService.validateResponse(responseHeaders, SESSION_ID),
+                IPVAuthorisationService.validateResponse(responseHeaders, SESSION_ID),
                 equalTo(Optional.of(new ErrorObject(errorObject.getCode()))));
     }
 
     @Test
     void shouldReturnErrorObjectWhenResponseContainsNoQueryParams() {
         assertThat(
-                authorisationResponseService.validateResponse(Collections.emptyMap(), SESSION_ID),
+                IPVAuthorisationService.validateResponse(Collections.emptyMap(), SESSION_ID),
                 equalTo(
                         Optional.of(
                                 new ErrorObject(
@@ -85,7 +85,7 @@ class IPVAuthorisationResponseServiceTest {
         responseHeaders.put("code", AUTH_CODE.getValue());
 
         assertThat(
-                authorisationResponseService.validateResponse(responseHeaders, SESSION_ID),
+                IPVAuthorisationService.validateResponse(responseHeaders, SESSION_ID),
                 equalTo(
                         Optional.of(
                                 new ErrorObject(
@@ -99,7 +99,7 @@ class IPVAuthorisationResponseServiceTest {
         responseHeaders.put("state", STATE.getValue());
 
         assertThat(
-                authorisationResponseService.validateResponse(responseHeaders, SESSION_ID),
+                IPVAuthorisationService.validateResponse(responseHeaders, SESSION_ID),
                 equalTo(
                         Optional.of(
                                 new ErrorObject(
@@ -118,7 +118,7 @@ class IPVAuthorisationResponseServiceTest {
         responseHeaders.put("code", AUTH_CODE.getValue());
 
         assertThat(
-                authorisationResponseService.validateResponse(responseHeaders, SESSION_ID),
+                IPVAuthorisationService.validateResponse(responseHeaders, SESSION_ID),
                 equalTo(
                         Optional.of(
                                 new ErrorObject(
@@ -129,7 +129,7 @@ class IPVAuthorisationResponseServiceTest {
     @Test
     void shouldSaveStateToRedis() throws JsonProcessingException {
         var sessionId = "session-id";
-        authorisationResponseService.storeState(sessionId, STATE);
+        IPVAuthorisationService.storeState(sessionId, STATE);
 
         verify(redisConnectionService)
                 .saveWithExpiry(

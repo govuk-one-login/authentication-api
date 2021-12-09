@@ -16,7 +16,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.IPVAuthorisationRequest;
 import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
-import uk.gov.di.authentication.ipv.services.AuthorisationResponseService;
+import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.SessionAction;
@@ -48,7 +48,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
 
     private static final String IPV_AUTHORIZE_ROUTE = "/authorize";
     private final AuditService auditService;
-    private final AuthorisationResponseService authorisationService;
+    private final IPVAuthorisationService authorisationService;
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             userJourneyStateMachine();
 
@@ -59,7 +59,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
             ClientService clientService,
             AuthenticationService authenticationService,
             AuditService auditService,
-            AuthorisationResponseService authorisationService) {
+            IPVAuthorisationService authorisationService) {
         super(
                 IPVAuthorisationRequest.class,
                 configurationService,
@@ -79,7 +79,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
         super(IPVAuthorisationRequest.class, configurationService);
         this.auditService = new AuditService(configurationService);
         this.authorisationService =
-                new AuthorisationResponseService(
+                new IPVAuthorisationService(
                         configurationService, new RedisConnectionService(configurationService));
     }
 

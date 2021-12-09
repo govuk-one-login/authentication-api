@@ -15,7 +15,7 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
-import uk.gov.di.authentication.ipv.services.AuthorisationResponseService;
+import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.SessionState;
@@ -66,8 +66,7 @@ public class IPVAuthorisationHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
-    private AuthorisationResponseService authorisationService =
-            mock(AuthorisationResponseService.class);
+    private IPVAuthorisationService authorisationService = mock(IPVAuthorisationService.class);
 
     private IPVAuthorisationHandler handler;
 

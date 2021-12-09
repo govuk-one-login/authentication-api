@@ -13,7 +13,7 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.Tokens;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.ipv.services.AuthorisationResponseService;
+import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -35,8 +35,7 @@ class IPVCallbackHandlerTest {
 
     private final Context context = mock(Context.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
-    private final AuthorisationResponseService responseService =
-            mock(AuthorisationResponseService.class);
+    private final IPVAuthorisationService responseService = mock(IPVAuthorisationService.class);
     private final IPVTokenService ipvTokenService = mock(IPVTokenService.class);
     private static final URI LOGIN_URL = URI.create("https://example.com");
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();

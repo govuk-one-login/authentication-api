@@ -13,14 +13,14 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import java.util.Map;
 import java.util.Optional;
 
-public class AuthorisationResponseService {
+public class IPVAuthorisationService {
 
-    private static final Logger LOG = LogManager.getLogger(AuthorisationResponseService.class);
+    private static final Logger LOG = LogManager.getLogger(IPVAuthorisationService.class);
     private final ConfigurationService configurationService;
     private final RedisConnectionService redisConnectionService;
     public static final String STATE_STORAGE_PREFIX = "state:";
 
-    public AuthorisationResponseService(
+    public IPVAuthorisationService(
             ConfigurationService configurationService,
             RedisConnectionService redisConnectionService) {
         this.configurationService = configurationService;
