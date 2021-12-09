@@ -50,7 +50,7 @@ public class IPVAuthorisationHandlerTest {
 
     private static final URI REDIRECT_URI = URI.create("http://localhost/oidc/redirect");
     private static final URI IPV_CALLBACK_URI = URI.create("http://localhost/oidc/ipv/callback");
-    private static final URI IPV_AUTHORISATION_URI = URI.create("http://localhost/ipv/authorize");
+    private static final URI IPV_AUTHORISATION_URI = URI.create("http://localhost/ipv");
 
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
 
@@ -104,7 +104,7 @@ public class IPVAuthorisationHandlerTest {
                 new ObjectMapper().readValue(response.getBody(), IPVAuthorisationResponse.class);
 
         assertEquals(body.getSessionState(), SessionState.IPV_REQUIRED);
-        assertThat(body.getRedirectUri(), startsWith(IPV_AUTHORISATION_URI.toString()));
+        assertThat(body.getRedirectUri(), startsWith(IPV_AUTHORISATION_URI + "/authorize"));
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {

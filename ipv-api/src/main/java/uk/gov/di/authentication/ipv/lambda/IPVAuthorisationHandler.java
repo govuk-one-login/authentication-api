@@ -36,6 +36,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import static uk.gov.di.authentication.shared.entity.SessionState.IPV_REQUIRED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisationRequest>
@@ -43,6 +44,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
 
     private static final Logger LOG = LogManager.getLogger(IPVAuthorisationHandler.class);
 
+    private static final String IPV_AUTHORIZE_ROUTE = "/authorize";
     private final AuditService auditService;
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             userJourneyStateMachine();
@@ -95,7 +97,12 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                             .customParameter("nonce", IdGenerator.generate())
                             .state(new State())
                             .redirectionURI(configurationService.getIPVAuthorisationCallbackURI())
-                            .endpointURI(configurationService.getIPVAuthorisationURI())
+                            .endpointURI(
+                                    buildURI(
+                                            configurationService
+                                                    .getIPVAuthorisationURI()
+                                                    .toString(),
+                                            IPV_AUTHORIZE_ROUTE))
                             .build();
 
             auditService.submitAuditEvent(
