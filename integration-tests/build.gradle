@@ -23,6 +23,7 @@ dependencies {
             project(":client-registry-api"),
             project(":frontend-api"),
             project(":oidc-api"),
+            project(":ipv-api"),
             project(":shared"),
             project(":shared-test")
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
