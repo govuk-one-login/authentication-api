@@ -53,6 +53,12 @@ subprojects {
         test_runtime
     }
 
+    configurations.all {
+        resolutionStrategy {
+            force 'org.apache.logging.log4j:log4j-api:2.15.0', 'org.apache.logging.log4j:log4j-core:2.15.0'
+        }
+    }
+
     dependencies {
         bouncycastle "org.bouncycastle:bcpkix-jdk15on:1.69"
 
