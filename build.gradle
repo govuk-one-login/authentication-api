@@ -60,7 +60,7 @@ subprojects {
     }
 
     dependencies {
-        bouncycastle "org.bouncycastle:bcpkix-jdk15on:1.69"
+        bouncycastle "org.bouncycastle:bcpkix-jdk15on:1.70"
 
         dynamodb "com.amazonaws:aws-java-sdk-dynamodb:${dependencyVersions.aws_sdk_version}"
 
