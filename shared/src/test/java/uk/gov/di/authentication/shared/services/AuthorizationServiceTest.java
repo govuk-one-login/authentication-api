@@ -10,9 +10,10 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import net.minidev.json.JSONArray;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,6 +52,9 @@ import static org.mockito.Mockito.when;
 class AuthorizationServiceTest {
 
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
+    private static final ClientID CLIENT_ID = new ClientID();
+    private static final State STATE = new State();
+    private static final Nonce NONCE = new Nonce();
     private AuthorizationService authorizationService;
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
@@ -62,85 +66,73 @@ class AuthorizationServiceTest {
 
     @Test
     void shouldThrowClientNotFoundExceptionWhenClientDoesNotExist() {
-        ClientID clientID = new ClientID();
-        when(dynamoClientService.getClient(clientID.toString())).thenReturn(Optional.empty());
+        when(dynamoClientService.getClient(CLIENT_ID.toString())).thenReturn(Optional.empty());
 
         ClientNotFoundException exception =
                 Assertions.assertThrows(
                         ClientNotFoundException.class,
-                        () -> authorizationService.isClientRedirectUriValid(clientID, REDIRECT_URI),
+                        () ->
+                                authorizationService.isClientRedirectUriValid(
+                                        CLIENT_ID, REDIRECT_URI),
                         "Expected to throw exception");
 
-        MatcherAssert.assertThat(
+        assertThat(
                 exception.getMessage(),
-                equalTo(format("No Client found for ClientID: %s", clientID)));
+                equalTo(format("No Client found for ClientID: %s", CLIENT_ID)));
     }
 
     @Test
     void shouldReturnFalseIfClientUriIsInvalid() throws ClientNotFoundException {
-        ClientID clientID = new ClientID();
-        ClientRegistry clientRegistry =
-                generateClientRegistry("http://localhost//", clientID.toString());
-        when(dynamoClientService.getClient(clientID.toString()))
-                .thenReturn(Optional.of(clientRegistry));
-        assertFalse(authorizationService.isClientRedirectUriValid(clientID, REDIRECT_URI));
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        "http://localhost//", CLIENT_ID.toString())));
+        assertFalse(authorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI));
     }
 
     @Test
     void shouldReturnTrueIfRedirectUriIsValid() throws ClientNotFoundException {
-        ClientID clientID = new ClientID();
-        ClientRegistry clientRegistry =
-                generateClientRegistry(REDIRECT_URI.toString(), clientID.toString());
-        when(dynamoClientService.getClient(clientID.toString()))
-                .thenReturn(Optional.of(clientRegistry));
-        assertTrue(authorizationService.isClientRedirectUriValid(clientID, REDIRECT_URI));
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
+        assertTrue(authorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI));
     }
 
     @Test
     void shouldGenerateSuccessfulAuthResponse() throws URISyntaxException {
-        ClientID clientID = new ClientID();
         AuthorizationCode authCode = new AuthorizationCode();
-        State state = new State();
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         AuthenticationRequest authRequest =
-                new AuthenticationRequest.Builder(responseType, scope, clientID, REDIRECT_URI)
-                        .state(state)
-                        .nonce(new Nonce())
-                        .build();
+                generateAuthRequest(REDIRECT_URI.toString(), responseType, scope);
 
         AuthenticationSuccessResponse authSuccessResponse =
                 authorizationService.generateSuccessfulAuthResponse(authRequest, authCode, null);
-        assertThat(authSuccessResponse.getState(), equalTo(state));
+        assertThat(authSuccessResponse.getState(), equalTo(STATE));
         assertThat(authSuccessResponse.getAuthorizationCode(), equalTo(authCode));
         assertThat(authSuccessResponse.getRedirectionURI(), equalTo(REDIRECT_URI));
     }
 
     @Test
     void shouldSuccessfullyValidateAuthRequestWhenIdentityValuesAreIncludedInVtrAttribute() {
-        ClientID clientID = new ClientID();
-        State state = new State();
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         JSONArray jsonArray = new JSONArray();
         jsonArray.add("Pl.Cl.Cm");
         jsonArray.add("Pl.Cl");
-        when(dynamoClientService.getClient(clientID.toString()))
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(
                         Optional.of(
                                 generateClientRegistry(
-                                        REDIRECT_URI.toString(), clientID.toString())));
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         AuthenticationRequest authRequest =
                 generateAuthRequest(
-                        clientID,
-                        REDIRECT_URI.toString(),
-                        responseType,
-                        scope,
-                        jsonArray,
-                        state,
-                        new Nonce());
+                        REDIRECT_URI.toString(), responseType, scope, jsonArray, Optional.empty());
         Optional<ErrorObject> errorObject = authorizationService.validateAuthRequest(authRequest);
 
         assertThat(errorObject, equalTo(Optional.empty()));
@@ -148,28 +140,20 @@ class AuthorizationServiceTest {
 
     @Test
     void shouldReturnErrorWhenInvalidVtrAttributeIsSentInRequest() {
-        ClientID clientID = new ClientID();
-        State state = new State();
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         JSONArray jsonArray = new JSONArray();
         jsonArray.add("Cm.Cl.Pl");
         jsonArray.add("Pl.Cl");
-        when(dynamoClientService.getClient(clientID.toString()))
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(
                         Optional.of(
                                 generateClientRegistry(
-                                        REDIRECT_URI.toString(), clientID.toString())));
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         AuthenticationRequest authRequest =
                 generateAuthRequest(
-                        clientID,
-                        REDIRECT_URI.toString(),
-                        responseType,
-                        scope,
-                        jsonArray,
-                        state,
-                        new Nonce());
+                        REDIRECT_URI.toString(), responseType, scope, jsonArray, Optional.empty());
         Optional<ErrorObject> errorObject = authorizationService.validateAuthRequest(authRequest);
 
         assertThat(
@@ -181,130 +165,177 @@ class AuthorizationServiceTest {
 
     @Test
     void shouldSuccessfullyValidateAuthRequest() {
-        ClientID clientID = new ClientID();
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(clientID.toString()))
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(
                         Optional.of(
                                 generateClientRegistry(
-                                        REDIRECT_URI.toString(), clientID.toString())));
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
         Optional<ErrorObject> errorObject =
                 authorizationService.validateAuthRequest(
-                        generateAuthRequest(
-                                clientID, REDIRECT_URI.toString(), responseType, scope));
+                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
 
         assertThat(errorObject, equalTo(Optional.empty()));
     }
 
     @Test
+    void shouldSuccessfullyValidateAuthRequestWhenValidClaimsArePresent() {
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
+        var jsonArray = new JSONArray();
+        jsonArray.add("Cl.Cm");
+        jsonArray.add("Cl");
+        var claimsSetRequest = new ClaimsSetRequest().add("name").add("birthdate");
+        var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
+        AuthenticationRequest authRequest =
+                generateAuthRequest(
+                        REDIRECT_URI.toString(),
+                        responseType,
+                        scope,
+                        jsonArray,
+                        Optional.of(oidcClaimsRequest));
+        Optional<ErrorObject> errorObject = authorizationService.validateAuthRequest(authRequest);
+
+        assertThat(errorObject, equalTo(Optional.empty()));
+    }
+
+    @Test
+    void shouldReturnErrorWhenValidatingAuthRequestWhichContainsInvalidClaims() {
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
+        var jsonArray = new JSONArray();
+        jsonArray.add("Cl.Cm");
+        jsonArray.add("Cl");
+        var claimsSetRequest = new ClaimsSetRequest().add("nickname").add("birthdate");
+        var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
+        AuthenticationRequest authRequest =
+                generateAuthRequest(
+                        REDIRECT_URI.toString(),
+                        responseType,
+                        scope,
+                        jsonArray,
+                        Optional.of(oidcClaimsRequest));
+        Optional<ErrorObject> errorObject = authorizationService.validateAuthRequest(authRequest);
+
+        assertThat(
+                errorObject,
+                equalTo(
+                        Optional.of(
+                                new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Request contains invalid claims"))));
+    }
+
+    @Test
     void shouldSuccessfullyValidateAccountManagementAuthRequest() {
-        ClientID clientID = new ClientID();
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope(OIDCScopeValue.OPENID, CustomScopeValue.ACCOUNT_MANAGEMENT);
-        when(dynamoClientService.getClient(clientID.toString()))
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(
                         Optional.of(
                                 generateClientRegistry(
                                         REDIRECT_URI.toString(),
-                                        clientID.toString(),
+                                        CLIENT_ID.toString(),
                                         List.of("openid", "am"))));
         Optional<ErrorObject> errorObject =
                 authorizationService.validateAuthRequest(
-                        generateAuthRequest(
-                                clientID, REDIRECT_URI.toString(), responseType, scope));
+                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
 
         assertThat(errorObject, equalTo(Optional.empty()));
     }
 
     @Test
     void shouldReturnErrorForAccountManagementAuthRequestWhenScopeNotInClient() {
-        ClientID clientID = new ClientID();
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope(OIDCScopeValue.OPENID, CustomScopeValue.ACCOUNT_MANAGEMENT);
-        when(dynamoClientService.getClient(clientID.toString()))
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(
                         Optional.of(
                                 generateClientRegistry(
-                                        REDIRECT_URI.toString(), clientID.toString())));
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
         Optional<ErrorObject> errorObject =
                 authorizationService.validateAuthRequest(
-                        generateAuthRequest(
-                                clientID, REDIRECT_URI.toString(), responseType, scope));
+                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
 
         assertThat(errorObject, equalTo(Optional.of(OAuth2Error.INVALID_SCOPE)));
     }
 
     @Test
     void shouldReturnErrorWhenClientIdIsNotValidInAuthRequest() {
-        ClientID clientID = new ClientID();
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(clientID.toString())).thenReturn(Optional.empty());
+        when(dynamoClientService.getClient(CLIENT_ID.toString())).thenReturn(Optional.empty());
         Optional<ErrorObject> errorObject =
                 authorizationService.validateAuthRequest(
-                        generateAuthRequest(
-                                clientID, REDIRECT_URI.toString(), responseType, scope));
+                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
 
         assertThat(errorObject, equalTo(Optional.of(OAuth2Error.UNAUTHORIZED_CLIENT)));
     }
 
     @Test
     void shouldReturnErrorWhenResponseCodeIsNotValidInAuthRequest() {
-        ClientID clientID = new ClientID();
         ResponseType responseType =
                 new ResponseType(ResponseType.Value.TOKEN, ResponseType.Value.CODE);
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(clientID.toString()))
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(
                         Optional.of(
                                 generateClientRegistry(
-                                        REDIRECT_URI.toString(), clientID.toString())));
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
         Optional<ErrorObject> errorObject =
                 authorizationService.validateAuthRequest(
-                        generateAuthRequest(
-                                clientID, REDIRECT_URI.toString(), responseType, scope));
+                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
 
         assertThat(errorObject, equalTo(Optional.of(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE)));
     }
 
     @Test
     void shouldReturnErrorWhenScopeIsNotValidInAuthRequest() {
-        ClientID clientID = new ClientID();
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         scope.add(OIDCScopeValue.EMAIL);
-        when(dynamoClientService.getClient(clientID.toString()))
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(
                         Optional.of(
                                 generateClientRegistry(
-                                        REDIRECT_URI.toString(), clientID.toString())));
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
         Optional<ErrorObject> errorObject =
                 authorizationService.validateAuthRequest(
-                        generateAuthRequest(
-                                clientID, REDIRECT_URI.toString(), responseType, scope));
+                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
 
         assertThat(errorObject, equalTo(Optional.of(OAuth2Error.INVALID_SCOPE)));
     }
 
     @Test
     void shouldReturnErrorWhenStateIsNotIncludedInAuthRequest() {
-        ClientID clientID = new ClientID();
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(clientID.toString()))
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(
                         Optional.of(
                                 generateClientRegistry(
-                                        REDIRECT_URI.toString(), clientID.toString())));
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
-                                responseType, scope, new ClientID(clientID), REDIRECT_URI)
+                                responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
                         .nonce(new Nonce())
                         .build();
         Optional<ErrorObject> errorObject = authorizationService.validateAuthRequest(authRequest);
@@ -320,18 +351,17 @@ class AuthorizationServiceTest {
 
     @Test
     void shouldReturnErrorWhenNonceIsNotIncludedInAuthRequest() {
-        ClientID clientID = new ClientID();
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(clientID.toString()))
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(
                         Optional.of(
                                 generateClientRegistry(
-                                        REDIRECT_URI.toString(), clientID.toString())));
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
-                                responseType, scope, new ClientID(clientID), REDIRECT_URI)
+                                responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
                         .state(new State())
                         .build();
         Optional<ErrorObject> errorObject = authorizationService.validateAuthRequest(authRequest);
@@ -347,20 +377,18 @@ class AuthorizationServiceTest {
 
     @Test
     void shouldReturnErrorWhenInvalidVtrIsIncludedInAuthRequest() {
-        ClientID clientID = new ClientID();
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(clientID.toString()))
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(
                         Optional.of(
                                 generateClientRegistry(
-                                        REDIRECT_URI.toString(), clientID.toString())));
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
         JSONArray jsonArray = new JSONArray();
         jsonArray.add("Cm");
         AuthenticationRequest authRequest =
-                new AuthenticationRequest.Builder(
-                                responseType, scope, new ClientID(clientID), REDIRECT_URI)
+                new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
                         .state(new State())
                         .nonce(new Nonce())
                         .customParameter("vtr", jsonArray.toJSONString())
@@ -378,24 +406,22 @@ class AuthorizationServiceTest {
 
     @Test
     void shouldThrowExceptionWhenRedirectUriIsInvalidInAuthRequest() {
-        ClientID clientID = new ClientID();
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         String redirectURi = "http://localhost/redirect";
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(clientID.toString()))
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(
                         Optional.of(
                                 generateClientRegistry(
-                                        "http://localhost/wrong-redirect", clientID.toString())));
+                                        "http://localhost/wrong-redirect", CLIENT_ID.toString())));
 
         RuntimeException exception =
                 assertThrows(
                         RuntimeException.class,
                         () ->
                                 authorizationService.validateAuthRequest(
-                                        generateAuthRequest(
-                                                clientID, redirectURi, responseType, scope)),
+                                        generateAuthRequest(redirectURi, responseType, scope)),
                         "Expected to throw exception");
         assertThat(
                 exception.getMessage(),
@@ -481,29 +507,27 @@ class AuthorizationServiceTest {
     }
 
     private AuthenticationRequest generateAuthRequest(
-            ClientID clientID, String redirectUri, ResponseType responseType, Scope scope) {
-        JSONArray jsonArray = new JSONArray();
+            String redirectUri, ResponseType responseType, Scope scope) {
+        var jsonArray = new JSONArray();
         jsonArray.add("Cl.Cm");
         jsonArray.add("Cl");
-        State state = new State();
-        Nonce nonce = new Nonce();
-        return generateAuthRequest(
-                clientID, redirectUri, responseType, scope, jsonArray, state, nonce);
+        return generateAuthRequest(redirectUri, responseType, scope, jsonArray, Optional.empty());
     }
 
     private AuthenticationRequest generateAuthRequest(
-            ClientID clientID,
             String redirectUri,
             ResponseType responseType,
             Scope scope,
             JSONArray jsonArray,
-            State state,
-            Nonce nonce) {
-        return new AuthenticationRequest.Builder(
-                        responseType, scope, new ClientID(clientID), URI.create(redirectUri))
-                .state(state)
-                .nonce(new Nonce())
-                .customParameter("vtr", jsonArray.toJSONString())
-                .build();
+            Optional<OIDCClaimsRequest> claimsRequest) {
+        AuthenticationRequest.Builder authRequestBuilder =
+                new AuthenticationRequest.Builder(
+                                responseType, scope, CLIENT_ID, URI.create(redirectUri))
+                        .state(STATE)
+                        .nonce(NONCE)
+                        .customParameter("vtr", jsonArray.toJSONString());
+        claimsRequest.ifPresent(authRequestBuilder::claims);
+
+        return authRequestBuilder.build();
     }
 }
