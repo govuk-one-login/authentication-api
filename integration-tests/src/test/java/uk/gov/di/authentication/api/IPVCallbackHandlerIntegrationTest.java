@@ -88,5 +88,10 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         public String getIPVAuthorisationClientId() {
             return "ipv-client-id";
         }
+
+        @Override
+        public URI getIPVAuthorisationCallbackURI() {
+            return URI.create("http://localhost/redirect");
+        }
     }
 }
