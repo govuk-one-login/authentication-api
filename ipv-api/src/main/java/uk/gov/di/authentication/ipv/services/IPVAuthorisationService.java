@@ -64,7 +64,6 @@ public class IPVAuthorisationService {
 
     public void storeState(String sessionId, State state) {
         try {
-            LOG.info("Saving state to Redis: {}", state);
             redisConnectionService.saveWithExpiry(
                     STATE_STORAGE_PREFIX + sessionId,
                     new ObjectMapper().writeValueAsString(state),

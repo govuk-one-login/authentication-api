@@ -65,7 +65,13 @@ public class IPVTokenService {
         var extraParams = new HashMap<String, List<String>>();
         extraParams.put(
                 "client_id", singletonList(configurationService.getIPVAuthorisationClientId()));
-        return new TokenRequest(tokenUri, privateKeyJWT, codeGrant, null, null, extraParams);
+        return new TokenRequest(
+                tokenUri,
+                privateKeyJWT,
+                codeGrant,
+                null,
+                singletonList(configurationService.getIPVAuthorisationCallbackURI()),
+                extraParams);
     }
 
     public TokenResponse sendTokenRequest(TokenRequest tokenRequest) {
