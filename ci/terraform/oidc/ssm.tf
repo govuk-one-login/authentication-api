@@ -19,3 +19,15 @@ resource "aws_iam_policy" "pepper_parameter_policy" {
   path        = "/${var.environment}/lambda-parameters/"
   name_prefix = "pepper-parameter-store-policy"
 }
+
+
+data "aws_iam_policy" "ipv_capacity_parameter_policy" {
+  arn = local.ipv_capacity_ssm_parameter_policy
+}
+
+resource "aws_iam_policy" "ipv_capacity_parameter_policy" {
+  policy      = data.aws_iam_policy.ipv_capacity_parameter_policy.policy
+  path        = "/${var.environment}/lambda-parameters/"
+  name_prefix = "ipv-capacity-parameter-store-policy"
+}
+

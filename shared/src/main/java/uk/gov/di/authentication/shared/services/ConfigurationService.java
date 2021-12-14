@@ -233,6 +233,18 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("AUDIT_HMAC_SECRET");
     }
 
+    public Optional<String> getIPVCapacity() {
+        try {
+            var request =
+                    new GetParameterRequest()
+                            .withWithDecryption(true)
+                            .withName(format("{0}-ipv-capacity", getEnvironment()));
+            return Optional.of(getSsmClient().getParameter(request).getParameter().getValue());
+        } catch (ParameterNotFoundException e) {
+            return Optional.empty();
+        }
+    }
+
     private Map<String, String> getSsmRedisParameters() {
         if (ssmRedisParameters == null) {
             var getParametersRequest =
