@@ -6,7 +6,7 @@ services:
       context: docker
       dockerfile: localstack.Dockerfile
     environment:
-      SERVICES: lambda, apigateway, iam, ec2, sqs, s3, sts, kms, sns, ssm
+      SERVICES: iam, ec2, sqs, s3, sts, kms, sns, ssm
       EDGE_PORT: "45678"
       EXTERNAL_HOSTNAME: localhost
       DEFAULT_REGION: eu-west-2
