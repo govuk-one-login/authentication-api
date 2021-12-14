@@ -9,6 +9,8 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
+import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
+import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
@@ -17,6 +19,7 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
@@ -30,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 
@@ -72,7 +76,7 @@ public class AuthorizationService {
     public boolean isClientCookieConsentShared(ClientID clientID) throws ClientNotFoundException {
         return dynamoClientService
                 .getClient(clientID.toString())
-                .map(c -> c.isCookieConsentShared())
+                .map(ClientRegistry::isCookieConsentShared)
                 .orElseThrow();
     }
 
@@ -127,6 +131,14 @@ public class AuthorizationService {
                     authRequest.getScope().toStringList());
             return Optional.of(OAuth2Error.INVALID_SCOPE);
         }
+        if (!areClaimsValid(authRequest.getOIDCClaims())) {
+            LOGGER.warn(
+                    "Invalid claims in authRequest. Claims in request: {}",
+                    authRequest.getOIDCClaims().toJSONString());
+            return Optional.of(
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_CODE, "Request contains invalid claims"));
+        }
         if (authRequest.getNonce() == null) {
             LOGGER.warn("Nonce is missing from authRequest");
             return Optional.of(
@@ -143,8 +155,7 @@ public class AuthorizationService {
         }
         List<String> authRequestVtr = authRequest.getCustomParameter(VTR);
         try {
-            VectorOfTrust vectorOfTrust =
-                    VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
+            VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
         } catch (IllegalArgumentException e) {
             LOGGER.warn(
                     "vtr in AuthRequest is not valid. vtr in request: {}. IllegalArgumentException: {}",
@@ -203,6 +214,22 @@ public class AuthorizationService {
     private boolean areScopesValid(List<String> scopes) {
         for (String scope : scopes) {
             if (ValidScopes.getAllValidScopes().stream().noneMatch((t) -> t.equals(scope))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean areClaimsValid(OIDCClaimsRequest claimsRequest) {
+        if (claimsRequest == null) {
+            return true;
+        }
+        List<String> claimNames =
+                claimsRequest.getUserInfoClaimsRequest().getEntries().stream()
+                        .map(ClaimsSetRequest.Entry::getClaimName)
+                        .collect(Collectors.toList());
+        for (String claim : claimNames) {
+            if (ValidClaims.getAllowedClaimNames().stream().noneMatch(t -> t.equals(claim))) {
                 return false;
             }
         }
