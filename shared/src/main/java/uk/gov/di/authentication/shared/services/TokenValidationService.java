@@ -56,7 +56,7 @@ public class TokenValidationService {
         }
         LOGGER.info("Validating Refresh Token expiry");
         if (hasTokenExpired(refreshToken.getValue())) {
-            LOGGER.error("Refresh token has expired");
+            LOGGER.warn("Refresh token has expired");
             return false;
         }
         return true;
@@ -71,7 +71,7 @@ public class TokenValidationService {
                 return true;
             }
         } catch (java.text.ParseException e) {
-            LOGGER.error("Unable to parse token when checking if expired", e);
+            LOGGER.warn("Unable to parse token when checking if expired", e);
             return true;
         }
         return false;
@@ -85,7 +85,7 @@ public class TokenValidationService {
             JWSVerifier verifier = new ECDSAVerifier(getPublicJwk().toECKey());
             isVerified = signedJwt.verify(verifier);
         } catch (JOSEException | java.text.ParseException e) {
-            LOGGER.error("Unable to validate Signature of Token", e);
+            LOGGER.warn("Unable to validate Signature of Token", e);
             return false;
         }
         return isVerified;
@@ -94,11 +94,11 @@ public class TokenValidationService {
     public boolean validateRefreshTokenScopes(
             List<String> clientScopes, List<String> refreshTokenScopes) {
         if (!clientScopes.containsAll(refreshTokenScopes)) {
-            LOGGER.error("Scopes in Client Registry does not contain all scopes in Refresh Token");
+            LOGGER.warn("Scopes in Client Registry does not contain all scopes in Refresh Token");
             return false;
         }
         if (!refreshTokenScopes.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
-            LOGGER.error("Scopes in Refresh Token does not contain OFFLINE_ACCESS scope");
+            LOGGER.warn("Scopes in Refresh Token does not contain OFFLINE_ACCESS scope");
             return false;
         }
         return true;
