@@ -117,3 +117,7 @@ output "redis_ssm_parameter_policy" {
 output "pepper_ssm_parameter_policy" {
   value = aws_iam_policy.pepper_parameter_policy.arn
 }
+
+output "ipv_capacity_ssm_parameter_policy" {
+  value = aws_iam_policy.ipv_capacity_parameter_policy.arn
+}

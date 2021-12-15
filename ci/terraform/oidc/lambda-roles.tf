@@ -7,14 +7,16 @@ module "oidc_default_role" {
   policies_to_attach = var.use_localstack ? [
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
-    aws_iam_policy.pepper_parameter_policy.arn
+    aws_iam_policy.pepper_parameter_policy.arn,
+    aws_iam_policy.ipv_capacity_parameter_policy.arn,
     ] : [
     aws_iam_policy.oidc_default_id_token_public_key_kms_policy[0].arn,
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0].arn,
     aws_iam_policy.dynamo_access_policy[0].arn,
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
-    aws_iam_policy.pepper_parameter_policy.arn
+    aws_iam_policy.pepper_parameter_policy.arn,
+    aws_iam_policy.ipv_capacity_parameter_policy.arn,
   ]
 }
 

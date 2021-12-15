@@ -31,4 +31,5 @@ locals {
   lambda_parameter_encryption_alias_id   = data.terraform_remote_state.shared.outputs.lambda_parameter_encryption_alias_id
   redis_ssm_parameter_policy             = data.terraform_remote_state.shared.outputs.redis_ssm_parameter_policy
   pepper_ssm_parameter_policy            = data.terraform_remote_state.shared.outputs.pepper_ssm_parameter_policy
+  ipv_capacity_ssm_parameter_policy      = data.terraform_remote_state.shared.outputs.ipv_capacity_ssm_parameter_policy
 }
