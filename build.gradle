@@ -75,7 +75,7 @@ subprojects {
 
         lambda "com.amazonaws:aws-lambda-java-core:${dependencyVersions.aws_lambda_core_version}",
                 "com.amazonaws:aws-lambda-java-events:${dependencyVersions.aws_lambda_events_version}",
-                "com.amazonaws:aws-lambda-java-log4j2:1.3.0"
+                "com.amazonaws:aws-lambda-java-log4j2:1.4.0"
 
         lambda_tests "com.amazonaws:aws-lambda-java-tests:1.1.1"
 
