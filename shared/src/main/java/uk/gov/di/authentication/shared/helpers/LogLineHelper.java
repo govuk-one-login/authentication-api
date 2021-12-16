@@ -12,4 +12,11 @@ public class LogLineHelper {
     public static void attachSessionIdToLogs(String sessionId) {
         ThreadContext.put("sessionId", sessionId);
     }
+
+    public static void updateAttachedSessionIdToLogs(String sessionId) {
+        if (ThreadContext.containsKey("sessionId")) {
+            ThreadContext.remove("sessionId");
+        }
+        attachSessionIdToLogs(sessionId);
+    }
 }
