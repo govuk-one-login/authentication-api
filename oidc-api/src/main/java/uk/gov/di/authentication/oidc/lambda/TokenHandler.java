@@ -118,7 +118,7 @@ public class TokenHandler
                             Optional<ErrorObject> invalidRequestParamError =
                                     tokenService.validateTokenRequestParams(input.getBody());
                             if (invalidRequestParamError.isPresent()) {
-                                LOG.error(
+                                LOG.warn(
                                         "Invalid Token Request. ErrorCode: {}. ErrorDescription: {}",
                                         invalidRequestParamError.get().getCode(),
                                         invalidRequestParamError.get().getDescription());
@@ -136,7 +136,7 @@ public class TokenHandler
                             try {
                                 client = clientService.getClient(clientID).orElseThrow();
                             } catch (NoSuchElementException e) {
-                                LOG.error(
+                                LOG.warn(
                                         "Client not found in Client Registry with Client ID {}",
                                         clientID);
                                 return generateApiGatewayProxyResponse(
@@ -164,7 +164,7 @@ public class TokenHandler
                                             tokenUrl,
                                             clientID);
                             if (invalidPrivateKeyJwtError.isPresent()) {
-                                LOG.error(
+                                LOG.warn(
                                         "Private Key JWT is not valid for Client ID: {}", clientID);
                                 return generateApiGatewayProxyResponse(
                                         400,
@@ -190,7 +190,7 @@ public class TokenHandler
                                                 .getExchangeDataForCode(requestBody.get("code"))
                                                 .orElseThrow();
                             } catch (NoSuchElementException e) {
-                                LOG.error("Could not retrieve client session ID from code", e);
+                                LOG.warn("Could not retrieve client session ID from code", e);
                                 return generateApiGatewayProxyResponse(
                                         400,
                                         OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
@@ -216,7 +216,7 @@ public class TokenHandler
                                     .getRedirectionURI()
                                     .toString()
                                     .equals(requestBody.get("redirect_uri"))) {
-                                LOG.error(
+                                LOG.warn(
                                         "Redirect URI for auth request ({}) does not match redirect URI for request body ({})",
                                         authRequest.getRedirectionURI(),
                                         requestBody.get("redirect_uri"));
@@ -308,7 +308,7 @@ public class TokenHandler
             publicSubject = new Subject(signedJwt.getJWTClaimsSet().getSubject());
             scopes = (List<String>) signedJwt.getJWTClaimsSet().getClaim("scope");
         } catch (java.text.ParseException e) {
-            LOG.error("Unable to parse RefreshToken");
+            LOG.warn("Unable to parse RefreshToken");
             return generateApiGatewayProxyResponse(
                     400,
                     new ErrorObject(OAuth2Error.INVALID_GRANT_CODE, "Invalid Refresh token")
@@ -329,7 +329,7 @@ public class TokenHandler
         try {
             tokenStore = new ObjectMapper().readValue(refreshToken.get(), RefreshTokenStore.class);
         } catch (JsonProcessingException | NoSuchElementException | IllegalArgumentException e) {
-            LOG.error("Refresh token not found with given key");
+            LOG.warn("Refresh token not found with given key");
             return generateApiGatewayProxyResponse(
                     400,
                     new ErrorObject(OAuth2Error.INVALID_GRANT_CODE, "Invalid Refresh token")
@@ -337,7 +337,7 @@ public class TokenHandler
                             .toJSONString());
         }
         if (!tokenStore.getRefreshTokens().contains(currentRefreshToken.getValue())) {
-            LOG.error("Refresh token store does not contain Refresh token in request");
+            LOG.warn("Refresh token store does not contain Refresh token in request");
             return generateApiGatewayProxyResponse(
                     400,
                     new ErrorObject(OAuth2Error.INVALID_GRANT_CODE, "Invalid Refresh token")
