@@ -11,6 +11,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
@@ -34,6 +35,8 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.UserContext;
+
+import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.entity.SessionState.IPV_REQUIRED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -91,14 +94,14 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
             UserContext userContext) {
         try {
             LOG.info("IPVAuthorisationHandler received request");
-
-            AuthenticationRequest authRequest =
+            var authRequest =
                     AuthenticationRequest.parse(
                             userContext.getClientSession().getAuthRequestParams());
 
-            ClientID clientID = new ClientID(configurationService.getIPVAuthorisationClientId());
-            State state = new State();
-            AuthorizationRequest ipvAuthorisationRequest =
+            var clientID = new ClientID(configurationService.getIPVAuthorisationClientId());
+            var state = new State();
+            Optional<ClaimsSetRequest> claimsSetRequest = buildIpvClaimsRequest(authRequest);
+            var authRequestBuilder =
                     new AuthorizationRequest.Builder(
                                     new ResponseType(ResponseType.Value.CODE), clientID)
                             .scope(authRequest.getScope())
@@ -110,8 +113,11 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                                             configurationService
                                                     .getIPVAuthorisationURI()
                                                     .toString(),
-                                            IPV_AUTHORIZE_ROUTE))
-                            .build();
+                                            IPV_AUTHORIZE_ROUTE));
+            claimsSetRequest.ifPresent(
+                    t -> authRequestBuilder.customParameter("claims", t.toJSONString()));
+
+            var ipvAuthorisationRequest = authRequestBuilder.build();
             authorisationService.storeState(userContext.getSession().getSessionId(), state);
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
@@ -142,5 +148,13 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
             LOG.error("Could not parse authentication request from client");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
+    }
+
+    private Optional<ClaimsSetRequest> buildIpvClaimsRequest(AuthenticationRequest authRequest) {
+        if (authRequest.getOIDCClaims() == null
+                || authRequest.getOIDCClaims().getUserInfoClaimsRequest() == null) {
+            return Optional.empty();
+        }
+        return Optional.of(authRequest.getOIDCClaims().getUserInfoClaimsRequest());
     }
 }

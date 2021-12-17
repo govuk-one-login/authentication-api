@@ -11,7 +11,10 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import com.nimbusds.openid.connect.sdk.claims.ClaimRequirement;
+import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
@@ -27,13 +30,17 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
+import java.net.URLDecoder;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -67,6 +74,13 @@ public class IPVAuthorisationHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
     private IPVAuthorisationService authorisationService = mock(IPVAuthorisationService.class);
+    private final ClaimsSetRequest.Entry nameEntry =
+            new ClaimsSetRequest.Entry("name").withClaimRequirement(ClaimRequirement.ESSENTIAL);
+    private final ClaimsSetRequest.Entry birthDateEntry =
+            new ClaimsSetRequest.Entry("birthdate")
+                    .withClaimRequirement(ClaimRequirement.VOLUNTARY);
+    private final ClaimsSetRequest claimsSetRequest =
+            new ClaimsSetRequest().add(nameEntry).add(birthDateEntry);
 
     private IPVAuthorisationHandler handler;
 
@@ -90,7 +104,8 @@ public class IPVAuthorisationHandlerTest {
     }
 
     @Test
-    void shouldReturn200AndRedirectURI() throws JsonProcessingException {
+    void shouldReturn200AndRedirectURIWithClaims()
+            throws JsonProcessingException, UnsupportedEncodingException {
 
         usingValidSession();
         usingValidClientSession(TEST_CLIENT_ID);
@@ -112,6 +127,9 @@ public class IPVAuthorisationHandlerTest {
 
         assertEquals(body.getSessionState(), SessionState.IPV_REQUIRED);
         assertThat(body.getRedirectUri(), startsWith(IPV_AUTHORISATION_URI + "/authorize"));
+        assertThat(
+                splitQuery(body.getRedirectUri()).get("claims"),
+                equalTo(claimsSetRequest.toJSONString()));
         verify(authorisationService).storeState(eq(session.getSessionId()), any(State.class));
     }
 
@@ -136,6 +154,7 @@ public class IPVAuthorisationHandlerTest {
     private AuthenticationRequest withAuthenticationRequest(String clientId) {
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
+        var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
         return new AuthenticationRequest.Builder(
                         new ResponseType(ResponseType.Value.CODE),
                         scope,
@@ -143,6 +162,22 @@ public class IPVAuthorisationHandlerTest {
                         REDIRECT_URI)
                 .state(new State())
                 .nonce(new Nonce())
+                .claims(oidcClaimsRequest)
                 .build();
+    }
+
+    public static Map<String, String> splitQuery(String stringUrl)
+            throws UnsupportedEncodingException {
+        URI uri = URI.create(stringUrl);
+        Map<String, String> query_pairs = new LinkedHashMap<>();
+        String query = uri.getQuery();
+        String[] pairs = query.split("&");
+        for (String pair : pairs) {
+            int idx = pair.indexOf("=");
+            query_pairs.put(
+                    URLDecoder.decode(pair.substring(0, idx), "UTF-8"),
+                    URLDecoder.decode(pair.substring(idx + 1), "UTF-8"));
+        }
+        return query_pairs;
     }
 }
