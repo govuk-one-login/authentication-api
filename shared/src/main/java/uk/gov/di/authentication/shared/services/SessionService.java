@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.helpers.InputSanitiser.sanitiseBase64;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
 
@@ -82,11 +83,16 @@ public class SessionService {
             LOGGER.error("Value not found for Session-Id header");
             return Optional.empty();
         }
-        try {
-            return readSessionFromRedis(sessionId);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+
+        return sanitiseBase64(sessionId)
+                .flatMap(
+                        id -> {
+                            try {
+                                return readSessionFromRedis(id);
+                            } catch (Exception e) {
+                                throw new RuntimeException(e);
+                            }
+                        });
     }
 
     public Optional<Session> getSessionFromSessionCookie(Map<String, String> headers) {
