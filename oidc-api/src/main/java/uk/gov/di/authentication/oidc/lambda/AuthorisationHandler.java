@@ -46,6 +46,9 @@ import static uk.gov.di.authentication.oidc.entity.RequestParameters.GA;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.INTERRUPT_STATES;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.updateAttachedSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
@@ -112,6 +115,8 @@ public class AuthorisationHandler
                                     ipAddress,
                                     AuditService.UNKNOWN,
                                     persistentSessionId);
+                            attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionId);
+                            attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
                             LOGGER.info("Received authentication request");
 
                             Map<String, List<String>> queryStringParameters =
