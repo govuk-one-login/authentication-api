@@ -24,6 +24,7 @@ import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -65,9 +66,9 @@ class LogoutHandlerTest {
 
     private static final State STATE = new State();
     private static final String COOKIE = "Cookie";
-    private static final String SESSION_ID = "a-session-id";
-    private static final String CLIENT_SESSION_ID = "client-session-id";
-    private static final String PERSISTENT_SESSION_ID = "persistent-session-id";
+    private static final String SESSION_ID = IdGenerator.generate();
+    private static final String CLIENT_SESSION_ID = IdGenerator.generate();
+    private static final String PERSISTENT_SESSION_ID = IdGenerator.generate();
     private static final URI DEFAULT_LOGOUT_URI =
             URI.create("https://di-authentication-frontend.london.cloudapps.digital/signed-out");
     private static final URI CLIENT_LOGOUT_URI = URI.create("http://localhost/logout");

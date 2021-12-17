@@ -18,11 +18,13 @@ public class PersistentIdHelper {
                 || headers.get(PERSISTENT_ID_HEADER_NAME) == null) {
             return PERSISTENT_ID_UNKNOWN_VALUE;
         }
-        LOG.info("PersistentID on request: {}", headers.get(PERSISTENT_ID_HEADER_NAME));
-        return headers.get(PERSISTENT_ID_HEADER_NAME);
+        return InputSanitiser.sanitiseBase64(headers.get(PERSISTENT_ID_HEADER_NAME))
+                .orElse(PERSISTENT_ID_UNKNOWN_VALUE);
     }
 
     public static String extractPersistentIdFromCookieHeader(Map<String, String> headers) {
-        return CookieHelper.parsePersistentCookie(headers).orElse(PERSISTENT_ID_UNKNOWN_VALUE);
+        return CookieHelper.parsePersistentCookie(headers)
+                .flatMap(InputSanitiser::sanitiseBase64)
+                .orElse(PERSISTENT_ID_UNKNOWN_VALUE);
     }
 }

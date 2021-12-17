@@ -31,6 +31,7 @@ import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.AuthorizationService;
@@ -72,9 +73,9 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthCodeHandlerTest {
-    private static final String SESSION_ID = "a-session-id";
-    private static final String CLIENT_SESSION_ID = "client-session-id";
-    private static final String PERSISTENT_SESSION_ID = "persistent-session-id";
+    private static final String SESSION_ID = IdGenerator.generate();
+    private static final String CLIENT_SESSION_ID = IdGenerator.generate();
+    private static final String PERSISTENT_SESSION_ID = IdGenerator.generate();
     private static final String COOKIE = "Cookie";
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
