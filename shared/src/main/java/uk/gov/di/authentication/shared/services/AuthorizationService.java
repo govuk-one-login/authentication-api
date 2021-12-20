@@ -23,8 +23,7 @@ import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
-import uk.gov.di.authentication.shared.helpers.CookieHelper;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
@@ -237,7 +236,7 @@ public class AuthorizationService {
     }
 
     public String getExistingOrCreateNewPersistentSessionId(Map<String, String> headers) {
-        return CookieHelper.parsePersistentCookie(headers).orElse(IdGenerator.generate());
+        return PersistentIdHelper.getExistingOrCreateNewPersistentSessionId(headers);
     }
 
     public boolean isValidCookieConsentValue(String cookieConsent) {

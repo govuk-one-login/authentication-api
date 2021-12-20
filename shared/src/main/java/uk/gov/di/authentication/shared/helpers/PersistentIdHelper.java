@@ -27,4 +27,10 @@ public class PersistentIdHelper {
                 .flatMap(InputSanitiser::sanitiseBase64)
                 .orElse(PERSISTENT_ID_UNKNOWN_VALUE);
     }
+
+    public static String getExistingOrCreateNewPersistentSessionId(Map<String, String> headers) {
+        return CookieHelper.parsePersistentCookie(headers)
+                .flatMap(InputSanitiser::sanitiseBase64)
+                .orElse(IdGenerator.generate());
+    }
 }
