@@ -50,4 +50,22 @@ public class LogEventMatcher {
             }
         };
     }
+
+    public static Matcher<LogEvent> hasContextData(String key, String value) {
+        return new TypeSafeMatcher<>() {
+
+            @Override
+            @SuppressWarnings("unchecked")
+            protected boolean matchesSafely(LogEvent item) {
+                return item.getContextData().containsKey(key)
+                        && item.getContextData().getValue(key).equals(value);
+            }
+
+            @Override
+            public void describeTo(Description description) {
+                description.appendText(
+                        "a log event with ContextData property [" + key + ", " + value + "]");
+            }
+        };
+    }
 }

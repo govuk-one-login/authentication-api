@@ -11,9 +11,11 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCError;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.logging.log4j.core.LogEvent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.InOrder;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -29,6 +31,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -58,6 +61,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION
 import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_NOT_VALID;
 import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.hasContextData;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthorisationHandlerTest {
@@ -78,12 +82,16 @@ class AuthorisationHandlerTest {
             "di-persistent-session-id=a-persistent-session-id; Max-Age=34190000; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
     private static final URI LOGIN_URL = URI.create("https://example.com");
     private static final String PERSISTENT_SESSION_ID = "a-persistent-session-id";
+    private static final String AWS_REQUEST_ID = "aws-request-id";
 
     private AuthorisationHandler handler;
 
+    @RegisterExtension
+    public final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(AuthorisationHandler.class);
+
     @BeforeEach
     public void setUp() {
-        when(context.getAwsRequestId()).thenReturn("request-id");
         when(configService.getDomainName()).thenReturn("auth.ida.digital.cabinet-office.gov.uk");
         when(configService.getLoginURI()).thenReturn(LOGIN_URL);
         when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
@@ -94,6 +102,7 @@ class AuthorisationHandlerTest {
         when(authorizationService.getExistingOrCreateNewPersistentSessionId(any()))
                 .thenReturn(PERSISTENT_SESSION_ID);
         when(sessionService.createSession()).thenReturn(new Session("new-session"));
+        when(context.getAwsRequestId()).thenReturn(AWS_REQUEST_ID);
         handler =
                 new AuthorisationHandler(
                         configService,
@@ -287,7 +296,7 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
-                        "request-id",
+                        AWS_REQUEST_ID,
                         "",
                         "",
                         "",
@@ -323,7 +332,7 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
-                        "request-id",
+                        AWS_REQUEST_ID,
                         "",
                         "",
                         "",
@@ -426,7 +435,7 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
-                        "request-id",
+                        AWS_REQUEST_ID,
                         "",
                         "",
                         "",
@@ -576,7 +585,7 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
-                        "request-id",
+                        AWS_REQUEST_ID,
                         "",
                         "",
                         "",
@@ -601,7 +610,7 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
-                        "request-id",
+                        AWS_REQUEST_ID,
                         "",
                         "",
                         "",
@@ -626,7 +635,7 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
-                        "request-id",
+                        AWS_REQUEST_ID,
                         "",
                         "",
                         "",
@@ -651,7 +660,7 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
-                        "request-id",
+                        AWS_REQUEST_ID,
                         "",
                         "",
                         "",
@@ -676,7 +685,7 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
-                        "request-id",
+                        AWS_REQUEST_ID,
                         "",
                         "",
                         "",
@@ -771,7 +780,7 @@ class AuthorisationHandlerTest {
         inOrder.verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
-                        "request-id",
+                        AWS_REQUEST_ID,
                         "",
                         "",
                         "",
@@ -779,6 +788,11 @@ class AuthorisationHandlerTest {
                         "123.123.123.123",
                         "",
                         PERSISTENT_SESSION_ID);
+
+        LogEvent logEvent = logging.events().get(0);
+
+        assertThat(logEvent, hasContextData("persistentSessionId", PERSISTENT_SESSION_ID));
+        assertThat(logEvent, hasContextData("awsRequestId", AWS_REQUEST_ID));
 
         return response;
     }
