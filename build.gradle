@@ -291,3 +291,7 @@ jacocoTestReport {
     }
     dependsOn "test"
 }
+
+repositories {
+    mavenCentral()
+}
