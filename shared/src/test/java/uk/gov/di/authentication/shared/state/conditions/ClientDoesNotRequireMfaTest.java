@@ -7,7 +7,6 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
-import net.minidev.json.JSONArray;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -24,6 +23,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
+import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 
 class ClientDoesNotRequireMfaTest {
     private final ClientDoesNotRequireMfa condition = new ClientDoesNotRequireMfa();
@@ -78,12 +78,7 @@ class ClientDoesNotRequireMfaTest {
                         .state(new State())
                         .nonce(new Nonce());
 
-        credentialTrustLevel.ifPresent(
-                t -> {
-                    JSONArray jsonArray = new JSONArray();
-                    jsonArray.add(t);
-                    builder.customParameter("vtr", jsonArray.toJSONString());
-                });
+        credentialTrustLevel.ifPresent(t -> builder.customParameter("vtr", jsonArrayOf(t)));
         return builder.build();
     }
 }

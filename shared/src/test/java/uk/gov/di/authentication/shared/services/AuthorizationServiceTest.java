@@ -13,7 +13,6 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
-import net.minidev.json.JSONArray;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,6 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 
 class AuthorizationServiceTest {
 
@@ -121,9 +121,6 @@ class AuthorizationServiceTest {
     void shouldSuccessfullyValidateAuthRequestWhenIdentityValuesAreIncludedInVtrAttribute() {
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
-        JSONArray jsonArray = new JSONArray();
-        jsonArray.add("Pl.Cl.Cm");
-        jsonArray.add("Pl.Cl");
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(
                         Optional.of(
@@ -132,7 +129,11 @@ class AuthorizationServiceTest {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         AuthenticationRequest authRequest =
                 generateAuthRequest(
-                        REDIRECT_URI.toString(), responseType, scope, jsonArray, Optional.empty());
+                        REDIRECT_URI.toString(),
+                        responseType,
+                        scope,
+                        jsonArrayOf("Pl.Cl.Cm", "Pl.Cl"),
+                        Optional.empty());
         Optional<ErrorObject> errorObject = authorizationService.validateAuthRequest(authRequest);
 
         assertThat(errorObject, equalTo(Optional.empty()));
@@ -142,9 +143,6 @@ class AuthorizationServiceTest {
     void shouldReturnErrorWhenInvalidVtrAttributeIsSentInRequest() {
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
-        JSONArray jsonArray = new JSONArray();
-        jsonArray.add("Cm.Cl.Pl");
-        jsonArray.add("Pl.Cl");
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(
                         Optional.of(
@@ -153,7 +151,11 @@ class AuthorizationServiceTest {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         AuthenticationRequest authRequest =
                 generateAuthRequest(
-                        REDIRECT_URI.toString(), responseType, scope, jsonArray, Optional.empty());
+                        REDIRECT_URI.toString(),
+                        responseType,
+                        scope,
+                        jsonArrayOf("Cm.Cl.Pl", "Pl.Cl"),
+                        Optional.empty());
         Optional<ErrorObject> errorObject = authorizationService.validateAuthRequest(authRequest);
 
         assertThat(
@@ -190,9 +192,6 @@ class AuthorizationServiceTest {
                         Optional.of(
                                 generateClientRegistry(
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
-        var jsonArray = new JSONArray();
-        jsonArray.add("Cl.Cm");
-        jsonArray.add("Cl");
         var claimsSetRequest = new ClaimsSetRequest().add("name").add("birthdate");
         var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
         AuthenticationRequest authRequest =
@@ -200,7 +199,7 @@ class AuthorizationServiceTest {
                         REDIRECT_URI.toString(),
                         responseType,
                         scope,
-                        jsonArray,
+                        jsonArrayOf("Cl.Cm", "Cl"),
                         Optional.of(oidcClaimsRequest));
         Optional<ErrorObject> errorObject = authorizationService.validateAuthRequest(authRequest);
 
@@ -217,9 +216,6 @@ class AuthorizationServiceTest {
                         Optional.of(
                                 generateClientRegistry(
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
-        var jsonArray = new JSONArray();
-        jsonArray.add("Cl.Cm");
-        jsonArray.add("Cl");
         var claimsSetRequest = new ClaimsSetRequest().add("nickname").add("birthdate");
         var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
         AuthenticationRequest authRequest =
@@ -227,7 +223,7 @@ class AuthorizationServiceTest {
                         REDIRECT_URI.toString(),
                         responseType,
                         scope,
-                        jsonArray,
+                        jsonArrayOf("Cl.Cm", "Cl"),
                         Optional.of(oidcClaimsRequest));
         Optional<ErrorObject> errorObject = authorizationService.validateAuthRequest(authRequest);
 
@@ -385,13 +381,11 @@ class AuthorizationServiceTest {
                         Optional.of(
                                 generateClientRegistry(
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
-        JSONArray jsonArray = new JSONArray();
-        jsonArray.add("Cm");
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
                         .state(new State())
                         .nonce(new Nonce())
-                        .customParameter("vtr", jsonArray.toJSONString())
+                        .customParameter("vtr", jsonArrayOf("Cm"))
                         .build();
         Optional<ErrorObject> errorObject = authorizationService.validateAuthRequest(authRequest);
 
@@ -508,24 +502,22 @@ class AuthorizationServiceTest {
 
     private AuthenticationRequest generateAuthRequest(
             String redirectUri, ResponseType responseType, Scope scope) {
-        var jsonArray = new JSONArray();
-        jsonArray.add("Cl.Cm");
-        jsonArray.add("Cl");
-        return generateAuthRequest(redirectUri, responseType, scope, jsonArray, Optional.empty());
+        return generateAuthRequest(
+                redirectUri, responseType, scope, jsonArrayOf("Cl.Cm", "Cl"), Optional.empty());
     }
 
     private AuthenticationRequest generateAuthRequest(
             String redirectUri,
             ResponseType responseType,
             Scope scope,
-            JSONArray jsonArray,
+            String jsonArray,
             Optional<OIDCClaimsRequest> claimsRequest) {
         AuthenticationRequest.Builder authRequestBuilder =
                 new AuthenticationRequest.Builder(
                                 responseType, scope, CLIENT_ID, URI.create(redirectUri))
                         .state(STATE)
                         .nonce(NONCE)
-                        .customParameter("vtr", jsonArray.toJSONString());
+                        .customParameter("vtr", jsonArray);
         claimsRequest.ifPresent(authRequestBuilder::claims);
 
         return authRequestBuilder.build();
