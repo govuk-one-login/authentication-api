@@ -19,7 +19,7 @@ dependencies {
             configurations.dynamodb,
             configurations.lettuce,
             configurations.lambda,
-            "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.13.0",
+            "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${dependencyVersions.jackson_version}",
             project(":client-registry-api"),
             project(":frontend-api"),
             project(":oidc-api"),
