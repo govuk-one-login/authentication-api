@@ -37,19 +37,16 @@ public class ClientInfoHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOGGER = LogManager.getLogger(ClientInfoHandler.class);
-    private final ConfigurationService configurationService;
     private final ClientSessionService clientSessionService;
     private final ClientService clientService;
     private final SessionService sessionService;
     private final AuditService auditService;
 
     public ClientInfoHandler(
-            ConfigurationService configurationService,
             ClientSessionService clientSessionService,
             ClientService clientService,
             SessionService sessionService,
             AuditService auditService) {
-        this.configurationService = configurationService;
         this.clientSessionService = clientSessionService;
         this.clientService = clientService;
         this.sessionService = sessionService;
@@ -57,7 +54,6 @@ public class ClientInfoHandler
     }
 
     public ClientInfoHandler(ConfigurationService configurationService) {
-        this.configurationService = configurationService;
         this.clientSessionService = new ClientSessionService(configurationService);
         this.clientService =
                 new DynamoClientService(
