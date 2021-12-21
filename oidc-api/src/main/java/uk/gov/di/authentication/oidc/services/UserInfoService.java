@@ -37,7 +37,7 @@ public class UserInfoService {
     private final DynamoClientService clientService;
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
 
-    private static final Logger LOGGER = LogManager.getLogger(UserInfoService.class);
+    private static final Logger LOG = LogManager.getLogger(UserInfoService.class);
 
     public UserInfoService(
             RedisConnectionService redisConnectionService,
@@ -52,12 +52,12 @@ public class UserInfoService {
 
     public UserInfo processUserInfoRequest(String authorizationHeader)
             throws UserInfoValidationException {
-        LOGGER.info("Processing UserInfo request");
+        LOG.info("Processing UserInfo request");
         AccessToken accessToken;
         try {
             accessToken = AccessToken.parse(authorizationHeader, AccessTokenType.BEARER);
         } catch (com.nimbusds.oauth2.sdk.ParseException e) {
-            LOGGER.error("Unable to parse AccessToken");
+            LOG.error("Unable to parse AccessToken");
             throw new UserInfoValidationException(
                     "Unable to parse AccessToken", BearerTokenError.INVALID_TOKEN);
         }
@@ -69,7 +69,7 @@ public class UserInfoService {
             Date currentDateTime = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
             if (DateUtils.isBefore(
                     signedJWT.getJWTClaimsSet().getExpirationTime(), currentDateTime, 0)) {
-                LOGGER.error(
+                LOG.error(
                         "Access Token has expired. Access Token expires at: {}. CurrentDateTime is: {}",
                         signedJWT.getJWTClaimsSet().getExpirationTime(),
                         currentDateTime);
@@ -77,26 +77,26 @@ public class UserInfoService {
                         "Invalid Access Token", BearerTokenError.INVALID_TOKEN);
             }
             if (!tokenValidationService.validateAccessTokenSignature(accessToken)) {
-                LOGGER.error("Unable to validate AccessToken signature");
+                LOG.error("Unable to validate AccessToken signature");
                 throw new UserInfoValidationException(
                         "Unable to validate AccessToken signature", BearerTokenError.INVALID_TOKEN);
             }
             String clientID = signedJWT.getJWTClaimsSet().getStringClaim("client_id");
             Optional<ClientRegistry> client = clientService.getClient(clientID);
             if (client.isEmpty()) {
-                LOGGER.error("Client not found with given ClientID: {}", clientID);
+                LOG.error("Client not found with given ClientID: {}", clientID);
                 throw new UserInfoValidationException(
                         "Client not found with given ClientID", BearerTokenError.INVALID_TOKEN);
             }
             List<String> scopes = (List<String>) signedJWT.getJWTClaimsSet().getClaim("scope");
             if (!areScopesValid(scopes) || !client.get().getScopes().containsAll(scopes)) {
-                LOGGER.error("Invalid Scopes: {}", scopes);
+                LOG.error("Invalid Scopes: {}", scopes);
                 throw new UserInfoValidationException("Invalid Scopes", OAuth2Error.INVALID_SCOPE);
             }
             String subject = signedJWT.getJWTClaimsSet().getSubject();
             Optional<AccessTokenStore> accessTokenStore = getAccessTokenStore(clientID, subject);
             if (accessTokenStore.isEmpty()) {
-                LOGGER.error(
+                LOG.error(
                         "Access Token Store is empty. Access Token expires at: {}. CurrentDateTime is: {}",
                         signedJWT.getJWTClaimsSet().getExpirationTime(),
                         currentDateTime);
@@ -104,7 +104,7 @@ public class UserInfoService {
                         "Invalid Access Token", BearerTokenError.INVALID_TOKEN);
             }
             if (!accessTokenStore.get().getToken().equals(accessToken.getValue())) {
-                LOGGER.error(
+                LOG.error(
                         "Access Token in Access Token Store is different to Access Token sent in request");
                 throw new UserInfoValidationException(
                         "Invalid Access Token", BearerTokenError.INVALID_TOKEN);
@@ -115,7 +115,7 @@ public class UserInfoService {
                             accessTokenStore.get().getInternalSubjectId());
             return populateUserInfo(userProfile, subject, scopes);
         } catch (ParseException e) {
-            LOGGER.error("Unable to parse AccessToken to SignedJWT");
+            LOG.error("Unable to parse AccessToken to SignedJWT");
             throw new UserInfoValidationException(
                     "Unable to parse AccessToken to SignedJWT", BearerTokenError.INVALID_TOKEN);
         }
@@ -145,7 +145,7 @@ public class UserInfoService {
             return Optional.ofNullable(
                     new ObjectMapper().readValue(result, AccessTokenStore.class));
         } catch (JsonProcessingException | IllegalArgumentException e) {
-            LOGGER.error("Error getting AccessToken from Redis. ClientID: {}", clientId);
+            LOG.error("Error getting AccessToken from Redis. ClientID: {}", clientId);
             return Optional.empty();
         }
     }

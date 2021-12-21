@@ -54,7 +54,7 @@ public class ObjectMapperFactory {
     }
 
     public static class ValidatingBeanDeserializer extends BeanDeserializer {
-        private static final Logger LOGGER = LogManager.getLogger(ValidatingBeanDeserializer.class);
+        private static final Logger LOG = LogManager.getLogger(ValidatingBeanDeserializer.class);
         private final Validator validator;
 
         public ValidatingBeanDeserializer(BeanDeserializerBase src) {
@@ -73,8 +73,7 @@ public class ObjectMapperFactory {
         private void validate(Object instance) {
             Set<ConstraintViolation<Object>> violations = validator.validate(instance);
             if (violations.size() > 0) {
-                violations.forEach(
-                        v -> LOGGER.warn("Json validation violation: {}", v.getMessage()));
+                violations.forEach(v -> LOG.warn("Json validation violation: {}", v.getMessage()));
                 throw new ConstraintViolationException("JSON validation error", violations);
             }
         }

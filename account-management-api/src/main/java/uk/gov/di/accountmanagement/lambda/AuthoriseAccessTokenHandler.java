@@ -30,7 +30,7 @@ import static uk.gov.di.authentication.shared.helpers.WarmerHelper.WARMUP_HEADER
 public class AuthoriseAccessTokenHandler
         implements RequestHandler<TokenAuthorizerContext, AuthPolicy> {
 
-    private static final Logger LOGGER = LogManager.getLogger(AuthoriseAccessTokenHandler.class);
+    private static final Logger LOG = LogManager.getLogger(AuthoriseAccessTokenHandler.class);
 
     private final TokenValidationService tokenValidationService;
     private final ConfigurationService configurationService;
@@ -64,17 +64,17 @@ public class AuthoriseAccessTokenHandler
     @Override
     public AuthPolicy handleRequest(TokenAuthorizerContext input, Context context) {
         if (input.getType().equals(WARMUP_HEADER)) {
-            LOGGER.info("Warmup Request Received");
+            LOG.info("Warmup Request Received");
             try {
                 sleep(configurationService.getWarmupDelayMillis());
             } catch (InterruptedException e) {
-                LOGGER.error("Sleep was interrupted", e);
+                LOG.error("Sleep was interrupted", e);
                 throw new RuntimeException("Sleep was interrupted", e);
             }
-            LOGGER.info("Instance warmed for request");
+            LOG.info("Instance warmed for request");
             throw new RuntimeException("Unauthorized");
         } else {
-            LOGGER.info("Request received in AuthoriseAccessTokenHandler");
+            LOG.info("Request received in AuthoriseAccessTokenHandler");
             try {
                 String token = input.getAuthorizationToken();
 
@@ -86,7 +86,7 @@ public class AuthoriseAccessTokenHandler
                 Date currentDateTime =
                         Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
                 if (DateUtils.isBefore(claimsSet.getExpirationTime(), currentDateTime, 0)) {
-                    LOGGER.error(
+                    LOG.error(
                             "Access Token expires at: {}. CurrentDateTime is: {}",
                             claimsSet.getExpirationTime(),
                             currentDateTime);
@@ -95,41 +95,41 @@ public class AuthoriseAccessTokenHandler
                 boolean isAccessTokenSignatureValid =
                         tokenValidationService.validateAccessTokenSignature(accessToken);
                 if (!isAccessTokenSignatureValid) {
-                    LOGGER.error("Access Token signature is not valid");
+                    LOG.error("Access Token signature is not valid");
                     throw new RuntimeException("Unauthorized");
                 }
-                LOGGER.info("Successfully validated Access Token signature");
+                LOG.info("Successfully validated Access Token signature");
 
                 List<String> scopeList = claimsSet.getStringListClaim("scope");
                 if (scopeList == null
                         || !scopeList.contains(CustomScopeValue.ACCOUNT_MANAGEMENT.getValue())) {
-                    LOGGER.error("Access Token scope is not valid or missing");
+                    LOG.error("Access Token scope is not valid or missing");
                     throw new RuntimeException("Unauthorized");
                 }
-                LOGGER.info("Successfully validated Access Token scope");
+                LOG.info("Successfully validated Access Token scope");
                 String clientId = claimsSet.getStringClaim("client_id");
                 if (clientId == null) {
-                    LOGGER.error("Access Token client_id is missing");
+                    LOG.error("Access Token client_id is missing");
                     throw new RuntimeException("Unauthorized");
                 }
                 if (!clientService.isValidClient(clientId)) {
-                    LOGGER.error(
+                    LOG.error(
                             "Access Token client_id does not exist in Dynamo. ClientId {}",
                             clientId);
                     throw new RuntimeException("Unauthorized");
                 }
                 String subject = claimsSet.getSubject();
                 if (subject == null) {
-                    LOGGER.error("Access Token subject is missing");
+                    LOG.error("Access Token subject is missing");
                     throw new RuntimeException("Unauthorized");
                 }
                 try {
                     dynamoService.getUserProfileFromPublicSubject(subject);
                 } catch (Exception e) {
-                    LOGGER.error("Unable to retrieve UserProfile from Dynamo with given SubjectID");
+                    LOG.error("Unable to retrieve UserProfile from Dynamo with given SubjectID");
                     throw new RuntimeException("Unauthorized");
                 }
-                LOGGER.info("User found in Dynamo with given SubjectID");
+                LOG.info("User found in Dynamo with given SubjectID");
                 String methodArn = input.getMethodArn();
                 String[] arnPartials = methodArn.split(":");
                 String region = arnPartials[3];
@@ -137,13 +137,13 @@ public class AuthoriseAccessTokenHandler
                 String[] apiGatewayArnPartials = arnPartials[5].split("/");
                 String restApiId = apiGatewayArnPartials[0];
                 String stage = apiGatewayArnPartials[1];
-                LOGGER.info("Generating AuthPolicy");
+                LOG.info("Generating AuthPolicy");
                 return new AuthPolicy(
                         subject,
                         AuthPolicy.PolicyDocument.getAllowAllPolicy(
                                 region, awsAccountId, restApiId, stage));
             } catch (ParseException | java.text.ParseException e) {
-                LOGGER.error("Unable to parse Access Token");
+                LOG.error("Unable to parse Access Token");
                 throw new RuntimeException("Unauthorized");
             }
         }

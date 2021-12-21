@@ -72,7 +72,7 @@ public class TokenService {
     private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
     private static final JWSAlgorithm TOKEN_ALGORITHM = JWSAlgorithm.ES256;
-    private static final Logger LOGGER = LogManager.getLogger(TokenService.class);
+    private static final Logger LOG = LogManager.getLogger(TokenService.class);
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
     private static final List<String> ALLOWED_GRANTS =
@@ -171,16 +171,16 @@ public class TokenService {
         try {
             privateKeyJWT = PrivateKeyJWT.parse(requestString);
         } catch (ParseException e) {
-            LOGGER.error("Could not parse Private Key JWT");
+            LOG.error("Could not parse Private Key JWT");
             return Optional.of(OAuth2Error.INVALID_CLIENT);
         }
         if (hasPrivateKeyJwtExpired(privateKeyJWT.getClientAssertion())) {
-            LOGGER.error("PrivateKeyJWT has expired");
+            LOG.error("PrivateKeyJWT has expired");
             return Optional.of(OAuth2Error.INVALID_GRANT);
         }
         if (Objects.isNull(privateKeyJWT.getClientID())
                 || !privateKeyJWT.getClientID().toString().equals(clientID)) {
-            LOGGER.error("Invalid ClientID in PrivateKeyJWT");
+            LOG.error("Invalid ClientID in PrivateKeyJWT");
             return Optional.of(OAuth2Error.INVALID_CLIENT);
         }
         ClientAuthenticationVerifier<?> authenticationVerifier =
@@ -190,7 +190,7 @@ public class TokenService {
         try {
             authenticationVerifier.verify(privateKeyJWT, null, null);
         } catch (InvalidClientException | JOSEException e) {
-            LOGGER.error("Unable to Verify Signature of Private Key JWT", e);
+            LOG.error("Unable to Verify Signature of Private Key JWT", e);
             return Optional.of(OAuth2Error.INVALID_CLIENT);
         }
         return Optional.empty();
@@ -204,7 +204,7 @@ public class TokenService {
                         .findFirst()
                         .orElse(null);
         if (clientConsent == null) {
-            LOGGER.error("Client consent is empty for user");
+            LOG.error("Client consent is empty for user");
             throw new RuntimeException("Client consent is empty for user");
         }
         Set<String> claimsFromAuthnRequest =
@@ -229,7 +229,7 @@ public class TokenService {
         try {
             RefreshToken refreshToken = new RefreshToken(requestBody.get("refresh_token"));
         } catch (IllegalArgumentException e) {
-            LOGGER.error("Invalid RefreshToken", e);
+            LOG.error("Invalid RefreshToken", e);
             return Optional.of(
                     new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Invalid refresh token"));
         }
@@ -242,7 +242,7 @@ public class TokenService {
             Map<String, Object> additionalTokenClaims,
             AccessTokenHash accessTokenHash,
             String vot) {
-        LOGGER.info("Generating IdToken for ClientId: {}", clientId);
+        LOG.info("Generating IdToken for ClientId: {}", clientId);
         URI trustMarkUri = buildURI(configService.getBaseURL().get(), "/trustmark");
         LocalDateTime localDateTime =
                 LocalDateTime.now().plusSeconds(configService.getIDTokenExpiry());
@@ -261,14 +261,14 @@ public class TokenService {
         try {
             return generateSignedJWT(idTokenClaims.toJWTClaimsSet());
         } catch (com.nimbusds.oauth2.sdk.ParseException e) {
-            LOGGER.error("Error when trying to parse IDTokenClaims to JWTClaimSet", e);
+            LOG.error("Error when trying to parse IDTokenClaims to JWTClaimSet", e);
             throw new RuntimeException(e);
         }
     }
 
     private AccessToken generateAndStoreAccessToken(
             String clientId, Subject internalSubject, List<String> scopes, Subject publicSubject) {
-        LOGGER.info("Generating AccessToken for ClientId: {}", clientId);
+        LOG.info("Generating AccessToken for ClientId: {}", clientId);
         LocalDateTime localDateTime =
                 LocalDateTime.now().plusSeconds(configService.getAccessTokenExpiry());
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
@@ -296,7 +296,7 @@ public class TokenService {
                                             accessToken.getValue(), internalSubject.getValue())),
                     configService.getAccessTokenExpiry());
         } catch (JsonProcessingException e) {
-            LOGGER.error("Unable to save access token to Redis");
+            LOG.error("Unable to save access token to Redis");
             throw new RuntimeException(e);
         }
         return accessToken;
@@ -304,7 +304,7 @@ public class TokenService {
 
     private RefreshToken generateAndStoreRefreshToken(
             String clientId, Subject internalSubject, List<String> scopes, Subject publicSubject) {
-        LOGGER.info("Generating RefreshToken for ClientId: {}", clientId);
+        LOG.info("Generating RefreshToken for ClientId: {}", clientId);
         LocalDateTime localDateTime =
                 LocalDateTime.now().plusSeconds(configService.getSessionExpiry());
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
@@ -346,7 +346,7 @@ public class TokenService {
             redisConnectionService.saveWithExpiry(
                     redisKey, serializedTokenStore, configService.getSessionExpiry());
         } catch (JsonProcessingException e) {
-            LOGGER.error("Unable to create new TokenStore with RefreshToken");
+            LOG.error("Unable to create new TokenStore with RefreshToken");
             throw new RuntimeException(e);
         }
         return refreshToken;
@@ -367,7 +367,7 @@ public class TokenService {
             signRequest.setKeyId(configService.getTokenSigningKeyAlias());
             signRequest.setSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256.toString());
             SignResult signResult = kmsConnectionService.sign(signRequest);
-            LOGGER.info("Token has been signed successfully");
+            LOG.info("Token has been signed successfully");
             String signature =
                     Base64URL.encode(
                                     ECDSA.transcodeSignatureToConcat(
@@ -376,7 +376,7 @@ public class TokenService {
                             .toString();
             return SignedJWT.parse(message + "." + signature);
         } catch (java.text.ParseException | JOSEException e) {
-            LOGGER.error("Exception thrown when trying to parse SignedJWT or JWTClaimSet", e);
+            LOG.error("Exception thrown when trying to parse SignedJWT or JWTClaimSet", e);
             throw new RuntimeException(e);
         }
     }
@@ -390,7 +390,7 @@ public class TokenService {
                 return true;
             }
         } catch (java.text.ParseException e) {
-            LOGGER.error("Unable to parse PrivateKeyJwt when checking if expired", e);
+            LOG.error("Unable to parse PrivateKeyJwt when checking if expired", e);
             return true;
         }
         return false;

@@ -10,7 +10,7 @@ import java.security.NoSuchAlgorithmException;
 
 public class ClientSubjectHelper {
 
-    private static final Logger LOGGER = LogManager.getLogger(ClientSubjectHelper.class);
+    private static final Logger LOG = LogManager.getLogger(ClientSubjectHelper.class);
 
     private static final ConfigurationService configurationService =
             ConfigurationService.getInstance();
@@ -31,7 +31,7 @@ public class ClientSubjectHelper {
 
             return sb.toString();
         } catch (NoSuchAlgorithmException e) {
-            LOGGER.error("Failed to hash", e);
+            LOG.error("Failed to hash", e);
             throw new RuntimeException(e);
         }
     }

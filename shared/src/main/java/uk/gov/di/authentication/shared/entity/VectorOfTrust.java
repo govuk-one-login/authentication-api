@@ -18,7 +18,7 @@ import static net.minidev.json.parser.JSONParser.DEFAULT_PERMISSIVE_MODE;
 
 public class VectorOfTrust {
 
-    private static final Logger LOGGER = LogManager.getLogger(VectorOfTrust.class);
+    private static final Logger LOG = LogManager.getLogger(VectorOfTrust.class);
 
     @JsonProperty("credential_trust_level")
     private final CredentialTrustLevel credentialTrustLevel;
@@ -49,7 +49,7 @@ public class VectorOfTrust {
 
     public static VectorOfTrust parseFromAuthRequestAttribute(List<String> vtr) {
         if (Objects.isNull(vtr) || vtr.isEmpty()) {
-            LOGGER.info(
+            LOG.info(
                     "VTR attribute is not present so defaulting to {}",
                     CredentialTrustLevel.getDefault().getValue());
             return new VectorOfTrust(CredentialTrustLevel.getDefault());
@@ -59,11 +59,11 @@ public class VectorOfTrust {
         try {
             vtrJsonArray = (JSONArray) parser.parse(vtr.get(0));
         } catch (net.minidev.json.parser.ParseException | ClassCastException e) {
-            LOGGER.error("Error when parsing vtr attribute", e);
+            LOG.error("Error when parsing vtr attribute", e);
             throw new IllegalArgumentException("Invalid VTR attribute", e);
         }
         VectorOfTrust vectorOfTrust = parseVtrSet(vtrJsonArray);
-        LOGGER.info("VTR has been processed at vectorOfTrust: {}", vectorOfTrust.toString());
+        LOG.info("VTR has been processed at vectorOfTrust: {}", vectorOfTrust.toString());
 
         return vectorOfTrust;
     }

@@ -24,7 +24,7 @@ import static java.text.MessageFormat.format;
 
 public class LambdaWarmerHandler implements RequestHandler<ScheduledEvent, String> {
 
-    private static final Logger LOGGER = LogManager.getLogger(LambdaWarmerHandler.class);
+    private static final Logger LOG = LogManager.getLogger(LambdaWarmerHandler.class);
     private final ConfigurationService configurationService;
     private final AWSLambda awsLambda;
 
@@ -42,7 +42,7 @@ public class LambdaWarmerHandler implements RequestHandler<ScheduledEvent, Strin
 
     @Override
     public String handleRequest(ScheduledEvent input, Context context) {
-        LOGGER.info("Lambda warmer started");
+        LOG.info("Lambda warmer started");
 
         String lambdaArn = configurationService.getLambdaArn();
         int concurrency = configurationService.getMinConcurrency();
@@ -57,13 +57,13 @@ public class LambdaWarmerHandler implements RequestHandler<ScheduledEvent, Strin
                         () -> {
                             invocations.forEach(
                                     i ->
-                                            LOGGER.info(
+                                            LOG.info(
                                                     "Completed Successfully: {}",
                                                     !i.isCompletedExceptionally()));
                         })
                 .join();
 
-        LOGGER.info(
+        LOG.info(
                 format(
                         "Lambda warmup for {0}:{1} complete!",
                         lambdaArn, configurationService.getLambdaQualifier()));
@@ -81,14 +81,14 @@ public class LambdaWarmerHandler implements RequestHandler<ScheduledEvent, Strin
                         .withInvocationType(InvocationType.RequestResponse);
         switch (configurationService.getLambdaType()) {
             case ENDPOINT:
-                LOGGER.info("Using ENDPOINT payload");
+                LOG.info("Using ENDPOINT payload");
                 invokeRequest.setPayload(
                         format(
                                 "'{' \"headers\": '{' \"{0}\": \"{1}\" '}}'",
                                 WARMUP_HEADER, warmupRequestId));
                 break;
             case AUTHORIZER:
-                LOGGER.info("Using AUTHORIZER payload");
+                LOG.info("Using AUTHORIZER payload");
                 invokeRequest.setPayload(
                         format(
                                 "'{' \"type\": \"{0}\", \"authorizationToken\": \"{1}\" '}'",
@@ -96,11 +96,11 @@ public class LambdaWarmerHandler implements RequestHandler<ScheduledEvent, Strin
                 break;
         }
         try {
-            LOGGER.info("Invoking warmup request with ID {}", warmupRequestId);
+            LOG.info("Invoking warmup request with ID {}", warmupRequestId);
             InvokeResult invokeResult = awsLambda.invoke(invokeRequest);
             return invokeResult;
         } catch (ServiceException e) {
-            LOGGER.error("Error invoking lambda");
+            LOG.error("Error invoking lambda");
             throw new RuntimeException("Error invoking Lambda");
         }
     }

@@ -10,7 +10,7 @@ import static java.lang.String.format;
 
 public class CodeStorageService {
 
-    private static final Logger LOGGER = LogManager.getLogger(CodeStorageService.class);
+    private static final Logger LOG = LogManager.getLogger(CodeStorageService.class);
     private final RedisConnectionService redisConnectionService;
     private static final String EMAIL_KEY_PREFIX = "email-code:";
     private static final String PHONE_NUMBER_KEY_PREFIX = "phone-number-code:";
@@ -41,7 +41,7 @@ public class CodeStorageService {
                         prefix + HashHelper.hashSha256String(emailAddress));
 
         if (numberOfKeysRemoved == 0) {
-            LOGGER.info(format("No %s key was deleted", prefix));
+            LOG.info(format("No %s key was deleted", prefix));
         }
     }
 

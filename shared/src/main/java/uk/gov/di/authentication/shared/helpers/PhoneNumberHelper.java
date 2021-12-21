@@ -7,7 +7,7 @@ import org.apache.logging.log4j.Logger;
 
 public class PhoneNumberHelper {
 
-    private static final Logger LOGGER = LogManager.getLogger(PhoneNumberHelper.class);
+    private static final Logger LOG = LogManager.getLogger(PhoneNumberHelper.class);
 
     public static String formatPhoneNumber(String phoneNumber) {
         PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
@@ -15,7 +15,7 @@ public class PhoneNumberHelper {
             var parsedPhoneNumber = phoneUtil.parse(phoneNumber, "GB");
             return phoneUtil.format(parsedPhoneNumber, PhoneNumberUtil.PhoneNumberFormat.E164);
         } catch (NumberParseException e) {
-            LOGGER.error("Error when trying to parse phone number");
+            LOG.error("Error when trying to parse phone number");
             throw new RuntimeException(e);
         }
     }

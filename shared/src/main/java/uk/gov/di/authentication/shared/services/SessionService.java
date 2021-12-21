@@ -18,7 +18,7 @@ import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.header
 
 public class SessionService {
 
-    private static final Logger LOGGER = LogManager.getLogger(SessionService.class);
+    private static final Logger LOG = LogManager.getLogger(SessionService.class);
 
     private static final ObjectMapper OBJECT_MAPPER = ObjectMapperFactory.getInstance();
 
@@ -71,7 +71,7 @@ public class SessionService {
     public Optional<Session> getSessionFromRequestHeaders(Map<String, String> headers) {
         if (!headersContainValidHeader(
                 headers, SESSION_ID_HEADER, configurationService.getHeadersCaseInsensitive())) {
-            LOGGER.error("Headers are missing Session-Id header");
+            LOG.error("Headers are missing Session-Id header");
             return Optional.empty();
         }
         String sessionId =
@@ -80,7 +80,7 @@ public class SessionService {
                         SESSION_ID_HEADER,
                         configurationService.getHeadersCaseInsensitive());
         if (sessionId == null) {
-            LOGGER.error("Value not found for Session-Id header");
+            LOG.error("Value not found for Session-Id header");
             return Optional.empty();
         }
 

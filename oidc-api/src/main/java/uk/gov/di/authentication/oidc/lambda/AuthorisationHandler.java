@@ -58,7 +58,7 @@ import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStat
 public class AuthorisationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final Logger LOGGER = LogManager.getLogger(AuthorisationHandler.class);
+    private static final Logger LOG = LogManager.getLogger(AuthorisationHandler.class);
 
     private final SessionService sessionService;
     private final ConfigurationService configurationService;
@@ -117,7 +117,7 @@ public class AuthorisationHandler
                                     persistentSessionId);
                             attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionId);
                             attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
-                            LOGGER.info("Received authentication request");
+                            LOG.info("Received authentication request");
 
                             Map<String, List<String>> queryStringParameters =
                                     getQueryStringParametersAsMap(input);
@@ -126,7 +126,7 @@ public class AuthorisationHandler
                                 authRequest = AuthenticationRequest.parse(queryStringParameters);
                             } catch (ParseException e) {
                                 if (e.getRedirectionURI() == null) {
-                                    LOGGER.error(
+                                    LOG.error(
                                             "Authentication request could not be parsed: redirect URI or Client ID is missing from auth request");
                                     // TODO - We need to come up with a strategy to handle uncaught
                                     // exceptions
@@ -134,7 +134,7 @@ public class AuthorisationHandler
                                             "Redirect URI or ClientID is missing from auth request",
                                             e);
                                 }
-                                LOGGER.error("Authentication request could not be parsed", e);
+                                LOG.error("Authentication request could not be parsed", e);
                                 return generateErrorResponse(
                                         e.getRedirectionURI(),
                                         e.getState(),
@@ -277,7 +277,7 @@ public class AuthorisationHandler
         sessionService.updateSessionId(session);
         session.addClientSession(clientSessionID);
         updateAttachedSessionIdToLogs(session.getSessionId());
-        LOGGER.info(
+        LOG.info(
                 "Updated session id from {} to {} for client {} - client session id = {} - new",
                 oldSessionId,
                 session.getSessionId(),
@@ -285,7 +285,7 @@ public class AuthorisationHandler
                 clientSessionID);
 
         sessionService.save(session.setState(nextState));
-        LOGGER.info("Session saved successfully {}", session.getSessionId());
+        LOG.info("Session saved successfully {}", session.getSessionId());
         return session;
     }
 
@@ -303,13 +303,13 @@ public class AuthorisationHandler
                                         authenticationRequest)));
         session.addClientSession(clientSessionID);
         updateAttachedSessionIdToLogs(session.getSessionId());
-        LOGGER.info(
+        LOG.info(
                 "Created session {} for client {} - client session id = {}",
                 session.getSessionId(),
                 authenticationRequest.getClientID().getValue(),
                 clientSessionID);
         sessionService.save(session);
-        LOGGER.info("Session saved successfully {}", session.getSessionId());
+        LOG.info("Session saved successfully {}", session.getSessionId());
 
         var redirectURI = buildRedirectURI(authRequest, authenticationRequest, null);
         return redirect(session, clientSessionID, redirectURI, persistentSessionId);
@@ -354,7 +354,7 @@ public class AuthorisationHandler
             String clientSessionID,
             String redirectURI,
             String persistentSessionId) {
-        LOGGER.info(
+        LOG.info(
                 "Redirecting for SessionId: {} and ClientSessionId: {}",
                 session.getSessionId(),
                 clientSessionID);
@@ -416,7 +416,7 @@ public class AuthorisationHandler
                 persistentSessionId,
                 pair("description", errorObject.getDescription()));
 
-        LOGGER.warn(
+        LOG.warn(
                 "Returning error response: {} {}",
                 errorObject.getCode(),
                 errorObject.getDescription());
@@ -444,7 +444,7 @@ public class AuthorisationHandler
                         && !authRequestParameters.get(COOKIE_CONSENT).isEmpty()
                         && authorizationService.isValidCookieConsentValue(
                                 authRequestParameters.get(COOKIE_CONSENT).get(0))) {
-                    LOGGER.info(
+                    LOG.info(
                             "Sharing cookie_consent for client {}",
                             authenticationRequest.getClientID());
                     return authRequestParameters.get(COOKIE_CONSENT).get(0);
@@ -461,7 +461,7 @@ public class AuthorisationHandler
 
         if (authRequestParameters.containsKey(GA)) {
             String gaId = authRequestParameters.get(GA).get(0);
-            LOGGER.info("GA value present in request {}", gaId);
+            LOG.info("GA value present in request {}", gaId);
 
             return gaId;
         }

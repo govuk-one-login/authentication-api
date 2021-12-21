@@ -28,7 +28,7 @@ import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 public class AuthenticateHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final Logger LOGGER = LogManager.getLogger(AuthenticateHandler.class);
+    private static final Logger LOG = LogManager.getLogger(AuthenticateHandler.class);
 
     private final AuthenticationService authenticationService;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -63,7 +63,7 @@ public class AuthenticateHandler
                                     RequestHeaderHelper.getHeaderValueOrElse(
                                             input.getHeaders(), SESSION_ID_HEADER, "");
                             attachSessionIdToLogs(sessionId);
-                            LOGGER.info("Request received to the AuthenticateHandler");
+                            LOG.info("Request received to the AuthenticateHandler");
 
                             try {
                                 AuthenticateRequest loginRequest =
@@ -72,7 +72,7 @@ public class AuthenticateHandler
                                 boolean userHasAccount =
                                         authenticationService.userExists(loginRequest.getEmail());
                                 if (!userHasAccount) {
-                                    LOGGER.error("The user does not have an account");
+                                    LOG.error("The user does not have an account");
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1010);
                                 }
@@ -81,11 +81,11 @@ public class AuthenticateHandler
                                                 loginRequest.getEmail(),
                                                 loginRequest.getPassword());
                                 if (!hasValidCredentials) {
-                                    LOGGER.info("Invalid login credentials entered");
+                                    LOG.info("Invalid login credentials entered");
                                     return generateApiGatewayProxyErrorResponse(
                                             401, ErrorResponse.ERROR_1008);
                                 }
-                                LOGGER.info(
+                                LOG.info(
                                         "User has successfully Logged in. Generating successful AuthenticateResponse");
 
                                 auditService.submitAuditEvent(
@@ -103,7 +103,7 @@ public class AuthenticateHandler
 
                                 return generateEmptySuccessApiGatewayResponse();
                             } catch (JsonProcessingException e) {
-                                LOGGER.error("Request is missing parameters.");
+                                LOG.error("Request is missing parameters.");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1001);
                             }

@@ -97,7 +97,7 @@ public class StateMachine<T, A, C> {
     private final Map<T, List<Transition<T, A, C>>> states;
     private final List<Transition<T, A, C>> anyStateTransitions;
 
-    private static final Logger LOGGER = LogManager.getLogger(StateMachine.class);
+    private static final Logger LOG = LogManager.getLogger(StateMachine.class);
 
     public StateMachine(Map<T, List<Transition<T, A, C>>> states) {
         this(states, List.of());
@@ -146,7 +146,7 @@ public class StateMachine<T, A, C> {
                                                                         from, action, sessionId)))
                         .getNextState();
 
-        LOGGER.info(
+        LOG.info(
                 "Session transitioned from {} to {} on action {} for sessionId {}",
                 from,
                 to,
@@ -613,7 +613,7 @@ public class StateMachine<T, A, C> {
 
     private InvalidStateTransitionException handleBadStateTransition(
             T from, A action, String sessionId) {
-        LOGGER.error(
+        LOG.error(
                 "Session attempted invalid transition from {} on action {} for sessionId {}",
                 from,
                 action,
@@ -622,7 +622,7 @@ public class StateMachine<T, A, C> {
     }
 
     private NoTransitionContextProvidedException handleNoTransitionContext(T from, A action) {
-        LOGGER.error(
+        LOG.error(
                 "More than one transition defined from {} on action {} but no context was provided",
                 from,
                 action);

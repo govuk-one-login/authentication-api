@@ -14,7 +14,7 @@ import static java.lang.Thread.sleep;
 public class WarmerHelper {
     private static final ConfigurationService configurationService =
             ConfigurationService.getInstance();
-    private static final Logger LOGGER = LogManager.getLogger(WarmerHelper.class);
+    private static final Logger LOG = LogManager.getLogger(WarmerHelper.class);
 
     public static final String WARMUP_HEADER = "__WARMUP_REQUEST__";
 
@@ -24,13 +24,12 @@ public class WarmerHelper {
 
         if (input.getHeaders() != null && input.getHeaders().containsKey(WARMUP_HEADER)) {
             try {
-                LOGGER.info("Warmup Request Received {}", input.getHeaders().get(WARMUP_HEADER));
+                LOG.info("Warmup Request Received {}", input.getHeaders().get(WARMUP_HEADER));
                 sleep(configurationService.getWarmupDelayMillis());
-                LOGGER.info(
-                        "Instance warmed for request {}", input.getHeaders().get(WARMUP_HEADER));
+                LOG.info("Instance warmed for request {}", input.getHeaders().get(WARMUP_HEADER));
                 return Optional.of(new APIGatewayProxyResponseEvent().withStatusCode(200));
             } catch (InterruptedException e) {
-                LOGGER.error("Sleep was interrupted", e);
+                LOG.error("Sleep was interrupted", e);
                 throw new RuntimeException("Sleep was interrupted", e);
             }
         }

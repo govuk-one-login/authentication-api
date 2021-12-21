@@ -11,14 +11,14 @@ public class SnsService {
 
     private final String topicArn;
     private final AmazonSNS snsClient;
-    private static final Logger LOGGER = LogManager.getLogger(SnsService.class);
+    private static final Logger LOG = LogManager.getLogger(SnsService.class);
 
     public SnsService(AuditPublisherConfiguration configService) {
         this.topicArn = configService.getEventsSnsTopicArn();
         var localstackEndpointUri = configService.getLocalstackEndpointUri();
         var awsRegion = configService.getAwsRegion();
         if (localstackEndpointUri.isPresent()) {
-            LOGGER.info("Localstack endpoint URI is present: " + localstackEndpointUri.get());
+            LOG.info("Localstack endpoint URI is present: " + localstackEndpointUri.get());
             this.snsClient =
                     AmazonSNSClientBuilder.standard()
                             .withEndpointConfiguration(

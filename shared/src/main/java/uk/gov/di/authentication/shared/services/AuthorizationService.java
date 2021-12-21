@@ -46,7 +46,7 @@ public class AuthorizationService {
     public static final String COOKIE_CONSENT_REJECT = "reject";
     public static final String COOKIE_CONSENT_NOT_ENGAGED = "not-engaged";
 
-    private static final Logger LOGGER = LogManager.getLogger(AuthorizationService.class);
+    private static final Logger LOG = LogManager.getLogger(AuthorizationService.class);
 
     public AuthorizationService(
             DynamoClientService dynamoClientService, DynamoService dynamoService) {
@@ -105,11 +105,11 @@ public class AuthorizationService {
         Optional<ClientRegistry> client =
                 dynamoClientService.getClient(authRequest.getClientID().toString());
         if (client.isEmpty()) {
-            LOGGER.warn("Invalid client: {}", authRequest.getClientID());
+            LOG.warn("Invalid client: {}", authRequest.getClientID());
             return Optional.of(OAuth2Error.UNAUTHORIZED_CLIENT);
         }
         if (!client.get().getRedirectUrls().contains(authRequest.getRedirectionURI().toString())) {
-            LOGGER.warn(
+            LOG.warn(
                     "Invalid Redirect URI for Client {}. Redirect URI in request {}",
                     client.get().getClientID(),
                     authRequest.getRedirectionURI().toString());
@@ -119,19 +119,18 @@ public class AuthorizationService {
                             authRequest.getRedirectionURI().toString()));
         }
         if (!authRequest.getResponseType().toString().equals("code")) {
-            LOGGER.warn(
-                    "Unsupported responseType included in request. Expected responseType of code");
+            LOG.warn("Unsupported responseType included in request. Expected responseType of code");
             return Optional.of(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE);
         }
         if (!areScopesValid(authRequest.getScope().toStringList())
                 || !client.get().getScopes().containsAll(authRequest.getScope().toStringList())) {
-            LOGGER.warn(
+            LOG.warn(
                     "Invalid scopes in authRequest. Scopes in request: {}",
                     authRequest.getScope().toStringList());
             return Optional.of(OAuth2Error.INVALID_SCOPE);
         }
         if (!areClaimsValid(authRequest.getOIDCClaims())) {
-            LOGGER.warn(
+            LOG.warn(
                     "Invalid claims in authRequest. Claims in request: {}",
                     authRequest.getOIDCClaims().toJSONString());
             return Optional.of(
@@ -139,14 +138,14 @@ public class AuthorizationService {
                             OAuth2Error.INVALID_REQUEST_CODE, "Request contains invalid claims"));
         }
         if (authRequest.getNonce() == null) {
-            LOGGER.warn("Nonce is missing from authRequest");
+            LOG.warn("Nonce is missing from authRequest");
             return Optional.of(
                     new ErrorObject(
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "Request is missing nonce parameter"));
         }
         if (authRequest.getState() == null) {
-            LOGGER.warn("State is missing from authRequest");
+            LOG.warn("State is missing from authRequest");
             return Optional.of(
                     new ErrorObject(
                             OAuth2Error.INVALID_REQUEST_CODE,
@@ -156,7 +155,7 @@ public class AuthorizationService {
         try {
             VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
         } catch (IllegalArgumentException e) {
-            LOGGER.warn(
+            LOG.warn(
                     "vtr in AuthRequest is not valid. vtr in request: {}. IllegalArgumentException: {}",
                     authRequestVtr,
                     e);
@@ -204,7 +203,7 @@ public class AuthorizationService {
             }
             userContext = builder.withClient(clientRegistry).build();
         } catch (NoSuchElementException e) {
-            LOGGER.error("Error creating UserContext");
+            LOG.error("Error creating UserContext");
             throw new RuntimeException("Error when creating UserContext", e);
         }
         return userContext;

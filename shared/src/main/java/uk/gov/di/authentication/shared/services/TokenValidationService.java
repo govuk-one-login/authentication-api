@@ -36,7 +36,7 @@ public class TokenValidationService {
 
     private final ConfigurationService configService;
     private final KmsConnectionService kmsConnectionService;
-    private static final Logger LOGGER = LogManager.getLogger(TokenValidationService.class);
+    private static final Logger LOG = LogManager.getLogger(TokenValidationService.class);
 
     public TokenValidationService(
             ConfigurationService configService, KmsConnectionService kmsConnectionService) {
@@ -45,18 +45,18 @@ public class TokenValidationService {
     }
 
     public boolean validateAccessTokenSignature(AccessToken accessToken) {
-        LOGGER.info("Validating Access Token signature");
+        LOG.info("Validating Access Token signature");
         return isTokenSignatureValid(accessToken.getValue());
     }
 
     public boolean validateRefreshTokenSignatureAndExpiry(RefreshToken refreshToken) {
-        LOGGER.info("Validating Refresh Token signature");
+        LOG.info("Validating Refresh Token signature");
         if (!isTokenSignatureValid(refreshToken.getValue())) {
             return false;
         }
-        LOGGER.info("Validating Refresh Token expiry");
+        LOG.info("Validating Refresh Token expiry");
         if (hasTokenExpired(refreshToken.getValue())) {
-            LOGGER.warn("Refresh token has expired");
+            LOG.warn("Refresh token has expired");
             return false;
         }
         return true;
@@ -71,7 +71,7 @@ public class TokenValidationService {
                 return true;
             }
         } catch (java.text.ParseException e) {
-            LOGGER.warn("Unable to parse token when checking if expired", e);
+            LOG.warn("Unable to parse token when checking if expired", e);
             return true;
         }
         return false;
@@ -80,12 +80,12 @@ public class TokenValidationService {
     public boolean isTokenSignatureValid(String tokenValue) {
         boolean isVerified;
         try {
-            LOGGER.info("TokenSigningKeyID: " + configService.getTokenSigningKeyAlias());
+            LOG.info("TokenSigningKeyID: " + configService.getTokenSigningKeyAlias());
             SignedJWT signedJwt = SignedJWT.parse(tokenValue);
             JWSVerifier verifier = new ECDSAVerifier(getPublicJwk().toECKey());
             isVerified = signedJwt.verify(verifier);
         } catch (JOSEException | java.text.ParseException e) {
-            LOGGER.warn("Unable to validate Signature of Token", e);
+            LOG.warn("Unable to validate Signature of Token", e);
             return false;
         }
         return isVerified;
@@ -94,29 +94,29 @@ public class TokenValidationService {
     public boolean validateRefreshTokenScopes(
             List<String> clientScopes, List<String> refreshTokenScopes) {
         if (!clientScopes.containsAll(refreshTokenScopes)) {
-            LOGGER.warn("Scopes in Client Registry does not contain all scopes in Refresh Token");
+            LOG.warn("Scopes in Client Registry does not contain all scopes in Refresh Token");
             return false;
         }
         if (!refreshTokenScopes.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
-            LOGGER.warn("Scopes in Refresh Token does not contain OFFLINE_ACCESS scope");
+            LOG.warn("Scopes in Refresh Token does not contain OFFLINE_ACCESS scope");
             return false;
         }
         return true;
     }
 
     public PublicKey getPublicKey() {
-        LOGGER.info("Creating GetPublicKeyRequest to retrieve PublicKey from KMS");
+        LOG.info("Creating GetPublicKeyRequest to retrieve PublicKey from KMS");
         Provider bcProvider = new BouncyCastleProvider();
         GetPublicKeyRequest getPublicKeyRequest = new GetPublicKeyRequest();
         getPublicKeyRequest.setKeyId(configService.getTokenSigningKeyAlias());
         GetPublicKeyResult publicKeyResult = kmsConnectionService.getPublicKey(getPublicKeyRequest);
         try {
-            LOGGER.info("PUBLICKEYRESULT: " + publicKeyResult.toString());
+            LOG.info("PUBLICKEYRESULT: " + publicKeyResult.toString());
             SubjectPublicKeyInfo subjectKeyInfo =
                     SubjectPublicKeyInfo.getInstance(publicKeyResult.getPublicKey().array());
             return new JcaPEMKeyConverter().setProvider(bcProvider).getPublicKey(subjectKeyInfo);
         } catch (PEMException e) {
-            LOGGER.error("Error getting the PublicKey using the JcaPEMKeyConverter", e);
+            LOG.error("Error getting the PublicKey using the JcaPEMKeyConverter", e);
             throw new RuntimeException();
         }
     }
@@ -130,10 +130,10 @@ public class TokenValidationService {
                             .keyUse(KeyUse.SIGNATURE)
                             .algorithm(new Algorithm(JWSAlgorithm.ES256.getName()))
                             .build();
-            LOGGER.info("ECKey KeyID: " + jwk.getKeyID());
+            LOG.info("ECKey KeyID: " + jwk.getKeyID());
             return JWK.parse(jwk.toString());
         } catch (java.text.ParseException e) {
-            LOGGER.error("Error parsing the ECKey to JWK", e);
+            LOG.error("Error parsing the ECKey to JWK", e);
             throw new RuntimeException(e);
         }
     }

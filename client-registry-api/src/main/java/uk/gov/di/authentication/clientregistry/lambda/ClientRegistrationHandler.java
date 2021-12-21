@@ -34,7 +34,7 @@ public class ClientRegistrationHandler
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ClientConfigValidationService validationService;
     private final AuditService auditService;
-    private static final Logger LOGGER = LogManager.getLogger(ClientRegistrationHandler.class);
+    private static final Logger LOG = LogManager.getLogger(ClientRegistrationHandler.class);
 
     public ClientRegistrationHandler(
             ClientService clientService,
@@ -78,7 +78,7 @@ public class ClientRegistrationHandler
                                     AuditService.UNKNOWN);
 
                             try {
-                                LOGGER.info("Client registration request received");
+                                LOG.info("Client registration request received");
                                 ClientRegistrationRequest clientRegistrationRequest =
                                         objectMapper.readValue(
                                                 input.getBody(), ClientRegistrationRequest.class);
@@ -86,7 +86,7 @@ public class ClientRegistrationHandler
                                         validationService.validateClientRegistrationConfig(
                                                 clientRegistrationRequest);
                                 if (errorResponse.isPresent()) {
-                                    LOGGER.error(
+                                    LOG.error(
                                             "Invalid Client registration request. Failed validation. Error Code: {}. Error description: {}",
                                             errorResponse.get().getCode(),
                                             errorResponse.get().getDescription());
@@ -130,11 +130,11 @@ public class ClientRegistrationHandler
                                                         .getPostLogoutRedirectUris(),
                                                 clientRegistrationRequest.getServiceType(),
                                                 clientRegistrationRequest.getSubjectType());
-                                LOGGER.info("Generating successful Client registration response");
+                                LOG.info("Generating successful Client registration response");
                                 return generateApiGatewayProxyResponse(
                                         200, clientRegistrationResponse);
                             } catch (JsonProcessingException e) {
-                                LOGGER.error(
+                                LOG.error(
                                         "Invalid Client registration request. Missing parameters from request");
                                 auditService.submitAuditEvent(
                                         REGISTER_CLIENT_REQUEST_ERROR,

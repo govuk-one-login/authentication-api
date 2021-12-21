@@ -55,7 +55,7 @@ import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStat
 public class AuthCodeHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final Logger LOGGER = LogManager.getLogger(AuthCodeHandler.class);
+    private static final Logger LOG = LogManager.getLogger(AuthCodeHandler.class);
 
     private final SessionService sessionService;
     private final AuthorisationCodeService authorisationCodeService;
@@ -108,14 +108,14 @@ public class AuthCodeHandler
                                                         sessionCookieIds.getSessionId())
                                                 .orElseThrow();
                             } catch (NoSuchElementException e) {
-                                LOGGER.error("SessionID not found");
+                                LOG.error("SessionID not found");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1000);
                             }
 
                             attachSessionIdToLogs(session);
 
-                            LOGGER.info(
+                            LOG.info(
                                     "AuthCodeHandler processing request for session: {}",
                                     session.getSessionId());
 
@@ -141,7 +141,7 @@ public class AuthCodeHandler
                                 authenticationRequest = AuthenticationRequest.parse(authRequest);
                             } catch (ParseException e) {
                                 if (e.getRedirectionURI() == null) {
-                                    LOGGER.error(
+                                    LOG.error(
                                             "Authentication request could not be parsed: redirect URI or Client ID is missing from auth request for session: {}",
                                             session.getSessionId(),
                                             e);
@@ -157,7 +157,7 @@ public class AuthCodeHandler
                                                 e.getState(),
                                                 e.getResponseMode(),
                                                 e.getErrorObject());
-                                LOGGER.error(
+                                LOG.error(
                                         "Authentication request could not be parsed for session: {}. Generating error response",
                                         session.getSessionId(),
                                         e);
@@ -210,7 +210,7 @@ public class AuthCodeHandler
                                                 authenticationRequest, authCode, additionalParams);
 
                                 sessionService.save(session.setState(nextState));
-                                LOGGER.info(
+                                LOG.info(
                                         "AuthCodeHandler successfully processed request for session: {}",
                                         session.getSessionId());
                                 auditService.submitAuditEvent(
@@ -272,7 +272,7 @@ public class AuthCodeHandler
 
     private APIGatewayProxyResponseEvent generateInvalidClientRedirectError(
             Session session, URI redirectURI) {
-        LOGGER.error(
+        LOG.error(
                 "Invalid client redirect URI ({}) for session: {}",
                 redirectURI,
                 session.getSessionId());
@@ -284,7 +284,7 @@ public class AuthCodeHandler
         AuthenticationErrorResponse errorResponse =
                 authorizationService.generateAuthenticationErrorResponse(
                         authenticationRequest, OAuth2Error.INVALID_CLIENT);
-        LOGGER.error(
+        LOG.error(
                 "Client not found for session: {}. Generating error response",
                 session.getSessionId());
         return new APIGatewayProxyResponseEvent()

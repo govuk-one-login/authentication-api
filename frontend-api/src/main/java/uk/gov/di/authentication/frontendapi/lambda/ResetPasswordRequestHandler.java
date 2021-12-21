@@ -49,7 +49,7 @@ import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStat
 public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswordRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final Logger LOGGER = LogManager.getLogger(ResetPasswordRequestHandler.class);
+    private static final Logger LOG = LogManager.getLogger(ResetPasswordRequestHandler.class);
 
     private final ValidationService validationService;
     private final AwsSqsClient sqsClient;
@@ -112,19 +112,18 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             Context context,
             ResetPasswordRequest request,
             UserContext userContext) {
-        LOGGER.info(
+        LOG.info(
                 "ResetPasswordRequestHandler processing request for session: {}",
                 userContext.getSession().getSessionId());
         try {
             if (!userContext.getSession().validateSession(request.getEmail())) {
-                LOGGER.info(
-                        "Invalid session. session: {}", userContext.getSession().getSessionId());
+                LOG.info("Invalid session. session: {}", userContext.getSession().getSessionId());
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
             Optional<ErrorResponse> emailErrorResponse =
                     validationService.validateEmailAddress(request.getEmail());
             if (emailErrorResponse.isPresent()) {
-                LOGGER.info(
+                LOG.info(
                         "Email validation failed: {} for session: {}",
                         emailErrorResponse.get(),
                         userContext.getSession().getSessionId());
@@ -158,13 +157,13 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                     persistentSessionId);
 
         } catch (SdkClientException ex) {
-            LOGGER.error(
+            LOG.error(
                     "Error sending message to queue for session: {}",
                     userContext.getSession().getSessionId(),
                     ex);
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
         } catch (JsonProcessingException e) {
-            LOGGER.error(
+            LOG.error(
                     "Error parsing request for session: {}",
                     userContext.getSession().getSessionId());
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
@@ -198,7 +197,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         sessionService.save(
                 userContext.getSession().setState(nextState).incrementPasswordResetCount());
         sqsClient.send(serialiseRequest(notifyRequest));
-        LOGGER.info(
+        LOG.info(
                 "ResetPasswordRequestHandler successfully processed request for session: {}",
                 userContext.getSession().getSessionId());
         return generateApiGatewayProxyResponse(
@@ -208,13 +207,13 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     private Optional<ErrorResponse> validatePasswordResetCount(
             String email, UserContext userContext) {
         if (codeStorageService.isBlockedForEmail(email, PASSWORD_RESET_BLOCKED_KEY_PREFIX)) {
-            LOGGER.info(
+            LOG.info(
                     "User cannot request another password reset for session: {}",
                     userContext.getSession().getSessionId());
             return Optional.of(ErrorResponse.ERROR_1023);
         } else if (userContext.getSession().getPasswordResetCount()
                 > configurationService.getCodeMaxRetries()) {
-            LOGGER.info(
+            LOG.info(
                     "User has requested too many password resets for session: {}",
                     userContext.getSession().getSessionId());
             codeStorageService.saveBlockedForEmail(
