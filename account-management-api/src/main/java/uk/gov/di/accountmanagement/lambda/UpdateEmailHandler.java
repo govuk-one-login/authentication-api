@@ -44,7 +44,7 @@ public class UpdateEmailHandler
     private final AwsSqsClient sqsClient;
     private final ValidationService validationService;
     private final CodeStorageService codeStorageService;
-    private static final Logger LOGGER = LogManager.getLogger(UpdateEmailHandler.class);
+    private static final Logger LOG = LogManager.getLogger(UpdateEmailHandler.class);
     private final AuditService auditService;
 
     public UpdateEmailHandler() {
@@ -87,7 +87,7 @@ public class UpdateEmailHandler
                                     RequestHeaderHelper.getHeaderValueOrElse(
                                             input.getHeaders(), SESSION_ID_HEADER, "");
                             attachSessionIdToLogs(sessionId);
-                            LOGGER.info("UpdateEmailHandler received request");
+                            LOG.info("UpdateEmailHandler received request");
                             try {
                                 UpdateEmailRequest updateInfoRequest =
                                         objectMapper.readValue(
@@ -98,7 +98,7 @@ public class UpdateEmailHandler
                                                 updateInfoRequest.getOtp(),
                                                 NotificationType.VERIFY_EMAIL);
                                 if (!isValidOtpCode) {
-                                    LOGGER.info("Invalid OTP code sent in request");
+                                    LOG.info("Invalid OTP code sent in request");
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1020);
                                 }
@@ -107,7 +107,7 @@ public class UpdateEmailHandler
                                                 updateInfoRequest.getExistingEmailAddress(),
                                                 updateInfoRequest.getReplacementEmailAddress());
                                 if (emailValidationErrors.isPresent()) {
-                                    LOGGER.info(
+                                    LOG.info(
                                             "Invalid email address with error: {}",
                                             emailValidationErrors.get().getMessage());
                                     return generateApiGatewayProxyErrorResponse(
@@ -115,8 +115,7 @@ public class UpdateEmailHandler
                                 }
                                 if (dynamoService.userExists(
                                         updateInfoRequest.getReplacementEmailAddress())) {
-                                    LOGGER.info(
-                                            "An account with this email address already exists");
+                                    LOG.info("An account with this email address already exists");
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1009);
                                 }
@@ -131,7 +130,7 @@ public class UpdateEmailHandler
                                 dynamoService.updateEmail(
                                         updateInfoRequest.getExistingEmailAddress(),
                                         updateInfoRequest.getReplacementEmailAddress());
-                                LOGGER.info(
+                                LOG.info(
                                         "Email has successfully been updated. Adding message to SQS queue");
                                 NotifyRequest notifyRequest =
                                         new NotifyRequest(
@@ -151,11 +150,11 @@ public class UpdateEmailHandler
                                         PersistentIdHelper.extractPersistentIdFromHeaders(
                                                 input.getHeaders()));
 
-                                LOGGER.info(
+                                LOG.info(
                                         "Message successfully added to queue. Generating successful gateway response");
                                 return generateEmptySuccessApiGatewayResponse();
                             } catch (JsonProcessingException | IllegalArgumentException e) {
-                                LOGGER.error(
+                                LOG.error(
                                         "UpdateInfo request is missing or contains invalid parameters.");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1001);

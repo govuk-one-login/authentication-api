@@ -21,7 +21,7 @@ import static java.text.MessageFormat.format;
 
 public class ConfigurationService implements BaseLambdaConfiguration, AuditPublisherConfiguration {
 
-    private static final Logger LOGGER = LogManager.getLogger(ConfigurationService.class);
+    private static final Logger LOG = LogManager.getLogger(ConfigurationService.class);
     private static ConfigurationService configurationService;
 
     public static ConfigurationService getInstance() {
@@ -270,8 +270,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     private AWSSimpleSystemsManagement getSsmClient() {
         if (ssmClient == null) {
             if (getLocalstackEndpointUri().isPresent()) {
-                LOGGER.info(
-                        "Localstack endpoint URI is present: " + getLocalstackEndpointUri().get());
+                LOG.info("Localstack endpoint URI is present: " + getLocalstackEndpointUri().get());
                 ssmClient =
                         AWSSimpleSystemsManagementClient.builder()
                                 .withEndpointConfiguration(

@@ -40,7 +40,7 @@ import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair
 public class SendOtpNotificationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final Logger LOGGER = LogManager.getLogger(SendOtpNotificationHandler.class);
+    private static final Logger LOG = LogManager.getLogger(SendOtpNotificationHandler.class);
 
     private final ConfigurationService configurationService;
     private final ValidationService validationService;
@@ -93,19 +93,19 @@ public class SendOtpNotificationHandler
                                     RequestHeaderHelper.getHeaderValueOrElse(
                                             input.getHeaders(), SESSION_ID_HEADER, "");
                             attachSessionIdToLogs(sessionId);
-                            LOGGER.info("Request received in SendOtp Lambda");
+                            LOG.info("Request received in SendOtp Lambda");
                             try {
                                 SendNotificationRequest sendNotificationRequest =
                                         objectMapper.readValue(
                                                 input.getBody(), SendNotificationRequest.class);
                                 switch (sendNotificationRequest.getNotificationType()) {
                                     case VERIFY_EMAIL:
-                                        LOGGER.info("NotificationType is VERIFY_EMAIL");
+                                        LOG.info("NotificationType is VERIFY_EMAIL");
                                         Optional<ErrorResponse> emailErrorResponse =
                                                 validationService.validateEmailAddress(
                                                         sendNotificationRequest.getEmail());
                                         if (emailErrorResponse.isPresent()) {
-                                            LOGGER.info(
+                                            LOG.info(
                                                     "Invalid email address. Errors are: {}",
                                                     emailErrorResponse.get());
                                             return generateApiGatewayProxyErrorResponse(
@@ -113,8 +113,7 @@ public class SendOtpNotificationHandler
                                         }
                                         if (dynamoService.userExists(
                                                 sendNotificationRequest.getEmail())) {
-                                            LOGGER.info(
-                                                    "User already exists with this email address");
+                                            LOG.info("User already exists with this email address");
                                             return generateApiGatewayProxyErrorResponse(
                                                     400, ErrorResponse.ERROR_1009);
                                         }
@@ -124,12 +123,12 @@ public class SendOtpNotificationHandler
                                                 input,
                                                 context);
                                     case VERIFY_PHONE_NUMBER:
-                                        LOGGER.info("NotificationType is VERIFY_PHONE_NUMBER");
+                                        LOG.info("NotificationType is VERIFY_PHONE_NUMBER");
                                         Optional<ErrorResponse> phoneNumberValidationError =
                                                 validationService.validatePhoneNumber(
                                                         sendNotificationRequest.getPhoneNumber());
                                         if (phoneNumberValidationError.isPresent()) {
-                                            LOGGER.info(
+                                            LOG.info(
                                                     "Invalid phone number. Errors are: {}",
                                                     phoneNumberValidationError.get());
                                             return generateApiGatewayProxyErrorResponse(
@@ -143,11 +142,11 @@ public class SendOtpNotificationHandler
                                 }
                                 return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
                             } catch (SdkClientException ex) {
-                                LOGGER.error("Error sending message to queue", ex);
+                                LOG.error("Error sending message to queue", ex);
                                 return generateApiGatewayProxyResponse(
                                         500, "Error sending message to queue");
                             } catch (JsonProcessingException e) {
-                                LOGGER.error("Error parsing request");
+                                LOG.error("Error parsing request");
                                 return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
                             }
                         });
@@ -168,7 +167,7 @@ public class SendOtpNotificationHandler
                 code,
                 configurationService.getCodeExpiry(),
                 sendNotificationRequest.getNotificationType());
-        LOGGER.info(
+        LOG.info(
                 "Sending message to SQS queue for notificationType: {}",
                 sendNotificationRequest.getNotificationType());
         sqsClient.send(serialiseRequest(notifyRequest));
@@ -185,7 +184,7 @@ public class SendOtpNotificationHandler
                 PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
                 pair("notification-type", sendNotificationRequest.getNotificationType()));
 
-        LOGGER.info("Generating successful API response");
+        LOG.info("Generating successful API response");
         return generateEmptySuccessApiGatewayResponse();
     }
 

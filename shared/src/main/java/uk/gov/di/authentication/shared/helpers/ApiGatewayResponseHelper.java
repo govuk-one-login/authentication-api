@@ -28,7 +28,7 @@ public class ApiGatewayResponseHelper {
             "max-age=31536000; includeSubDomains";
     private static final String X_FRAME_OPTIONS_HEADER_VALUE = "DENY";
 
-    private static final Logger LOGGER = LogManager.getLogger(ApiGatewayResponseHelper.class);
+    private static final Logger LOG = LogManager.getLogger(ApiGatewayResponseHelper.class);
 
     public static <T> APIGatewayProxyResponseEvent generateApiGatewayProxyResponse(
             int statusCode, T body) throws JsonProcessingException {
@@ -42,7 +42,7 @@ public class ApiGatewayResponseHelper {
             return generateApiGatewayProxyResponse(
                     statusCode, new ObjectMapper().writeValueAsString(errorResponse));
         } catch (JsonProcessingException e) {
-            LOGGER.warn("Unable to generateApiGatewayProxyErrorResponse: " + e);
+            LOG.warn("Unable to generateApiGatewayProxyErrorResponse: " + e);
             return generateApiGatewayProxyResponse(500, "Internal server error");
         }
     }

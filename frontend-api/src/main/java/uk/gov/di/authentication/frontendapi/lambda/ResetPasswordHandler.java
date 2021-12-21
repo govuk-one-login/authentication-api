@@ -49,7 +49,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordWithC
     private final AuditService auditService;
     private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
 
-    private static final Logger LOGGER = LogManager.getLogger(ResetPasswordHandler.class);
+    private static final Logger LOG = LogManager.getLogger(ResetPasswordHandler.class);
 
     public ResetPasswordHandler(
             AuthenticationService authenticationService,
@@ -99,12 +99,12 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordWithC
             Context context,
             ResetPasswordWithCodeRequest request,
             UserContext userContext) {
-        LOGGER.info("Request received to ResetPasswordHandler");
+        LOG.info("Request received to ResetPasswordHandler");
         try {
             Optional<ErrorResponse> errorResponse =
                     validationService.validatePassword(request.getPassword());
             if (errorResponse.isPresent()) {
-                LOGGER.info(
+                LOG.info(
                         "Password did not pass validation because: {}",
                         errorResponse.get().getMessage());
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
@@ -112,18 +112,18 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordWithC
             Optional<String> subject =
                     codeStorageService.getSubjectWithPasswordResetCode(request.getCode());
             if (subject.isEmpty()) {
-                LOGGER.error("Subject is not found in Redis");
+                LOG.error("Subject is not found in Redis");
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1021);
             }
             UserCredentials userCredentials =
                     authenticationService.getUserCredentialsFromSubject(subject.get());
             if (userCredentials.getPassword() != null) {
                 if (verifyPassword(userCredentials.getPassword(), request.getPassword())) {
-                    LOGGER.info("New password is the same as the old password");
+                    LOG.info("New password is the same as the old password");
                     return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1024);
                 }
             } else {
-                LOGGER.info("Resetting password for migrated user");
+                LOG.info("Resetting password for migrated user");
             }
             codeStorageService.deleteSubjectWithPasswordResetCode(request.getCode());
             authenticationService.updatePassword(userCredentials.getEmail(), request.getPassword());
@@ -138,7 +138,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordWithC
                     new NotifyRequest(
                             userCredentials.getEmail(),
                             NotificationType.PASSWORD_RESET_CONFIRMATION);
-            LOGGER.info("Placing message on queue");
+            LOG.info("Placing message on queue");
             sqsClient.send(serialiseRequest(notifyRequest));
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
@@ -154,10 +154,10 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordWithC
                     AuditService.UNKNOWN,
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
         } catch (JsonProcessingException | ConstraintViolationException e) {
-            LOGGER.error("Incorrect parameters in ResetPassword request");
+            LOG.error("Incorrect parameters in ResetPassword request");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
-        LOGGER.info("Generating successful response");
+        LOG.info("Generating successful response");
         return generateEmptySuccessApiGatewayResponse();
     }
 

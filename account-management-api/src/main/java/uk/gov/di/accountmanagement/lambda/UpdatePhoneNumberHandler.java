@@ -44,7 +44,7 @@ public class UpdatePhoneNumberHandler
     private final AwsSqsClient sqsClient;
     private final ValidationService validationService;
     private final CodeStorageService codeStorageService;
-    private static final Logger LOGGER = LogManager.getLogger(UpdatePhoneNumberHandler.class);
+    private static final Logger LOG = LogManager.getLogger(UpdatePhoneNumberHandler.class);
     private final AuditService auditService;
 
     public UpdatePhoneNumberHandler() {
@@ -84,7 +84,7 @@ public class UpdatePhoneNumberHandler
                                     RequestHeaderHelper.getHeaderValueOrElse(
                                             input.getHeaders(), SESSION_ID_HEADER, "");
                             attachSessionIdToLogs(sessionId);
-                            LOGGER.info("UpdatePhoneNumberHandler received request");
+                            LOG.info("UpdatePhoneNumberHandler received request");
                             try {
                                 UpdatePhoneNumberRequest updatePhoneNumberRequest =
                                         objectMapper.readValue(
@@ -95,7 +95,7 @@ public class UpdatePhoneNumberHandler
                                                 updatePhoneNumberRequest.getOtp(),
                                                 NotificationType.VERIFY_PHONE_NUMBER);
                                 if (!isValidOtpCode) {
-                                    LOGGER.info("Invalid OTP code sent in request");
+                                    LOG.info("Invalid OTP code sent in request");
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1020);
                                 }
@@ -103,7 +103,7 @@ public class UpdatePhoneNumberHandler
                                         validationService.validatePhoneNumber(
                                                 updatePhoneNumberRequest.getPhoneNumber());
                                 if (phoneValidationErrors.isPresent()) {
-                                    LOGGER.info(
+                                    LOG.info(
                                             "Invalid phone number with error: {}",
                                             phoneValidationErrors.get().getMessage());
                                     return generateApiGatewayProxyErrorResponse(
@@ -120,7 +120,7 @@ public class UpdatePhoneNumberHandler
                                 dynamoService.updatePhoneNumber(
                                         updatePhoneNumberRequest.getEmail(),
                                         updatePhoneNumberRequest.getPhoneNumber());
-                                LOGGER.info(
+                                LOG.info(
                                         "Phone Number has successfully been updated. Adding message to SQS queue");
                                 NotifyRequest notifyRequest =
                                         new NotifyRequest(
@@ -140,11 +140,11 @@ public class UpdatePhoneNumberHandler
                                         PersistentIdHelper.extractPersistentIdFromHeaders(
                                                 input.getHeaders()));
 
-                                LOGGER.info(
+                                LOG.info(
                                         "Message successfully added to queue. Generating successful gateway response");
                                 return generateEmptySuccessApiGatewayResponse();
                             } catch (JsonProcessingException | IllegalArgumentException e) {
-                                LOGGER.error(
+                                LOG.error(
                                         "UpdatePhoneNumber request is missing or contains invalid parameters.");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1001);

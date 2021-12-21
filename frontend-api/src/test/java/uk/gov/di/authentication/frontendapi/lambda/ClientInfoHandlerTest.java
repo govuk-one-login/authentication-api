@@ -25,7 +25,6 @@ import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URI;
@@ -57,7 +56,6 @@ public class ClientInfoHandlerTest {
     private ClientInfoHandler handler;
     private ClientRegistry clientRegistry;
     private final Context context = mock(Context.class);
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final SessionService sessionService = mock(SessionService.class);
@@ -69,11 +67,7 @@ public class ClientInfoHandlerTest {
 
         handler =
                 new ClientInfoHandler(
-                        configurationService,
-                        clientSessionService,
-                        clientService,
-                        sessionService,
-                        auditService);
+                        clientSessionService, clientService, sessionService, auditService);
         clientRegistry = new ClientRegistry();
         clientRegistry.setClientID(TEST_CLIENT_ID);
         clientRegistry.setClientName(TEST_CLIENT_NAME);

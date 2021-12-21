@@ -36,20 +36,17 @@ import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 public class ClientInfoHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final Logger LOGGER = LogManager.getLogger(ClientInfoHandler.class);
-    private final ConfigurationService configurationService;
+    private static final Logger LOG = LogManager.getLogger(ClientInfoHandler.class);
     private final ClientSessionService clientSessionService;
     private final ClientService clientService;
     private final SessionService sessionService;
     private final AuditService auditService;
 
     public ClientInfoHandler(
-            ConfigurationService configurationService,
             ClientSessionService clientSessionService,
             ClientService clientService,
             SessionService sessionService,
             AuditService auditService) {
-        this.configurationService = configurationService;
         this.clientSessionService = clientSessionService;
         this.clientService = clientService;
         this.sessionService = sessionService;
@@ -57,7 +54,6 @@ public class ClientInfoHandler
     }
 
     public ClientInfoHandler(ConfigurationService configurationService) {
-        this.configurationService = configurationService;
         this.clientSessionService = new ClientSessionService(configurationService);
         this.clientService =
                 new DynamoClientService(
@@ -78,7 +74,7 @@ public class ClientInfoHandler
         return isWarming(input)
                 .orElseGet(
                         () -> {
-                            LOGGER.info("ClientInfo request received");
+                            LOG.info("ClientInfo request received");
                             Optional<Session> session =
                                     sessionService.getSessionFromRequestHeaders(input.getHeaders());
                             if (session.isEmpty()) {
@@ -86,7 +82,7 @@ public class ClientInfoHandler
                                         400, ErrorResponse.ERROR_1000);
                             } else {
                                 attachSessionIdToLogs(session.get());
-                                LOGGER.info("ClientInfo session retrieved");
+                                LOG.info("ClientInfo session retrieved");
                             }
 
                             Optional<ClientSession> clientSession =
@@ -94,7 +90,7 @@ public class ClientInfoHandler
                                             input.getHeaders());
 
                             if (clientSession.isEmpty()) {
-                                LOGGER.info("ClientSession not found");
+                                LOG.info("ClientSession not found");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1018);
                             }
@@ -117,8 +113,7 @@ public class ClientInfoHandler
                                         clientService.getClient(clientID);
 
                                 if (optionalClientRegistry.isEmpty()) {
-                                    LOGGER.error(
-                                            "ClientId: {} not found in ClientRegistry", clientID);
+                                    LOG.error("ClientId: {} not found in ClientRegistry", clientID);
                                     return generateApiGatewayProxyErrorResponse(
                                             403, ErrorResponse.ERROR_1015);
                                 }
@@ -133,7 +128,7 @@ public class ClientInfoHandler
                                                 clientRegistry.getServiceType(),
                                                 state);
 
-                                LOGGER.info(
+                                LOG.info(
                                         "Found Client Info for ClientID: {} ClientName {} Scopes {} Redirect Uri {} Service Type {} State {}",
                                         clientRegistry.getClientID(),
                                         clientRegistry.getClientName(),
@@ -157,7 +152,7 @@ public class ClientInfoHandler
                                 return generateApiGatewayProxyResponse(200, clientInfoResponse);
 
                             } catch (ParseException | JsonProcessingException e) {
-                                LOGGER.error("Error when calling ClientInfo");
+                                LOG.error("Error when calling ClientInfo");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1001);
                             }

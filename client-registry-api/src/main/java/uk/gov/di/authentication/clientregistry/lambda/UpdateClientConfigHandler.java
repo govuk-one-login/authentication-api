@@ -34,7 +34,7 @@ public class UpdateClientConfigHandler
     private final ClientConfigValidationService validationService;
     private final AuditService auditService;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private static final Logger LOGGER = LogManager.getLogger(UpdateClientConfigHandler.class);
+    private static final Logger LOG = LogManager.getLogger(UpdateClientConfigHandler.class);
 
     public UpdateClientConfigHandler(
             ClientService clientService,
@@ -78,7 +78,7 @@ public class UpdateClientConfigHandler
                                     AuditService.UNKNOWN);
                             try {
                                 String clientId = input.getPathParameters().get("clientId");
-                                LOGGER.info(
+                                LOG.info(
                                         "Update client config request received with ClientId: {}",
                                         clientId);
 
@@ -96,7 +96,7 @@ public class UpdateClientConfigHandler
                                             ipAddress,
                                             AuditService.UNKNOWN,
                                             AuditService.UNKNOWN);
-                                    LOGGER.error(
+                                    LOG.error(
                                             "Invalid update Client config request. Invalid CliendId: {}",
                                             clientId);
                                     return generateApiGatewayProxyResponse(
@@ -109,7 +109,7 @@ public class UpdateClientConfigHandler
                                         validationService.validateClientUpdateConfig(
                                                 updateClientConfigRequest);
                                 if (errorResponse.isPresent()) {
-                                    LOGGER.error(
+                                    LOG.error(
                                             "≈. Failed validation. ErrorCode: {}. ErrorDescription: {}",
                                             errorResponse.get().getCode(),
                                             errorResponse.get().getDescription());
@@ -139,7 +139,7 @@ public class UpdateClientConfigHandler
                                                 clientRegistry.getPostLogoutRedirectUrls(),
                                                 clientRegistry.getServiceType(),
                                                 clientRegistry.getSubjectType());
-                                LOGGER.info("Client with ClientId {} has been updated", clientId);
+                                LOG.info("Client with ClientId {} has been updated", clientId);
                                 return generateApiGatewayProxyResponse(
                                         200, clientRegistrationResponse);
                             } catch (JsonProcessingException | NullPointerException e) {
@@ -153,7 +153,7 @@ public class UpdateClientConfigHandler
                                         ipAddress,
                                         AuditService.UNKNOWN,
                                         AuditService.UNKNOWN);
-                                LOGGER.error(
+                                LOG.error(
                                         "Invalid Client registration request. Missing parameters from request");
                                 return generateApiGatewayProxyResponse(
                                         400,

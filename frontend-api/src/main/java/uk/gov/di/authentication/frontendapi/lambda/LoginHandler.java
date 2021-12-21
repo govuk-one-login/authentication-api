@@ -48,7 +48,7 @@ import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStat
 public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final Logger LOGGER = LogManager.getLogger(LoginHandler.class);
+    private static final Logger LOG = LogManager.getLogger(LoginHandler.class);
     private final CodeStorageService codeStorageService;
     private final UserMigrationService userMigrationService;
     private final AuditService auditService;
@@ -96,7 +96,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             Context context,
             LoginRequest request,
             UserContext userContext) {
-        LOGGER.info(
+        LOG.info(
                 "Request received to the LoginHandler with session: {}",
                 userContext.getSession().getSessionId());
         try {
@@ -105,7 +105,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             UserProfile userProfile =
                     authenticationService.getUserProfileByEmail(request.getEmail());
             if (Objects.isNull(userProfile)) {
-                LOGGER.error(
+                LOG.error(
                         "The user does not have an account for session: {}",
                         userContext.getSession().getSessionId());
 
@@ -128,7 +128,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     codeStorageService.getIncorrectPasswordCount(request.getEmail());
 
             if (incorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
-                LOGGER.info(
+                LOG.info(
                         "User has exceeded max password retries with session: {}",
                         userContext.getSession().getSessionId());
                 var nextState =
@@ -168,7 +168,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             userProfile.getLegacySubjectID(), request.getEmail());
             boolean hasValidCredentials;
             if (userIsAMigratedUser) {
-                LOGGER.info(
+                LOG.info(
                         "Processing migrated user with session: {}",
                         userContext.getSession().getSessionId());
                 hasValidCredentials =
@@ -181,7 +181,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
             if (!hasValidCredentials) {
                 codeStorageService.increaseIncorrectPasswordCount(request.getEmail());
-                LOGGER.info(
+                LOG.info(
                         "Invalid login credentials entered with session: {}",
                         userContext.getSession().getSessionId());
 
@@ -228,7 +228,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
             String concatPhoneNumber = RedactPhoneNumberHelper.redactPhoneNumber(phoneNumber);
 
-            LOGGER.info(
+            LOG.info(
                     "User has successfully Logged in. Generating successful LoginResponse with session: {}",
                     userContext.getSession().getSessionId());
 
@@ -246,7 +246,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             return generateApiGatewayProxyResponse(
                     200, new LoginResponse(concatPhoneNumber, userContext.getSession().getState()));
         } catch (JsonProcessingException e) {
-            LOGGER.error(
+            LOG.error(
                     "Request is missing parameters with session: {}.",
                     userContext.getSession().getSessionId());
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);

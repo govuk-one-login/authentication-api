@@ -18,7 +18,7 @@ import java.util.Optional;
 public class KmsConnectionService {
 
     private final AWSKMS kmsClient;
-    private static final Logger LOGGER = LogManager.getLogger(KmsConnectionService.class);
+    private static final Logger LOG = LogManager.getLogger(KmsConnectionService.class);
 
     public KmsConnectionService(ConfigurationService configurationService) {
         this(
@@ -30,7 +30,7 @@ public class KmsConnectionService {
     public KmsConnectionService(
             Optional<String> localstackEndpointUri, String awsRegion, String tokenSigningKeyId) {
         if (localstackEndpointUri.isPresent()) {
-            LOGGER.info("Localstack endpoint URI is present: " + localstackEndpointUri.get());
+            LOG.info("Localstack endpoint URI is present: " + localstackEndpointUri.get());
             this.kmsClient =
                     AWSKMSClientBuilder.standard()
                             .withEndpointConfiguration(
@@ -44,7 +44,7 @@ public class KmsConnectionService {
     }
 
     public GetPublicKeyResult getPublicKey(GetPublicKeyRequest getPublicKeyRequest) {
-        LOGGER.info("Retrieving public key from KMS with KeyID {}", getPublicKeyRequest.getKeyId());
+        LOG.info("Retrieving public key from KMS with KeyID {}", getPublicKeyRequest.getKeyId());
         return kmsClient.getPublicKey(getPublicKeyRequest);
     }
 
@@ -61,7 +61,7 @@ public class KmsConnectionService {
     }
 
     public SignResult sign(SignRequest signRequest) {
-        LOGGER.info("Calling KMS with SignRequest and KeyId {}", signRequest.getKeyId());
+        LOG.info("Calling KMS with SignRequest and KeyId {}", signRequest.getKeyId());
         return kmsClient.sign(signRequest);
     }
 
@@ -71,7 +71,7 @@ public class KmsConnectionService {
         try {
             kmsClient.getPublicKey(request);
         } catch (Exception e) {
-            LOGGER.info("Unable to retrieve Public Key whilst warming up");
+            LOG.info("Unable to retrieve Public Key whilst warming up");
         }
     }
 }

@@ -41,7 +41,7 @@ public class UpdatePasswordHandler
     private final AwsSqsClient sqsClient;
     private final AuditService auditService;
 
-    private static final Logger LOGGER = LogManager.getLogger(UpdatePasswordHandler.class);
+    private static final Logger LOG = LogManager.getLogger(UpdatePasswordHandler.class);
 
     public UpdatePasswordHandler() {
         ConfigurationService configurationService = ConfigurationService.getInstance();
@@ -71,7 +71,7 @@ public class UpdatePasswordHandler
                                     RequestHeaderHelper.getHeaderValueOrElse(
                                             input.getHeaders(), SESSION_ID_HEADER, "");
                             attachSessionIdToLogs(sessionId);
-                            LOGGER.info("UpdatePasswordHandler received request");
+                            LOG.info("UpdatePasswordHandler received request");
                             context.getClientContext();
                             try {
                                 UpdatePasswordRequest updatePasswordRequest =
@@ -96,7 +96,7 @@ public class UpdatePasswordHandler
 
                                 if (verifyPassword(
                                         currentPassword, updatePasswordRequest.getNewPassword())) {
-                                    LOGGER.info("New password is the same as the old password");
+                                    LOG.info("New password is the same as the old password");
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1024);
                                 }
@@ -105,14 +105,14 @@ public class UpdatePasswordHandler
                                         updatePasswordRequest.getEmail(),
                                         updatePasswordRequest.getNewPassword());
 
-                                LOGGER.info(
+                                LOG.info(
                                         "User Password has successfully been updated.  Adding confirmation message to SQS queue");
                                 NotifyRequest notifyRequest =
                                         new NotifyRequest(
                                                 updatePasswordRequest.getEmail(),
                                                 NotificationType.PASSWORD_UPDATED);
                                 sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
-                                LOGGER.info(
+                                LOG.info(
                                         "Message successfully added to queue. Generating successful gateway response");
 
                                 auditService.submitAuditEvent(
@@ -130,7 +130,7 @@ public class UpdatePasswordHandler
                                 return generateEmptySuccessApiGatewayResponse();
 
                             } catch (JsonProcessingException | IllegalArgumentException e) {
-                                LOGGER.error(
+                                LOG.error(
                                         "UpdatePassword request is missing or contains invalid parameters.");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1001);

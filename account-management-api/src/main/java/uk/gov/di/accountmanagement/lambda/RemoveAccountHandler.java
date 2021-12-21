@@ -36,7 +36,7 @@ import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 public class RemoveAccountHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final Logger LOGGER = LogManager.getLogger(RemoveAccountHandler.class);
+    private static final Logger LOG = LogManager.getLogger(RemoveAccountHandler.class);
 
     private final AuthenticationService authenticationService;
     private final AwsSqsClient sqsClient;
@@ -78,7 +78,7 @@ public class RemoveAccountHandler
                                         RequestHeaderHelper.getHeaderValueOrElse(
                                                 input.getHeaders(), SESSION_ID_HEADER, "");
                                 attachSessionIdToLogs(sessionId);
-                                LOGGER.info("RemoveAccountHandler received request");
+                                LOG.info("RemoveAccountHandler received request");
                                 RemoveAccountRequest removeAccountRequest =
                                         objectMapper.readValue(
                                                 input.getBody(), RemoveAccountRequest.class);
@@ -94,12 +94,12 @@ public class RemoveAccountHandler
                                         authorizerParams);
 
                                 authenticationService.removeAccount(email);
-                                LOGGER.info("User account removed. Adding message to SQS queue");
+                                LOG.info("User account removed. Adding message to SQS queue");
 
                                 NotifyRequest notifyRequest =
                                         new NotifyRequest(email, NotificationType.DELETE_ACCOUNT);
                                 sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
-                                LOGGER.info(
+                                LOG.info(
                                         "Remove account message successfully added to queue. Generating successful gateway response");
                                 auditService.submitAuditEvent(
                                         AccountManagementAuditableEvent.DELETE_ACCOUNT,
@@ -115,7 +115,7 @@ public class RemoveAccountHandler
 
                                 return generateEmptySuccessApiGatewayResponse();
                             } catch (JsonProcessingException e) {
-                                LOGGER.error(
+                                LOG.error(
                                         "RemoveAccountRequest request is missing or contains invalid parameters.");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1001);

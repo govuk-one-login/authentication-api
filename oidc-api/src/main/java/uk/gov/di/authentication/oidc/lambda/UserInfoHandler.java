@@ -27,7 +27,7 @@ import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 public class UserInfoHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final Logger LOGGER = LogManager.getLogger(UserInfoHandler.class);
+    private static final Logger LOG = LogManager.getLogger(UserInfoHandler.class);
     private final ConfigurationService configurationService;
     private final UserInfoService userInfoService;
 
@@ -65,12 +65,12 @@ public class UserInfoHandler
         return isWarming(input)
                 .orElseGet(
                         () -> {
-                            LOGGER.info("Request received to the UserInfoHandler");
+                            LOG.info("Request received to the UserInfoHandler");
                             if (!headersContainValidHeader(
                                     input.getHeaders(),
                                     AUTHORIZATION_HEADER,
                                     configurationService.getHeadersCaseInsensitive())) {
-                                LOGGER.error("AccessToken is missing from request");
+                                LOG.error("AccessToken is missing from request");
                                 return generateApiGatewayProxyResponse(
                                         401,
                                         "",
@@ -88,7 +88,7 @@ public class UserInfoHandler
                                                         configurationService
                                                                 .getHeadersCaseInsensitive()));
                             } catch (UserInfoValidationException e) {
-                                LOGGER.error(
+                                LOG.error(
                                         "UserInfoValidationException. Sending back UserInfoErrorResponse");
                                 return generateApiGatewayProxyResponse(
                                         401,
@@ -97,7 +97,7 @@ public class UserInfoHandler
                                                 .toHTTPResponse()
                                                 .getHeaderMap());
                             }
-                            LOGGER.info(
+                            LOG.info(
                                     "Successfully processed UserInfo request. Sending back UserInfo response");
                             return generateApiGatewayProxyResponse(200, userInfo.toJSONString());
                         });

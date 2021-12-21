@@ -13,7 +13,7 @@ import java.util.Optional;
 
 public class UserMigrationService {
 
-    private static final Logger LOGGER = LogManager.getLogger(UserMigrationService.class);
+    private static final Logger LOG = LogManager.getLogger(UserMigrationService.class);
 
     private final AuthenticationService authenticationService;
     private final ConfigurationService configurationService;
@@ -43,10 +43,10 @@ public class UserMigrationService {
                         userCredentials.getMigratedPassword(), passwordByteArray);
 
         if (!hasValidCredentials) {
-            LOGGER.info("Migrated user has invalid credentials");
+            LOG.info("Migrated user has invalid credentials");
             return hasValidCredentials;
         }
-        LOGGER.info("Migrated user has valid credentials. About to migrate password");
+        LOG.info("Migrated user has valid credentials. About to migrate password");
         authenticationService.migrateLegacyPassword(email, inputPassword);
         return true;
     }

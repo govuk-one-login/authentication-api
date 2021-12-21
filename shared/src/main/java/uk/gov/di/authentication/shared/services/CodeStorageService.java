@@ -15,7 +15,7 @@ public class CodeStorageService {
     public static final String CODE_BLOCKED_KEY_PREFIX = "code-blocked:";
     public static final String PASSWORD_RESET_BLOCKED_KEY_PREFIX = "password-reset-blocked:";
 
-    private static final Logger LOGGER = LogManager.getLogger(CodeStorageService.class);
+    private static final Logger LOG = LogManager.getLogger(CodeStorageService.class);
     private final RedisConnectionService redisConnectionService;
     private static final String EMAIL_KEY_PREFIX = "email-code:";
     private static final String PHONE_NUMBER_KEY_PREFIX = "phone-number-code:";
@@ -114,7 +114,7 @@ public class CodeStorageService {
         long numberOfKeysRemoved =
                 redisConnectionService.deleteValue(RESET_PASSWORD_KEY_PREFIX + code);
         if (numberOfKeysRemoved == 0) {
-            LOGGER.info(format("No key was deleted for code: %s", code));
+            LOG.info(format("No key was deleted for code: %s", code));
         }
     }
 
@@ -132,7 +132,7 @@ public class CodeStorageService {
                         prefix + HashHelper.hashSha256String(emailAddress));
 
         if (numberOfKeysRemoved == 0) {
-            LOGGER.info(format("No %s key was deleted", prefix));
+            LOG.info(format("No %s key was deleted", prefix));
         }
     }
 

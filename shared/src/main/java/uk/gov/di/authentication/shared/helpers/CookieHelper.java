@@ -14,7 +14,7 @@ import static java.lang.String.format;
 
 public class CookieHelper {
 
-    private static final Logger LOGGER = LogManager.getLogger(CookieHelper.class);
+    private static final Logger LOG = LogManager.getLogger(CookieHelper.class);
 
     public static final String REQUEST_COOKIE_HEADER = "Cookie";
     public static final String RESPONSE_COOKIE_HEADER = "Set-Cookie";
@@ -63,7 +63,7 @@ public class CookieHelper {
         }
         String cookies = headers.get(cookieHeader.get());
 
-        LOGGER.debug("Cookies: {}", cookies);
+        LOG.debug("Cookies: {}", cookies);
 
         String[] cookiesList = cookies.split(";");
         String cookie =

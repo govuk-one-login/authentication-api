@@ -7,22 +7,22 @@ import java.util.Map;
 
 public final class RequestHeaderHelper {
 
-    private static final Logger LOGGER = LogManager.getLogger(RequestHeaderHelper.class);
+    private static final Logger LOG = LogManager.getLogger(RequestHeaderHelper.class);
 
     private RequestHeaderHelper() {}
 
     public static boolean headersContainValidHeader(
             Map<String, String> headers, String headerName, boolean matchLowerCase) {
         if (headers == null || headers.isEmpty()) {
-            LOGGER.error("All headers are missing or empty when looking for header {}", headerName);
+            LOG.error("All headers are missing or empty when looking for header {}", headerName);
             return false;
         } else if (!matchLowerCase && headers.containsKey(headerName)) {
-            LOGGER.info("Found header {}, matchLowerCase={}", headerName, matchLowerCase);
+            LOG.info("Found header {}, matchLowerCase={}", headerName, matchLowerCase);
             return true;
         } else if (matchLowerCase
                 && (headers.containsKey(headerName)
                         && headers.containsKey(headerName.toLowerCase()))) {
-            LOGGER.error(
+            LOG.error(
                     "Found both headers {} and lowercase version, matchLowerCase={}",
                     headerName,
                     matchLowerCase);
@@ -30,13 +30,13 @@ public final class RequestHeaderHelper {
         } else if (matchLowerCase
                 && (headers.containsKey(headerName)
                         || headers.containsKey(headerName.toLowerCase()))) {
-            LOGGER.info(
+            LOG.info(
                     "Found header {} lowercase version, matchLowerCase={}",
                     headerName,
                     matchLowerCase);
             return true;
         } else {
-            LOGGER.warn("Header {} is missing, matchLowerCase={}", headerName, matchLowerCase);
+            LOG.warn("Header {} is missing, matchLowerCase={}", headerName, matchLowerCase);
             return false;
         }
     }

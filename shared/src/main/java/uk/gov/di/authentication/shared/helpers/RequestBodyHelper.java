@@ -12,7 +12,7 @@ import java.util.Map;
 
 public class RequestBodyHelper {
 
-    private static final Logger LOGGER = LogManager.getLogger(RequestBodyHelper.class);
+    private static final Logger LOG = LogManager.getLogger(RequestBodyHelper.class);
 
     public static Map<String, String> parseRequestBody(String body) {
         Map<String, String> query_pairs = new HashMap<>();
@@ -27,10 +27,10 @@ public class RequestBodyHelper {
     public static void validatePrincipal(
             Subject subjectFromEmail, Map<String, Object> authorizerParams) {
         if (!authorizerParams.containsKey("principalId")) {
-            LOGGER.error("principalId is missing");
+            LOG.error("principalId is missing");
             throw new RuntimeException("principalId is missing");
         } else if (!subjectFromEmail.getValue().equals(authorizerParams.get("principalId"))) {
-            LOGGER.error(
+            LOG.error(
                     "Subject ID: {} does not match principalId: {}",
                     subjectFromEmail,
                     authorizerParams.get("principalId"));
