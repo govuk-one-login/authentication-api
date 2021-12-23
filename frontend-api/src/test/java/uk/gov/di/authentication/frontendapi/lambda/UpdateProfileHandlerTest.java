@@ -3,8 +3,6 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -19,13 +17,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
@@ -39,8 +35,6 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.shared.state.StateMachine;
-import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -55,7 +49,6 @@ import java.util.Set;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
@@ -74,9 +67,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.ADD_PHONE_NUMBER;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.CAPTURE_CONSENT;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
-import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_ADDED;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.buildCookieString;
-import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -90,6 +81,7 @@ class UpdateProfileHandlerTest {
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "client-session-id";
     private static final String CLIENT_ID = "client-id";
+    private static final String INTERNAL_SUBJECT = new Subject().getValue();
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
     private static final String COOKIE = "Cookie";
@@ -104,8 +96,6 @@ class UpdateProfileHandlerTest {
     private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
-    private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
-            userJourneyStateMachine();
 
     private final String TERMS_AND_CONDITIONS_VERSION =
             configurationService.getTermsAndConditionsVersion();
@@ -141,8 +131,7 @@ class UpdateProfileHandlerTest {
                         clientSessionService,
                         configurationService,
                         auditService,
-                        clientService,
-                        stateMachine);
+                        clientService);
     }
 
     @AfterEach
@@ -151,7 +140,7 @@ class UpdateProfileHandlerTest {
     }
 
     @Test
-    public void shouldReturn200WhenUpdatingPhoneNumber() {
+    public void shouldReturn204WhenUpdatingPhoneNumber() {
         usingValidSession();
         String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
@@ -167,7 +156,7 @@ class UpdateProfileHandlerTest {
 
         verify(authenticationService).updatePhoneNumber(eq(TEST_EMAIL_ADDRESS), eq(PHONE_NUMBER));
 
-        assertThat(result, hasStatus(200));
+        assertThat(result, hasStatus(204));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -183,7 +172,7 @@ class UpdateProfileHandlerTest {
     }
 
     @Test
-    public void shouldReturn200WhenUpdatingTermsAndConditions() {
+    public void shouldReturn204WhenUpdatingTermsAndConditions() {
         session.setState(SessionState.UPDATED_TERMS_AND_CONDITIONS);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -206,24 +195,24 @@ class UpdateProfileHandlerTest {
         verify(authenticationService)
                 .updateTermsAndConditions(eq(TEST_EMAIL_ADDRESS), eq(TERMS_AND_CONDITIONS_VERSION));
 
-        assertThat(result, hasStatus(200));
+        assertThat(result, hasStatus(204));
 
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE,
                         "request-id",
                         session.getSessionId(),
-                        "",
-                        "",
+                        CLIENT_ID,
+                        INTERNAL_SUBJECT,
                         TEST_EMAIL_ADDRESS,
                         "",
-                        "",
+                        PHONE_NUMBER,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
     }
 
     @Test
-    public void shouldReturn200WhenUpdatingProfileWithConsent()
-            throws ClientNotFoundException, JsonProcessingException, URISyntaxException {
+    public void shouldReturn204WhenUpdatingProfileWithConsent()
+            throws ClientNotFoundException, URISyntaxException {
         session.setState(SessionState.CONSENT_REQUIRED);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -269,7 +258,7 @@ class UpdateProfileHandlerTest {
         verify(authenticationService)
                 .updateConsent(eq(TEST_EMAIL_ADDRESS), any(ClientConsent.class));
 
-        assertThat(result, hasStatus(200));
+        assertThat(result, hasStatus(204));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -277,14 +266,11 @@ class UpdateProfileHandlerTest {
                         "request-id",
                         session.getSessionId(),
                         clientID.getValue(),
-                        "",
+                        INTERNAL_SUBJECT,
                         TEST_EMAIL_ADDRESS,
                         "",
-                        "",
+                        PHONE_NUMBER,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
-        BaseAPIResponse codeResponse =
-                new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
-        assertThat(codeResponse.getSessionState(), equalTo(CONSENT_ADDED));
     }
 
     @Test
@@ -303,26 +289,6 @@ class UpdateProfileHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        UPDATE_PROFILE_REQUEST_ERROR, "request-id", "", "", "", "", "", "", "");
-    }
-
-    @Test
-    public void shouldReturn400IfUserTransitionsFromWrongState() {
-        session.setState(SessionState.NEW);
-        usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, ADD_PHONE_NUMBER, PHONE_NUMBER));
-        APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1017));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -367,7 +333,7 @@ class UpdateProfileHandlerTest {
                 .setPhoneNumber(PHONE_NUMBER)
                 .setEmailVerified(true)
                 .setPublicSubjectID(new Subject().getValue())
-                .setSubjectID(new Subject().getValue());
+                .setSubjectID(INTERNAL_SUBJECT);
     }
 
     private UserProfile generateUserProfileWithConsent() {
@@ -378,7 +344,7 @@ class UpdateProfileHandlerTest {
                 .setPhoneNumber(PHONE_NUMBER)
                 .setEmailVerified(true)
                 .setPublicSubjectID(new Subject().getValue())
-                .setSubjectID(new Subject().getValue())
+                .setSubjectID(INTERNAL_SUBJECT)
                 .setClientConsent(
                         new ClientConsent(
                                 CLIENT_ID, claims, LocalDateTime.now(ZoneId.of("UTC")).toString()));

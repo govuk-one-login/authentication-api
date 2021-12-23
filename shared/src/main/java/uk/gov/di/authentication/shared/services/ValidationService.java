@@ -5,22 +5,12 @@ import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.SessionAction;
 
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.MOBILE;
-import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE;
-import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES;
-import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_MFA_CODE;
-import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES;
-import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE;
-import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES;
-import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE;
-import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_MFA_CODE;
-import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_PHONE_VERIFICATION_CODE;
 
 public class ValidationService {
 
@@ -103,7 +93,7 @@ public class ValidationService {
         }
     }
 
-    public SessionAction validateVerificationCode(
+    public Optional<ErrorResponse> validateVerificationCode(
             NotificationType type,
             Optional<String> code,
             String input,
@@ -115,12 +105,11 @@ public class ValidationService {
 
             switch (type) {
                 case MFA_SMS:
-                    return USER_ENTERED_VALID_MFA_CODE;
                 case VERIFY_EMAIL:
-                    return USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE;
                 case VERIFY_PHONE_NUMBER:
-                    return USER_ENTERED_VALID_PHONE_VERIFICATION_CODE;
+                    return Optional.empty();
             }
+            return Optional.of(ErrorResponse.ERROR_1002);
         }
 
         session.incrementRetryCount();
@@ -128,23 +117,22 @@ public class ValidationService {
         if (session.getRetryCount() > maxRetries) {
             switch (type) {
                 case MFA_SMS:
-                    return USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES;
+                    return Optional.of(ErrorResponse.ERROR_1027);
                 case VERIFY_EMAIL:
-                    return USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES;
+                    return Optional.of(ErrorResponse.ERROR_1033);
                 case VERIFY_PHONE_NUMBER:
-                    return USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES;
+                    return Optional.of(ErrorResponse.ERROR_1034);
             }
         }
 
         switch (type) {
             case MFA_SMS:
-                return USER_ENTERED_INVALID_MFA_CODE;
+                return Optional.of(ErrorResponse.ERROR_1035);
             case VERIFY_EMAIL:
-                return USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE;
+                return Optional.of(ErrorResponse.ERROR_1036);
             case VERIFY_PHONE_NUMBER:
-                return USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE;
+                return Optional.of(ErrorResponse.ERROR_1037);
         }
-
-        return null;
+        return Optional.of(ErrorResponse.ERROR_1002);
     }
 }

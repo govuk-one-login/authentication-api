@@ -58,11 +58,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.shared.entity.SessionState.ACCOUNT_TEMPORARILY_LOCKED;
-import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
-import static uk.gov.di.authentication.shared.entity.SessionState.LOGGED_IN;
-import static uk.gov.di.authentication.shared.entity.SessionState.MFA_SMS_CODE_SENT;
-import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -86,8 +81,7 @@ class LoginHandlerTest {
     private final UserMigrationService userMigrationService = mock(UserMigrationService.class);
     private final AuditService auditService = mock(AuditService.class);
 
-    private final Session session =
-            new Session(IdGenerator.generate()).setState(AUTHENTICATION_REQUIRED);
+    private final Session session = new Session(IdGenerator.generate());
 
     @RegisterExtension
     public final CaptureLoggingExtension logging = new CaptureLoggingExtension(LoginHandler.class);
@@ -150,7 +144,6 @@ class LoginHandlerTest {
 
         LoginResponse response =
                 new ObjectMapper().readValue(result.getBody(), LoginResponse.class);
-        assertThat(response.getSessionState(), equalTo(LOGGED_IN));
         assertThat(
                 response.getRedactedPhoneNumber(),
                 equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
@@ -195,7 +188,6 @@ class LoginHandlerTest {
 
         LoginResponse response =
                 new ObjectMapper().readValue(result.getBody(), LoginResponse.class);
-        assertThat(response.getSessionState(), equalTo(LOGGED_IN));
         assertThat(
                 response.getRedactedPhoneNumber(),
                 equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
@@ -213,8 +205,8 @@ class LoginHandlerTest {
                         userProfile.getLegacySubjectID(), EMAIL))
                 .thenReturn(false);
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
-
-        session.setState(MFA_SMS_CODE_SENT);
+        when(clientSession.getAuthRequestParams())
+                .thenReturn(generateAuthRequest(Optional.empty()).toParameters());
 
         usingValidSession();
 
@@ -227,7 +219,6 @@ class LoginHandlerTest {
 
         LoginResponse response =
                 new ObjectMapper().readValue(result.getBody(), LoginResponse.class);
-        assertThat(response.getSessionState(), equalTo(MFA_SMS_CODE_SENT));
         assertThat(
                 response.getRedactedPhoneNumber(),
                 equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
@@ -237,8 +228,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    public void shouldChangeStateToAccountTemporarilyLockedAfter5UnsuccessfulAttempts()
-            throws JsonProcessingException {
+    public void shouldChangeStateToAccountTemporarilyLockedAfter5UnsuccessfulAttempts() {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -254,16 +244,13 @@ class LoginHandlerTest {
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        assertThat(result, hasStatus(200));
+        assertThat(result, hasStatus(400));
 
-        LoginResponse response =
-                new ObjectMapper().readValue(result.getBody(), LoginResponse.class);
-        assertThat(response.getSessionState(), equalTo(ACCOUNT_TEMPORARILY_LOCKED));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
     }
 
     @Test
-    public void shouldKeepUserLockedWhenTheyEnterSuccessfulLoginRequestInNewSession()
-            throws JsonProcessingException {
+    public void shouldKeepUserLockedWhenTheyEnterSuccessfulLoginRequestInNewSession() {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -280,11 +267,8 @@ class LoginHandlerTest {
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        assertThat(result, hasStatus(200));
-
-        LoginResponse response =
-                new ObjectMapper().readValue(result.getBody(), LoginResponse.class);
-        assertThat(response.getSessionState(), equalTo(ACCOUNT_TEMPORARILY_LOCKED));
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -327,7 +311,6 @@ class LoginHandlerTest {
 
         LoginResponse response =
                 new ObjectMapper().readValue(result2.getBody(), LoginResponse.class);
-        assertThat(response.getSessionState(), equalTo(LOGGED_IN));
     }
 
     @Test
@@ -442,31 +425,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserTransitionsFromWrongState() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-        when(userMigrationService.userHasBeenPartlyMigrated(
-                        userProfile.getLegacySubjectID(), EMAIL))
-                .thenReturn(false);
-        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
-
-        session.setState(NEW);
-
-        usingValidSession();
-
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1017));
-    }
-
-    @Test
-    public void shouldSetSessionCredentialStrengthIfClientSessionsVtrIsLow()
-            throws JsonProcessingException {
+    public void shouldSetSessionCredentialStrengthIfClientSessionsVtrIsLow() {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -496,8 +455,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    public void shouldNotSetSessionCredentialStrengthIfClientSessionsVtrIsMedium()
-            throws JsonProcessingException {
+    public void shouldNotSetSessionCredentialStrengthIfClientSessionsVtrIsMedium() {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
