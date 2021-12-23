@@ -34,6 +34,7 @@ resource "aws_elasticache_replication_group" "sessions_store" {
   port                          = 6379
   multi_az_enabled              = true
   maintenance_window            = "thu:02:00-thu:03:00"
+  notification_topic_arn        = aws_sns_topic.slack_events.arn
 
   at_rest_encryption_enabled = true
   transit_encryption_enabled = true
@@ -54,5 +55,6 @@ resource "aws_elasticache_replication_group" "sessions_store" {
   depends_on = [
     aws_vpc.authentication,
     aws_subnet.authentication,
+    aws_sns_topic.slack_events,
   ]
 }
