@@ -22,7 +22,7 @@ dependencies {
             configurations.hamcrest,
             configurations.sns,
             configurations.ssm,
-            "com.googlecode.libphonenumber:libphonenumber:8.12.39",
+            "com.googlecode.libphonenumber:libphonenumber:8.12.40",
             "com.google.protobuf:protobuf-java:3.18.1"
 
     testImplementation configurations.tests,
