@@ -13,6 +13,7 @@ import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.conditions.MfaHelper;
+import uk.gov.di.authentication.shared.conditions.TermsAndConditionsHelper;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -192,7 +193,15 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 redactedPhoneNumber =
                         RedactPhoneNumberHelper.redactPhoneNumber(userProfile.getPhoneNumber());
             }
-
+            boolean termsAndConditionsAccepted;
+            if (userProfile.getTermsAndConditions() == null) {
+                termsAndConditionsAccepted = false;
+            } else {
+                termsAndConditionsAccepted =
+                        TermsAndConditionsHelper.hasTermsAndConditionsBeenAccepted(
+                                userProfile.getTermsAndConditions(),
+                                configurationService.getTermsAndConditionsVersion());
+            }
             LOG.info("User has successfully logged in");
 
             auditService.submitAuditEvent(
@@ -208,7 +217,11 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
             return generateApiGatewayProxyResponse(
                     200,
-                    new LoginResponse(redactedPhoneNumber, isMfaRequired, isPhoneNumberVerified));
+                    new LoginResponse(
+                            redactedPhoneNumber,
+                            isMfaRequired,
+                            isPhoneNumberVerified,
+                            termsAndConditionsAccepted));
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }

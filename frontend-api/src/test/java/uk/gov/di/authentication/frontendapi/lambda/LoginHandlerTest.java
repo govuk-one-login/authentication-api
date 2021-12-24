@@ -26,6 +26,7 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
@@ -40,7 +41,10 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -117,6 +121,56 @@ class LoginHandlerTest {
 
     @Test
     public void shouldReturn200IfLoginIsSuccessful() throws JsonProcessingException {
+        when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
+        String persistentId = "some-persistent-id-value";
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
+        headers.put("Session-Id", session.getSessionId());
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(userMigrationService.userHasBeenPartlyMigrated(userProfile.getLegacySubjectID(), EMAIL))
+                .thenReturn(false);
+        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
+        when(clientSession.getAuthRequestParams())
+                .thenReturn(generateAuthRequest(Optional.empty()).toParameters());
+        usingValidSession();
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setHeaders(headers);
+        event.setBody(
+                format(
+                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
+                        PASSWORD, EMAIL.toUpperCase()));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+
+        LoginResponse response =
+                new ObjectMapper().readValue(result.getBody(), LoginResponse.class);
+        assertThat(
+                response.getRedactedPhoneNumber(),
+                equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+        assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
+        verify(authenticationService).getUserProfileByEmail(EMAIL);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.LOG_IN_SUCCESS,
+                        "aws-session-id",
+                        session.getSessionId(),
+                        "",
+                        userProfile.getSubjectID(),
+                        userProfile.getEmail(),
+                        "123.123.123.123",
+                        userProfile.getPhoneNumber(),
+                        persistentId);
+    }
+
+    @Test
+    public void shouldReturn200IfLoginIsSuccessfulAndTermsAndConditionsNotAccepted()
+            throws JsonProcessingException {
+        when(configurationService.getTermsAndConditionsVersion()).thenReturn("2.0");
         String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
@@ -147,6 +201,7 @@ class LoginHandlerTest {
         assertThat(
                 response.getRedactedPhoneNumber(),
                 equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+        assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(false));
         verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 
         verify(auditService)
@@ -168,6 +223,7 @@ class LoginHandlerTest {
     @Test
     public void shouldReturn200IfMigratedUserHasBeenProcessesSuccessfully()
             throws JsonProcessingException {
+        when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         String legacySubjectId = new Subject().getValue();
         UserProfile userProfile = generateUserProfile(legacySubjectId);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
@@ -188,6 +244,7 @@ class LoginHandlerTest {
 
         LoginResponse response =
                 new ObjectMapper().readValue(result.getBody(), LoginResponse.class);
+        assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
         assertThat(
                 response.getRedactedPhoneNumber(),
                 equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
@@ -501,6 +558,8 @@ class LoginHandlerTest {
     }
 
     private UserProfile generateUserProfile(String legacySubjectId) {
+        LocalDateTime localDateTime = LocalDateTime.now();
+        Date currentDateTime = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         return new UserProfile()
                 .setEmail(EMAIL)
                 .setEmailVerified(true)
@@ -508,6 +567,7 @@ class LoginHandlerTest {
                 .setPhoneNumberVerified(true)
                 .setPublicSubjectID(new Subject().getValue())
                 .setSubjectID(new Subject().getValue())
-                .setLegacySubjectID(legacySubjectId);
+                .setLegacySubjectID(legacySubjectId)
+                .setTermsAndConditions(new TermsAndConditions("1.0", currentDateTime.toString()));
     }
 }
