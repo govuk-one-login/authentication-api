@@ -4,22 +4,19 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
-import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
-import org.apache.http.NameValuePair;
-import org.apache.http.message.BasicNameValuePair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
+import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.SessionAction;
-import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
@@ -33,27 +30,21 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.shared.state.StateMachine;
-import uk.gov.di.authentication.shared.state.UserContext;
 
-import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 import static java.util.Objects.isNull;
-import static uk.gov.di.authentication.oidc.entity.RequestParameters.COOKIE_CONSENT;
-import static uk.gov.di.authentication.oidc.entity.RequestParameters.GA;
-import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 import static uk.gov.di.authentication.shared.services.AuthorizationService.COOKIE_CONSENT_NOT_ENGAGED;
-import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class AuthCodeHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -66,8 +57,6 @@ public class AuthCodeHandler
     private final ClientSessionService clientSessionService;
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
-    private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
-            userJourneyStateMachine();
     private final ConfigurationService configurationService;
 
     public AuthCodeHandler(
@@ -129,18 +118,6 @@ public class AuthCodeHandler
 
                             LOG.info("Processing request");
 
-                            SessionState nextState;
-                            try {
-                                nextState =
-                                        stateMachine.transition(
-                                                session.getState(),
-                                                SYSTEM_HAS_ISSUED_AUTHORIZATION_CODE,
-                                                UserContext.builder(session).build());
-                            } catch (StateMachine.InvalidStateTransitionException e) {
-                                return generateApiGatewayProxyErrorResponse(
-                                        400, ErrorResponse.ERROR_1017);
-                            }
-
                             AuthenticationRequest authenticationRequest;
                             try {
                                 Map<String, List<String>> authRequest =
@@ -154,8 +131,6 @@ public class AuthCodeHandler
                                     LOG.warn(
                                             "Authentication request could not be parsed: redirect URI or Client ID is missing from auth request",
                                             e);
-                                    // TODO - We need to come up with a strategy to handle uncaught
-                                    // exceptions
                                     throw new RuntimeException(
                                             "Redirect URI or Client ID is missing from auth request",
                                             e);
@@ -179,11 +154,12 @@ public class AuthCodeHandler
                                 if (!authorizationService.isClientRedirectUriValid(
                                         authenticationRequest.getClientID(),
                                         authenticationRequest.getRedirectionURI())) {
-                                    return generateInvalidClientRedirectError(
-                                            authenticationRequest.getRedirectionURI());
+                                    return generateApiGatewayProxyErrorResponse(
+                                            400, ErrorResponse.ERROR_1016);
                                 }
                             } catch (ClientNotFoundException e) {
-                                return generateClientNotFoundError(authenticationRequest);
+                                return generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.ERROR_1015);
                             }
                             VectorOfTrust requestedVectorOfTrust =
                                     clientSessionService
@@ -204,18 +180,13 @@ public class AuthCodeHandler
                                             session.getEmailAddress());
 
                             try {
-                                AuthenticationSuccessResponse authenticationResponse;
+                                String cookieConsentValue =
+                                        getCookieConsentValue(authenticationRequest).orElse(null);
 
-                                List<NameValuePair> additionalParams =
-                                        getAdditionalQueryParams(
-                                                input.getQueryStringParameters(),
-                                                authenticationRequest);
-
-                                authenticationResponse =
+                                AuthenticationSuccessResponse authenticationResponse =
                                         authorizationService.generateSuccessfulAuthResponse(
-                                                authenticationRequest, authCode, additionalParams);
+                                                authenticationRequest, authCode);
 
-                                sessionService.save(session.setState(nextState));
                                 LOG.info("Successfully processed request");
 
                                 cloudwatchMetricsService.incrementCounter(
@@ -239,64 +210,29 @@ public class AuthCodeHandler
                                         AuditService.UNKNOWN,
                                         PersistentIdHelper.extractPersistentIdFromCookieHeader(
                                                 input.getHeaders()));
-                                return new APIGatewayProxyResponseEvent()
-                                        .withStatusCode(302)
-                                        .withHeaders(
-                                                Map.of(
-                                                        ResponseHeaders.LOCATION,
-                                                        authenticationResponse.toURI().toString()));
+                                return generateApiGatewayProxyResponse(
+                                        200,
+                                        new AuthCodeResponse(
+                                                authenticationResponse.toURI().toString(),
+                                                cookieConsentValue));
                             } catch (ClientNotFoundException e) {
-                                return generateClientNotFoundError(authenticationRequest);
+                                return generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.ERROR_1015);
                             } catch (URISyntaxException e) {
-                                return generateInvalidClientRedirectError(
-                                        authenticationRequest.getRedirectionURI());
+                                return generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.ERROR_1016);
+                            } catch (JsonProcessingException e) {
+                                throw new RuntimeException(e);
                             }
                         });
     }
 
-    private List<NameValuePair> getAdditionalQueryParams(
-            Map<String, String> queryParams, AuthenticationRequest authenticationRequest)
+    private Optional<String> getCookieConsentValue(AuthenticationRequest authenticationRequest)
             throws ClientNotFoundException {
-        List<NameValuePair> additionalParams = new ArrayList<>();
-
+        Optional<String> cookieConsentValue = Optional.empty();
         if (authorizationService.isClientCookieConsentShared(authenticationRequest.getClientID())) {
-
-            String cookieConsentValue = COOKIE_CONSENT_NOT_ENGAGED;
-
-            if (isValidQueryParam(queryParams, COOKIE_CONSENT)
-                    && authorizationService.isValidCookieConsentValue(
-                            queryParams.get(COOKIE_CONSENT))) {
-                cookieConsentValue = queryParams.get(COOKIE_CONSENT);
-            }
-
-            additionalParams.add(new BasicNameValuePair(COOKIE_CONSENT, cookieConsentValue));
+            cookieConsentValue = Optional.of(COOKIE_CONSENT_NOT_ENGAGED);
         }
-
-        if (isValidQueryParam(queryParams, GA)) {
-            additionalParams.add(new BasicNameValuePair(GA, queryParams.get(GA)));
-        }
-
-        return additionalParams;
-    }
-
-    private boolean isValidQueryParam(Map<String, String> queryParams, String queryParam) {
-        return queryParams != null
-                && queryParams.containsKey(queryParam)
-                && !queryParams.get(queryParam).isEmpty();
-    }
-
-    private APIGatewayProxyResponseEvent generateInvalidClientRedirectError(URI redirectURI) {
-        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1016);
-    }
-
-    private APIGatewayProxyResponseEvent generateClientNotFoundError(
-            AuthenticationRequest authenticationRequest) {
-        AuthenticationErrorResponse errorResponse =
-                authorizationService.generateAuthenticationErrorResponse(
-                        authenticationRequest, OAuth2Error.INVALID_CLIENT);
-        LOG.warn("Client not found");
-        return new APIGatewayProxyResponseEvent()
-                .withStatusCode(302)
-                .withHeaders(Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()));
+        return cookieConsentValue;
     }
 }

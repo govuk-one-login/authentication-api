@@ -11,7 +11,6 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
-import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -81,16 +80,10 @@ public class AuthorizationService {
     }
 
     public AuthenticationSuccessResponse generateSuccessfulAuthResponse(
-            AuthenticationRequest authRequest,
-            AuthorizationCode authorizationCode,
-            List<NameValuePair> additionalParams)
+            AuthenticationRequest authRequest, AuthorizationCode authorizationCode)
             throws URISyntaxException {
 
         URIBuilder redirectUri = new URIBuilder(authRequest.getRedirectionURI());
-
-        if (additionalParams != null && !additionalParams.isEmpty()) {
-            redirectUri.addParameters(additionalParams);
-        }
 
         return new AuthenticationSuccessResponse(
                 redirectUri.build(),

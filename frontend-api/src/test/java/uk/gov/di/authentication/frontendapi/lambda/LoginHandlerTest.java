@@ -129,7 +129,8 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(userMigrationService.userHasBeenPartlyMigrated(userProfile.getLegacySubjectID(), EMAIL))
+        when(userMigrationService.userHasBeenPartlyMigrated(
+                        userProfile.getLegacySubjectID(), EMAIL))
                 .thenReturn(false);
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
         when(clientSession.getAuthRequestParams())
