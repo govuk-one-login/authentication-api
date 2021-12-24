@@ -21,7 +21,6 @@ import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.SessionAction;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -29,7 +28,6 @@ import uk.gov.di.authentication.shared.services.AuthorizationService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -56,12 +54,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR;
-import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY;
-import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED;
-import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
-import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
-import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_NOT_VALID;
-import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.hasContextData;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -76,8 +68,6 @@ class AuthorisationHandlerTest {
     private final UserContext userContext = mock(UserContext.class);
     private final AuditService auditService = mock(AuditService.class);
     private final InOrder inOrder = inOrder(auditService);
-    private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
-            mock(StateMachine.class);
     private static final String EXPECTED_SESSION_COOKIE_STRING =
             "gs=a-session-id.client-session-id; Max-Age=3600; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
     private static final String EXPECTED_PERSISTENT_COOKIE_STRING =
@@ -111,28 +101,7 @@ class AuthorisationHandlerTest {
                         sessionService,
                         clientSessionService,
                         authorizationService,
-                        auditService,
-                        stateMachine);
-        when(stateMachine.transition(
-                        eq(AUTHENTICATED),
-                        eq(USER_HAS_STARTED_A_NEW_JOURNEY),
-                        any(UserContext.class)))
-                .thenReturn(AUTHENTICATED);
-        when(stateMachine.transition(
-                        eq(MFA_CODE_NOT_VALID),
-                        eq(USER_HAS_STARTED_A_NEW_JOURNEY),
-                        any(UserContext.class)))
-                .thenReturn(MFA_CODE_NOT_VALID);
-        when(stateMachine.transition(
-                        eq(AUTHENTICATED),
-                        eq(USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED),
-                        any(UserContext.class)))
-                .thenReturn(NEW);
-        when(stateMachine.transition(
-                        eq(AUTHENTICATION_REQUIRED),
-                        eq(USER_HAS_STARTED_A_NEW_JOURNEY),
-                        any(UserContext.class)))
-                .thenReturn(NEW);
+                        auditService);
     }
 
     @AfterEach
@@ -394,8 +363,7 @@ class AuthorisationHandlerTest {
                         AuditService.UNKNOWN,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
-                        pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY));
+                        PERSISTENT_SESSION_ID);
     }
 
     @Test
@@ -409,10 +377,7 @@ class AuthorisationHandlerTest {
 
         APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent());
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
-        URI expectedUri =
-                new URIBuilder(LOGIN_URL)
-                        .addParameter("interrupt", AUTHENTICATED.toString())
-                        .build();
+        URI expectedUri = new URIBuilder(LOGIN_URL).addParameter("interrupt", "").build();
 
         assertThat(response, hasStatus(302));
         assertEquals(expectedUri, uri);
@@ -439,8 +404,7 @@ class AuthorisationHandlerTest {
                         AuditService.UNKNOWN,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
-                        pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY));
+                        PERSISTENT_SESSION_ID);
     }
 
     @Test
@@ -479,10 +443,7 @@ class AuthorisationHandlerTest {
                 makeHandlerRequest(withRequestEvent(Map.of("prompt", "none")));
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
-        URI expectedUri =
-                new URIBuilder(LOGIN_URL)
-                        .addParameter("interrupt", AUTHENTICATED.toString())
-                        .build();
+        URI expectedUri = new URIBuilder(LOGIN_URL).addParameter("interrupt", "").build();
 
         assertThat(response, hasStatus(302));
         assertEquals(expectedUri, uri);
@@ -509,8 +470,7 @@ class AuthorisationHandlerTest {
                         AuditService.UNKNOWN,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
-                        pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY));
+                        PERSISTENT_SESSION_ID);
     }
 
     @Test
@@ -551,8 +511,7 @@ class AuthorisationHandlerTest {
                         AuditService.UNKNOWN,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
-                        pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY));
+                        PERSISTENT_SESSION_ID);
     }
 
     @Test
@@ -589,8 +548,7 @@ class AuthorisationHandlerTest {
                         AuditService.UNKNOWN,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
-                        pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED));
+                        PERSISTENT_SESSION_ID);
     }
 
     @Test
@@ -753,8 +711,7 @@ class AuthorisationHandlerTest {
                         AuditService.UNKNOWN,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
-                        pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY));
+                        PERSISTENT_SESSION_ID);
     }
 
     @Test
@@ -790,8 +747,7 @@ class AuthorisationHandlerTest {
                         AuditService.UNKNOWN,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
-                        pair("session-action", USER_HAS_STARTED_A_NEW_JOURNEY));
+                        PERSISTENT_SESSION_ID);
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {

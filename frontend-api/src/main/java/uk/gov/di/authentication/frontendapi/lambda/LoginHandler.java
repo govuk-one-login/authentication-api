@@ -184,8 +184,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             sessionService.save(session.setNewAccount(EXISTING));
 
             var isMfaRequired =
-                    MfaHelper.clientDoesNotRequireMfa(
-                            userContext.getClientSession().getAuthRequestParams());
+                    MfaHelper.mfaRequired(userContext.getClientSession().getAuthRequestParams());
 
             boolean isPhoneNumberVerified = userProfile.isPhoneNumberVerified();
             String redactedPhoneNumber = null;

@@ -15,7 +15,7 @@ public class MfaHelper {
 
     private static final Logger LOG = LogManager.getLogger(MfaHelper.class);
 
-    public static boolean clientDoesNotRequireMfa(Map<String, List<String>> authRequestParams) {
+    public static boolean mfaRequired(Map<String, List<String>> authRequestParams) {
         AuthenticationRequest authRequest;
         try {
             authRequest = AuthenticationRequest.parse(authRequestParams);
@@ -25,9 +25,9 @@ public class MfaHelper {
         List<String> vtr = authRequest.getCustomParameter("vtr");
         VectorOfTrust vectorOfTrust = VectorOfTrust.parseFromAuthRequestAttribute(vtr);
         if (vectorOfTrust.getCredentialTrustLevel().equals(LOW_LEVEL)) {
-            return true;
-        } else {
             return false;
+        } else {
+            return true;
         }
     }
 }
