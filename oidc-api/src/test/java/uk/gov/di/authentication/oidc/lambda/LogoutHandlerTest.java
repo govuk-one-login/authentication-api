@@ -104,24 +104,17 @@ class LogoutHandlerTest {
                 .thenReturn(Optional.of(createClientRegistry()));
         when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
                 .thenReturn(true);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setQueryStringParameters(
-                Map.of(
-                        "id_token_hint", signedIDToken.serialize(),
-                        "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString(),
-                        "state", STATE.toString()));
-        session.getClientSessions().add("client-session-id-2");
-        session.getClientSessions().add("client-session-id-3");
-        generateSessionFromCookie(session);
-        setupClientSessionToken(signedIDToken);
+        APIGatewayProxyRequestEvent event =
+                generateRequestEvent(
+                        Map.of(
+                                "id_token_hint", signedIDToken.serialize(),
+                                "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString(),
+                                "state", STATE.toString()));
+        setupSessions();
+
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
-        verify(sessionService).deleteSessionFromRedis(SESSION_ID);
-        verify(clientSessionService).deleteClientSessionFromRedis(CLIENT_SESSION_ID);
-        verify(clientSessionService).deleteClientSessionFromRedis("client-session-id-2");
-        verify(clientSessionService).deleteClientSessionFromRedis("client-session-id-3");
+        verifySessions();
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
@@ -141,20 +134,112 @@ class LogoutHandlerTest {
     }
 
     @Test
+    public void
+            shouldDeleteSessionAndRedirectToDefaultLogoutUriForValidLogoutRequestWithHintOnly() {
+        when(dynamoClientService.getClient("client-id"))
+                .thenReturn(Optional.of(createClientRegistry()));
+        when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
+                .thenReturn(true);
+        APIGatewayProxyRequestEvent event =
+                generateRequestEvent(Map.of("id_token_hint", signedIDToken.serialize()));
+        setupSessions();
+
+        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+
+        verifySessions();
+        assertThat(response, hasStatus(302));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                equalTo(DEFAULT_LOGOUT_URI.toString()));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.LOG_OUT_SUCCESS,
+                        "aws-session-id",
+                        SESSION_ID,
+                        "client-id",
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID);
+    }
+
+    @Test
+    public void
+            shouldDeleteSessionAndRedirectToDefaultLogoutUriForValidLogoutRequestWithLogoutURIOnly() {
+        when(dynamoClientService.getClient("client-id"))
+                .thenReturn(Optional.of(createClientRegistry()));
+        when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
+                .thenReturn(true);
+        APIGatewayProxyRequestEvent event =
+                generateRequestEvent(
+                        Map.of("post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString()));
+        setupSessions();
+
+        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+
+        verifySessions();
+        assertThat(response, hasStatus(302));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                equalTo(DEFAULT_LOGOUT_URI.toString()));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.LOG_OUT_SUCCESS,
+                        "aws-session-id",
+                        SESSION_ID,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID);
+    }
+
+    @Test
+    public void
+            shouldDeleteSessionAndRedirectToDefaultLogoutUriForValidLogoutRequestWithNoQueryParams() {
+        when(dynamoClientService.getClient("client-id"))
+                .thenReturn(Optional.of(createClientRegistry()));
+        when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
+                .thenReturn(true);
+        APIGatewayProxyRequestEvent event = generateRequestEvent(null);
+        setupSessions();
+
+        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+
+        verifySessions();
+        assertThat(response, hasStatus(302));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                equalTo(DEFAULT_LOGOUT_URI.toString()));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.LOG_OUT_SUCCESS,
+                        "aws-session-id",
+                        SESSION_ID,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID);
+    }
+
+    @Test
     public void shouldNotReturnStateWhenStateIsNotSentInRequest() {
         when(dynamoClientService.getClient("client-id"))
                 .thenReturn(Optional.of(createClientRegistry()));
         when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
                 .thenReturn(true);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setQueryStringParameters(
-                Map.of(
-                        "id_token_hint",
-                        signedIDToken.serialize(),
-                        "post_logout_redirect_uri",
-                        CLIENT_LOGOUT_URI.toString()));
+        APIGatewayProxyRequestEvent event =
+                generateRequestEvent(
+                        Map.of(
+                                "id_token_hint", signedIDToken.serialize(),
+                                "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString()));
         generateSessionFromCookie(session);
         setupClientSessionToken(signedIDToken);
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
@@ -254,13 +339,11 @@ class LogoutHandlerTest {
     @Test
     public void shouldRedirectToDefaultLogoutUriWithErrorMessageWhenIDTokenHintIsNotFoundInSession()
             throws URISyntaxException {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
-        event.setQueryStringParameters(
-                Map.of(
-                        "id_token_hint", signedIDToken.serialize(),
-                        "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString()));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        APIGatewayProxyRequestEvent event =
+                generateRequestEvent(
+                        Map.of(
+                                "id_token_hint", signedIDToken.serialize(),
+                                "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString()));
         generateSessionFromCookie(session);
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
@@ -299,13 +382,11 @@ class LogoutHandlerTest {
                 TokenGeneratorHelper.generateIDToken(
                         "invalid-client-id", new Subject(), "http://localhost-rp", ecSigningKey);
         when(tokenValidationService.isTokenSignatureValid(signedJWT.serialize())).thenReturn(false);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
-        event.setQueryStringParameters(
-                Map.of(
-                        "id_token_hint", signedJWT.serialize(),
-                        "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString()));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        APIGatewayProxyRequestEvent event =
+                generateRequestEvent(
+                        Map.of(
+                                "id_token_hint", signedJWT.serialize(),
+                                "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString()));
 
         session.getClientSessions().add(CLIENT_SESSION_ID);
         generateSessionFromCookie(session);
@@ -348,15 +429,12 @@ class LogoutHandlerTest {
                 TokenGeneratorHelper.generateIDToken(
                         "invalid-client-id", SUBJECT, "http://localhost-rp", ecSigningKey);
         when(tokenValidationService.isTokenSignatureValid(signedJWT.serialize())).thenReturn(true);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
-        event.setQueryStringParameters(
-                Map.of(
-                        "id_token_hint", signedJWT.serialize(),
-                        "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString(),
-                        "state", STATE.toString()));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-
+        APIGatewayProxyRequestEvent event =
+                generateRequestEvent(
+                        Map.of(
+                                "id_token_hint", signedJWT.serialize(),
+                                "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString(),
+                                "state", STATE.toString()));
         session.getClientSessions().add(CLIENT_SESSION_ID);
         generateSessionFromCookie(session);
         setupClientSessionToken(signedJWT);
@@ -396,14 +474,12 @@ class LogoutHandlerTest {
                 .thenReturn(true);
         when(dynamoClientService.getClient("client-id"))
                 .thenReturn(Optional.of(createClientRegistry()));
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
-        event.setQueryStringParameters(
-                Map.of(
-                        "id_token_hint", signedIDToken.serialize(),
-                        "post_logout_redirect_uri", "http://localhost/invalidlogout",
-                        "state", STATE.toString()));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        APIGatewayProxyRequestEvent event =
+                generateRequestEvent(
+                        Map.of(
+                                "id_token_hint", signedIDToken.serialize(),
+                                "post_logout_redirect_uri", "http://localhost/invalidlogout",
+                                "state", STATE.toString()));
         session.getClientSessions().add(CLIENT_SESSION_ID);
         setupClientSessionToken(signedIDToken);
         generateSessionFromCookie(session);
@@ -485,5 +561,30 @@ class LogoutHandlerTest {
                 PERSISTENT_SESSION_ID,
                 3600,
                 "Secure; HttpOnly;");
+    }
+
+    private static APIGatewayProxyRequestEvent generateRequestEvent(
+            Map<String, String> queryStringParameters) {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of(COOKIE, buildCookieString(CLIENT_SESSION_ID)));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        if (queryStringParameters != null) {
+            event.setQueryStringParameters(queryStringParameters);
+        }
+        return event;
+    }
+
+    private void setupSessions() {
+        session.getClientSessions().add("client-session-id-2");
+        session.getClientSessions().add("client-session-id-3");
+        generateSessionFromCookie(session);
+        setupClientSessionToken(signedIDToken);
+    }
+
+    private void verifySessions() {
+        verify(sessionService).deleteSessionFromRedis(SESSION_ID);
+        verify(clientSessionService).deleteClientSessionFromRedis(CLIENT_SESSION_ID);
+        verify(clientSessionService).deleteClientSessionFromRedis("client-session-id-2");
+        verify(clientSessionService).deleteClientSessionFromRedis("client-session-id-3");
     }
 }

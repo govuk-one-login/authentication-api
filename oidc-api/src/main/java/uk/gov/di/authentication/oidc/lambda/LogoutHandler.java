@@ -126,8 +126,6 @@ public class LogoutHandler
                 session.getSessionId(),
                 sessionCookieIds.getClientSessionId());
 
-        Map<String, String> queryStringParameters = input.getQueryStringParameters();
-
         if (!session.getClientSessions().contains(sessionCookieIds.getClientSessionId())) {
             LOG.error("Client Session ID does not exist in Session: {}", session.getSessionId());
             return generateErrorLogoutResponse(
@@ -138,71 +136,80 @@ public class LogoutHandler
                     Optional.empty(),
                     Optional.of(session.getSessionId()));
         }
-        if (queryStringParameters.get("id_token_hint") == null
-                || !queryStringParameters.containsKey("id_token_hint")
-                || queryStringParameters.get("id_token_hint").isBlank()) {
-            LOG.info("Deleting session from redis as no id token is present in request");
+
+        Map<String, String> queryStringParameters = input.getQueryStringParameters();
+        if (queryStringParameters == null || queryStringParameters.isEmpty()) {
+            LOG.info("Deleting session and returning default logout as no input parameters");
             destroySessions(session);
             return generateDefaultLogoutResponse(
                     state, input, context, Optional.empty(), Optional.of(session.getSessionId()));
         }
-        if (!doesIDTokenExistInSession(queryStringParameters.get("id_token_hint"), session)) {
-            LOG.error("ID token does not exist in session {}", session.getSessionId());
-            return generateErrorLogoutResponse(
-                    Optional.empty(),
-                    new ErrorObject(
-                            OAuth2Error.INVALID_REQUEST_CODE, "unable to validate id_token_hint"),
-                    input,
-                    context,
-                    Optional.empty(),
-                    Optional.of(session.getSessionId()));
-        }
-        if (!tokenValidationService.isTokenSignatureValid(
-                queryStringParameters.get("id_token_hint"))) {
-            LOG.error(
-                    "Unable to validate ID token signature for Session: {}",
-                    session.getSessionId());
-            return generateErrorLogoutResponse(
-                    Optional.empty(),
-                    new ErrorObject(
-                            OAuth2Error.INVALID_REQUEST_CODE, "unable to validate id_token_hint"),
-                    input,
-                    context,
-                    Optional.empty(),
-                    Optional.of(session.getSessionId()));
-        }
-        try {
-            String idTokenHint = queryStringParameters.get("id_token_hint");
-            SignedJWT idToken = SignedJWT.parse(idTokenHint);
-            Optional<String> audience =
-                    idToken.getJWTClaimsSet().getAudience().stream().findFirst();
-            destroySessions(session);
-            if (audience.isPresent()) {
-                return validateClientIDAgainstClientRegistry(
-                        queryStringParameters,
-                        audience.get(),
-                        state,
+
+        Optional<String> idTokenHint =
+                Optional.ofNullable(queryStringParameters.get("id_token_hint"));
+        Optional<String> postLogoutRedirectUri =
+                Optional.ofNullable(queryStringParameters.get("post_logout_redirect_uri"));
+        Optional<String> audience = Optional.empty();
+
+        if (idTokenHint.isPresent()) {
+            if (!doesIDTokenExistInSession(idTokenHint.get(), session)) {
+                LOG.error("ID token does not exist in session {}", session.getSessionId());
+                return generateErrorLogoutResponse(
+                        Optional.empty(),
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "unable to validate id_token_hint"),
                         input,
                         context,
+                        Optional.empty(),
                         Optional.of(session.getSessionId()));
-            } else {
-                return generateDefaultLogoutResponse(
-                        state, input, context, audience, Optional.of(session.getSessionId()));
             }
-        } catch (ParseException e) {
-            LOG.error("Unable to parse id_token_hint into SignedJWT");
-            return generateErrorLogoutResponse(
-                    Optional.empty(),
-                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid id_token_hint"),
+            if (!tokenValidationService.isTokenSignatureValid(idTokenHint.get())) {
+                LOG.error(
+                        "Unable to validate ID token signature for Session: {}",
+                        session.getSessionId());
+                return generateErrorLogoutResponse(
+                        Optional.empty(),
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "unable to validate id_token_hint"),
+                        input,
+                        context,
+                        Optional.empty(),
+                        Optional.of(session.getSessionId()));
+            }
+
+            try {
+                SignedJWT idToken = SignedJWT.parse(idTokenHint.get());
+                audience = idToken.getJWTClaimsSet().getAudience().stream().findFirst();
+            } catch (ParseException e) {
+                LOG.error("Unable to parse id_token_hint into SignedJWT");
+                return generateErrorLogoutResponse(
+                        Optional.empty(),
+                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid id_token_hint"),
+                        input,
+                        context,
+                        Optional.empty(),
+                        Optional.of(session.getSessionId()));
+            }
+        }
+        destroySessions(session);
+        if (audience.isPresent()) {
+            return validateClientIDAgainstClientRegistry(
+                    postLogoutRedirectUri,
+                    audience.get(),
+                    state,
                     input,
                     context,
-                    Optional.empty(),
                     Optional.of(session.getSessionId()));
+        } else {
+            return generateDefaultLogoutResponse(
+                    state, input, context, audience, Optional.of(session.getSessionId()));
         }
     }
 
     private APIGatewayProxyResponseEvent validateClientIDAgainstClientRegistry(
-            Map<String, String> queryStringParameters,
+            Optional<String> postLogoutRedirectUri,
             String clientID,
             Optional<String> state,
             APIGatewayProxyRequestEvent input,
@@ -221,41 +228,43 @@ public class LogoutHandler
                     sessionId);
         }
 
-        if ((queryStringParameters.containsKey("post_logout_redirect_uri"))) {
-            if (!clientRegistry
-                    .get()
-                    .getPostLogoutRedirectUrls()
-                    .contains(queryStringParameters.get("post_logout_redirect_uri"))) {
-                LOG.error(
-                        "Client registry does not contain PostLogoutRedirectUri which was sent in the logout request. Value is {}",
-                        queryStringParameters.get("post_logout_redirect_uri"));
-                return generateErrorLogoutResponse(
-                        state,
-                        new ErrorObject(
-                                OAuth2Error.INVALID_REQUEST_CODE,
-                                "client registry does not contain post_logout_redirect_uri"),
-                        input,
-                        context,
-                        Optional.of(clientID),
-                        sessionId);
-            } else {
-                LOG.info(
-                        "The post_logout_redirect_uri is present in logout request and client registry. Value is {}",
-                        queryStringParameters.get("post_logout_redirect_uri"));
-                return generateLogoutResponse(
-                        URI.create(queryStringParameters.get("post_logout_redirect_uri")),
-                        state,
-                        Optional.empty(),
-                        input,
-                        context,
-                        Optional.of(clientID),
-                        sessionId);
-            }
-        }
-        LOG.info(
-                "post_logout_redirect_uri is NOT present in logout request. Generating default logout response");
-        return generateDefaultLogoutResponse(
-                state, input, context, Optional.of(clientID), sessionId);
+        return postLogoutRedirectUri
+                .map(
+                        uri -> {
+                            if (!clientRegistry.get().getPostLogoutRedirectUrls().contains(uri)) {
+                                LOG.error(
+                                        "Client registry does not contain PostLogoutRedirectUri which was sent in the logout request. Value is {}",
+                                        uri);
+                                return generateErrorLogoutResponse(
+                                        state,
+                                        new ErrorObject(
+                                                OAuth2Error.INVALID_REQUEST_CODE,
+                                                "client registry does not contain post_logout_redirect_uri"),
+                                        input,
+                                        context,
+                                        Optional.of(clientID),
+                                        sessionId);
+                            } else {
+                                LOG.info(
+                                        "The post_logout_redirect_uri is present in logout request and client registry. Value is {}",
+                                        uri);
+                                return generateLogoutResponse(
+                                        URI.create(uri),
+                                        state,
+                                        Optional.empty(),
+                                        input,
+                                        context,
+                                        Optional.of(clientID),
+                                        sessionId);
+                            }
+                        })
+                .orElseGet(
+                        () -> {
+                            LOG.info(
+                                    "post_logout_redirect_uri is NOT present in logout request. Generating default logout response");
+                            return generateDefaultLogoutResponse(
+                                    state, input, context, Optional.of(clientID), sessionId);
+                        });
     }
 
     private APIGatewayProxyResponseEvent generateDefaultLogoutResponse(
