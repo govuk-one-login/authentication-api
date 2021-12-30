@@ -47,9 +47,12 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STAR
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_STARTED_A_NEW_JOURNEY_WITH_LOGIN_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.INTERRUPT_STATES;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.updateAttachedLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.updateAttachedSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -277,15 +280,11 @@ public class AuthorisationHandler
         sessionService.updateSessionId(session);
         session.addClientSession(clientSessionID);
         updateAttachedSessionIdToLogs(session.getSessionId());
-        LOG.info(
-                "Updated session id from {} to {} for client {} - client session id = {} - new",
-                oldSessionId,
-                session.getSessionId(),
-                clientId.getValue(),
-                clientSessionID);
-
+        updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionID);
+        updateAttachedLogFieldToLogs(CLIENT_ID, clientId.getValue());
+        LOG.info("Updated session id from {} - new", oldSessionId);
         sessionService.save(session.setState(nextState));
-        LOG.info("Session saved successfully {}", session.getSessionId());
+        LOG.info("Session saved successfully");
         return session;
     }
 
@@ -303,13 +302,11 @@ public class AuthorisationHandler
                                         authenticationRequest)));
         session.addClientSession(clientSessionID);
         updateAttachedSessionIdToLogs(session.getSessionId());
-        LOG.info(
-                "Created session {} for client {} - client session id = {}",
-                session.getSessionId(),
-                authenticationRequest.getClientID().getValue(),
-                clientSessionID);
+        updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionID);
+        updateAttachedLogFieldToLogs(CLIENT_ID, authenticationRequest.getClientID().getValue());
+        LOG.info("Created session");
         sessionService.save(session);
-        LOG.info("Session saved successfully {}", session.getSessionId());
+        LOG.info("Session saved successfully");
 
         var redirectURI = buildRedirectURI(authRequest, authenticationRequest, null);
         return redirect(session, clientSessionID, redirectURI, persistentSessionId);
@@ -354,10 +351,7 @@ public class AuthorisationHandler
             String clientSessionID,
             String redirectURI,
             String persistentSessionId) {
-        LOG.info(
-                "Redirecting for SessionId: {} and ClientSessionId: {}",
-                session.getSessionId(),
-                clientSessionID);
+        LOG.info("Redirecting");
         List<String> cookies =
                 List.of(
                         CookieHelper.buildCookieString(
@@ -444,9 +438,7 @@ public class AuthorisationHandler
                         && !authRequestParameters.get(COOKIE_CONSENT).isEmpty()
                         && authorizationService.isValidCookieConsentValue(
                                 authRequestParameters.get(COOKIE_CONSENT).get(0))) {
-                    LOG.info(
-                            "Sharing cookie_consent for client {}",
-                            authenticationRequest.getClientID());
+                    LOG.info("Sharing cookie_consent");
                     return authRequestParameters.get(COOKIE_CONSENT).get(0);
                 }
             } catch (ClientNotFoundException e) {

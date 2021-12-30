@@ -4,6 +4,8 @@
             <JsonLayout compact="true" eventEol="true" objectMessageAsJsonObject="true" >
                 <KeyValuePair key="session-id" value="$${ctx:sessionId:-unknown}"/>
                 <KeyValuePair key="persistent-session-id" value="$${ctx:persistentSessionId:-}"/>
+                <KeyValuePair key="client-session-id" value="$${ctx:clientSessionId:-}"/>
+                <KeyValuePair key="client-id" value="$${ctx:clientId:-}"/>
                 <KeyValuePair key="aws-request-id" value="$${ctx:awsRequestId:-}"/>
             </JsonLayout>
         </Lambda>

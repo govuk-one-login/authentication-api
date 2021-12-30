@@ -9,8 +9,10 @@ public class LogLineHelper {
 
     public enum LogFieldName {
         SESSION_ID("sessionId"),
+        CLIENT_SESSION_ID("clientSessionId"),
         PERSISTENT_SESSION_ID("persistentSessionId"),
-        AWS_REQUEST_ID("awsRequestId");
+        AWS_REQUEST_ID("awsRequestId"),
+        CLIENT_ID("clientId");
 
         private String logFieldName;
 
@@ -25,6 +27,13 @@ public class LogLineHelper {
 
     public static void attachLogFieldToLogs(LogFieldName logFieldName, String value) {
         ThreadContext.put(logFieldName.getLogFieldName(), value);
+    }
+
+    public static void updateAttachedLogFieldToLogs(LogFieldName logFieldName, String value) {
+        if (ThreadContext.containsKey(logFieldName.getLogFieldName())) {
+            ThreadContext.remove(logFieldName.getLogFieldName());
+        }
+        attachLogFieldToLogs(logFieldName, value);
     }
 
     public static void attachSessionIdToLogs(Session session) {
