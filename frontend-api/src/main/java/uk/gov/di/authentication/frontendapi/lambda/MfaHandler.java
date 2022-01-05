@@ -47,6 +47,9 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_IS_BLO
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
@@ -106,11 +109,14 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             MfaRequest request,
             UserContext userContext) {
         try {
-            LOG.info(
-                    "MfaHandler received request for session: {}",
-                    userContext.getSession().getSessionId());
             String persistentSessionId =
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
+
+            attachSessionIdToLogs(userContext.getSession().getSessionId());
+            attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionId);
+
+            LOG.info("MfaHandler received request");
+
             String email = request.getEmail().toLowerCase(Locale.ROOT);
             boolean codeRequestValid = validateCodeRequestAttempts(email, userContext);
             if (!codeRequestValid) {
@@ -133,9 +139,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             }
 
             if (!userContext.getSession().validateSession(email)) {
-                LOG.error(
-                        "Email in session: {} does not match Email in Request",
-                        userContext.getSession().getSessionId());
+                LOG.error("Email does not match Email in Request");
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.MFA_MISMATCHED_EMAIL,
@@ -156,9 +160,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             String phoneNumber = authenticationService.getPhoneNumber(email).orElse(null);
 
             if (phoneNumber == null) {
-                LOG.error(
-                        "PhoneNumber is null for session: {}",
-                        userContext.getSession().getSessionId());
+                LOG.error("PhoneNumber is null");
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.MFA_MISSING_PHONE_NUMBER,
@@ -220,22 +222,17 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         phoneNumber,
                         persistentSessionId);
             }
-            LOG.info(
-                    "MfaHandler successfully processed request for session: {}",
-                    userContext.getSession().getSessionId());
+            LOG.info("Successfully processed request");
 
             return generateApiGatewayProxyResponse(
                     200, new BaseAPIResponse(userContext.getSession().getState()));
         } catch (JsonProcessingException e) {
-            LOG.error(
-                    "MFA request is missing parameters. session: {}",
-                    userContext.getSession().getSessionId());
+            LOG.error("MFA request is missing parameters");
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
             return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
         } catch (ClientNotFoundException e) {
-            LOG.error(
-                    "Client not found for session: {}", userContext.getSession().getSessionId(), e);
+            LOG.error("Client not found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
     }
@@ -243,9 +240,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
     private boolean validateCodeRequestAttempts(String email, UserContext userContext) {
         Session session = userContext.getSession();
         if (session.getCodeRequestCount() == configurationService.getCodeMaxRetries()) {
-            LOG.info(
-                    "User has requested too many OTP codes for session: {}",
-                    session.getSessionId());
+            LOG.info("User has requested too many OTP codes");
             codeStorageService.saveBlockedForEmail(
                     email, CODE_REQUEST_BLOCKED_KEY_PREFIX, configurationService.getCodeExpiry());
             SessionState nextState =
@@ -255,9 +250,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             return false;
         }
         if (codeStorageService.isBlockedForEmail(email, CODE_REQUEST_BLOCKED_KEY_PREFIX)) {
-            LOG.info(
-                    "User is blocked from requesting any OTP codes for session: {}",
-                    session.getSessionId());
+            LOG.info("User is blocked from requesting any OTP codes");
             SessionState nextState =
                     stateMachine.transition(
                             session.getState(),
@@ -267,9 +260,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             return false;
         }
         if (codeStorageService.isBlockedForEmail(email, CODE_BLOCKED_KEY_PREFIX)) {
-            LOG.info(
-                    "User is blocked from requesting any OTP codes for session {}",
-                    session.getSessionId());
+            LOG.info("User is blocked from requesting any OTP codes");
             SessionState nextState =
                     stateMachine.transition(
                             session.getState(),
@@ -285,9 +276,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             UserContext userContext, NotificationType notificationType)
             throws ClientNotFoundException {
         if (configurationService.isTestClientsEnabled()) {
-            LOG.warn(
-                    "TestClients are ENABLED: SessionId {}",
-                    userContext.getSession().getSessionId());
+            LOG.warn("TestClients are ENABLED");
         } else {
             return false;
         }
@@ -301,11 +290,10 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                                             .getTestClientEmailAllowlist()
                                             .contains(emailAddress)) {
                                 LOG.info(
-                                        "MfaHandler not sending message for TestClient {} {} on TestClientEmailAllowlist with NotificationType {} for session {}",
+                                        "MfaHandler not sending message for TestClient {} {} on TestClientEmailAllowlist with NotificationType {}",
                                         clientRegistry.getClientID(),
                                         clientRegistry.getClientName(),
-                                        notificationType,
-                                        userContext.getSession().getSessionId());
+                                        notificationType);
                                 return true;
                             } else {
                                 return false;
