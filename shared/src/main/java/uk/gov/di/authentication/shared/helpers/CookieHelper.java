@@ -63,8 +63,6 @@ public class CookieHelper {
         }
         String cookies = headers.get(cookieHeader.get());
 
-        LOG.debug("Cookies: {}", cookies);
-
         String[] cookiesList = cookies.split(";");
         String cookie =
                 Arrays.stream(cookiesList)

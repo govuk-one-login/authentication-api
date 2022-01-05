@@ -21,8 +21,6 @@ public class IpAddressHelper {
                         .map(APIGatewayProxyRequestEvent::getHeaders)
                         .orElse(emptyMap());
 
-        LOG.info("Headers on request: {}", headers.keySet());
-
         if (headers.containsKey("X-Forwarded-For")) {
             return headers.get("X-Forwarded-For").split(",")[0].trim();
         }
