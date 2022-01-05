@@ -82,7 +82,8 @@ public class LogEventMatcher {
 
             @Override
             public void describeTo(Description description) {
-                description.appendText("a log event with message containing [" + Arrays.asList(values) + "]");
+                description.appendText(
+                        "a log event with message containing [" + Arrays.asList(values) + "]");
             }
         };
     }

@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
 
@@ -45,40 +47,45 @@ public class ClientSessionService {
 
     public String generateClientSession(ClientSession clientSession) {
         String id = IdGenerator.generate();
+
+        attachLogFieldToLogs(CLIENT_SESSION_ID, id);
+
         try {
             redisConnectionService.saveWithExpiry(
                     CLIENT_SESSION_PREFIX.concat(id),
                     objectMapper.writeValueAsString(clientSession),
                     configurationService.getSessionExpiry());
         } catch (JsonProcessingException e) {
-            LOG.error("Error saving client session: {} to Redis", id);
+            LOG.error("Error saving client session to Redis");
             throw new RuntimeException(e);
         }
-        LOG.info("Generated new ClientSession with ID: {}", id);
+        LOG.info("Generated new ClientSession");
         return id;
     }
 
     public ClientSession getClientSession(String clientSessionId) {
+        attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
+
         try {
             String result =
                     redisConnectionService.getValue(CLIENT_SESSION_PREFIX.concat(clientSessionId));
             return objectMapper.readValue(result, ClientSession.class);
         } catch (JsonProcessingException | IllegalArgumentException e) {
-            LOG.error(
-                    "Error getting client session from Redis with ClientSessionId: {}",
-                    clientSessionId);
+            LOG.error("Error getting client session from Redis");
             throw new RuntimeException(e);
         }
     }
 
     public void saveClientSession(String clientSessionId, ClientSession clientSession) {
+        attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
+
         try {
             redisConnectionService.saveWithExpiry(
                     CLIENT_SESSION_PREFIX.concat(clientSessionId),
                     objectMapper.writeValueAsString(clientSession),
                     configurationService.getSessionExpiry());
         } catch (JsonProcessingException e) {
-            LOG.error("Error saving client session: {} to Redis", clientSessionId);
+            LOG.error("Error saving client session to Redis");
             throw new RuntimeException(e);
         }
     }

@@ -4,9 +4,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -16,11 +20,14 @@ import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class ClientSessionServiceTest {
 
@@ -32,13 +39,27 @@ class ClientSessionServiceTest {
     private final ClientSessionService clientSessionService =
             new ClientSessionService(configuration, redis);
 
+    @RegisterExtension
+    public final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(ClientSessionService.class);
+
+    private final String clientSessionId = IdGenerator.generate();
+    private final String sessionId = IdGenerator.generate();
+
+    @AfterEach
+    public void tearDown() {
+        assertThat(
+                logging.events(), not(hasItem(withMessageContaining(clientSessionId, sessionId))));
+    }
+
     @Test
     void shouldRetrieveClientSessionUsingRequestHeaders() throws JsonProcessingException {
-        when(redis.getValue("client-session-cs1")).thenReturn(generateSerialisedClientSession());
+        when(redis.getValue("client-session-" + clientSessionId))
+                .thenReturn(generateSerialisedClientSession());
 
         Optional<ClientSession> clientSessionInRedis =
                 clientSessionService.getClientSessionFromRequestHeaders(
-                        Map.of("Session-Id", "session-id", "Client-Session-Id", "cs1"));
+                        Map.of("Session-Id", sessionId, "Client-Session-Id", clientSessionId));
 
         clientSessionInRedis.ifPresentOrElse(
                 clientSession ->
@@ -50,7 +71,7 @@ class ClientSessionServiceTest {
 
     @Test
     void shouldNotRetrieveClientSessionUsingNullRequestHeaders() throws JsonProcessingException {
-        when(redis.getValue("client-session-cs1")).thenReturn(generateSerialisedClientSession());
+        when(redis.getValue(clientSessionId)).thenReturn(generateSerialisedClientSession());
 
         Optional<ClientSession> clientSessionInRedis =
                 clientSessionService.getClientSessionFromRequestHeaders(null);
@@ -60,18 +81,18 @@ class ClientSessionServiceTest {
 
     @Test
     void shouldNotRetrieveClientSessionForLowerCaseHeaderName() throws JsonProcessingException {
-        when(redis.getValue("client-session-cs1")).thenReturn(generateSerialisedClientSession());
+        when(redis.getValue(clientSessionId)).thenReturn(generateSerialisedClientSession());
 
         Optional<ClientSession> clientSessionInRedis =
                 clientSessionService.getClientSessionFromRequestHeaders(
-                        Map.of("Session-Id", "session-id", "client-Session-id", "cs1"));
+                        Map.of("Session-Id", sessionId, "client-Session-id", clientSessionId));
 
         assertTrue(clientSessionInRedis.isEmpty());
     }
 
     @Test
     void shouldNotRetrieveClientSessionWithNoHeaders() throws JsonProcessingException {
-        when(redis.getValue("client-session-cs1")).thenReturn(generateSerialisedClientSession());
+        when(redis.getValue(clientSessionId)).thenReturn(generateSerialisedClientSession());
 
         Optional<ClientSession> clientSessionInRedis =
                 clientSessionService.getClientSessionFromRequestHeaders(Collections.emptyMap());
@@ -81,7 +102,7 @@ class ClientSessionServiceTest {
 
     @Test
     void shouldNotRetrieveClientSessionWithMissingHeader() throws JsonProcessingException {
-        when(redis.getValue("client-session-cs1")).thenReturn(generateSerialisedClientSession());
+        when(redis.getValue(clientSessionId)).thenReturn(generateSerialisedClientSession());
 
         Optional<ClientSession> clientSessionInRedis =
                 clientSessionService.getClientSessionFromRequestHeaders(
@@ -92,7 +113,7 @@ class ClientSessionServiceTest {
 
     @Test
     void shouldNotRetrieveClientSessionAndThrowExceptionIfNotPresentInRedis() {
-        final Map headers = Map.of("Session-Id", "session-id", "Client-Session-Id", "cs1");
+        final Map headers = Map.of("Session-Id", sessionId, "Client-Session-Id", clientSessionId);
 
         RuntimeException exception =
                 assertThrows(
