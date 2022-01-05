@@ -1,3 +1,7 @@
+locals {
+  redis_port_number = 6379
+}
+
 resource "aws_elasticache_subnet_group" "sessions_store" {
   count = var.use_localstack ? 0 : 1
 
@@ -31,7 +35,7 @@ resource "aws_elasticache_replication_group" "sessions_store" {
   engine                        = "redis"
   engine_version                = "6.x"
   parameter_group_name          = "default.redis6.x"
-  port                          = 6379
+  port                          = local.redis_port_number
   multi_az_enabled              = true
   maintenance_window            = "thu:02:00-thu:03:00"
   notification_topic_arn        = aws_sns_topic.slack_events.arn
@@ -41,8 +45,11 @@ resource "aws_elasticache_replication_group" "sessions_store" {
   auth_token                 = random_password.redis_password.result
   apply_immediately          = true
 
-  subnet_group_name  = aws_elasticache_subnet_group.sessions_store[0].name
-  security_group_ids = [aws_vpc.authentication.default_security_group_id]
+  subnet_group_name = aws_elasticache_subnet_group.sessions_store[0].name
+  security_group_ids = [
+    aws_vpc.authentication.default_security_group_id,
+    aws_security_group.redis_security_group.id,
+  ]
 
   lifecycle {
     ignore_changes = [
