@@ -14,6 +14,8 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.updateAttach
 
 class LogLineHelperTest {
 
+    private final String identifier = IdGenerator.generate();
+
     @BeforeEach
     void setup() {
         ThreadContext.clearAll();
@@ -21,35 +23,47 @@ class LogLineHelperTest {
 
     @Test
     void shouldAttachSessionIdToThreadContextUsingAttachLogField() {
-        attachLogFieldToLogs(SESSION_ID, "session-id");
+        attachLogFieldToLogs(SESSION_ID, identifier);
 
         assertTrue(ThreadContext.containsKey(SESSION_ID.getLogFieldName()));
-        assertEquals("session-id", ThreadContext.get(SESSION_ID.getLogFieldName()));
+        assertEquals(identifier, ThreadContext.get(SESSION_ID.getLogFieldName()));
     }
 
     @Test
     void shouldAttachSessionIdToThreadContextUsingString() {
-        attachSessionIdToLogs("session-id");
+        attachSessionIdToLogs(identifier);
 
         assertTrue(ThreadContext.containsKey(SESSION_ID.getLogFieldName()));
-        assertEquals("session-id", ThreadContext.get(SESSION_ID.getLogFieldName()));
+        assertEquals(identifier, ThreadContext.get(SESSION_ID.getLogFieldName()));
     }
 
     @Test
     void shouldAttachSessionIdToThreadContextUsingSession() {
-        attachSessionIdToLogs(new Session("session-id"));
+        attachSessionIdToLogs(new Session(identifier));
 
         assertTrue(ThreadContext.containsKey(SESSION_ID.getLogFieldName()));
-        assertEquals("session-id", ThreadContext.get(SESSION_ID.getLogFieldName()));
+        assertEquals(identifier, ThreadContext.get(SESSION_ID.getLogFieldName()));
     }
 
     @Test
     void shouldUpdateAttachedSessionIdToThreadContext() {
-        attachSessionIdToLogs("session-id");
-        updateAttachedSessionIdToLogs("updated-session-id");
+        var newIdentifier = IdGenerator.generate();
+
+        attachSessionIdToLogs(identifier);
+        updateAttachedSessionIdToLogs(newIdentifier);
 
         assertTrue(ThreadContext.containsKey(SESSION_ID.getLogFieldName()));
         assertEquals(1, ThreadContext.getContext().size());
-        assertEquals("updated-session-id", ThreadContext.get(SESSION_ID.getLogFieldName()));
+        assertEquals(newIdentifier, ThreadContext.get(SESSION_ID.getLogFieldName()));
+    }
+
+    @Test
+    void shouldLogInvalidParameterIfFormatIsWrong() {
+        var badIdentifier = "not-@-b@se64-identifier";
+
+        attachSessionIdToLogs(badIdentifier);
+
+        assertTrue(ThreadContext.containsKey(SESSION_ID.getLogFieldName()));
+        assertEquals("invalid-identifier", ThreadContext.get(SESSION_ID.getLogFieldName()));
     }
 }
