@@ -7,8 +7,10 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
@@ -20,6 +22,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.util.Collections;
@@ -28,6 +31,8 @@ import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_REQUIRED;
@@ -42,6 +47,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.UPLIFT_REQUIRE
 import static uk.gov.di.authentication.shared.entity.SessionState.USER_NOT_FOUND;
 import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 public class StateMachineJourneyTest {
 
@@ -54,6 +60,16 @@ public class StateMachineJourneyTest {
     private final Session session = new Session(IdGenerator.generate());
 
     private StateMachine<SessionState, SessionAction, UserContext> stateMachine;
+
+    @RegisterExtension
+    public final CaptureLoggingExtension logging = new CaptureLoggingExtension(StateMachine.class);
+
+    @AfterEach
+    public void tearDown() {
+        assertThat(
+                logging.events(),
+                not(hasItem(withMessageContaining(CLIENT_ID.toString(), session.getSessionId()))));
+    }
 
     @BeforeEach
     void setup() {

@@ -3,19 +3,24 @@ package uk.gov.di.authentication.shared.helpers;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.shared.entity.Session;
 
+import static uk.gov.di.authentication.shared.helpers.InputSanitiser.sanitiseBase64;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.SESSION_ID;
 
 public class LogLineHelper {
 
     public enum LogFieldName {
-        SESSION_ID("sessionId"),
-        PERSISTENT_SESSION_ID("persistentSessionId"),
-        AWS_REQUEST_ID("awsRequestId");
+        SESSION_ID("sessionId", true),
+        CLIENT_SESSION_ID("clientSessionId", true),
+        PERSISTENT_SESSION_ID("persistentSessionId", true),
+        AWS_REQUEST_ID("awsRequestId", false),
+        CLIENT_ID("clientId", true);
 
-        private String logFieldName;
+        private final String logFieldName;
+        private boolean isBase64;
 
-        LogFieldName(String fieldName) {
+        LogFieldName(String fieldName, boolean isBase64) {
             this.logFieldName = fieldName;
+            this.isBase64 = isBase64;
         }
 
         String getLogFieldName() {
@@ -24,7 +29,18 @@ public class LogLineHelper {
     }
 
     public static void attachLogFieldToLogs(LogFieldName logFieldName, String value) {
-        ThreadContext.put(logFieldName.getLogFieldName(), value);
+        if (logFieldName.isBase64 && sanitiseBase64(value).isEmpty()) {
+            ThreadContext.put(logFieldName.getLogFieldName(), "invalid-identifier");
+        } else {
+            ThreadContext.put(logFieldName.getLogFieldName(), value);
+        }
+    }
+
+    public static void updateAttachedLogFieldToLogs(LogFieldName logFieldName, String value) {
+        if (ThreadContext.containsKey(logFieldName.getLogFieldName())) {
+            ThreadContext.remove(logFieldName.getLogFieldName());
+        }
+        attachLogFieldToLogs(logFieldName, value);
     }
 
     public static void attachSessionIdToLogs(Session session) {
