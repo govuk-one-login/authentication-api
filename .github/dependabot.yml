@@ -18,3 +18,7 @@ updates:
     target-branch: main
     labels:
     - dependabot
+    ignore:
+      - dependency-name: localstack/localstack
+        versions:
+          - ">= 0.13"
