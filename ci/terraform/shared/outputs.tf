@@ -17,7 +17,11 @@ output "authentication_vpc_arn" {
 }
 
 output "authentication_security_group_id" {
-  value = aws_vpc.authentication.default_security_group_id
+  value = aws_security_group.allow_vpc_resources_only.id
+}
+
+output "authentication_egress_security_group_id" {
+  value = aws_security_group.allow_egress.id
 }
 
 output "authentication_subnet_ids" {
