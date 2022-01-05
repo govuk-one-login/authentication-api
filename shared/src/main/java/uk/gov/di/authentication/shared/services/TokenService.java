@@ -65,6 +65,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
 public class TokenService {
 
@@ -242,7 +244,10 @@ public class TokenService {
             Map<String, Object> additionalTokenClaims,
             AccessTokenHash accessTokenHash,
             String vot) {
-        LOG.info("Generating IdToken for ClientId: {}", clientId);
+
+        attachLogFieldToLogs(CLIENT_ID, clientId);
+
+        LOG.info("Generating IdToken");
         URI trustMarkUri = buildURI(configService.getBaseURL().get(), "/trustmark");
         LocalDateTime localDateTime =
                 LocalDateTime.now().plusSeconds(configService.getIDTokenExpiry());
@@ -268,7 +273,10 @@ public class TokenService {
 
     private AccessToken generateAndStoreAccessToken(
             String clientId, Subject internalSubject, List<String> scopes, Subject publicSubject) {
-        LOG.info("Generating AccessToken for ClientId: {}", clientId);
+
+        attachLogFieldToLogs(CLIENT_ID, clientId);
+
+        LOG.info("Generating AccessToken");
         LocalDateTime localDateTime =
                 LocalDateTime.now().plusSeconds(configService.getAccessTokenExpiry());
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
@@ -304,7 +312,10 @@ public class TokenService {
 
     private RefreshToken generateAndStoreRefreshToken(
             String clientId, Subject internalSubject, List<String> scopes, Subject publicSubject) {
-        LOG.info("Generating RefreshToken for ClientId: {}", clientId);
+
+        attachLogFieldToLogs(CLIENT_ID, clientId);
+
+        LOG.info("Generating RefreshToken");
         LocalDateTime localDateTime =
                 LocalDateTime.now().plusSeconds(configService.getSessionExpiry());
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());

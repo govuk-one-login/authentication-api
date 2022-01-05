@@ -6,6 +6,7 @@ import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
 
+import java.util.Arrays;
 import java.util.Map;
 
 public class LogEventMatcher {
@@ -65,6 +66,23 @@ public class LogEventMatcher {
             public void describeTo(Description description) {
                 description.appendText(
                         "a log event with ContextData property [" + key + ", " + value + "]");
+            }
+        };
+    }
+
+    public static Matcher<LogEvent> withMessageContaining(String... values) {
+        return new TypeSafeMatcher<>() {
+
+            @Override
+            protected boolean matchesSafely(LogEvent item) {
+                var message = item.getMessage().getFormattedMessage();
+
+                return Arrays.stream(values).anyMatch(message::contains);
+            }
+
+            @Override
+            public void describeTo(Description description) {
+                description.appendText("a log event with message containing [" + Arrays.asList(values) + "]");
             }
         };
     }
