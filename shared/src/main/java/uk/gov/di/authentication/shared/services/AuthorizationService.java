@@ -35,11 +35,13 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
 public class AuthorizationService {
 
-    public static final String VTR = "vtr";
-    private static final String CLIENT_ID = "client_id";
+    public static final String VTR_PARAM = "vtr";
+    private static final String CLIENT_ID_PARAM = "client_id";
     private final DynamoClientService dynamoClientService;
     private final DynamoService dynamoService;
     public static final String COOKIE_CONSENT_ACCEPT = "accept";
@@ -102,16 +104,20 @@ public class AuthorizationService {
     }
 
     public Optional<ErrorObject> validateAuthRequest(AuthenticationRequest authRequest) {
-        Optional<ClientRegistry> client =
-                dynamoClientService.getClient(authRequest.getClientID().toString());
+        var clientId = authRequest.getClientID().toString();
+
+        attachLogFieldToLogs(CLIENT_ID, clientId);
+
+        Optional<ClientRegistry> client = dynamoClientService.getClient(clientId);
+
         if (client.isEmpty()) {
-            LOG.warn("Invalid client: {}", authRequest.getClientID());
+            LOG.warn("Invalid client");
             return Optional.of(OAuth2Error.UNAUTHORIZED_CLIENT);
         }
+
         if (!client.get().getRedirectUrls().contains(authRequest.getRedirectionURI().toString())) {
             LOG.warn(
-                    "Invalid Redirect URI for Client {}. Redirect URI in request {}",
-                    client.get().getClientID(),
+                    "Invalid Redirect URI in request {}",
                     authRequest.getRedirectionURI().toString());
             throw new RuntimeException(
                     format(
@@ -151,7 +157,7 @@ public class AuthorizationService {
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "Request is missing state parameter"));
         }
-        List<String> authRequestVtr = authRequest.getCustomParameter(VTR);
+        List<String> authRequestVtr = authRequest.getCustomParameter(VTR_PARAM);
         try {
             VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
         } catch (IllegalArgumentException e) {
@@ -182,7 +188,7 @@ public class AuthorizationService {
 
     public VectorOfTrust getEffectiveVectorOfTrust(AuthenticationRequest authenticationRequest) {
         return VectorOfTrust.parseFromAuthRequestAttribute(
-                authenticationRequest.getCustomParameter(VTR));
+                authenticationRequest.getCustomParameter(VTR_PARAM));
     }
 
     public UserContext buildUserContext(Session session, ClientSession clientSession) {
@@ -190,7 +196,7 @@ public class AuthorizationService {
         UserContext userContext;
         try {
             String clientId =
-                    clientSession.getAuthRequestParams().get(CLIENT_ID).stream()
+                    clientSession.getAuthRequestParams().get(CLIENT_ID_PARAM).stream()
                             .findFirst()
                             .orElseThrow();
             ClientRegistry clientRegistry = dynamoClientService.getClient(clientId).orElseThrow();
