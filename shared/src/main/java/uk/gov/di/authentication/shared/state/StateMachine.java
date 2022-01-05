@@ -83,6 +83,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.UPLIFT_REQUIRE
 import static uk.gov.di.authentication.shared.entity.SessionState.USER_NOT_FOUND;
 import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
 import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_PHONE_NUMBER_CODE_SENT;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.state.conditions.AggregateCondition.and;
 import static uk.gov.di.authentication.shared.state.conditions.ClientDoesNotRequireMfa.clientDoesNotRequireMfa;
 import static uk.gov.di.authentication.shared.state.conditions.ClientIsAnInternalService.clientIsAnInternalService;
@@ -123,7 +124,10 @@ public class StateMachine<T, A, C> {
                         .map(UserContext.class::cast)
                         .map(UserContext::getSession)
                         .map(Session::getSessionId)
-                        .orElse(null);
+                        .orElse("unknown");
+
+        attachSessionIdToLogs(sessionId);
+
         T to =
                 states.getOrDefault(from, emptyList()).stream()
                         .filter(
@@ -143,15 +147,10 @@ public class StateMachine<T, A, C> {
                                                 .orElseThrow(
                                                         () ->
                                                                 handleBadStateTransition(
-                                                                        from, action, sessionId)))
+                                                                        from, action)))
                         .getNextState();
 
-        LOG.info(
-                "Session transitioned from {} to {} on action {} for sessionId {}",
-                from,
-                to,
-                action,
-                sessionId);
+        LOG.info("Session transitioned from {} to {} on action {}", from, to, action);
 
         return to;
     }
@@ -611,13 +610,8 @@ public class StateMachine<T, A, C> {
         }
     }
 
-    private InvalidStateTransitionException handleBadStateTransition(
-            T from, A action, String sessionId) {
-        LOG.error(
-                "Session attempted invalid transition from {} on action {} for sessionId {}",
-                from,
-                action,
-                sessionId);
+    private InvalidStateTransitionException handleBadStateTransition(T from, A action) {
+        LOG.error("Session attempted invalid transition from {} on action {}", from, action);
         return new InvalidStateTransitionException();
     }
 

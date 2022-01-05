@@ -1,6 +1,9 @@
 package uk.gov.di.authentication.shared.state;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.List;
 import java.util.Optional;
@@ -9,6 +12,8 @@ import static java.util.Map.entry;
 import static java.util.Map.ofEntries;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static uk.gov.di.authentication.shared.state.StateMachineTest.Action.ACTION_COMMON_TO_SOME_STATES;
 import static uk.gov.di.authentication.shared.state.StateMachineTest.Action.ACTION_THAT_CAN_OCCUR_AT_ANY_STATE;
@@ -22,6 +27,7 @@ import static uk.gov.di.authentication.shared.state.StateMachineTest.State.STATE
 import static uk.gov.di.authentication.shared.state.StateMachineTest.State.STATE_5;
 import static uk.gov.di.authentication.shared.state.StateMachineTest.State.STATE_6;
 import static uk.gov.di.authentication.shared.state.StateMachineTest.State.STATE_7;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 public class StateMachineTest {
 
@@ -43,13 +49,15 @@ public class StateMachineTest {
         ACTION_COMMON_TO_SOME_STATES
     }
 
-    private final Condition<Boolean> testCondition =
-            new Condition<Boolean>() {
-                @Override
-                public boolean isMet(Optional<Boolean> context) {
-                    return context.get().booleanValue();
-                }
-            };
+    private final Condition<Boolean> testCondition = Optional::get;
+
+    @RegisterExtension
+    public final CaptureLoggingExtension logging = new CaptureLoggingExtension(StateMachine.class);
+
+    @AfterEach
+    public void tearDown() {
+        assertThat(logging.events(), not(hasItem(withMessageContaining("unknown"))));
+    }
 
     private final StateMachine<State, Action, Boolean> stateMachine =
             new StateMachine<>(
