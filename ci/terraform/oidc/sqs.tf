@@ -160,7 +160,7 @@ resource "aws_lambda_function" "email_sqs_lambda" {
 
   source_code_hash = filebase64sha256(var.frontend_api_lambda_zip_file)
   vpc_config {
-    security_group_ids = [local.authentication_security_group_id]
+    security_group_ids = [local.authentication_egress_security_group_id]
     subnet_ids         = local.authentication_subnet_ids
   }
   environment {
