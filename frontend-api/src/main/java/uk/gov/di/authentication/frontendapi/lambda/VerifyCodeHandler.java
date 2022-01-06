@@ -23,7 +23,6 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -61,6 +60,11 @@ import static uk.gov.di.authentication.shared.entity.SessionState.PHONE_NUMBER_C
 import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -119,10 +123,16 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             Context context,
             VerifyCodeRequest request,
             UserContext userContext) {
+
+        attachSessionIdToLogs(userContext.getSession());
+        attachLogFieldToLogs(
+                PERSISTENT_SESSION_ID, extractPersistentIdFromHeaders(input.getHeaders()));
+        attachLogFieldToLogs(
+                CLIENT_ID,
+                userContext.getClient().map(ClientRegistry::getClientID).orElse("unknown"));
+
         try {
-            LOG.info(
-                    "VerifyCodeHandler processing request for session: {}",
-                    userContext.getSession().getSessionId());
+            LOG.info("Processing request");
 
             VerifyCodeRequest codeRequest =
                     objectMapper.readValue(input.getBody(), VerifyCodeRequest.class);
@@ -154,9 +164,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             configurationService.getCodeMaxRetries());
 
             if (validationAction == null) {
-                LOG.error(
-                        "Encountered unexpected error while processing session: {}",
-                        userContext.getSession().getSessionId());
+                LOG.error("Encountered unexpected error");
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
             }
 
@@ -180,14 +188,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             return generateSuccessResponse(session);
 
         } catch (JsonProcessingException e) {
-            LOG.error(
-                    "Error parsing request for session: {}",
-                    userContext.getSession().getSessionId());
+            LOG.error("Error parsing request");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         } catch (ClientNotFoundException e) {
-            LOG.error("Client not found for session: {}", userContext.getSession().getSessionId());
+            LOG.error("Client not found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
     }
@@ -224,18 +230,14 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
     private APIGatewayProxyResponseEvent generateSuccessResponse(Session session)
             throws JsonProcessingException {
-        LOG.info(
-                "VerifyCodeHandler successfully processed request for session: {}",
-                session.getSessionId());
+        LOG.info("Successfully handled request");
 
         return generateApiGatewayProxyResponse(200, new BaseAPIResponse(session.getState()));
     }
 
     private APIGatewayProxyResponseEvent generateResponse(Session session)
             throws JsonProcessingException {
-        LOG.info(
-                "VerifyCodeHandler failed to process request for session: {}",
-                session.getSessionId());
+        LOG.info("Failed to process request");
 
         return generateApiGatewayProxyResponse(400, new BaseAPIResponse(session.getState()));
     }
@@ -277,7 +279,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     session.getEmailAddress(),
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    extractPersistentIdFromHeaders(input.getHeaders()),
                     pair("notification-type", notificationType.name()));
 
             codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
@@ -308,7 +310,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     session.getEmailAddress(),
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    extractPersistentIdFromHeaders(input.getHeaders()),
                     pair("notification-type", notificationType.name()));
 
             codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
@@ -330,7 +332,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     session.getEmailAddress(),
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    extractPersistentIdFromHeaders(input.getHeaders()),
                     pair("notification-type", notificationType.name()));
 
             blockCodeForSessionAndResetCount(session);
@@ -339,7 +341,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
     private Optional<String> getOtpCode(UserContext userContext, NotificationType notificationType)
             throws ClientNotFoundException {
-        LOG.warn("TestClients are ENABLED: session: {}", userContext.getSession().getSessionId());
+        LOG.warn("TestClients are ENABLED");
         final String emailAddress = userContext.getSession().getEmailAddress();
         final Optional<String> generatedOTPCode =
                 codeStorageService.getOtpCode(emailAddress, notificationType);
@@ -353,11 +355,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                                             .getTestClientEmailAllowlist()
                                             .contains(emailAddress)) {
                                 LOG.info(
-                                        "Using TestClient {} {} on TestClientEmailAllowlist with NotificationType {} and session: {}",
-                                        clientRegistry.getClientID(),
-                                        clientRegistry.getClientName(),
-                                        notificationType,
-                                        userContext.getSession().getSessionId());
+                                        "Using TestClient with NotificationType {}",
+                                        notificationType);
                                 switch (notificationType) {
                                     case VERIFY_EMAIL:
                                         return configurationService.getTestClientVerifyEmailOTP();
@@ -369,11 +368,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                                                 .getTestClientVerifyPhoneNumberOTP();
                                     default:
                                         LOG.info(
-                                                "Returning the generated OTP for TestClient {} {} with NotificationType {} and session: {}",
-                                                clientRegistry.getClientID(),
-                                                clientRegistry.getClientName(),
-                                                notificationType,
-                                                userContext.getSession().getSessionId());
+                                                "Returning the generated OTP for NotificationType {}",
+                                                notificationType);
                                         return generatedOTPCode;
                                 }
                             } else {
