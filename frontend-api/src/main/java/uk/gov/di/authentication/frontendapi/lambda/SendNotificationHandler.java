@@ -11,6 +11,7 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.authentication.frontendapi.entity.SendNotificationRequest;
 import uk.gov.di.authentication.frontendapi.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
@@ -49,6 +50,9 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.*;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
@@ -107,22 +111,26 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             Context context,
             SendNotificationRequest request,
             UserContext userContext) {
+
+        attachSessionIdToLogs(userContext.getSession());
+        attachLogFieldToLogs(
+                PERSISTENT_SESSION_ID, extractPersistentIdFromHeaders(input.getHeaders()));
+        attachLogFieldToLogs(
+                LogFieldName.CLIENT_ID,
+                userContext.getClient().map(ClientRegistry::getClientID).orElse("unknown"));
+
         try {
             if (!userContext.getSession().validateSession(request.getEmail())) {
-                LOG.info("Invalid session: {}", userContext.getSession().getSessionId());
+                LOG.info("Invalid session");
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
             if (request.getNotificationType().equals(ACCOUNT_CREATED_CONFIRMATION)) {
-                LOG.info(
-                        "Placing message on queue for AccountCreatedConfirmation for session: {}",
-                        userContext.getSession().getSessionId());
+                LOG.info("Placing message on queue for AccountCreatedConfirmation");
                 NotifyRequest notifyRequest =
                         new NotifyRequest(request.getEmail(), ACCOUNT_CREATED_CONFIRMATION);
                 if (!isTestClientAndAllowedEmail(userContext, ACCOUNT_CREATED_CONFIRMATION)) {
                     sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
-                    LOG.info(
-                            "AccountCreatedConfirmation email placed on queue for session: {}",
-                            userContext.getSession().getSessionId());
+                    LOG.info("AccountCreatedConfirmation email placed on queue");
                 }
                 return generateEmptySuccessApiGatewayResponse();
             }
@@ -148,10 +156,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                     Optional<ErrorResponse> emailErrorResponse =
                             validationService.validateEmailAddress(request.getEmail());
                     if (emailErrorResponse.isPresent()) {
-                        LOG.info(
-                                "session: {} encountered emailErrorResponse: {}",
-                                userContext.getSession().getSessionId(),
-                                emailErrorResponse.get());
+                        LOG.info("Encountered emailErrorResponse: {}", emailErrorResponse.get());
                         return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
                     }
                     return handleNotificationRequest(
@@ -168,9 +173,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                                     userContext);
 
                     if (request.getPhoneNumber() == null) {
-                        LOG.error(
-                                "No phone number provided for session: {}",
-                                userContext.getSession().getSessionId());
+                        LOG.error("No phone number provided");
                         return generateApiGatewayProxyResponse(400, ERROR_1011);
                     }
                     String phoneNumber = removeWhitespaceFromPhoneNumber(request.getPhoneNumber());
@@ -188,19 +191,15 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             }
             return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
         } catch (SdkClientException ex) {
-            LOG.error(
-                    "Error sending message to queue for session: {}",
-                    userContext.getSession().getSessionId());
+            LOG.error("Error sending message to queue");
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
         } catch (JsonProcessingException e) {
-            LOG.error(
-                    "Error parsing request for session: {}",
-                    userContext.getSession().getSessionId());
+            LOG.error("Error parsing request");
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
             return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
         } catch (ClientNotFoundException e) {
-            LOG.error("Client not found for session: {}", userContext.getSession().getSessionId());
+            LOG.error("Client not found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
     }
@@ -227,9 +226,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         sessionService.save(session.setState(nextState).incrementCodeRequestCount());
         if (!isTestClientAndAllowedEmail(userContext, notificationType)) {
             sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
-            LOG.info(
-                    "SendNotificationHandler successfully processed request for session {}",
-                    session.getSessionId());
+            LOG.info("Successfully processed request");
         }
         return generateApiGatewayProxyResponse(200, new BaseAPIResponse(session.getState()));
     }
@@ -240,8 +237,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             NotificationType notificationType,
             UserContext userContext) {
         if (session.getCodeRequestCount() == configurationService.getCodeMaxRetries()) {
-            LOG.info(
-                    "User has requested too many OTP codes for session {}", session.getSessionId());
+            LOG.info("User has requested too many OTP codes");
             codeStorageService.saveBlockedForEmail(
                     email, CODE_REQUEST_BLOCKED_KEY_PREFIX, configurationService.getCodeExpiry());
             SessionState nextState =
@@ -253,9 +249,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             return false;
         }
         if (codeStorageService.isBlockedForEmail(email, CODE_REQUEST_BLOCKED_KEY_PREFIX)) {
-            LOG.info(
-                    "User is blocked from requesting any OTP codes for session {}",
-                    session.getSessionId());
+            LOG.info("User is blocked from requesting any OTP codes");
             SessionState nextState =
                     stateMachine.transition(
                             session.getState(),
@@ -265,9 +259,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             return false;
         }
         if (codeStorageService.isBlockedForEmail(email, CODE_BLOCKED_KEY_PREFIX)) {
-            LOG.info(
-                    "User is blocked from requesting any OTP codes for session {}",
-                    session.getSessionId());
+            LOG.info("User is blocked from requesting any OTP codes");
             SessionState nextState =
                     stateMachine.transition(
                             session.getState(),
@@ -320,9 +312,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             UserContext userContext, NotificationType notificationType)
             throws ClientNotFoundException {
         if (configurationService.isTestClientsEnabled()) {
-            LOG.warn(
-                    "TestClients are ENABLED: SessionId {}",
-                    userContext.getSession().getSessionId());
+            LOG.warn("TestClients are ENABLED");
         } else {
             return false;
         }
@@ -335,12 +325,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                                     && clientRegistry
                                             .getTestClientEmailAllowlist()
                                             .contains(emailAddress)) {
+
                                 LOG.info(
-                                        "SendNotificationHandler not sending message for TestClient {} {} on TestClientEmailAllowlist with NotificationType {} for session {}",
-                                        clientRegistry.getClientID(),
-                                        clientRegistry.getClientName(),
-                                        notificationType,
-                                        userContext.getSession().getSessionId());
+                                        "SendNotificationHandler not sending message on TestClientEmailAllowlist with NotificationType {}",
+                                        notificationType);
                                 return true;
                             } else {
                                 return false;
