@@ -3,6 +3,8 @@ package uk.gov.di.authentication.oidc.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseMode;
@@ -15,7 +17,6 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
-import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,16 +25,15 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
+import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
-import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.AuthorizationService;
@@ -51,16 +51,15 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
@@ -68,13 +67,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.oidc.entity.RequestParameters.COOKIE_CONSENT;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.Session.AccountState.NEW;
-import static uk.gov.di.authentication.shared.services.AuthorizationService.COOKIE_CONSENT_ACCEPT;
-import static uk.gov.di.authentication.shared.services.AuthorizationService.COOKIE_CONSENT_NOT_ENGAGED;
-import static uk.gov.di.authentication.shared.services.AuthorizationService.COOKIE_CONSENT_REJECT;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -84,7 +79,6 @@ class AuthCodeHandlerTest {
     private static final String SESSION_ID = IdGenerator.generate();
     private static final String CLIENT_SESSION_ID = IdGenerator.generate();
     private static final String PERSISTENT_SESSION_ID = IdGenerator.generate();
-    private static final String COOKIE = "Cookie";
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private static final ClientID CLIENT_ID = new ClientID();
@@ -106,7 +100,6 @@ class AuthCodeHandlerTest {
             new Session(SESSION_ID)
                     .addClientSession(CLIENT_SESSION_ID)
                     .setEmailAddress(EMAIL)
-                    .setState(SessionState.MFA_CODE_VERIFIED)
                     .setCurrentCredentialStrength(MEDIUM_LEVEL);
 
     @RegisterExtension
@@ -151,17 +144,13 @@ class AuthCodeHandlerTest {
                 arguments(MEDIUM_LEVEL, LOW_LEVEL, MEDIUM_LEVEL));
     }
 
-    private static Stream<String> validCookieConsentTestParameters() {
-        return Stream.of(COOKIE_CONSENT_NOT_ENGAGED, COOKIE_CONSENT_ACCEPT, COOKIE_CONSENT_REJECT);
-    }
-
     @ParameterizedTest
     @MethodSource("upliftTestParameters")
     void shouldGenerateSuccessfulAuthResponseAndUpliftAsNecessary(
             CredentialTrustLevel initialLevel,
             CredentialTrustLevel requestedLevel,
             CredentialTrustLevel finalLevel)
-            throws ClientNotFoundException, URISyntaxException {
+            throws ClientNotFoundException, URISyntaxException, JsonProcessingException {
         AuthorizationCode authorizationCode = new AuthorizationCode();
         AuthenticationRequest authRequest = generateValidSessionAndAuthRequest(requestedLevel);
         session.setCurrentCredentialStrength(initialLevel).setNewAccount(NEW);
@@ -179,20 +168,18 @@ class AuthCodeHandlerTest {
                 .thenReturn(true);
         when(authorisationCodeService.generateAuthorisationCode(eq(CLIENT_SESSION_ID), eq(EMAIL)))
                 .thenReturn(authorizationCode);
+        when(authorizationService.isClientCookieConsentShared(CLIENT_ID)).thenReturn(false);
         when(authorizationService.generateSuccessfulAuthResponse(
                         any(AuthenticationRequest.class), any(AuthorizationCode.class)))
                 .thenReturn(authSuccessResponse);
 
-        APIGatewayProxyResponseEvent response = generateApiRequest(Optional.empty());
+        APIGatewayProxyResponseEvent response = generateApiRequest();
 
-        assertThat(response, hasStatus(302));
-        assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                equalTo(authSuccessResponse.toURI().toString()));
-
-        assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                not(containsString(COOKIE_CONSENT)));
+        assertThat(response, hasStatus(200));
+        AuthCodeResponse authCodeResponse =
+                new ObjectMapper().readValue(response.getBody(), AuthCodeResponse.class);
+        assertThat(authCodeResponse.getLocation(), equalTo(authSuccessResponse.toURI().toString()));
+        assertFalse(authCodeResponse.getCookieConsentShared());
 
         assertThat(session.getCurrentCredentialStrength(), equalTo(finalLevel));
 
@@ -220,116 +207,9 @@ class AuthCodeHandlerTest {
                                 CLIENT_ID.getValue()));
     }
 
-    @ParameterizedTest
-    @MethodSource("validCookieConsentTestParameters")
-    void shouldGenerateSuccessfulAuthResponseWithConsentParams(String cookieValue)
-            throws ClientNotFoundException, URISyntaxException {
-        AuthorizationCode authorizationCode = new AuthorizationCode();
-        AuthenticationRequest authRequest = generateValidSessionAndAuthRequest(MEDIUM_LEVEL);
-        session.setCurrentCredentialStrength(MEDIUM_LEVEL).setNewAccount(NEW);
-        AuthenticationSuccessResponse authSuccessResponse =
-                generateSuccessfulAuthResponse(
-                        authRequest, authorizationCode, COOKIE_CONSENT, cookieValue);
-
-        when(authorizationService.isClientRedirectUriValid(eq(CLIENT_ID), eq(REDIRECT_URI)))
-                .thenReturn(true);
-        when(authorizationService.isClientCookieConsentShared(eq(CLIENT_ID))).thenReturn(true);
-        when(authorisationCodeService.generateAuthorisationCode(eq(CLIENT_SESSION_ID), eq(EMAIL)))
-                .thenReturn(authorizationCode);
-        when(authorizationService.isValidCookieConsentValue(cookieValue)).thenReturn(true);
-        when(authorizationService.generateSuccessfulAuthResponse(
-                        any(AuthenticationRequest.class), any(AuthorizationCode.class)))
-                .thenCallRealMethod();
-
-        APIGatewayProxyResponseEvent response = generateApiRequest(Optional.of(cookieValue));
-
-        assertThat(response, hasStatus(302));
-        assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                equalTo(authSuccessResponse.toURI().toString()));
-
-        assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                containsString(COOKIE_CONSENT + "=" + cookieValue));
-
-        assertThat(session.getCurrentCredentialStrength(), equalTo(MEDIUM_LEVEL));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        OidcAuditableEvent.AUTH_CODE_ISSUED,
-                        "aws-session-id",
-                        SESSION_ID,
-                        CLIENT_ID.getValue(),
-                        AuditService.UNKNOWN,
-                        EMAIL,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
-
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
-                        "SignIn",
-                        Map.of(
-                                "Account",
-                                "NEW",
-                                "Environment",
-                                "unit-test",
-                                "Client",
-                                CLIENT_ID.getValue()));
-    }
-
-    @Test
-    void shouldSetCookieConsentToNotEnagegedWhenInvalidCookieValueIsPassed()
-            throws ClientNotFoundException, URISyntaxException {
-        String invalidCookieValue = "rubbish-cookie-consent";
-        AuthorizationCode authorizationCode = new AuthorizationCode();
-        session.setCurrentCredentialStrength(MEDIUM_LEVEL).setNewAccount(NEW);
-        generateValidSessionAndAuthRequest(MEDIUM_LEVEL);
-        when(authorizationService.isClientRedirectUriValid(eq(CLIENT_ID), eq(REDIRECT_URI)))
-                .thenReturn(true);
-        when(authorizationService.isClientCookieConsentShared(eq(CLIENT_ID))).thenReturn(true);
-        when(authorisationCodeService.generateAuthorisationCode(eq(CLIENT_SESSION_ID), eq(EMAIL)))
-                .thenReturn(authorizationCode);
-        when(authorizationService.isValidCookieConsentValue(invalidCookieValue)).thenReturn(false);
-        when(authorizationService.generateSuccessfulAuthResponse(
-                        any(AuthenticationRequest.class), any(AuthorizationCode.class)))
-                .thenCallRealMethod();
-
-        APIGatewayProxyResponseEvent response = generateApiRequest(Optional.of(invalidCookieValue));
-
-        assertThat(response, hasStatus(302));
-        assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                containsString(COOKIE_CONSENT + "=" + COOKIE_CONSENT_NOT_ENGAGED));
-        assertThat(session.getCurrentCredentialStrength(), equalTo(MEDIUM_LEVEL));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        OidcAuditableEvent.AUTH_CODE_ISSUED,
-                        "aws-session-id",
-                        SESSION_ID,
-                        CLIENT_ID.getValue(),
-                        AuditService.UNKNOWN,
-                        EMAIL,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
-
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
-                        "SignIn",
-                        Map.of(
-                                "Account",
-                                "NEW",
-                                "Environment",
-                                "unit-test",
-                                "Client",
-                                CLIENT_ID.getValue()));
-    }
-
     @Test
     void shouldGenerateErrorResponseWhenSessionIsNotFound() {
-        APIGatewayProxyResponseEvent response = generateApiRequest(Optional.empty());
+        APIGatewayProxyResponseEvent response = generateApiRequest();
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1000));
@@ -342,7 +222,7 @@ class AuthCodeHandlerTest {
         generateValidSessionAndAuthRequest(MEDIUM_LEVEL);
         when(authorizationService.isClientRedirectUriValid(eq(CLIENT_ID), eq(REDIRECT_URI)))
                 .thenReturn(false);
-        APIGatewayProxyResponseEvent response = generateApiRequest(Optional.empty());
+        APIGatewayProxyResponseEvent response = generateApiRequest();
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1016));
@@ -351,7 +231,8 @@ class AuthCodeHandlerTest {
     }
 
     @Test
-    void shouldGenerateErrorResponseWhenClientIsNotFound() throws ClientNotFoundException {
+    void shouldGenerateErrorResponseWhenClientIsNotFound()
+            throws ClientNotFoundException, JsonProcessingException {
         AuthenticationErrorResponse authenticationErrorResponse =
                 new AuthenticationErrorResponse(
                         REDIRECT_URI, OAuth2Error.INVALID_CLIENT, null, null);
@@ -363,18 +244,21 @@ class AuthCodeHandlerTest {
                 .when(authorizationService)
                 .isClientRedirectUriValid(eq(CLIENT_ID), eq(REDIRECT_URI));
 
-        APIGatewayProxyResponseEvent response = generateApiRequest(Optional.empty());
+        APIGatewayProxyResponseEvent response = generateApiRequest();
 
-        assertThat(response, hasStatus(302));
-        assertEquals(
-                "http://localhost/redirect?error=invalid_client&error_description=Client+authentication+failed",
-                response.getHeaders().get(ResponseHeaders.LOCATION));
+        assertThat(response, hasStatus(200));
+        AuthCodeResponse authCodeResponse =
+                new ObjectMapper().readValue(response.getBody(), AuthCodeResponse.class);
+        assertThat(
+                authCodeResponse.getLocation(),
+                equalTo(
+                        "http://localhost/redirect?error=invalid_client&error_description=Client+authentication+failed"));
 
         verifyNoInteractions(auditService);
     }
 
     @Test
-    void shouldGenerateErrorResponseIfUnableToParseAuthRequest() {
+    void shouldGenerateErrorResponseIfUnableToParseAuthRequest() throws JsonProcessingException {
         AuthenticationErrorResponse authenticationErrorResponse =
                 new AuthenticationErrorResponse(
                         REDIRECT_URI, OAuth2Error.INVALID_REQUEST, null, null);
@@ -388,45 +272,47 @@ class AuthCodeHandlerTest {
         customParams.put("redirect_uri", singletonList("http://localhost/redirect"));
         customParams.put("client_id", singletonList(new ClientID().toString()));
         generateValidSession(customParams, MEDIUM_LEVEL);
-        APIGatewayProxyResponseEvent response = generateApiRequest(Optional.empty());
+        APIGatewayProxyResponseEvent response = generateApiRequest();
 
-        assertThat(response, hasStatus(302));
-        assertEquals(
-                "http://localhost/redirect?error=invalid_request&error_description=Invalid+request",
-                response.getHeaders().get(ResponseHeaders.LOCATION));
+        assertThat(response, hasStatus(200));
+        AuthCodeResponse authCodeResponse =
+                new ObjectMapper().readValue(response.getBody(), AuthCodeResponse.class);
+        assertThat(
+                authCodeResponse.getLocation(),
+                equalTo(
+                        "http://localhost/redirect?error=invalid_request&error_description=Invalid+request"));
 
         verifyNoInteractions(auditService);
     }
 
     @Test
-    void shouldReturn400IfUserTransitionsFromWrongState()
-            throws ClientNotFoundException, URISyntaxException {
-        session.setState(SessionState.NEW);
+    public void shouldReturn400IfSessionIdMissing() {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        AuthorizationCode authorizationCode = new AuthorizationCode();
-        AuthenticationRequest authRequest = generateValidSessionAndAuthRequest(MEDIUM_LEVEL);
-        AuthenticationSuccessResponse authSuccessResponse =
-                new AuthenticationSuccessResponse(
-                        authRequest.getRedirectionURI(),
-                        authorizationCode,
-                        null,
-                        null,
-                        authRequest.getState(),
-                        null,
-                        null);
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
 
-        when(authorizationService.isClientRedirectUriValid(eq(CLIENT_ID), eq(REDIRECT_URI)))
-                .thenReturn(true);
-        when(authorisationCodeService.generateAuthorisationCode(eq(CLIENT_SESSION_ID), eq(EMAIL)))
-                .thenReturn(authorizationCode);
-        when(authorizationService.generateSuccessfulAuthResponse(
-                        any(AuthenticationRequest.class), any(AuthorizationCode.class)))
-                .thenReturn(authSuccessResponse);
+        verifyNoInteractions(auditService);
+    }
 
-        APIGatewayProxyResponseEvent response = generateApiRequest(Optional.empty());
+    @Test
+    public void shouldReturn400IfClientSessionIdMissing() {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setHeaders(
+                Map.of(
+                        "Session-Id",
+                        SESSION_ID,
+                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                        PERSISTENT_SESSION_ID));
+        when(sessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(session));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1017));
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1018));
 
         verifyNoInteractions(auditService);
     }
@@ -448,50 +334,27 @@ class AuthCodeHandlerTest {
 
     private void generateValidSession(
             Map<String, List<String>> authRequest, CredentialTrustLevel requestedLevel) {
-        when(sessionService.readSessionFromRedis(SESSION_ID)).thenReturn(Optional.of(session));
+        when(sessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(session));
+        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(clientSession));
         when(vectorOfTrust.getCredentialTrustLevel()).thenReturn(requestedLevel);
         when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vectorOfTrust);
         when(clientSession.getAuthRequestParams()).thenReturn(authRequest);
-        when(clientSessionService.getClientSession(eq(CLIENT_SESSION_ID)))
-                .thenReturn(clientSession);
     }
 
-    public AuthenticationSuccessResponse generateSuccessfulAuthResponse(
-            AuthenticationRequest authRequest,
-            AuthorizationCode authorizationCode,
-            String additionalParamName,
-            String additionalParamValue)
-            throws URISyntaxException {
-        return new AuthenticationSuccessResponse(
-                new URIBuilder(authRequest.getRedirectionURI())
-                        .addParameter(additionalParamName, additionalParamValue)
-                        .build(),
-                authorizationCode,
-                null,
-                null,
-                authRequest.getState(),
-                null,
-                authRequest.getResponseMode());
-    }
-
-    private APIGatewayProxyResponseEvent generateApiRequest(Optional<String> cookieConsent) {
+    private APIGatewayProxyResponseEvent generateApiRequest() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(COOKIE, buildCookieString()));
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        cookieConsent.ifPresent(c -> event.setQueryStringParameters(Map.of(COOKIE_CONSENT, c)));
+        event.setHeaders(
+                Map.of(
+                        "Session-Id",
+                        SESSION_ID,
+                        "Client-Session-Id",
+                        CLIENT_SESSION_ID,
+                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                        PERSISTENT_SESSION_ID));
 
         return handler.handleRequest(event, context);
-    }
-
-    private static String buildCookieString() {
-        return format(
-                "%s=%s.%s; %s=%s; Max-Age=%d; %s",
-                "gs",
-                SESSION_ID,
-                CLIENT_SESSION_ID,
-                CookieHelper.PERSISTENT_COOKIE_NAME,
-                PERSISTENT_SESSION_ID,
-                3600,
-                "Secure; HttpOnly;");
     }
 }
