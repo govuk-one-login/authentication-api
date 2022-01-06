@@ -6,8 +6,10 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -23,6 +25,7 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.ValidationService;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -31,6 +34,8 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -43,6 +48,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_VER
 import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
 import static uk.gov.di.authentication.shared.entity.SessionState.TWO_FACTOR_REQUIRED;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -61,6 +67,14 @@ class SignUpHandlerTest {
 
     private final Session session =
             new Session(IdGenerator.generate()).setState(SessionState.USER_NOT_FOUND);
+
+    @RegisterExtension
+    public final CaptureLoggingExtension logging = new CaptureLoggingExtension(SignUpHandler.class);
+
+    @AfterEach
+    public void tearDown() {
+        assertThat(logging.events(), not(hasItem(withMessageContaining(session.getSessionId()))));
+    }
 
     @BeforeEach
     public void setUp() {

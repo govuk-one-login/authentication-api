@@ -36,6 +36,11 @@ import java.util.Optional;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_CREATED_A_PASSWORD;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
@@ -83,10 +88,16 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
             Context context,
             SignupRequest request,
             UserContext userContext) {
+
+        attachSessionIdToLogs(userContext.getSession());
+        attachLogFieldToLogs(
+                PERSISTENT_SESSION_ID, extractPersistentIdFromHeaders(input.getHeaders()));
+        attachLogFieldToLogs(
+                CLIENT_ID,
+                userContext.getClient().map(ClientRegistry::getClientID).orElse("unknown"));
+
         try {
-            LOG.info(
-                    "SignUpHandler received request for session: {}",
-                    userContext.getSession().getSessionId());
+            LOG.info("Received request");
             var nextState =
                     stateMachine.transition(
                             userContext.getSession().getState(),
@@ -113,9 +124,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                             AuditService.UNKNOWN,
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-                    LOG.info(
-                            "User already exists for session: {}",
-                            userContext.getSession().getSessionId());
+                    LOG.info("User already exists");
                     return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
                 }
                 authenticationService.signUp(
@@ -146,20 +155,15 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                                 .setState(nextState)
                                 .setEmailAddress(request.getEmail()));
 
-                LOG.info(
-                        "SignUpHandler successfully processed request for session: {}",
-                        userContext.getSession().getSessionId());
+                LOG.info("Successfully processed request");
                 return generateApiGatewayProxyResponse(
                         200, new BaseAPIResponse(userContext.getSession().getState()));
             } else {
-                LOG.info(
-                        "Invalid Password entered with errors: {}", passwordValidationErrors.get());
+                LOG.info("Invalid Password entered: {}", passwordValidationErrors.get());
                 return generateApiGatewayProxyErrorResponse(400, passwordValidationErrors.get());
             }
         } catch (JsonProcessingException e) {
-            LOG.error(
-                    "Error parsing request for session: {}",
-                    userContext.getSession().getSessionId());
+            LOG.error("Error parsing request");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
