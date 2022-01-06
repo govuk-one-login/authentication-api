@@ -23,7 +23,7 @@ dependencies {
             configurations.sns,
             configurations.ssm,
             "com.googlecode.libphonenumber:libphonenumber:8.12.40",
-            "com.google.protobuf:protobuf-java:3.18.1"
+            "com.google.protobuf:protobuf-java:3.19.2"
 
     testImplementation configurations.tests,
             configurations.lambda_tests,
