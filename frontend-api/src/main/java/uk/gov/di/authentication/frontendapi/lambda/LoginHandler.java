@@ -43,6 +43,7 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_
 import static uk.gov.di.authentication.shared.entity.SessionState.TWO_FACTOR_REQUIRED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class LoginHandler extends BaseFrontendHandler<LoginRequest>
@@ -96,18 +97,17 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             Context context,
             LoginRequest request,
             UserContext userContext) {
-        LOG.info(
-                "Request received to the LoginHandler with session: {}",
-                userContext.getSession().getSessionId());
+
+        attachSessionIdToLogs(userContext.getSession().getSessionId());
+
+        LOG.info("Request received");
         try {
             String persistentSessionId =
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
             UserProfile userProfile =
                     authenticationService.getUserProfileByEmail(request.getEmail());
             if (Objects.isNull(userProfile)) {
-                LOG.error(
-                        "The user does not have an account for session: {}",
-                        userContext.getSession().getSessionId());
+                LOG.error("The user does not have an account");
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
@@ -128,9 +128,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     codeStorageService.getIncorrectPasswordCount(request.getEmail());
 
             if (incorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
-                LOG.info(
-                        "User has exceeded max password retries with session: {}",
-                        userContext.getSession().getSessionId());
+                LOG.info("User has exceeded max password retries");
                 var nextState =
                         stateMachine.transition(
                                 userContext.getSession().getState(),
@@ -168,9 +166,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             userProfile.getLegacySubjectID(), request.getEmail());
             boolean hasValidCredentials;
             if (userIsAMigratedUser) {
-                LOG.info(
-                        "Processing migrated user with session: {}",
-                        userContext.getSession().getSessionId());
+                LOG.info("Processing migrated user");
                 hasValidCredentials =
                         userMigrationService.processMigratedUser(
                                 request.getEmail(), request.getPassword());
@@ -181,9 +177,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
             if (!hasValidCredentials) {
                 codeStorageService.increaseIncorrectPasswordCount(request.getEmail());
-                LOG.info(
-                        "Invalid login credentials entered with session: {}",
-                        userContext.getSession().getSessionId());
+                LOG.info("Invalid login credentials entered");
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
@@ -228,9 +222,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
             String concatPhoneNumber = RedactPhoneNumberHelper.redactPhoneNumber(phoneNumber);
 
-            LOG.info(
-                    "User has successfully Logged in. Generating successful LoginResponse with session: {}",
-                    userContext.getSession().getSessionId());
+            LOG.info("User has successfully logged in");
 
             auditService.submitAuditEvent(
                     LOG_IN_SUCCESS,
@@ -246,9 +238,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             return generateApiGatewayProxyResponse(
                     200, new LoginResponse(concatPhoneNumber, userContext.getSession().getState()));
         } catch (JsonProcessingException e) {
-            LOG.error(
-                    "Request is missing parameters with session: {}.",
-                    userContext.getSession().getSessionId());
+            LOG.error("Request is missing parameters");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
