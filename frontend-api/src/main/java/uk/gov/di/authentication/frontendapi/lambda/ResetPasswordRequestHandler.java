@@ -43,6 +43,7 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SE
 import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_RESET_PASSWORD_LINK_TOO_MANY_TIMES;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.PASSWORD_RESET_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
@@ -112,21 +113,18 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             Context context,
             ResetPasswordRequest request,
             UserContext userContext) {
-        LOG.info(
-                "ResetPasswordRequestHandler processing request for session: {}",
-                userContext.getSession().getSessionId());
+        attachSessionIdToLogs(userContext.getSession().getSessionId());
+
+        LOG.info("Processing request");
         try {
             if (!userContext.getSession().validateSession(request.getEmail())) {
-                LOG.info("Invalid session. session: {}", userContext.getSession().getSessionId());
+                LOG.info("Invalid session");
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
             Optional<ErrorResponse> emailErrorResponse =
                     validationService.validateEmailAddress(request.getEmail());
             if (emailErrorResponse.isPresent()) {
-                LOG.info(
-                        "Email validation failed: {} for session: {}",
-                        emailErrorResponse.get(),
-                        userContext.getSession().getSessionId());
+                LOG.info("Email validation failed: {}", emailErrorResponse.get());
                 return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
             }
             String persistentSessionId =
@@ -157,15 +155,10 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                     persistentSessionId);
 
         } catch (SdkClientException ex) {
-            LOG.error(
-                    "Error sending message to queue for session: {}",
-                    userContext.getSession().getSessionId(),
-                    ex);
+            LOG.error("Error sending message to queue", ex);
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
         } catch (JsonProcessingException e) {
-            LOG.error(
-                    "Error parsing request for session: {}",
-                    userContext.getSession().getSessionId());
+            LOG.error("Error parsing request");
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
             return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
@@ -197,9 +190,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         sessionService.save(
                 userContext.getSession().setState(nextState).incrementPasswordResetCount());
         sqsClient.send(serialiseRequest(notifyRequest));
-        LOG.info(
-                "ResetPasswordRequestHandler successfully processed request for session: {}",
-                userContext.getSession().getSessionId());
+        LOG.info("Successfully processed request");
         return generateApiGatewayProxyResponse(
                 200, new BaseAPIResponse(userContext.getSession().getState()));
     }
@@ -207,15 +198,11 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     private Optional<ErrorResponse> validatePasswordResetCount(
             String email, UserContext userContext) {
         if (codeStorageService.isBlockedForEmail(email, PASSWORD_RESET_BLOCKED_KEY_PREFIX)) {
-            LOG.info(
-                    "User cannot request another password reset for session: {}",
-                    userContext.getSession().getSessionId());
+            LOG.info("User cannot request another password reset");
             return Optional.of(ErrorResponse.ERROR_1023);
         } else if (userContext.getSession().getPasswordResetCount()
                 > configurationService.getCodeMaxRetries()) {
-            LOG.info(
-                    "User has requested too many password resets for session: {}",
-                    userContext.getSession().getSessionId());
+            LOG.info("User has requested too many password resets");
             codeStorageService.saveBlockedForEmail(
                     userContext.getSession().getEmailAddress(),
                     PASSWORD_RESET_BLOCKED_KEY_PREFIX,
