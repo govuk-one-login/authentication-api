@@ -20,7 +20,7 @@ dependencies {
             configurations.sns,
             configurations.ssm,
             "org.eclipse.jetty:jetty-server:11.0.7",
-            "com.google.protobuf:protobuf-java:3.18.1",
+            "com.google.protobuf:protobuf-java:3.19.2",
             project(":shared")
 }
 
