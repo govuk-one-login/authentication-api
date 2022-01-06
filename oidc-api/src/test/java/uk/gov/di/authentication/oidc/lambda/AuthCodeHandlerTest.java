@@ -180,9 +180,7 @@ class AuthCodeHandlerTest {
         when(authorisationCodeService.generateAuthorisationCode(eq(CLIENT_SESSION_ID), eq(EMAIL)))
                 .thenReturn(authorizationCode);
         when(authorizationService.generateSuccessfulAuthResponse(
-                        any(AuthenticationRequest.class),
-                        any(AuthorizationCode.class),
-                        any(List.class)))
+                        any(AuthenticationRequest.class), any(AuthorizationCode.class)))
                 .thenReturn(authSuccessResponse);
 
         APIGatewayProxyResponseEvent response = generateApiRequest(Optional.empty());
@@ -240,9 +238,7 @@ class AuthCodeHandlerTest {
                 .thenReturn(authorizationCode);
         when(authorizationService.isValidCookieConsentValue(cookieValue)).thenReturn(true);
         when(authorizationService.generateSuccessfulAuthResponse(
-                        any(AuthenticationRequest.class),
-                        any(AuthorizationCode.class),
-                        any(List.class)))
+                        any(AuthenticationRequest.class), any(AuthorizationCode.class)))
                 .thenCallRealMethod();
 
         APIGatewayProxyResponseEvent response = generateApiRequest(Optional.of(cookieValue));
@@ -296,9 +292,7 @@ class AuthCodeHandlerTest {
                 .thenReturn(authorizationCode);
         when(authorizationService.isValidCookieConsentValue(invalidCookieValue)).thenReturn(false);
         when(authorizationService.generateSuccessfulAuthResponse(
-                        any(AuthenticationRequest.class),
-                        any(AuthorizationCode.class),
-                        any(List.class)))
+                        any(AuthenticationRequest.class), any(AuthorizationCode.class)))
                 .thenCallRealMethod();
 
         APIGatewayProxyResponseEvent response = generateApiRequest(Optional.of(invalidCookieValue));
@@ -426,9 +420,7 @@ class AuthCodeHandlerTest {
         when(authorisationCodeService.generateAuthorisationCode(eq(CLIENT_SESSION_ID), eq(EMAIL)))
                 .thenReturn(authorizationCode);
         when(authorizationService.generateSuccessfulAuthResponse(
-                        any(AuthenticationRequest.class),
-                        any(AuthorizationCode.class),
-                        any(List.class)))
+                        any(AuthenticationRequest.class), any(AuthorizationCode.class)))
                 .thenReturn(authSuccessResponse);
 
         APIGatewayProxyResponseEvent response = generateApiRequest(Optional.empty());

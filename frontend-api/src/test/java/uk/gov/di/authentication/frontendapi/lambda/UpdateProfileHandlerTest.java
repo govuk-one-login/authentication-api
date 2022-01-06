@@ -42,7 +42,6 @@ import java.net.URISyntaxException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -234,9 +233,7 @@ class UpdateProfileHandlerTest {
         when(authorizationService.isClientRedirectUriValid(eq(clientID), eq(REDIRECT_URI)))
                 .thenReturn(true);
         when(authorizationService.generateSuccessfulAuthResponse(
-                        any(AuthenticationRequest.class),
-                        any(AuthorizationCode.class),
-                        any(List.class)))
+                        any(AuthenticationRequest.class), any(AuthorizationCode.class)))
                 .thenReturn(authSuccessResponse);
 
         event.setHeaders(

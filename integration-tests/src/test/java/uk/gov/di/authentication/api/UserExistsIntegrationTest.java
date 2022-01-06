@@ -20,8 +20,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
-import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
-import static uk.gov.di.authentication.shared.entity.SessionState.USER_NOT_FOUND;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -49,7 +47,6 @@ public class UserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         CheckUserExistsResponse checkUserExistsResponse =
                 objectMapper.readValue(response.getBody(), CheckUserExistsResponse.class);
         assertThat(checkUserExistsResponse.getEmail(), equalTo(emailAddress));
-        assertThat(checkUserExistsResponse.getSessionState(), equalTo(AUTHENTICATION_REQUIRED));
         assertTrue(checkUserExistsResponse.doesUserExist());
 
         assertEventTypesReceived(auditTopic, List.of(CHECK_USER_KNOWN_EMAIL));
@@ -71,7 +68,6 @@ public class UserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         CheckUserExistsResponse checkUserExistsResponse =
                 objectMapper.readValue(response.getBody(), CheckUserExistsResponse.class);
         assertThat(checkUserExistsResponse.getEmail(), equalTo(emailAddress));
-        assertThat(checkUserExistsResponse.getSessionState(), equalTo(USER_NOT_FOUND));
         assertFalse(checkUserExistsResponse.doesUserExist());
 
         assertEventTypesReceived(auditTopic, List.of(CHECK_USER_NO_ACCOUNT_WITH_EMAIL));
