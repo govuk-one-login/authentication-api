@@ -188,23 +188,32 @@ resource "aws_vpc_endpoint" "ssm" {
 data "aws_vpc_endpoint_service" "s3" {
   count   = var.use_localstack ? 0 : 1
   service = "s3"
+
+  service_type = "Interface"
 }
 
 resource "aws_vpc_endpoint" "s3" {
   count = var.use_localstack ? 0 : 1
 
-  vpc_endpoint_type = "Gateway"
+  vpc_endpoint_type = "Interface"
   vpc_id            = aws_vpc.authentication.id
   service_name      = data.aws_vpc_endpoint_service.s3[0].service_name
 
+  subnet_ids = aws_subnet.authentication.*.id
+
+  security_group_ids = [
+    aws_vpc.authentication.default_security_group_id,
+    aws_security_group.aws_endpoints.id,
+  ]
+
+  private_dns_enabled = true
+
+  depends_on = [
+    aws_vpc.authentication,
+    aws_subnet.authentication,
+  ]
+
   tags = local.default_tags
-}
-
-resource "aws_vpc_endpoint_route_table_association" "s3" {
-  vpc_endpoint_id = aws_vpc_endpoint.s3[0].id
-  count           = var.use_localstack ? 0 : length(data.aws_availability_zones.available.names)
-
-  route_table_id = aws_route_table.private_route_table[count.index].id
 }
 
 resource "aws_subnet" "authentication_public" {
@@ -356,16 +365,6 @@ resource "aws_security_group_rule" "allow_https_to_dynamo" {
 
   from_port       = 443
   prefix_list_ids = [aws_vpc_endpoint.dynamodb[0].prefix_list_id]
-  protocol        = "tcp"
-  to_port         = 443
-  type            = "egress"
-}
-
-resource "aws_security_group_rule" "allow_https_to_s3" {
-  security_group_id = aws_security_group.allow_vpc_resources_only.id
-
-  from_port       = 443
-  prefix_list_ids = [aws_vpc_endpoint.s3[0].prefix_list_id]
   protocol        = "tcp"
   to_port         = 443
   type            = "egress"
