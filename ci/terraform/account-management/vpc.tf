@@ -25,6 +25,27 @@ resource "aws_subnet" "account_management_subnets" {
   })
 }
 
+resource "aws_security_group" "aws_endpoints" {
+  name_prefix = "${var.environment}-aws-endpoints-"
+  description = "Security group for AWS service VPC endpoints"
+  vpc_id      = aws_vpc.account_management_vpc.id
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+
+resource "aws_security_group_rule" "allow_incoming_aws_https_requests_from_private_subnet" {
+  security_group_id = aws_security_group.aws_endpoints.id
+
+  from_port   = 443
+  protocol    = "tcp"
+  cidr_blocks = aws_subnet.account_management_subnets.*.cidr_block
+  to_port     = 443
+  type        = "ingress"
+}
+
 data "aws_vpc_endpoint_service" "sqs" {
   count   = var.use_localstack ? 0 : 1
   service = "sqs"
@@ -40,7 +61,7 @@ resource "aws_vpc_endpoint" "sqs" {
   subnet_ids = aws_subnet.account_management_subnets.*.id
 
   security_group_ids = [
-    aws_vpc.account_management_vpc.default_security_group_id
+    aws_security_group.aws_endpoints.id
   ]
 
   private_dns_enabled = true
@@ -67,6 +88,94 @@ resource "aws_vpc_endpoint" "dynamodb" {
 
   tags = local.default_tags
 }
+
+data "aws_vpc_endpoint_service" "sns" {
+  count   = var.use_localstack ? 0 : 1
+  service = "sns"
+}
+
+resource "aws_vpc_endpoint" "sns" {
+  count = var.use_localstack ? 0 : 1
+
+  vpc_endpoint_type = "Interface"
+  vpc_id            = aws_vpc.account_management_vpc.id
+  service_name      = data.aws_vpc_endpoint_service.sns[0].service_name
+
+  subnet_ids = aws_subnet.account_management_subnets.*.id
+
+  security_group_ids = [
+    aws_vpc.account_management_vpc.default_security_group_id,
+    aws_security_group.aws_endpoints.id,
+  ]
+
+  private_dns_enabled = true
+
+  depends_on = [
+    aws_vpc.account_management_vpc,
+    aws_subnet.account_management_subnets,
+  ]
+
+  tags = local.default_tags
+}
+
+data "aws_vpc_endpoint_service" "kms" {
+  count   = var.use_localstack ? 0 : 1
+  service = "kms"
+}
+
+resource "aws_vpc_endpoint" "kms" {
+  count = var.use_localstack ? 0 : 1
+
+  vpc_endpoint_type = "Interface"
+  vpc_id            = aws_vpc.account_management_vpc.id
+  service_name      = data.aws_vpc_endpoint_service.kms[0].service_name
+
+  subnet_ids = aws_subnet.account_management_subnets.*.id
+
+  security_group_ids = [
+    aws_vpc.account_management_vpc.default_security_group_id,
+    aws_security_group.aws_endpoints.id,
+  ]
+
+  private_dns_enabled = true
+
+  depends_on = [
+    aws_vpc.account_management_vpc,
+    aws_subnet.account_management_subnets,
+  ]
+
+  tags = local.default_tags
+}
+
+data "aws_vpc_endpoint_service" "ssm" {
+  count   = var.use_localstack ? 0 : 1
+  service = "ssm"
+}
+
+resource "aws_vpc_endpoint" "ssm" {
+  count = var.use_localstack ? 0 : 1
+
+  vpc_endpoint_type = "Interface"
+  vpc_id            = aws_vpc.account_management_vpc.id
+  service_name      = data.aws_vpc_endpoint_service.ssm[0].service_name
+
+  subnet_ids = aws_subnet.account_management_subnets.*.id
+
+  security_group_ids = [
+    aws_vpc.account_management_vpc.default_security_group_id,
+    aws_security_group.aws_endpoints.id,
+  ]
+
+  private_dns_enabled = true
+
+  depends_on = [
+    aws_vpc.account_management_vpc,
+    aws_subnet.account_management_subnets,
+  ]
+
+  tags = local.default_tags
+}
+
 
 resource "aws_vpc_endpoint_route_table_association" "dynamodb" {
   vpc_endpoint_id = aws_vpc_endpoint.dynamodb[0].id
@@ -166,4 +275,94 @@ resource "aws_route" "private_to_internet" {
     aws_route_table.private_route_table,
     aws_route_table_association.private,
   ]
+}
+
+resource "aws_security_group" "allow_vpc_resources_only" {
+  name_prefix = "${var.environment}-allow-vpc-access-only-"
+  description = "Allow access to Redis, SQS and Dynamo but no egress"
+  vpc_id      = aws_vpc.account_management_vpc.id
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_security_group" "redis_security_group" {
+  name_prefix = "${var.environment}-redis-security-group-"
+  description = "Allow ingress to Redis. Use on Elasticache clusters only"
+  vpc_id      = aws_vpc.account_management_vpc.id
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_security_group" "allow_egress" {
+  name_prefix = "${var.environment}-allow-egress-"
+  description = "Allow egress to external services"
+  vpc_id      = aws_vpc.account_management_vpc.id
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_security_group_rule" "allow_incoming_redis_from_private_subnet" {
+  security_group_id = aws_security_group.redis_security_group.id
+
+  from_port   = local.redis_port_number
+  protocol    = "tcp"
+  cidr_blocks = aws_subnet.account_management_subnets.*.cidr_block
+  to_port     = local.redis_port_number
+  type        = "ingress"
+}
+
+resource "aws_security_group_rule" "allow_https_to_aws_services" {
+  security_group_id = aws_security_group.allow_vpc_resources_only.id
+
+  from_port                = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.aws_endpoints.id
+  to_port                  = 443
+  type                     = "egress"
+}
+
+resource "aws_security_group_rule" "allow_https_to_dynamo" {
+  security_group_id = aws_security_group.allow_vpc_resources_only.id
+
+  from_port       = 443
+  prefix_list_ids = [aws_vpc_endpoint.dynamodb[0].prefix_list_id]
+  protocol        = "tcp"
+  to_port         = 443
+  type            = "egress"
+}
+
+resource "aws_security_group_rule" "allow_connection_to_redis" {
+  security_group_id = aws_security_group.allow_vpc_resources_only.id
+
+  from_port                = local.redis_port_number
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.redis_security_group.id
+  to_port                  = local.redis_port_number
+  type                     = "egress"
+}
+
+resource "aws_security_group_rule" "allow_https_to_anywhere" {
+  security_group_id = aws_security_group.allow_egress.id
+
+  cidr_blocks = ["0.0.0.0/0"]
+  from_port   = 443
+  protocol    = "tcp"
+  to_port     = 443
+  type        = "egress"
+}
+
+resource "aws_security_group_rule" "allow_connection_to_redis_from_egress_group" {
+  security_group_id = aws_security_group.allow_egress.id
+
+  from_port                = local.redis_port_number
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.redis_security_group.id
+  to_port                  = local.redis_port_number
+  type                     = "egress"
 }
