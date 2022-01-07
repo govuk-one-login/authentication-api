@@ -176,6 +176,34 @@ resource "aws_vpc_endpoint" "ssm" {
   tags = local.default_tags
 }
 
+data "aws_vpc_endpoint_service" "lambda" {
+  count   = var.use_localstack ? 0 : 1
+  service = "lambda"
+}
+
+resource "aws_vpc_endpoint" "lambda" {
+  count = var.use_localstack ? 0 : 1
+
+  vpc_endpoint_type = "Interface"
+  vpc_id            = aws_vpc.account_management_vpc.id
+  service_name      = data.aws_vpc_endpoint_service.lambda[0].service_name
+
+  subnet_ids = aws_subnet.account_management_subnets.*.id
+
+  security_group_ids = [
+    aws_vpc.account_management_vpc.default_security_group_id,
+    aws_security_group.aws_endpoints.id,
+  ]
+
+  private_dns_enabled = true
+
+  depends_on = [
+    aws_vpc.account_management_vpc,
+    aws_subnet.account_management_subnets,
+  ]
+
+  tags = local.default_tags
+}
 
 resource "aws_vpc_endpoint_route_table_association" "dynamodb" {
   vpc_endpoint_id = aws_vpc_endpoint.dynamodb[0].id
