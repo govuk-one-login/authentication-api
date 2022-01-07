@@ -21,7 +21,7 @@ module "update_phone_number" {
   execution_arn                          = aws_api_gateway_rest_api.di_account_management_api.execution_arn
   lambda_zip_file                        = var.lambda_zip_file
   authentication_vpc_arn                 = aws_vpc.account_management_vpc.arn
-  security_group_id                      = aws_vpc.account_management_vpc.default_security_group_id
+  security_group_id                      = aws_security_group.allow_vpc_resources_only.id
   subnet_id                              = aws_subnet.account_management_subnets.*.id
   environment                            = var.environment
   lambda_role_arn                        = module.account_notification_dynamo_sqs_role.arn
