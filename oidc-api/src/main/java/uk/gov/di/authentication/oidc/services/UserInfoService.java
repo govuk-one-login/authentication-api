@@ -29,6 +29,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+
 public class UserInfoService {
 
     private final RedisConnectionService redisConnectionService;
@@ -83,10 +86,13 @@ public class UserInfoService {
             }
             String clientID = signedJWT.getJWTClaimsSet().getStringClaim("client_id");
             Optional<ClientRegistry> client = clientService.getClient(clientID);
+
+            attachLogFieldToLogs(CLIENT_ID, clientID);
+
             if (client.isEmpty()) {
-                LOG.error("Client not found with given ClientID: {}", clientID);
+                LOG.error("Client not found");
                 throw new UserInfoValidationException(
-                        "Client not found with given ClientID", BearerTokenError.INVALID_TOKEN);
+                        "Client not found", BearerTokenError.INVALID_TOKEN);
             }
             List<String> scopes = (List<String>) signedJWT.getJWTClaimsSet().getClaim("scope");
             if (!areScopesValid(scopes) || !client.get().getScopes().containsAll(scopes)) {
@@ -145,7 +151,7 @@ public class UserInfoService {
             return Optional.ofNullable(
                     new ObjectMapper().readValue(result, AccessTokenStore.class));
         } catch (JsonProcessingException | IllegalArgumentException e) {
-            LOG.error("Error getting AccessToken from Redis. ClientID: {}", clientId);
+            LOG.error("Error getting AccessToken from Redis");
             return Optional.empty();
         }
     }

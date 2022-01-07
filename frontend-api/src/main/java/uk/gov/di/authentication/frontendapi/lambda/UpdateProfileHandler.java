@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.LogLineHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -49,6 +50,9 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_ACTI
 import static uk.gov.di.authentication.shared.entity.SessionState.ADDED_UNVERIFIED_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileRequest>
@@ -122,17 +126,22 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             Context context,
             UpdateProfileRequest request,
             UserContext userContext) {
+
         Session session = userContext.getSession();
 
-        LOG.info("UpdateProfileHandler processing request for session: {}", session.getSessionId());
-
-        String ipAddress = IpAddressHelper.extractIpAddress(input);
         String persistentSessionId =
                 PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
 
+        LogLineHelper.attachSessionIdToLogs(session);
+        attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionId);
+
+        LOG.info("Processing request");
+
+        String ipAddress = IpAddressHelper.extractIpAddress(input);
+
         try {
             if (!session.validateSession(request.getEmail())) {
-                LOG.info("Invalid session: {}", session.getSessionId());
+                LOG.info("Invalid session");
                 return generateErrorResponse(ErrorResponse.ERROR_1000, context);
             }
 
@@ -164,8 +173,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                 persistentSessionId);
                         sessionService.save(session.setState(nextState));
                         LOG.info(
-                                "Phone number updated and session state changed. Session: {}, Session state {}",
-                                session.getSessionId(),
+                                "Phone number updated and session state updated to {}",
                                 ADDED_UNVERIFIED_PHONE_NUMBER);
                         return generateSuccessResponse(session);
                     }
@@ -174,9 +182,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                         ClientSession clientSession = userContext.getClientSession();
 
                         if (clientSession == null) {
-                            LOG.error(
-                                    "ClientSession not found for session: {}",
-                                    session.getSessionId());
+                            LOG.error("ClientSession not found");
                             return generateErrorResponse(ErrorResponse.ERROR_1000, context);
                         }
                         AuthenticationRequest authorizationRequest;
@@ -185,12 +191,13 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                     AuthenticationRequest.parse(
                                             clientSession.getAuthRequestParams());
                         } catch (ParseException e) {
-                            LOG.info(
-                                    "Cannot retrieve auth request params from client session id. session: {}",
-                                    session.getSessionId());
+                            LOG.info("Cannot retrieve auth request params from client session id");
                             return generateErrorResponse(ErrorResponse.ERROR_1001, context);
                         }
                         String clientId = authorizationRequest.getClientID().getValue();
+
+                        attachLogFieldToLogs(CLIENT_ID, clientId);
+
                         Set<String> claimsConsented;
 
                         if (!Boolean.parseBoolean(request.getProfileInformation())) {
@@ -225,11 +232,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                         .orElse(AuditService.UNKNOWN),
                                 persistentSessionId);
 
-                        LOG.info(
-                                "Consent updated for ClientID {} and session state changed. Session state {}, session {}",
-                                clientId,
-                                nextState,
-                                session.getSessionId());
+                        LOG.info("Consent updated and session state changed to {}", nextState);
 
                         return generateSuccessResponse(session);
                     }
@@ -254,8 +257,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                         .orElse(AuditService.UNKNOWN),
                                 persistentSessionId);
                         LOG.info(
-                                "Updated terms and conditions for session: {} for Version {}",
-                                session.getSessionId(),
+                                "Updated terms and conditions to version {}",
                                 configurationService.getTermsAndConditionsVersion());
 
                         var nextState =
@@ -265,23 +267,18 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                         userContext);
                         sessionService.save(session.setState(nextState));
 
-                        LOG.info(
-                                "Updated terms and conditions for session: {}. Session state {}",
-                                session.getSessionId(),
-                                nextState);
+                        LOG.info("Updated terms and conditions session state to {}", nextState);
 
                         return generateSuccessResponse(session);
                     }
             }
         } catch (JsonProcessingException e) {
-            LOG.error("Error parsing request for session: {}", session.getSessionId());
+            LOG.error("Error parsing request");
             return generateErrorResponse(ErrorResponse.ERROR_1001, context);
         } catch (InvalidStateTransitionException e) {
             return generateErrorResponse(ErrorResponse.ERROR_1017, context);
         }
-        LOG.error(
-                "Encountered unexpected error while processing session: {}",
-                session.getSessionId());
+        LOG.error("Encountered unexpected error");
         return generateErrorResponse(ErrorResponse.ERROR_1013, context);
     }
 
@@ -309,19 +306,14 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                         claimsConsented,
                                         LocalDateTime.now(ZoneId.of("UTC")).toString()));
 
-        LOG.info(
-                "Consent value successfully added to ClientConsentObject for session: {}. Attempting to update UserProfile with ClientConsent: {}",
-                userContext.getSession().getSessionId(),
-                clientConsentToUpdate);
+        LOG.info("Consent value successfully added. Attempting to update UserProfile.");
 
         authenticationService.updateConsent(email, clientConsentToUpdate);
     }
 
     private APIGatewayProxyResponseEvent generateSuccessResponse(Session session)
             throws JsonProcessingException {
-        LOG.info(
-                "UpdateProfileHandler successfully processed request for session: {}",
-                session.getSessionId());
+        LOG.info("UpdateProfileHandler successfully processed request");
 
         return generateApiGatewayProxyResponse(200, new BaseAPIResponse(session.getState()));
     }

@@ -18,6 +18,7 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -40,6 +41,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -54,6 +56,8 @@ import java.util.Set;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
@@ -73,6 +77,7 @@ import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDA
 import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_ADDED;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.buildCookieString;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -108,6 +113,23 @@ class UpdateProfileHandlerTest {
             new Session(SESSION_ID)
                     .setEmailAddress(TEST_EMAIL_ADDRESS)
                     .setState(SessionState.TWO_FACTOR_REQUIRED);
+
+    @RegisterExtension
+    public final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(UpdateProfileHandler.class);
+
+    @AfterEach
+    public void tearDown() {
+        assertThat(
+                logging.events(),
+                not(
+                        hasItem(
+                                withMessageContaining(
+                                        SESSION_ID,
+                                        CLIENT_SESSION_ID,
+                                        CLIENT_ID,
+                                        TEST_EMAIL_ADDRESS))));
+    }
 
     @BeforeEach
     public void setUp() {

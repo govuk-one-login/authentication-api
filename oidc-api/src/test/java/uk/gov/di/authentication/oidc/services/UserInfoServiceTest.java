@@ -16,8 +16,10 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.BearerTokenError;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -27,6 +29,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -35,12 +38,16 @@ import java.util.List;
 import java.util.Optional;
 
 import static java.util.Collections.singletonList;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class UserInfoServiceTest {
 
@@ -65,6 +72,17 @@ class UserInfoServiceTest {
     private static final String KEY_ID = "14342354354353";
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
     private AccessToken accessToken;
+
+    @RegisterExtension
+    public final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(UserInfoService.class);
+
+    @AfterEach
+    public void tearDown() {
+        assertThat(
+                logging.events(),
+                not(hasItem(withMessageContaining(CLIENT_ID, SUBJECT.toString()))));
+    }
 
     @BeforeEach
     public void setUp() throws JOSEException {
@@ -149,8 +167,7 @@ class UserInfoServiceTest {
                                         accessToken.toAuthorizationHeader()),
                         "Expected to throw UserInfoValidationException");
 
-        assertEquals(
-                userInfoValidationException.getMessage(), "Client not found with given ClientID");
+        assertEquals(userInfoValidationException.getMessage(), "Client not found");
         assertEquals(userInfoValidationException.getError(), BearerTokenError.INVALID_TOKEN);
     }
 

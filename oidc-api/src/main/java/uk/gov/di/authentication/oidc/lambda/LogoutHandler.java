@@ -32,6 +32,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
@@ -116,18 +118,16 @@ public class LogoutHandler
             Optional<String> state,
             Context context) {
 
-        attachSessionIdToLogs(session);
-
         CookieHelper.SessionCookieIds sessionCookieIds =
                 CookieHelper.parseSessionCookie(input.getHeaders()).get();
 
-        LOG.info(
-                "LogoutHandler processing request for SessionId: {} and ClientSessionId: {}",
-                session.getSessionId(),
-                sessionCookieIds.getClientSessionId());
+        attachSessionIdToLogs(session);
+        attachLogFieldToLogs(CLIENT_SESSION_ID, sessionCookieIds.getClientSessionId());
+
+        LOG.info("LogoutHandler processing request");
 
         if (!session.getClientSessions().contains(sessionCookieIds.getClientSessionId())) {
-            LOG.error("Client Session ID does not exist in Session: {}", session.getSessionId());
+            LOG.error("Client Session ID does not exist");
             return generateErrorLogoutResponse(
                     Optional.empty(),
                     new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid session"),
@@ -153,7 +153,7 @@ public class LogoutHandler
 
         if (idTokenHint.isPresent()) {
             if (!doesIDTokenExistInSession(idTokenHint.get(), session)) {
-                LOG.error("ID token does not exist in session {}", session.getSessionId());
+                LOG.error("ID token does not exist");
                 return generateErrorLogoutResponse(
                         Optional.empty(),
                         new ErrorObject(
@@ -165,9 +165,7 @@ public class LogoutHandler
                         Optional.of(session.getSessionId()));
             }
             if (!tokenValidationService.isTokenSignatureValid(idTokenHint.get())) {
-                LOG.error(
-                        "Unable to validate ID token signature for Session: {}",
-                        session.getSessionId());
+                LOG.error("Unable to validate ID token signature");
                 return generateErrorLogoutResponse(
                         Optional.empty(),
                         new ErrorObject(
@@ -218,7 +216,7 @@ public class LogoutHandler
         LOG.info("Validating ClientID");
         Optional<ClientRegistry> clientRegistry = dynamoClientService.getClient(clientID);
         if (clientRegistry.isEmpty()) {
-            LOG.error("Client not found in ClientRegistry for ClientID: {}", clientID);
+            LOG.error("Client not found in ClientRegistry");
             return generateErrorLogoutResponse(
                     state,
                     new ErrorObject(OAuth2Error.UNAUTHORIZED_CLIENT_CODE, "client not found"),
@@ -343,10 +341,10 @@ public class LogoutHandler
 
     private void destroySessions(Session session) {
         for (String clientSessionId : session.getClientSessions()) {
-            LOG.info("Deleting ClientSession with ClientSessionId: {}", clientSessionId);
+            LOG.info("Deleting ClientSession");
             clientSessionService.deleteClientSessionFromRedis(clientSessionId);
         }
-        LOG.info("Deleting Session with SessionId: {}", session.getSessionId());
+        LOG.info("Deleting Session");
         sessionService.deleteSessionFromRedis(session.getSessionId());
     }
 

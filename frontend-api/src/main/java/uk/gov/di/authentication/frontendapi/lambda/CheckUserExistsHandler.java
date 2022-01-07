@@ -33,6 +33,11 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsRequest>
@@ -80,10 +85,16 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             Context context,
             CheckUserExistsRequest request,
             UserContext userContext) {
+
+        attachSessionIdToLogs(userContext.getSession());
+        attachLogFieldToLogs(
+                PERSISTENT_SESSION_ID, extractPersistentIdFromHeaders(input.getHeaders()));
+        attachLogFieldToLogs(
+                CLIENT_ID,
+                userContext.getClient().map(ClientRegistry::getClientID).orElse("unknown"));
+
         try {
-            LOG.info(
-                    "CheckUserExistsHandler processing request for session {}",
-                    userContext.getSession().getSessionId());
+            LOG.info("Processing request");
 
             userContext
                     .getSession()
@@ -112,10 +123,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         persistentSessionId);
-                LOG.error(
-                        "Encountered an error while processing request for session {}; errorResponse is {}",
-                        userContext.getSession().getSessionId(),
-                        errorResponse.get());
+                LOG.error("Invalid email address: {}", errorResponse.get());
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
             boolean userExists = authenticationService.userExists(emailAddress);
@@ -161,9 +169,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             emailAddress, userExists, userContext.getSession().getState());
             sessionService.save(userContext.getSession());
 
-            LOG.info(
-                    "CheckUserExistsHandler successfully processed request for session {}",
-                    userContext.getSession().getSessionId());
+            LOG.info("Successfully processed request");
 
             return generateApiGatewayProxyResponse(200, checkUserExistsResponse);
 
