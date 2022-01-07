@@ -144,7 +144,7 @@ public class UpdateEmailHandler
                                         sessionId,
                                         AuditService.UNKNOWN,
                                         userProfile.getSubjectID(),
-                                        userProfile.getEmail(),
+                                        updateInfoRequest.getReplacementEmailAddress(),
                                         IpAddressHelper.extractIpAddress(input),
                                         userProfile.getPhoneNumber(),
                                         PersistentIdHelper.extractPersistentIdFromHeaders(

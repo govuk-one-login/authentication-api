@@ -46,7 +46,8 @@ class UpdatePhoneNumberHandlerTest {
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private UpdatePhoneNumberHandler handler;
     private static final String EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final String PHONE_NUMBER = "01234567891";
+    private static final String NEW_PHONE_NUMBER = "01234567891";
+    private static final String OLD_PHONE_NUMBER = "09876543219";
     private static final String INVALID_PHONE_NUMBER = "12345";
     private static final String OTP = "123456";
     private static final Subject SUBJECT = new Subject();
@@ -66,13 +67,16 @@ class UpdatePhoneNumberHandlerTest {
     @Test
     public void shouldReturn204ForValidUpdatePhoneNumberRequest() throws JsonProcessingException {
         String persistentIdValue = "some-persistent-session-id";
-        UserProfile userProfile = new UserProfile().setPublicSubjectID(SUBJECT.getValue());
+        UserProfile userProfile =
+                new UserProfile()
+                        .setPublicSubjectID(SUBJECT.getValue())
+                        .setPhoneNumber(OLD_PHONE_NUMBER);
         when(dynamoService.getUserProfileByEmail(EMAIL_ADDRESS)).thenReturn(userProfile);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
                 format(
                         "{\"email\": \"%s\", \"phoneNumber\": \"%s\", \"otp\": \"%s\"  }",
-                        EMAIL_ADDRESS, PHONE_NUMBER, OTP));
+                        EMAIL_ADDRESS, NEW_PHONE_NUMBER, OTP));
         event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentIdValue));
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
                 new APIGatewayProxyRequestEvent.ProxyRequestContext();
@@ -83,12 +87,12 @@ class UpdatePhoneNumberHandlerTest {
         event.setRequestContext(proxyRequestContext);
         when(codeStorageService.isValidOtpCode(EMAIL_ADDRESS, OTP, VERIFY_PHONE_NUMBER))
                 .thenReturn(true);
-        when(validationService.validatePhoneNumber(PHONE_NUMBER)).thenReturn(Optional.empty());
+        when(validationService.validatePhoneNumber(NEW_PHONE_NUMBER)).thenReturn(Optional.empty());
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
-        verify(dynamoService).updatePhoneNumber(EMAIL_ADDRESS, PHONE_NUMBER);
+        verify(dynamoService).updatePhoneNumber(EMAIL_ADDRESS, NEW_PHONE_NUMBER);
         NotifyRequest notifyRequest = new NotifyRequest(EMAIL_ADDRESS, PHONE_NUMBER_UPDATED);
         verify(sqsClient).send(new ObjectMapper().writeValueAsString(notifyRequest));
 
@@ -101,7 +105,7 @@ class UpdatePhoneNumberHandlerTest {
                         userProfile.getSubjectID(),
                         userProfile.getEmail(),
                         "123.123.123.123",
-                        userProfile.getPhoneNumber(),
+                        NEW_PHONE_NUMBER,
                         persistentIdValue);
     }
 

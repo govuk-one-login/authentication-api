@@ -102,7 +102,7 @@ class UpdateEmailHandlerTest {
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         userProfile.getSubjectID(),
-                        userProfile.getEmail(),
+                        NEW_EMAIL_ADDRESS,
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),
                         persistentIdValue);

@@ -136,7 +136,7 @@ public class UpdatePhoneNumberHandler
                                         userProfile.getSubjectID(),
                                         userProfile.getEmail(),
                                         IpAddressHelper.extractIpAddress(input),
-                                        userProfile.getPhoneNumber(),
+                                        updatePhoneNumberRequest.getPhoneNumber(),
                                         PersistentIdHelper.extractPersistentIdFromHeaders(
                                                 input.getHeaders()));
 
