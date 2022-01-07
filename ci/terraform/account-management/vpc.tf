@@ -104,7 +104,6 @@ resource "aws_vpc_endpoint" "sns" {
   subnet_ids = aws_subnet.account_management_subnets.*.id
 
   security_group_ids = [
-    aws_vpc.account_management_vpc.default_security_group_id,
     aws_security_group.aws_endpoints.id,
   ]
 
@@ -133,7 +132,6 @@ resource "aws_vpc_endpoint" "kms" {
   subnet_ids = aws_subnet.account_management_subnets.*.id
 
   security_group_ids = [
-    aws_vpc.account_management_vpc.default_security_group_id,
     aws_security_group.aws_endpoints.id,
   ]
 
@@ -162,7 +160,6 @@ resource "aws_vpc_endpoint" "ssm" {
   subnet_ids = aws_subnet.account_management_subnets.*.id
 
   security_group_ids = [
-    aws_vpc.account_management_vpc.default_security_group_id,
     aws_security_group.aws_endpoints.id,
   ]
 
@@ -191,7 +188,6 @@ resource "aws_vpc_endpoint" "lambda" {
   subnet_ids = aws_subnet.account_management_subnets.*.id
 
   security_group_ids = [
-    aws_vpc.account_management_vpc.default_security_group_id,
     aws_security_group.aws_endpoints.id,
   ]
 
