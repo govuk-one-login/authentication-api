@@ -101,9 +101,18 @@ public class AuthCodeHandler
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1000);
                             }
+                            String clientSessionId =
+                                    getHeaderValueFromHeaders(
+                                            input.getHeaders(),
+                                            CLIENT_SESSION_ID_HEADER,
+                                            configurationService.getHeadersCaseInsensitive());
+
+                            if (Objects.isNull(clientSessionId)) {
+                                return generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.ERROR_1018);
+                            }
                             attachSessionIdToLogs(session);
-                            attachLogFieldToLogs(
-                                    CLIENT_SESSION_ID, sessionCookieIds.getClientSessionId());
+                            attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
 
                             LOG.info("Processing request");
 
@@ -164,12 +173,7 @@ public class AuthCodeHandler
                                 }
                                 AuthorizationCode authCode =
                                         authorisationCodeService.generateAuthorisationCode(
-                                                getHeaderValueFromHeaders(
-                                                        input.getHeaders(),
-                                                        CLIENT_SESSION_ID_HEADER,
-                                                        configurationService
-                                                                .getHeadersCaseInsensitive()),
-                                                session.getEmailAddress());
+                                                clientSessionId, session.getEmailAddress());
 
                                 AuthenticationSuccessResponse authenticationResponse =
                                         authorizationService.generateSuccessfulAuthResponse(

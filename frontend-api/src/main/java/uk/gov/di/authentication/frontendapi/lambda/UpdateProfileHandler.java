@@ -189,7 +189,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                             request.getEmail(), userContext, clientId, claimsConsented);
                     auditableEvent = UPDATE_PROFILE_CONSENT_UPDATED;
                     auditableClientId = clientId;
-                    LOG.info("Consent updated and session state changed to {}", nextState);
+                    LOG.info("Consent updated");
                     break;
                 }
             case UPDATE_TERMS_CONDS:
