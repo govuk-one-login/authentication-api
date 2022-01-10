@@ -200,7 +200,7 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_frontend_api" {
     visibility_config {
       cloudwatch_metrics_enabled = true
       metric_name                = "${replace(var.environment, "-", "")}FrontendWafMaxRequestRate"
-      sampled_requests_enabled   = false
+      sampled_requests_enabled   = true
     }
   }
 
@@ -221,7 +221,7 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_frontend_api" {
     visibility_config {
       cloudwatch_metrics_enabled = true
       metric_name                = "${replace(var.environment, "-", "")}FrontendWafCommonRuleSet"
-      sampled_requests_enabled   = false
+      sampled_requests_enabled   = true
     }
   }
 
@@ -242,14 +242,14 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_frontend_api" {
     visibility_config {
       cloudwatch_metrics_enabled = true
       metric_name                = "${replace(var.environment, "-", "")}FrontendWafBaduleSet"
-      sampled_requests_enabled   = false
+      sampled_requests_enabled   = true
     }
   }
 
   visibility_config {
     cloudwatch_metrics_enabled = true
     metric_name                = "${replace(var.environment, "-", "")}FrontendWafRules"
-    sampled_requests_enabled   = false
+    sampled_requests_enabled   = true
   }
 }
 
