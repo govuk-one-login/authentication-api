@@ -56,7 +56,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
@@ -168,7 +167,6 @@ class AuthCodeHandlerTest {
                 .thenReturn(true);
         when(authorisationCodeService.generateAuthorisationCode(eq(CLIENT_SESSION_ID), eq(EMAIL)))
                 .thenReturn(authorizationCode);
-        when(authorizationService.isClientCookieConsentShared(CLIENT_ID)).thenReturn(false);
         when(authorizationService.generateSuccessfulAuthResponse(
                         any(AuthenticationRequest.class), any(AuthorizationCode.class)))
                 .thenReturn(authSuccessResponse);
@@ -179,8 +177,6 @@ class AuthCodeHandlerTest {
         AuthCodeResponse authCodeResponse =
                 new ObjectMapper().readValue(response.getBody(), AuthCodeResponse.class);
         assertThat(authCodeResponse.getLocation(), equalTo(authSuccessResponse.toURI().toString()));
-        assertFalse(authCodeResponse.getCookieConsentShared());
-
         assertThat(session.getCurrentCredentialStrength(), equalTo(finalLevel));
 
         verify(auditService)

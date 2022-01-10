@@ -140,8 +140,7 @@ public class AuthCodeHandler
                                                 e.getErrorObject());
                                 LOG.warn("Authentication request could not be parsed", e);
                                 return generateResponse(
-                                        new AuthCodeResponse(
-                                                errorResponse.toURI().toString(), false));
+                                        new AuthCodeResponse(errorResponse.toURI().toString()));
                             }
 
                             try {
@@ -201,16 +200,13 @@ public class AuthCodeHandler
                                                 input.getHeaders()));
                                 return generateResponse(
                                         new AuthCodeResponse(
-                                                authenticationResponse.toURI().toString(),
-                                                authorizationService.isClientCookieConsentShared(
-                                                        authenticationRequest.getClientID())));
+                                                authenticationResponse.toURI().toString()));
                             } catch (ClientNotFoundException e) {
                                 AuthenticationErrorResponse errorResponse =
                                         authorizationService.generateAuthenticationErrorResponse(
                                                 authenticationRequest, OAuth2Error.INVALID_CLIENT);
                                 return generateResponse(
-                                        new AuthCodeResponse(
-                                                errorResponse.toURI().toString(), false));
+                                        new AuthCodeResponse(errorResponse.toURI().toString()));
                             } catch (URISyntaxException e) {
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1016);

@@ -7,21 +7,11 @@ public class AuthCodeResponse {
     @JsonProperty("location")
     private String location;
 
-    @JsonProperty("cookieConsentShared")
-    private boolean cookieConsentShared;
-
-    public AuthCodeResponse(
-            @JsonProperty(required = true, value = "location") String location,
-            @JsonProperty(value = "cookieConsentShared") boolean cookieConsentShared) {
+    public AuthCodeResponse(@JsonProperty(required = true, value = "location") String location) {
         this.location = location;
-        this.cookieConsentShared = cookieConsentShared;
     }
 
     public String getLocation() {
         return location;
-    }
-
-    public boolean getCookieConsentShared() {
-        return cookieConsentShared;
     }
 }
