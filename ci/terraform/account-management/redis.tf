@@ -48,7 +48,6 @@ resource "aws_elasticache_replication_group" "account_management_sessions_store"
 
   subnet_group_name = aws_elasticache_subnet_group.account_management_sessions_store[0].name
   security_group_ids = [
-    aws_vpc.account_management_vpc.default_security_group_id,
     aws_security_group.redis_security_group.id,
   ]
 
