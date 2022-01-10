@@ -2,7 +2,6 @@ package uk.gov.di.authentication.frontendapi.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class ClientInfoResponse {
@@ -14,7 +13,7 @@ public class ClientInfoResponse {
     private String clientName;
 
     @JsonProperty("scopes")
-    private List<String> scopes = new ArrayList<>();
+    private List<String> scopes;
 
     @JsonProperty("redirectUri")
     private String redirectUri;
@@ -25,19 +24,24 @@ public class ClientInfoResponse {
     @JsonProperty("state")
     private String state;
 
+    @JsonProperty("cookieConsentShared")
+    private boolean cookieConsentShared;
+
     public ClientInfoResponse(
             @JsonProperty(required = true, value = "client_id") String clientId,
             @JsonProperty(required = true, value = "client_name") String clientName,
             @JsonProperty(required = true, value = "scopes") List<String> scopes,
             @JsonProperty(value = "redirectUri") String redirectUri,
             @JsonProperty(required = true, value = "service_type") String serviceType,
-            @JsonProperty(value = "state") String state) {
+            @JsonProperty(value = "state") String state,
+            @JsonProperty(value = "cookieConsentShared") boolean cookieConsentShared) {
         this.clientId = clientId;
         this.clientName = clientName;
         this.scopes = scopes;
         this.redirectUri = redirectUri;
         this.serviceType = serviceType;
         this.state = state;
+        this.cookieConsentShared = cookieConsentShared;
     }
 
     public String getClientId() {
@@ -62,5 +66,9 @@ public class ClientInfoResponse {
 
     public String getState() {
         return state;
+    }
+
+    public boolean getCookieConsentShared() {
+        return cookieConsentShared;
     }
 }

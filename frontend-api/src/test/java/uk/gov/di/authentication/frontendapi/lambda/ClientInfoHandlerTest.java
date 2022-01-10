@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
@@ -70,6 +71,7 @@ public class ClientInfoHandlerTest {
                         clientSessionService, clientService, sessionService, auditService);
         clientRegistry = new ClientRegistry();
         clientRegistry.setClientID(TEST_CLIENT_ID);
+        clientRegistry.setCookieConsentShared(true);
         clientRegistry.setClientName(TEST_CLIENT_NAME);
         when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
         when(clientService.getClient(UNKNOWN_TEST_CLIENT_ID)).thenReturn(Optional.empty());
@@ -97,6 +99,7 @@ public class ClientInfoHandlerTest {
 
         assertEquals(response.getClientId(), TEST_CLIENT_ID);
         assertEquals(response.getClientName(), TEST_CLIENT_NAME);
+        assertThat(response.getCookieConsentShared(), equalTo(true));
 
         verify(auditService)
                 .submitAuditEvent(

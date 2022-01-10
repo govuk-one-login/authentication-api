@@ -124,7 +124,8 @@ public class ClientInfoHandler
                                                 scopes,
                                                 redirectUri,
                                                 clientRegistry.getServiceType(),
-                                                state);
+                                                state,
+                                                clientRegistry.isCookieConsentShared());
 
                                 LOG.info(
                                         "Found Client Info for ClientID: {} ClientName {} Scopes {} Redirect Uri {} Service Type {} State {}",
