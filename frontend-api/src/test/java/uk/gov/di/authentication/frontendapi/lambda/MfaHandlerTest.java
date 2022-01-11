@@ -105,7 +105,9 @@ public class MfaHandlerTest {
 
     @AfterEach
     public void tearDown() {
-        assertThat(logging.events(), not(hasItem(withMessageContaining(session.getSessionId()))));
+        assertThat(
+                logging.events(),
+                not(hasItem(withMessageContaining(session.getSessionId(), TEST_CLIENT_ID))));
     }
 
     @BeforeEach
