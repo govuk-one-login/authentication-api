@@ -14,7 +14,7 @@ apply plugin: "idea"
 ext {
     dependencyVersions = [
         jackson_version: "2.13.1",
-        aws_sdk_version: "1.12.133",
+        aws_sdk_version: "1.12.137",
         aws_lambda_core_version: "1.2.1",
         aws_lambda_events_version: "3.11.0",
         nimbusds_oauth_version: "9.20.1",
