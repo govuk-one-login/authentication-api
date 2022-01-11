@@ -6,10 +6,10 @@ import java.util.List;
 
 public class ClientInfoResponse {
 
-    @JsonProperty("client_id")
+    @JsonProperty("clientId")
     private String clientId;
 
-    @JsonProperty("client_name")
+    @JsonProperty("clientName")
     private String clientName;
 
     @JsonProperty("scopes")
@@ -18,7 +18,7 @@ public class ClientInfoResponse {
     @JsonProperty("redirectUri")
     private String redirectUri;
 
-    @JsonProperty("service_type")
+    @JsonProperty("serviceType")
     private String serviceType;
 
     @JsonProperty("state")
@@ -28,11 +28,11 @@ public class ClientInfoResponse {
     private boolean cookieConsentShared;
 
     public ClientInfoResponse(
-            @JsonProperty(required = true, value = "client_id") String clientId,
-            @JsonProperty(required = true, value = "client_name") String clientName,
+            @JsonProperty(required = true, value = "clientId") String clientId,
+            @JsonProperty(required = true, value = "clientName") String clientName,
             @JsonProperty(required = true, value = "scopes") List<String> scopes,
             @JsonProperty(value = "redirectUri") String redirectUri,
-            @JsonProperty(required = true, value = "service_type") String serviceType,
+            @JsonProperty(required = true, value = "serviceType") String serviceType,
             @JsonProperty(value = "state") String state,
             @JsonProperty(value = "cookieConsentShared") boolean cookieConsentShared) {
         this.clientId = clientId;
