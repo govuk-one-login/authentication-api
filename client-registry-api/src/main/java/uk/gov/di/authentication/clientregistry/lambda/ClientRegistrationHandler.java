@@ -25,6 +25,8 @@ import java.util.Optional;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_ERROR;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class ClientRegistrationHandler
@@ -106,6 +108,9 @@ public class ClientRegistrationHandler
                                 }
 
                                 String clientID = clientService.generateClientID().toString();
+
+                                attachLogFieldToLogs(CLIENT_ID, clientID);
+
                                 clientService.addClient(
                                         clientID,
                                         clientRegistrationRequest.getClientName(),

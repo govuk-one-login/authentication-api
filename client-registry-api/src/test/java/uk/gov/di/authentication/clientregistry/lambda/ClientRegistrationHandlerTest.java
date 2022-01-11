@@ -10,19 +10,23 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -33,11 +37,13 @@ import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAudit
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_SCOPE;
 import static uk.gov.di.authentication.shared.entity.ServiceType.MANDATORY;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class ClientRegistrationHandlerTest {
 
+    private final String clientId = IdGenerator.generate();
     private final Context context = mock(Context.class);
     private final ClientService clientService = mock(ClientService.class);
     private final ClientConfigValidationService configValidationService =
@@ -53,15 +59,20 @@ class ClientRegistrationHandlerTest {
                 new ClientRegistrationHandler(clientService, configValidationService, auditService);
     }
 
+    @RegisterExtension
+    public final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(UpdateClientConfigHandler.class);
+
     @AfterEach
     public void afterEach() {
+        assertThat(logging.events(), not(hasItem(withMessageContaining(clientId))));
         verifyNoMoreInteractions(auditService);
     }
 
     @Test
     public void shouldReturn200IfClientRegistrationRequestIsSuccessful()
             throws JsonProcessingException {
-        String clientId = UUID.randomUUID().toString();
+
         String sectorIdentifierUri = "https://test.com";
         String subjectType = "pairwise";
         String clientName = "test-client";
