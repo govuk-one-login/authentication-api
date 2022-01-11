@@ -25,6 +25,8 @@ import java.util.Optional;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_ERROR;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class UpdateClientConfigHandler
@@ -78,9 +80,10 @@ public class UpdateClientConfigHandler
                                     AuditService.UNKNOWN);
                             try {
                                 String clientId = input.getPathParameters().get("clientId");
-                                LOG.info(
-                                        "Update client config request received with ClientId: {}",
-                                        clientId);
+
+                                attachLogFieldToLogs(CLIENT_ID, clientId);
+
+                                LOG.info("Update client config request received");
 
                                 UpdateClientConfigRequest updateClientConfigRequest =
                                         objectMapper.readValue(
@@ -96,9 +99,7 @@ public class UpdateClientConfigHandler
                                             ipAddress,
                                             AuditService.UNKNOWN,
                                             AuditService.UNKNOWN);
-                                    LOG.error(
-                                            "Invalid update Client config request. Invalid CliendId: {}",
-                                            clientId);
+                                    LOG.error("Invalid client id");
                                     return generateApiGatewayProxyResponse(
                                             400,
                                             OAuth2Error.INVALID_CLIENT
@@ -110,7 +111,7 @@ public class UpdateClientConfigHandler
                                                 updateClientConfigRequest);
                                 if (errorResponse.isPresent()) {
                                     LOG.error(
-                                            "≈. Failed validation. ErrorCode: {}. ErrorDescription: {}",
+                                            "Failed validation. ErrorCode: {}. ErrorDescription: {}",
                                             errorResponse.get().getCode(),
                                             errorResponse.get().getDescription());
                                     auditService.submitAuditEvent(
@@ -139,7 +140,7 @@ public class UpdateClientConfigHandler
                                                 clientRegistry.getPostLogoutRedirectUrls(),
                                                 clientRegistry.getServiceType(),
                                                 clientRegistry.getSubjectType());
-                                LOG.info("Client with ClientId {} has been updated", clientId);
+                                LOG.info("Client updated");
                                 return generateApiGatewayProxyResponse(
                                         200, clientRegistrationResponse);
                             } catch (JsonProcessingException | NullPointerException e) {

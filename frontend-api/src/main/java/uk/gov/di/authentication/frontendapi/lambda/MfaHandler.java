@@ -47,6 +47,7 @@ import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_IS_BLO
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
@@ -114,6 +115,9 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
 
             attachSessionIdToLogs(userContext.getSession().getSessionId());
             attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionId);
+            attachLogFieldToLogs(
+                    CLIENT_ID,
+                    userContext.getClient().map(ClientRegistry::getClientID).orElse("unknown"));
 
             LOG.info("MfaHandler received request");
 
@@ -290,9 +294,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                                             .getTestClientEmailAllowlist()
                                             .contains(emailAddress)) {
                                 LOG.info(
-                                        "MfaHandler not sending message for TestClient {} {} on TestClientEmailAllowlist with NotificationType {}",
-                                        clientRegistry.getClientID(),
-                                        clientRegistry.getClientName(),
+                                        "MfaHandler not sending message with NotificationType {}",
                                         notificationType);
                                 return true;
                             } else {
