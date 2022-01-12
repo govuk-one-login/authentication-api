@@ -107,7 +107,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             UserProfile userProfile =
                     authenticationService.getUserProfileByEmail(request.getEmail());
             if (Objects.isNull(userProfile)) {
-                LOG.error("The user does not have an account");
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
@@ -177,7 +176,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
             if (!hasValidCredentials) {
                 codeStorageService.increaseIncorrectPasswordCount(request.getEmail());
-                LOG.info("Invalid login credentials entered");
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
@@ -238,7 +236,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             return generateApiGatewayProxyResponse(
                     200, new LoginResponse(concatPhoneNumber, userContext.getSession().getState()));
         } catch (JsonProcessingException e) {
-            LOG.error("Request is missing parameters");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);

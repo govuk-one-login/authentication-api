@@ -121,7 +121,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
         try {
             if (!userContext.getSession().validateSession(request.getEmail())) {
-                LOG.info("Invalid session");
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
             if (request.getNotificationType().equals(ACCOUNT_CREATED_CONFIRMATION)) {
@@ -156,7 +155,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                     Optional<ErrorResponse> emailErrorResponse =
                             validationService.validateEmailAddress(request.getEmail());
                     if (emailErrorResponse.isPresent()) {
-                        LOG.info("Encountered emailErrorResponse: {}", emailErrorResponse.get());
                         return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
                     }
                     return handleNotificationRequest(
@@ -173,7 +171,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                                     userContext);
 
                     if (request.getPhoneNumber() == null) {
-                        LOG.error("No phone number provided");
                         return generateApiGatewayProxyResponse(400, ERROR_1011);
                     }
                     String phoneNumber = removeWhitespaceFromPhoneNumber(request.getPhoneNumber());
@@ -194,12 +191,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             LOG.error("Error sending message to queue");
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
         } catch (JsonProcessingException e) {
-            LOG.error("Error parsing request");
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
             return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
         } catch (ClientNotFoundException e) {
-            LOG.error("Client not found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
     }

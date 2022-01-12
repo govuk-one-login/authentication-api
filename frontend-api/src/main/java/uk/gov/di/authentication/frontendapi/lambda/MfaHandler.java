@@ -164,8 +164,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             String phoneNumber = authenticationService.getPhoneNumber(email).orElse(null);
 
             if (phoneNumber == null) {
-                LOG.error("PhoneNumber is null");
-
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.MFA_MISSING_PHONE_NUMBER,
                         context.getAwsRequestId(),
@@ -231,7 +229,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             return generateApiGatewayProxyResponse(
                     200, new BaseAPIResponse(userContext.getSession().getState()));
         } catch (JsonProcessingException e) {
-            LOG.error("MFA request is missing parameters");
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
             return generateApiGatewayProxyErrorResponse(400, ERROR_1017);

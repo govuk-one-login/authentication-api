@@ -104,22 +104,17 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordWithC
             Optional<ErrorResponse> errorResponse =
                     validationService.validatePassword(request.getPassword());
             if (errorResponse.isPresent()) {
-                LOG.info(
-                        "Password did not pass validation because: {}",
-                        errorResponse.get().getMessage());
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
             Optional<String> subject =
                     codeStorageService.getSubjectWithPasswordResetCode(request.getCode());
             if (subject.isEmpty()) {
-                LOG.error("Subject is not found in Redis");
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1021);
             }
             UserCredentials userCredentials =
                     authenticationService.getUserCredentialsFromSubject(subject.get());
             if (userCredentials.getPassword() != null) {
                 if (verifyPassword(userCredentials.getPassword(), request.getPassword())) {
-                    LOG.info("New password is the same as the old password");
                     return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1024);
                 }
             } else {
@@ -154,7 +149,6 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordWithC
                     AuditService.UNKNOWN,
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
         } catch (JsonProcessingException | ConstraintViolationException e) {
-            LOG.error("Incorrect parameters in ResetPassword request");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
         LOG.info("Generating successful response");

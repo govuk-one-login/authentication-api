@@ -72,7 +72,6 @@ public class AuthenticateHandler
                                 boolean userHasAccount =
                                         authenticationService.userExists(loginRequest.getEmail());
                                 if (!userHasAccount) {
-                                    LOG.error("The user does not have an account");
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1010);
                                 }
@@ -81,7 +80,6 @@ public class AuthenticateHandler
                                                 loginRequest.getEmail(),
                                                 loginRequest.getPassword());
                                 if (!hasValidCredentials) {
-                                    LOG.info("Invalid login credentials entered");
                                     return generateApiGatewayProxyErrorResponse(
                                             401, ErrorResponse.ERROR_1008);
                                 }
@@ -103,7 +101,6 @@ public class AuthenticateHandler
 
                                 return generateEmptySuccessApiGatewayResponse();
                             } catch (JsonProcessingException e) {
-                                LOG.error("Request is missing parameters.");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1001);
                             }

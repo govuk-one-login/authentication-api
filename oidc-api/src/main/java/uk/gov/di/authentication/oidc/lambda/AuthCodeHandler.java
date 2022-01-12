@@ -110,7 +110,6 @@ public class AuthCodeHandler
                                                         sessionCookieIds.getSessionId())
                                                 .orElseThrow();
                             } catch (NoSuchElementException e) {
-                                LOG.error("SessionID not found");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1000);
                             }
@@ -267,7 +266,6 @@ public class AuthCodeHandler
     }
 
     private APIGatewayProxyResponseEvent generateInvalidClientRedirectError(URI redirectURI) {
-        LOG.error("Invalid client redirect URI ({})", redirectURI);
         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1016);
     }
 

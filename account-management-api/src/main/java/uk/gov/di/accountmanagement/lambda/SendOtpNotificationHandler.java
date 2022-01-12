@@ -105,15 +105,11 @@ public class SendOtpNotificationHandler
                                                 validationService.validateEmailAddress(
                                                         sendNotificationRequest.getEmail());
                                         if (emailErrorResponse.isPresent()) {
-                                            LOG.info(
-                                                    "Invalid email address. Errors are: {}",
-                                                    emailErrorResponse.get());
                                             return generateApiGatewayProxyErrorResponse(
                                                     400, emailErrorResponse.get());
                                         }
                                         if (dynamoService.userExists(
                                                 sendNotificationRequest.getEmail())) {
-                                            LOG.info("User already exists with this email address");
                                             return generateApiGatewayProxyErrorResponse(
                                                     400, ErrorResponse.ERROR_1009);
                                         }
@@ -128,9 +124,6 @@ public class SendOtpNotificationHandler
                                                 validationService.validatePhoneNumber(
                                                         sendNotificationRequest.getPhoneNumber());
                                         if (phoneNumberValidationError.isPresent()) {
-                                            LOG.info(
-                                                    "Invalid phone number. Errors are: {}",
-                                                    phoneNumberValidationError.get());
                                             return generateApiGatewayProxyErrorResponse(
                                                     400, phoneNumberValidationError.get());
                                         }
@@ -146,7 +139,6 @@ public class SendOtpNotificationHandler
                                 return generateApiGatewayProxyResponse(
                                         500, "Error sending message to queue");
                             } catch (JsonProcessingException e) {
-                                LOG.error("Error parsing request");
                                 return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
                             }
                         });

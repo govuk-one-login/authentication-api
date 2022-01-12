@@ -115,8 +115,6 @@ public class RemoveAccountHandler
 
                                 return generateEmptySuccessApiGatewayResponse();
                             } catch (JsonProcessingException e) {
-                                LOG.error(
-                                        "RemoveAccountRequest request is missing or contains invalid parameters.");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1001);
                             }
