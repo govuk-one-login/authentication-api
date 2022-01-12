@@ -19,26 +19,26 @@ class ConsentIsNotRequiredTest {
     private ClientRegistry client = mock(ClientRegistry.class);
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         when(userContext.getClient()).thenReturn(Optional.of(client));
     }
 
     @Test
-    public void shouldReturnTrueIfConsentIsNotRequired() {
+    void shouldReturnTrueIfConsentIsNotRequired() {
         when(client.isConsentRequired()).thenReturn(false);
 
         assertThat(condition.isMet(Optional.of(userContext)), equalTo(true));
     }
 
     @Test
-    public void shouldReturnFalseIfConsentIsRequired() {
+    void shouldReturnFalseIfConsentIsRequired() {
         when(client.isConsentRequired()).thenReturn(true);
 
         assertThat(condition.isMet(Optional.of(userContext)), equalTo(false));
     }
 
     @Test
-    public void shouldDefaultToTrueIfClientHasNotSpecifiedWhetherConsentIsRequired() {
+    void shouldDefaultToTrueIfClientHasNotSpecifiedWhetherConsentIsRequired() {
         assertThat(condition.isMet(Optional.of(userContext)), equalTo(true));
     }
 }
