@@ -229,7 +229,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 singletonList("http://localhost/post-logout-redirect"),
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public");
+                "public",
+                true);
         userStore.signUp(TEST_EMAIL, "password-1", internalSubject);
         Set<String> claims = ValidScopes.getClaimsForListOfScopes(scope.toStringList());
         ClientConsent clientConsent =

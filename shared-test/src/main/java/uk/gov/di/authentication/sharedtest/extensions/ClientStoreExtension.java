@@ -36,7 +36,8 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
             List<String> postLogoutRedirectUris,
             String serviceType,
             String sectorIdentifierUri,
-            String subjectType) {
+            String subjectType,
+            boolean consentRequired) {
         dynamoClientService.addClient(
                 clientID,
                 clientName,
@@ -47,7 +48,8 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 postLogoutRedirectUris,
                 serviceType,
                 sectorIdentifierUri,
-                subjectType);
+                subjectType,
+                consentRequired);
     }
 
     public boolean clientExists(String clientID) {

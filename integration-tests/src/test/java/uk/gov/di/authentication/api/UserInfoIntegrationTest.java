@@ -126,6 +126,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 singletonList("http://localhost/post-redirect-logout"),
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public");
+                "public",
+                true);
     }
 }

@@ -155,7 +155,8 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 singletonList(REDIRECT_URL),
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public");
+                "public",
+                true);
 
         return signedJWT;
     }

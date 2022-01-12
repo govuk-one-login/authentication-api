@@ -41,7 +41,8 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
                         singletonList("http://localhost/post-redirect-logout"),
                         String.valueOf(ServiceType.MANDATORY),
                         "https://test.com",
-                        "public");
+                        "public",
+                        false);
 
         var response = makeRequest(Optional.of(clientRequest), Map.of(), Map.of());
 
