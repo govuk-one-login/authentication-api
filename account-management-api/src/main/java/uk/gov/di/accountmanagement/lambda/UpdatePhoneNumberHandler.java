@@ -95,7 +95,6 @@ public class UpdatePhoneNumberHandler
                                                 updatePhoneNumberRequest.getOtp(),
                                                 NotificationType.VERIFY_PHONE_NUMBER);
                                 if (!isValidOtpCode) {
-                                    LOG.info("Invalid OTP code sent in request");
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1020);
                                 }
@@ -103,9 +102,6 @@ public class UpdatePhoneNumberHandler
                                         validationService.validatePhoneNumber(
                                                 updatePhoneNumberRequest.getPhoneNumber());
                                 if (phoneValidationErrors.isPresent()) {
-                                    LOG.info(
-                                            "Invalid phone number with error: {}",
-                                            phoneValidationErrors.get().getMessage());
                                     return generateApiGatewayProxyErrorResponse(
                                             400, phoneValidationErrors.get());
                                 }
@@ -144,8 +140,6 @@ public class UpdatePhoneNumberHandler
                                         "Message successfully added to queue. Generating successful gateway response");
                                 return generateEmptySuccessApiGatewayResponse();
                             } catch (JsonProcessingException | IllegalArgumentException e) {
-                                LOG.error(
-                                        "UpdatePhoneNumber request is missing or contains invalid parameters.");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1001);
                             }

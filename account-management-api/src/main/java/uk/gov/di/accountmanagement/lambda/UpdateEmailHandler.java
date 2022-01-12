@@ -98,7 +98,6 @@ public class UpdateEmailHandler
                                                 updateInfoRequest.getOtp(),
                                                 NotificationType.VERIFY_EMAIL);
                                 if (!isValidOtpCode) {
-                                    LOG.info("Invalid OTP code sent in request");
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1020);
                                 }
@@ -107,15 +106,11 @@ public class UpdateEmailHandler
                                                 updateInfoRequest.getExistingEmailAddress(),
                                                 updateInfoRequest.getReplacementEmailAddress());
                                 if (emailValidationErrors.isPresent()) {
-                                    LOG.info(
-                                            "Invalid email address with error: {}",
-                                            emailValidationErrors.get().getMessage());
                                     return generateApiGatewayProxyErrorResponse(
                                             400, emailValidationErrors.get());
                                 }
                                 if (dynamoService.userExists(
                                         updateInfoRequest.getReplacementEmailAddress())) {
-                                    LOG.info("An account with this email address already exists");
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1009);
                                 }
@@ -154,8 +149,6 @@ public class UpdateEmailHandler
                                         "Message successfully added to queue. Generating successful gateway response");
                                 return generateEmptySuccessApiGatewayResponse();
                             } catch (JsonProcessingException | IllegalArgumentException e) {
-                                LOG.error(
-                                        "UpdateInfo request is missing or contains invalid parameters.");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1001);
                             }

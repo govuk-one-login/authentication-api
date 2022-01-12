@@ -96,7 +96,6 @@ public class UpdatePasswordHandler
 
                                 if (verifyPassword(
                                         currentPassword, updatePasswordRequest.getNewPassword())) {
-                                    LOG.info("New password is the same as the old password");
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1024);
                                 }
@@ -130,8 +129,6 @@ public class UpdatePasswordHandler
                                 return generateEmptySuccessApiGatewayResponse();
 
                             } catch (JsonProcessingException | IllegalArgumentException e) {
-                                LOG.error(
-                                        "UpdatePassword request is missing or contains invalid parameters.");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1001);
                             }
