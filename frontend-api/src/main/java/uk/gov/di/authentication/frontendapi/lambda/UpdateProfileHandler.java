@@ -182,7 +182,6 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                         ClientSession clientSession = userContext.getClientSession();
 
                         if (clientSession == null) {
-                            LOG.error("ClientSession not found");
                             return generateErrorResponse(ErrorResponse.ERROR_1000, context);
                         }
                         AuthenticationRequest authorizationRequest;
@@ -273,12 +272,10 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                     }
             }
         } catch (JsonProcessingException e) {
-            LOG.error("Error parsing request");
             return generateErrorResponse(ErrorResponse.ERROR_1001, context);
         } catch (InvalidStateTransitionException e) {
             return generateErrorResponse(ErrorResponse.ERROR_1017, context);
         }
-        LOG.error("Encountered unexpected error");
         return generateErrorResponse(ErrorResponse.ERROR_1013, context);
     }
 

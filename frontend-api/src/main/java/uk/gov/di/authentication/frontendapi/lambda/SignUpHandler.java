@@ -124,7 +124,6 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                             AuditService.UNKNOWN,
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-                    LOG.info("User already exists");
                     return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
                 }
                 authenticationService.signUp(
@@ -159,7 +158,6 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                 return generateApiGatewayProxyResponse(
                         200, new BaseAPIResponse(userContext.getSession().getState()));
             } else {
-                LOG.info("Invalid Password entered: {}", passwordValidationErrors.get());
                 return generateApiGatewayProxyErrorResponse(400, passwordValidationErrors.get());
             }
         } catch (JsonProcessingException e) {

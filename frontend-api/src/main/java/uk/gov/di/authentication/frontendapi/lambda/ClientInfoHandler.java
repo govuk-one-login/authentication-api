@@ -90,7 +90,6 @@ public class ClientInfoHandler
                                             input.getHeaders());
 
                             if (clientSession.isEmpty()) {
-                                LOG.info("ClientSession not found");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1018);
                             }
@@ -113,7 +112,6 @@ public class ClientInfoHandler
                                         clientService.getClient(clientID);
 
                                 if (optionalClientRegistry.isEmpty()) {
-                                    LOG.error("ClientId: {} not found in ClientRegistry", clientID);
                                     return generateApiGatewayProxyErrorResponse(
                                             403, ErrorResponse.ERROR_1015);
                                 }
@@ -152,7 +150,6 @@ public class ClientInfoHandler
                                 return generateApiGatewayProxyResponse(200, clientInfoResponse);
 
                             } catch (ParseException | JsonProcessingException e) {
-                                LOG.error("Error when calling ClientInfo");
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1001);
                             }

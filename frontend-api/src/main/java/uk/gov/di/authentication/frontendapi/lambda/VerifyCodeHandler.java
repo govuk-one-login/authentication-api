@@ -164,7 +164,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             configurationService.getCodeMaxRetries());
 
             if (validationAction == null) {
-                LOG.error("Encountered unexpected error");
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
             }
 
@@ -188,12 +187,10 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             return generateSuccessResponse(session);
 
         } catch (JsonProcessingException e) {
-            LOG.error("Error parsing request");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         } catch (ClientNotFoundException e) {
-            LOG.error("Client not found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
     }

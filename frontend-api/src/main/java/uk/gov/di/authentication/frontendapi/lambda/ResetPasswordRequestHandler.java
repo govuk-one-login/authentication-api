@@ -118,13 +118,11 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         LOG.info("Processing request");
         try {
             if (!userContext.getSession().validateSession(request.getEmail())) {
-                LOG.info("Invalid session");
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
             Optional<ErrorResponse> emailErrorResponse =
                     validationService.validateEmailAddress(request.getEmail());
             if (emailErrorResponse.isPresent()) {
-                LOG.info("Email validation failed: {}", emailErrorResponse.get());
                 return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
             }
             String persistentSessionId =
@@ -158,7 +156,6 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             LOG.error("Error sending message to queue", ex);
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
         } catch (JsonProcessingException e) {
-            LOG.error("Error parsing request");
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
             return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
@@ -198,11 +195,9 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     private Optional<ErrorResponse> validatePasswordResetCount(
             String email, UserContext userContext) {
         if (codeStorageService.isBlockedForEmail(email, PASSWORD_RESET_BLOCKED_KEY_PREFIX)) {
-            LOG.info("User cannot request another password reset");
             return Optional.of(ErrorResponse.ERROR_1023);
         } else if (userContext.getSession().getPasswordResetCount()
                 > configurationService.getCodeMaxRetries()) {
-            LOG.info("User has requested too many password resets");
             codeStorageService.saveBlockedForEmail(
                     userContext.getSession().getEmailAddress(),
                     PASSWORD_RESET_BLOCKED_KEY_PREFIX,

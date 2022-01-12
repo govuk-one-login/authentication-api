@@ -123,7 +123,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         persistentSessionId);
-                LOG.error("Invalid email address: {}", errorResponse.get());
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
             boolean userExists = authenticationService.userExists(emailAddress);
@@ -174,7 +173,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             return generateApiGatewayProxyResponse(200, checkUserExistsResponse);
 
         } catch (JsonProcessingException e) {
-            LOG.error("Error parsing UserInfo request");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
