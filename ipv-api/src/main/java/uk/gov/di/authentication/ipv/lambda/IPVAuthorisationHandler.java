@@ -11,6 +11,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -145,16 +146,13 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
         } catch (StateMachine.InvalidStateTransitionException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         } catch (ParseException | JsonProcessingException e) {
-            LOG.error("Could not parse authentication request from client");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
     }
 
     private Optional<ClaimsSetRequest> buildIpvClaimsRequest(AuthenticationRequest authRequest) {
-        if (authRequest.getOIDCClaims() == null
-                || authRequest.getOIDCClaims().getUserInfoClaimsRequest() == null) {
-            return Optional.empty();
-        }
-        return Optional.of(authRequest.getOIDCClaims().getUserInfoClaimsRequest());
+        return Optional.ofNullable(authRequest)
+                .map(AuthenticationRequest::getOIDCClaims)
+                .map(OIDCClaimsRequest::getUserInfoClaimsRequest);
     }
 }
