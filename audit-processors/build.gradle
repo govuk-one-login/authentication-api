@@ -11,7 +11,7 @@ repositories {
 
 ext {
     dependencyVersions = [
-        protobuf_version: "3.19.2",
+        protobuf_version: "3.19.3",
     ]
 }
 
