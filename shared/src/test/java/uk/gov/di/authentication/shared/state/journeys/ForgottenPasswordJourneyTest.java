@@ -287,7 +287,10 @@ public class ForgottenPasswordJourneyTest {
                                                 null)
                                         .setEffectiveVectorOfTrust(generateLowLevelVectorOfTrust()))
                         .withUserProfile(userProfile)
-                        .withClient(new ClientRegistry().setClientID(CLIENT_ID.toString()))
+                        .withClient(
+                                new ClientRegistry()
+                                        .setClientID(CLIENT_ID.toString())
+                                        .setConsentRequired(true))
                         .build();
 
         List<JourneyTransition> transitions =

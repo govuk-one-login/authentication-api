@@ -97,12 +97,12 @@ public class TokenService {
             Subject publicSubject,
             String vot,
             List<ClientConsent> clientConsents,
-            boolean isInternalService) {
+            boolean isConsentRequired) {
         List<String> scopesForToken;
-        if (isInternalService) {
-            scopesForToken = authRequestScopes.toStringList();
-        } else {
+        if (isConsentRequired) {
             scopesForToken = calculateScopesForToken(clientConsents, clientID, authRequestScopes);
+        } else {
+            scopesForToken = authRequestScopes.toStringList();
         }
         AccessToken accessToken =
                 generateAndStoreAccessToken(

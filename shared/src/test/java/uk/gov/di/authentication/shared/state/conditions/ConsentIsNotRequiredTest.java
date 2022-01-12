@@ -12,9 +12,9 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class ClientIsAnInternalServiceTest {
+class ConsentIsNotRequiredTest {
 
-    private final ClientIsAnInternalService condition = new ClientIsAnInternalService();
+    private final ConsentIsNotRequired condition = new ConsentIsNotRequired();
     private UserContext userContext = mock(UserContext.class);
     private ClientRegistry client = mock(ClientRegistry.class);
 
@@ -24,21 +24,21 @@ class ClientIsAnInternalServiceTest {
     }
 
     @Test
-    public void shouldReturnTrueIfClientIsAnInternalService() {
-        when(client.isInternalService()).thenReturn(true);
+    public void shouldReturnTrueIfConsentIsNotRequired() {
+        when(client.isConsentRequired()).thenReturn(false);
 
         assertThat(condition.isMet(Optional.of(userContext)), equalTo(true));
     }
 
     @Test
-    public void shouldReturnFalseIfClientIsNotAnInternalService() {
-        when(client.isInternalService()).thenReturn(false);
+    public void shouldReturnFalseIfConsentIsRequired() {
+        when(client.isConsentRequired()).thenReturn(true);
 
         assertThat(condition.isMet(Optional.of(userContext)), equalTo(false));
     }
 
     @Test
-    public void shouldReturnFalseIfClientHasNotSpecifiedWhetherTheyAreAnInternalService() {
-        assertThat(condition.isMet(Optional.of(userContext)), equalTo(false));
+    public void shouldDefaultToTrueIfClientHasNotSpecifiedWhetherConsentIsRequired() {
+        assertThat(condition.isMet(Optional.of(userContext)), equalTo(true));
     }
 }
