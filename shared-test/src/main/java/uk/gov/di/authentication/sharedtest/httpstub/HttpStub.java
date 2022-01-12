@@ -126,6 +126,10 @@ class HttpStub {
 
     public void reset() {
         registeredResponses.clear();
+        clearRequests();
+    }
+
+    public void clearRequests() {
         recordedRequests.clear();
     }
 
@@ -148,6 +152,10 @@ class HttpStub {
 
     public int getCountOfRequests() {
         return recordedRequests.size();
+    }
+
+    public List<RecordedRequest> getRecordedRequests() {
+        return recordedRequests;
     }
 
     public static <T> T unchecked(Callable<T> callable) {

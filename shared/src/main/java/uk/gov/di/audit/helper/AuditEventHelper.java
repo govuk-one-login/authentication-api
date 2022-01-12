@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.audit.helper;
+package uk.gov.di.audit.helper;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.logging.log4j.LogManager;

@@ -110,6 +110,7 @@ jobs:
           KMS_PROVIDER: local-kms
         options: >-
           --add-host "notify.internal:host-gateway"
+          --add-host "subscriber.internal:host-gateway"
         ports:
           - 45678:45678
       redis:

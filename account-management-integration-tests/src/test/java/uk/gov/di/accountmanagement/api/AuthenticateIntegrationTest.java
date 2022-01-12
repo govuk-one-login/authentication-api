@@ -2,6 +2,7 @@ package uk.gov.di.accountmanagement.api;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.AuthenticateRequest;
 import uk.gov.di.accountmanagement.lambda.AuthenticateHandler;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -9,8 +10,14 @@ import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegration
 import java.util.Map;
 import java.util.Optional;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.sharedtest.matchers.AuditEventMatcher.hasEventType;
 
 public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
@@ -30,6 +37,15 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         Optional.of(new AuthenticateRequest(email, password)), Map.of(), Map.of());
 
         assertThat(response, hasStatus(204));
+
+        await().atMost(10, SECONDS)
+                .untilAsserted(() -> assertThat(auditTopic.getCountOfRequests(), equalTo(1)));
+        assertThat(
+                auditTopic.getAuditEvents(),
+                hasItem(
+                        hasEventType(
+                                AccountManagementAuditableEvent.class,
+                                ACCOUNT_MANAGEMENT_AUTHENTICATE)));
     }
 
     @Test
