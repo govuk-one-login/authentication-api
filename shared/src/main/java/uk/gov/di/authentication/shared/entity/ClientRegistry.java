@@ -21,6 +21,7 @@ public class ClientRegistry {
     private String subjectType;
     private boolean cookieConsentShared = false;
     private boolean isInternalService = false;
+    private boolean consentRequired = false;
     private boolean testClient = false;
     private List<String> testClientEmailAllowlist = new ArrayList<>();
 
@@ -164,5 +165,14 @@ public class ClientRegistry {
     public ClientRegistry setTestClientEmailAllowlist(List<String> testClientEmailAllowlist) {
         this.testClientEmailAllowlist = testClientEmailAllowlist;
         return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "ConsentRequired")
+    public boolean isConsentRequired() {
+        return consentRequired;
+    }
+
+    public void setConsentRequired(boolean consentRequired) {
+        this.consentRequired = consentRequired;
     }
 }
