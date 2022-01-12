@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.clientregistry.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import uk.gov.di.authentication.shared.entity.ServiceType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,7 +46,7 @@ public class ClientRegistrationRequest {
             @JsonProperty(required = true, value = "public_key") String publicKey,
             @JsonProperty(required = true, value = "scopes") List<String> scopes,
             @JsonProperty(value = "post_logout_redirect_uris") List<String> postLogoutRedirectUris,
-            @JsonProperty(required = true, value = "service_type") String serviceType,
+            @JsonProperty(value = "service_type") String serviceType,
             @JsonProperty(required = true, value = "sector_identifier_uri")
                     String sectorIdentifierUri,
             @JsonProperty(required = true, value = "subject_type") String subjectType,
@@ -58,6 +59,9 @@ public class ClientRegistrationRequest {
         this.scopes = scopes;
         if (Objects.nonNull(postLogoutRedirectUris)) {
             this.postLogoutRedirectUris = postLogoutRedirectUris;
+        }
+        if (Objects.isNull(serviceType)) {
+            serviceType = String.valueOf(ServiceType.MANDATORY);
         }
         this.serviceType = serviceType;
         this.sectorIdentifierUri = sectorIdentifierUri;
