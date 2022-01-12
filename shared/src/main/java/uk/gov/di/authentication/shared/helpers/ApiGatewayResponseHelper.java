@@ -38,6 +38,13 @@ public class ApiGatewayResponseHelper {
 
     public static <T> APIGatewayProxyResponseEvent generateApiGatewayProxyErrorResponse(
             int statusCode, ErrorResponse errorResponse) {
+
+        if (400 <= statusCode && statusCode <= 499) {
+            LOG.warn(errorResponse.getMessage());
+        } else {
+            LOG.error(errorResponse.getMessage());
+        }
+
         try {
             return generateApiGatewayProxyResponse(
                     statusCode, new ObjectMapper().writeValueAsString(errorResponse));
