@@ -86,7 +86,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_PHONE_N
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.state.conditions.AggregateCondition.and;
 import static uk.gov.di.authentication.shared.state.conditions.ClientDoesNotRequireMfa.clientDoesNotRequireMfa;
-import static uk.gov.di.authentication.shared.state.conditions.ClientIsAnInternalService.clientIsAnInternalService;
+import static uk.gov.di.authentication.shared.state.conditions.ConsentIsNotRequired.consentIsNotRequired;
 import static uk.gov.di.authentication.shared.state.conditions.ConsentNotGiven.userHasNotGivenConsent;
 import static uk.gov.di.authentication.shared.state.conditions.CredentialTrustUpliftRequired.upliftRequired;
 import static uk.gov.di.authentication.shared.state.conditions.PhoneNumberUnverified.phoneNumberUnverified;
@@ -186,7 +186,7 @@ public class StateMachine<T, A, C> {
                                 .build(),
                         on(USER_ENTERED_VALID_MFA_CODE)
                                 .then(MFA_CODE_VERIFIED)
-                                .ifCondition(clientIsAnInternalService())
+                                .ifCondition(consentIsNotRequired())
                                 .build(),
                         on(USER_ENTERED_VALID_MFA_CODE)
                                 .then(CONSENT_REQUIRED)
@@ -224,8 +224,7 @@ public class StateMachine<T, A, C> {
                                                                 .getTermsAndConditionsVersion())))
                                 .then(UPDATED_TERMS_AND_CONDITIONS),
                         on(USER_ENTERED_VALID_CREDENTIALS)
-                                .ifCondition(
-                                        and(clientDoesNotRequireMfa(), clientIsAnInternalService()))
+                                .ifCondition(and(clientDoesNotRequireMfa(), consentIsNotRequired()))
                                 .then(AUTHENTICATED),
                         on(USER_ENTERED_VALID_CREDENTIALS)
                                 .ifCondition(
@@ -304,7 +303,7 @@ public class StateMachine<T, A, C> {
                 .allow(
                         on(USER_ENTERED_VALID_PHONE_VERIFICATION_CODE)
                                 .then(PHONE_NUMBER_CODE_VERIFIED)
-                                .ifCondition(clientIsAnInternalService()),
+                                .ifCondition(consentIsNotRequired()),
                         on(USER_ENTERED_VALID_PHONE_VERIFICATION_CODE)
                                 .then(CONSENT_REQUIRED)
                                 .ifCondition(userHasNotGivenConsent()),
@@ -372,8 +371,7 @@ public class StateMachine<T, A, C> {
                                                                 .getTermsAndConditionsVersion())))
                                 .then(UPDATED_TERMS_AND_CONDITIONS),
                         on(USER_ENTERED_VALID_CREDENTIALS)
-                                .ifCondition(
-                                        and(clientDoesNotRequireMfa(), clientIsAnInternalService()))
+                                .ifCondition(and(clientDoesNotRequireMfa(), consentIsNotRequired()))
                                 .then(AUTHENTICATED),
                         on(USER_ENTERED_VALID_CREDENTIALS)
                                 .ifCondition(
@@ -451,7 +449,7 @@ public class StateMachine<T, A, C> {
                 .allow(
                         on(USER_ACCEPTS_TERMS_AND_CONDITIONS)
                                 .then(UPDATED_TERMS_AND_CONDITIONS_ACCEPTED)
-                                .ifCondition(clientIsAnInternalService()),
+                                .ifCondition(consentIsNotRequired()),
                         on(USER_ACCEPTS_TERMS_AND_CONDITIONS)
                                 .then(CONSENT_REQUIRED)
                                 .ifCondition(userHasNotGivenConsent()),
@@ -507,7 +505,7 @@ public class StateMachine<T, A, C> {
                                                         .getTermsAndConditionsVersion())),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY)
                                 .then(AUTHENTICATED)
-                                .ifCondition(clientIsAnInternalService()),
+                                .ifCondition(consentIsNotRequired()),
                         on(USER_HAS_STARTED_A_NEW_JOURNEY)
                                 .then(CONSENT_REQUIRED)
                                 .ifCondition(userHasNotGivenConsent()),

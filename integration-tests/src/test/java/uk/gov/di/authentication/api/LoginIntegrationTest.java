@@ -95,7 +95,8 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 singletonList("http://localhost/post-redirect-logout"),
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public");
+                "public",
+                true);
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);

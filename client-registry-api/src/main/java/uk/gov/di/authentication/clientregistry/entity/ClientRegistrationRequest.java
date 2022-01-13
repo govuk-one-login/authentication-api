@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.clientregistry.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import uk.gov.di.authentication.shared.entity.ServiceType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +36,9 @@ public class ClientRegistrationRequest {
     @JsonProperty("subject_type")
     private String subjectType;
 
+    @JsonProperty("identity_verification_required")
+    private boolean identityVerificationRequired;
+
     public ClientRegistrationRequest(
             @JsonProperty(required = true, value = "client_name") String clientName,
             @JsonProperty(required = true, value = "redirect_uris") List<String> redirectUris,
@@ -42,10 +46,12 @@ public class ClientRegistrationRequest {
             @JsonProperty(required = true, value = "public_key") String publicKey,
             @JsonProperty(required = true, value = "scopes") List<String> scopes,
             @JsonProperty(value = "post_logout_redirect_uris") List<String> postLogoutRedirectUris,
-            @JsonProperty(required = true, value = "service_type") String serviceType,
+            @JsonProperty(value = "service_type") String serviceType,
             @JsonProperty(required = true, value = "sector_identifier_uri")
                     String sectorIdentifierUri,
-            @JsonProperty(required = true, value = "subject_type") String subjectType) {
+            @JsonProperty(required = true, value = "subject_type") String subjectType,
+            @JsonProperty(value = "identity_verification_required")
+                    boolean identityVerificationRequired) {
         this.clientName = clientName;
         this.redirectUris = redirectUris;
         this.contacts = contacts;
@@ -54,9 +60,13 @@ public class ClientRegistrationRequest {
         if (Objects.nonNull(postLogoutRedirectUris)) {
             this.postLogoutRedirectUris = postLogoutRedirectUris;
         }
+        if (Objects.isNull(serviceType)) {
+            serviceType = String.valueOf(ServiceType.MANDATORY);
+        }
         this.serviceType = serviceType;
         this.sectorIdentifierUri = sectorIdentifierUri;
         this.subjectType = subjectType;
+        this.identityVerificationRequired = identityVerificationRequired;
     }
 
     public String getClientName() {
@@ -93,5 +103,9 @@ public class ClientRegistrationRequest {
 
     public String getSubjectType() {
         return subjectType;
+    }
+
+    public boolean isIdentityVerificationRequired() {
+        return identityVerificationRequired;
     }
 }

@@ -122,7 +122,9 @@ public class ClientRegistrationHandler
                                         clientRegistrationRequest.getServiceType(),
                                         sanitiseUrl(
                                                 clientRegistrationRequest.getSectorIdentifierUri()),
-                                        clientRegistrationRequest.getSubjectType());
+                                        clientRegistrationRequest.getSubjectType(),
+                                        !clientRegistrationRequest
+                                                .isIdentityVerificationRequired());
 
                                 ClientRegistrationResponse clientRegistrationResponse =
                                         new ClientRegistrationResponse(

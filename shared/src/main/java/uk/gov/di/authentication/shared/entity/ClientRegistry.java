@@ -172,7 +172,8 @@ public class ClientRegistry {
         return consentRequired;
     }
 
-    public void setConsentRequired(boolean consentRequired) {
+    public ClientRegistry setConsentRequired(boolean consentRequired) {
         this.consentRequired = consentRequired;
+        return this;
     }
 }

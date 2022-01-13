@@ -190,7 +190,7 @@ public class TokenHandlerTest {
                         PUBLIC_SUBJECT,
                         vtr.retrieveVectorOfTrustForToken(),
                         userProfile.getClientConsent(),
-                        clientRegistry.isInternalService()))
+                        clientRegistry.isConsentRequired()))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result = generateApiGatewayRequest(privateKeyJWT, authCode);
@@ -499,7 +499,7 @@ public class TokenHandlerTest {
     private ClientRegistry generateClientRegistry(KeyPair keyPair) {
         return new ClientRegistry()
                 .setClientID(CLIENT_ID)
-                .setInternalService(false)
+                .setConsentRequired(false)
                 .setClientName("test-client")
                 .setRedirectUrls(singletonList(REDIRECT_URI))
                 .setScopes(SCOPES.toStringList())

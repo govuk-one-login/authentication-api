@@ -233,7 +233,8 @@ class ClientConfigValidationServiceTest {
                 postLogoutUris,
                 serviceType,
                 sectorIdentifierUri,
-                subjectType);
+                subjectType,
+                false);
     }
 
     private UpdateClientConfigRequest generateClientUpdateRequest(

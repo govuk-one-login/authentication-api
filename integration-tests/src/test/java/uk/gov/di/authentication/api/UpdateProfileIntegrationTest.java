@@ -152,7 +152,8 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 singletonList("http://localhost/post-redirect-logout"),
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public");
+                "public",
+                true);
         Set<String> claims = ValidScopes.getClaimsForListOfScopes(scope.toStringList());
         userStore.signUp(EMAIL_ADDRESS, "password");
         userStore.updateConsent(

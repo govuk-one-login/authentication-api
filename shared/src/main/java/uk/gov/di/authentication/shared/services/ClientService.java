@@ -21,7 +21,8 @@ public interface ClientService {
             List<String> postLogoutRedirectUris,
             String serviceType,
             String sectorIdentifierUri,
-            String subjectType);
+            String subjectType,
+            boolean consentRequired);
 
     Optional<ClientRegistry> getClient(String clientId);
 

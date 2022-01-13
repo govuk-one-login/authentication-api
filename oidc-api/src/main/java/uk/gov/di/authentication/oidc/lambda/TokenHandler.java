@@ -246,7 +246,7 @@ public class TokenHandler
                                             publicSubject,
                                             vot,
                                             userProfile.getClientConsent(),
-                                            client.isInternalService());
+                                            client.isConsentRequired());
 
                             clientSessionService.saveClientSession(
                                     authCodeExchangeData.getClientSessionId(),
