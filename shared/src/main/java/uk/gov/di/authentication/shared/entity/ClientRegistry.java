@@ -20,7 +20,6 @@ public class ClientRegistry {
     private String sectorIdentifierUri;
     private String subjectType;
     private boolean cookieConsentShared = false;
-    private boolean isInternalService = false;
     private boolean consentRequired = false;
     private boolean testClient = false;
     private List<String> testClientEmailAllowlist = new ArrayList<>();
@@ -134,16 +133,6 @@ public class ClientRegistry {
 
     public ClientRegistry setCookieConsentShared(boolean cookieConsent) {
         this.cookieConsentShared = cookieConsent;
-        return this;
-    }
-
-    @DynamoDBAttribute(attributeName = "IsInternalService")
-    public boolean isInternalService() {
-        return isInternalService;
-    }
-
-    public ClientRegistry setInternalService(boolean internalService) {
-        isInternalService = internalService;
         return this;
     }
 
