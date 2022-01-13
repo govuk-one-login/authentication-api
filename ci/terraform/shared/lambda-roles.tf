@@ -95,7 +95,7 @@ data "aws_iam_policy_document" "endpoint_networking_policy" {
     condition {
       test     = "ArnLikeIfExists"
       variable = "ec2:Vpc"
-      values   = [aws_vpc.authentication.arn]
+      values   = [local.vpc_arn]
     }
   }
 }
