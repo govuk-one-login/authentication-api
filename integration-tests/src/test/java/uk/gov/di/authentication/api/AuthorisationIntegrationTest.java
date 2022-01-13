@@ -13,7 +13,6 @@ import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ServiceType;
-import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
@@ -44,10 +43,6 @@ import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISAT
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
-import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
-import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
-import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_REQUIRED;
-import static uk.gov.di.authentication.shared.entity.SessionState.UPLIFT_REQUIRED_CM;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.getHttpCookieFromMultiValueResponseHeaders;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
@@ -286,7 +281,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldRedirectToLoginWhenSessionFromCookieIsNotAuthenticated() throws Exception {
-        String sessionId = givenAnExistingSession(AUTHENTICATION_REQUIRED);
+        String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         registerUserWithConsentedScope(Optional.empty());
 
@@ -321,7 +316,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldIssueAuthorisationCodeWhenSessionFromCookieIsAuthenticated() throws Exception {
-        String sessionId = givenAnExistingSession(AUTHENTICATED);
+        String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         registerUserWithConsentedScope(Optional.of(new Scope(OPENID)));
 
@@ -375,7 +370,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldNotPromptForLoginWhenPromptNoneAndUserAuthenticated() throws Exception {
-        String sessionId = givenAnExistingSession(AUTHENTICATED);
+        String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         registerUserWithConsentedScope(Optional.of(new Scope(OPENID)));
 
@@ -411,7 +406,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldPromptForLoginWhenPromptLoginAndUserAuthenticated() throws Exception {
-        String sessionId = givenAnExistingSession(AUTHENTICATED);
+        String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         registerUserWithConsentedScope(Optional.empty());
 
@@ -449,7 +444,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldRequireUpliftWhenHighCredentialLevelOfTrustRequested() throws Exception {
-        String sessionId = givenAnExistingSession(AUTHENTICATED, LOW_LEVEL);
+        String sessionId = givenAnExistingSession(LOW_LEVEL);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         registerUserWithConsentedScope(Optional.empty());
 
@@ -481,16 +476,13 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
         assertThat(URI.create(redirectUri).getQuery(), equalTo("interrupt=UPLIFT_REQUIRED_CM"));
 
-        String newSessionId = cookie.get().getValue().split("\\.")[0];
-        assertThat(redis.getSession(newSessionId).getState(), equalTo(UPLIFT_REQUIRED_CM));
-
         assertEventTypesReceived(
                 auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
     void shouldRequireConsentWhenUserAuthenticatedAndConsentIsNotGiven() throws Exception {
-        String sessionId = givenAnExistingSession(AUTHENTICATED);
+        String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         registerUserWithConsentedScope(Optional.empty());
 
@@ -522,21 +514,14 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
         assertThat(URI.create(redirectUri).getQuery(), equalTo("interrupt=CONSENT_REQUIRED"));
 
-        String newSessionId = cookie.get().getValue().split("\\.")[0];
-        assertThat(redis.getSession(newSessionId).getState(), equalTo(CONSENT_REQUIRED));
-
         assertEventTypesReceived(
                 auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
-    private String givenAnExistingSession(SessionState initialState) throws Exception {
-        return givenAnExistingSession(initialState, MEDIUM_LEVEL);
-    }
-
-    private String givenAnExistingSession(
-            SessionState initialState, CredentialTrustLevel credentialTrustLevel) throws Exception {
+    private String givenAnExistingSession(CredentialTrustLevel credentialTrustLevel)
+            throws Exception {
         String sessionId = redis.createSession();
-        redis.setSessionState(sessionId, initialState, credentialTrustLevel);
+        redis.setSessionCredentialTrustLevel(sessionId, credentialTrustLevel);
         return sessionId;
     }
 

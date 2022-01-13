@@ -22,7 +22,6 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -82,10 +81,7 @@ public class MfaHandlerTest {
     private final ClientSession clientSession = mock(ClientSession.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final Session session =
-            new Session("a-session-id")
-                    .setEmailAddress(TEST_EMAIL_ADDRESS)
-                    .setState(SessionState.LOGGED_IN);
+    private final Session session = new Session("a-session-id").setEmailAddress(TEST_EMAIL_ADDRESS);
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
                     .setTestClient(true)

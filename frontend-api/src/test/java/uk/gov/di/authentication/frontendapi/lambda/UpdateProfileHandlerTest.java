@@ -22,7 +22,6 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
@@ -98,10 +97,7 @@ class UpdateProfileHandlerTest {
 
     private final String TERMS_AND_CONDITIONS_VERSION =
             configurationService.getTermsAndConditionsVersion();
-    private final Session session =
-            new Session(SESSION_ID)
-                    .setEmailAddress(TEST_EMAIL_ADDRESS)
-                    .setState(SessionState.TWO_FACTOR_REQUIRED);
+    private final Session session = new Session(SESSION_ID).setEmailAddress(TEST_EMAIL_ADDRESS);
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -172,7 +168,6 @@ class UpdateProfileHandlerTest {
 
     @Test
     public void shouldReturn204WhenUpdatingTermsAndConditions() {
-        session.setState(SessionState.UPDATED_TERMS_AND_CONDITIONS);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -212,7 +207,6 @@ class UpdateProfileHandlerTest {
     @Test
     public void shouldReturn204WhenUpdatingProfileWithConsent()
             throws ClientNotFoundException, URISyntaxException {
-        session.setState(SessionState.CONSENT_REQUIRED);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         ClientID clientID = new ClientID();

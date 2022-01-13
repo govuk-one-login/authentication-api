@@ -11,7 +11,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -58,8 +57,7 @@ class SignUpHandlerTest {
 
     private SignUpHandler handler;
 
-    private final Session session =
-            new Session(IdGenerator.generate()).setState(SessionState.USER_NOT_FOUND);
+    private final Session session = new Session(IdGenerator.generate());
 
     @RegisterExtension
     public final CaptureLoggingExtension logging = new CaptureLoggingExtension(SignUpHandler.class);

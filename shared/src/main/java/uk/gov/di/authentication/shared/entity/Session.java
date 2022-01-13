@@ -6,8 +6,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.ArrayList;
 import java.util.List;
 
-import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
-
 public class Session {
 
     public enum AccountState {
@@ -21,9 +19,6 @@ public class Session {
 
     @JsonProperty("client_sessions")
     private List<String> clientSessions;
-
-    @JsonProperty("state")
-    private SessionState state;
 
     @JsonProperty("email_address")
     private String emailAddress;
@@ -45,7 +40,6 @@ public class Session {
 
     public Session(String sessionId) {
         this.sessionId = sessionId;
-        this.state = NEW;
         this.clientSessions = new ArrayList<>();
         this.isNewAccount = AccountState.UNKNOWN;
     }
@@ -54,11 +48,9 @@ public class Session {
     public Session(
             @JsonProperty("session_id") String sessionId,
             @JsonProperty("client_sessions") List<String> clientSessions,
-            @JsonProperty("state") SessionState state,
             @JsonProperty("email_address") String emailAddress) {
         this.sessionId = sessionId;
         this.clientSessions = clientSessions;
-        this.state = state;
         this.emailAddress = emailAddress;
         this.isNewAccount = AccountState.UNKNOWN;
     }
@@ -82,15 +74,6 @@ public class Session {
 
     public boolean validateSession(String emailAddress) {
         return this.emailAddress.equals(emailAddress);
-    }
-
-    public SessionState getState() {
-        return state;
-    }
-
-    public Session setState(SessionState state) {
-        this.state = state;
-        return this;
     }
 
     public String getEmailAddress() {

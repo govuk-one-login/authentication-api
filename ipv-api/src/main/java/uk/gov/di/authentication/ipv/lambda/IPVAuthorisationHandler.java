@@ -21,8 +21,6 @@ import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.SessionAction;
-import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -34,16 +32,13 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
 
-import static uk.gov.di.authentication.shared.entity.SessionState.IPV_REQUIRED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
-import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisationRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -53,8 +48,6 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
     private static final String IPV_AUTHORIZE_ROUTE = "/authorize";
     private final AuditService auditService;
     private final IPVAuthorisationService authorisationService;
-    private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
-            userJourneyStateMachine();
 
     public IPVAuthorisationHandler(
             ConfigurationService configurationService,
@@ -139,12 +132,8 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                     ipvAuthorisationRequest.toURI().toString());
 
             return generateApiGatewayProxyResponse(
-                    200,
-                    new IPVAuthorisationResponse(
-                            IPV_REQUIRED, ipvAuthorisationRequest.toURI().toString()));
+                    200, new IPVAuthorisationResponse(ipvAuthorisationRequest.toURI().toString()));
 
-        } catch (StateMachine.InvalidStateTransitionException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         } catch (ParseException | JsonProcessingException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }

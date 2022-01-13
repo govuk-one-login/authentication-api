@@ -24,7 +24,6 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
@@ -304,7 +303,6 @@ class SendNotificationHandlerTest {
 
     @Test
     public void shouldReturn204AndPutMessageOnQueueForAValidVerifyPhoneNumberRequest() {
-        session.setState(SessionState.ADDED_UNVERIFIED_PHONE_NUMBER);
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -320,7 +318,6 @@ class SendNotificationHandlerTest {
 
     @Test
     public void shouldReturn400WhenVerifyTypeIsVerifyPhoneNumberButRequestIsMissingNumber() {
-        session.setState(SessionState.ADDED_UNVERIFIED_PHONE_NUMBER);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -336,7 +333,6 @@ class SendNotificationHandlerTest {
 
     @Test
     public void shouldReturn400WhenPhoneNumberIsInvalid() {
-        session.setState(SessionState.ADDED_UNVERIFIED_PHONE_NUMBER);
         when(validationService.validatePhoneNumber(eq("123456789")))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1012));
         usingValidSession();
@@ -384,7 +380,6 @@ class SendNotificationHandlerTest {
     public void shouldReturn400IfUserHasReachedThePhoneCodeRequestLimit() {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
-        session.setState(SessionState.VERIFY_PHONE_NUMBER_CODE_SENT);
         maxOutCodeRequestCount();
         usingValidSession();
 
@@ -419,7 +414,6 @@ class SendNotificationHandlerTest {
         when(codeStorageService.isBlockedForEmail(
                         TEST_EMAIL_ADDRESS, CODE_REQUEST_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
-        session.setState(SessionState.EMAIL_MAX_CODES_SENT);
         usingValidSession();
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -441,7 +435,6 @@ class SendNotificationHandlerTest {
                 .thenReturn(Optional.empty());
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
-        session.setState(SessionState.EMAIL_CODE_MAX_RETRIES_REACHED);
         usingValidSession();
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -463,7 +456,6 @@ class SendNotificationHandlerTest {
                 .thenReturn(Optional.empty());
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
-        session.setState(SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED);
         usingValidSession();
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();

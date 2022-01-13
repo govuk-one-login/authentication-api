@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.api;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -13,12 +12,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
 import uk.gov.di.authentication.frontendapi.lambda.VerifyCodeHandler;
-import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
-import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
@@ -57,7 +54,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     @Test
     public void shouldCallVerifyCodeEndpointToVerifyEmailCodeAndReturn200() throws IOException {
         String sessionId = redis.createSession();
-        setUpTestWithoutSignUp(sessionId, withScope(), SessionState.VERIFY_EMAIL_CODE_SENT);
+        setUpTestWithoutSignUp(sessionId, withScope());
         String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, code);
 
@@ -75,7 +72,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     public void shouldCallVerifyCodeEndpointAndReturn400WitUpdatedStateWhenEmailCodeHasExpired()
             throws IOException, InterruptedException {
         String sessionId = redis.createSession();
-        setUpTestWithoutSignUp(sessionId, withScope(), SessionState.VERIFY_EMAIL_CODE_SENT);
+        setUpTestWithoutSignUp(sessionId, withScope());
 
         String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 2);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, code);
@@ -90,10 +87,9 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         assertThat(response, hasStatus(400));
 
-        BaseAPIResponse codeResponse =
-                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
-        assertEquals(SessionState.EMAIL_CODE_NOT_VALID, codeResponse.getSessionState());
-
+        ErrorResponse errorResponseResponse =
+                objectMapper.readValue(response.getBody(), ErrorResponse.class);
+        assertEquals(ErrorResponse.ERROR_1036, errorResponseResponse);
         assertNoAuditEventsReceived(auditTopic);
     }
 
@@ -101,7 +97,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     public void shouldReturn400WithNewStateWhenUserTriesEmailCodeThatTheyHaveAlreadyUsed()
             throws IOException {
         String sessionId = redis.createSession();
-        setUpTestWithoutSignUp(sessionId, withScope(), SessionState.VERIFY_EMAIL_CODE_SENT);
+        setUpTestWithoutSignUp(sessionId, withScope());
         String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, code);
 
@@ -111,10 +107,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
                         Map.of());
 
-        assertThat(response, hasStatus(200));
-        BaseAPIResponse codeResponse1 =
-                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
-        assertEquals(SessionState.EMAIL_CODE_VERIFIED, codeResponse1.getSessionState());
+        assertThat(response, hasStatus(204));
 
         var response2 =
                 makeRequest(
@@ -123,11 +116,9 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of());
 
         assertThat(response2, hasStatus(400));
-
-        BaseAPIResponse codeResponse =
-                objectMapper.readValue(response2.getBody(), BaseAPIResponse.class);
-        assertEquals(SessionState.EMAIL_CODE_NOT_VALID, codeResponse.getSessionState());
-
+        ErrorResponse errorResponseResponse =
+                objectMapper.readValue(response.getBody(), ErrorResponse.class);
+        assertEquals(ErrorResponse.ERROR_1036, errorResponseResponse);
         assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));
     }
 
@@ -135,7 +126,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     public void shouldCallVerifyCodeEndpointToVerifyPhoneCodeAndReturn200() throws IOException {
         String sessionId = redis.createSession();
         Scope scope = withScope();
-        setUpTestWithoutClientConsent(sessionId, scope, SessionState.VERIFY_PHONE_NUMBER_CODE_SENT);
+        setUpTestWithoutClientConsent(sessionId, scope);
         Set<String> claims = ValidScopes.getClaimsForListOfScopes(scope.toStringList());
         ClientConsent clientConsent =
                 new ClientConsent(
@@ -151,12 +142,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
                         Map.of());
 
-        assertThat(response, hasStatus(200));
-
-        BaseAPIResponse codeResponse =
-                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
-        assertEquals(SessionState.PHONE_NUMBER_CODE_VERIFIED, codeResponse.getSessionState());
-
+        assertThat(response, hasStatus(204));
         assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));
 
         assertThat(cloudwatchMetrics.getLastValue("SignUpSuccess"), is(1.0));
@@ -166,8 +152,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     public void shouldCallVerifyCodeEndpointToVerifyPhoneCodeAndReturnConsentRequiredState()
             throws IOException {
         String sessionId = redis.createSession();
-        setUpTestWithoutClientConsent(
-                sessionId, withScope(), SessionState.VERIFY_PHONE_NUMBER_CODE_SENT);
+        setUpTestWithoutClientConsent(sessionId, withScope());
         String code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
         VerifyCodeRequest codeRequest =
                 new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
@@ -178,12 +163,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
                         Map.of());
 
-        assertThat(response, hasStatus(200));
-
-        BaseAPIResponse codeResponse =
-                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
-        assertEquals(SessionState.CONSENT_REQUIRED, codeResponse.getSessionState());
-
+        assertThat(response, hasStatus(204));
         assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));
     }
 
@@ -192,7 +172,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
             shouldCallVerifyCodeEndpointAndReturn400WitUpdatedStateWhenPhoneNumberCodeHasExpired()
                     throws IOException, InterruptedException {
         String sessionId = redis.createSession();
-        setUpTestWithoutSignUp(sessionId, withScope(), SessionState.VERIFY_PHONE_NUMBER_CODE_SENT);
+        setUpTestWithoutSignUp(sessionId, withScope());
 
         String code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 2);
         VerifyCodeRequest codeRequest =
@@ -208,10 +188,9 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         assertThat(response, hasStatus(400));
 
-        BaseAPIResponse codeResponse =
-                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
-        assertEquals(SessionState.PHONE_NUMBER_CODE_NOT_VALID, codeResponse.getSessionState());
-
+        ErrorResponse errorResponseResponse =
+                objectMapper.readValue(response.getBody(), ErrorResponse.class);
+        assertEquals(ErrorResponse.ERROR_1037, errorResponseResponse);
         assertNoAuditEventsReceived(auditTopic);
     }
 
@@ -219,7 +198,6 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     public void shouldReturnMaxCodesReachedIfPhoneNumberCodeIsBlocked() throws IOException {
         String sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
-        redis.setSessionState(sessionId, SessionState.PHONE_NUMBER_CODE_NOT_VALID);
         redis.blockPhoneCode(EMAIL_ADDRESS);
 
         VerifyCodeRequest codeRequest =
@@ -230,19 +208,15 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Optional.of(codeRequest), constructFrontendHeaders(sessionId), Map.of());
 
         assertThat(response, hasStatus(400));
-
-        BaseAPIResponse codeResponse =
-                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
-        assertEquals(
-                SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED, codeResponse.getSessionState());
-
+        ErrorResponse errorResponseResponse =
+                objectMapper.readValue(response.getBody(), ErrorResponse.class);
+        assertEquals(ErrorResponse.ERROR_1030, errorResponseResponse);
         assertNoAuditEventsReceived(auditTopic);
     }
 
     @Test
     public void shouldReturnMaxCodesReachedIfEmailCodeIsBlocked() throws IOException {
         String sessionId = redis.createSession();
-        redis.setSessionState(sessionId, SessionState.EMAIL_CODE_NOT_VALID);
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
         redis.blockPhoneCode(EMAIL_ADDRESS);
 
@@ -254,58 +228,9 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         assertThat(response, hasStatus(400));
 
-        BaseAPIResponse codeResponse =
-                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
-        assertEquals(SessionState.EMAIL_CODE_MAX_RETRIES_REACHED, codeResponse.getSessionState());
-
-        assertNoAuditEventsReceived(auditTopic);
-    }
-
-    @Test
-    public void shouldReturn400IfStateTransitionIsInvalid() throws IOException {
-        String sessionId = redis.createSession();
-        setUpTestWithoutSignUp(sessionId, withScope(), SessionState.NEW);
-
-        String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
-        VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, code);
-
-        var response =
-                makeRequest(
-                        Optional.of(codeRequest),
-                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
-                        Map.of());
-
-        assertThat(response, hasStatus(400));
-
-        assertEquals(
-                new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1017),
-                response.getBody());
-
-        assertNoAuditEventsReceived(auditTopic);
-    }
-
-    @Test
-    public void shouldReturn400IfStateTransitionIsInvalid_PhoneNumber() throws IOException {
-        String sessionId = redis.createSession();
-        setUpTestWithoutSignUp(sessionId, withScope(), SessionState.NEW);
-
-        String code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
-        VerifyCodeRequest codeRequest =
-                new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
-        userStore.signUp(EMAIL_ADDRESS, "password");
-
-        var response =
-                makeRequest(
-                        Optional.of(codeRequest),
-                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
-                        Map.of());
-
-        assertThat(response, hasStatus(400));
-
-        assertEquals(
-                new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1017),
-                response.getBody());
-
+        ErrorResponse errorResponseResponse =
+                objectMapper.readValue(response.getBody(), ErrorResponse.class);
+        assertEquals(ErrorResponse.ERROR_1029, errorResponseResponse);
         assertNoAuditEventsReceived(auditTopic);
     }
 
@@ -317,7 +242,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         scope.add(OIDCScopeValue.OPENID);
         scope.add(OIDCScopeValue.EMAIL);
         scope.add(OIDCScopeValue.PHONE);
-        setUpTestWithoutClientConsent(sessionId, withScope(), SessionState.MFA_SMS_CODE_SENT);
+        setUpTestWithoutClientConsent(sessionId, withScope());
         userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
         ClientConsent clientConsent =
                 new ClientConsent(
@@ -335,12 +260,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
                         Map.of());
 
-        assertThat(response, hasStatus(200));
-
-        BaseAPIResponse codeResponse =
-                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
-        assertEquals(SessionState.MFA_CODE_VERIFIED, codeResponse.getSessionState());
-
+        assertThat(response, hasStatus(204));
         assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));
     }
 
@@ -352,7 +272,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         scope.add(OIDCScopeValue.OPENID);
         scope.add(OIDCScopeValue.EMAIL);
         scope.add(OIDCScopeValue.PHONE);
-        setUpTestWithoutClientConsent(sessionId, scope, SessionState.MFA_SMS_CODE_SENT);
+        setUpTestWithoutClientConsent(sessionId, scope);
 
         userStore.updateTermsAndConditions(EMAIL_ADDRESS, "0.1");
 
@@ -365,41 +285,13 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
                         Map.of());
 
-        assertThat(response, hasStatus(200));
-
-        BaseAPIResponse codeResponse =
-                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
-        assertEquals(SessionState.UPDATED_TERMS_AND_CONDITIONS, codeResponse.getSessionState());
-
-        assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));
-    }
-
-    @Test
-    public void shouldReturn400IfStateTransitionIsInvalid_SMS() throws IOException {
-        String sessionId = redis.createSession();
-        setUpTestWithoutSignUp(sessionId, withScope(), SessionState.NEW);
-
-        String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
-        VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code);
-
-        var response =
-                makeRequest(
-                        Optional.of(codeRequest),
-                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
-                        Map.of());
-
-        assertThat(response, hasStatus(400));
-        assertEquals(
-                new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1017),
-                response.getBody());
-
+        assertThat(response, hasStatus(204));
         assertNoAuditEventsReceived(auditTopic);
     }
 
-    private void setUpTestWithoutSignUp(String sessionId, Scope scope, SessionState sessionState)
+    private void setUpTestWithoutSignUp(String sessionId, Scope scope)
             throws JsonProcessingException {
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
-        redis.setSessionState(sessionId, sessionState);
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE,
@@ -424,10 +316,9 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                 true);
     }
 
-    private void setUpTestWithoutClientConsent(
-            String sessionId, Scope scope, SessionState sessionState)
+    private void setUpTestWithoutClientConsent(String sessionId, Scope scope)
             throws JsonProcessingException {
-        setUpTestWithoutSignUp(sessionId, scope, sessionState);
+        setUpTestWithoutSignUp(sessionId, scope);
         userStore.signUp(EMAIL_ADDRESS, "password");
     }
 

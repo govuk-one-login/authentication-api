@@ -11,10 +11,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
 import uk.gov.di.authentication.frontendapi.lambda.UpdateProfileHandler;
-import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ServiceType;
-import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -30,15 +28,11 @@ import java.util.Set;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.ADD_PHONE_NUMBER;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.CAPTURE_CONSENT;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
-import static uk.gov.di.authentication.shared.entity.SessionState.ADDED_UNVERIFIED_PHONE_NUMBER;
-import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_ADDED;
-import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS_ACCEPTED;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -57,7 +51,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
             throws IOException {
         String sessionId = redis.createSession();
         String clientSessionId = IdGenerator.generate();
-        setUpTest(sessionId, clientSessionId, SessionState.TWO_FACTOR_REQUIRED);
+        setUpTest(sessionId, clientSessionId);
         UpdateProfileRequest request =
                 new UpdateProfileRequest(EMAIL_ADDRESS, ADD_PHONE_NUMBER, "07123456789");
 
@@ -67,10 +61,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         constructFrontendHeaders(sessionId, clientSessionId),
                         Map.of());
 
-        assertThat(response, hasStatus(200));
-        BaseAPIResponse baseAPIResponse =
-                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
-        assertThat(baseAPIResponse.getSessionState(), equalTo(ADDED_UNVERIFIED_PHONE_NUMBER));
+        assertThat(response, hasStatus(204));
 
         assertEventTypesReceived(
                 auditTopic,
@@ -81,8 +72,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
     public void shouldCallUpdateProfileToUpdateConsentAndReturn200() throws IOException {
         String sessionId = redis.createSession();
         String clientSessionId = IdGenerator.generate();
-        AuthenticationRequest authRequest =
-                setUpTest(sessionId, clientSessionId, SessionState.CONSENT_REQUIRED);
+        AuthenticationRequest authRequest = setUpTest(sessionId, clientSessionId);
         redis.createClientSession(clientSessionId, authRequest.toParameters());
         UpdateProfileRequest request =
                 new UpdateProfileRequest(EMAIL_ADDRESS, CAPTURE_CONSENT, String.valueOf(true));
@@ -93,7 +83,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         constructFrontendHeaders(sessionId, clientSessionId),
                         Map.of());
 
-        assertThat(response, hasStatus(200));
+        assertThat(response, hasStatus(204));
         Optional<ClientConsent> consent =
                 userStore
                         .getUserConsents(EMAIL_ADDRESS)
@@ -104,9 +94,6 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
                                                 .findFirst());
         assertTrue(consent.get().getClaims().containsAll(OIDCScopeValue.OPENID.getClaimNames()));
         assertTrue(consent.get().getClaims().containsAll(OIDCScopeValue.EMAIL.getClaimNames()));
-        BaseAPIResponse baseAPIResponse =
-                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
-        assertThat(baseAPIResponse.getSessionState(), equalTo(CONSENT_ADDED));
 
         assertEventTypesReceived(
                 auditTopic,
@@ -117,7 +104,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
     public void shouldCallUpdateProfileToApproveTermsAndConditonsAndReturn200() throws IOException {
         String sessionId = redis.createSession();
         String clientSessionId = IdGenerator.generate();
-        setUpTest(sessionId, clientSessionId, SessionState.UPDATED_TERMS_AND_CONDITIONS);
+        setUpTest(sessionId, clientSessionId);
 
         UpdateProfileRequest request =
                 new UpdateProfileRequest(EMAIL_ADDRESS, UPDATE_TERMS_CONDS, String.valueOf(true));
@@ -128,25 +115,18 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         constructFrontendHeaders(sessionId, clientSessionId),
                         Map.of());
 
-        assertThat(response, hasStatus(200));
-        BaseAPIResponse baseAPIResponse =
-                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
-        assertThat(
-                baseAPIResponse.getSessionState(), equalTo(UPDATED_TERMS_AND_CONDITIONS_ACCEPTED));
-
+        assertThat(response, hasStatus(204));
         assertEventTypesReceived(
                 auditTopic,
                 List.of(UPDATE_PROFILE_REQUEST_RECEIVED, UPDATE_PROFILE_REQUEST_RECEIVED));
     }
 
-    private AuthenticationRequest setUpTest(
-            String sessionId, String clientSessionId, SessionState sessionState)
+    private AuthenticationRequest setUpTest(String sessionId, String clientSessionId)
             throws JsonProcessingException {
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         scope.add(OIDCScopeValue.EMAIL);
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
-        redis.setSessionState(sessionId, sessionState);
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE,

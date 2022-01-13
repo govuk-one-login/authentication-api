@@ -21,7 +21,6 @@ import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthorizationService;
@@ -351,7 +350,6 @@ class AuthorisationHandlerTest {
                         .get(ResponseHeaders.SET_COOKIE)
                         .contains(EXPECTED_SESSION_COOKIE_STRING));
         verify(sessionService).save(eq(session));
-        assertEquals(SessionState.NEW, session.getState());
 
         inOrder.verify(auditService)
                 .submitAuditEvent(
@@ -390,7 +388,6 @@ class AuthorisationHandlerTest {
                         .get(ResponseHeaders.SET_COOKIE)
                         .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
         verify(sessionService).save(eq(session));
-        assertEquals(SessionState.AUTHENTICATED, session.getState());
         assertThat(session.getClientSessions(), hasItem("client-session-id"));
         assertThat(session.getClientSessions(), hasSize(2));
 
@@ -456,7 +453,6 @@ class AuthorisationHandlerTest {
                         .get(ResponseHeaders.SET_COOKIE)
                         .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
         verify(sessionService).save(eq(session));
-        assertEquals(SessionState.AUTHENTICATED, session.getState());
         assertThat(session.getClientSessions(), hasItem("client-session-id"));
         assertThat(session.getClientSessions(), hasSize(2));
 
@@ -499,7 +495,6 @@ class AuthorisationHandlerTest {
                         .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
 
         verify(sessionService).save(eq(session));
-        assertEquals(SessionState.NEW, session.getState());
 
         inOrder.verify(auditService)
                 .submitAuditEvent(
@@ -536,7 +531,6 @@ class AuthorisationHandlerTest {
                 response.getMultiValueHeaders()
                         .get(ResponseHeaders.SET_COOKIE)
                         .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
-        assertEquals(SessionState.NEW, session.getState());
 
         inOrder.verify(auditService)
                 .submitAuditEvent(
@@ -699,7 +693,6 @@ class AuthorisationHandlerTest {
                         .get(ResponseHeaders.SET_COOKIE)
                         .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
         verify(sessionService).save(eq(session));
-        assertEquals(SessionState.NEW, session.getState());
 
         inOrder.verify(auditService)
                 .submitAuditEvent(
@@ -718,7 +711,6 @@ class AuthorisationHandlerTest {
     void shouldDoLoginWhenPromptParamAbsentAndNotLoggedInBecauseSessionNotAuthenticated() {
         final Session session = new Session("a-session-id");
         whenLoggedIn(session);
-        session.setState(SessionState.AUTHENTICATION_REQUIRED);
         when(authorizationService.buildUserContext(eq(session), any(ClientSession.class)))
                 .thenReturn(userContext);
         APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent());
@@ -735,7 +727,6 @@ class AuthorisationHandlerTest {
                         .get(ResponseHeaders.SET_COOKIE)
                         .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
         verify(sessionService).save(eq(session));
-        assertEquals(SessionState.NEW, session.getState());
 
         inOrder.verify(auditService)
                 .submitAuditEvent(
@@ -799,7 +790,6 @@ class AuthorisationHandlerTest {
     }
 
     private void whenLoggedIn(Session session) {
-        session.setState(SessionState.AUTHENTICATED);
         when(sessionService.getSessionFromSessionCookie(any())).thenReturn(Optional.of(session));
         when(clientSessionService.generateClientSession(any(ClientSession.class)))
                 .thenReturn("client-session-id");

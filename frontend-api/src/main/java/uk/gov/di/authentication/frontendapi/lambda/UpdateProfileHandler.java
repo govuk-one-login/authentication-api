@@ -40,7 +40,6 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_ERROR;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
-import static uk.gov.di.authentication.shared.entity.SessionState.ADDED_UNVERIFIED_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -151,9 +150,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                     auditableEvent = UPDATE_PROFILE_PHONE_NUMBER;
                     auditablePhoneNumber = request.getProfileInformation();
 
-                    LOG.info(
-                            "Phone number updated and session state updated to {}",
-                            ADDED_UNVERIFIED_PHONE_NUMBER);
+                    LOG.info("Phone number updated");
                     break;
                 }
             case CAPTURE_CONSENT:

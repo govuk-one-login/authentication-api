@@ -26,7 +26,6 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.ValidationService;
-import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
@@ -34,7 +33,6 @@ import java.util.Optional;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1011;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1017;
 import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -161,8 +159,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
-        } catch (StateMachine.InvalidStateTransitionException e) {
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
         } catch (ClientNotFoundException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
