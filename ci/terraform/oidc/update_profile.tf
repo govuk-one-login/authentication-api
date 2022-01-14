@@ -24,7 +24,7 @@ module "update_profile" {
   execution_arn                          = aws_api_gateway_rest_api.di_authentication_frontend_api.execution_arn
   lambda_zip_file                        = var.frontend_api_lambda_zip_file
   authentication_vpc_arn                 = local.authentication_vpc_arn
-  security_group_id                      = local.authentication_security_group_id
+  security_group_ids                     = [local.authentication_security_group_id]
   subnet_id                              = local.authentication_subnet_ids
   lambda_role_arn                        = module.oidc_default_role.arn
   logging_endpoint_enabled               = var.logging_endpoint_enabled

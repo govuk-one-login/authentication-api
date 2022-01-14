@@ -67,9 +67,9 @@ variable "authentication_vpc_arn" {
   type = string
 }
 
-variable "security_group_id" {
-  type        = string
-  description = "The id of the security for the lambda"
+variable "security_group_ids" {
+  type        = list(string)
+  description = "The list of security group IDs to apply to the lambda"
 }
 
 variable "subnet_id" {

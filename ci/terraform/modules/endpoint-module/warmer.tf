@@ -135,7 +135,7 @@ resource "aws_lambda_function" "warmer_function" {
   source_code_hash = filebase64sha256(var.warmer_lambda_zip_file)
 
   vpc_config {
-    security_group_ids = [var.security_group_id]
+    security_group_ids = var.security_group_ids
     subnet_ids         = var.subnet_id
   }
 
