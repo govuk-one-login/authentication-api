@@ -13,7 +13,7 @@ resource "aws_lambda_function" "endpoint_lambda" {
 
   source_code_hash = filebase64sha256(var.lambda_zip_file)
   vpc_config {
-    security_group_ids = [var.security_group_id]
+    security_group_ids = var.security_group_ids
     subnet_ids         = var.subnet_id
   }
   environment {

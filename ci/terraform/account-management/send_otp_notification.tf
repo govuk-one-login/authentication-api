@@ -22,7 +22,7 @@ module "send_otp_notification" {
   execution_arn                          = aws_api_gateway_rest_api.di_account_management_api.execution_arn
   lambda_zip_file                        = var.lambda_zip_file
   authentication_vpc_arn                 = aws_vpc.account_management_vpc.arn
-  security_group_id                      = aws_security_group.allow_vpc_resources_only.id
+  security_group_ids                     = [aws_security_group.allow_vpc_resources_only.id]
   subnet_id                              = aws_subnet.account_management_subnets.*.id
   lambda_role_arn                        = module.account_notification_dynamo_sqs_role.arn
   logging_endpoint_enabled               = var.logging_endpoint_enabled
@@ -37,6 +37,7 @@ module "send_otp_notification" {
   keep_lambda_warm             = var.keep_lambdas_warm
   warmer_handler_function_name = "uk.gov.di.lambdawarmer.lambda.LambdaWarmerHandler::handleRequest"
   warmer_lambda_zip_file       = var.lambda_warmer_zip_file
+  warmer_security_group_ids    = [aws_security_group.allow_vpc_resources_only.id]
   warmer_handler_environment_variables = {
     LAMBDA_MIN_CONCURRENCY = var.lambda_min_concurrency
   }
