@@ -72,6 +72,11 @@ variable "security_group_ids" {
   description = "The list of security group IDs to apply to the lambda"
 }
 
+variable "warmer_security_group_ids" {
+  type        = list(string)
+  description = "The list of security group IDs to apply to the warmer lambda"
+}
+
 variable "subnet_id" {
   type        = list(string)
   description = "The id of the subnets for the lambda"

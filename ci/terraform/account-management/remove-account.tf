@@ -35,6 +35,7 @@ module "delete_account" {
   keep_lambda_warm             = var.keep_lambdas_warm
   warmer_handler_function_name = "uk.gov.di.lambdawarmer.lambda.LambdaWarmerHandler::handleRequest"
   warmer_lambda_zip_file       = var.lambda_warmer_zip_file
+  warmer_security_group_ids    = [aws_security_group.allow_vpc_resources_only.id]
   warmer_handler_environment_variables = {
     LAMBDA_MIN_CONCURRENCY = var.lambda_min_concurrency
   }
