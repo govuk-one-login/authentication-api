@@ -17,12 +17,14 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
@@ -53,10 +55,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
@@ -133,8 +137,7 @@ class LoginHandlerTest {
                         userProfile.getLegacySubjectID(), EMAIL))
                 .thenReturn(false);
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest(Optional.empty()).toParameters());
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
@@ -183,8 +186,7 @@ class LoginHandlerTest {
                         userProfile.getLegacySubjectID(), EMAIL))
                 .thenReturn(false);
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest(Optional.empty()).toParameters());
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
@@ -233,8 +235,7 @@ class LoginHandlerTest {
                         userProfile.getLegacySubjectID(), EMAIL))
                 .thenReturn(true);
         when(userMigrationService.processMigratedUser(EMAIL, PASSWORD)).thenReturn(true);
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest(Optional.empty()).toParameters());
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -263,8 +264,7 @@ class LoginHandlerTest {
                         userProfile.getLegacySubjectID(), EMAIL))
                 .thenReturn(false);
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest(Optional.empty()).toParameters());
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
 
         usingValidSession();
 
@@ -360,8 +360,7 @@ class LoginHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest(Optional.empty()).toParameters());
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
 
         APIGatewayProxyResponseEvent result2 = handler.handleRequest(event, context);
 
@@ -488,11 +487,11 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(userMigrationService.userHasBeenPartlyMigrated(
-                        userProfile.getLegacySubjectID(), EMAIL))
+                userProfile.getLegacySubjectID(), EMAIL))
                 .thenReturn(false);
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
         when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest(Optional.empty()).toParameters());
+                .thenReturn(generateAuthRequest().toParameters());
 
         VectorOfTrust vectorOfTrust =
                 VectorOfTrust.parseFromAuthRequestAttribute(
@@ -518,11 +517,11 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(userMigrationService.userHasBeenPartlyMigrated(
-                        userProfile.getLegacySubjectID(), EMAIL))
+                userProfile.getLegacySubjectID(), EMAIL))
                 .thenReturn(false);
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
         when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest(Optional.empty()).toParameters());
+                .thenReturn(generateAuthRequest().toParameters());
 
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -537,7 +536,7 @@ class LoginHandlerTest {
         assertThat(session.getCurrentCredentialStrength(), nullValue());
     }
 
-    private AuthenticationRequest generateAuthRequest(Optional<String> credentialTrustLevel) {
+    private AuthenticationRequest generateAuthRequest() {
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         AuthenticationRequest.Builder builder =
@@ -548,7 +547,6 @@ class LoginHandlerTest {
                                 URI.create("http://localhost/redirect"))
                         .state(new State())
                         .nonce(new Nonce());
-        credentialTrustLevel.ifPresent(t -> builder.customParameter("vtr", t));
         return builder.build();
     }
 

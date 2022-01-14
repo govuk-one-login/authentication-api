@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent.ProxyRequestContext;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent.RequestIdentity;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -14,18 +15,22 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCError;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
-import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.core.LogEvent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InOrder;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthorizationService;
@@ -36,10 +41,10 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -59,6 +64,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.hasContextData;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -124,18 +130,12 @@ class AuthorisationHandlerTest {
     }
 
     @Test
-    void shouldSetCookieAndRedirectToLoginOnSuccess() {
+    void shouldRedirectToLoginWhenUserHasNoExistingSession() {
         when(clientSessionService.generateClientSession(any(ClientSession.class)))
                 .thenReturn(CLIENT_SESSION_ID);
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setQueryStringParameters(
-                Map.of(
-                        "client_id", CLIENT_ID.getValue(),
-                        "redirect_uri", REDIRECT_URI,
-                        "scope", SCOPE,
-                        "response_type", RESPONSE_TYPE,
-                        "state", STATE.getValue()));
+        Map<String, String> requestParams = buildRequestParams(null);
+        APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
         event.setRequestContext(
                 new ProxyRequestContext()
                         .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
@@ -154,10 +154,22 @@ class AuthorisationHandlerTest {
                         .get(ResponseHeaders.SET_COOKIE)
                         .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
         verify(sessionService).save(eq(session));
+
+        inOrder.verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTHORISATION_INITIATED,
+                        context.getAwsRequestId(),
+                        session.getSessionId(),
+                        CLIENT_ID.getValue(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID);
     }
 
     @Test
-    void shouldDoLoginAndForwardCookieConsent() throws ClientNotFoundException {
+    void shouldRedirectToLoginAndForwardCookieConsentWhenPresent() throws ClientNotFoundException {
         when(authorizationService.isClientCookieConsentShared(eq(new ClientID("test-id"))))
                 .thenReturn(true);
         when(clientSessionService.generateClientSession(any(ClientSession.class)))
@@ -184,7 +196,7 @@ class AuthorisationHandlerTest {
     }
 
     @Test
-    void shouldDoLoginAndNotForwardCookieConsentWhenValueIsInvalid()
+    void shouldRedirectToLoginAndNotForwardCookieConsentWhenValueIsInvalid()
             throws ClientNotFoundException {
         when(authorizationService.isClientCookieConsentShared(eq(new ClientID("test-id"))))
                 .thenReturn(true);
@@ -212,7 +224,7 @@ class AuthorisationHandlerTest {
     }
 
     @Test
-    void shouldDoLoginAndForwardGAParameter() throws ClientNotFoundException {
+    void shouldRedirectToLoginAndForwardGAParameterWhenPresent() throws ClientNotFoundException {
         when(authorizationService.isClientCookieConsentShared(eq(CLIENT_ID))).thenReturn(false);
         when(clientSessionService.generateClientSession(any(ClientSession.class)))
                 .thenReturn(CLIENT_SESSION_ID);
@@ -237,6 +249,144 @@ class AuthorisationHandlerTest {
                         .get(ResponseHeaders.SET_COOKIE)
                         .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
         verify(sessionService).save(eq(session));
+    }
+
+    @Test
+    void shouldRedirectToLoginWithPromptParamWhenSetToLoginAndExistingSessionIsPresent() {
+        withExistingSession(session);
+        when(authorizationService.buildUserContext(eq(session), any(ClientSession.class)))
+                .thenReturn(userContext);
+        when(userContext.getClientSession()).thenReturn(clientSession);
+        when(userContext.getSession()).thenReturn(session);
+        when(clientSession.getAuthRequestParams())
+                .thenReturn(generateAuthRequest(Optional.empty()).toParameters());
+        when(clientSessionService.generateClientSession(any(ClientSession.class)))
+                .thenReturn(CLIENT_SESSION_ID);
+
+        Map<String, String> requestParams = buildRequestParams(Map.of("prompt", "login"));
+        APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent(requestParams));
+        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+
+        assertThat(response, hasStatus(302));
+        assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
+        assertThat(uri.getQuery(), containsString("prompt=login"));
+        assertThat(uri.getQuery(), containsString("consent=false"));
+
+        assertTrue(
+                response.getMultiValueHeaders()
+                        .get(ResponseHeaders.SET_COOKIE)
+                        .contains(EXPECTED_SESSION_COOKIE_STRING));
+        assertTrue(
+                response.getMultiValueHeaders()
+                        .get(ResponseHeaders.SET_COOKIE)
+                        .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
+
+        verify(sessionService).save(eq(session));
+
+        inOrder.verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTHORISATION_INITIATED,
+                        context.getAwsRequestId(),
+                        session.getSessionId(),
+                        CLIENT_ID.getValue(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID);
+    }
+
+    @Test
+    void shouldRedirectToLoginWithUpliftParamWhenUserRequiresUplift() {
+        session.setCurrentCredentialStrength(CredentialTrustLevel.LOW_LEVEL);
+        withExistingSession(session);
+        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(VectorOfTrust.getDefaults());
+        when(authorizationService.buildUserContext(eq(session), any(ClientSession.class)))
+                .thenReturn(userContext);
+        when(userContext.getClientSession()).thenReturn(clientSession);
+        when(userContext.getSession()).thenReturn(session);
+        when(clientSession.getAuthRequestParams())
+                .thenReturn(generateAuthRequest(Optional.of(jsonArrayOf("Cl.Cm"))).toParameters());
+        when(clientSessionService.generateClientSession(any(ClientSession.class)))
+                .thenReturn(CLIENT_SESSION_ID);
+
+        APIGatewayProxyResponseEvent response =
+                makeHandlerRequest(withRequestEvent(buildRequestParams(Map.of("vtr", "Cl"))));
+        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+
+        assertThat(response, hasStatus(302));
+        assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
+        assertThat(uri.getQuery(), containsString("uplift=true"));
+        assertThat(uri.getQuery(), containsString("consent=false"));
+
+        assertTrue(
+                response.getMultiValueHeaders()
+                        .get(ResponseHeaders.SET_COOKIE)
+                        .contains(EXPECTED_SESSION_COOKIE_STRING));
+        assertTrue(
+                response.getMultiValueHeaders()
+                        .get(ResponseHeaders.SET_COOKIE)
+                        .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
+
+        verify(sessionService).save(eq(session));
+
+        inOrder.verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTHORISATION_INITIATED,
+                        context.getAwsRequestId(),
+                        session.getSessionId(),
+                        CLIENT_ID.getValue(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID);
+    }
+
+    @Test
+    void shouldRedirectToLoginWitIdentityParamWhenIdentityIsRequired() {
+        withExistingSession(session);
+        when(authorizationService.buildUserContext(eq(session), any(ClientSession.class)))
+                .thenReturn(userContext);
+        when(userContext.getClientSession()).thenReturn(clientSession);
+        when(userContext.getSession()).thenReturn(session);
+        when(clientSession.getAuthRequestParams())
+                .thenReturn(
+                        generateAuthRequest(Optional.of(jsonArrayOf("P2.Cl.Cm"))).toParameters());
+        when(clientSessionService.generateClientSession(any(ClientSession.class)))
+                .thenReturn(CLIENT_SESSION_ID);
+
+        APIGatewayProxyResponseEvent response =
+                makeHandlerRequest(withRequestEvent(buildRequestParams(Map.of("vtr", "P2.Cl.Cm"))));
+        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+
+        assertThat(response, hasStatus(302));
+        assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
+        assertThat(uri.getQuery(), containsString("identity=true"));
+        assertThat(uri.getQuery(), containsString("consent=false"));
+
+        assertTrue(
+                response.getMultiValueHeaders()
+                        .get(ResponseHeaders.SET_COOKIE)
+                        .contains(EXPECTED_SESSION_COOKIE_STRING));
+        assertTrue(
+                response.getMultiValueHeaders()
+                        .get(ResponseHeaders.SET_COOKIE)
+                        .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
+
+        verify(sessionService).save(eq(session));
+
+        inOrder.verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTHORISATION_INITIATED,
+                        context.getAwsRequestId(),
+                        session.getSessionId(),
+                        CLIENT_ID.getValue(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID);
     }
 
     @Test
@@ -281,24 +431,6 @@ class AuthorisationHandlerTest {
     }
 
     @Test
-    void shouldThrowExceptionWhenNoQueryStringParametersArePresent() {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(
-                new ProxyRequestContext()
-                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-
-        RuntimeException expectedException =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> makeHandlerRequest(event),
-                        "Expected to throw AccessTokenException");
-
-        assertThat(
-                expectedException.getMessage(),
-                equalTo("No query string parameters are present in the Authentication request"));
-    }
-
-    @Test
     void shouldReturn400WhenAuthorisationRequestContainsInvalidScope() {
         when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.of(OAuth2Error.INVALID_SCOPE));
@@ -335,193 +467,21 @@ class AuthorisationHandlerTest {
     }
 
     @Test
-    void shouldDoLoginWhenPromptParamAbsentAndNotLoggedIn() {
-        when(clientSessionService.generateClientSession(any(ClientSession.class)))
-                .thenReturn(CLIENT_SESSION_ID);
-        Map<String, String> requestParams = buildRequestParams(null);
-        APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent(requestParams));
-        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+    void shouldThrowExceptionWhenNoQueryStringParametersArePresent() {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(
+                new ProxyRequestContext()
+                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
 
-        assertThat(response, hasStatus(302));
-        assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
-        assertTrue(
-                response.getMultiValueHeaders()
-                        .get(ResponseHeaders.SET_COOKIE)
-                        .contains(EXPECTED_SESSION_COOKIE_STRING));
-        verify(sessionService).save(eq(session));
+        RuntimeException expectedException =
+                assertThrows(
+                        RuntimeException.class,
+                        () -> makeHandlerRequest(event),
+                        "Expected to throw AccessTokenException");
 
-        inOrder.verify(auditService)
-                .submitAuditEvent(
-                        OidcAuditableEvent.AUTHORISATION_INITIATED,
-                        context.getAwsRequestId(),
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
-    }
-
-    @Test
-    void shouldSkipLoginWhenPromptParamAbsentAndLoggedIn() throws URISyntaxException {
-        session.addClientSession("old-client-session-id");
-
-        whenLoggedIn(session);
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest(Optional.empty()).toParameters());
-        when(userContext.getSession()).thenReturn(session);
-        when(userContext.getClientSession()).thenReturn(clientSession);
-        when(authorizationService.buildUserContext(eq(session), any(ClientSession.class)))
-                .thenReturn(userContext);
-        Map<String, String> requestParams = buildRequestParams(null);
-        APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent(requestParams));
-        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
-        URI expectedUri = new URIBuilder(LOGIN_URL).addParameter("consent", "false").build();
-
-        assertThat(response, hasStatus(302));
-        assertEquals(expectedUri, uri);
-        assertTrue(
-                response.getMultiValueHeaders()
-                        .get(ResponseHeaders.SET_COOKIE)
-                        .contains(EXPECTED_SESSION_COOKIE_STRING));
-        assertTrue(
-                response.getMultiValueHeaders()
-                        .get(ResponseHeaders.SET_COOKIE)
-                        .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
-        verify(sessionService).save(eq(session));
-        assertThat(session.getClientSessions(), hasItem(CLIENT_SESSION_ID));
-        assertThat(session.getClientSessions(), hasSize(2));
-
-        inOrder.verify(auditService)
-                .submitAuditEvent(
-                        OidcAuditableEvent.AUTHORISATION_INITIATED,
-                        context.getAwsRequestId(),
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
-    }
-
-    @Test
-    void shouldSkipLoginWhenPromptParamNoneAndLoggedIn() throws URISyntaxException {
-        session.addClientSession("old-client-session-id");
-
-        whenLoggedIn(session);
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest(Optional.empty()).toParameters());
-        when(userContext.getClientSession()).thenReturn(clientSession);
-        when(userContext.getSession()).thenReturn(session);
-        when(authorizationService.buildUserContext(eq(session), any(ClientSession.class)))
-                .thenReturn(userContext);
-        Map<String, String> requestParams = buildRequestParams(Map.of("prompt", "none"));
-        APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent(requestParams));
-        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
-
-        URI expectedUri = new URIBuilder(LOGIN_URL).addParameter("consent", "false").build();
-
-        assertThat(response, hasStatus(302));
-        assertEquals(expectedUri, uri);
-        assertTrue(
-                response.getMultiValueHeaders()
-                        .get(ResponseHeaders.SET_COOKIE)
-                        .contains(EXPECTED_SESSION_COOKIE_STRING));
-        assertTrue(
-                response.getMultiValueHeaders()
-                        .get(ResponseHeaders.SET_COOKIE)
-                        .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
-        verify(sessionService).save(eq(session));
-        assertThat(session.getClientSessions(), hasItem(CLIENT_SESSION_ID));
-        assertThat(session.getClientSessions(), hasSize(2));
-
-        inOrder.verify(auditService)
-                .submitAuditEvent(
-                        OidcAuditableEvent.AUTHORISATION_INITIATED,
-                        context.getAwsRequestId(),
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
-    }
-
-    @Test
-    void shouldDoLoginWhenPromptParamLoginAndNotLoggedIn() {
-        when(clientSessionService.generateClientSession(any(ClientSession.class)))
-                .thenReturn(CLIENT_SESSION_ID);
-        Map<String, String> requestParams = buildRequestParams(Map.of("prompt", "login"));
-        APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent(requestParams));
-        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
-
-        assertThat(response, hasStatus(302));
-        assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
-
-        assertTrue(
-                response.getMultiValueHeaders()
-                        .get(ResponseHeaders.SET_COOKIE)
-                        .contains(EXPECTED_SESSION_COOKIE_STRING));
-        assertTrue(
-                response.getMultiValueHeaders()
-                        .get(ResponseHeaders.SET_COOKIE)
-                        .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
-
-        verify(sessionService).save(eq(session));
-
-        inOrder.verify(auditService)
-                .submitAuditEvent(
-                        OidcAuditableEvent.AUTHORISATION_INITIATED,
-                        context.getAwsRequestId(),
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
-    }
-
-    @Test
-    void shouldDoLoginWhenPromptParamLoginAndLoggedIn() {
-        Map<String, String> requestParams = buildRequestParams(Map.of("prompt", "login"));
-
-        whenLoggedIn(session);
-        when(userContext.getSession()).thenReturn(session);
-        when(userContext.getClientSession()).thenReturn(clientSession);
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest(Optional.empty()).toParameters());
-        when(authorizationService.buildUserContext(eq(session), any(ClientSession.class)))
-                .thenReturn(userContext);
-
-        APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent(requestParams));
-        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
-
-        assertThat(response, hasStatus(302));
-        assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
-        assertTrue(
-                response.getMultiValueHeaders()
-                        .get(ResponseHeaders.SET_COOKIE)
-                        .contains(EXPECTED_SESSION_COOKIE_STRING));
-        assertTrue(
-                response.getMultiValueHeaders()
-                        .get(ResponseHeaders.SET_COOKIE)
-                        .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
-
-        inOrder.verify(auditService)
-                .submitAuditEvent(
-                        OidcAuditableEvent.AUTHORISATION_INITIATED,
-                        context.getAwsRequestId(),
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+        assertThat(
+                expectedException.getMessage(),
+                equalTo("No query string parameters are present in the Authentication request"));
     }
 
     @Test
@@ -550,40 +510,24 @@ class AuthorisationHandlerTest {
                                 "Invalid request: Invalid prompt parameter: Unknown prompt type: unrecognised"));
     }
 
-    @Test
-    void shouldReturnErrorWhenPromptParamWithMultipleValuesNoneAndLogin() {
-        Map<String, String> requestParams = buildRequestParams(Map.of("prompt", "none login"));
-        APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent(requestParams));
-        assertThat(response, hasStatus(302));
-        assertEquals(
-                "https://localhost:8080?error=invalid_request&error_description=Invalid+request%3A+Invalid+prompt+parameter%3A+Invalid+prompt%3A+none+login&state="
-                        + STATE.getValue(),
-                response.getHeaders().get(ResponseHeaders.LOCATION));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        AUTHORISATION_REQUEST_ERROR,
-                        AWS_REQUEST_ID,
-                        "",
-                        "",
-                        "",
-                        "",
-                        "123.123.123.123",
-                        "",
-                        PERSISTENT_SESSION_ID,
-                        pair(
-                                "description",
-                                "Invalid request: Invalid prompt parameter: Invalid prompt: none login"));
+    private static Stream<Arguments> invalidPromptValues() {
+        return Stream.of(
+                Arguments.of("login consent", OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS),
+                Arguments.of("consent", OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS),
+                Arguments.of("select_account", OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS));
     }
 
-    @Test
-    void shouldReturnErrorWhenPromptParamWithUnsupportedMultipleValues() {
-        Map<String, String> requestParams = buildRequestParams(Map.of("prompt", "login consent"));
+    @ParameterizedTest
+    @MethodSource("invalidPromptValues")
+    void shouldReturnErrorWhenInvalidPromptValuesArePassed(
+            String invalidPromptValues, ErrorObject expectedError) {
+        Map<String, String> requestParams =
+                buildRequestParams(Map.of("prompt", invalidPromptValues));
         APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent(requestParams));
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                containsString(OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS_CODE));
+                containsString(expectedError.getCode()));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -596,131 +540,7 @@ class AuthorisationHandlerTest {
                         "123.123.123.123",
                         "",
                         PERSISTENT_SESSION_ID,
-                        pair(
-                                "description",
-                                OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS.getDescription()));
-    }
-
-    @Test
-    void shouldReturnErrorWhenPromptParamConsent() {
-        Map<String, String> requestParams = buildRequestParams(Map.of("prompt", "consent"));
-        APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent(requestParams));
-        assertThat(response, hasStatus(302));
-        assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                containsString(OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS_CODE));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        AUTHORISATION_REQUEST_ERROR,
-                        AWS_REQUEST_ID,
-                        "",
-                        "",
-                        "",
-                        "",
-                        "123.123.123.123",
-                        "",
-                        PERSISTENT_SESSION_ID,
-                        pair(
-                                "description",
-                                OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS.getDescription()));
-    }
-
-    @Test
-    void shouldReturnErrorWhenPromptParamSelectAccount() {
-        Map<String, String> requestParams = buildRequestParams(Map.of("prompt", "select_account"));
-        APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent(requestParams));
-        assertThat(response, hasStatus(302));
-        assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                containsString(OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS_CODE));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        AUTHORISATION_REQUEST_ERROR,
-                        AWS_REQUEST_ID,
-                        "",
-                        "",
-                        "",
-                        "",
-                        "123.123.123.123",
-                        "",
-                        PERSISTENT_SESSION_ID,
-                        pair(
-                                "description",
-                                OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS.getDescription()));
-    }
-
-    @Test
-    void shouldDoLoginWhenPromptParamAbsentAndNotLoggedInBecauseNoSession() {
-        when(sessionService.getSessionFromSessionCookie(any())).thenReturn(Optional.empty());
-        when(clientSessionService.generateClientSession(any(ClientSession.class)))
-                .thenReturn(CLIENT_SESSION_ID);
-        Map<String, String> requestParams = buildRequestParams(null);
-        APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent(requestParams));
-        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
-
-        assertThat(response, hasStatus(302));
-        assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
-        assertTrue(
-                response.getMultiValueHeaders()
-                        .get(ResponseHeaders.SET_COOKIE)
-                        .contains(EXPECTED_SESSION_COOKIE_STRING));
-        assertTrue(
-                response.getMultiValueHeaders()
-                        .get(ResponseHeaders.SET_COOKIE)
-                        .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
-        verify(sessionService).save(eq(session));
-
-        inOrder.verify(auditService)
-                .submitAuditEvent(
-                        OidcAuditableEvent.AUTHORISATION_INITIATED,
-                        context.getAwsRequestId(),
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
-    }
-
-    @Test
-    void shouldDoLoginWhenPromptParamAbsentAndNotLoggedInBecauseSessionNotAuthenticated() {
-        whenLoggedIn(session);
-        when(userContext.getSession()).thenReturn(session);
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest(Optional.empty()).toParameters());
-        when(userContext.getClientSession()).thenReturn(clientSession);
-        when(authorizationService.buildUserContext(eq(session), any(ClientSession.class)))
-                .thenReturn(userContext);
-        Map<String, String> requestParams = buildRequestParams(null);
-        APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent(requestParams));
-        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
-
-        assertThat(response, hasStatus(302));
-        assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
-        assertTrue(
-                response.getMultiValueHeaders()
-                        .get(ResponseHeaders.SET_COOKIE)
-                        .contains(EXPECTED_SESSION_COOKIE_STRING));
-        assertTrue(
-                response.getMultiValueHeaders()
-                        .get(ResponseHeaders.SET_COOKIE)
-                        .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
-        verify(sessionService).save(eq(session));
-
-        inOrder.verify(auditService)
-                .submitAuditEvent(
-                        OidcAuditableEvent.AUTHORISATION_INITIATED,
-                        context.getAwsRequestId(),
-                        session.getSessionId(),
-                        "test-id",
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+                        pair("description", expectedError.getDescription()));
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
@@ -781,7 +601,7 @@ class AuthorisationHandlerTest {
         return builder.build();
     }
 
-    private void whenLoggedIn(Session session) {
+    private void withExistingSession(Session session) {
         when(sessionService.getSessionFromSessionCookie(any())).thenReturn(Optional.of(session));
         when(clientSessionService.generateClientSession(any(ClientSession.class)))
                 .thenReturn(CLIENT_SESSION_ID);

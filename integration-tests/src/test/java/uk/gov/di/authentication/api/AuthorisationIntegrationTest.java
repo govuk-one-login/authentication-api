@@ -435,8 +435,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
-        String newSessionId = cookie.get().getValue().split("\\.")[0];
-        assertThat(redis.getSession(newSessionId).getState(), equalTo(AUTHENTICATION_REQUIRED));
 
         assertEventTypesReceived(
                 auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
