@@ -7,7 +7,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseMode;
-import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
@@ -18,7 +17,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.shared.conditions.ConsentHelper;
-import uk.gov.di.authentication.shared.conditions.MfaHelper;
+import uk.gov.di.authentication.shared.conditions.IdentityHelper;
+import uk.gov.di.authentication.shared.conditions.UpliftHelper;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -37,6 +37,7 @@ import java.net.URISyntaxException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -149,7 +150,9 @@ public class AuthorisationHandler
                             return error.map(
                                             e ->
                                                     generateErrorResponse(
-                                                            authRequest,
+                                                            authRequest.getRedirectionURI(),
+                                                            authRequest.getState(),
+                                                            authRequest.getResponseMode(),
                                                             e,
                                                             context,
                                                             ipAddress,
@@ -175,11 +178,13 @@ public class AuthorisationHandler
             Context context,
             String ipAddress,
             String persistentSessionId) {
-        if (authenticationRequest.getPrompt() != null) {
+        if (Objects.nonNull(authenticationRequest.getPrompt())) {
             if (authenticationRequest.getPrompt().contains(Prompt.Type.CONSENT)
                     || authenticationRequest.getPrompt().contains(Prompt.Type.SELECT_ACCOUNT)) {
                 return generateErrorResponse(
-                        authenticationRequest,
+                        authenticationRequest.getRedirectionURI(),
+                        authenticationRequest.getState(),
+                        authenticationRequest.getResponseMode(),
                         OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS,
                         context,
                         ipAddress,
@@ -223,26 +228,20 @@ public class AuthorisationHandler
                         authorizationService.getEffectiveVectorOfTrust(authenticationRequest));
         String clientSessionID = clientSessionService.generateClientSession(clientSession);
         UserContext userContext = authorizationService.buildUserContext(session, clientSession);
-        session = updateSessionId(session, authenticationRequest.getClientID(), clientSessionID);
-
-        String redirectUri =
-                buildRedirectURI(authRequestParameters, authenticationRequest, userContext);
-
-        return redirect(session, clientSessionID, redirectUri, persistentSessionId);
-    }
-
-    private Session updateSessionId(Session session, ClientID clientId, String clientSessionID) {
         String oldSessionId = session.getSessionId();
         sessionService.updateSessionId(session);
         session.addClientSession(clientSessionID);
         updateAttachedSessionIdToLogs(session.getSessionId());
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionID);
-        updateAttachedLogFieldToLogs(CLIENT_ID, clientId.getValue());
         LOG.info("Updated session id from {} - new", oldSessionId);
 
         sessionService.save(session);
         LOG.info("Session saved successfully");
-        return session;
+
+        String redirectUri =
+                buildRedirectURI(authRequestParameters, authenticationRequest, userContext);
+
+        return redirect(session, clientSessionID, redirectUri, persistentSessionId);
     }
 
     private APIGatewayProxyResponseEvent createSessionAndRedirect(
@@ -278,34 +277,33 @@ public class AuthorisationHandler
         try {
             URIBuilder redirectUriBuilder = new URIBuilder(configurationService.getLoginURI());
 
-            if (userContext != null) {
-                boolean consentRequired = ConsentHelper.userHasNotGivenConsent(userContext);
-                boolean mfaRequired =
-                        MfaHelper.mfaRequired(
-                                userContext.getClientSession().getAuthRequestParams());
-                redirectUriBuilder.addParameter(
-                        "consent-required", String.valueOf(consentRequired));
-                redirectUriBuilder.addParameter("mfa-required", String.valueOf(mfaRequired));
+            if (Objects.nonNull(userContext)) {
+                boolean consent = ConsentHelper.userHasNotGivenConsent(userContext);
+                redirectUriBuilder.addParameter("consent", String.valueOf(consent));
+                if (Objects.nonNull(userContext.getSession().getCurrentCredentialStrength())) {
+                    boolean uplift = UpliftHelper.upliftRequired(userContext);
+                    redirectUriBuilder.addParameter("uplift", String.valueOf(uplift));
+                }
+                if (IdentityHelper.identityRequired(
+                        userContext.getClientSession().getAuthRequestParams())) {
+                    redirectUriBuilder.addParameter("identity", String.valueOf(true));
+                }
+                if (Objects.nonNull(authenticationRequest.getPrompt())
+                        && authenticationRequest.getPrompt().contains(Prompt.Type.LOGIN)) {
+                    redirectUriBuilder.addParameter("prompt", String.valueOf(Prompt.Type.LOGIN));
+                }
             }
 
-            String cookieConsent =
-                    getCookieConsentValue(authRequestParameters, authenticationRequest);
+            var cookieConsent = getCookieConsentValue(authRequestParameters, authenticationRequest);
+            cookieConsent.ifPresent(c -> redirectUriBuilder.addParameter(COOKIE_CONSENT, c));
 
-            if (cookieConsent != null && !cookieConsent.isEmpty()) {
-                redirectUriBuilder.addParameter(COOKIE_CONSENT, cookieConsent);
-            }
-
-            String gaValue = getGAUserIdValue(authRequestParameters);
-
-            if (gaValue != null && !gaValue.isEmpty()) {
-                redirectUriBuilder.addParameter(GA, gaValue);
-            }
+            var gaValue = getGAUserIdValue(authRequestParameters);
+            gaValue.ifPresent(ga -> redirectUriBuilder.addParameter(GA, ga));
 
             redirectUri = redirectUriBuilder.build();
         } catch (URISyntaxException e) {
             throw new RuntimeException("Error constructing redirect URI", e);
         }
-
         return redirectUri.toString();
     }
 
@@ -333,23 +331,6 @@ public class AuthorisationHandler
                 .withStatusCode(302)
                 .withHeaders(Map.of(ResponseHeaders.LOCATION, redirectURI))
                 .withMultiValueHeaders(Map.of(ResponseHeaders.SET_COOKIE, cookies));
-    }
-
-    private APIGatewayProxyResponseEvent generateErrorResponse(
-            AuthenticationRequest authRequest,
-            ErrorObject errorObject,
-            Context context,
-            String ipAddress,
-            String persistentSessionId) {
-
-        return generateErrorResponse(
-                authRequest.getRedirectionURI(),
-                authRequest.getState(),
-                authRequest.getResponseMode(),
-                errorObject,
-                context,
-                ipAddress,
-                persistentSessionId);
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(
@@ -390,7 +371,7 @@ public class AuthorisationHandler
                 .collect(Collectors.toMap(Map.Entry::getKey, entry -> List.of(entry.getValue())));
     }
 
-    private String getCookieConsentValue(
+    private Optional<String> getCookieConsentValue(
             Map<String, List<String>> authRequestParameters,
             AuthenticationRequest authenticationRequest) {
 
@@ -402,25 +383,22 @@ public class AuthorisationHandler
                         && authorizationService.isValidCookieConsentValue(
                                 authRequestParameters.get(COOKIE_CONSENT).get(0))) {
                     LOG.info("Sharing cookie_consent");
-                    return authRequestParameters.get(COOKIE_CONSENT).get(0);
+                    return Optional.of(authRequestParameters.get(COOKIE_CONSENT).get(0));
                 }
             } catch (ClientNotFoundException e) {
                 throw new RuntimeException("Client not found", e);
             }
         }
 
-        return null;
+        return Optional.empty();
     }
 
-    private String getGAUserIdValue(Map<String, List<String>> authRequestParameters) {
-
+    private Optional<String> getGAUserIdValue(Map<String, List<String>> authRequestParameters) {
         if (authRequestParameters.containsKey(GA)) {
             String gaId = authRequestParameters.get(GA).get(0);
             LOG.info("GA value present in request {}", gaId);
-
-            return gaId;
+            return Optional.of(gaId);
         }
-
-        return null;
+        return Optional.empty();
     }
 }

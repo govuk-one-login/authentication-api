@@ -7,41 +7,50 @@ public class LoginResponse {
     @JsonProperty("redactedPhoneNumber")
     private String redactedPhoneNumber;
 
-    @JsonProperty("isMfaRequired")
-    private boolean isMfaRequired;
+    @JsonProperty("mfaRequired")
+    private boolean mfaRequired;
 
-    @JsonProperty("isPhoneNumberVerified")
-    private boolean isPhoneNumberVerified;
+    @JsonProperty("phoneNumberVerified")
+    private boolean phoneNumberVerified;
 
     @JsonProperty(value = "latestTermsAndConditionsAccepted")
     private boolean latestTermsAndConditionsAccepted;
 
+    @JsonProperty(value = "consentRequired")
+    private boolean consentRequired;
+
     public LoginResponse(
             @JsonProperty(value = "redactedPhoneNumber") String redactedPhoneNumber,
-            @JsonProperty(value = "isMfaRequired", required = true) boolean isMfaRequired,
-            @JsonProperty(value = "isPhoneNumberVerified", required = true)
-                    boolean isPhoneNumberVerified,
+            @JsonProperty(value = "mfaRequired", required = true) boolean mfaRequired,
+            @JsonProperty(value = "phoneNumberVerified", required = true)
+                    boolean phoneNumberVerified,
             @JsonProperty(value = "latestTermsAndConditionsAccepted", required = true)
-                    boolean latestTermsAndConditionsAccepted) {
+                    boolean latestTermsAndConditionsAccepted,
+            @JsonProperty(value = "consentRequired", required = true) boolean consentRequired) {
         this.redactedPhoneNumber = redactedPhoneNumber;
-        this.isMfaRequired = isMfaRequired;
-        this.isPhoneNumberVerified = isPhoneNumberVerified;
+        this.mfaRequired = mfaRequired;
+        this.phoneNumberVerified = phoneNumberVerified;
         this.latestTermsAndConditionsAccepted = latestTermsAndConditionsAccepted;
+        this.consentRequired = consentRequired;
     }
 
     public String getRedactedPhoneNumber() {
         return redactedPhoneNumber;
     }
 
-    public boolean getIsMfaRequired() {
-        return isMfaRequired;
+    public boolean isMfaRequired() {
+        return mfaRequired;
     }
 
-    public boolean getIsPhoneNumberVerified() {
-        return isPhoneNumberVerified;
+    public boolean isPhoneNumberVerified() {
+        return phoneNumberVerified;
     }
 
     public boolean getLatestTermsAndConditionsAccepted() {
         return latestTermsAndConditionsAccepted;
+    }
+
+    public boolean isConsentRequired() {
+        return consentRequired;
     }
 }

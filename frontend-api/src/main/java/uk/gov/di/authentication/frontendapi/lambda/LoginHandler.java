@@ -12,11 +12,10 @@ import uk.gov.di.authentication.frontendapi.entity.LoginRequest;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
+import uk.gov.di.authentication.shared.conditions.ConsentHelper;
 import uk.gov.di.authentication.shared.conditions.MfaHelper;
 import uk.gov.di.authentication.shared.conditions.TermsAndConditionsHelper;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -32,6 +31,7 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.LOG_IN_SUCCESS;
@@ -94,7 +94,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         LOG.info("Request received");
         try {
-            String persistentSessionId =
+            var persistentSessionId =
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
             Optional<UserProfile> userProfileMaybe =
                     authenticationService.getUserProfileByEmailMaybe(request.getEmail());
@@ -136,7 +136,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1028);
             }
 
-            boolean userIsAMigratedUser =
+            var userIsAMigratedUser =
                     userMigrationService.userHasBeenPartlyMigrated(
                             userProfile.getLegacySubjectID(), request.getEmail());
             boolean hasValidCredentials;
@@ -171,43 +171,29 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 codeStorageService.deleteIncorrectPasswordCount(request.getEmail());
             }
 
-            CredentialTrustLevel credentialTrustLevel =
-                    userContext
-                            .getClientSession()
-                            .getEffectiveVectorOfTrust()
-                            .getCredentialTrustLevel();
-
-            Session session = userContext.getSession();
-            if (credentialTrustLevel.equals(CredentialTrustLevel.LOW_LEVEL)) {
-                session.setCurrentCredentialStrength(credentialTrustLevel);
-            }
-
-            sessionService.save(session.setNewAccount(EXISTING));
-
-            var isMfaRequired =
-                    MfaHelper.mfaRequired(userContext.getClientSession().getAuthRequestParams());
-
-            boolean isPhoneNumberVerified = userProfile.isPhoneNumberVerified();
+            var isPhoneNumberVerified = userProfile.isPhoneNumberVerified();
             String redactedPhoneNumber = null;
             if (isPhoneNumberVerified) {
                 redactedPhoneNumber =
                         RedactPhoneNumberHelper.redactPhoneNumber(userProfile.getPhoneNumber());
             }
-            boolean termsAndConditionsAccepted;
-            if (userProfile.getTermsAndConditions() == null) {
-                termsAndConditionsAccepted = false;
-            } else {
+            boolean termsAndConditionsAccepted = false;
+            if (Objects.nonNull(userProfile.getTermsAndConditions())) {
                 termsAndConditionsAccepted =
                         TermsAndConditionsHelper.hasTermsAndConditionsBeenAccepted(
                                 userProfile.getTermsAndConditions(),
                                 configurationService.getTermsAndConditionsVersion());
             }
+            sessionService.save(userContext.getSession().setNewAccount(EXISTING));
+            var isMfaRequired =
+                    MfaHelper.mfaRequired(userContext.getClientSession().getAuthRequestParams());
+            var consentRequired = ConsentHelper.userHasNotGivenConsent(userContext);
             LOG.info("User has successfully logged in");
 
             auditService.submitAuditEvent(
                     LOG_IN_SUCCESS,
                     context.getAwsRequestId(),
-                    session.getSessionId(),
+                    userContext.getSession().getSessionId(),
                     AuditService.UNKNOWN,
                     userProfile.getSubjectID(),
                     userProfile.getEmail(),
@@ -221,7 +207,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             redactedPhoneNumber,
                             isMfaRequired,
                             isPhoneNumberVerified,
-                            termsAndConditionsAccepted));
+                            termsAndConditionsAccepted,
+                            consentRequired));
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }

@@ -17,13 +17,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
@@ -54,12 +53,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
@@ -73,6 +70,7 @@ class LoginHandlerTest {
     private static final String EMAIL = "joe.bloggs@test.com";
     private static final String PASSWORD = "computer-1";
     private static final String PHONE_NUMBER = "01234567890";
+    private static final ClientID CLIENT_ID = new ClientID();
     private LoginHandler handler;
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -106,6 +104,8 @@ class LoginHandlerTest {
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         Collections.singletonList(jsonArrayOf("Cl.Cm")));
         when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vectorOfTrust);
+        when(clientService.getClient(CLIENT_ID.getValue()))
+                .thenReturn(Optional.of(generateClientRegistry()));
 
         handler =
                 new LoginHandler(
@@ -544,11 +544,10 @@ class LoginHandlerTest {
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE,
                                 scope,
-                                new ClientID(),
+                                CLIENT_ID,
                                 URI.create("http://localhost/redirect"))
                         .state(new State())
                         .nonce(new Nonce());
-
         credentialTrustLevel.ifPresent(t -> builder.customParameter("vtr", t));
         return builder.build();
     }
@@ -570,5 +569,14 @@ class LoginHandlerTest {
                 .setSubjectID(new Subject().getValue())
                 .setLegacySubjectID(legacySubjectId)
                 .setTermsAndConditions(new TermsAndConditions("1.0", currentDateTime.toString()));
+    }
+
+    private ClientRegistry generateClientRegistry() {
+        return new ClientRegistry()
+                .setClientID(CLIENT_ID.getValue())
+                .setConsentRequired(false)
+                .setClientName("test-client")
+                .setSectorIdentifierUri("https://test.com")
+                .setSubjectType("public");
     }
 }

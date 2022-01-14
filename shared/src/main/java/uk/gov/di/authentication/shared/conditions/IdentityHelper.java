@@ -6,12 +6,11 @@ import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
-import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
+public class IdentityHelper {
 
-public class MfaHelper {
-
-    public static boolean mfaRequired(Map<String, List<String>> authRequestParams) {
+    public static boolean identityRequired(Map<String, List<String>> authRequestParams) {
         AuthenticationRequest authRequest;
         try {
             authRequest = AuthenticationRequest.parse(authRequestParams);
@@ -20,10 +19,10 @@ public class MfaHelper {
         }
         List<String> vtr = authRequest.getCustomParameter("vtr");
         VectorOfTrust vectorOfTrust = VectorOfTrust.parseFromAuthRequestAttribute(vtr);
-        if (vectorOfTrust.getCredentialTrustLevel().equals(LOW_LEVEL)) {
-            return false;
-        } else {
+        if (Objects.nonNull(vectorOfTrust.getLevelOfConfidence())) {
             return true;
+        } else {
+            return false;
         }
     }
 }
