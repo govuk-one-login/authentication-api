@@ -52,21 +52,12 @@ class VectorOfTrustTest {
     }
 
     @Test
-    void shouldParseValidStringWithMultipleIdentityVectors() {
-        var jsonArray = jsonArrayOf("Pm.Cl.Cm", "Ph.Cl.Cm", "Cl.Cm");
+    void shouldParseValidStringWithSingleIdentityVector() {
+        var jsonArray = jsonArrayOf("Pm.Cl.Cm");
         VectorOfTrust vectorOfTrust =
                 VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(jsonArray));
         assertThat(vectorOfTrust.getCredentialTrustLevel(), equalTo(MEDIUM_LEVEL));
         assertThat(vectorOfTrust.getLevelOfConfidence(), equalTo(LevelOfConfidence.MEDIUM_LEVEL));
-    }
-
-    @Test
-    void shouldParseValidStringWithSingleIdentityVector() {
-        var jsonArray = jsonArrayOf("Ph.Cl.Cm");
-        VectorOfTrust vectorOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(jsonArray));
-        assertThat(vectorOfTrust.getCredentialTrustLevel(), equalTo(MEDIUM_LEVEL));
-        assertThat(vectorOfTrust.getLevelOfConfidence(), equalTo(LevelOfConfidence.HIGH_LEVEL));
     }
 
     @Test
@@ -79,13 +70,13 @@ class VectorOfTrustTest {
     }
 
     @Test
-    void
-            shouldParseToLowCredentialTrustLevelAndMediumLevelOfConfidenceWhenMultipleIdentityLevelsExist() {
+    void shouldThrowWhenUnsupportedIdentityValueInVector() {
         var jsonArray = jsonArrayOf("Pm.Cl.Cm", "Ph.Cl");
-        VectorOfTrust vectorOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(jsonArray));
-        assertThat(vectorOfTrust.getCredentialTrustLevel(), equalTo(MEDIUM_LEVEL));
-        assertThat(vectorOfTrust.getLevelOfConfidence(), equalTo(LevelOfConfidence.MEDIUM_LEVEL));
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        VectorOfTrust.parseFromAuthRequestAttribute(
+                                Collections.singletonList(jsonArray)));
     }
 
     @Test

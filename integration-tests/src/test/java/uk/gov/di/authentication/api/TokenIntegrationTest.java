@@ -84,10 +84,6 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 Optional.of("Cl"),
                 Optional.of("Pm.Cl.Cm"),
                 Optional.of("Pm.Cl"),
-                Optional.of("Pl.Cl.Cm"),
-                Optional.of("Pl.Cl"),
-                Optional.of("Ph.Cl"),
-                Optional.of("Ph.Cl.Cm"),
                 Optional.empty());
     }
 

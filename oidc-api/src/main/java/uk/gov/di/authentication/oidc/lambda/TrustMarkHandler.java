@@ -58,6 +58,6 @@ public class TrustMarkHandler
                 Arrays.asList(
                         CredentialTrustLevel.LOW_LEVEL.getValue(),
                         CredentialTrustLevel.MEDIUM_LEVEL.getValue()),
-                LevelOfConfidence.getAllLevelOfConfidenceValues());
+                LevelOfConfidence.getAllSupportedLevelOfConfidenceValues());
     }
 }

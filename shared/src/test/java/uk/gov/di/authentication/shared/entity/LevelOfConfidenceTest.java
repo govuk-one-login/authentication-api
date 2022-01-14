@@ -23,10 +23,18 @@ class LevelOfConfidenceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("validLevelOfConfidence")
+    @MethodSource("supportedLevelOfConfidence")
     void shouldReturnLevelOfConfidenceForValidValue(
             String vtrSet, LevelOfConfidence expectedLevel) {
         assertThat(LevelOfConfidence.retrieveLevelOfConfidence(vtrSet), equalTo(expectedLevel));
+    }
+
+    @ParameterizedTest
+    @MethodSource("unsupportedLevelOfConfidence")
+    void shouldThrowWhenUnsupportedValueIsPassed(String vtrSet) {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> LevelOfConfidence.retrieveLevelOfConfidence(vtrSet));
     }
 
     @ParameterizedTest
@@ -38,26 +46,24 @@ class LevelOfConfidenceTest {
     }
 
     @Test
-    void shouldReturnLevelOfConfidenceValuesFromLowestToHighest() {
-        List<String> allLevelOfConfidenceValues = LevelOfConfidence.getAllLevelOfConfidenceValues();
+    void shouldReturnOnlySupportedLevelOfConfidenceValues() {
+        List<String> allLevelOfConfidenceValues =
+                LevelOfConfidence.getAllSupportedLevelOfConfidenceValues();
+
+        assertThat(allLevelOfConfidenceValues.size(), equalTo(1));
 
         assertThat(
-                allLevelOfConfidenceValues.get(0), equalTo(LevelOfConfidence.LOW_LEVEL.getValue()));
-        assertThat(
-                allLevelOfConfidenceValues.get(1),
+                allLevelOfConfidenceValues.get(0),
                 equalTo(LevelOfConfidence.MEDIUM_LEVEL.getValue()));
-        assertThat(
-                allLevelOfConfidenceValues.get(2),
-                equalTo(LevelOfConfidence.HIGH_LEVEL.getValue()));
-        assertThat(
-                allLevelOfConfidenceValues.get(3),
-                equalTo(LevelOfConfidence.VERY_HIGH_LEVEL.getValue()));
     }
 
-    private static Stream<Arguments> validLevelOfConfidence() {
+    private static Stream<Arguments> supportedLevelOfConfidence() {
+        return Stream.of(Arguments.of("Pm", LevelOfConfidence.MEDIUM_LEVEL));
+    }
+
+    private static Stream<Arguments> unsupportedLevelOfConfidence() {
         return Stream.of(
                 Arguments.of("Pl", LevelOfConfidence.LOW_LEVEL),
-                Arguments.of("Pm", LevelOfConfidence.MEDIUM_LEVEL),
                 Arguments.of("Ph", LevelOfConfidence.HIGH_LEVEL),
                 Arguments.of("Pv", LevelOfConfidence.VERY_HIGH_LEVEL));
     }

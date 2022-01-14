@@ -114,7 +114,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 Optional.of(CLIENT_ID),
                                 Optional.empty(),
                                 "openid",
-                                Optional.of("Pl.Cl.Cm")));
+                                Optional.of("Pm.Cl.Cm")));
         assertThat(response, hasStatus(302));
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
