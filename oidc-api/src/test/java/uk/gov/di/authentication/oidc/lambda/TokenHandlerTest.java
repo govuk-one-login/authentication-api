@@ -39,7 +39,6 @@ import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
@@ -102,7 +101,6 @@ public class TokenHandlerTest {
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final Nonce NONCE = new Nonce();
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
-    private static final String VOT = CredentialTrustLevel.MEDIUM_LEVEL.getValue();
     private final Context context = mock(Context.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -134,8 +132,7 @@ public class TokenHandlerTest {
     }
 
     private static Stream<String> validVectorValues() {
-        return Stream.of(
-                "Cl.Cm", "Cl", "Pm.Cl.Cm", "Pm.Cl", "Pl.Cl.Cm", "Pl.Cl", "Ph.Cl", "Ph.Cl.Cm");
+        return Stream.of("Cl.Cm", "Cl", "Pm.Cl.Cm", "Pm.Cl");
     }
 
     @ParameterizedTest
