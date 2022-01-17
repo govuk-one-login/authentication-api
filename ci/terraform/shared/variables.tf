@@ -132,3 +132,6 @@ variable "password_pepper" {
   default     = null
 }
 
+variable "common_state_bucket" {
+  type = string
+}

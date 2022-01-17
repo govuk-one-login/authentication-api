@@ -13,15 +13,15 @@ output "redis_password" {
 }
 
 output "authentication_vpc_arn" {
-  value = aws_vpc.authentication.arn
+  value = local.vpc_arn
 }
 
 output "authentication_security_group_id" {
-  value = aws_security_group.allow_vpc_resources_only.id
+  value = local.allow_aws_service_access_security_group_id
 }
 
 output "authentication_egress_security_group_id" {
-  value = aws_security_group.allow_egress.id
+  value = local.allow_egress_security_group_id
 }
 
 output "authentication_oidc_redis_security_group_id" {
@@ -29,7 +29,7 @@ output "authentication_oidc_redis_security_group_id" {
 }
 
 output "authentication_subnet_ids" {
-  value = aws_subnet.authentication.*.id
+  value = local.private_subnet_ids
 }
 
 output "lambda_iam_role_arn" {

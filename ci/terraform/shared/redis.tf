@@ -6,11 +6,7 @@ resource "aws_elasticache_subnet_group" "sessions_store" {
   count = var.use_localstack ? 0 : 1
 
   name       = "${var.environment}-session-store-cache-subnet"
-  subnet_ids = aws_subnet.authentication.*.id
-  depends_on = [
-    aws_vpc.authentication,
-    aws_subnet.authentication,
-  ]
+  subnet_ids = local.private_subnet_ids
 }
 
 resource "random_password" "redis_password" {
@@ -59,8 +55,6 @@ resource "aws_elasticache_replication_group" "sessions_store" {
   tags = local.default_tags
 
   depends_on = [
-    aws_vpc.authentication,
-    aws_subnet.authentication,
     aws_sns_topic.slack_events,
   ]
 }
