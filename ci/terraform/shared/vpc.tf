@@ -407,16 +407,6 @@ resource "aws_security_group_rule" "allow_https_to_s3" {
   type            = "egress"
 }
 
-resource "aws_security_group_rule" "allow_connection_to_redis" {
-  security_group_id = aws_security_group.allow_vpc_resources_only.id
-
-  from_port                = local.redis_port_number
-  protocol                 = "tcp"
-  source_security_group_id = aws_security_group.redis_security_group.id
-  to_port                  = local.redis_port_number
-  type                     = "egress"
-}
-
 resource "aws_security_group_rule" "allow_connection_to_oidc_redis" {
   security_group_id = aws_security_group.allow_access_to_oidc_redis.id
 
@@ -435,14 +425,4 @@ resource "aws_security_group_rule" "allow_https_to_anywhere" {
   protocol    = "tcp"
   to_port     = 443
   type        = "egress"
-}
-
-resource "aws_security_group_rule" "allow_connection_to_redis_from_egress_group" {
-  security_group_id = aws_security_group.allow_egress.id
-
-  from_port                = local.redis_port_number
-  protocol                 = "tcp"
-  source_security_group_id = aws_security_group.redis_security_group.id
-  to_port                  = local.redis_port_number
-  type                     = "egress"
 }
