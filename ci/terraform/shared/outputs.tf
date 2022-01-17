@@ -24,6 +24,10 @@ output "authentication_egress_security_group_id" {
   value = aws_security_group.allow_egress.id
 }
 
+output "authentication_oidc_redis_security_group_id" {
+  value = aws_security_group.allow_access_to_oidc_redis.id
+}
+
 output "authentication_subnet_ids" {
   value = aws_subnet.authentication.*.id
 }
