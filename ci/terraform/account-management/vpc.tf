@@ -201,6 +201,68 @@ resource "aws_vpc_endpoint" "lambda" {
   tags = local.default_tags
 }
 
+
+data "aws_vpc_endpoint_service" "ecr_dkr" {
+  service = "ecr.dkr"
+}
+
+resource "aws_vpc_endpoint" "ecr_dkr" {
+  vpc_endpoint_type = "Interface"
+  vpc_id            = aws_vpc.account_management_vpc.id
+  service_name      = data.aws_vpc_endpoint_service.ecr_dkr.service_name
+
+  subnet_ids = aws_subnet.account_management_subnets.*.id
+
+  security_group_ids = [
+    aws_security_group.aws_endpoints.id,
+  ]
+
+  private_dns_enabled = true
+
+  tags = local.default_tags
+}
+
+data "aws_vpc_endpoint_service" "ecr_api" {
+  service = "ecr.api"
+}
+
+resource "aws_vpc_endpoint" "ecr_api" {
+  vpc_endpoint_type = "Interface"
+  vpc_id            = aws_vpc.account_management_vpc.id
+  service_name      = data.aws_vpc_endpoint_service.ecr_api.service_name
+
+  subnet_ids = aws_subnet.account_management_subnets.*.id
+
+  security_group_ids = [
+    aws_security_group.aws_endpoints.id,
+  ]
+
+  private_dns_enabled = true
+
+  tags = local.default_tags
+}
+
+data "aws_vpc_endpoint_service" "s3" {
+  service = "s3"
+
+  service_type = "Gateway"
+}
+
+resource "aws_vpc_endpoint" "s3" {
+  vpc_endpoint_type = "Gateway"
+  vpc_id            = aws_vpc.account_management_vpc.id
+  service_name      = data.aws_vpc_endpoint_service.s3.service_name
+
+  tags = local.default_tags
+}
+
+resource "aws_vpc_endpoint_route_table_association" "s3" {
+  count = length(data.aws_availability_zones.available.names)
+
+  vpc_endpoint_id = aws_vpc_endpoint.s3.id
+  route_table_id  = aws_route_table.private_route_table[count.index].id
+}
+
 resource "aws_vpc_endpoint_route_table_association" "dynamodb" {
   vpc_endpoint_id = aws_vpc_endpoint.dynamodb[0].id
   count           = var.use_localstack ? 0 : length(data.aws_availability_zones.available.names)
@@ -356,6 +418,16 @@ resource "aws_security_group_rule" "allow_https_to_dynamo" {
 
   from_port       = 443
   prefix_list_ids = [aws_vpc_endpoint.dynamodb[0].prefix_list_id]
+  protocol        = "tcp"
+  to_port         = 443
+  type            = "egress"
+}
+
+resource "aws_security_group_rule" "allow_https_to_s3" {
+  security_group_id = aws_security_group.allow_vpc_resources_only.id
+
+  from_port       = 443
+  prefix_list_ids = [aws_vpc_endpoint.s3.prefix_list_id]
   protocol        = "tcp"
   to_port         = 443
   type            = "egress"
