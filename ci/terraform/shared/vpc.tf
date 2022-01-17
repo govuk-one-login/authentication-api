@@ -357,6 +357,16 @@ resource "aws_security_group" "allow_egress" {
   }
 }
 
+resource "aws_security_group" "allow_access_to_oidc_redis" {
+  name_prefix = "${var.environment}-allow-access-to-oidc-redis-"
+  description = "Allow outgoing access to the OIDC Redis session store"
+  vpc_id      = aws_vpc.authentication.id
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
 resource "aws_security_group_rule" "allow_incoming_redis_from_private_subnet" {
   security_group_id = aws_security_group.redis_security_group.id
 
@@ -399,6 +409,16 @@ resource "aws_security_group_rule" "allow_https_to_s3" {
 
 resource "aws_security_group_rule" "allow_connection_to_redis" {
   security_group_id = aws_security_group.allow_vpc_resources_only.id
+
+  from_port                = local.redis_port_number
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.redis_security_group.id
+  to_port                  = local.redis_port_number
+  type                     = "egress"
+}
+
+resource "aws_security_group_rule" "allow_connection_to_oidc_redis" {
+  security_group_id = aws_security_group.allow_access_to_oidc_redis.id
 
   from_port                = local.redis_port_number
   protocol                 = "tcp"
