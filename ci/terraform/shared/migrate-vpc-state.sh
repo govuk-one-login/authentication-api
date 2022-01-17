@@ -9,9 +9,9 @@ function migrate() {
 
 migrate aws_vpc.authentication aws_vpc.authentication
 
-migrate aws_subnet.authentication[0] aws_subnet.authentication[0]
-migrate aws_subnet.authentication[1] aws_subnet.authentication[1]
-migrate aws_subnet.authentication[2] aws_subnet.authentication[2]
+migrate aws_subnet.authentication[0] aws_subnet.authentication_private[0]
+migrate aws_subnet.authentication[1] aws_subnet.authentication_private[1]
+migrate aws_subnet.authentication[2] aws_subnet.authentication_private[2]
 
 migrate aws_security_group.aws_endpoints aws_security_group.aws_endpoints
 migrate aws_security_group_rule.allow_incoming_aws_https_requests_from_private_subnet aws_security_group_rule.allow_incoming_aws_https_requests_from_private_subnet
