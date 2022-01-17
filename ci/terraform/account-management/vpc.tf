@@ -242,6 +242,26 @@ resource "aws_vpc_endpoint" "ecr_api" {
   tags = local.default_tags
 }
 
+data "aws_vpc_endpoint_service" "cloudwatch" {
+  service = "logs"
+}
+
+resource "aws_vpc_endpoint" "cloudwatch" {
+  vpc_endpoint_type = "Interface"
+  vpc_id            = aws_vpc.account_management_vpc.id
+  service_name      = data.aws_vpc_endpoint_service.cloudwatch.service_name
+
+  subnet_ids = aws_subnet.account_management_subnets.*.id
+
+  security_group_ids = [
+    aws_security_group.aws_endpoints.id,
+  ]
+
+  private_dns_enabled = true
+
+  tags = local.default_tags
+}
+
 data "aws_vpc_endpoint_service" "s3" {
   service = "s3"
 
