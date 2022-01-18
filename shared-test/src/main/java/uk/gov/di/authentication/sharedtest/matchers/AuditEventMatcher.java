@@ -3,6 +3,7 @@ package uk.gov.di.authentication.sharedtest.matchers;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 import uk.gov.di.audit.AuditPayload;
+import uk.gov.di.authentication.shared.domain.AuditableEvent;
 
 import java.util.function.Function;
 
@@ -19,10 +20,9 @@ public class AuditEventMatcher<T> extends TypeSafeDiagnosingMatcher<AuditPayload
         this.expected = expected;
     }
 
-    public static <T extends Enum<T>> AuditEventMatcher<T> hasEventType(
-            Class<T> clazz, T eventType) {
-        Function<AuditPayload.AuditEvent, T> extractEventType =
-                auditEvent -> T.valueOf(clazz, auditEvent.getEventName());
+    public static AuditEventMatcher<AuditableEvent> hasEventType(AuditableEvent eventType) {
+        Function<AuditPayload.AuditEvent, AuditableEvent> extractEventType =
+                auditEvent -> eventType.parseFromName(auditEvent.getEventName());
 
         return new AuditEventMatcher<>("event name", extractEventType, eventType);
     }

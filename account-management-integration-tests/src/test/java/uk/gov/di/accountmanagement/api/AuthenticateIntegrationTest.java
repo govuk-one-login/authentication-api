@@ -2,7 +2,6 @@ package uk.gov.di.accountmanagement.api;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.AuthenticateRequest;
 import uk.gov.di.accountmanagement.lambda.AuthenticateHandler;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -42,10 +41,7 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
                 .untilAsserted(() -> assertThat(auditTopic.getCountOfRequests(), equalTo(1)));
         assertThat(
                 auditTopic.getAuditEvents(),
-                hasItem(
-                        hasEventType(
-                                AccountManagementAuditableEvent.class,
-                                ACCOUNT_MANAGEMENT_AUTHENTICATE)));
+                hasItem(hasEventType(ACCOUNT_MANAGEMENT_AUTHENTICATE)));
     }
 
     @Test

@@ -51,7 +51,11 @@ class AuditServiceTest {
     @Captor private ArgumentCaptor<String> messageCaptor;
 
     enum TestEvents implements AuditableEvent {
-        TEST_EVENT_ONE
+        TEST_EVENT_ONE;
+
+        public AuditableEvent parseFromName(String name) {
+            return valueOf(name);
+        }
     }
 
     @BeforeEach

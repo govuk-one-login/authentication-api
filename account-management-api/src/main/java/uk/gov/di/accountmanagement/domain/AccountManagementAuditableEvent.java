@@ -8,5 +8,9 @@ public enum AccountManagementAuditableEvent implements AuditableEvent {
     UPDATE_PHONE_NUMBER,
     ACCOUNT_MANAGEMENT_AUTHENTICATE,
     DELETE_ACCOUNT,
-    SEND_OTP
+    SEND_OTP;
+
+    public AuditableEvent parseFromName(String name) {
+        return valueOf(name);
+    }
 }
