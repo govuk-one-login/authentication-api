@@ -4,7 +4,7 @@ module "lambda_warmer_role" {
 
   environment = var.environment
   role_name   = "lambda-warmer"
-  vpc_arn     = aws_vpc.account_management_vpc.arn
+  vpc_arn     = local.vpc_arn
 
   policies_to_attach = [
     aws_iam_policy.lambda_warmer_policy[0].arn

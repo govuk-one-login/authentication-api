@@ -19,7 +19,7 @@ module "delete_account" {
   root_resource_id                       = aws_api_gateway_rest_api.di_account_management_api.root_resource_id
   execution_arn                          = aws_api_gateway_rest_api.di_account_management_api.execution_arn
   lambda_zip_file                        = var.lambda_zip_file
-  authentication_vpc_arn                 = aws_vpc.account_management_vpc.arn
+  authentication_vpc_arn                 = local.vpc_arn
   security_group_ids                     = [local.allow_aws_service_access_security_group_id]
   subnet_id                              = local.private_subnet_ids
   environment                            = var.environment

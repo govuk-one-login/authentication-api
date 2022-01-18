@@ -2,7 +2,7 @@ module "account_management_sqs_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "account-management-sqs"
-  vpc_arn     = aws_vpc.account_management_vpc.arn
+  vpc_arn     = local.vpc_arn
 }
 
 resource "aws_sqs_queue" "email_queue" {
