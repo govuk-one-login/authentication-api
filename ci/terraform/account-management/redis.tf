@@ -6,11 +6,7 @@ resource "aws_elasticache_subnet_group" "account_management_sessions_store" {
   count = var.use_localstack ? 0 : 1
 
   name       = "${var.environment}-account-mgmt-session-store-cache-subnet"
-  subnet_ids = aws_subnet.account_management_subnets.*.id
-  depends_on = [
-    aws_vpc.account_management_vpc,
-    aws_subnet.account_management_subnets,
-  ]
+  subnet_ids = local.private_subnet_ids
 }
 
 resource "random_password" "redis_password" {
@@ -58,9 +54,4 @@ resource "aws_elasticache_replication_group" "account_management_sessions_store"
   }
 
   tags = local.default_tags
-
-  depends_on = [
-    aws_vpc.account_management_vpc,
-    aws_subnet.account_management_subnets,
-  ]
 }
