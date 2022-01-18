@@ -130,7 +130,7 @@ variable "lambda_warmer_zip_file" {
   type        = string
 }
 
-variable "shared_state_bucket" {
+variable "common_state_bucket" {
   type = string
 }
 
