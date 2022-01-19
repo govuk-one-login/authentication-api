@@ -14,13 +14,16 @@ module "delete_account" {
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.RemoveAccountHandler::handleRequest"
 
-  authorizer_id                          = aws_api_gateway_authorizer.di_account_management_api.id
-  rest_api_id                            = aws_api_gateway_rest_api.di_account_management_api.id
-  root_resource_id                       = aws_api_gateway_rest_api.di_account_management_api.root_resource_id
-  execution_arn                          = aws_api_gateway_rest_api.di_account_management_api.execution_arn
-  lambda_zip_file                        = var.lambda_zip_file
-  authentication_vpc_arn                 = local.vpc_arn
-  security_group_ids                     = [local.allow_aws_service_access_security_group_id]
+  authorizer_id          = aws_api_gateway_authorizer.di_account_management_api.id
+  rest_api_id            = aws_api_gateway_rest_api.di_account_management_api.id
+  root_resource_id       = aws_api_gateway_rest_api.di_account_management_api.root_resource_id
+  execution_arn          = aws_api_gateway_rest_api.di_account_management_api.execution_arn
+  lambda_zip_file        = var.lambda_zip_file
+  authentication_vpc_arn = local.vpc_arn
+  security_group_ids = [
+    local.allow_aws_service_access_security_group_id,
+    aws_security_group.allow_access_to_am_redis.id,
+  ]
   subnet_id                              = local.private_subnet_ids
   environment                            = var.environment
   lambda_role_arn                        = module.account_notification_dynamo_sqs_role.arn
