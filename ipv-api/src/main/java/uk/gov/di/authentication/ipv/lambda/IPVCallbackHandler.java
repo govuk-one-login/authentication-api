@@ -13,9 +13,10 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
-import uk.gov.di.authentication.shared.helpers.CookieHelper;
+import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
+import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URISyntaxException;
 import java.util.Map;
@@ -31,6 +32,7 @@ public class IPVCallbackHandler
     private final ConfigurationService configurationService;
     private final IPVAuthorisationService ipvAuthorisationService;
     private final IPVTokenService ipvTokenService;
+    private final SessionService sessionService;
 
     public IPVCallbackHandler() {
         this(ConfigurationService.getInstance());
@@ -39,10 +41,12 @@ public class IPVCallbackHandler
     public IPVCallbackHandler(
             ConfigurationService configurationService,
             IPVAuthorisationService responseService,
-            IPVTokenService ipvTokenService) {
+            IPVTokenService ipvTokenService,
+            SessionService sessionService) {
         this.configurationService = configurationService;
         this.ipvAuthorisationService = responseService;
         this.ipvTokenService = ipvTokenService;
+        this.sessionService = sessionService;
     }
 
     public IPVCallbackHandler(ConfigurationService configurationService) {
@@ -53,6 +57,7 @@ public class IPVCallbackHandler
         this.ipvTokenService =
                 new IPVTokenService(
                         configurationService, new RedisConnectionService(configurationService));
+        this.sessionService = new SessionService(configurationService);
     }
 
     @Override
@@ -62,19 +67,20 @@ public class IPVCallbackHandler
                 .orElseGet(
                         () -> {
                             LOG.info("Request received to IPVCallbackHandler");
-                            CookieHelper.SessionCookieIds sessionCookieIds;
+                            Session session;
                             try {
-                                sessionCookieIds =
-                                        CookieHelper.parseSessionCookie(input.getHeaders())
+                                session =
+                                        sessionService
+                                                .getSessionFromSessionCookie(input.getHeaders())
                                                 .orElseThrow();
                             } catch (NoSuchElementException e) {
-                                LOG.error("SessionID not found in cookie");
+                                LOG.error("Session not found");
                                 throw new RuntimeException(e);
                             }
                             Optional<ErrorObject> errorObject =
                                     ipvAuthorisationService.validateResponse(
                                             input.getQueryStringParameters(),
-                                            sessionCookieIds.getSessionId());
+                                            session.getSessionId());
                             if (errorObject.isPresent()) {
                                 LOG.error(
                                         "Error in IPV AuthorisationResponse. ErrorCode: {}. ErrorDescription: {}",
@@ -95,7 +101,7 @@ public class IPVCallbackHandler
                             }
                             ipvTokenService.saveAccessTokenToRedis(
                                     tokenResponse.toSuccessResponse().getTokens().getAccessToken(),
-                                    sessionCookieIds.getSessionId());
+                                    session.getSessionId());
 
                             return new APIGatewayProxyResponseEvent()
                                     .withStatusCode(302)
