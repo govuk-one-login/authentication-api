@@ -30,6 +30,8 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     protected static final ConfigurationService configurationService =
             new IPVCallbackHandlerIntegrationTest.TestConfigurationService(ipvStub);
 
+    private static final String TEST_EMAIL_ADDRESS = "test@test.com";
+
     @BeforeEach
     void setup() {
         ipvStub.init();
@@ -43,6 +45,8 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         State state = new State();
         redis.createSession(sessionId);
         redis.addStateToRedis(state, sessionId);
+        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        userStore.signUp(TEST_EMAIL_ADDRESS, "wrong-password");
         var response =
                 makeRequest(
                         Optional.empty(),

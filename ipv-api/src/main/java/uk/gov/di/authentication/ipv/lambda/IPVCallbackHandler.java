@@ -14,7 +14,9 @@ import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
@@ -33,6 +35,7 @@ public class IPVCallbackHandler
     private final IPVAuthorisationService ipvAuthorisationService;
     private final IPVTokenService ipvTokenService;
     private final SessionService sessionService;
+    private final DynamoService dynamoService;
 
     public IPVCallbackHandler() {
         this(ConfigurationService.getInstance());
@@ -42,11 +45,13 @@ public class IPVCallbackHandler
             ConfigurationService configurationService,
             IPVAuthorisationService responseService,
             IPVTokenService ipvTokenService,
-            SessionService sessionService) {
+            SessionService sessionService,
+            DynamoService dynamoService) {
         this.configurationService = configurationService;
         this.ipvAuthorisationService = responseService;
         this.ipvTokenService = ipvTokenService;
         this.sessionService = sessionService;
+        this.dynamoService = dynamoService;
     }
 
     public IPVCallbackHandler(ConfigurationService configurationService) {
@@ -58,6 +63,7 @@ public class IPVCallbackHandler
                 new IPVTokenService(
                         configurationService, new RedisConnectionService(configurationService));
         this.sessionService = new SessionService(configurationService);
+        this.dynamoService = new DynamoService(configurationService);
     }
 
     @Override
@@ -87,6 +93,13 @@ public class IPVCallbackHandler
                                         errorObject.get().getCode(),
                                         errorObject.get().getDescription());
                                 throw new RuntimeException("Error in IPV AuthorisationResponse");
+                            }
+                            Optional<UserProfile> userProfile =
+                                    dynamoService.getUserProfileFromEmail(
+                                            session.getEmailAddress());
+                            if (userProfile.isEmpty()) {
+                                throw new RuntimeException(
+                                        "Email from session does not have a user profile");
                             }
                             TokenRequest tokenRequest =
                                     ipvTokenService.constructTokenRequest(
