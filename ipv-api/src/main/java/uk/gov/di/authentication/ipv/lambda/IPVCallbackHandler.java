@@ -36,6 +36,7 @@ public class IPVCallbackHandler
     private final IPVTokenService ipvTokenService;
     private final SessionService sessionService;
     private final DynamoService dynamoService;
+    private static final String REDIRECT_PATH = "auth-code";
 
     public IPVCallbackHandler() {
         this(ConfigurationService.getInstance());
@@ -120,7 +121,8 @@ public class IPVCallbackHandler
     }
 
     private String buildRedirectUri() {
-        URIBuilder redirectUriBuilder = new URIBuilder(configurationService.getLoginURI());
+        URIBuilder redirectUriBuilder =
+                new URIBuilder(configurationService.getLoginURI()).setPath(REDIRECT_PATH);
         try {
             return redirectUriBuilder.build().toString();
         } catch (URISyntaxException e) {

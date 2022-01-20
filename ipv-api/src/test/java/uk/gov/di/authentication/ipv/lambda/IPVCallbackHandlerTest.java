@@ -12,6 +12,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.Tokens;
+import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
@@ -24,6 +25,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -74,7 +76,7 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToLoginUriForSuccessfulResponse() {
+    void shouldRedirectToLoginUriForSuccessfulResponse() throws URISyntaxException {
         usingValidSession();
         TokenResponse successfulTokenResponse =
                 new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
@@ -95,7 +97,8 @@ class IPVCallbackHandlerTest {
         APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
 
         assertThat(response, hasStatus(302));
-        assertThat(response.getHeaders().get("Location"), equalTo(LOGIN_URL.toString()));
+        URI redirectUri = new URIBuilder(LOGIN_URL).setPath("auth-code").build();
+        assertThat(response.getHeaders().get("Location"), equalTo(redirectUri.toString()));
     }
 
     @Test
