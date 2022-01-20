@@ -6,20 +6,27 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.AccessTokenResponse;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.TokenResponse;
+import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.Tokens;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
+import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -36,7 +43,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -50,18 +56,23 @@ class IPVCallbackHandlerTest {
     private final IPVTokenService ipvTokenService = mock(IPVTokenService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
+    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private static final URI LOGIN_URL = URI.create("https://example.com");
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final String COOKIE = "Cookie";
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
+    private static final URI REDIRECT_URI = URI.create("test-uri");
+    private static final ClientID CLIENT_ID = new ClientID();
     private static final Subject PUBLIC_SUBJECT = new Subject();
     private static final State STATE = new State();
     private IPVCallbackHandler handler;
 
-    private final Session session =
-            new Session(IdGenerator.generate()).setEmailAddress(TEST_EMAIL_ADDRESS);
+    private final Session session = new Session(SESSION_ID).setEmailAddress(TEST_EMAIL_ADDRESS);
+
+    private final ClientSession clientSession =
+            new ClientSession(generateAuthRequest().toParameters(), null, null);
 
     @BeforeEach
     void setUp() {
@@ -71,13 +82,15 @@ class IPVCallbackHandlerTest {
                         responseService,
                         ipvTokenService,
                         sessionService,
-                        dynamoService);
+                        dynamoService,
+                        clientSessionService);
         when(configService.getLoginURI()).thenReturn(LOGIN_URL);
     }
 
     @Test
     void shouldRedirectToLoginUriForSuccessfulResponse() throws URISyntaxException {
         usingValidSession();
+        usingValidClientSession();
         TokenResponse successfulTokenResponse =
                 new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
         TokenRequest tokenRequest = mock(TokenRequest.class);
@@ -118,6 +131,7 @@ class IPVCallbackHandlerTest {
     @Test
     void shouldThrowWhenUserProfileNotFound() {
         usingValidSession();
+        usingValidClientSession();
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
         responseHeaders.put("state", STATE.getValue());
@@ -177,7 +191,11 @@ class IPVCallbackHandlerTest {
     }
 
     private void usingValidSession() {
-        when(sessionService.getSessionFromSessionCookie(anyMap())).thenReturn(Optional.of(session));
+        when(sessionService.readSessionFromRedis(SESSION_ID)).thenReturn(Optional.of(session));
+    }
+
+    private void usingValidClientSession() {
+        when(clientSessionService.getClientSession(CLIENT_SESSION_ID)).thenReturn(clientSession);
     }
 
     private UserProfile generateUserProfile() {
@@ -188,5 +206,19 @@ class IPVCallbackHandlerTest {
                 .setPhoneNumberVerified(true)
                 .setPublicSubjectID(PUBLIC_SUBJECT.getValue())
                 .setSubjectID(new Subject().getValue());
+    }
+
+    public static AuthenticationRequest generateAuthRequest() {
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        State state = new State();
+        Scope scope = new Scope();
+        Nonce nonce = new Nonce();
+        scope.add(OIDCScopeValue.OPENID);
+        scope.add("phone");
+        scope.add("email");
+        return new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
+                .state(state)
+                .nonce(nonce)
+                .build();
     }
 }
