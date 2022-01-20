@@ -24,12 +24,14 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URI;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyMap;
@@ -94,6 +96,46 @@ class IPVCallbackHandlerTest {
 
         assertThat(response, hasStatus(302));
         assertThat(response.getHeaders().get("Location"), equalTo(LOGIN_URL.toString()));
+    }
+
+    @Test
+    void shouldThrowWhenSessionIsNotFoundInRedis() {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setQueryStringParameters(Collections.emptyMap());
+        event.setHeaders(Map.of(COOKIE, buildCookieString()));
+        RuntimeException expectedException =
+                assertThrows(
+                        RuntimeException.class,
+                        () -> handler.handleRequest(event, context),
+                        "Expected to throw exception");
+
+        assertThat(expectedException.getMessage(), containsString("Session not found"));
+    }
+
+    @Test
+    void shouldThrowWhenUserProfileNotFound() {
+        usingValidSession();
+        Map<String, String> responseHeaders = new HashMap<>();
+        responseHeaders.put("code", AUTH_CODE.getValue());
+        responseHeaders.put("state", STATE.getValue());
+        when(responseService.validateResponse(responseHeaders, SESSION_ID))
+                .thenReturn(Optional.empty());
+        when(dynamoService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
+                .thenReturn(Optional.empty());
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setQueryStringParameters(responseHeaders);
+        event.setHeaders(Map.of(COOKIE, buildCookieString()));
+
+        RuntimeException expectedException =
+                assertThrows(
+                        RuntimeException.class,
+                        () -> handler.handleRequest(event, context),
+                        "Expected to throw exception");
+
+        assertThat(
+                expectedException.getMessage(),
+                equalTo("Email from session does not have a user profile"));
     }
 
     @Test
