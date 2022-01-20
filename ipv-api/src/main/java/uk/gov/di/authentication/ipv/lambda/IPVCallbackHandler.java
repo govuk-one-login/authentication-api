@@ -59,9 +59,7 @@ public class IPVCallbackHandler
         this.ipvAuthorisationService =
                 new IPVAuthorisationService(
                         configurationService, new RedisConnectionService(configurationService));
-        this.ipvTokenService =
-                new IPVTokenService(
-                        configurationService, new RedisConnectionService(configurationService));
+        this.ipvTokenService = new IPVTokenService(configurationService);
         this.sessionService = new SessionService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
     }
@@ -81,7 +79,7 @@ public class IPVCallbackHandler
                                                 .orElseThrow();
                             } catch (NoSuchElementException e) {
                                 LOG.error("Session not found");
-                                throw new RuntimeException(e);
+                                throw new RuntimeException("Session not found", e);
                             }
                             Optional<ErrorObject> errorObject =
                                     ipvAuthorisationService.validateResponse(
@@ -98,6 +96,7 @@ public class IPVCallbackHandler
                                     dynamoService.getUserProfileFromEmail(
                                             session.getEmailAddress());
                             if (userProfile.isEmpty()) {
+                                LOG.error("Email from session does not have a user profile");
                                 throw new RuntimeException(
                                         "Email from session does not have a user profile");
                             }
@@ -112,9 +111,6 @@ public class IPVCallbackHandler
                                         tokenResponse.toErrorResponse().toJSONObject());
                                 throw new RuntimeException("IPV TokenResponse was not successful");
                             }
-                            ipvTokenService.saveAccessTokenToRedis(
-                                    tokenResponse.toSuccessResponse().getTokens().getAccessToken(),
-                                    session.getSessionId());
 
                             return new APIGatewayProxyResponseEvent()
                                     .withStatusCode(302)
