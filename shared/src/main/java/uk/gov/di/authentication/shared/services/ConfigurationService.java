@@ -84,6 +84,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("EMAIL_QUEUE_URL");
     }
 
+    public String getSpotQueueUri() {
+        return System.getenv("SPOT_QUEUE_URL");
+    }
+
     public String getFrontendBaseUrl() {
         return System.getenv().getOrDefault("FRONTEND_BASE_URL", "");
     }
