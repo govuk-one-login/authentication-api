@@ -89,7 +89,7 @@ subprojects {
                 "com.fasterxml.jackson.core:jackson-databind:${dependencyVersions.jackson_version}",
                 "com.fasterxml.jackson.core:jackson-annotations:${dependencyVersions.jackson_version}",
                 "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${dependencyVersions.jackson_version}",
-                "org.hibernate.validator:hibernate-validator:7.0.1.Final",
+                "org.hibernate.validator:hibernate-validator:7.0.2.Final",
                 "org.glassfish:jakarta.el:4.0.2",
                 "jakarta.xml.bind:jakarta.xml.bind-api:3.0.1",
                 "com.sun.xml.bind:jaxb-impl:3.0.2"
