@@ -6,24 +6,41 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.AccessTokenResponse;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.TokenResponse;
+import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.Tokens;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
+import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
@@ -37,22 +54,43 @@ class IPVCallbackHandlerTest {
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final IPVAuthorisationService responseService = mock(IPVAuthorisationService.class);
     private final IPVTokenService ipvTokenService = mock(IPVTokenService.class);
+    private final SessionService sessionService = mock(SessionService.class);
+    private final DynamoService dynamoService = mock(DynamoService.class);
+    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private static final URI LOGIN_URL = URI.create("https://example.com");
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final String COOKIE = "Cookie";
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
+    private static final String TEST_EMAIL_ADDRESS = "test@test.com";
+    private static final URI REDIRECT_URI = URI.create("test-uri");
+    private static final ClientID CLIENT_ID = new ClientID();
+    private static final Subject PUBLIC_SUBJECT = new Subject();
     private static final State STATE = new State();
     private IPVCallbackHandler handler;
 
+    private final Session session = new Session(SESSION_ID).setEmailAddress(TEST_EMAIL_ADDRESS);
+
+    private final ClientSession clientSession =
+            new ClientSession(generateAuthRequest().toParameters(), null, null);
+
     @BeforeEach
     void setUp() {
-        handler = new IPVCallbackHandler(configService, responseService, ipvTokenService);
+        handler =
+                new IPVCallbackHandler(
+                        configService,
+                        responseService,
+                        ipvTokenService,
+                        sessionService,
+                        dynamoService,
+                        clientSessionService);
         when(configService.getLoginURI()).thenReturn(LOGIN_URL);
     }
 
     @Test
-    void shouldRedirectToLoginUriForSuccessfulResponse() {
+    void shouldRedirectToLoginUriForSuccessfulResponse() throws URISyntaxException {
+        usingValidSession();
+        usingValidClientSession();
         TokenResponse successfulTokenResponse =
                 new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
         TokenRequest tokenRequest = mock(TokenRequest.class);
@@ -61,6 +99,8 @@ class IPVCallbackHandlerTest {
         responseHeaders.put("state", STATE.getValue());
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.empty());
+        when(dynamoService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(generateUserProfile()));
         when(ipvTokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
         when(ipvTokenService.sendTokenRequest(tokenRequest)).thenReturn(successfulTokenResponse);
 
@@ -70,7 +110,49 @@ class IPVCallbackHandlerTest {
         APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
 
         assertThat(response, hasStatus(302));
-        assertThat(response.getHeaders().get("Location"), equalTo(LOGIN_URL.toString()));
+        URI redirectUri = new URIBuilder(LOGIN_URL).setPath("auth-code").build();
+        assertThat(response.getHeaders().get("Location"), equalTo(redirectUri.toString()));
+    }
+
+    @Test
+    void shouldThrowWhenSessionIsNotFoundInRedis() {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setQueryStringParameters(Collections.emptyMap());
+        event.setHeaders(Map.of(COOKIE, buildCookieString()));
+        RuntimeException expectedException =
+                assertThrows(
+                        RuntimeException.class,
+                        () -> handler.handleRequest(event, context),
+                        "Expected to throw exception");
+
+        assertThat(expectedException.getMessage(), containsString("Session not found"));
+    }
+
+    @Test
+    void shouldThrowWhenUserProfileNotFound() {
+        usingValidSession();
+        usingValidClientSession();
+        Map<String, String> responseHeaders = new HashMap<>();
+        responseHeaders.put("code", AUTH_CODE.getValue());
+        responseHeaders.put("state", STATE.getValue());
+        when(responseService.validateResponse(responseHeaders, SESSION_ID))
+                .thenReturn(Optional.empty());
+        when(dynamoService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
+                .thenReturn(Optional.empty());
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setQueryStringParameters(responseHeaders);
+        event.setHeaders(Map.of(COOKIE, buildCookieString()));
+
+        RuntimeException expectedException =
+                assertThrows(
+                        RuntimeException.class,
+                        () -> handler.handleRequest(event, context),
+                        "Expected to throw exception");
+
+        assertThat(
+                expectedException.getMessage(),
+                equalTo("Email from session does not have a user profile"));
     }
 
     @Test
@@ -106,5 +188,37 @@ class IPVCallbackHandlerTest {
         return format(
                 "%s=%s.%s; Max-Age=%d; %s",
                 "gs", SESSION_ID, CLIENT_SESSION_ID, 3600, "Secure; HttpOnly;");
+    }
+
+    private void usingValidSession() {
+        when(sessionService.readSessionFromRedis(SESSION_ID)).thenReturn(Optional.of(session));
+    }
+
+    private void usingValidClientSession() {
+        when(clientSessionService.getClientSession(CLIENT_SESSION_ID)).thenReturn(clientSession);
+    }
+
+    private UserProfile generateUserProfile() {
+        return new UserProfile()
+                .setEmail(TEST_EMAIL_ADDRESS)
+                .setEmailVerified(true)
+                .setPhoneNumber("012345678902")
+                .setPhoneNumberVerified(true)
+                .setPublicSubjectID(PUBLIC_SUBJECT.getValue())
+                .setSubjectID(new Subject().getValue());
+    }
+
+    public static AuthenticationRequest generateAuthRequest() {
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        State state = new State();
+        Scope scope = new Scope();
+        Nonce nonce = new Nonce();
+        scope.add(OIDCScopeValue.OPENID);
+        scope.add("phone");
+        scope.add("email");
+        return new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
+                .state(state)
+                .nonce(nonce)
+                .build();
     }
 }

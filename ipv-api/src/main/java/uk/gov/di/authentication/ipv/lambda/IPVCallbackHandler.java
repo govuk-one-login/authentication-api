@@ -4,9 +4,8 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.ErrorObject;
-import com.nimbusds.oauth2.sdk.TokenRequest;
-import com.nimbusds.oauth2.sdk.TokenResponse;
+import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -14,13 +13,16 @@ import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
+import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
+import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Optional;
+import java.util.Objects;
 
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
@@ -31,6 +33,10 @@ public class IPVCallbackHandler
     private final ConfigurationService configurationService;
     private final IPVAuthorisationService ipvAuthorisationService;
     private final IPVTokenService ipvTokenService;
+    private final SessionService sessionService;
+    private final DynamoService dynamoService;
+    private final ClientSessionService clientSessionService;
+    private static final String REDIRECT_PATH = "auth-code";
 
     public IPVCallbackHandler() {
         this(ConfigurationService.getInstance());
@@ -39,10 +45,16 @@ public class IPVCallbackHandler
     public IPVCallbackHandler(
             ConfigurationService configurationService,
             IPVAuthorisationService responseService,
-            IPVTokenService ipvTokenService) {
+            IPVTokenService ipvTokenService,
+            SessionService sessionService,
+            DynamoService dynamoService,
+            ClientSessionService clientSessionService) {
         this.configurationService = configurationService;
         this.ipvAuthorisationService = responseService;
         this.ipvTokenService = ipvTokenService;
+        this.sessionService = sessionService;
+        this.dynamoService = dynamoService;
+        this.clientSessionService = clientSessionService;
     }
 
     public IPVCallbackHandler(ConfigurationService configurationService) {
@@ -50,9 +62,10 @@ public class IPVCallbackHandler
         this.ipvAuthorisationService =
                 new IPVAuthorisationService(
                         configurationService, new RedisConnectionService(configurationService));
-        this.ipvTokenService =
-                new IPVTokenService(
-                        configurationService, new RedisConnectionService(configurationService));
+        this.ipvTokenService = new IPVTokenService(configurationService);
+        this.sessionService = new SessionService(configurationService);
+        this.dynamoService = new DynamoService(configurationService);
+        this.clientSessionService = new ClientSessionService(configurationService);
     }
 
     @Override
@@ -62,40 +75,67 @@ public class IPVCallbackHandler
                 .orElseGet(
                         () -> {
                             LOG.info("Request received to IPVCallbackHandler");
-                            CookieHelper.SessionCookieIds sessionCookieIds;
                             try {
-                                sessionCookieIds =
+                                var sessionCookiesIds =
                                         CookieHelper.parseSessionCookie(input.getHeaders())
                                                 .orElseThrow();
+                                var session =
+                                        sessionService
+                                                .readSessionFromRedis(
+                                                        sessionCookiesIds.getSessionId())
+                                                .orElseThrow();
+                                var clientSession =
+                                        clientSessionService.getClientSession(
+                                                sessionCookiesIds.getClientSessionId());
+                                if (Objects.isNull(clientSession)) {
+                                    throw new RuntimeException();
+                                }
+                                var clientId =
+                                        AuthenticationRequest.parse(
+                                                        clientSession.getAuthRequestParams())
+                                                .getClientID()
+                                                .getValue();
+
+                                var errorObject =
+                                        ipvAuthorisationService.validateResponse(
+                                                input.getQueryStringParameters(),
+                                                session.getSessionId());
+                                if (errorObject.isPresent()) {
+                                    LOG.error(
+                                            "Error in IPV AuthorisationResponse. ErrorCode: {}. ErrorDescription: {}",
+                                            errorObject.get().getCode(),
+                                            errorObject.get().getDescription());
+                                    throw new RuntimeException(
+                                            "Error in IPV AuthorisationResponse");
+                                }
+                                var userProfile =
+                                        dynamoService
+                                                .getUserProfileFromEmail(session.getEmailAddress())
+                                                .orElse(null);
+                                if (Objects.isNull(userProfile)) {
+                                    LOG.error("Email from session does not have a user profile");
+                                    throw new RuntimeException(
+                                            "Email from session does not have a user profile");
+                                }
+                                var tokenRequest =
+                                        ipvTokenService.constructTokenRequest(
+                                                input.getQueryStringParameters().get("code"));
+                                var tokenResponse = ipvTokenService.sendTokenRequest(tokenRequest);
+                                if (!tokenResponse.indicatesSuccess()) {
+                                    LOG.error(
+                                            "IPV TokenResponse was not successful: {}",
+                                            tokenResponse.toErrorResponse().toJSONObject());
+                                    throw new RuntimeException(
+                                            "IPV TokenResponse was not successful");
+                                }
                             } catch (NoSuchElementException e) {
-                                LOG.error("SessionID not found in cookie");
-                                throw new RuntimeException(e);
+                                LOG.error("Session not found");
+                                throw new RuntimeException("Session not found", e);
+                            } catch (ParseException e) {
+                                LOG.info(
+                                        "Cannot retrieve auth request params from client session id");
+                                throw new RuntimeException();
                             }
-                            Optional<ErrorObject> errorObject =
-                                    ipvAuthorisationService.validateResponse(
-                                            input.getQueryStringParameters(),
-                                            sessionCookieIds.getSessionId());
-                            if (errorObject.isPresent()) {
-                                LOG.error(
-                                        "Error in IPV AuthorisationResponse. ErrorCode: {}. ErrorDescription: {}",
-                                        errorObject.get().getCode(),
-                                        errorObject.get().getDescription());
-                                throw new RuntimeException("Error in IPV AuthorisationResponse");
-                            }
-                            TokenRequest tokenRequest =
-                                    ipvTokenService.constructTokenRequest(
-                                            input.getQueryStringParameters().get("code"));
-                            TokenResponse tokenResponse =
-                                    ipvTokenService.sendTokenRequest(tokenRequest);
-                            if (!tokenResponse.indicatesSuccess()) {
-                                LOG.error(
-                                        "IPV TokenResponse was not successful: {}",
-                                        tokenResponse.toErrorResponse().toJSONObject());
-                                throw new RuntimeException("IPV TokenResponse was not successful");
-                            }
-                            ipvTokenService.saveAccessTokenToRedis(
-                                    tokenResponse.toSuccessResponse().getTokens().getAccessToken(),
-                                    sessionCookieIds.getSessionId());
 
                             return new APIGatewayProxyResponseEvent()
                                     .withStatusCode(302)
@@ -105,7 +145,8 @@ public class IPVCallbackHandler
     }
 
     private String buildRedirectUri() {
-        URIBuilder redirectUriBuilder = new URIBuilder(configurationService.getLoginURI());
+        URIBuilder redirectUriBuilder =
+                new URIBuilder(configurationService.getLoginURI()).setPath(REDIRECT_PATH);
         try {
             return redirectUriBuilder.build().toString();
         } catch (URISyntaxException e) {

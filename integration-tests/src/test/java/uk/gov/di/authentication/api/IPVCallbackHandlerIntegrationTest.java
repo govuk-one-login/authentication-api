@@ -1,7 +1,13 @@
 package uk.gov.di.authentication.api;
 
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
+import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +36,10 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     protected static final ConfigurationService configurationService =
             new IPVCallbackHandlerIntegrationTest.TestConfigurationService(ipvStub);
 
+    private static final String CLIENT_ID = "test-client-id";
+    private static final String REDIRECT_URI = "http://localhost/redirect";
+    private static final String TEST_EMAIL_ADDRESS = "test@test.com";
+
     @BeforeEach
     void setup() {
         ipvStub.init();
@@ -40,9 +50,21 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     void shouldReturn200AndClientInfoResponseForValidClient() throws IOException {
         String sessionId = "some-session-id";
         String clientSessionId = "some-client-session-id";
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        AuthenticationRequest.Builder authRequestBuilder =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                scope,
+                                new ClientID(CLIENT_ID),
+                                URI.create(REDIRECT_URI))
+                        .nonce(new Nonce());
         State state = new State();
         redis.createSession(sessionId);
+        redis.createClientSession(clientSessionId, authRequestBuilder.build().toParameters());
         redis.addStateToRedis(state, sessionId);
+        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        userStore.signUp(TEST_EMAIL_ADDRESS, "wrong-password");
         var response =
                 makeRequest(
                         Optional.empty(),
