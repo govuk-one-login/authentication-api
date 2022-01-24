@@ -6,7 +6,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
@@ -38,7 +37,7 @@ import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
-import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
+import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.nio.ByteBuffer;
@@ -400,7 +399,7 @@ public class TokenServiceTest {
                         .algorithm(JWSAlgorithm.ES256)
                         .generate();
         ECDSASigner ecdsaSigner = new ECDSASigner(ecSigningKey);
-        SignedJWT signedIdToken = createSignedIdToken(ecdsaSigner);
+        SignedJWT signedIdToken = createSignedIdToken(ecSigningKey);
         SignResult idTokenSignedResult = new SignResult();
         byte[] idTokenSignatureDer =
                 ECDSA.transcodeSignatureToDER(signedIdToken.getSignature().decode());
@@ -410,11 +409,11 @@ public class TokenServiceTest {
         when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(idTokenSignedResult);
     }
 
-    private SignedJWT createSignedIdToken(JWSSigner signer) {
+    private SignedJWT createSignedIdToken(ECKey ecSigningKey) {
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         return TokenGeneratorHelper.generateIDToken(
-                CLIENT_ID, PUBLIC_SUBJECT, BASE_URL, signer, KEY_ID, expiryDate);
+                CLIENT_ID, PUBLIC_SUBJECT, BASE_URL, ecSigningKey, expiryDate);
     }
 
     private void createSignedAccessToken() throws JOSEException {

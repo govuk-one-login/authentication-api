@@ -14,11 +14,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.entity.AuthPolicy;
 import uk.gov.di.accountmanagement.entity.TokenAuthorizerContext;
-import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
+import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;

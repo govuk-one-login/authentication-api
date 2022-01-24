@@ -3,6 +3,16 @@ package uk.gov.di.authentication.ipv.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.crypto.ECDSASigner;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AccessTokenResponse;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
@@ -23,11 +33,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
@@ -39,6 +51,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
+import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
@@ -57,6 +70,7 @@ class IPVCallbackHandlerTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
+    private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private static final URI LOGIN_URL = URI.create("https://example.com");
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final String COOKIE = "Cookie";
@@ -83,7 +97,8 @@ class IPVCallbackHandlerTest {
                         ipvTokenService,
                         sessionService,
                         dynamoService,
-                        clientSessionService);
+                        clientSessionService,
+                        dynamoClientService);
         when(configService.getLoginURI()).thenReturn(LOGIN_URL);
     }
 
@@ -97,12 +112,20 @@ class IPVCallbackHandlerTest {
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
         responseHeaders.put("state", STATE.getValue());
+        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                .thenReturn(Optional.of(generateClientRegistry()));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.empty());
         when(dynamoService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(generateUserProfile()));
         when(ipvTokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
         when(ipvTokenService.sendTokenRequest(tokenRequest)).thenReturn(successfulTokenResponse);
+        when(ipvTokenService.sendIpvInfoRequest(
+                        successfulTokenResponse
+                                .toSuccessResponse()
+                                .getTokens()
+                                .getBearerAccessToken()))
+                .thenReturn(generateSignedCredential().serialize());
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(responseHeaders);
@@ -135,6 +158,8 @@ class IPVCallbackHandlerTest {
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
         responseHeaders.put("state", STATE.getValue());
+        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                .thenReturn(Optional.of(generateClientRegistry()));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.empty());
         when(dynamoService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
@@ -157,6 +182,8 @@ class IPVCallbackHandlerTest {
 
     @Test
     void shouldThrowWhenAuthnResponseContainsError() {
+        usingValidSession();
+        usingValidClientSession();
         ErrorObject errorObject =
                 new ErrorObject(
                         "invalid_request_redirect_uri", "redirect_uri param must be provided");
@@ -164,7 +191,8 @@ class IPVCallbackHandlerTest {
         responseHeaders.put("code", AUTH_CODE.getValue());
         responseHeaders.put("state", STATE.getValue());
         responseHeaders.put("error", errorObject.toString());
-
+        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                .thenReturn(Optional.of(generateClientRegistry()));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.of(new ErrorObject(errorObject.getCode())));
 
@@ -172,10 +200,39 @@ class IPVCallbackHandlerTest {
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
         event.setQueryStringParameters(responseHeaders);
 
-        assertThrows(
-                RuntimeException.class,
-                () -> handler.handleRequest(event, context),
-                "Expected to throw exception");
+        RuntimeException expectedException =
+                assertThrows(
+                        RuntimeException.class,
+                        () -> handler.handleRequest(event, context),
+                        "Expected to throw exception");
+
+        assertThat(expectedException.getMessage(), equalTo("Error in IPV AuthorisationResponse"));
+
+        verifyNoInteractions(ipvTokenService);
+    }
+
+    @Test
+    void shouldThrowWhenClientRegistryIsNotFound() {
+        usingValidSession();
+        usingValidClientSession();
+        Map<String, String> responseHeaders = new HashMap<>();
+        responseHeaders.put("code", AUTH_CODE.getValue());
+        responseHeaders.put("state", STATE.getValue());
+        when(dynamoClientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.empty());
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of(COOKIE, buildCookieString()));
+        event.setQueryStringParameters(responseHeaders);
+
+        RuntimeException expectedException =
+                assertThrows(
+                        RuntimeException.class,
+                        () -> handler.handleRequest(event, context),
+                        "Expected to throw exception");
+
+        assertThat(
+                expectedException.getMessage(),
+                equalTo("Client registry not found with given clientId"));
 
         verifyNoInteractions(ipvTokenService);
     }
@@ -208,6 +265,16 @@ class IPVCallbackHandlerTest {
                 .setSubjectID(new Subject().getValue());
     }
 
+    private ClientRegistry generateClientRegistry() {
+        return new ClientRegistry()
+                .setClientID(CLIENT_ID.getValue())
+                .setConsentRequired(false)
+                .setClientName("test-client")
+                .setRedirectUrls(singletonList(REDIRECT_URI.toString()))
+                .setSectorIdentifierUri("https://test.com")
+                .setSubjectType("public");
+    }
+
     public static AuthenticationRequest generateAuthRequest() {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         State state = new State();
@@ -220,5 +287,22 @@ class IPVCallbackHandlerTest {
                 .state(state)
                 .nonce(nonce)
                 .build();
+    }
+
+    public SignedJWT generateSignedCredential() {
+        try {
+            ECKey ecSigningKey =
+                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+            JWSSigner signer = new ECDSASigner(ecSigningKey);
+            JWSHeader jwsHeader =
+                    new JWSHeader.Builder(JWSAlgorithm.ES256)
+                            .keyID(ecSigningKey.getKeyID())
+                            .build();
+            var signedJWT = new SignedJWT(jwsHeader, new JWTClaimsSet.Builder().build());
+            signedJWT.sign(signer);
+            return signedJWT;
+        } catch (JOSEException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
