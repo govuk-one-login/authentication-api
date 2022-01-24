@@ -2,7 +2,7 @@ module "account_notification_default_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "account-management-default-role"
-  vpc_arn     = aws_vpc.account_management_vpc.arn
+  vpc_arn     = local.vpc_arn
 
   policies_to_attach = var.use_localstack ? [aws_iam_policy.parameter_policy.arn] : [
     aws_iam_policy.lambda_kms_policy[0].arn,
@@ -16,7 +16,7 @@ module "account_notification_dynamo_sqs_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "account-management-dynamo-sqs"
-  vpc_arn     = aws_vpc.account_management_vpc.arn
+  vpc_arn     = local.vpc_arn
 
   policies_to_attach = var.use_localstack ? [aws_iam_policy.parameter_policy.arn] : [
     aws_iam_policy.lambda_dynamo_policy[0].arn,

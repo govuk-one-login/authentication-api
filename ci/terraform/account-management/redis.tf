@@ -7,11 +7,15 @@ resource "aws_elasticache_subnet_group" "account_management_sessions_store" {
 
   name       = "${var.environment}-account-mgmt-session-store-cache-subnet"
   subnet_ids = aws_subnet.account_management_subnets.*.id
-  depends_on = [
-    aws_vpc.account_management_vpc,
-    aws_subnet.account_management_subnets,
-  ]
 }
+
+resource "aws_elasticache_subnet_group" "account_management_redis_session_store" {
+  name       = "${var.environment}-acct-mgmt-redis-session-store-cache-subnet"
+  subnet_ids = local.private_subnet_ids
+
+  tags = local.default_tags
+}
+
 
 resource "random_password" "redis_password" {
   length = 32
@@ -28,7 +32,7 @@ resource "aws_elasticache_replication_group" "account_management_sessions_store"
 
   automatic_failover_enabled    = true
   availability_zones            = data.aws_availability_zones.available.names
-  replication_group_id          = "${var.environment}-account-mgmt-sessions-store"
+  replication_group_id          = "${var.environment}-acct-mgmt-session-store"
   replication_group_description = "A Redis cluster for storing user session data"
   node_type                     = var.redis_node_size
   number_cache_clusters         = length(data.aws_availability_zones.available.names)
@@ -46,9 +50,9 @@ resource "aws_elasticache_replication_group" "account_management_sessions_store"
   auth_token                 = random_password.redis_password.result
   apply_immediately          = true
 
-  subnet_group_name = aws_elasticache_subnet_group.account_management_sessions_store[0].name
+  subnet_group_name = aws_elasticache_subnet_group.account_management_redis_session_store.name
   security_group_ids = [
-    aws_security_group.redis_security_group.id,
+    aws_security_group.am_redis_security_group.id
   ]
 
   lifecycle {
@@ -58,9 +62,4 @@ resource "aws_elasticache_replication_group" "account_management_sessions_store"
   }
 
   tags = local.default_tags
-
-  depends_on = [
-    aws_vpc.account_management_vpc,
-    aws_subnet.account_management_subnets,
-  ]
 }

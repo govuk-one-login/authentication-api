@@ -2,7 +2,7 @@ module "account_management_sqs_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "account-management-sqs"
-  vpc_arn     = aws_vpc.account_management_vpc.arn
+  vpc_arn     = local.vpc_arn
 }
 
 resource "aws_sqs_queue" "email_queue" {
@@ -163,8 +163,8 @@ resource "aws_lambda_function" "email_sqs_lambda" {
 
   source_code_hash = filebase64sha256(var.lambda_zip_file)
   vpc_config {
-    security_group_ids = [aws_security_group.allow_egress.id]
-    subnet_ids         = aws_subnet.account_management_subnets.*.id
+    security_group_ids = [local.allow_egress_security_group_id]
+    subnet_ids         = local.private_subnet_ids
   }
   environment {
     variables = merge(var.notify_template_map, {

@@ -2,7 +2,7 @@
 data "terraform_remote_state" "shared" {
   backend = "s3"
   config = {
-    bucket                      = var.shared_state_bucket
+    bucket                      = var.common_state_bucket
     key                         = "${var.environment}-shared-terraform.tfstate"
     role_arn                    = var.deployer_role_arn
     region                      = var.aws_region

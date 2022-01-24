@@ -4,7 +4,7 @@ module "lambda_warmer_role" {
 
   environment = var.environment
   role_name   = "lambda-warmer"
-  vpc_arn     = aws_vpc.account_management_vpc.arn
+  vpc_arn     = local.vpc_arn
 
   policies_to_attach = [
     aws_iam_policy.lambda_warmer_policy[0].arn
@@ -49,8 +49,8 @@ resource "aws_lambda_function" "warmer_function" {
   source_code_hash = filebase64sha256(var.lambda_warmer_zip_file)
 
   vpc_config {
-    security_group_ids = [aws_security_group.allow_vpc_resources_only.id]
-    subnet_ids         = aws_subnet.account_management_subnets.*.id
+    security_group_ids = [local.allow_aws_service_access_security_group_id]
+    subnet_ids         = local.private_subnet_ids
   }
 
   environment {

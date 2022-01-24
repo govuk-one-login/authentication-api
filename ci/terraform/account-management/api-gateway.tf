@@ -85,8 +85,8 @@ resource "aws_lambda_function" "authorizer" {
   timeout          = 30
   memory_size      = 2048
   vpc_config {
-    security_group_ids = [aws_security_group.allow_vpc_resources_only.id]
-    subnet_ids         = aws_subnet.account_management_subnets.*.id
+    security_group_ids = [local.allow_egress_security_group_id]
+    subnet_ids         = local.private_subnet_ids
   }
   environment {
     variables = {
