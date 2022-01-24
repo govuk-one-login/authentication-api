@@ -19,6 +19,13 @@ public class DynamoClientService implements ClientService {
     private final DynamoDBMapper clientRegistryMapper;
     private final AmazonDynamoDB dynamoDB;
 
+    public DynamoClientService(ConfigurationService configurationService) {
+        this(
+                configurationService.getAwsRegion(),
+                configurationService.getEnvironment(),
+                configurationService.getDynamoEndpointUri());
+    }
+
     public DynamoClientService(String region, String environment, Optional<String> dynamoEndpoint) {
         String tableName = environment + "-" + CLIENT_REGISTRY_TABLE;
         dynamoDB =

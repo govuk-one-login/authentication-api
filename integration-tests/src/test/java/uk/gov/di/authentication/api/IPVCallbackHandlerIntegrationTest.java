@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
+import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.IPVStubExtension;
@@ -25,6 +26,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -37,6 +39,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
             new IPVCallbackHandlerIntegrationTest.TestConfigurationService(ipvStub);
 
     private static final String CLIENT_ID = "test-client-id";
+    private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String REDIRECT_URI = "http://localhost/redirect";
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
 
@@ -64,7 +67,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         redis.createClientSession(clientSessionId, authRequestBuilder.build().toParameters());
         redis.addStateToRedis(state, sessionId);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
-        userStore.signUp(TEST_EMAIL_ADDRESS, "wrong-password");
+        setUpDynamo();
         var response =
                 makeRequest(
                         Optional.empty(),
@@ -76,6 +79,22 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+    }
+
+    private void setUpDynamo() {
+        userStore.signUp(TEST_EMAIL_ADDRESS, "password");
+        clientStore.registerClient(
+                CLIENT_ID,
+                "test-client",
+                singletonList(REDIRECT_URI),
+                singletonList(EMAIL),
+                singletonList("openid"),
+                null,
+                singletonList("http://localhost/post-redirect-logout"),
+                String.valueOf(ServiceType.MANDATORY),
+                "https://test.com",
+                "public",
+                true);
     }
 
     private Map<String, String> constructQueryStringParameters(State state) {

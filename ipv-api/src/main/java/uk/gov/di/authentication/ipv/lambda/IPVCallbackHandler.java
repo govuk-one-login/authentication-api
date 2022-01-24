@@ -11,10 +11,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -36,6 +38,7 @@ public class IPVCallbackHandler
     private final SessionService sessionService;
     private final DynamoService dynamoService;
     private final ClientSessionService clientSessionService;
+    private final DynamoClientService dynamoClientService;
     private static final String REDIRECT_PATH = "auth-code";
 
     public IPVCallbackHandler() {
@@ -48,13 +51,15 @@ public class IPVCallbackHandler
             IPVTokenService ipvTokenService,
             SessionService sessionService,
             DynamoService dynamoService,
-            ClientSessionService clientSessionService) {
+            ClientSessionService clientSessionService,
+            DynamoClientService dynamoClientService) {
         this.configurationService = configurationService;
         this.ipvAuthorisationService = responseService;
         this.ipvTokenService = ipvTokenService;
         this.sessionService = sessionService;
         this.dynamoService = dynamoService;
         this.clientSessionService = clientSessionService;
+        this.dynamoClientService = dynamoClientService;
     }
 
     public IPVCallbackHandler(ConfigurationService configurationService) {
@@ -66,6 +71,7 @@ public class IPVCallbackHandler
         this.sessionService = new SessionService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
+        this.dynamoClientService = new DynamoClientService(configurationService);
     }
 
     @Override
@@ -88,6 +94,7 @@ public class IPVCallbackHandler
                                         clientSessionService.getClientSession(
                                                 sessionCookiesIds.getClientSessionId());
                                 if (Objects.isNull(clientSession)) {
+                                    LOG.error("ClientSession not found");
                                     throw new RuntimeException();
                                 }
                                 var clientId =
@@ -95,6 +102,13 @@ public class IPVCallbackHandler
                                                         clientSession.getAuthRequestParams())
                                                 .getClientID()
                                                 .getValue();
+                                ClientRegistry clientRegistry =
+                                        dynamoClientService.getClient(clientId).orElse(null);
+                                if (Objects.isNull(clientRegistry)) {
+                                    LOG.error("Client registry not found with given clientId");
+                                    throw new RuntimeException(
+                                            "Client registry not found with given clientId");
+                                }
 
                                 var errorObject =
                                         ipvAuthorisationService.validateResponse(
