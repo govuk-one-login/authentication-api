@@ -3,6 +3,16 @@ package uk.gov.di.authentication.ipv.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.crypto.ECDSASigner;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AccessTokenResponse;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
@@ -110,6 +120,12 @@ class IPVCallbackHandlerTest {
                 .thenReturn(Optional.of(generateUserProfile()));
         when(ipvTokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
         when(ipvTokenService.sendTokenRequest(tokenRequest)).thenReturn(successfulTokenResponse);
+        when(ipvTokenService.sendIpvInfoRequest(
+                        successfulTokenResponse
+                                .toSuccessResponse()
+                                .getTokens()
+                                .getBearerAccessToken()))
+                .thenReturn(generateSignedCredential().serialize());
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(responseHeaders);
@@ -271,5 +287,22 @@ class IPVCallbackHandlerTest {
                 .state(state)
                 .nonce(nonce)
                 .build();
+    }
+
+    public SignedJWT generateSignedCredential() {
+        try {
+            ECKey ecSigningKey =
+                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+            JWSSigner signer = new ECDSASigner(ecSigningKey);
+            JWSHeader jwsHeader =
+                    new JWSHeader.Builder(JWSAlgorithm.ES256)
+                            .keyID(ecSigningKey.getKeyID())
+                            .build();
+            var signedJWT = new SignedJWT(jwsHeader, new JWTClaimsSet.Builder().build());
+            signedJWT.sign(signer);
+            return signedJWT;
+        } catch (JOSEException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

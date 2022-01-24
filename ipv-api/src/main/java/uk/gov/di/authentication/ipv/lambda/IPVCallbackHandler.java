@@ -10,6 +10,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -146,6 +147,15 @@ public class IPVCallbackHandler
                                 }
                                 Subject pairwiseSubject =
                                         ClientSubjectHelper.getSubject(userProfile, clientRegistry);
+                                String serializedCredential =
+                                        ipvTokenService.sendIpvInfoRequest(
+                                                tokenResponse
+                                                        .toSuccessResponse()
+                                                        .getTokens()
+                                                        .getBearerAccessToken());
+                                SPOTRequest spotRequest =
+                                        new SPOTRequest(
+                                                serializedCredential, pairwiseSubject.getValue());
                             } catch (NoSuchElementException e) {
                                 LOG.error("Session not found");
                                 throw new RuntimeException("Session not found", e);

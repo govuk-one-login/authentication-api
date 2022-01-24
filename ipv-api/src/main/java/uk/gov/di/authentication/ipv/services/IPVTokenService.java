@@ -11,6 +11,7 @@ import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.token.AccessToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -76,6 +77,10 @@ public class IPVTokenService {
             LOG.error("Error whilst parsing TokenResponse", e);
             throw new RuntimeException(e);
         }
+    }
+
+    public String sendIpvInfoRequest(AccessToken accessToken) {
+        return "";
     }
 
     private PrivateKeyJWT generatePrivateKeyJwt(JWTAuthenticationClaimsSet claimsSet) {
