@@ -17,7 +17,7 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.shared.helpers.TokenGeneratorHelper;
+import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 
 import java.nio.ByteBuffer;
 import java.time.LocalDateTime;
@@ -48,13 +48,13 @@ class TokenValidationServiceTest {
     private static final String BASE_URL = "http://example.com";
     private static final String KEY_ID = "14342354354353";
     private JWSSigner signer;
+    private ECKey ecJWK;
 
     @BeforeEach
     public void setUp() throws JOSEException {
         Optional<String> baseUrl = Optional.of(BASE_URL);
         when(configurationService.getBaseURL()).thenReturn(baseUrl);
-        ECKey ecJWK = generateECKeyPair();
-        ECKey ecPublicJWK = ecJWK.toPublicJWK();
+        ecJWK = generateECKeyPair();
         signer = new ECDSASigner(ecJWK);
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
         GetPublicKeyResult getPublicKeyResult = new GetPublicKeyResult();
@@ -62,7 +62,8 @@ class TokenValidationServiceTest {
         getPublicKeyResult.setKeyId(KEY_ID);
         getPublicKeyResult.setSigningAlgorithms(
                 Collections.singletonList(JWSAlgorithm.ES256.getName()));
-        getPublicKeyResult.setPublicKey(ByteBuffer.wrap(ecPublicJWK.toECPublicKey().getEncoded()));
+        getPublicKeyResult.setPublicKey(
+                ByteBuffer.wrap(ecJWK.toPublicJWK().toECPublicKey().getEncoded()));
         when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
                 .thenReturn(getPublicKeyResult);
     }
@@ -71,7 +72,7 @@ class TokenValidationServiceTest {
     public void shouldSuccessfullyValidateIDToken() {
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
-        SignedJWT signedIdToken = createSignedIdToken(signer, expiryDate);
+        SignedJWT signedIdToken = createSignedIdToken(expiryDate);
         assertTrue(tokenValidationService.isTokenSignatureValid(signedIdToken.serialize()));
     }
 
@@ -79,7 +80,7 @@ class TokenValidationServiceTest {
     public void shouldNotFailSignatureValidationIfIdTokenHasExpired() {
         LocalDateTime localDateTime = LocalDateTime.now().minusMinutes(2);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
-        SignedJWT signedIdToken = createSignedIdToken(signer, expiryDate);
+        SignedJWT signedIdToken = createSignedIdToken(expiryDate);
         assertTrue(tokenValidationService.isTokenSignatureValid(signedIdToken.serialize()));
     }
 
@@ -164,9 +165,9 @@ class TokenValidationServiceTest {
         }
     }
 
-    private SignedJWT createSignedIdToken(JWSSigner signer, Date expiryDate) {
+    private SignedJWT createSignedIdToken(Date expiryDate) {
         return TokenGeneratorHelper.generateIDToken(
-                CLIENT_ID, SUBJECT, BASE_URL, signer, KEY_ID, expiryDate);
+                CLIENT_ID, SUBJECT, BASE_URL, ecJWK, expiryDate);
     }
 
     private SignedJWT createSignedAccessToken(JWSSigner signer) {
