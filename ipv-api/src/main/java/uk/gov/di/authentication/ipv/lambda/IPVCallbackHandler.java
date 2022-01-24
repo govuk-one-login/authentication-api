@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
@@ -142,6 +143,9 @@ public class IPVCallbackHandler
                                     throw new RuntimeException(
                                             "IPV TokenResponse was not successful");
                                 }
+                                Subject pairwiseSubject =
+                                        ipvAuthorisationService.getPairwiseSubject(
+                                                userProfile, clientRegistry);
                             } catch (NoSuchElementException e) {
                                 LOG.error("Session not found");
                                 throw new RuntimeException("Session not found", e);

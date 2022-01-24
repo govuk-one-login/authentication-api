@@ -5,11 +5,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.Optional;
 
@@ -95,5 +101,35 @@ public class IPVAuthorisationService {
                 storedState.getValue(),
                 responseState.equals(storedState.getValue()));
         return responseState.equals(storedState.getValue());
+    }
+
+    public Subject getPairwiseSubject(UserProfile userProfile, ClientRegistry client) {
+        if (client.getSubjectType().equalsIgnoreCase("public")) {
+            return new Subject(userProfile.getPublicSubjectID());
+        } else {
+            String uri =
+                    client.getSectorIdentifierUri() != null
+                            ? client.getSectorIdentifierUri()
+                            : returnHost(client);
+            return new Subject(
+                    ClientSubjectHelper.pairwiseIdentifier(userProfile.getSubjectID(), uri));
+        }
+    }
+
+    private String returnHost(ClientRegistry clientRegistry) {
+        String redirectUri = null;
+
+        if (clientRegistry.getRedirectUrls().stream().findFirst().isPresent()) {
+            redirectUri = clientRegistry.getRedirectUrls().stream().findFirst().get();
+            try {
+                String hostname = new URI(redirectUri).getHost();
+                if (hostname != null)
+                    return hostname.startsWith("www.") ? hostname.substring(4) : hostname;
+            } catch (URISyntaxException e) {
+                LOG.info("Not a valid URI {} - Exception {}", redirectUri, e);
+            }
+        }
+
+        return redirectUri;
     }
 }
