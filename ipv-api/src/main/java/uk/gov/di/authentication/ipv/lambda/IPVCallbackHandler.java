@@ -14,6 +14,7 @@ import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -144,8 +145,7 @@ public class IPVCallbackHandler
                                             "IPV TokenResponse was not successful");
                                 }
                                 Subject pairwiseSubject =
-                                        ipvAuthorisationService.getPairwiseSubject(
-                                                userProfile, clientRegistry);
+                                        ClientSubjectHelper.getSubject(userProfile, clientRegistry);
                             } catch (NoSuchElementException e) {
                                 LOG.error("Session not found");
                                 throw new RuntimeException("Session not found", e);

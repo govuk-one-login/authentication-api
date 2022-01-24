@@ -34,8 +34,6 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -227,7 +225,8 @@ public class TokenHandler
                             UserProfile userProfile =
                                     dynamoService.getUserProfileByEmail(
                                             authCodeExchangeData.getEmail());
-                            Subject publicSubject = getSubjectByEmailAndClient(userProfile, client);
+                            Subject publicSubject =
+                                    ClientSubjectHelper.getSubject(userProfile, client);
                             Map<String, Object> additionalTokenClaims = new HashMap<>();
                             if (authRequest.getNonce() != null) {
                                 additionalTokenClaims.put("nonce", authRequest.getNonce());
@@ -259,36 +258,6 @@ public class TokenHandler
                             return generateApiGatewayProxyResponse(
                                     200, tokenResponse.toJSONObject().toJSONString());
                         });
-    }
-
-    private Subject getSubjectByEmailAndClient(UserProfile userProfile, ClientRegistry client) {
-        if (client.getSubjectType().equalsIgnoreCase("public")) {
-            return new Subject(userProfile.getPublicSubjectID());
-        } else {
-            String uri =
-                    client.getSectorIdentifierUri() != null
-                            ? client.getSectorIdentifierUri()
-                            : returnHost(client);
-            return new Subject(
-                    ClientSubjectHelper.pairwiseIdentifier(userProfile.getSubjectID(), uri));
-        }
-    }
-
-    private String returnHost(ClientRegistry clientRegistry) {
-        String redirectUri = null;
-
-        if (clientRegistry.getRedirectUrls().stream().findFirst().isPresent()) {
-            redirectUri = clientRegistry.getRedirectUrls().stream().findFirst().get();
-            try {
-                String hostname = new URI(redirectUri).getHost();
-                if (hostname != null)
-                    return hostname.startsWith("www.") ? hostname.substring(4) : hostname;
-            } catch (URISyntaxException e) {
-                LOG.info("Not a valid URI {} - Exception {}", redirectUri, e);
-            }
-        }
-
-        return redirectUri;
     }
 
     private APIGatewayProxyResponseEvent processRefreshTokenRequest(
