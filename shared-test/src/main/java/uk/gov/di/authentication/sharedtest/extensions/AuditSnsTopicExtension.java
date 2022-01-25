@@ -12,7 +12,8 @@ import java.util.stream.Collectors;
 
 public class AuditSnsTopicExtension extends SnsTopicExtension {
 
-    public static final int SNS_TIMEOUT = 10; // In seconds.
+    public static final int SNS_TIMEOUT = 1; // In seconds.
+    public static final int SNS_TIMEOUT_MILLIS = SNS_TIMEOUT * 1000;
 
     public AuditSnsTopicExtension(String topicNameSuffix) {
         super(topicNameSuffix);

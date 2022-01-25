@@ -16,6 +16,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE;
 import static uk.gov.di.authentication.sharedtest.extensions.AuditSnsTopicExtension.SNS_TIMEOUT;
+import static uk.gov.di.authentication.sharedtest.extensions.AuditSnsTopicExtension.SNS_TIMEOUT_MILLIS;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.authentication.sharedtest.matchers.AuditEventMatcher.hasEventType;
 
@@ -38,8 +39,6 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
         assertThat(response, hasStatus(204));
 
-        Thread.sleep(10000);
-
         await().atMost(SNS_TIMEOUT, SECONDS)
                 .untilAsserted(() -> assertThat(auditTopic.getCountOfRequests(), equalTo(1)));
         assertThat(
@@ -59,9 +58,7 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
         assertThat(response, hasStatus(401));
 
-        Thread.sleep(10000);
-
-        await().atMost(SNS_TIMEOUT, SECONDS)
-                .untilAsserted(() -> assertThat(auditTopic.getCountOfRequests(), equalTo(0)));
+        Thread.sleep(SNS_TIMEOUT_MILLIS);
+        assertThat(auditTopic.getCountOfRequests(), equalTo(0));
     }
 }

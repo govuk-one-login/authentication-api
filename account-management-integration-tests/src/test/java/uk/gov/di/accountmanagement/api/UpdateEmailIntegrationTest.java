@@ -57,8 +57,6 @@ public class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest
         assertThat(requests.get(0).getDestination(), equalTo(NEW_EMAIL_ADDRESS));
         assertThat(requests.get(0).getNotificationType(), equalTo(EMAIL_UPDATED));
 
-        Thread.sleep(10000);
-
         await().atMost(SNS_TIMEOUT, SECONDS)
                 .untilAsserted(() -> assertThat(auditTopic.getCountOfRequests(), equalTo(1)));
         assertThat(auditTopic.getAuditEvents(), hasItem(hasEventType(UPDATE_EMAIL)));
