@@ -44,7 +44,7 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
     @RegisterExtension public static final IPVStubExtension ipvStub = new IPVStubExtension();
 
-    protected static final ConfigurationService configurationService =
+    protected final ConfigurationService configurationService =
             new IPVTestConfigurationService(ipvStub);
 
     @BeforeEach
@@ -104,7 +104,7 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                 .build();
     }
 
-    private static class IPVTestConfigurationService extends IntegrationTestConfigurationService {
+    private class IPVTestConfigurationService extends IntegrationTestConfigurationService {
 
         private final IPVStubExtension ipvStubExtension;
 

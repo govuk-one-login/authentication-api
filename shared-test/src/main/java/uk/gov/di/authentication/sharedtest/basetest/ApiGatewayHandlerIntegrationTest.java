@@ -53,8 +53,7 @@ public abstract class ApiGatewayHandlerIntegrationTest {
             new SqsQueueExtension("notification-queue");
 
     @RegisterExtension
-    protected static final AuditSnsTopicExtension auditTopic =
-            new AuditSnsTopicExtension("local-events");
+    protected final AuditSnsTopicExtension auditTopic = new AuditSnsTopicExtension("local-events");
 
     @RegisterExtension
     protected static final KmsKeyExtension auditSigningKey =
@@ -77,7 +76,7 @@ public abstract class ApiGatewayHandlerIntegrationTest {
                             "local-account-management-redis-tls", "false",
                             "local-password-pepper", "pepper"));
 
-    protected static final ConfigurationService TEST_CONFIGURATION_SERVICE =
+    protected final ConfigurationService TEST_CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
                     auditTopic, notificationsQueue, auditSigningKey, tokenSigner);
 
