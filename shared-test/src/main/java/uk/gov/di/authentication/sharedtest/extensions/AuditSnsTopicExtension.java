@@ -26,7 +26,8 @@ public class AuditSnsTopicExtension extends SnsTopicExtension {
     }
 
     private static AuditPayload.AuditEvent mapRequest(String json) {
-        String message = JsonParser.parseString(json).getAsJsonObject().get("Message").getAsString();
+        String message =
+                JsonParser.parseString(json).getAsJsonObject().get("Message").getAsString();
         byte[] decodedBytes = Base64.getDecoder().decode(message);
         Optional<AuditPayload.SignedAuditEvent> signedAuditEvent =
                 AuditEventHelper.parseToSignedAuditEvent(decodedBytes);

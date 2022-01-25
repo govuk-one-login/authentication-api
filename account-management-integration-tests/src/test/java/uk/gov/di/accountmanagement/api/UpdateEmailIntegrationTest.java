@@ -12,11 +12,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.UPDATE_EMAIL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.EMAIL_UPDATED;
+import static uk.gov.di.authentication.sharedtest.extensions.AuditSnsTopicExtension.SNS_TIMEOUT;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.sharedtest.matchers.AuditEventMatcher.hasEventType;
 
 public class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
@@ -30,7 +36,7 @@ public class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest
     }
 
     @Test
-    public void shouldCallUpdateEmailEndpointAndReturn204WhenLoginIsSuccessful() {
+    public void shouldCallUpdateEmailEndpointAndReturn204WhenLoginIsSuccessful() throws Exception {
         String publicSubjectID = userStore.signUp(EXISTING_EMAIL_ADDRESS, "password-1", SUBJECT);
         String otp = redis.generateAndSaveEmailCode(NEW_EMAIL_ADDRESS, 300);
         var response =
@@ -50,5 +56,11 @@ public class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest
         assertThat(requests, hasSize(1));
         assertThat(requests.get(0).getDestination(), equalTo(NEW_EMAIL_ADDRESS));
         assertThat(requests.get(0).getNotificationType(), equalTo(EMAIL_UPDATED));
+
+        Thread.sleep(10000);
+
+        await().atMost(SNS_TIMEOUT, SECONDS)
+                .untilAsserted(() -> assertThat(auditTopic.getCountOfRequests(), equalTo(1)));
+        assertThat(auditTopic.getAuditEvents(), hasItem(hasEventType(UPDATE_EMAIL)));
     }
 }

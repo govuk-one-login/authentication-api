@@ -15,6 +15,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE;
+import static uk.gov.di.authentication.sharedtest.extensions.AuditSnsTopicExtension.SNS_TIMEOUT;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.authentication.sharedtest.matchers.AuditEventMatcher.hasEventType;
 
@@ -26,7 +27,7 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
     }
 
     @Test
-    public void shouldCallLoginEndpointAndReturn204WhenLoginIsSuccessful() {
+    public void shouldCallLoginEndpointAndReturn204WhenLoginIsSuccessful() throws Exception {
         String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         String password = "password-1";
         userStore.signUp(email, password);
@@ -37,7 +38,9 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
         assertThat(response, hasStatus(204));
 
-        await().atMost(10, SECONDS)
+        Thread.sleep(10000);
+
+        await().atMost(SNS_TIMEOUT, SECONDS)
                 .untilAsserted(() -> assertThat(auditTopic.getCountOfRequests(), equalTo(1)));
         assertThat(
                 auditTopic.getAuditEvents(),
@@ -45,7 +48,7 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
     }
 
     @Test
-    public void shouldCallLoginEndpointAndReturn401henUserHasInvalidCredentials() {
+    public void shouldCallLoginEndpointAndReturn401henUserHasInvalidCredentials() throws Exception {
         String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
         String password = "password-1";
         userStore.signUp(email, "wrong-password");
@@ -55,5 +58,10 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         Optional.of(new AuthenticateRequest(email, password)), Map.of(), Map.of());
 
         assertThat(response, hasStatus(401));
+
+        Thread.sleep(10000);
+
+        await().atMost(SNS_TIMEOUT, SECONDS)
+                .untilAsserted(() -> assertThat(auditTopic.getCountOfRequests(), equalTo(0)));
     }
 }

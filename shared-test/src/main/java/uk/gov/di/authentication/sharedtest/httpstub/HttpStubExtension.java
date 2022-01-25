@@ -61,6 +61,10 @@ public class HttpStubExtension implements AfterAllCallback {
         return httpStub.getHttpsPort();
     }
 
+    protected void startStub() {
+        httpStub.start();
+    }
+
     public void reset() {
         httpStub.reset();
     }
