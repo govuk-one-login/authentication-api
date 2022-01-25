@@ -2,13 +2,6 @@ locals {
   redis_port_number = 6379
 }
 
-resource "aws_elasticache_subnet_group" "account_management_sessions_store" {
-  count = var.use_localstack ? 0 : 1
-
-  name       = "${var.environment}-account-mgmt-session-store-cache-subnet"
-  subnet_ids = aws_subnet.account_management_subnets.*.id
-}
-
 resource "aws_elasticache_subnet_group" "account_management_redis_session_store" {
   name       = "${var.environment}-acct-mgmt-redis-session-store-cache-subnet"
   subnet_ids = local.private_subnet_ids
