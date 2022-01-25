@@ -99,7 +99,7 @@ subprojects {
 
         sns "com.amazonaws:aws-java-sdk-sns:${dependencyVersions.aws_sdk_version}"
 
-        sqs "software.amazon.awssdk:sqs:2.17.107"
+        sqs "software.amazon.awssdk:sqs:2.17.117"
 
         ssm "com.amazonaws:aws-java-sdk-ssm:${dependencyVersions.aws_sdk_version}"
 
