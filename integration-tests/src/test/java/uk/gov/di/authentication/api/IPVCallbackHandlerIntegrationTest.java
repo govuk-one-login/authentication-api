@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.IPVStubExtension;
+import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
 import java.io.IOException;
 import java.net.URI;
@@ -79,6 +80,8 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+
+        AuditAssertionsHelper.assertNoAuditEventsReceived(auditTopic);
     }
 
     private void setUpDynamo() {

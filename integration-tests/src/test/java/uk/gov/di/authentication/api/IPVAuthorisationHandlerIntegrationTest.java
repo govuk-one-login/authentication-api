@@ -18,10 +18,12 @@ import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.IPVStubExtension;
+import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -29,6 +31,7 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -77,10 +80,13 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         assertThat(
                 body.getRedirectUri(),
                 startsWith(configurationService.getIPVAuthorisationURI() + "/authorize"));
+
+        AuditAssertionsHelper.assertEventTypesReceived(
+                auditTopic, List.of(IPV_AUTHORISATION_REQUESTED));
     }
 
     @Test
-    void shouldReturn400WhenBodyInvalid() throws IOException {
+    void shouldReturn400WhenBodyInvalid() {
         var response =
                 makeRequest(
                         Optional.of("{ \"incorrect\": \"value\"}"),
@@ -89,6 +95,8 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         Map.of());
 
         assertThat(response, hasStatus(400));
+
+        AuditAssertionsHelper.assertNoAuditEventsReceived(auditTopic);
     }
 
     private AuthenticationRequest withAuthenticationRequest(String clientId) {

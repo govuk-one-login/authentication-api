@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
 import java.io.IOException;
 import java.net.URI;
@@ -35,6 +36,7 @@ import java.util.concurrent.TimeUnit;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -63,6 +65,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
                         Map.of());
         assertThat(response, hasStatus(200));
+
+        AuditAssertionsHelper.assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));
     }
 
     @Test
@@ -87,6 +91,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         BaseAPIResponse codeResponse =
                 objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
         assertEquals(SessionState.EMAIL_CODE_NOT_VALID, codeResponse.getSessionState());
+
+        AuditAssertionsHelper.assertNoAuditEventsReceived(auditTopic);
     }
 
     @Test
@@ -119,6 +125,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         BaseAPIResponse codeResponse =
                 objectMapper.readValue(response2.getBody(), BaseAPIResponse.class);
         assertEquals(SessionState.EMAIL_CODE_NOT_VALID, codeResponse.getSessionState());
+
+        AuditAssertionsHelper.assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));
     }
 
     @Test
@@ -146,6 +154,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         BaseAPIResponse codeResponse =
                 objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
         assertEquals(SessionState.PHONE_NUMBER_CODE_VERIFIED, codeResponse.getSessionState());
+
+        AuditAssertionsHelper.assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));
     }
 
     @Test
@@ -169,6 +179,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         BaseAPIResponse codeResponse =
                 objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
         assertEquals(SessionState.CONSENT_REQUIRED, codeResponse.getSessionState());
+
+        AuditAssertionsHelper.assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));
     }
 
     @Test
@@ -195,6 +207,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         BaseAPIResponse codeResponse =
                 objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
         assertEquals(SessionState.PHONE_NUMBER_CODE_NOT_VALID, codeResponse.getSessionState());
+
+        AuditAssertionsHelper.assertNoAuditEventsReceived(auditTopic);
     }
 
     @Test
@@ -217,6 +231,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                 objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
         assertEquals(
                 SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED, codeResponse.getSessionState());
+
+        AuditAssertionsHelper.assertNoAuditEventsReceived(auditTopic);
     }
 
     @Test
@@ -237,6 +253,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         BaseAPIResponse codeResponse =
                 objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
         assertEquals(SessionState.EMAIL_CODE_MAX_RETRIES_REACHED, codeResponse.getSessionState());
+
+        AuditAssertionsHelper.assertNoAuditEventsReceived(auditTopic);
     }
 
     @Test
@@ -258,6 +276,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertEquals(
                 new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1017),
                 response.getBody());
+
+        AuditAssertionsHelper.assertNoAuditEventsReceived(auditTopic);
     }
 
     @Test
@@ -281,11 +301,13 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertEquals(
                 new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1017),
                 response.getBody());
+
+        AuditAssertionsHelper.assertNoAuditEventsReceived(auditTopic);
     }
 
     @Test
     public void shouldReturnStateOfMfaCodeVerifiedWhenUserHasAcceptedCurrentTermsAndConditions()
-            throws IOException {
+            throws Exception {
         String sessionId = redis.createSession();
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
@@ -314,6 +336,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         BaseAPIResponse codeResponse =
                 objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
         assertEquals(SessionState.MFA_CODE_VERIFIED, codeResponse.getSessionState());
+
+        AuditAssertionsHelper.assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));
     }
 
     @Test
@@ -342,6 +366,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         BaseAPIResponse codeResponse =
                 objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
         assertEquals(SessionState.UPDATED_TERMS_AND_CONDITIONS, codeResponse.getSessionState());
+
+        AuditAssertionsHelper.assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));
     }
 
     @Test
@@ -362,6 +388,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertEquals(
                 new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1017),
                 response.getBody());
+
+        AuditAssertionsHelper.assertNoAuditEventsReceived(auditTopic);
     }
 
     private void setUpTestWithoutSignUp(String sessionId, Scope scope, SessionState sessionState)

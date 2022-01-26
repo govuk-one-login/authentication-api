@@ -18,11 +18,13 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
 import java.io.IOException;
 import java.net.URI;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -30,6 +32,8 @@ import java.util.stream.Stream;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CREDENTIALS;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.LOG_IN_SUCCESS;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
@@ -110,6 +114,8 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         LoginResponse loginResponse =
                 objectMapper.readValue(response.getBody(), LoginResponse.class);
         assertEquals(expectedState, loginResponse.getSessionState());
+
+        AuditAssertionsHelper.assertEventTypesReceived(auditTopic, List.of(LOG_IN_SUCCESS));
     }
 
     private static Stream<Arguments> vectorOfTrustEndStates() {
@@ -136,5 +142,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(Optional.of(new LoginRequest(email, password)), headers, Map.of());
         assertThat(response, hasStatus(401));
+
+        AuditAssertionsHelper.assertEventTypesReceived(auditTopic, List.of(INVALID_CREDENTIALS));
     }
 }

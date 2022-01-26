@@ -14,6 +14,7 @@ import uk.gov.di.authentication.frontendapi.entity.ClientInfoResponse;
 import uk.gov.di.authentication.frontendapi.lambda.ClientInfoHandler;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.io.IOException;
@@ -30,6 +31,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CLIENT_INFO_FOUND;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class ClientInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -53,6 +55,8 @@ public class ClientInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         var response = makeRequest(Optional.empty(), headers, Map.of());
         assertThat(response, hasStatus(400));
+
+        AuditAssertionsHelper.assertNoAuditEventsReceived(auditTopic);
     }
 
     @Test
@@ -87,6 +91,8 @@ public class ClientInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(clientInfoResponse.getClientName(), equalTo(TEST_CLIENT_NAME));
         assertThat(clientInfoResponse.getScopes(), hasItem("openid"));
         assertThat(clientInfoResponse.getScopes(), hasSize(1));
+
+        AuditAssertionsHelper.assertEventTypesReceived(auditTopic, List.of(CLIENT_INFO_FOUND));
     }
 
     private void registerClient(KeyPair keyPair) {

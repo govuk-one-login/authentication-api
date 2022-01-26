@@ -9,7 +9,6 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.GrantType;
-import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.TokenResponse;
@@ -39,6 +38,7 @@ import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.net.URI;
@@ -90,8 +90,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @ParameterizedTest
     @MethodSource("validVectorValues")
     void shouldCallTokenResourceAndReturnAccessAndRefreshToken(Optional<String> vtr)
-            throws JOSEException, ParseException, JsonProcessingException,
-                    java.text.ParseException {
+            throws Exception {
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         Scope scope =
                 new Scope(
@@ -121,11 +120,13 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .getJWTClaimsSet()
                         .getClaim("vot"),
                 equalTo(vtr.get()));
+
+        AuditAssertionsHelper.assertNoAuditEventsReceived(auditTopic);
     }
 
     @Test
     void shouldCallTokenResourceAndOnlyReturnAccessTokenWithoutOfflineAccessScope()
-            throws JOSEException, ParseException, JsonProcessingException {
+            throws Exception {
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         Scope scope = new Scope(OIDCScopeValue.OPENID.getValue());
         setUpDynamo(keyPair, scope, new Subject());
@@ -143,11 +144,12 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .toSuccessResponse()
                         .getTokens()
                         .getBearerAccessToken());
+
+        AuditAssertionsHelper.assertNoAuditEventsReceived(auditTopic);
     }
 
     @Test
-    void shouldCallTokenResourceWithRefreshTokenGrantAndReturn200()
-            throws JOSEException, JsonProcessingException, ParseException {
+    void shouldCallTokenResourceWithRefreshTokenGrantAndReturn200() throws Exception {
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
@@ -195,6 +197,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .toSuccessResponse()
                         .getTokens()
                         .getBearerAccessToken());
+
+        AuditAssertionsHelper.assertNoAuditEventsReceived(auditTopic);
     }
 
     private SignedJWT generateSignedRefreshToken(Scope scope, Subject publicSubject) {

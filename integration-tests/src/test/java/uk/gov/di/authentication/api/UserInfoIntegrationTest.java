@@ -15,6 +15,7 @@ import uk.gov.di.authentication.oidc.lambda.UserInfoHandler;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.security.KeyPair;
@@ -94,6 +95,8 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         expectedUserInfoResponse.setPhoneNumber(FORMATTED_PHONE_NUMBER);
         expectedUserInfoResponse.setPhoneNumberVerified(true);
         assertThat(response.getBody(), equalTo(expectedUserInfoResponse.toJSONString()));
+
+        AuditAssertionsHelper.assertNoAuditEventsReceived(auditTopic);
     }
 
     @Test
@@ -109,6 +112,8 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 .toHTTPResponse()
                                 .getHeaderMap()
                                 .get("WWW-Authenticate")));
+
+        AuditAssertionsHelper.assertNoAuditEventsReceived(auditTopic);
     }
 
     private void setUpDynamo(Subject internalSubject) {
