@@ -7,7 +7,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
@@ -16,6 +15,7 @@ import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -24,7 +24,6 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
-import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -164,21 +163,16 @@ public class IPVCallbackHandler
                                         "Cannot retrieve auth request params from client session id");
                                 throw new RuntimeException();
                             }
-
+                            var redirectURI =
+                                    ConstructUriHelper.buildURI(
+                                            configurationService.getLoginURI().toString(),
+                                            REDIRECT_PATH);
                             return new APIGatewayProxyResponseEvent()
                                     .withStatusCode(302)
                                     .withHeaders(
-                                            Map.of(ResponseHeaders.LOCATION, buildRedirectUri()));
+                                            Map.of(
+                                                    ResponseHeaders.LOCATION,
+                                                    redirectURI.toString()));
                         });
-    }
-
-    private String buildRedirectUri() {
-        URIBuilder redirectUriBuilder =
-                new URIBuilder(configurationService.getLoginURI()).setPath(REDIRECT_PATH);
-        try {
-            return redirectUriBuilder.build().toString();
-        } catch (URISyntaxException e) {
-            throw new RuntimeException();
-        }
     }
 }
