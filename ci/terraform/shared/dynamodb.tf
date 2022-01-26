@@ -134,6 +134,34 @@ resource "aws_dynamodb_table" "client_registry_table" {
   tags = local.default_tags
 }
 
+resource "aws_dynamodb_table" "spot_credential_table" {
+  name         = "${var.environment}-spot-credential"
+  billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
+  hash_key     = "SubjectID"
+
+  read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
+  write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
+
+  attribute {
+    name = "SubjectID"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = !var.use_localstack
+  }
+
+  server_side_encryption {
+    enabled = !var.use_localstack
+  }
+
+  lifecycle {
+    prevent_destroy = false
+  }
+
+  tags = local.default_tags
+}
+
 data "aws_iam_policy_document" "dynamo_policy_document" {
   count = var.use_localstack ? 0 : 1
   statement {

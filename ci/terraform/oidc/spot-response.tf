@@ -2,7 +2,7 @@ resource "aws_lambda_function" "spot_response_lambda" {
   count         = var.ipv_api_enabled ? 1 : 0
   filename      = var.ipv_api_lambda_zip_file
   function_name = "${var.environment}-spot-response-lambda"
-  role          = module.oidc_default_role.arn
+  role          = module.spot_response_role.arn
   handler       = "uk.gov.di.authentication.ipv-api.lambda.SPOTResponseHandler::handleRequest"
   timeout       = 30
   memory_size   = 512
@@ -16,7 +16,10 @@ resource "aws_lambda_function" "spot_response_lambda" {
   }
   environment {
     variables = merge({
+      ENVIRONMENT       = var.environment
       FRONTEND_BASE_URL = module.dns.frontend_url
+      DYNAMO_ENDPOINT   = var.use_localstack ? var.lambda_dynamo_endpoint : null
+
     })
   }
   kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
