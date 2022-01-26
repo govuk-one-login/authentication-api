@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.api;
 
+import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.lambda.IdentityHandler;
@@ -21,7 +22,11 @@ public class IdentityIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldReturn204WhenCallingIdentityLambda() {
 
-        var response = makeRequest(Optional.empty(), Map.of(), Map.of());
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        Map.of("Authorization", new BearerAccessToken().toAuthorizationHeader()),
+                        Map.of());
 
         assertThat(response, hasStatus(204));
     }
