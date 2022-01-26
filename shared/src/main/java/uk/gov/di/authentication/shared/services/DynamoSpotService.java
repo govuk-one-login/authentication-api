@@ -13,16 +13,20 @@ public class DynamoSpotService {
 
     private static final String SPOT_CREDENTIAL_TABLE = "spot-credential";
     private final DynamoDBMapper spotCredentialMapper;
+    private final long timeToExist;
     private final AmazonDynamoDB dynamoDB;
 
     public DynamoSpotService(ConfigurationService configurationService) {
         this(
                 configurationService.getAwsRegion(),
                 configurationService.getEnvironment(),
-                configurationService.getDynamoEndpointUri());
+                configurationService.getDynamoEndpointUri(),
+                configurationService.getAccessTokenExpiry());
     }
 
-    public DynamoSpotService(String region, String environment, Optional<String> dynamoEndpoint) {
+    public DynamoSpotService(
+            String region, String environment, Optional<String> dynamoEndpoint, long timeToExist) {
+        this.timeToExist = timeToExist;
         dynamoDB =
                 dynamoEndpoint
                         .map(
@@ -38,6 +42,7 @@ public class DynamoSpotService {
                         .withTableNameOverride(
                                 DynamoDBMapperConfig.TableNameOverride.withTableNameReplacement(
                                         environment + "-" + SPOT_CREDENTIAL_TABLE))
+                        .withConsistentReads(DynamoDBMapperConfig.ConsistentReads.CONSISTENT)
                         .build();
         this.spotCredentialMapper = new DynamoDBMapper(dynamoDB, spotResponseConfig);
         warmUp(environment + "-" + SPOT_CREDENTIAL_TABLE);
@@ -47,7 +52,8 @@ public class DynamoSpotService {
         SPOTCredential spotCredential =
                 new SPOTCredential()
                         .setSubjectID(subjectID)
-                        .setSerializedCredential(serializedCredential);
+                        .setSerializedCredential(serializedCredential)
+                        .setTimeToExist(timeToExist);
 
         spotCredentialMapper.save(spotCredential);
     }
