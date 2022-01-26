@@ -9,12 +9,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.ipv.entity.SPOTResponse;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoSpotService;
 
 import java.util.Optional;
 
 public class SPOTResponseHandler implements RequestHandler<SNSEvent, Object> {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final DynamoSpotService dynamoSpotService;
 
     private static final Logger LOG = LogManager.getLogger(SPOTResponseHandler.class);
 
@@ -22,7 +24,13 @@ public class SPOTResponseHandler implements RequestHandler<SNSEvent, Object> {
         this(ConfigurationService.getInstance());
     }
 
-    public SPOTResponseHandler(ConfigurationService configurationService) {}
+    public SPOTResponseHandler(ConfigurationService configurationService) {
+        this.dynamoSpotService = new DynamoSpotService(configurationService);
+    }
+
+    public SPOTResponseHandler(DynamoSpotService dynamoSpotService) {
+        this.dynamoSpotService = dynamoSpotService;
+    }
 
     @Override
     public Object handleRequest(SNSEvent input, Context context) {
@@ -46,5 +54,8 @@ public class SPOTResponseHandler implements RequestHandler<SNSEvent, Object> {
         }
     }
 
-    private void writeToDynamo(SPOTResponse spotResponse) {}
+    private void writeToDynamo(SPOTResponse spotResponse) {
+        dynamoSpotService.addSpotResponse(
+                spotResponse.getPairwiseIdentifier(), spotResponse.getSerializedCredential());
+    }
 }
