@@ -159,6 +159,11 @@ resource "aws_dynamodb_table" "spot_credential_table" {
     prevent_destroy = false
   }
 
+  ttl {
+    attribute_name = "TimeToExist"
+    enabled        = true
+  }
+
   tags = local.default_tags
 }
 

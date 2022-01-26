@@ -7,6 +7,7 @@ public class SPOTCredential {
 
     private String subjectID;
     private String serializedCredential;
+    private long timeToExist;
 
     public SPOTCredential() {}
 
@@ -27,6 +28,16 @@ public class SPOTCredential {
 
     public SPOTCredential setSerializedCredential(String serializedCredential) {
         this.serializedCredential = serializedCredential;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "TimeToExist")
+    public long getTimeToExist() {
+        return timeToExist;
+    }
+
+    public SPOTCredential setTimeToExist(long timeToExist) {
+        this.timeToExist = timeToExist;
         return this;
     }
 }
