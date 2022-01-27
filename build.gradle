@@ -1,5 +1,13 @@
 import java.util.stream.Collectors
 
+buildscript {
+    repositories {
+        maven {
+            url 'https://gds.jfrog.io/artifactory/di-allowed-repos'
+        }
+    }
+}
+
 plugins {
     id "com.diffplug.spotless" version "6.2.0"
     id "com.avast.gradle.docker-compose" version "0.14.13"
@@ -33,7 +41,19 @@ ext {
     ] : [:]
 }
 
+repositories {
+    maven {
+        url 'https://gds.jfrog.io/artifactory/di-allowed-repos'
+    }
+}
+
 subprojects {
+    repositories {
+        maven {
+            url 'https://gds.jfrog.io/artifactory/di-allowed-repos'
+        }
+    }
+
     configurations {
         bouncycastle
         dynamodb
@@ -293,6 +313,3 @@ jacocoTestReport {
     dependsOn "test"
 }
 
-repositories {
-    mavenCentral()
-}

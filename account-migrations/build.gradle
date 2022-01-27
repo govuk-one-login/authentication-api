@@ -6,11 +6,6 @@ plugins {
 group "uk.gov.di.authentication.accountmigration"
 version "unspecified"
 
-
-repositories {
-    mavenCentral()
-}
-
 dependencies {
     implementation configurations.bouncycastle,
             configurations.lambda,
