@@ -6,10 +6,6 @@ plugins {
 group "uk.gov.di"
 version "unspecified"
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
     testImplementation configurations.bouncycastle,
             configurations.nimbus,

@@ -6,10 +6,6 @@ plugins {
 group "uk.gov.di.authentication.ipvapi"
 version "unspecified"
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
     implementation configurations.dynamodb,
             configurations.lambda,

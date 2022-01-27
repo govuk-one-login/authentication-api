@@ -6,10 +6,6 @@ plugins {
 group "uk.gov.di.authentication.oidc"
 version "unspecified"
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
     implementation configurations.lambda,
             configurations.sqs,

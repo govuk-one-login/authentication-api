@@ -5,10 +5,6 @@ plugins {
 group "uk.gov.di.authentication.sharedtest"
 version "unspecified"
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
     implementation configurations.tests,
             configurations.lambda,

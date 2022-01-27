@@ -6,10 +6,6 @@ plugins {
 group "uk.gov.di.authentication.frontendapi"
 version "unspecified"
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
     implementation configurations.dynamodb,
             configurations.govuk_notify,

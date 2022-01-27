@@ -5,10 +5,6 @@ plugins {
 group "uk.gov.di.lambdawarmer"
 version "unspecified"
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
     implementation configurations.lambda,
             "com.amazonaws:aws-java-sdk-lambda:1.12.141"
