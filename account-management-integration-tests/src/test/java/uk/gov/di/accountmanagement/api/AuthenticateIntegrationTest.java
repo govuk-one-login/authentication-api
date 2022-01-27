@@ -12,9 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE;
-import static uk.gov.di.authentication.sharedtest.extensions.AuditSnsTopicExtension.SNS_TIMEOUT_MILLIS;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -41,7 +39,7 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
     }
 
     @Test
-    public void shouldCallLoginEndpointAndReturn401henUserHasInvalidCredentials() throws Exception {
+    public void shouldCallLoginEndpointAndReturn401henUserHasInvalidCredentials() {
         String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
         String password = "password-1";
         userStore.signUp(email, "wrong-password");
@@ -52,7 +50,6 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
         assertThat(response, hasStatus(401));
 
-        Thread.sleep(SNS_TIMEOUT_MILLIS);
-        assertThat(auditTopic.getCountOfRequests(), equalTo(0));
+        AuditAssertionsHelper.assertNoAuditEventsReceived(auditTopic);
     }
 }
