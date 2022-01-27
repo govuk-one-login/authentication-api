@@ -79,10 +79,9 @@ public class UserInfoHandlerTest {
     void shouldReturn401WhenBearerTokenIsNotParseable() throws AccessTokenException {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Authorization", "this-is-not-a-valid-token"));
-        AccessTokenException userInfoValidationException =
+        AccessTokenException accessTokenException =
                 new AccessTokenException("Unable to parse AccessToken", INVALID_TOKEN);
-        when(accessTokenService.parse("this-is-not-a-valid-token"))
-                .thenThrow(userInfoValidationException);
+        when(accessTokenService.parse("this-is-not-a-valid-token")).thenThrow(accessTokenException);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
