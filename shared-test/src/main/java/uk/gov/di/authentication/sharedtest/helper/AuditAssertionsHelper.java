@@ -15,6 +15,17 @@ import static uk.gov.di.authentication.sharedtest.matchers.AuditEventMatcher.has
 public class AuditAssertionsHelper {
 
     private static final int SNS_TIMEOUT = 1;
+    public static final int SNS_TIMEOUT_MILLIS = SNS_TIMEOUT * 1000;
+
+    public static void assertNoAuditEventsReceived(AuditSnsTopicExtension auditTopic) {
+        try {
+            Thread.sleep(SNS_TIMEOUT_MILLIS);
+        } catch (InterruptedException ex) {
+            throw new RuntimeException(ex);
+        }
+
+        assertThat(auditTopic.getCountOfRequests(), equalTo(0));
+    }
 
     public static void assertEventTypesReceived(
             AuditSnsTopicExtension auditTopic, Collection<AuditableEvent> eventTypes) {
@@ -39,6 +50,7 @@ public class AuditAssertionsHelper {
                                                         auditTopic.getAuditEvents(),
                                                         hasItem(hasEventType(eventType)))));
 
+        // Check that no more events came through while we were looking for the ones we expected.
         assertThat(auditTopic.getCountOfRequests(), equalTo(eventTypes.size()));
     }
 }
