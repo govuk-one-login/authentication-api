@@ -10,6 +10,7 @@ import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -17,8 +18,11 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.USER_NOT_FOUND;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class UserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -47,6 +51,8 @@ public class UserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(checkUserExistsResponse.getEmail(), equalTo(emailAddress));
         assertThat(checkUserExistsResponse.getSessionState(), equalTo(AUTHENTICATION_REQUIRED));
         assertTrue(checkUserExistsResponse.doesUserExist());
+
+        assertEventTypesReceived(auditTopic, List.of(CHECK_USER_KNOWN_EMAIL));
     }
 
     @Test
@@ -67,5 +73,7 @@ public class UserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(checkUserExistsResponse.getEmail(), equalTo(emailAddress));
         assertThat(checkUserExistsResponse.getSessionState(), equalTo(USER_NOT_FOUND));
         assertFalse(checkUserExistsResponse.doesUserExist());
+
+        assertEventTypesReceived(auditTopic, List.of(CHECK_USER_NO_ACCOUNT_WITH_EMAIL));
     }
 }

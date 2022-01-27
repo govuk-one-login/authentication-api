@@ -15,6 +15,7 @@ services:
       KMS_PROVIDER: local-kms
     extra_hosts:
       - "notify.internal:host-gateway"
+      - "subscriber.internal:host-gateway"
     networks:
       - di-authentication-api-net
     ports:

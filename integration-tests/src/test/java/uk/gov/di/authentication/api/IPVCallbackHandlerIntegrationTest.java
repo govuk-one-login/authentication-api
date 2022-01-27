@@ -29,6 +29,7 @@ import java.util.Optional;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -79,6 +80,8 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+
+        assertNoAuditEventsReceived(auditTopic);
     }
 
     private void setUpDynamo() {

@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.security.KeyPair;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -27,6 +28,8 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
+import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTH_CODE_ISSUED;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -62,6 +65,8 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION).toString(),
                 not(containsString("cookie_consent")));
+
+        assertEventTypesReceived(auditTopic, List.of(AUTH_CODE_ISSUED));
     }
 
     private AuthenticationRequest generateAuthRequest() {

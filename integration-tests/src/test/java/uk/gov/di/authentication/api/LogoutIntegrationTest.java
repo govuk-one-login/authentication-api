@@ -32,6 +32,8 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.hasEntry;
+import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.LOG_OUT_SUCCESS;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.isRedirect;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.isRedirectTo;
 import static uk.gov.di.authentication.sharedtest.matchers.UriMatcher.baseUri;
@@ -74,6 +76,8 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         allOf(
                                 baseUri(URI.create(REDIRECT_URL)),
                                 redirectQueryParameters(hasEntry("state", STATE)))));
+
+        assertEventTypesReceived(auditTopic, List.of(LOG_OUT_SUCCESS));
     }
 
     @Test
@@ -94,6 +98,8 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         allOf(
                                 baseUri(TEST_CONFIGURATION_SERVICE.getDefaultLogoutURI()),
                                 redirectQueryParameters(hasEntry("state", STATE)))));
+
+        assertEventTypesReceived(auditTopic, List.of(LOG_OUT_SUCCESS));
     }
 
     @Test
@@ -122,6 +128,8 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 redirectQueryParameters(hasEntry("state", STATE)),
                                 redirectQueryParameters(
                                         hasEntry("error_code", "invalid_request")))));
+
+        assertEventTypesReceived(auditTopic, List.of(LOG_OUT_SUCCESS));
     }
 
     private SignedJWT setupClientAndSession(String sessionId, String clientSessionId)

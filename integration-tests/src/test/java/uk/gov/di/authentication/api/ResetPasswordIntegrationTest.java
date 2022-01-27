@@ -16,7 +16,9 @@ import java.util.Optional;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -50,5 +52,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         assertThat(requests, hasSize(1));
         assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
         assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
+
+        assertEventTypesReceived(auditTopic, List.of(PASSWORD_RESET_SUCCESSFUL));
     }
 }

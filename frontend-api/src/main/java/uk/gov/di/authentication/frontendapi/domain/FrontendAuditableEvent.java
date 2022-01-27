@@ -26,5 +26,9 @@ public enum FrontendAuditableEvent implements AuditableEvent {
     MFA_MISMATCHED_EMAIL,
     MFA_MISSING_PHONE_NUMBER,
     MFA_CODE_SENT,
-    MFA_CODE_SENT_FOR_TEST_CLIENT
+    MFA_CODE_SENT_FOR_TEST_CLIENT;
+
+    public AuditableEvent parseFromName(String name) {
+        return valueOf(name);
+    }
 }

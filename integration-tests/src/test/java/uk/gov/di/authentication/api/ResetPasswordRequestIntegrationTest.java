@@ -17,10 +17,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_REQUESTED;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
 import static uk.gov.di.authentication.shared.entity.SessionState.RESET_PASSWORD_LINK_SENT;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -67,6 +69,8 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         BaseAPIResponse resetPasswordResponse =
                 objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
         assertThat(resetPasswordResponse.getSessionState(), equalTo(RESET_PASSWORD_LINK_SENT));
+
+        assertEventTypesReceived(auditTopic, List.of(PASSWORD_RESET_REQUESTED));
     }
 
     @Test
@@ -90,5 +94,7 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
 
         assertThat(requests, hasSize(0));
+
+        assertEventTypesReceived(auditTopic, List.of(PASSWORD_RESET_REQUESTED));
     }
 }

@@ -10,12 +10,15 @@ import uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_RECEIVED;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -51,5 +54,7 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
 
         assertThat(response, hasStatus(200));
         assertTrue(clientStore.clientExists(clientResponse.getClientId()));
+
+        assertEventTypesReceived(auditTopic, List.of(REGISTER_CLIENT_REQUEST_RECEIVED));
     }
 }

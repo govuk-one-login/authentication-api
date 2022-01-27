@@ -39,6 +39,9 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
+import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_INITIATED;
+import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR;
+import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATED;
@@ -46,6 +49,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION
 import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPLIFT_REQUIRED_CM;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.getHttpCookieFromMultiValueResponseHeaders;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -66,7 +70,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    void shouldReturnUnmetAuthenticationRequirementsErrorWhenUsingInvalidClient() {
+    void shouldReturnUnmetAuthenticationRequirementsErrorWhenUsingInvalidClient() throws Exception {
         var response =
                 makeRequest(
                         Optional.empty(),
@@ -81,6 +85,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 containsString(OAuth2Error.UNAUTHORIZED_CLIENT.getCode()));
+
+        assertEventTypesReceived(
+                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
     }
 
     @Test
@@ -102,6 +109,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
                         .isPresent(),
                 equalTo(true));
+
+        assertEventTypesReceived(
+                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -123,6 +133,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
                         .isPresent(),
                 equalTo(true));
+
+        assertEventTypesReceived(
+                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -155,6 +168,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         response.getMultiValueHeaders(), "di-persistent-session-id");
         assertThat(persistentCookie.isPresent(), equalTo(true));
         assertThat(persistentCookie.get().getValue(), equalTo("persistent-id-value"));
+
+        assertEventTypesReceived(
+                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -183,6 +199,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 response.getMultiValueHeaders(), "di-persistent-session-id")
                         .isPresent(),
                 equalTo(true));
+
+        assertEventTypesReceived(
+                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -201,6 +220,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 containsString(
                         "error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope"));
+
+        assertEventTypesReceived(
+                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
     }
 
     @Test
@@ -227,6 +249,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 response.getMultiValueHeaders(), "di-persistent-session-id")
                         .isPresent(),
                 equalTo(true));
+
+        assertEventTypesReceived(
+                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -254,6 +279,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 response.getMultiValueHeaders(), "di-persistent-session-id")
                         .isPresent(),
                 equalTo(true));
+
+        assertEventTypesReceived(
+                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -286,6 +314,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 equalTo(true));
         assertThat(cookie.isPresent(), equalTo(true));
         assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
+
+        assertEventTypesReceived(
+                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -317,6 +348,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 equalTo(true));
         assertThat(cookie.isPresent(), equalTo(true));
         assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
+
+        assertEventTypesReceived(
+                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -334,6 +368,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 containsString(OIDCError.LOGIN_REQUIRED_CODE));
+
+        assertEventTypesReceived(
+                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
     }
 
     @Test
@@ -367,6 +404,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(
                 getHeaderValueByParamName(response, ResponseHeaders.LOCATION),
                 startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+
+        assertEventTypesReceived(
+                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -402,6 +442,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
         String newSessionId = cookie.get().getValue().split("\\.")[0];
         assertThat(redis.getSession(newSessionId).getState(), equalTo(AUTHENTICATION_REQUIRED));
+
+        assertEventTypesReceived(
+                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -440,6 +483,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         String newSessionId = cookie.get().getValue().split("\\.")[0];
         assertThat(redis.getSession(newSessionId).getState(), equalTo(UPLIFT_REQUIRED_CM));
+
+        assertEventTypesReceived(
+                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -478,6 +524,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         String newSessionId = cookie.get().getValue().split("\\.")[0];
         assertThat(redis.getSession(newSessionId).getState(), equalTo(CONSENT_REQUIRED));
+
+        assertEventTypesReceived(
+                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     private String givenAnExistingSession(SessionState initialState) throws Exception {

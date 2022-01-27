@@ -32,6 +32,7 @@ import static com.nimbusds.oauth2.sdk.token.BearerTokenError.INVALID_TOKEN;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -94,6 +95,8 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         expectedUserInfoResponse.setPhoneNumber(FORMATTED_PHONE_NUMBER);
         expectedUserInfoResponse.setPhoneNumberVerified(true);
         assertThat(response.getBody(), equalTo(expectedUserInfoResponse.toJSONString()));
+
+        assertNoAuditEventsReceived(auditTopic);
     }
 
     @Test
@@ -109,6 +112,8 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 .toHTTPResponse()
                                 .getHeaderMap()
                                 .get("WWW-Authenticate")));
+
+        assertNoAuditEventsReceived(auditTopic);
     }
 
     private void setUpDynamo(Subject internalSubject) {
