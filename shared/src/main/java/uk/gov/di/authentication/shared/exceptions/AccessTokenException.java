@@ -2,11 +2,11 @@ package uk.gov.di.authentication.shared.exceptions;
 
 import com.nimbusds.oauth2.sdk.ErrorObject;
 
-public class UserInfoValidationException extends Exception {
+public class AccessTokenException extends Exception {
 
     private final ErrorObject error;
 
-    public UserInfoValidationException(String message, ErrorObject error) {
+    public AccessTokenException(String message, ErrorObject error) {
         super(message);
         this.error = error;
     }

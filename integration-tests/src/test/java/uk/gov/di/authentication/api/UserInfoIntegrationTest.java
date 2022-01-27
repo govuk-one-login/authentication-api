@@ -36,7 +36,6 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    private static final String USERINFO_ENDPOINT = "/userinfo";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_PHONE_NUMBER = "01234567890";
     private static final String FORMATTED_PHONE_NUMBER = "+441234567890";
