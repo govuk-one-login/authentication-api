@@ -18,7 +18,6 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
 import java.io.IOException;
 import java.net.URI;
@@ -40,6 +39,7 @@ import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION
 import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_REQUIRED;
 import static uk.gov.di.authentication.shared.entity.SessionState.LOGGED_IN;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -115,7 +115,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 objectMapper.readValue(response.getBody(), LoginResponse.class);
         assertEquals(expectedState, loginResponse.getSessionState());
 
-        AuditAssertionsHelper.assertEventTypesReceived(auditTopic, List.of(LOG_IN_SUCCESS));
+        assertEventTypesReceived(auditTopic, List.of(LOG_IN_SUCCESS));
     }
 
     private static Stream<Arguments> vectorOfTrustEndStates() {
@@ -143,6 +143,6 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 makeRequest(Optional.of(new LoginRequest(email, password)), headers, Map.of());
         assertThat(response, hasStatus(401));
 
-        AuditAssertionsHelper.assertEventTypesReceived(auditTopic, List.of(INVALID_CREDENTIALS));
+        assertEventTypesReceived(auditTopic, List.of(INVALID_CREDENTIALS));
     }
 }

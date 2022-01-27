@@ -5,7 +5,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.lambda.JwksHandler;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
 import java.text.ParseException;
 import java.util.Map;
@@ -13,6 +12,7 @@ import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class JwksIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -30,6 +30,6 @@ public class JwksIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(200));
         assertThat(JWKSet.parse(response.getBody()).getKeys(), hasSize(1));
 
-        AuditAssertionsHelper.assertNoAuditEventsReceived(auditTopic);
+        assertNoAuditEventsReceived(auditTopic);
     }
 }

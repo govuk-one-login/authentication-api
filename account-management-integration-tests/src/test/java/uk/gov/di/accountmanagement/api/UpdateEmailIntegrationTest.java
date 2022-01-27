@@ -7,7 +7,6 @@ import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdateEmailRequest;
 import uk.gov.di.accountmanagement.lambda.UpdateEmailHandler;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
 import java.util.List;
 import java.util.Map;
@@ -18,6 +17,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.UPDATE_EMAIL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.EMAIL_UPDATED;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -53,6 +53,6 @@ public class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest
         assertThat(requests.get(0).getDestination(), equalTo(NEW_EMAIL_ADDRESS));
         assertThat(requests.get(0).getNotificationType(), equalTo(EMAIL_UPDATED));
 
-        AuditAssertionsHelper.assertEventTypesReceived(auditTopic, List.of(UPDATE_EMAIL));
+        assertEventTypesReceived(auditTopic, List.of(UPDATE_EMAIL));
     }
 }

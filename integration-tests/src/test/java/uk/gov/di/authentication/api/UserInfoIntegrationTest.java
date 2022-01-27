@@ -15,7 +15,6 @@ import uk.gov.di.authentication.oidc.lambda.UserInfoHandler;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.security.KeyPair;
@@ -33,6 +32,7 @@ import static com.nimbusds.oauth2.sdk.token.BearerTokenError.INVALID_TOKEN;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -96,7 +96,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         expectedUserInfoResponse.setPhoneNumberVerified(true);
         assertThat(response.getBody(), equalTo(expectedUserInfoResponse.toJSONString()));
 
-        AuditAssertionsHelper.assertNoAuditEventsReceived(auditTopic);
+        assertNoAuditEventsReceived(auditTopic);
     }
 
     @Test
@@ -113,7 +113,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 .getHeaderMap()
                                 .get("WWW-Authenticate")));
 
-        AuditAssertionsHelper.assertNoAuditEventsReceived(auditTopic);
+        assertNoAuditEventsReceived(auditTopic);
     }
 
     private void setUpDynamo(Subject internalSubject) {

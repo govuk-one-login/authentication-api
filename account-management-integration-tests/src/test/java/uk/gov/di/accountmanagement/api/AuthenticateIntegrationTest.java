@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.entity.AuthenticateRequest;
 import uk.gov.di.accountmanagement.lambda.AuthenticateHandler;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
 import java.util.List;
 import java.util.Map;
@@ -13,6 +12,8 @@ import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -34,8 +35,7 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
         assertThat(response, hasStatus(204));
 
-        AuditAssertionsHelper.assertEventTypesReceived(
-                auditTopic, List.of(ACCOUNT_MANAGEMENT_AUTHENTICATE));
+        assertEventTypesReceived(auditTopic, List.of(ACCOUNT_MANAGEMENT_AUTHENTICATE));
     }
 
     @Test
@@ -50,6 +50,6 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
         assertThat(response, hasStatus(401));
 
-        AuditAssertionsHelper.assertNoAuditEventsReceived(auditTopic);
+        assertNoAuditEventsReceived(auditTopic);
     }
 }

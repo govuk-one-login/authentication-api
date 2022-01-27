@@ -9,7 +9,6 @@ import uk.gov.di.authentication.clientregistry.lambda.UpdateClientConfigHandler;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
 import java.util.List;
 import java.util.Map;
@@ -19,6 +18,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_RECEIVED;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -63,8 +63,7 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
         assertThat(clientResponse.getClientName(), equalTo("new-client-name"));
         assertThat(clientResponse.getClientId(), equalTo(CLIENT_ID));
 
-        AuditAssertionsHelper.assertEventTypesReceived(
-                auditTopic, List.of(UPDATE_CLIENT_REQUEST_RECEIVED));
+        assertEventTypesReceived(auditTopic, List.of(UPDATE_CLIENT_REQUEST_RECEIVED));
     }
 
     @Test
@@ -84,7 +83,7 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
                 response.getBody(),
                 equalTo(OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString()));
 
-        AuditAssertionsHelper.assertEventTypesReceived(
+        assertEventTypesReceived(
                 auditTopic,
                 List.of(UPDATE_CLIENT_REQUEST_RECEIVED, UPDATE_CLIENT_REQUEST_RECEIVED));
     }

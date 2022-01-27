@@ -18,7 +18,6 @@ import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
 import java.io.IOException;
 import java.net.URI;
@@ -40,6 +39,7 @@ import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDA
 import static uk.gov.di.authentication.shared.entity.SessionState.ADDED_UNVERIFIED_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_ADDED;
 import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS_ACCEPTED;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -72,7 +72,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
         assertThat(baseAPIResponse.getSessionState(), equalTo(ADDED_UNVERIFIED_PHONE_NUMBER));
 
-        AuditAssertionsHelper.assertEventTypesReceived(
+        assertEventTypesReceived(
                 auditTopic,
                 List.of(UPDATE_PROFILE_REQUEST_RECEIVED, UPDATE_PROFILE_REQUEST_RECEIVED));
     }
@@ -108,7 +108,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
         assertThat(baseAPIResponse.getSessionState(), equalTo(CONSENT_ADDED));
 
-        AuditAssertionsHelper.assertEventTypesReceived(
+        assertEventTypesReceived(
                 auditTopic,
                 List.of(UPDATE_PROFILE_REQUEST_RECEIVED, UPDATE_PROFILE_REQUEST_RECEIVED));
     }
@@ -134,7 +134,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
         assertThat(
                 baseAPIResponse.getSessionState(), equalTo(UPDATED_TERMS_AND_CONDITIONS_ACCEPTED));
 
-        AuditAssertionsHelper.assertEventTypesReceived(
+        assertEventTypesReceived(
                 auditTopic,
                 List.of(UPDATE_PROFILE_REQUEST_RECEIVED, UPDATE_PROFILE_REQUEST_RECEIVED));
     }

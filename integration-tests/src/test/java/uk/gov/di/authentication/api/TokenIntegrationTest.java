@@ -38,7 +38,6 @@ import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.net.URI;
@@ -63,6 +62,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -121,7 +121,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .getClaim("vot"),
                 equalTo(vtr.get()));
 
-        AuditAssertionsHelper.assertNoAuditEventsReceived(auditTopic);
+        assertNoAuditEventsReceived(auditTopic);
     }
 
     @Test
@@ -145,7 +145,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .getTokens()
                         .getBearerAccessToken());
 
-        AuditAssertionsHelper.assertNoAuditEventsReceived(auditTopic);
+        assertNoAuditEventsReceived(auditTopic);
     }
 
     @Test
@@ -198,7 +198,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .getTokens()
                         .getBearerAccessToken());
 
-        AuditAssertionsHelper.assertNoAuditEventsReceived(auditTopic);
+        assertNoAuditEventsReceived(auditTopic);
     }
 
     private SignedJWT generateSignedRefreshToken(Scope scope, Subject publicSubject) {

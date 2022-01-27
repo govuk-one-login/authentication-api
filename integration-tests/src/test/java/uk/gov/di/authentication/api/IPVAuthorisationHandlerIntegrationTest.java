@@ -18,7 +18,6 @@ import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.IPVStubExtension;
-import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
 import java.io.IOException;
 import java.net.URI;
@@ -32,6 +31,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -81,8 +82,7 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                 body.getRedirectUri(),
                 startsWith(configurationService.getIPVAuthorisationURI() + "/authorize"));
 
-        AuditAssertionsHelper.assertEventTypesReceived(
-                auditTopic, List.of(IPV_AUTHORISATION_REQUESTED));
+        assertEventTypesReceived(auditTopic, List.of(IPV_AUTHORISATION_REQUESTED));
     }
 
     @Test
@@ -96,7 +96,7 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
         assertThat(response, hasStatus(400));
 
-        AuditAssertionsHelper.assertNoAuditEventsReceived(auditTopic);
+        assertNoAuditEventsReceived(auditTopic);
     }
 
     private AuthenticationRequest withAuthenticationRequest(String clientId) {

@@ -18,7 +18,6 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.lambda.LogoutHandler;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
 import java.io.IOException;
 import java.net.URI;
@@ -34,6 +33,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.hasEntry;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.LOG_OUT_SUCCESS;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.isRedirect;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.isRedirectTo;
 import static uk.gov.di.authentication.sharedtest.matchers.UriMatcher.baseUri;
@@ -77,7 +77,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 baseUri(URI.create(REDIRECT_URL)),
                                 redirectQueryParameters(hasEntry("state", STATE)))));
 
-        AuditAssertionsHelper.assertEventTypesReceived(auditTopic, List.of(LOG_OUT_SUCCESS));
+        assertEventTypesReceived(auditTopic, List.of(LOG_OUT_SUCCESS));
     }
 
     @Test
@@ -99,7 +99,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 baseUri(TEST_CONFIGURATION_SERVICE.getDefaultLogoutURI()),
                                 redirectQueryParameters(hasEntry("state", STATE)))));
 
-        AuditAssertionsHelper.assertEventTypesReceived(auditTopic, List.of(LOG_OUT_SUCCESS));
+        assertEventTypesReceived(auditTopic, List.of(LOG_OUT_SUCCESS));
     }
 
     @Test
@@ -129,7 +129,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 redirectQueryParameters(
                                         hasEntry("error_code", "invalid_request")))));
 
-        AuditAssertionsHelper.assertEventTypesReceived(auditTopic, List.of(LOG_OUT_SUCCESS));
+        assertEventTypesReceived(auditTopic, List.of(LOG_OUT_SUCCESS));
     }
 
     private SignedJWT setupClientAndSession(String sessionId, String clientSessionId)

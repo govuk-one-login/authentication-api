@@ -14,7 +14,6 @@ import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.io.IOException;
@@ -30,6 +29,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTH_CODE_ISSUED;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -66,7 +66,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 response.getHeaders().get(ResponseHeaders.LOCATION).toString(),
                 not(containsString("cookie_consent")));
 
-        AuditAssertionsHelper.assertEventTypesReceived(auditTopic, List.of(AUTH_CODE_ISSUED));
+        assertEventTypesReceived(auditTopic, List.of(AUTH_CODE_ISSUED));
     }
 
     private AuthenticationRequest generateAuthRequest() {
