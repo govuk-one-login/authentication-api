@@ -19,7 +19,7 @@ dependencies {
             configurations.sns,
             configurations.sqs,
             configurations.ssm,
-            "com.googlecode.libphonenumber:libphonenumber:8.12.41",
+            "com.googlecode.libphonenumber:libphonenumber:8.12.42",
             "com.google.protobuf:protobuf-java:3.19.3"
 
     testImplementation configurations.tests,
