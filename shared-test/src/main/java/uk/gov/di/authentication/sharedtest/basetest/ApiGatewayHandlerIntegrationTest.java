@@ -13,6 +13,7 @@ import uk.gov.di.authentication.sharedtest.extensions.ClientStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.authentication.sharedtest.extensions.ParameterStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.RedisExtension;
+import uk.gov.di.authentication.sharedtest.extensions.SPOTStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
@@ -92,6 +93,9 @@ public abstract class ApiGatewayHandlerIntegrationTest {
 
     @RegisterExtension
     protected static final ClientStoreExtension clientStore = new ClientStoreExtension();
+
+    @RegisterExtension
+    protected static final SPOTStoreExtension spotStore = new SPOTStoreExtension();
 
     protected APIGatewayProxyResponseEvent makeRequest(
             Optional<Object> body, Map<String, String> headers, Map<String, String> queryString) {

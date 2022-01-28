@@ -2,6 +2,14 @@ package uk.gov.di.authentication.api;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.crypto.ECDSASigner;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.id.Subject;
@@ -9,6 +17,7 @@ import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.oidc.entity.IdentityResponse;
 import uk.gov.di.authentication.oidc.lambda.IdentityHandler;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ServiceType;
@@ -28,6 +37,7 @@ import java.util.UUID;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class IdentityIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -71,7 +81,8 @@ public class IdentityIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + publicSubject,
                 accessTokenStoreString,
                 300L);
-        setUpDynamo();
+        SignedJWT signedCredential = generateSignedCredential();
+        setUpDynamo(publicSubject.getValue(), signedCredential.serialize());
 
         var response =
                 makeRequest(
@@ -79,11 +90,17 @@ public class IdentityIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of("Authorization", accessToken.toAuthorizationHeader()),
                         Map.of());
 
-        assertThat(response, hasStatus(204));
+        assertThat(response, hasStatus(200));
+
+        IdentityResponse identityResponse =
+                new ObjectMapper().readValue(response.getBody(), IdentityResponse.class);
+        assertThat(identityResponse.getSub(), equalTo(publicSubject.getValue()));
+        assertThat(identityResponse.getIdentityCredential(), equalTo(signedCredential.serialize()));
     }
 
-    private void setUpDynamo() {
+    private void setUpDynamo(String subject, String serializedCredential) {
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        spotStore.addCredential(subject, serializedCredential);
         clientStore.registerClient(
                 CLIENT_ID,
                 "test-client",
@@ -96,5 +113,22 @@ public class IdentityIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "https://test.com",
                 "public",
                 true);
+    }
+
+    public SignedJWT generateSignedCredential() {
+        try {
+            ECKey ecSigningKey =
+                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+            JWSSigner signer = new ECDSASigner(ecSigningKey);
+            JWSHeader jwsHeader =
+                    new JWSHeader.Builder(JWSAlgorithm.ES256)
+                            .keyID(ecSigningKey.getKeyID())
+                            .build();
+            var signedJWT = new SignedJWT(jwsHeader, new JWTClaimsSet.Builder().build());
+            signedJWT.sign(signer);
+            return signedJWT;
+        } catch (JOSEException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

@@ -29,7 +29,24 @@ module "spot_response_role" {
   policies_to_attach = var.use_localstack ? [
     null
     ] : [
+    aws_iam_policy.dynamo_spot_write_access_policy[0].arn,
+  ]
+}
+
+module "identity_lambda_role" {
+  source      = "../modules/lambda-role"
+  environment = var.environment
+  role_name   = "oidc-default-role"
+  vpc_arn     = local.authentication_vpc_arn
+
+  policies_to_attach = var.use_localstack ? [
+    null
+    ] : [
     aws_iam_policy.dynamo_access_policy[0].arn,
+    aws_iam_policy.dynamo_spot_read_access_policy[0].arn,
+    aws_iam_policy.redis_parameter_policy.arn,
+    aws_iam_policy.oidc_default_id_token_public_key_kms_policy[0].arn,
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0].arn,
   ]
 }
 
@@ -166,6 +183,21 @@ data "aws_iam_policy_document" "dynamo_spot_write_access_policy_document" {
   }
 }
 
+data "aws_iam_policy_document" "dynamo_spot_read_access_policy_document" {
+  count = var.use_localstack ? 0 : 1
+  statement {
+    sid    = "AllowAccessToDynamoTables"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:Get*",
+    ]
+    resources = [
+      data.aws_dynamodb_table.spot_credential_table.arn,
+    ]
+  }
+}
+
 resource "aws_iam_policy" "dynamo_access_policy" {
   count       = var.use_localstack ? 0 : 1
   name_prefix = "dynamo-access-policy"
@@ -182,4 +214,13 @@ resource "aws_iam_policy" "dynamo_spot_write_access_policy" {
   description = "IAM policy for managing write permissions to the Dynamo SPOT credential table"
 
   policy = data.aws_iam_policy_document.dynamo_spot_write_access_policy_document[0].json
+}
+
+resource "aws_iam_policy" "dynamo_spot_read_access_policy" {
+  count       = var.use_localstack ? 0 : 1
+  name_prefix = "dynamo-access-policy"
+  path        = "/${var.environment}/oidc-default/"
+  description = "IAM policy for managing write permissions to the Dynamo SPOT credential table"
+
+  policy = data.aws_iam_policy_document.dynamo_spot_read_access_policy_document[0].json
 }

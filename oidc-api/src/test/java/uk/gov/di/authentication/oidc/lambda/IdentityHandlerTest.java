@@ -3,12 +3,28 @@ package uk.gov.di.authentication.oidc.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.crypto.ECDSASigner;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.entity.IdentityErrorResponse;
+import uk.gov.di.authentication.oidc.entity.IdentityResponse;
 import uk.gov.di.authentication.oidc.services.AccessTokenService;
+import uk.gov.di.authentication.oidc.services.IdentityService;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -17,6 +33,7 @@ import java.util.Map;
 
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.INVALID_TOKEN;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -26,24 +43,42 @@ class IdentityHandlerTest {
 
     private ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AccessTokenService accessTokenService = mock(AccessTokenService.class);
+    private final IdentityService identityService = mock(IdentityService.class);
+    private final Context context = mock(Context.class);
+    private final AccessTokenInfo accessTokenInfo = mock(AccessTokenInfo.class);
     private static final Map<String, List<String>> INVALID_TOKEN_RESPONSE =
             new IdentityErrorResponse(INVALID_TOKEN).toHTTPResponse().getHeaderMap();
-    private final Context context = mock(Context.class);
+    private static final Subject SUBJECT = new Subject();
+
     private IdentityHandler handler;
 
     @BeforeEach
     void setUp() {
-        handler = new IdentityHandler(configurationService, accessTokenService);
+        handler = new IdentityHandler(configurationService, accessTokenService, identityService);
     }
 
     @Test
-    void shouldReturn204ForSuccessfulRequest() {
+    void shouldReturnIdentityResponseForSuccessfulRequest()
+            throws AccessTokenException, JsonProcessingException {
+        String serializedCredential = generateSignedCredential().serialize();
+        IdentityResponse identityResponse =
+                new IdentityResponse(SUBJECT.getValue(), serializedCredential);
         AccessToken accessToken = new BearerAccessToken();
+        when(accessTokenService.parse(accessToken.toAuthorizationHeader()))
+                .thenReturn(accessTokenInfo);
+        when(identityService.populateIdentityResponse(accessTokenInfo))
+                .thenReturn(identityResponse);
+
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Authorization", accessToken.toAuthorizationHeader()));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        assertThat(result, hasStatus(204));
+        assertThat(result, hasStatus(200));
+        IdentityResponse receivedIdentityResponse =
+                new ObjectMapper().readValue(result.getBody(), IdentityResponse.class);
+
+        assertThat(receivedIdentityResponse.getIdentityCredential(), equalTo(serializedCredential));
+        assertThat(receivedIdentityResponse.getSub(), equalTo(SUBJECT.getValue()));
     }
 
     @Test
@@ -66,5 +101,22 @@ class IdentityHandlerTest {
 
         assertThat(result, hasStatus(401));
         assertEquals(INVALID_TOKEN_RESPONSE, result.getMultiValueHeaders());
+    }
+
+    public SignedJWT generateSignedCredential() {
+        try {
+            ECKey ecSigningKey =
+                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+            JWSSigner signer = new ECDSASigner(ecSigningKey);
+            JWSHeader jwsHeader =
+                    new JWSHeader.Builder(JWSAlgorithm.ES256)
+                            .keyID(ecSigningKey.getKeyID())
+                            .build();
+            var signedJWT = new SignedJWT(jwsHeader, new JWTClaimsSet.Builder().build());
+            signedJWT.sign(signer);
+            return signedJWT;
+        } catch (JOSEException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
