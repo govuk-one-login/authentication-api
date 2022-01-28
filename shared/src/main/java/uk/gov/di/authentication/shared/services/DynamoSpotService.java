@@ -58,6 +58,10 @@ public class DynamoSpotService {
         spotCredentialMapper.save(spotCredential);
     }
 
+    public Optional<SPOTCredential> getSpotCredential(String subjectID) {
+        return Optional.ofNullable(spotCredentialMapper.load(SPOTCredential.class, subjectID));
+    }
+
     private void warmUp(String tableName) {
         dynamoDB.describeTable(tableName);
     }
