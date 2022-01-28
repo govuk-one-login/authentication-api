@@ -11,8 +11,10 @@ import com.nimbusds.openid.connect.sdk.UserInfoErrorResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
+import uk.gov.di.authentication.oidc.services.AccessTokenService;
 import uk.gov.di.authentication.oidc.services.UserInfoService;
-import uk.gov.di.authentication.shared.exceptions.UserInfoValidationException;
+import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.List;
@@ -36,26 +38,29 @@ public class UserInfoHandlerTest {
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final UserInfoService userInfoService = mock(UserInfoService.class);
+    private final AccessTokenInfo accessTokenInfo = mock(AccessTokenInfo.class);
+    private final AccessTokenService accessTokenService = mock(AccessTokenService.class);
     private static final Map<String, List<String>> INVALID_TOKEN_RESPONSE =
             new UserInfoErrorResponse(INVALID_TOKEN).toHTTPResponse().getHeaderMap();
     private UserInfoHandler handler;
 
     @BeforeEach
-    public void setUp() {
-        handler = new UserInfoHandler(configurationService, userInfoService);
+    void setUp() {
+        handler = new UserInfoHandler(configurationService, userInfoService, accessTokenService);
     }
 
     @Test
-    public void shouldReturn200WithUserInfoBasedOnScopesForSuccessfulRequest()
-            throws ParseException, UserInfoValidationException {
+    void shouldReturn200WithUserInfoBasedOnScopesForSuccessfulRequest()
+            throws ParseException, AccessTokenException {
         AccessToken accessToken = new BearerAccessToken();
         UserInfo userInfo = new UserInfo(SUBJECT);
         userInfo.setEmailVerified(true);
         userInfo.setPhoneNumberVerified(true);
         userInfo.setPhoneNumber(PHONE_NUMBER);
         userInfo.setEmailAddress(EMAIL_ADDRESS);
-        when(userInfoService.processUserInfoRequest(accessToken.toAuthorizationHeader()))
-                .thenReturn(userInfo);
+        when(accessTokenService.parse(accessToken.toAuthorizationHeader()))
+                .thenReturn(accessTokenInfo);
+        when(userInfoService.populateUserInfo(accessTokenInfo)).thenReturn(userInfo);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Authorization", accessToken.toAuthorizationHeader()));
@@ -71,12 +76,12 @@ public class UserInfoHandlerTest {
     }
 
     @Test
-    public void shouldReturn401WhenBearerTokenIsNotParseable() throws UserInfoValidationException {
+    void shouldReturn401WhenBearerTokenIsNotParseable() throws AccessTokenException {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Authorization", "this-is-not-a-valid-token"));
-        UserInfoValidationException userInfoValidationException =
-                new UserInfoValidationException("Unable to parse AccessToken", INVALID_TOKEN);
-        when(userInfoService.processUserInfoRequest("this-is-not-a-valid-token"))
+        AccessTokenException userInfoValidationException =
+                new AccessTokenException("Unable to parse AccessToken", INVALID_TOKEN);
+        when(accessTokenService.parse("this-is-not-a-valid-token"))
                 .thenThrow(userInfoValidationException);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -86,7 +91,7 @@ public class UserInfoHandlerTest {
     }
 
     @Test
-    public void shouldReturn401WhenAuthorizationHeaderIsMissing() {
+    void shouldReturn401WhenAuthorizationHeaderIsMissing() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 

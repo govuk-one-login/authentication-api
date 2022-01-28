@@ -8,8 +8,10 @@ import com.nimbusds.openid.connect.sdk.UserInfoErrorResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
+import uk.gov.di.authentication.oidc.services.AccessTokenService;
 import uk.gov.di.authentication.oidc.services.UserInfoService;
-import uk.gov.di.authentication.shared.exceptions.UserInfoValidationException;
+import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -30,11 +32,15 @@ public class UserInfoHandler
     private static final Logger LOG = LogManager.getLogger(UserInfoHandler.class);
     private final ConfigurationService configurationService;
     private final UserInfoService userInfoService;
+    private final AccessTokenService accessTokenService;
 
     public UserInfoHandler(
-            ConfigurationService configurationService, UserInfoService userInfoService) {
+            ConfigurationService configurationService,
+            UserInfoService userInfoService,
+            AccessTokenService accessTokenService) {
         this.configurationService = configurationService;
         this.userInfoService = userInfoService;
+        this.accessTokenService = accessTokenService;
     }
 
     public UserInfoHandler() {
@@ -45,18 +51,17 @@ public class UserInfoHandler
         this.configurationService = configurationService;
         this.userInfoService =
                 new UserInfoService(
-                        new RedisConnectionService(configurationService),
                         new DynamoService(
                                 configurationService.getAwsRegion(),
                                 configurationService.getEnvironment(),
-                                configurationService.getDynamoEndpointUri()),
+                                configurationService.getDynamoEndpointUri()));
+        this.accessTokenService =
+                new AccessTokenService(
+                        new RedisConnectionService(configurationService),
+                        new DynamoClientService(configurationService),
                         new TokenValidationService(
                                 configurationService,
-                                new KmsConnectionService(configurationService)),
-                        new DynamoClientService(
-                                configurationService.getAwsRegion(),
-                                configurationService.getEnvironment(),
-                                configurationService.getDynamoEndpointUri()));
+                                new KmsConnectionService(configurationService)));
     }
 
     @Override
@@ -80,16 +85,17 @@ public class UserInfoHandler
                             }
                             UserInfo userInfo;
                             try {
-                                userInfo =
-                                        userInfoService.processUserInfoRequest(
+                                AccessTokenInfo accessTokenInfo =
+                                        accessTokenService.parse(
                                                 getHeaderValueFromHeaders(
                                                         input.getHeaders(),
                                                         AUTHORIZATION_HEADER,
                                                         configurationService
                                                                 .getHeadersCaseInsensitive()));
-                            } catch (UserInfoValidationException e) {
+                                userInfo = userInfoService.populateUserInfo(accessTokenInfo);
+                            } catch (AccessTokenException e) {
                                 LOG.error(
-                                        "UserInfoValidationException. Sending back UserInfoErrorResponse");
+                                        "AccessTokenException. Sending back UserInfoErrorResponse");
                                 return generateApiGatewayProxyResponse(
                                         401,
                                         "",
