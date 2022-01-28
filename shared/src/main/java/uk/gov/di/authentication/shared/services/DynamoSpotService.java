@@ -62,6 +62,10 @@ public class DynamoSpotService {
         return Optional.ofNullable(spotCredentialMapper.load(SPOTCredential.class, subjectID));
     }
 
+    public void removeSpotCredential(String subjectID) {
+        spotCredentialMapper.delete(spotCredentialMapper.load(SPOTCredential.class, subjectID));
+    }
+
     private void warmUp(String tableName) {
         dynamoDB.describeTable(tableName);
     }

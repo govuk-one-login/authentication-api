@@ -5,16 +5,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.JWSSigner;
-import com.nimbusds.jose.crypto.ECDSASigner;
-import com.nimbusds.jose.jwk.Curve;
-import com.nimbusds.jose.jwk.ECKey;
-import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
@@ -27,6 +17,7 @@ import uk.gov.di.authentication.oidc.services.AccessTokenService;
 import uk.gov.di.authentication.oidc.services.IdentityService;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.sharedtest.helper.SignedCredentialHelper;
 
 import java.util.List;
 import java.util.Map;
@@ -60,7 +51,7 @@ class IdentityHandlerTest {
     @Test
     void shouldReturnIdentityResponseForSuccessfulRequest()
             throws AccessTokenException, JsonProcessingException {
-        String serializedCredential = generateSignedCredential().serialize();
+        String serializedCredential = SignedCredentialHelper.generateCredential().serialize();
         IdentityResponse identityResponse =
                 new IdentityResponse(SUBJECT.getValue(), serializedCredential);
         AccessToken accessToken = new BearerAccessToken();
@@ -101,22 +92,5 @@ class IdentityHandlerTest {
 
         assertThat(result, hasStatus(401));
         assertEquals(INVALID_TOKEN_RESPONSE, result.getMultiValueHeaders());
-    }
-
-    public SignedJWT generateSignedCredential() {
-        try {
-            ECKey ecSigningKey =
-                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
-            JWSSigner signer = new ECDSASigner(ecSigningKey);
-            JWSHeader jwsHeader =
-                    new JWSHeader.Builder(JWSAlgorithm.ES256)
-                            .keyID(ecSigningKey.getKeyID())
-                            .build();
-            var signedJWT = new SignedJWT(jwsHeader, new JWTClaimsSet.Builder().build());
-            signedJWT.sign(signer);
-            return signedJWT;
-        } catch (JOSEException e) {
-            throw new RuntimeException(e);
-        }
     }
 }

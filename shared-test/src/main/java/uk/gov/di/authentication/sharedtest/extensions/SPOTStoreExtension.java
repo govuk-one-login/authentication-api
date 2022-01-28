@@ -6,6 +6,7 @@ import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
 import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import uk.gov.di.authentication.shared.entity.SPOTCredential;
 import uk.gov.di.authentication.shared.services.DynamoSpotService;
 
 import java.util.Optional;
@@ -41,6 +42,10 @@ public class SPOTStoreExtension extends DynamoExtension implements AfterEachCall
 
     public void addCredential(String subjectID, String serializedCredential) {
         dynamoService.addSpotResponse(subjectID, serializedCredential);
+    }
+
+    public Optional<SPOTCredential> getSpotCredential(String subjectID) {
+        return dynamoService.getSpotCredential(subjectID);
     }
 
     private void createUserProfileTable(String tableName) {

@@ -6,9 +6,11 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.crypto.RSASSASigner;
+import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ParseException;
@@ -24,6 +26,8 @@ import java.util.List;
 import java.util.UUID;
 
 public class TokenGeneratorHelper {
+
+    private static final String KEY_ID = "14342354354353";
 
     public static SignedJWT generateIDToken(
             String clientId, Subject subject, String issuerUrl, JWK signingKey) {
@@ -63,6 +67,18 @@ public class TokenGeneratorHelper {
         } catch (JOSEException | ParseException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static SignedJWT generateSignedTokenWithGeneratedKey(
+            String clientId, String issuerUrl, List<String> scopes, Subject subject)
+            throws JOSEException {
+        ECKey ecSigningKey =
+                new ECKeyGenerator(Curve.P_256)
+                        .keyID(KEY_ID)
+                        .algorithm(JWSAlgorithm.ES256)
+                        .generate();
+        ECDSASigner signer = new ECDSASigner(ecSigningKey);
+        return generateSignedToken(clientId, issuerUrl, scopes, signer, subject, KEY_ID);
     }
 
     public static SignedJWT generateSignedToken(

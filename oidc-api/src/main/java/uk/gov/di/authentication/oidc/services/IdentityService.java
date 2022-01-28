@@ -24,6 +24,7 @@ public class IdentityService {
         if (spotCredential.isEmpty()) {
             throw new AccessTokenException("Invalid Access Token", BearerTokenError.INVALID_TOKEN);
         }
+        spotService.removeSpotCredential(accessTokenInfo.getPublicSubject());
         return new IdentityResponse(
                 spotCredential.get().getSubjectID(),
                 spotCredential.get().getSerializedCredential());

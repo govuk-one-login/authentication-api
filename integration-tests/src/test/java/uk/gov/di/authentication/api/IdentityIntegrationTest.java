@@ -2,14 +2,6 @@ package uk.gov.di.authentication.api;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.JWSSigner;
-import com.nimbusds.jose.crypto.ECDSASigner;
-import com.nimbusds.jose.jwk.Curve;
-import com.nimbusds.jose.jwk.ECKey;
-import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.id.Subject;
@@ -23,6 +15,7 @@ import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
+import uk.gov.di.authentication.sharedtest.helper.SignedCredentialHelper;
 
 import java.security.KeyPair;
 import java.time.LocalDateTime;
@@ -81,7 +74,7 @@ public class IdentityIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + publicSubject,
                 accessTokenStoreString,
                 300L);
-        SignedJWT signedCredential = generateSignedCredential();
+        SignedJWT signedCredential = SignedCredentialHelper.generateCredential();
         setUpDynamo(publicSubject.getValue(), signedCredential.serialize());
 
         var response =
@@ -96,6 +89,8 @@ public class IdentityIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new ObjectMapper().readValue(response.getBody(), IdentityResponse.class);
         assertThat(identityResponse.getSub(), equalTo(publicSubject.getValue()));
         assertThat(identityResponse.getIdentityCredential(), equalTo(signedCredential.serialize()));
+        assertThat(
+                spotStore.getSpotCredential(publicSubject.getValue()), equalTo(Optional.empty()));
     }
 
     private void setUpDynamo(String subject, String serializedCredential) {
@@ -113,22 +108,5 @@ public class IdentityIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "https://test.com",
                 "public",
                 true);
-    }
-
-    public SignedJWT generateSignedCredential() {
-        try {
-            ECKey ecSigningKey =
-                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
-            JWSSigner signer = new ECDSASigner(ecSigningKey);
-            JWSHeader jwsHeader =
-                    new JWSHeader.Builder(JWSAlgorithm.ES256)
-                            .keyID(ecSigningKey.getKeyID())
-                            .build();
-            var signedJWT = new SignedJWT(jwsHeader, new JWTClaimsSet.Builder().build());
-            signedJWT.sign(signer);
-            return signedJWT;
-        } catch (JOSEException e) {
-            throw new RuntimeException(e);
-        }
     }
 }
