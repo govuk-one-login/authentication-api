@@ -83,8 +83,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,
-                                    notificationService.getNotificationTemplateId(
-                                            ACCOUNT_CREATED_CONFIRMATION));
+                                    ACCOUNT_CREATED_CONFIRMATION);
                             break;
                         case VERIFY_EMAIL:
                             notifyPersonalisation.put("validation-code", notifyRequest.getCode());
@@ -93,22 +92,19 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,
-                                    notificationService.getNotificationTemplateId(VERIFY_EMAIL));
+                                    VERIFY_EMAIL);
                             break;
                         case VERIFY_PHONE_NUMBER:
                             notifyPersonalisation.put("validation-code", notifyRequest.getCode());
                             notificationService.sendText(
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,
-                                    notificationService.getNotificationTemplateId(
-                                            VERIFY_PHONE_NUMBER));
+                                    VERIFY_PHONE_NUMBER);
                             break;
                         case MFA_SMS:
                             notifyPersonalisation.put("validation-code", notifyRequest.getCode());
                             notificationService.sendText(
-                                    notifyRequest.getDestination(),
-                                    notifyPersonalisation,
-                                    notificationService.getNotificationTemplateId(MFA_SMS));
+                                    notifyRequest.getDestination(), notifyPersonalisation, MFA_SMS);
                             break;
                         case RESET_PASSWORD:
                             notifyPersonalisation.put(
@@ -116,7 +112,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,
-                                    notificationService.getNotificationTemplateId(RESET_PASSWORD));
+                                    RESET_PASSWORD);
                             break;
                         case PASSWORD_RESET_CONFIRMATION:
                             Map<String, Object> passwordResetConfirmationPersonalisation =
@@ -131,8 +127,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     passwordResetConfirmationPersonalisation,
-                                    notificationService.getNotificationTemplateId(
-                                            PASSWORD_RESET_CONFIRMATION));
+                                    PASSWORD_RESET_CONFIRMATION);
                             break;
                     }
                     writeTestClientOtpToS3(notifyRequest.getCode(), notifyRequest.getDestination());
