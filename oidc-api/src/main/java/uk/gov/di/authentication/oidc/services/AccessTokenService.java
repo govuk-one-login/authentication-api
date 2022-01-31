@@ -47,7 +47,8 @@ public class AccessTokenService {
         this.tokenValidationService = tokenValidationService;
     }
 
-    public AccessTokenInfo parse(String authorizationHeader) throws AccessTokenException {
+    public AccessTokenInfo parse(String authorizationHeader, boolean identityEndpoint)
+            throws AccessTokenException {
         AccessToken accessToken;
         try {
             accessToken = AccessToken.parse(authorizationHeader, AccessTokenType.BEARER);

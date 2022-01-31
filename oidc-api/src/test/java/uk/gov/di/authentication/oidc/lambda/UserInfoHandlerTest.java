@@ -58,7 +58,7 @@ public class UserInfoHandlerTest {
         userInfo.setPhoneNumberVerified(true);
         userInfo.setPhoneNumber(PHONE_NUMBER);
         userInfo.setEmailAddress(EMAIL_ADDRESS);
-        when(accessTokenService.parse(accessToken.toAuthorizationHeader()))
+        when(accessTokenService.parse(accessToken.toAuthorizationHeader(), false))
                 .thenReturn(accessTokenInfo);
         when(userInfoService.populateUserInfo(accessTokenInfo)).thenReturn(userInfo);
 
@@ -81,7 +81,8 @@ public class UserInfoHandlerTest {
         event.setHeaders(Map.of("Authorization", "this-is-not-a-valid-token"));
         AccessTokenException accessTokenException =
                 new AccessTokenException("Unable to parse AccessToken", INVALID_TOKEN);
-        when(accessTokenService.parse("this-is-not-a-valid-token")).thenThrow(accessTokenException);
+        when(accessTokenService.parse("this-is-not-a-valid-token", false))
+                .thenThrow(accessTokenException);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
