@@ -14,11 +14,15 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.BearerTokenError;
+import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -34,6 +38,7 @@ import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -64,7 +69,11 @@ class AccessTokenServiceTest {
     private static final String BASE_URL = "http://example.com";
     private static final String KEY_ID = "14342354354353";
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
-    private AccessToken accessToken;
+    private final ClaimsSetRequest claimsSetRequest =
+            new ClaimsSetRequest().add("name").add("birthdate");
+    private final OIDCClaimsRequest oidcValidClaimsRequest =
+            new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
+    private AccessToken accessToken = createSignedAccessTokenWithoutIdentityClaims();
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -78,16 +87,23 @@ class AccessTokenServiceTest {
     }
 
     @BeforeEach
-    void setUp() throws JOSEException {
+    void setUp() {
         validationService =
                 new AccessTokenService(
                         redisConnectionService, clientService, tokenValidationService);
-        accessToken = createSignedAccessToken();
     }
 
-    @Test
-    void shouldReturnAccessTokenInfoWhenAccessTokenIsValid()
+    private static Stream<Boolean> identityEndpoint() {
+        return Stream.of(true, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("identityEndpoint")
+    void shouldReturnAccessTokenInfoWhenAccessTokenIsValid(boolean identityEndpoint)
             throws JsonProcessingException, AccessTokenException {
+        if (identityEndpoint) {
+            accessToken = createSignedAccessTokenWithIdentityClaims(oidcValidClaimsRequest);
+        }
         when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
         when(clientService.getClient(CLIENT_ID))
                 .thenReturn(Optional.of(generateClientRegistry(SCOPES)));
@@ -100,7 +116,7 @@ class AccessTokenServiceTest {
                                                 INTERNAL_SUBJECT.getValue())));
 
         AccessTokenInfo accessTokenInfo =
-                validationService.parse(accessToken.toAuthorizationHeader());
+                validationService.parse(accessToken.toAuthorizationHeader(), identityEndpoint);
 
         assertThat(
                 accessTokenInfo.getAccessTokenStore().getToken(), equalTo(accessToken.getValue()));
@@ -111,14 +127,17 @@ class AccessTokenServiceTest {
         assertThat(accessTokenInfo.getScopes(), equalTo(SCOPES));
     }
 
-    @Test
-    void shouldThrowExceptionWhenTokenSignatureIsInvalid() {
+    @ParameterizedTest
+    @MethodSource("identityEndpoint")
+    void shouldThrowExceptionWhenTokenSignatureIsInvalid(boolean identityEndpoint) {
         when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(false);
 
         AccessTokenException accessTokenException =
                 assertThrows(
                         AccessTokenException.class,
-                        () -> validationService.parse(accessToken.toAuthorizationHeader()),
+                        () ->
+                                validationService.parse(
+                                        accessToken.toAuthorizationHeader(), identityEndpoint),
                         "Expected to throw AccessTokenException");
 
         assertThat(
@@ -127,36 +146,43 @@ class AccessTokenServiceTest {
         assertThat(accessTokenException.getError(), equalTo(BearerTokenError.INVALID_TOKEN));
     }
 
-    @Test
-    void shouldThrowExceptionWhenTokenHasExpired() throws JOSEException {
+    @ParameterizedTest
+    @MethodSource("identityEndpoint")
+    void shouldThrowExceptionWhenTokenHasExpired(boolean identityEndpoint) throws JOSEException {
         accessToken = createSignedExpiredAccessToken();
         AccessTokenException accessTokenException =
                 assertThrows(
                         AccessTokenException.class,
-                        () -> validationService.parse(accessToken.toAuthorizationHeader()),
+                        () ->
+                                validationService.parse(
+                                        accessToken.toAuthorizationHeader(), identityEndpoint),
                         "Expected to throw AccessTokenException");
 
         assertThat(accessTokenException.getMessage(), equalTo("Invalid Access Token"));
         assertThat(accessTokenException.getError(), equalTo(BearerTokenError.INVALID_TOKEN));
     }
 
-    @Test
-    void shouldThrowExceptionWhenClientIsNotFoundInClientRegistry() {
+    @ParameterizedTest
+    @MethodSource("identityEndpoint")
+    void shouldThrowExceptionWhenClientIsNotFoundInClientRegistry(boolean identityEndpoint) {
         when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
         when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.empty());
 
         AccessTokenException accessTokenException =
                 assertThrows(
                         AccessTokenException.class,
-                        () -> validationService.parse(accessToken.toAuthorizationHeader()),
+                        () ->
+                                validationService.parse(
+                                        accessToken.toAuthorizationHeader(), identityEndpoint),
                         "Expected to throw AccessTokenException");
 
         assertThat(accessTokenException.getMessage(), equalTo("Client not found"));
         assertThat(accessTokenException.getError(), equalTo(BearerTokenError.INVALID_TOKEN));
     }
 
-    @Test
-    void shouldThrowExceptionWhenScopesAreInvalid() {
+    @ParameterizedTest
+    @MethodSource("identityEndpoint")
+    void shouldThrowExceptionWhenScopesAreInvalid(boolean identityEndpoint) {
         List<String> scopes =
                 List.of(OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.ADDRESS.getValue());
         when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
@@ -166,7 +192,9 @@ class AccessTokenServiceTest {
         AccessTokenException accessTokenException =
                 assertThrows(
                         AccessTokenException.class,
-                        () -> validationService.parse(accessToken.toAuthorizationHeader()),
+                        () ->
+                                validationService.parse(
+                                        accessToken.toAuthorizationHeader(), identityEndpoint),
                         "Expected to throw AccessTokenException");
 
         assertThat(accessTokenException.getMessage(), equalTo("Invalid Scopes"));
@@ -174,7 +202,63 @@ class AccessTokenServiceTest {
     }
 
     @Test
-    void shouldThrowExceptionWhenAccessTokenNotFoundInRedis() {
+    void shouldThrowExceptionWhenIdentityClaimsAreInvalid() throws JsonProcessingException {
+        ClaimsSetRequest claimsSetRequest = new ClaimsSetRequest().add("email").add("birthdate");
+        OIDCClaimsRequest invalidClaimsRequest =
+                new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
+        accessToken = createSignedAccessTokenWithIdentityClaims(invalidClaimsRequest);
+        when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
+        when(clientService.getClient(CLIENT_ID))
+                .thenReturn(Optional.of(generateClientRegistry(SCOPES)));
+        when(redisConnectionService.getValue(ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + SUBJECT))
+                .thenReturn(
+                        new ObjectMapper()
+                                .writeValueAsString(
+                                        new AccessTokenStore(
+                                                accessToken.getValue(),
+                                                INTERNAL_SUBJECT.getValue())));
+
+        AccessTokenException accessTokenException =
+                assertThrows(
+                        AccessTokenException.class,
+                        () -> validationService.parse(accessToken.toAuthorizationHeader(), true),
+                        "Expected to throw AccessTokenException");
+
+        assertThat(accessTokenException.getMessage(), equalTo("Invalid Identity claims"));
+        assertThat(accessTokenException.getError(), equalTo(OAuth2Error.INVALID_REQUEST));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenIdentityClaimsAreMissingFromIdentityAccessToken()
+            throws JsonProcessingException {
+        accessToken = createSignedAccessTokenWithoutIdentityClaims();
+        when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
+        when(clientService.getClient(CLIENT_ID))
+                .thenReturn(Optional.of(generateClientRegistry(SCOPES)));
+        when(redisConnectionService.getValue(ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + SUBJECT))
+                .thenReturn(
+                        new ObjectMapper()
+                                .writeValueAsString(
+                                        new AccessTokenStore(
+                                                accessToken.getValue(),
+                                                INTERNAL_SUBJECT.getValue())));
+
+        AccessTokenException accessTokenException =
+                assertThrows(
+                        AccessTokenException.class,
+                        () -> validationService.parse(accessToken.toAuthorizationHeader(), true),
+                        "Expected to throw AccessTokenException");
+
+        assertThat(accessTokenException.getMessage(), equalTo("Invalid Identity claims"));
+        assertThat(accessTokenException.getError(), equalTo(OAuth2Error.INVALID_REQUEST));
+    }
+
+    @ParameterizedTest
+    @MethodSource("identityEndpoint")
+    void shouldThrowExceptionWhenAccessTokenNotFoundInRedis(boolean identityEndpoint) {
+        if (identityEndpoint) {
+            accessToken = createSignedAccessTokenWithIdentityClaims(oidcValidClaimsRequest);
+        }
         when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
         when(clientService.getClient(CLIENT_ID))
                 .thenReturn(Optional.of(generateClientRegistry(SCOPES)));
@@ -184,16 +268,22 @@ class AccessTokenServiceTest {
         AccessTokenException accessTokenException =
                 assertThrows(
                         AccessTokenException.class,
-                        () -> validationService.parse(accessToken.toAuthorizationHeader()),
+                        () ->
+                                validationService.parse(
+                                        accessToken.toAuthorizationHeader(), identityEndpoint),
                         "Expected to throw AccessTokenException");
 
         assertThat(accessTokenException.getMessage(), equalTo("Invalid Access Token"));
         assertThat(accessTokenException.getError(), equalTo(BearerTokenError.INVALID_TOKEN));
     }
 
-    @Test
-    void shouldThrowExceptionWhenAccessTokenSentIsNotTheSameAsInRedis()
-            throws JOSEException, JsonProcessingException {
+    @ParameterizedTest
+    @MethodSource("identityEndpoint")
+    void shouldThrowExceptionWhenAccessTokenSentIsNotTheSameAsInRedis(boolean identityEndpoint)
+            throws JsonProcessingException {
+        if (identityEndpoint) {
+            accessToken = createSignedAccessTokenWithIdentityClaims(oidcValidClaimsRequest);
+        }
         when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
         when(clientService.getClient(CLIENT_ID))
                 .thenReturn(Optional.of(generateClientRegistry(SCOPES)));
@@ -202,25 +292,29 @@ class AccessTokenServiceTest {
                         new ObjectMapper()
                                 .writeValueAsString(
                                         new AccessTokenStore(
-                                                createSignedAccessToken().getValue(),
+                                                createSignedAccessTokenWithoutIdentityClaims()
+                                                        .getValue(),
                                                 INTERNAL_SUBJECT.getValue())));
 
         AccessTokenException accessTokenException =
                 assertThrows(
                         AccessTokenException.class,
-                        () -> validationService.parse(accessToken.toAuthorizationHeader()),
+                        () ->
+                                validationService.parse(
+                                        accessToken.toAuthorizationHeader(), identityEndpoint),
                         "Expected to throw AccessTokenException");
 
         assertThat(accessTokenException.getMessage(), equalTo("Invalid Access Token"));
         assertThat(accessTokenException.getError(), equalTo(BearerTokenError.INVALID_TOKEN));
     }
 
-    @Test
-    void shouldThrowExceptionWhenUnableToParseAccessToken() {
+    @ParameterizedTest
+    @MethodSource("identityEndpoint")
+    void shouldThrowExceptionWhenUnableToParseAccessToken(boolean identityEndpoint) {
         AccessTokenException accessTokenException =
                 assertThrows(
                         AccessTokenException.class,
-                        () -> validationService.parse("rubbish-access-token"),
+                        () -> validationService.parse("rubbish-access-token", identityEndpoint),
                         "Expected to throw AccessTokenException");
 
         assertThat(accessTokenException.getMessage(), equalTo("Unable to parse AccessToken"));
@@ -257,16 +351,34 @@ class AccessTokenServiceTest {
         return new BearerAccessToken(signedJWT.serialize());
     }
 
-    private AccessToken createSignedAccessToken() throws JOSEException {
-        ECKey ecSigningKey =
-                new ECKeyGenerator(Curve.P_256)
-                        .keyID(KEY_ID)
-                        .algorithm(JWSAlgorithm.ES256)
-                        .generate();
-        ECDSASigner signer = new ECDSASigner(ecSigningKey);
-        SignedJWT signedJWT =
-                TokenGeneratorHelper.generateSignedToken(
-                        CLIENT_ID, BASE_URL, SCOPES, signer, SUBJECT, ecSigningKey.getKeyID());
-        return new BearerAccessToken(signedJWT.serialize());
+    private AccessToken createSignedAccessTokenWithoutIdentityClaims() {
+        return createSignedAccessTokenWithIdentityClaims(null);
+    }
+
+    private AccessToken createSignedAccessTokenWithIdentityClaims(
+            OIDCClaimsRequest identityClaims) {
+        try {
+            LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(3);
+            Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+            ECKey ecSigningKey =
+                    new ECKeyGenerator(Curve.P_256)
+                            .keyID(KEY_ID)
+                            .algorithm(JWSAlgorithm.ES256)
+                            .generate();
+            ECDSASigner signer = new ECDSASigner(ecSigningKey);
+            SignedJWT signedJWT =
+                    TokenGeneratorHelper.generateSignedToken(
+                            CLIENT_ID,
+                            BASE_URL,
+                            SCOPES,
+                            signer,
+                            SUBJECT,
+                            ecSigningKey.getKeyID(),
+                            expiryDate,
+                            identityClaims);
+            return new BearerAccessToken(signedJWT.serialize());
+        } catch (JOSEException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

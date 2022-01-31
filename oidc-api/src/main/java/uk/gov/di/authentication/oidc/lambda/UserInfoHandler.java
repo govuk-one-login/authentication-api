@@ -91,7 +91,8 @@ public class UserInfoHandler
                                                         input.getHeaders(),
                                                         AUTHORIZATION_HEADER,
                                                         configurationService
-                                                                .getHeadersCaseInsensitive()));
+                                                                .getHeadersCaseInsensitive()),
+                                                false);
                                 userInfo = userInfoService.populateUserInfo(accessTokenInfo);
                             } catch (AccessTokenException e) {
                                 LOG.error(

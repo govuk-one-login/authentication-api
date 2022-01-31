@@ -2,17 +2,20 @@ package uk.gov.di.authentication.oidc.services;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.jwt.util.DateUtils;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.AccessTokenType;
 import com.nimbusds.oauth2.sdk.token.BearerTokenError;
+import com.nimbusds.oauth2.sdk.util.JSONArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
@@ -24,7 +27,9 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -47,7 +52,8 @@ public class AccessTokenService {
         this.tokenValidationService = tokenValidationService;
     }
 
-    public AccessTokenInfo parse(String authorizationHeader) throws AccessTokenException {
+    public AccessTokenInfo parse(String authorizationHeader, boolean identityEndpoint)
+            throws AccessTokenException {
         AccessToken accessToken;
         try {
             accessToken = AccessToken.parse(authorizationHeader, AccessTokenType.BEARER);
@@ -85,10 +91,18 @@ public class AccessTokenService {
                 LOG.error("Client not found");
                 throw new AccessTokenException("Client not found", BearerTokenError.INVALID_TOKEN);
             }
-            List<String> scopes = (List<String>) signedJWT.getJWTClaimsSet().getClaim("scope");
+            var scopes =
+                    JSONArrayUtils.parse(signedJWT.getJWTClaimsSet().getClaim("scope").toString())
+                            .stream()
+                            .map(Objects::toString)
+                            .collect(Collectors.toList());
             if (!areScopesValid(scopes) || !client.get().getScopes().containsAll(scopes)) {
                 LOG.error("Invalid Scopes: {}", scopes);
                 throw new AccessTokenException("Invalid Scopes", OAuth2Error.INVALID_SCOPE);
+            }
+            if (identityEndpoint && !areIdentityClaimsValid(signedJWT.getJWTClaimsSet())) {
+                throw new AccessTokenException(
+                        "Invalid Identity claims", OAuth2Error.INVALID_REQUEST);
             }
             String subject = signedJWT.getJWTClaimsSet().getSubject();
             Optional<AccessTokenStore> accessTokenStore = getAccessTokenStore(clientID, subject);
@@ -111,6 +125,10 @@ public class AccessTokenService {
             LOG.error("Unable to parse AccessToken to SignedJWT");
             throw new AccessTokenException(
                     "Unable to parse AccessToken to SignedJWT", BearerTokenError.INVALID_TOKEN);
+        } catch (com.nimbusds.oauth2.sdk.ParseException e) {
+            LOG.error("Unable to parse ClaimSet in AccessToken");
+            throw new AccessTokenException(
+                    "Unable to parse ClaimSet in AccessToken", BearerTokenError.INVALID_TOKEN);
         }
     }
 
@@ -131,6 +149,23 @@ public class AccessTokenService {
             if (ValidScopes.getAllValidScopes().stream().noneMatch(t -> t.equals(scope))) {
                 return false;
             }
+        }
+        return true;
+    }
+
+    private boolean areIdentityClaimsValid(JWTClaimsSet claimsSet)
+            throws com.nimbusds.oauth2.sdk.ParseException {
+        if (Objects.isNull(claimsSet.getClaim("claims"))) {
+            LOG.error("Identity claims missing from access token");
+            return false;
+        }
+        var identityClaims =
+                JSONArrayUtils.parse(claimsSet.getClaim("claims").toString()).stream()
+                        .map(Objects::toString)
+                        .collect(Collectors.toList());
+        if (!ValidClaims.getAllowedClaimNames().containsAll(identityClaims)) {
+            LOG.error("Invalid set of Identity claims present in access token: {}", identityClaims);
+            return false;
         }
         return true;
     }

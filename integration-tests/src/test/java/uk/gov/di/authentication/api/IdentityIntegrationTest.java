@@ -7,6 +7,8 @@ import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
+import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
+import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.entity.IdentityResponse;
@@ -27,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -54,6 +57,9 @@ public class IdentityIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         scopes.add("email");
         scopes.add("phone");
         scopes.add("openid");
+        var claimsSetRequest = new ClaimsSetRequest().add("name").add("birthdate");
+        var oidcValidClaimsRequest =
+                new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
         JWTClaimsSet claimsSet =
                 new JWTClaimsSet.Builder()
                         .claim("scope", scopes)
@@ -64,6 +70,14 @@ public class IdentityIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .claim("client_id", "client-id-one")
                         .subject(publicSubject.getValue())
                         .jwtID(UUID.randomUUID().toString())
+                        .claim(
+                                "claims",
+                                oidcValidClaimsRequest
+                                        .getUserInfoClaimsRequest()
+                                        .getEntries()
+                                        .stream()
+                                        .map(ClaimsSetRequest.Entry::getClaimName)
+                                        .collect(Collectors.toList()))
                         .build();
         SignedJWT signedJWT = tokenSigner.signJwt(claimsSet);
         AccessToken accessToken = new BearerAccessToken(signedJWT.serialize());

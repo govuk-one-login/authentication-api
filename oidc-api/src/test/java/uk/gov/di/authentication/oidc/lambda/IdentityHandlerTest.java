@@ -55,7 +55,7 @@ class IdentityHandlerTest {
         IdentityResponse identityResponse =
                 new IdentityResponse(SUBJECT.getValue(), serializedCredential);
         AccessToken accessToken = new BearerAccessToken();
-        when(accessTokenService.parse(accessToken.toAuthorizationHeader()))
+        when(accessTokenService.parse(accessToken.toAuthorizationHeader(), true))
                 .thenReturn(accessTokenInfo);
         when(identityService.populateIdentityResponse(accessTokenInfo))
                 .thenReturn(identityResponse);
@@ -86,7 +86,8 @@ class IdentityHandlerTest {
         event.setHeaders(Map.of("Authorization", "this-is-not-a-valid-token"));
         AccessTokenException accessTokenException =
                 new AccessTokenException("Unable to parse AccessToken", INVALID_TOKEN);
-        when(accessTokenService.parse("this-is-not-a-valid-token")).thenThrow(accessTokenException);
+        when(accessTokenService.parse("this-is-not-a-valid-token", true))
+                .thenThrow(accessTokenException);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 

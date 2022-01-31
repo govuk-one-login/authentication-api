@@ -86,7 +86,8 @@ public class IdentityHandler
                                                         input.getHeaders(),
                                                         AUTHORIZATION_HEADER,
                                                         configurationService
-                                                                .getHeadersCaseInsensitive()));
+                                                                .getHeadersCaseInsensitive()),
+                                                true);
                                 identityResponse =
                                         identityService.populateIdentityResponse(accessTokenInfo);
                             } catch (AccessTokenException e) {
