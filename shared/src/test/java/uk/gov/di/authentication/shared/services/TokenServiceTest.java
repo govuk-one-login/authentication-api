@@ -23,11 +23,15 @@ import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
+import com.nimbusds.oauth2.sdk.util.JSONArrayUtils;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
 import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.claims.AccessTokenHash;
+import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
+import net.minidev.json.JSONArray;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -142,11 +146,71 @@ public class TokenServiceTest {
                                         CLIENT_ID,
                                         claimsForListOfScopes,
                                         LocalDateTime.now(ZoneId.of("UTC")).toString())),
-                        false);
+                        false,
+                        null);
 
         assertSuccessfullTokenResponse(tokenResponse);
 
         assertNotNull(tokenResponse.getOIDCTokens().getRefreshToken());
+        String refreshTokenKey = REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT;
+        RefreshTokenStore refreshTokenStore =
+                new RefreshTokenStore(
+                        List.of(tokenResponse.getOIDCTokens().getRefreshToken().getValue()),
+                        INTERNAL_SUBJECT.getValue());
+        verify(redisConnectionService)
+                .saveWithExpiry(
+                        refreshTokenKey,
+                        new ObjectMapper().writeValueAsString(refreshTokenStore),
+                        300L);
+    }
+
+    @Test
+    public void shouldOnlyIncludeIdentityClaimsInAccessTokenWhenRequested()
+            throws ParseException, JOSEException, JsonProcessingException,
+                    com.nimbusds.oauth2.sdk.ParseException {
+        var claimsSetRequest = new ClaimsSetRequest().add("nickname").add("birthdate");
+        var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
+
+        when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
+        createSignedIdToken();
+        createSignedAccessToken();
+        Map<String, Object> additionalTokenClaims = new HashMap<>();
+        additionalTokenClaims.put("nonce", nonce);
+        Set<String> claimsForListOfScopes =
+                ValidScopes.getClaimsForListOfScopes(SCOPES_OFFLINE_ACCESS.toStringList());
+
+        OIDCTokenResponse tokenResponse =
+                tokenService.generateTokenResponse(
+                        CLIENT_ID,
+                        INTERNAL_SUBJECT,
+                        SCOPES_OFFLINE_ACCESS,
+                        additionalTokenClaims,
+                        PUBLIC_SUBJECT,
+                        VOT,
+                        Collections.singletonList(
+                                new ClientConsent(
+                                        CLIENT_ID,
+                                        claimsForListOfScopes,
+                                        LocalDateTime.now(ZoneId.of("UTC")).toString())),
+                        false,
+                        oidcClaimsRequest);
+
+        assertSuccessfullTokenResponse(tokenResponse);
+
+        assertNotNull(tokenResponse.getOIDCTokens().getRefreshToken());
+        assertNull(
+                SignedJWT.parse(tokenResponse.getOIDCTokens().getRefreshToken().getValue())
+                        .getJWTClaimsSet()
+                        .getClaim("claims"));
+        JSONArray jsonarray =
+                JSONArrayUtils.parse(
+                        SignedJWT.parse(tokenResponse.getOIDCTokens().getAccessToken().getValue())
+                                .getJWTClaimsSet()
+                                .getClaim("claims")
+                                .toString());
+
+        assertTrue(jsonarray.contains("nickname"));
+        assertTrue(jsonarray.contains("birthdate"));
         String refreshTokenKey = REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT;
         RefreshTokenStore refreshTokenStore =
                 new RefreshTokenStore(
@@ -183,7 +247,8 @@ public class TokenServiceTest {
                                         CLIENT_ID,
                                         claimsForListOfScopes,
                                         LocalDateTime.now(ZoneId.of("UTC")).toString())),
-                        false);
+                        false,
+                        null);
 
         assertSuccessfullTokenResponse(tokenResponse);
 
