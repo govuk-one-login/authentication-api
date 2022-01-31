@@ -31,9 +31,11 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
+import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.claims.AccessTokenHash;
+import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import org.apache.logging.log4j.LogManager;
@@ -97,7 +99,8 @@ public class TokenService {
             Subject publicSubject,
             String vot,
             List<ClientConsent> clientConsents,
-            boolean isConsentRequired) {
+            boolean isConsentRequired,
+            OIDCClaimsRequest claimsRequest) {
         List<String> scopesForToken;
         if (isConsentRequired) {
             scopesForToken = calculateScopesForToken(clientConsents, clientID, authRequestScopes);
@@ -106,7 +109,7 @@ public class TokenService {
         }
         AccessToken accessToken =
                 generateAndStoreAccessToken(
-                        clientID, internalSubject, scopesForToken, publicSubject);
+                        clientID, internalSubject, scopesForToken, publicSubject, claimsRequest);
         AccessTokenHash accessTokenHash =
                 AccessTokenHash.compute(accessToken, TOKEN_ALGORITHM, null);
         SignedJWT idToken =
@@ -125,7 +128,7 @@ public class TokenService {
     public OIDCTokenResponse generateRefreshTokenResponse(
             String clientID, Subject internalSubject, List<String> scopes, Subject publicSubject) {
         AccessToken accessToken =
-                generateAndStoreAccessToken(clientID, internalSubject, scopes, publicSubject);
+                generateAndStoreAccessToken(clientID, internalSubject, scopes, publicSubject, null);
         RefreshToken refreshToken =
                 generateAndStoreRefreshToken(clientID, internalSubject, scopes, publicSubject);
         return new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
@@ -272,7 +275,11 @@ public class TokenService {
     }
 
     private AccessToken generateAndStoreAccessToken(
-            String clientId, Subject internalSubject, List<String> scopes, Subject publicSubject) {
+            String clientId,
+            Subject internalSubject,
+            List<String> scopes,
+            Subject publicSubject,
+            OIDCClaimsRequest claimsRequest) {
 
         attachLogFieldToLogs(CLIENT_ID, clientId);
 
@@ -281,7 +288,7 @@ public class TokenService {
                 LocalDateTime.now().plusSeconds(configService.getAccessTokenExpiry());
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
 
-        JWTClaimsSet claimsSet =
+        JWTClaimsSet.Builder claimSetBuilder =
                 new JWTClaimsSet.Builder()
                         .claim("scope", scopes)
                         .issuer(configService.getBaseURL().get())
@@ -290,9 +297,17 @@ public class TokenService {
                                 Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()))
                         .claim("client_id", clientId)
                         .subject(publicSubject.getValue())
-                        .jwtID(UUID.randomUUID().toString())
-                        .build();
-        SignedJWT signedJWT = generateSignedJWT(claimsSet);
+                        .jwtID(UUID.randomUUID().toString());
+
+        if (Objects.nonNull(claimsRequest)) {
+            claimSetBuilder.claim(
+                    "claims",
+                    claimsRequest.getUserInfoClaimsRequest().getEntries().stream()
+                            .map(ClaimsSetRequest.Entry::getClaimName)
+                            .collect(Collectors.toList()));
+        }
+
+        SignedJWT signedJWT = generateSignedJWT(claimSetBuilder.build());
         AccessToken accessToken = new BearerAccessToken(signedJWT.serialize());
 
         try {

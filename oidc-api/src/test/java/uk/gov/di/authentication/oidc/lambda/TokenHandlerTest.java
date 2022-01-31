@@ -51,6 +51,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
+import uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 
 import java.net.URI;
@@ -99,6 +100,8 @@ public class TokenHandlerTest {
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final Nonce NONCE = new Nonce();
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
+    private final BearerAccessToken accessToken = new BearerAccessToken();
+    private final RefreshToken refreshToken = new RefreshToken();
     private final Context context = mock(Context.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -136,8 +139,6 @@ public class TokenHandlerTest {
     @ParameterizedTest
     @MethodSource("validVectorValues")
     public void shouldReturn200ForSuccessfulTokenRequest(String vectorValue) throws JOSEException {
-        JSONArray jsonArray = new JSONArray();
-        jsonArray.add(vectorValue);
         KeyPair keyPair = generateRsaKeyPair();
         UserProfile userProfile = generateUserProfile();
         SignedJWT signedJWT =
@@ -146,8 +147,6 @@ public class TokenHandlerTest {
                         PUBLIC_SUBJECT,
                         "issuer-url",
                         new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate());
-        BearerAccessToken accessToken = new BearerAccessToken();
-        RefreshToken refreshToken = new RefreshToken();
         OIDCTokenResponse tokenResponse =
                 new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
@@ -168,7 +167,8 @@ public class TokenHandlerTest {
                                 new AuthCodeExchangeData()
                                         .setEmail(TEST_EMAIL)
                                         .setClientSessionId(CLIENT_SESSION_ID)));
-        AuthenticationRequest authenticationRequest = generateAuthRequest(jsonArray.toJSONString());
+        AuthenticationRequest authenticationRequest =
+                generateAuthRequest(JsonArrayHelper.jsonArrayOf(vectorValue));
         VectorOfTrust vtr =
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         authenticationRequest.getCustomParameter("vtr"));
@@ -185,7 +185,8 @@ public class TokenHandlerTest {
                         PUBLIC_SUBJECT,
                         vtr.retrieveVectorOfTrustForToken(),
                         userProfile.getClientConsent(),
-                        clientRegistry.isConsentRequired()))
+                        clientRegistry.isConsentRequired(),
+                        null))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result = generateApiGatewayRequest(privateKeyJWT, authCode);
@@ -199,7 +200,6 @@ public class TokenHandlerTest {
             throws JOSEException, JsonProcessingException {
         SignedJWT signedRefreshToken = createSignedRefreshToken();
         KeyPair keyPair = generateRsaKeyPair();
-        BearerAccessToken accessToken = new BearerAccessToken();
         RefreshToken refreshToken = new RefreshToken(signedRefreshToken.serialize());
         OIDCTokenResponse tokenResponse =
                 new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
@@ -245,7 +245,6 @@ public class TokenHandlerTest {
             throws JOSEException, JsonProcessingException {
         SignedJWT signedRefreshToken = createSignedRefreshToken();
         KeyPair keyPair = generateRsaKeyPair();
-        BearerAccessToken accessToken = new BearerAccessToken();
         RefreshToken refreshToken = new RefreshToken(signedRefreshToken.serialize());
         RefreshToken refreshToken2 = new RefreshToken();
         OIDCTokenResponse tokenResponse =

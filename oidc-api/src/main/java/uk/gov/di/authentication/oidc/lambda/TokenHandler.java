@@ -14,6 +14,7 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -38,6 +39,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -236,7 +238,15 @@ public class TokenHandler
                                             .getEffectiveVectorOfTrust()
                                             .retrieveVectorOfTrustForToken();
 
-                            OIDCTokenResponse tokenResponse =
+                            OIDCClaimsRequest claimsRequest = null;
+                            if (Objects.nonNull(
+                                            clientSession
+                                                    .getEffectiveVectorOfTrust()
+                                                    .getLevelOfConfidence())
+                                    && Objects.nonNull(authRequest.getOIDCClaims())) {
+                                claimsRequest = authRequest.getOIDCClaims();
+                            }
+                            var tokenResponse =
                                     tokenService.generateTokenResponse(
                                             clientID,
                                             new Subject(userProfile.getSubjectID()),
@@ -245,7 +255,8 @@ public class TokenHandler
                                             publicSubject,
                                             vot,
                                             userProfile.getClientConsent(),
-                                            client.isConsentRequired());
+                                            client.isConsentRequired(),
+                                            claimsRequest);
 
                             clientSessionService.saveClientSession(
                                     authCodeExchangeData.getClientSessionId(),

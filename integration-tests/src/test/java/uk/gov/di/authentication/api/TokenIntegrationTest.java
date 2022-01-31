@@ -18,13 +18,17 @@ import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
+import com.nimbusds.oauth2.sdk.util.JSONArrayUtils;
 import com.nimbusds.oauth2.sdk.util.JSONObjectUtils;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
+import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,6 +42,7 @@ import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.net.URI;
@@ -62,6 +67,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -96,7 +102,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
         setUpDynamo(keyPair, scope, new Subject());
-        var response = generateTokenRequest(keyPair, scope, vtr);
+        var response = generateTokenRequest(keyPair, scope, vtr, Optional.empty());
 
         assertThat(response, hasStatus(200));
         JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
@@ -125,12 +131,52 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
+    void shouldCallTokenResourceAndReturnIdentityClaims() throws Exception {
+        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        Scope scope = new Scope(OIDCScopeValue.OPENID.getValue());
+        var claimsSetRequest = new ClaimsSetRequest().add("nickname").add("birthdate");
+        var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
+        setUpDynamo(keyPair, scope, new Subject());
+        var response =
+                generateTokenRequest(
+                        keyPair, scope, Optional.of("Pm.Cl.Cm"), Optional.of(oidcClaimsRequest));
+
+        assertThat(response, hasStatus(200));
+        JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
+        assertNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getRefreshToken());
+        assertNotNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getBearerAccessToken());
+        BearerAccessToken bearerAccessToken =
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getBearerAccessToken();
+        JSONArray jsonarray =
+                JSONArrayUtils.parse(
+                        SignedJWT.parse(bearerAccessToken.getValue())
+                                .getJWTClaimsSet()
+                                .getClaim("claims")
+                                .toString());
+
+        assertTrue(jsonarray.contains("nickname"));
+        assertTrue(jsonarray.contains("birthdate"));
+        assertNoAuditEventsReceived(auditTopic);
+    }
+
+    @Test
     void shouldCallTokenResourceAndOnlyReturnAccessTokenWithoutOfflineAccessScope()
             throws Exception {
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         Scope scope = new Scope(OIDCScopeValue.OPENID.getValue());
         setUpDynamo(keyPair, scope, new Subject());
-        var response = generateTokenRequest(keyPair, scope, Optional.empty());
+        var response = generateTokenRequest(keyPair, scope, Optional.empty(), Optional.empty());
 
         assertThat(response, hasStatus(200));
         JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
@@ -239,7 +285,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         userStore.updateConsent(TEST_EMAIL, clientConsent);
     }
 
-    private AuthenticationRequest generateAuthRequest(Scope scope, Optional<String> vtr) {
+    private AuthenticationRequest generateAuthRequest(
+            Scope scope, Optional<String> vtr, Optional<OIDCClaimsRequest> claimsRequest) {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         State state = new State();
         Nonce nonce = new Nonce();
@@ -251,14 +298,17 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 URI.create("http://localhost/redirect"))
                         .state(state)
                         .nonce(nonce);
-
+        claimsRequest.ifPresent(builder::claims);
         vtr.ifPresent(v -> builder.customParameter("vtr", v));
 
         return builder.build();
     }
 
     private APIGatewayProxyResponseEvent generateTokenRequest(
-            KeyPair keyPair, Scope scope, Optional<String> vtr)
+            KeyPair keyPair,
+            Scope scope,
+            Optional<String> vtr,
+            Optional<OIDCClaimsRequest> oidcClaimsRequest)
             throws JOSEException, JsonProcessingException {
         PrivateKey privateKey = keyPair.getPrivate();
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(5);
@@ -273,17 +323,15 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String code = new AuthorizationCode().toString();
         VectorOfTrust vectorOfTrust = VectorOfTrust.getDefaults();
         if (vtr.isPresent()) {
-            JSONArray jsonArray = new JSONArray();
-            jsonArray.add(vtr.get());
             vectorOfTrust =
                     VectorOfTrust.parseFromAuthRequestAttribute(
-                            singletonList(jsonArray.toJSONString()));
+                            singletonList(JsonArrayHelper.jsonArrayOf(vtr.get())));
         }
         redis.addAuthCodeAndCreateClientSession(
                 code,
                 "a-client-session-id",
                 TEST_EMAIL,
-                generateAuthRequest(scope, vtr).toParameters(),
+                generateAuthRequest(scope, vtr, oidcClaimsRequest).toParameters(),
                 vectorOfTrust);
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
