@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.frontendapi.services;
 
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.entity.TemplateAware;
 import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
@@ -10,6 +11,8 @@ import java.util.Map;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static uk.gov.di.authentication.frontendapi.services.NotificationServiceTest.FakeNotificationType.FAKE_EMAIL;
+import static uk.gov.di.authentication.frontendapi.services.NotificationServiceTest.FakeNotificationType.FAKE_SMS;
 
 class NotificationServiceTest {
 
@@ -19,24 +22,32 @@ class NotificationServiceTest {
     private final NotificationService notificationService =
             new NotificationService(notificationClient);
 
+    enum FakeNotificationType implements TemplateAware {
+        FAKE_EMAIL,
+        FAKE_SMS;
+
+        public String getTemplateId() {
+            return name();
+        }
+    }
+
     @Test
     public void shouldCallNotifyClientToSendEmail() throws NotificationClientException {
         Map<String, Object> emailPersonalisation = new HashMap<>();
         emailPersonalisation.put("validation-code", "some-code");
         emailPersonalisation.put("email-address", TEST_EMAIL);
-        String templateId = "email-template-id";
-        notificationService.sendEmail(TEST_EMAIL, emailPersonalisation, templateId);
 
-        verify(notificationClient).sendEmail(templateId, TEST_EMAIL, emailPersonalisation, "");
+        notificationService.sendEmail(TEST_EMAIL, emailPersonalisation, FAKE_EMAIL);
+
+        verify(notificationClient).sendEmail("FAKE_EMAIL", TEST_EMAIL, emailPersonalisation, "");
     }
 
     @Test
     public void shouldCallNotifyClientToSendText() throws NotificationClientException {
         Map<String, Object> phonePersonalisation = new HashMap<>();
         phonePersonalisation.put("validation-code", "some-code");
-        String templateId = "phone-template-id";
-        notificationService.sendText(TEST_PHONE_NUMBER, phonePersonalisation, templateId);
+        notificationService.sendText(TEST_PHONE_NUMBER, phonePersonalisation, FAKE_SMS);
 
-        verify(notificationClient).sendSms(templateId, TEST_PHONE_NUMBER, phonePersonalisation, "");
+        verify(notificationClient).sendSms("FAKE_SMS", TEST_PHONE_NUMBER, phonePersonalisation, "");
     }
 }

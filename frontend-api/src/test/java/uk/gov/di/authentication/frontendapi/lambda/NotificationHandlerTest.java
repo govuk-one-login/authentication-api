@@ -36,7 +36,6 @@ public class NotificationHandlerTest {
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_PHONE_NUMBER = "01234567891";
     private static final String NOTIFY_PHONE_NUMBER = "01234567899";
-    private static final String TEMPLATE_ID = "fdsfdssd";
     private static final String BUCKET_NAME = "test-s3-bucket";
     private static final String TEST_RESET_PASSWORD_LINK =
             "https://localhost:8080/frontend?reset-password?code=123456.54353464565";
@@ -61,8 +60,6 @@ public class NotificationHandlerTest {
     @Test
     void shouldSuccessfullyProcessEmailMessageFromSQSQueue()
             throws JsonProcessingException, NotificationClientException {
-        when(notificationService.getNotificationTemplateId(VERIFY_EMAIL)).thenReturn(TEMPLATE_ID);
-
         NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
@@ -73,14 +70,12 @@ public class NotificationHandlerTest {
         personalisation.put("validation-code", "654321");
         personalisation.put("email-address", notifyRequest.getDestination());
 
-        verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, TEMPLATE_ID);
+        verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, VERIFY_EMAIL);
     }
 
     @Test
     void shouldSuccessfullyProcessResetPasswordConfirmationFromSQSQueue()
             throws JsonProcessingException, NotificationClientException {
-        when(notificationService.getNotificationTemplateId(PASSWORD_RESET_CONFIRMATION))
-                .thenReturn(TEMPLATE_ID);
         when(configService.getFrontendBaseUrl()).thenReturn(FRONTEND_BASE_URL);
         when(configService.getCustomerSupportLinkRoute()).thenReturn(CUSTOMER_SUPPORT_LINK_ROUTE);
 
@@ -94,14 +89,13 @@ public class NotificationHandlerTest {
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("customer-support-link", CUSTOMER_SUPPORT_LINK_URL);
 
-        verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, TEMPLATE_ID);
+        verify(notificationService)
+                .sendEmail(TEST_EMAIL_ADDRESS, personalisation, PASSWORD_RESET_CONFIRMATION);
     }
 
     @Test
     void shouldSuccessfullyProcessResetPasswordEmailFromSQSQueue()
             throws JsonProcessingException, NotificationClientException {
-        when(notificationService.getNotificationTemplateId(RESET_PASSWORD)).thenReturn(TEMPLATE_ID);
-
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, RESET_PASSWORD, TEST_RESET_PASSWORD_LINK);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -112,7 +106,7 @@ public class NotificationHandlerTest {
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("reset-password-link", TEST_RESET_PASSWORD_LINK);
 
-        verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, TEMPLATE_ID);
+        verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, RESET_PASSWORD);
     }
 
     @Test
@@ -120,8 +114,6 @@ public class NotificationHandlerTest {
             throws JsonProcessingException, NotificationClientException {
         String accountManagementUrl = "http://account-management/";
         String baseUrl = "http://account-management";
-        when(notificationService.getNotificationTemplateId(ACCOUNT_CREATED_CONFIRMATION))
-                .thenReturn(TEMPLATE_ID);
         when(configService.getAccountManagementURI()).thenReturn(baseUrl);
 
         NotifyRequest notifyRequest =
@@ -134,15 +126,13 @@ public class NotificationHandlerTest {
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("sign-in-page-url", accountManagementUrl);
 
-        verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, TEMPLATE_ID);
+        verify(notificationService)
+                .sendEmail(TEST_EMAIL_ADDRESS, personalisation, ACCOUNT_CREATED_CONFIRMATION);
     }
 
     @Test
     void shouldSuccessfullyProcessPhoneMessageFromSQSQueue()
             throws JsonProcessingException, NotificationClientException {
-        when(notificationService.getNotificationTemplateId(VERIFY_PHONE_NUMBER))
-                .thenReturn(TEMPLATE_ID);
-
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -154,7 +144,7 @@ public class NotificationHandlerTest {
         personalisation.put("validation-code", "654321");
 
         verify(notificationService)
-                .sendText(notifyRequest.getDestination(), personalisation, TEMPLATE_ID);
+                .sendText(notifyRequest.getDestination(), personalisation, VERIFY_PHONE_NUMBER);
     }
 
     @Test
@@ -174,8 +164,6 @@ public class NotificationHandlerTest {
     @Test
     void shouldThrowExceptionIfNotifyIsUnableToSendEmail()
             throws JsonProcessingException, NotificationClientException {
-        when(notificationService.getNotificationTemplateId(VERIFY_EMAIL)).thenReturn(TEMPLATE_ID);
-
         NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
@@ -185,7 +173,7 @@ public class NotificationHandlerTest {
         personalisation.put("email-address", notifyRequest.getDestination());
         Mockito.doThrow(NotificationClientException.class)
                 .when(notificationService)
-                .sendEmail(TEST_EMAIL_ADDRESS, personalisation, TEMPLATE_ID);
+                .sendEmail(TEST_EMAIL_ADDRESS, personalisation, VERIFY_EMAIL);
 
         RuntimeException exception =
                 assertThrows(
@@ -201,9 +189,6 @@ public class NotificationHandlerTest {
     @Test
     void shouldThrowExceptionIfNotifyIsUnableToSendText()
             throws JsonProcessingException, NotificationClientException {
-        when(notificationService.getNotificationTemplateId(VERIFY_PHONE_NUMBER))
-                .thenReturn(TEMPLATE_ID);
-
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -213,7 +198,7 @@ public class NotificationHandlerTest {
         personalisation.put("validation-code", "654321");
         Mockito.doThrow(NotificationClientException.class)
                 .when(notificationService)
-                .sendText(TEST_PHONE_NUMBER, personalisation, TEMPLATE_ID);
+                .sendText(TEST_PHONE_NUMBER, personalisation, VERIFY_PHONE_NUMBER);
 
         RuntimeException exception =
                 assertThrows(
@@ -229,9 +214,6 @@ public class NotificationHandlerTest {
     @Test
     void shouldSuccessfullyProcessPhoneMessageFromSQSQueueAndWriteToS3WhenTestClient()
             throws JsonProcessingException, NotificationClientException {
-        when(notificationService.getNotificationTemplateId(VERIFY_PHONE_NUMBER))
-                .thenReturn(TEMPLATE_ID);
-
         NotifyRequest notifyRequest =
                 new NotifyRequest(NOTIFY_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -243,15 +225,13 @@ public class NotificationHandlerTest {
         personalisation.put("validation-code", "654321");
 
         verify(notificationService)
-                .sendText(notifyRequest.getDestination(), personalisation, TEMPLATE_ID);
+                .sendText(notifyRequest.getDestination(), personalisation, VERIFY_PHONE_NUMBER);
         verify(s3Client).putObject(BUCKET_NAME, NOTIFY_PHONE_NUMBER, "654321");
     }
 
     @Test
     void shouldSuccessfullyProcessMfaessageFromSQSQueue()
             throws JsonProcessingException, NotificationClientException {
-        when(notificationService.getNotificationTemplateId(MFA_SMS)).thenReturn(TEMPLATE_ID);
-
         NotifyRequest notifyRequest = new NotifyRequest(TEST_PHONE_NUMBER, MFA_SMS, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
@@ -262,14 +242,12 @@ public class NotificationHandlerTest {
         personalisation.put("validation-code", "654321");
 
         verify(notificationService)
-                .sendText(notifyRequest.getDestination(), personalisation, TEMPLATE_ID);
+                .sendText(notifyRequest.getDestination(), personalisation, MFA_SMS);
     }
 
     @Test
     void shouldSuccessfullyProcessMfaMessageFromSQSQueueAndWriteToS3WhenTestClient()
             throws JsonProcessingException, NotificationClientException {
-        when(notificationService.getNotificationTemplateId(MFA_SMS)).thenReturn(TEMPLATE_ID);
-
         NotifyRequest notifyRequest = new NotifyRequest(NOTIFY_PHONE_NUMBER, MFA_SMS, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
@@ -280,7 +258,7 @@ public class NotificationHandlerTest {
         personalisation.put("validation-code", "654321");
 
         verify(notificationService)
-                .sendText(notifyRequest.getDestination(), personalisation, TEMPLATE_ID);
+                .sendText(notifyRequest.getDestination(), personalisation, MFA_SMS);
         verify(s3Client).putObject(BUCKET_NAME, NOTIFY_PHONE_NUMBER, "654321");
     }
 
