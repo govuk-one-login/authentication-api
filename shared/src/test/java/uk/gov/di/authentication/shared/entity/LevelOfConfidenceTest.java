@@ -58,17 +58,17 @@ class LevelOfConfidenceTest {
     }
 
     private static Stream<Arguments> supportedLevelOfConfidence() {
-        return Stream.of(Arguments.of("Pm", LevelOfConfidence.MEDIUM_LEVEL));
+        return Stream.of(Arguments.of("P2", LevelOfConfidence.MEDIUM_LEVEL));
     }
 
     private static Stream<Arguments> unsupportedLevelOfConfidence() {
         return Stream.of(
-                Arguments.of("Pl", LevelOfConfidence.LOW_LEVEL),
-                Arguments.of("Ph", LevelOfConfidence.HIGH_LEVEL),
-                Arguments.of("Pv", LevelOfConfidence.VERY_HIGH_LEVEL));
+                Arguments.of("P1", LevelOfConfidence.LOW_LEVEL),
+                Arguments.of("P3", LevelOfConfidence.HIGH_LEVEL),
+                Arguments.of("P4", LevelOfConfidence.VERY_HIGH_LEVEL));
     }
 
     private static Stream<Arguments> invalidLevelOfConfidence() {
-        return Stream.of(Arguments.of("Pm.Pl"), Arguments.of("Cl.Cm"), Arguments.of("Pm.Ph.Cl"));
+        return Stream.of(Arguments.of("P2.P1"), Arguments.of("Cl.Cm"), Arguments.of("P2.P3.Cl"));
     }
 }

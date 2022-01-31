@@ -133,7 +133,7 @@ public class TokenHandlerTest {
     }
 
     private static Stream<String> validVectorValues() {
-        return Stream.of("Cl.Cm", "Cl", "Pm.Cl.Cm", "Pm.Cl");
+        return Stream.of("Cl.Cm", "Cl", "P2.Cl.Cm", "P2.Cl");
     }
 
     @ParameterizedTest

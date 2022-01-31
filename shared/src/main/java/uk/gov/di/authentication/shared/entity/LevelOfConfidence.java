@@ -5,10 +5,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public enum LevelOfConfidence {
-    LOW_LEVEL("Pl", false),
-    MEDIUM_LEVEL("Pm", true),
-    HIGH_LEVEL("Ph", false),
-    VERY_HIGH_LEVEL("Pv", false);
+    LOW_LEVEL("P1", false),
+    MEDIUM_LEVEL("P2", true),
+    HIGH_LEVEL("P3", false),
+    VERY_HIGH_LEVEL("P4", false);
 
     private String value;
     private boolean supported;

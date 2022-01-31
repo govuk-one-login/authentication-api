@@ -42,6 +42,6 @@ class CredentialTrustLevelTest {
     }
 
     private static Stream<String> invalidCredentialTrustLevelValues() {
-        return Stream.of("Cm", "Cm.Cl", "Cl.Cm.Cl.Cm", "Pm.Cl.Cm");
+        return Stream.of("Cm", "Cm.Cl", "Cl.Cm.Cl.Cm", "P2.Cl.Cm");
     }
 }
