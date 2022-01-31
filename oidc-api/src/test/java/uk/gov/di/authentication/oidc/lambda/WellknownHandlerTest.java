@@ -16,6 +16,7 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -28,34 +29,40 @@ class WellknownHandlerTest {
     private WellknownHandler handler;
 
     @Test
-    public void shouldReturn200WhenRequestIsSuccessful() throws ParseException {
+    void shouldReturn200WhenRequestIsSuccessful() throws ParseException {
         when(configService.getBaseURL()).thenReturn(Optional.of("http://localhost:8080"));
         handler = new WellknownHandler(configService);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         URI expectedRegistrationURI = URI.create("http://localhost:8080/connect/register");
+        String expectedIdentityURI = "http://localhost:8080/identity";
         String expectedTrustMarkURI = "http://localhost:8080/trustmark";
 
         assertThat(result, hasStatus(200));
-        assertEquals(
-                List.of(GrantType.AUTHORIZATION_CODE),
-                OIDCProviderMetadata.parse(result.getBody()).getGrantTypes());
-        assertEquals(
-                List.of(ClaimType.NORMAL),
-                OIDCProviderMetadata.parse(result.getBody()).getClaimTypes());
-        assertEquals(
-                expectedRegistrationURI,
-                OIDCProviderMetadata.parse(result.getBody()).getRegistrationEndpointURI());
-        assertEquals(
-                expectedTrustMarkURI,
+        assertThat(
+                OIDCProviderMetadata.parse(result.getBody()).getGrantTypes(),
+                equalTo(List.of(GrantType.AUTHORIZATION_CODE)));
+        assertThat(
+                OIDCProviderMetadata.parse(result.getBody()).getClaimTypes(),
+                equalTo(List.of(ClaimType.NORMAL)));
+        assertThat(
+                OIDCProviderMetadata.parse(result.getBody()).getRegistrationEndpointURI(),
+                equalTo(expectedRegistrationURI));
+        assertThat(
                 OIDCProviderMetadata.parse(result.getBody())
                         .getCustomParameters()
-                        .get("trustmarks"));
+                        .get("trustmarks"),
+                equalTo(expectedTrustMarkURI));
+        assertThat(
+                OIDCProviderMetadata.parse(result.getBody())
+                        .getCustomParameters()
+                        .get("identity_endpoint"),
+                equalTo(expectedIdentityURI));
     }
 
     @Test
-    public void shouldThrowExceptionWhenBaseUrlIsMissing() {
+    void shouldThrowExceptionWhenBaseUrlIsMissing() {
         when(configService.getBaseURL()).thenReturn(Optional.empty());
 
         assertThrows(
