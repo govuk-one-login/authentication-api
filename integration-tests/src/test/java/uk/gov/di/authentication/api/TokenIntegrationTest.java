@@ -88,8 +88,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         return Stream.of(
                 Optional.of("Cl.Cm"),
                 Optional.of("Cl"),
-                Optional.of("Pm.Cl.Cm"),
-                Optional.of("Pm.Cl"),
+                Optional.of("P2.Cl.Cm"),
+                Optional.of("P2.Cl"),
                 Optional.empty());
     }
 
@@ -139,7 +139,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         setUpDynamo(keyPair, scope, new Subject());
         var response =
                 generateTokenRequest(
-                        keyPair, scope, Optional.of("Pm.Cl.Cm"), Optional.of(oidcClaimsRequest));
+                        keyPair, scope, Optional.of("P2.Cl.Cm"), Optional.of(oidcClaimsRequest));
 
         assertThat(response, hasStatus(200));
         JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());

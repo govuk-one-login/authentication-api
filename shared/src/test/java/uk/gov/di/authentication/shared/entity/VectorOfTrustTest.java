@@ -53,7 +53,7 @@ class VectorOfTrustTest {
 
     @Test
     void shouldParseValidStringWithSingleIdentityVector() {
-        var jsonArray = jsonArrayOf("Pm.Cl.Cm");
+        var jsonArray = jsonArrayOf("P2.Cl.Cm");
         VectorOfTrust vectorOfTrust =
                 VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(jsonArray));
         assertThat(vectorOfTrust.getCredentialTrustLevel(), equalTo(MEDIUM_LEVEL));
@@ -62,7 +62,7 @@ class VectorOfTrustTest {
 
     @Test
     void shouldParseToLowCredentialTrustLevelAndMediumLevelOfConfidence() {
-        var jsonArray = jsonArrayOf("Pm.Cl.Cm", "Pm.Cl");
+        var jsonArray = jsonArrayOf("P2.Cl.Cm", "P2.Cl");
         VectorOfTrust vectorOfTrust =
                 VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(jsonArray));
         assertThat(vectorOfTrust.getCredentialTrustLevel(), equalTo(LOW_LEVEL));
@@ -71,7 +71,7 @@ class VectorOfTrustTest {
 
     @Test
     void shouldThrowWhenUnsupportedIdentityValueInVector() {
-        var jsonArray = jsonArrayOf("Pm.Cl.Cm", "Ph.Cl");
+        var jsonArray = jsonArrayOf("P2.Cl.Cm", "P3.Cl");
         assertThrows(
                 IllegalArgumentException.class,
                 () ->
@@ -81,7 +81,7 @@ class VectorOfTrustTest {
 
     @Test
     void shouldThrowWhenIdentityValueIsNotFirstValueInVector() {
-        var jsonArray = jsonArrayOf("Cl.Cm.Pm");
+        var jsonArray = jsonArrayOf("Cl.Cm.P2");
         assertThrows(
                 IllegalArgumentException.class,
                 () ->
@@ -101,7 +101,7 @@ class VectorOfTrustTest {
 
     @Test
     void shouldThrowWhenOnlyIdentityLevelIsSentInRequest() {
-        var jsonArray = jsonArrayOf("Pm");
+        var jsonArray = jsonArrayOf("P2");
         assertThrows(
                 IllegalArgumentException.class,
                 () ->
@@ -115,12 +115,12 @@ class VectorOfTrustTest {
                 IllegalArgumentException.class,
                 () ->
                         VectorOfTrust.parseFromAuthRequestAttribute(
-                                Collections.singletonList(jsonArrayOf("Pm.Cm.Cl"))));
+                                Collections.singletonList(jsonArrayOf("P2.Cm.Cl"))));
     }
 
     @Test
     void shouldThrowWhenMultipleIdentityValuesArePresentInVector() {
-        var jsonArray = jsonArrayOf("Pl.Pb");
+        var jsonArray = jsonArrayOf("P1.Pb");
         assertThrows(
                 IllegalArgumentException.class,
                 () ->
@@ -147,7 +147,7 @@ class VectorOfTrustTest {
 
     @Test
     void shouldReturnCorrectlyFormattedVectorOfTrustForTokenWhenIdentityValuesArePresent() {
-        String vectorString = "Pm.Cl.Cm";
+        String vectorString = "P2.Cl.Cm";
 
         VectorOfTrust vectorOfTrust =
                 VectorOfTrust.parseFromAuthRequestAttribute(

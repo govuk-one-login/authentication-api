@@ -147,7 +147,7 @@ class AuthorizationServiceTest {
                         REDIRECT_URI.toString(),
                         responseType,
                         scope,
-                        jsonArrayOf("Pm.Cl.Cm", "Pm.Cl"),
+                        jsonArrayOf("P2.Cl.Cm", "P2.Cl"),
                         Optional.empty());
         Optional<ErrorObject> errorObject = authorizationService.validateAuthRequest(authRequest);
 
@@ -169,7 +169,7 @@ class AuthorizationServiceTest {
                         REDIRECT_URI.toString(),
                         responseType,
                         scope,
-                        jsonArrayOf("Cm.Cl.Pl", "Pl.Cl"),
+                        jsonArrayOf("Cm.Cl.P1", "P1.Cl"),
                         Optional.empty());
         Optional<ErrorObject> errorObject = authorizationService.validateAuthRequest(authRequest);
 
