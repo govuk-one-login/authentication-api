@@ -17,13 +17,17 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.Issuer;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
+import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class TokenGeneratorHelper {
 
@@ -92,7 +96,8 @@ public class TokenGeneratorHelper {
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
 
-        return generateSignedToken(clientId, issuerUrl, scopes, signer, subject, keyId, expiryDate);
+        return generateSignedToken(
+                clientId, issuerUrl, scopes, signer, subject, keyId, expiryDate, null);
     }
 
     public static SignedJWT generateSignedToken(
@@ -104,7 +109,21 @@ public class TokenGeneratorHelper {
             String keyId,
             Date expiryDate) {
 
-        JWTClaimsSet claimsSet =
+        return generateSignedToken(
+                clientId, issuerUrl, scopes, signer, subject, keyId, expiryDate, null);
+    }
+
+    public static SignedJWT generateSignedToken(
+            String clientId,
+            String issuerUrl,
+            List<String> scopes,
+            JWSSigner signer,
+            Subject subject,
+            String keyId,
+            Date expiryDate,
+            OIDCClaimsRequest identityClaims) {
+
+        JWTClaimsSet.Builder claimsBuilder =
                 new JWTClaimsSet.Builder()
                         .claim("scope", scopes)
                         .issuer(issuerUrl)
@@ -113,12 +132,19 @@ public class TokenGeneratorHelper {
                                 Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()))
                         .claim("client_id", clientId)
                         .subject(subject.getValue())
-                        .jwtID(UUID.randomUUID().toString())
-                        .build();
+                        .jwtID(UUID.randomUUID().toString());
+
+        if (Objects.nonNull(identityClaims)) {
+            claimsBuilder.claim(
+                    "claims",
+                    identityClaims.getUserInfoClaimsRequest().getEntries().stream()
+                            .map(ClaimsSetRequest.Entry::getClaimName)
+                            .collect(Collectors.toList()));
+        }
 
         JWSHeader jwsHeader = new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(keyId).build();
         try {
-            var signedJWT = new SignedJWT(jwsHeader, claimsSet);
+            var signedJWT = new SignedJWT(jwsHeader, claimsBuilder.build());
             signedJWT.sign(signer);
             return signedJWT;
         } catch (JOSEException e) {
