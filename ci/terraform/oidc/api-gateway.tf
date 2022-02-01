@@ -181,6 +181,14 @@ resource "aws_cloudwatch_log_group" "oidc_stage_access_logs" {
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
 }
 
+resource "aws_cloudwatch_log_group" "oidc_waf_logs" {
+  count = var.use_localstack ? 0 : 1
+
+  name              = "aws-waf-logs-oidc-${var.environment}"
+  retention_in_days = var.cloudwatch_log_retention
+  kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+}
+
 resource "aws_cloudwatch_log_subscription_filter" "oidc_access_log_subscription" {
   count           = var.logging_endpoint_enabled ? 1 : 0
   name            = "${var.environment}-oidc-api-access-logs-subscription"
@@ -360,5 +368,29 @@ resource "aws_wafv2_web_acl_association" "oidc_waf_association" {
   depends_on = [
     aws_api_gateway_stage.endpoint_stage,
     aws_wafv2_web_acl.wafregional_web_acl_oidc_api
+  ]
+}
+
+resource "aws_wafv2_web_acl_logging_configuration" "waf_logging_config_oidc_api" {
+  count                   = var.use_localstack ? 0 : 1
+  log_destination_configs = [aws_cloudwatch_log_group.oidc_waf_logs[count.index].arn]
+  resource_arn            = aws_wafv2_web_acl.wafregional_web_acl_oidc_api[count.index].arn
+  logging_filter {
+    default_behavior = "DROP"
+
+    filter {
+      behavior = "KEEP"
+
+      condition {
+        action_condition {
+          action = "BLOCK"
+        }
+      }
+
+      requirement = "MEETS_ANY"
+    }
+  }
+  depends_on = [
+    aws_cloudwatch_log_group.oidc_waf_logs
   ]
 }

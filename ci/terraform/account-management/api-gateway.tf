@@ -131,6 +131,14 @@ resource "aws_cloudwatch_log_group" "lambda_log_group" {
   ]
 }
 
+resource "aws_cloudwatch_log_group" "account_management_waf_logs" {
+  count = var.use_localstack ? 0 : 1
+
+  name              = "aws-waf-logs-account-management-${var.environment}"
+  retention_in_days = var.cloudwatch_log_retention
+  kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+}
+
 resource "aws_iam_policy" "api_gateway_logging_policy" {
   name        = "${var.environment}-account-management-api-gateway-logging"
   path        = "/"
@@ -364,5 +372,31 @@ resource "aws_wafv2_web_acl_association" "waf_association_am_api" {
   depends_on = [
     aws_api_gateway_stage.stage,
     aws_wafv2_web_acl.wafregional_web_acl_am_api
+  ]
+}
+
+resource "aws_wafv2_web_acl_logging_configuration" "waf_logging_config_am_api" {
+  count                   = var.use_localstack ? 0 : 1
+  log_destination_configs = [aws_cloudwatch_log_group.account_management_waf_logs[count.index].arn]
+  resource_arn            = aws_wafv2_web_acl.wafregional_web_acl_am_api[count.index].arn
+
+  logging_filter {
+    default_behavior = "DROP"
+
+    filter {
+      behavior = "KEEP"
+
+      condition {
+        action_condition {
+          action = "BLOCK"
+        }
+      }
+
+      requirement = "MEETS_ANY"
+    }
+  }
+
+  depends_on = [
+    aws_cloudwatch_log_group.account_management_waf_logs
   ]
 }
