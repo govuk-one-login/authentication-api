@@ -54,12 +54,15 @@ public class NotificationHandlerTest {
     void setUp() {
         when(configService.getNotifyTestPhoneNumber()).thenReturn(Optional.of(NOTIFY_PHONE_NUMBER));
         when(configService.getSmoketestBucketName()).thenReturn(BUCKET_NAME);
+        when(configService.getFrontendBaseUrl()).thenReturn(FRONTEND_BASE_URL);
+        when(configService.getCustomerSupportLinkRoute()).thenReturn(CUSTOMER_SUPPORT_LINK_ROUTE);
         handler = new NotificationHandler(notificationService, configService, s3Client);
     }
 
     @Test
     void shouldSuccessfullyProcessEmailMessageFromSQSQueue()
             throws JsonProcessingException, NotificationClientException {
+
         NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
@@ -69,6 +72,7 @@ public class NotificationHandlerTest {
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
         personalisation.put("email-address", notifyRequest.getDestination());
+        personalisation.put("customer-support-link", CUSTOMER_SUPPORT_LINK_URL);
 
         verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, VERIFY_EMAIL);
     }
@@ -76,9 +80,6 @@ public class NotificationHandlerTest {
     @Test
     void shouldSuccessfullyProcessResetPasswordConfirmationFromSQSQueue()
             throws JsonProcessingException, NotificationClientException {
-        when(configService.getFrontendBaseUrl()).thenReturn(FRONTEND_BASE_URL);
-        when(configService.getCustomerSupportLinkRoute()).thenReturn(CUSTOMER_SUPPORT_LINK_ROUTE);
-
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, PASSWORD_RESET_CONFIRMATION);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -105,6 +106,7 @@ public class NotificationHandlerTest {
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("reset-password-link", TEST_RESET_PASSWORD_LINK);
+        personalisation.put("customer-support-link", CUSTOMER_SUPPORT_LINK_URL);
 
         verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, RESET_PASSWORD);
     }
@@ -115,6 +117,8 @@ public class NotificationHandlerTest {
         String accountManagementUrl = "http://account-management/";
         String baseUrl = "http://account-management";
         when(configService.getAccountManagementURI()).thenReturn(baseUrl);
+        when(configService.getFrontendBaseUrl()).thenReturn(FRONTEND_BASE_URL);
+        when(configService.getCustomerSupportLinkRoute()).thenReturn(CUSTOMER_SUPPORT_LINK_ROUTE);
 
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION);
@@ -125,6 +129,7 @@ public class NotificationHandlerTest {
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("sign-in-page-url", accountManagementUrl);
+        personalisation.put("customer-support-link", CUSTOMER_SUPPORT_LINK_URL);
 
         verify(notificationService)
                 .sendEmail(TEST_EMAIL_ADDRESS, personalisation, ACCOUNT_CREATED_CONFIRMATION);
@@ -171,6 +176,7 @@ public class NotificationHandlerTest {
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
         personalisation.put("email-address", notifyRequest.getDestination());
+        personalisation.put("customer-support-link", CUSTOMER_SUPPORT_LINK_URL);
         Mockito.doThrow(NotificationClientException.class)
                 .when(notificationService)
                 .sendEmail(TEST_EMAIL_ADDRESS, personalisation, VERIFY_EMAIL);
