@@ -122,6 +122,14 @@ resource "aws_cloudwatch_log_group" "frontend_waf_logs" {
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
 }
 
+resource "aws_cloudwatch_log_subscription_filter" "frontend_api_waf_log_subscription" {
+  count           = var.logging_endpoint_enabled ? 1 : 0
+  name            = "${var.environment}-frontend-api-waf-logs-subscription"
+  log_group_name  = aws_cloudwatch_log_group.frontend_waf_logs[0].name
+  filter_pattern  = ""
+  destination_arn = var.logging_endpoint_arn
+}
+
 resource "aws_api_gateway_stage" "endpoint_frontend_stage" {
   deployment_id = aws_api_gateway_deployment.frontend_deployment.id
   rest_api_id   = aws_api_gateway_rest_api.di_authentication_frontend_api.id

@@ -131,14 +131,6 @@ resource "aws_cloudwatch_log_group" "lambda_log_group" {
   ]
 }
 
-resource "aws_cloudwatch_log_group" "account_management_waf_logs" {
-  count = var.use_localstack ? 0 : 1
-
-  name              = "aws-waf-logs-account-management-${var.environment}"
-  retention_in_days = var.cloudwatch_log_retention
-  kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
-}
-
 resource "aws_iam_policy" "api_gateway_logging_policy" {
   name        = "${var.environment}-account-management-api-gateway-logging"
   path        = "/"
@@ -223,6 +215,22 @@ resource "aws_cloudwatch_log_subscription_filter" "account_management_access_log
   count           = var.logging_endpoint_enabled ? 1 : 0
   name            = "${var.environment}-account-management_-api-access-logs-subscription"
   log_group_name  = aws_cloudwatch_log_group.account_management_access_logs[0].name
+  filter_pattern  = ""
+  destination_arn = var.logging_endpoint_arn
+}
+
+resource "aws_cloudwatch_log_group" "account_management_waf_logs" {
+  count = var.use_localstack ? 0 : 1
+
+  name              = "aws-waf-logs-account-management-${var.environment}"
+  retention_in_days = var.cloudwatch_log_retention
+  kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+}
+
+resource "aws_cloudwatch_log_subscription_filter" "account_management_waf_log_subscription" {
+  count           = var.logging_endpoint_enabled ? 1 : 0
+  name            = "${var.environment}-account-management-api-waf-logs-subscription"
+  log_group_name  = aws_cloudwatch_log_group.account_management_waf_logs[0].name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arn
 }

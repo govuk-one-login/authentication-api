@@ -181,6 +181,14 @@ resource "aws_cloudwatch_log_group" "oidc_stage_access_logs" {
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
 }
 
+resource "aws_cloudwatch_log_subscription_filter" "oidc_access_log_subscription" {
+  count           = var.logging_endpoint_enabled ? 1 : 0
+  name            = "${var.environment}-oidc-api-access-logs-subscription"
+  log_group_name  = aws_cloudwatch_log_group.oidc_stage_access_logs[0].name
+  filter_pattern  = ""
+  destination_arn = var.logging_endpoint_arn
+}
+
 resource "aws_cloudwatch_log_group" "oidc_waf_logs" {
   count = var.use_localstack ? 0 : 1
 
@@ -189,10 +197,10 @@ resource "aws_cloudwatch_log_group" "oidc_waf_logs" {
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
 }
 
-resource "aws_cloudwatch_log_subscription_filter" "oidc_access_log_subscription" {
+resource "aws_cloudwatch_log_subscription_filter" "oidc_waf_log_subscription" {
   count           = var.logging_endpoint_enabled ? 1 : 0
-  name            = "${var.environment}-oidc-api-access-logs-subscription"
-  log_group_name  = aws_cloudwatch_log_group.oidc_stage_access_logs[0].name
+  name            = "${var.environment}-oidc-api-waf-logs-subscription"
+  log_group_name  = aws_cloudwatch_log_group.oidc_waf_logs[0].name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arn
 }
