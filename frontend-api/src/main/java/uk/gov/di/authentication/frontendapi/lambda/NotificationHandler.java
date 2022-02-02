@@ -80,6 +80,8 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                     "sign-in-page-url",
                                     buildURI(configurationService.getAccountManagementURI())
                                             .toString());
+                            notifyPersonalisation.put(
+                                    "customer-support-link", buildCustomerSupportUrl());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,
@@ -89,6 +91,8 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notifyPersonalisation.put("validation-code", notifyRequest.getCode());
                             notifyPersonalisation.put(
                                     "email-address", notifyRequest.getDestination());
+                            notifyPersonalisation.put(
+                                    "customer-support-link", buildCustomerSupportUrl());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,
@@ -109,6 +113,8 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                         case RESET_PASSWORD:
                             notifyPersonalisation.put(
                                     "reset-password-link", notifyRequest.getCode());
+                            notifyPersonalisation.put(
+                                    "customer-support-link", buildCustomerSupportUrl());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,
@@ -118,12 +124,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             Map<String, Object> passwordResetConfirmationPersonalisation =
                                     new HashMap<>();
                             passwordResetConfirmationPersonalisation.put(
-                                    "customer-support-link",
-                                    buildURI(
-                                                    configurationService.getFrontendBaseUrl(),
-                                                    configurationService
-                                                            .getCustomerSupportLinkRoute())
-                                            .toString());
+                                    "customer-support-link", buildCustomerSupportUrl());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     passwordResetConfirmationPersonalisation,
@@ -148,6 +149,13 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             }
         }
         return null;
+    }
+
+    private String buildCustomerSupportUrl() {
+        return buildURI(
+                        configurationService.getFrontendBaseUrl(),
+                        configurationService.getCustomerSupportLinkRoute())
+                .toString();
     }
 
     private void writeTestClientOtpToS3(String otp, String destination) {
