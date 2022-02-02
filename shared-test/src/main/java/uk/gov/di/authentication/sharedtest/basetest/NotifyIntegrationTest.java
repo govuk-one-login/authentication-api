@@ -99,7 +99,12 @@ public abstract class NotifyIntegrationTest {
 
         @Override
         public String getFrontendBaseUrl() {
-            return "http://localhost:3000/reset-password?code=";
+            return "http://localhost:3000/frontend/";
+        }
+
+        @Override
+        public String getContactUsLinkRoute() {
+            return "contact-us";
         }
     }
 }

@@ -129,7 +129,6 @@ public class NotificationHandlerTest {
         handler.handleRequest(sqsEvent, context);
 
         Map<String, Object> personalisation = new HashMap<>();
-        personalisation.put("sign-in-page-url", accountManagementUrl);
         personalisation.put("contact-us-link", CONTACT_US_LINK_URL);
 
         verify(notificationService)
