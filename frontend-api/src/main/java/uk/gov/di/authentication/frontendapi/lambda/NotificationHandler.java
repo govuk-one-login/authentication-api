@@ -80,8 +80,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                     "sign-in-page-url",
                                     buildURI(configurationService.getAccountManagementURI())
                                             .toString());
-                            notifyPersonalisation.put(
-                                    "customer-support-link", buildCustomerSupportUrl());
+                            notifyPersonalisation.put("contact-us-link", buildContactUsUrl());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,
@@ -91,8 +90,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notifyPersonalisation.put("validation-code", notifyRequest.getCode());
                             notifyPersonalisation.put(
                                     "email-address", notifyRequest.getDestination());
-                            notifyPersonalisation.put(
-                                    "customer-support-link", buildCustomerSupportUrl());
+                            notifyPersonalisation.put("contact-us-link", buildContactUsUrl());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,
@@ -113,8 +111,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                         case RESET_PASSWORD:
                             notifyPersonalisation.put(
                                     "reset-password-link", notifyRequest.getCode());
-                            notifyPersonalisation.put(
-                                    "customer-support-link", buildCustomerSupportUrl());
+                            notifyPersonalisation.put("contact-us-link", buildContactUsUrl());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,
@@ -155,6 +152,13 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
         return buildURI(
                         configurationService.getFrontendBaseUrl(),
                         configurationService.getCustomerSupportLinkRoute())
+                .toString();
+    }
+
+    private String buildContactUsUrl() {
+        return buildURI(
+                        configurationService.getFrontendBaseUrl(),
+                        configurationService.getContactUsLinkRoute())
                 .toString();
     }
 
