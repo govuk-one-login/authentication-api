@@ -42,7 +42,9 @@ public class NotificationHandlerTest {
     private static final String FRONTEND_BASE_URL = "https://localhost:8080/frontend";
     private static final String CUSTOMER_SUPPORT_LINK_URL =
             "https://localhost:8080/frontend/support";
+    private static final String CONTACT_US_LINK_URL = "https://localhost:8080/frontend/contact-us";
     private static final String CUSTOMER_SUPPORT_LINK_ROUTE = "support";
+    private static final String CONTACT_US_LINK_ROUTE = "contact-us";
     private final Context context = mock(Context.class);
     private final NotificationService notificationService = mock(NotificationService.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
@@ -56,6 +58,7 @@ public class NotificationHandlerTest {
         when(configService.getSmoketestBucketName()).thenReturn(BUCKET_NAME);
         when(configService.getFrontendBaseUrl()).thenReturn(FRONTEND_BASE_URL);
         when(configService.getCustomerSupportLinkRoute()).thenReturn(CUSTOMER_SUPPORT_LINK_ROUTE);
+        when(configService.getContactUsLinkRoute()).thenReturn(CONTACT_US_LINK_ROUTE);
         handler = new NotificationHandler(notificationService, configService, s3Client);
     }
 
@@ -72,7 +75,7 @@ public class NotificationHandlerTest {
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
         personalisation.put("email-address", notifyRequest.getDestination());
-        personalisation.put("customer-support-link", CUSTOMER_SUPPORT_LINK_URL);
+        personalisation.put("contact-us-link", CONTACT_US_LINK_URL);
 
         verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, VERIFY_EMAIL);
     }
@@ -106,7 +109,7 @@ public class NotificationHandlerTest {
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("reset-password-link", TEST_RESET_PASSWORD_LINK);
-        personalisation.put("customer-support-link", CUSTOMER_SUPPORT_LINK_URL);
+        personalisation.put("contact-us-link", CONTACT_US_LINK_URL);
 
         verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, RESET_PASSWORD);
     }
@@ -117,8 +120,6 @@ public class NotificationHandlerTest {
         String accountManagementUrl = "http://account-management/";
         String baseUrl = "http://account-management";
         when(configService.getAccountManagementURI()).thenReturn(baseUrl);
-        when(configService.getFrontendBaseUrl()).thenReturn(FRONTEND_BASE_URL);
-        when(configService.getCustomerSupportLinkRoute()).thenReturn(CUSTOMER_SUPPORT_LINK_ROUTE);
 
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION);
@@ -129,7 +130,7 @@ public class NotificationHandlerTest {
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("sign-in-page-url", accountManagementUrl);
-        personalisation.put("customer-support-link", CUSTOMER_SUPPORT_LINK_URL);
+        personalisation.put("contact-us-link", CONTACT_US_LINK_URL);
 
         verify(notificationService)
                 .sendEmail(TEST_EMAIL_ADDRESS, personalisation, ACCOUNT_CREATED_CONFIRMATION);
@@ -176,7 +177,7 @@ public class NotificationHandlerTest {
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
         personalisation.put("email-address", notifyRequest.getDestination());
-        personalisation.put("customer-support-link", CUSTOMER_SUPPORT_LINK_URL);
+        personalisation.put("contact-us-link", CONTACT_US_LINK_URL);
         Mockito.doThrow(NotificationClientException.class)
                 .when(notificationService)
                 .sendEmail(TEST_EMAIL_ADDRESS, personalisation, VERIFY_EMAIL);

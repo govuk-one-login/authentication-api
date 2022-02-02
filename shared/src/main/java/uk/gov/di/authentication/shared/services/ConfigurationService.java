@@ -60,6 +60,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Integer.parseInt(System.getenv().getOrDefault("CODE_MAX_RETRIES", "5"));
     }
 
+    public String getContactUsLinkRoute() {
+        return System.getenv().getOrDefault("CONTACT_US_LINK_ROUTE", "");
+    }
+
     public String getCustomerSupportLinkRoute() {
         return System.getenv().getOrDefault("CUSTOMER_SUPPORT_LINK_ROUTE", "");
     }
