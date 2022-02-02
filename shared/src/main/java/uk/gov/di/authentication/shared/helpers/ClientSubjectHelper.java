@@ -38,7 +38,7 @@ public class ClientSubjectHelper {
         try {
             redirectUri = clientRegistry.getRedirectUrls().stream().findFirst().orElseThrow();
         } catch (NoSuchElementException e) {
-            LOG.error("Client Registry contains no redirect URLs");
+            LOG.warn("Client Registry contains no redirect URLs");
             throw new RuntimeException(e);
         }
         try {

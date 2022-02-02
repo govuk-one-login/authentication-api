@@ -142,7 +142,7 @@ public class AuthCodeHandler
                                 authenticationRequest = AuthenticationRequest.parse(authRequest);
                             } catch (ParseException e) {
                                 if (e.getRedirectionURI() == null) {
-                                    LOG.error(
+                                    LOG.warn(
                                             "Authentication request could not be parsed: redirect URI or Client ID is missing from auth request",
                                             e);
                                     // TODO - We need to come up with a strategy to handle uncaught
@@ -157,7 +157,7 @@ public class AuthCodeHandler
                                                 e.getState(),
                                                 e.getResponseMode(),
                                                 e.getErrorObject());
-                                LOG.error("Authentication request could not be parsed", e);
+                                LOG.warn("Authentication request could not be parsed", e);
                                 return new APIGatewayProxyResponseEvent()
                                         .withStatusCode(302)
                                         .withHeaders(
@@ -274,7 +274,7 @@ public class AuthCodeHandler
         AuthenticationErrorResponse errorResponse =
                 authorizationService.generateAuthenticationErrorResponse(
                         authenticationRequest, OAuth2Error.INVALID_CLIENT);
-        LOG.error("Client not found");
+        LOG.warn("Client not found");
         return new APIGatewayProxyResponseEvent()
                 .withStatusCode(302)
                 .withHeaders(Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()));

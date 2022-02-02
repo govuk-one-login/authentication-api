@@ -75,7 +75,7 @@ public class UserInfoHandler
                                     input.getHeaders(),
                                     AUTHORIZATION_HEADER,
                                     configurationService.getHeadersCaseInsensitive())) {
-                                LOG.error("AccessToken is missing from request");
+                                LOG.warn("AccessToken is missing from request");
                                 return generateApiGatewayProxyResponse(
                                         401,
                                         "",
@@ -95,7 +95,7 @@ public class UserInfoHandler
                                                 false);
                                 userInfo = userInfoService.populateUserInfo(accessTokenInfo);
                             } catch (AccessTokenException e) {
-                                LOG.error(
+                                LOG.warn(
                                         "AccessTokenException. Sending back UserInfoErrorResponse");
                                 return generateApiGatewayProxyResponse(
                                         401,

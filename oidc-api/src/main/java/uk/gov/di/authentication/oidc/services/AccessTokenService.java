@@ -58,7 +58,7 @@ public class AccessTokenService {
         try {
             accessToken = AccessToken.parse(authorizationHeader, AccessTokenType.BEARER);
         } catch (com.nimbusds.oauth2.sdk.ParseException e) {
-            LOG.error("Unable to parse AccessToken");
+            LOG.warn("Unable to parse AccessToken");
             throw new AccessTokenException(
                     "Unable to parse AccessToken", BearerTokenError.INVALID_TOKEN);
         }
@@ -70,7 +70,7 @@ public class AccessTokenService {
             Date currentDateTime = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
             if (DateUtils.isBefore(
                     signedJWT.getJWTClaimsSet().getExpirationTime(), currentDateTime, 0)) {
-                LOG.error(
+                LOG.warn(
                         "Access Token has expired. Access Token expires at: {}. CurrentDateTime is: {}",
                         signedJWT.getJWTClaimsSet().getExpirationTime(),
                         currentDateTime);
@@ -78,7 +78,7 @@ public class AccessTokenService {
                         INVALID_ACCESS_TOKEN, BearerTokenError.INVALID_TOKEN);
             }
             if (!tokenValidationService.validateAccessTokenSignature(accessToken)) {
-                LOG.error("Unable to validate AccessToken signature");
+                LOG.warn("Unable to validate AccessToken signature");
                 throw new AccessTokenException(
                         "Unable to validate AccessToken signature", BearerTokenError.INVALID_TOKEN);
             }
@@ -88,7 +88,7 @@ public class AccessTokenService {
             attachLogFieldToLogs(CLIENT_ID, clientID);
 
             if (client.isEmpty()) {
-                LOG.error("Client not found");
+                LOG.warn("Client not found");
                 throw new AccessTokenException("Client not found", BearerTokenError.INVALID_TOKEN);
             }
             var scopes =
@@ -97,7 +97,7 @@ public class AccessTokenService {
                             .map(Objects::toString)
                             .collect(Collectors.toList());
             if (!areScopesValid(scopes) || !client.get().getScopes().containsAll(scopes)) {
-                LOG.error("Invalid Scopes: {}", scopes);
+                LOG.warn("Invalid Scopes: {}", scopes);
                 throw new AccessTokenException("Invalid Scopes", OAuth2Error.INVALID_SCOPE);
             }
             if (identityEndpoint && !areIdentityClaimsValid(signedJWT.getJWTClaimsSet())) {
@@ -107,7 +107,7 @@ public class AccessTokenService {
             String subject = signedJWT.getJWTClaimsSet().getSubject();
             Optional<AccessTokenStore> accessTokenStore = getAccessTokenStore(clientID, subject);
             if (accessTokenStore.isEmpty()) {
-                LOG.error(
+                LOG.warn(
                         "Access Token Store is empty. Access Token expires at: {}. CurrentDateTime is: {}",
                         signedJWT.getJWTClaimsSet().getExpirationTime(),
                         currentDateTime);
@@ -115,18 +115,18 @@ public class AccessTokenService {
                         INVALID_ACCESS_TOKEN, BearerTokenError.INVALID_TOKEN);
             }
             if (!accessTokenStore.get().getToken().equals(accessToken.getValue())) {
-                LOG.error(
+                LOG.warn(
                         "Access Token in Access Token Store is different to Access Token sent in request");
                 throw new AccessTokenException(
                         INVALID_ACCESS_TOKEN, BearerTokenError.INVALID_TOKEN);
             }
             return new AccessTokenInfo(accessTokenStore.get(), subject, scopes);
         } catch (ParseException e) {
-            LOG.error("Unable to parse AccessToken to SignedJWT");
+            LOG.warn("Unable to parse AccessToken to SignedJWT");
             throw new AccessTokenException(
                     "Unable to parse AccessToken to SignedJWT", BearerTokenError.INVALID_TOKEN);
         } catch (com.nimbusds.oauth2.sdk.ParseException e) {
-            LOG.error("Unable to parse ClaimSet in AccessToken");
+            LOG.warn("Unable to parse ClaimSet in AccessToken");
             throw new AccessTokenException(
                     "Unable to parse ClaimSet in AccessToken", BearerTokenError.INVALID_TOKEN);
         }
@@ -156,7 +156,7 @@ public class AccessTokenService {
     private boolean areIdentityClaimsValid(JWTClaimsSet claimsSet)
             throws com.nimbusds.oauth2.sdk.ParseException {
         if (Objects.isNull(claimsSet.getClaim("claims"))) {
-            LOG.error("Identity claims missing from access token");
+            LOG.warn("Identity claims missing from access token");
             return false;
         }
         var identityClaims =
@@ -164,7 +164,7 @@ public class AccessTokenService {
                         .map(Objects::toString)
                         .collect(Collectors.toList());
         if (!ValidClaims.getAllowedClaimNames().containsAll(identityClaims)) {
-            LOG.error("Invalid set of Identity claims present in access token: {}", identityClaims);
+            LOG.warn("Invalid set of Identity claims present in access token: {}", identityClaims);
             return false;
         }
         return true;

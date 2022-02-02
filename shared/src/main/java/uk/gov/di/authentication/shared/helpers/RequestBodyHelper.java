@@ -27,10 +27,10 @@ public class RequestBodyHelper {
     public static void validatePrincipal(
             Subject subjectFromEmail, Map<String, Object> authorizerParams) {
         if (!authorizerParams.containsKey("principalId")) {
-            LOG.error("principalId is missing");
+            LOG.warn("principalId is missing");
             throw new RuntimeException("principalId is missing");
         } else if (!subjectFromEmail.getValue().equals(authorizerParams.get("principalId"))) {
-            LOG.error(
+            LOG.warn(
                     "Subject ID: {} does not match principalId: {}",
                     subjectFromEmail,
                     authorizerParams.get("principalId"));

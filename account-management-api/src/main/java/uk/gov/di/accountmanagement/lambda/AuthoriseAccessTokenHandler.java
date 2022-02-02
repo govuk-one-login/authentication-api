@@ -86,7 +86,7 @@ public class AuthoriseAccessTokenHandler
                 Date currentDateTime =
                         Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
                 if (DateUtils.isBefore(claimsSet.getExpirationTime(), currentDateTime, 0)) {
-                    LOG.error(
+                    LOG.warn(
                             "Access Token expires at: {}. CurrentDateTime is: {}",
                             claimsSet.getExpirationTime(),
                             currentDateTime);
@@ -95,7 +95,7 @@ public class AuthoriseAccessTokenHandler
                 boolean isAccessTokenSignatureValid =
                         tokenValidationService.validateAccessTokenSignature(accessToken);
                 if (!isAccessTokenSignatureValid) {
-                    LOG.error("Access Token signature is not valid");
+                    LOG.warn("Access Token signature is not valid");
                     throw new RuntimeException("Unauthorized");
                 }
                 LOG.info("Successfully validated Access Token signature");
@@ -103,24 +103,24 @@ public class AuthoriseAccessTokenHandler
                 List<String> scopeList = claimsSet.getStringListClaim("scope");
                 if (scopeList == null
                         || !scopeList.contains(CustomScopeValue.ACCOUNT_MANAGEMENT.getValue())) {
-                    LOG.error("Access Token scope is not valid or missing");
+                    LOG.warn("Access Token scope is not valid or missing");
                     throw new RuntimeException("Unauthorized");
                 }
                 LOG.info("Successfully validated Access Token scope");
                 String clientId = claimsSet.getStringClaim("client_id");
                 if (clientId == null) {
-                    LOG.error("Access Token client_id is missing");
+                    LOG.warn("Access Token client_id is missing");
                     throw new RuntimeException("Unauthorized");
                 }
                 if (!clientService.isValidClient(clientId)) {
-                    LOG.error(
+                    LOG.warn(
                             "Access Token client_id does not exist in Dynamo. ClientId {}",
                             clientId);
                     throw new RuntimeException("Unauthorized");
                 }
                 String subject = claimsSet.getSubject();
                 if (subject == null) {
-                    LOG.error("Access Token subject is missing");
+                    LOG.warn("Access Token subject is missing");
                     throw new RuntimeException("Unauthorized");
                 }
                 try {
@@ -143,7 +143,7 @@ public class AuthoriseAccessTokenHandler
                         AuthPolicy.PolicyDocument.getAllowAllPolicy(
                                 region, awsAccountId, restApiId, stage));
             } catch (ParseException | java.text.ParseException e) {
-                LOG.error("Unable to parse Access Token");
+                LOG.warn("Unable to parse Access Token");
                 throw new RuntimeException("Unauthorized");
             }
         }

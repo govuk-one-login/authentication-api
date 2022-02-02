@@ -70,7 +70,7 @@ public class IdentityHandler
                                     input.getHeaders(),
                                     AUTHORIZATION_HEADER,
                                     configurationService.getHeadersCaseInsensitive())) {
-                                LOG.error("AccessToken is missing from request");
+                                LOG.warn("AccessToken is missing from request");
                                 return generateApiGatewayProxyResponse(
                                         401,
                                         "",
@@ -91,7 +91,7 @@ public class IdentityHandler
                                 identityResponse =
                                         identityService.populateIdentityResponse(accessTokenInfo);
                             } catch (AccessTokenException e) {
-                                LOG.error(
+                                LOG.warn(
                                         "AccessTokenException. Sending back IdentityErrorResponse");
                                 return generateApiGatewayProxyResponse(
                                         401,
@@ -105,7 +105,7 @@ public class IdentityHandler
                             try {
                                 return generateApiGatewayProxyResponse(200, identityResponse);
                             } catch (JsonProcessingException e) {
-                                LOG.error("Unable to searlize the IdentityResponse");
+                                LOG.warn("Unable to serialize the IdentityResponse");
                                 throw new RuntimeException(e);
                             }
                         });

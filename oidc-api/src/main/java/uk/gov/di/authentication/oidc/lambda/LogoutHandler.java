@@ -127,7 +127,7 @@ public class LogoutHandler
         LOG.info("LogoutHandler processing request");
 
         if (!session.getClientSessions().contains(sessionCookieIds.getClientSessionId())) {
-            LOG.error("Client Session ID does not exist");
+            LOG.warn("Client Session ID does not exist");
             return generateErrorLogoutResponse(
                     Optional.empty(),
                     new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid session"),
@@ -153,7 +153,7 @@ public class LogoutHandler
 
         if (idTokenHint.isPresent()) {
             if (!doesIDTokenExistInSession(idTokenHint.get(), session)) {
-                LOG.error("ID token does not exist");
+                LOG.warn("ID token does not exist");
                 return generateErrorLogoutResponse(
                         Optional.empty(),
                         new ErrorObject(
@@ -165,7 +165,7 @@ public class LogoutHandler
                         Optional.of(session.getSessionId()));
             }
             if (!tokenValidationService.isTokenSignatureValid(idTokenHint.get())) {
-                LOG.error("Unable to validate ID token signature");
+                LOG.warn("Unable to validate ID token signature");
                 return generateErrorLogoutResponse(
                         Optional.empty(),
                         new ErrorObject(
@@ -181,7 +181,7 @@ public class LogoutHandler
                 SignedJWT idToken = SignedJWT.parse(idTokenHint.get());
                 audience = idToken.getJWTClaimsSet().getAudience().stream().findFirst();
             } catch (ParseException e) {
-                LOG.error("Unable to parse id_token_hint into SignedJWT");
+                LOG.warn("Unable to parse id_token_hint into SignedJWT");
                 return generateErrorLogoutResponse(
                         Optional.empty(),
                         new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid id_token_hint"),
@@ -216,7 +216,7 @@ public class LogoutHandler
         LOG.info("Validating ClientID");
         Optional<ClientRegistry> clientRegistry = dynamoClientService.getClient(clientID);
         if (clientRegistry.isEmpty()) {
-            LOG.error("Client not found in ClientRegistry");
+            LOG.warn("Client not found in ClientRegistry");
             return generateErrorLogoutResponse(
                     state,
                     new ErrorObject(OAuth2Error.UNAUTHORIZED_CLIENT_CODE, "client not found"),
@@ -230,7 +230,7 @@ public class LogoutHandler
                 .map(
                         uri -> {
                             if (!clientRegistry.get().getPostLogoutRedirectUrls().contains(uri)) {
-                                LOG.error(
+                                LOG.warn(
                                         "Client registry does not contain PostLogoutRedirectUri which was sent in the logout request. Value is {}",
                                         uri);
                                 return generateErrorLogoutResponse(

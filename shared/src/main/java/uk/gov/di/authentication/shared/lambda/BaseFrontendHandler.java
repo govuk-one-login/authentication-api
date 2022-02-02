@@ -98,7 +98,7 @@ public abstract class BaseFrontendHandler<T>
         Optional<ClientSession> clientSession =
                 clientSessionService.getClientSessionFromRequestHeaders(input.getHeaders());
         if (session.isEmpty()) {
-            LOG.error("Session cannot be found");
+            LOG.warn("Session cannot be found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         } else {
             attachSessionIdToLogs(session.get());
@@ -107,7 +107,7 @@ public abstract class BaseFrontendHandler<T>
         try {
             request = objectMapper.readValue(input.getBody(), clazz);
         } catch (JsonProcessingException | ConstraintViolationException e) {
-            LOG.error("Request is missing parameters.");
+            LOG.warn("Request is missing parameters.");
             onRequestValidationError(context);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }

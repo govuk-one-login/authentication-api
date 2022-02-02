@@ -15,7 +15,7 @@ public class PhoneNumberHelper {
             var parsedPhoneNumber = phoneUtil.parse(phoneNumber, "GB");
             return phoneUtil.format(parsedPhoneNumber, PhoneNumberUtil.PhoneNumberFormat.E164);
         } catch (NumberParseException e) {
-            LOG.error("Error when trying to parse phone number");
+            LOG.warn("Error when trying to parse phone number");
             throw new RuntimeException(e);
         }
     }

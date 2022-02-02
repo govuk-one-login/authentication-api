@@ -14,7 +14,7 @@ public final class RequestHeaderHelper {
     public static boolean headersContainValidHeader(
             Map<String, String> headers, String headerName, boolean matchLowerCase) {
         if (headers == null || headers.isEmpty()) {
-            LOG.error("All headers are missing or empty when looking for header {}", headerName);
+            LOG.warn("All headers are missing or empty when looking for header {}", headerName);
             return false;
         } else if (!matchLowerCase && headers.containsKey(headerName)) {
             LOG.info("Found header {}, matchLowerCase={}", headerName, matchLowerCase);
@@ -22,7 +22,7 @@ public final class RequestHeaderHelper {
         } else if (matchLowerCase
                 && (headers.containsKey(headerName)
                         && headers.containsKey(headerName.toLowerCase()))) {
-            LOG.error(
+            LOG.warn(
                     "Found both headers {} and lowercase version, matchLowerCase={}",
                     headerName,
                     matchLowerCase);

@@ -88,7 +88,7 @@ public class ClientRegistrationHandler
                                         validationService.validateClientRegistrationConfig(
                                                 clientRegistrationRequest);
                                 if (errorResponse.isPresent()) {
-                                    LOG.error(
+                                    LOG.warn(
                                             "Invalid Client registration request. Failed validation. Error Code: {}. Error description: {}",
                                             errorResponse.get().getCode(),
                                             errorResponse.get().getDescription());
@@ -141,7 +141,7 @@ public class ClientRegistrationHandler
                                 return generateApiGatewayProxyResponse(
                                         200, clientRegistrationResponse);
                             } catch (JsonProcessingException e) {
-                                LOG.error(
+                                LOG.warn(
                                         "Invalid Client registration request. Missing parameters from request");
                                 auditService.submitAuditEvent(
                                         REGISTER_CLIENT_REQUEST_ERROR,

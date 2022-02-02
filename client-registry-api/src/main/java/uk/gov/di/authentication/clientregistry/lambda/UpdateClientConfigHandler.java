@@ -99,7 +99,7 @@ public class UpdateClientConfigHandler
                                             ipAddress,
                                             AuditService.UNKNOWN,
                                             AuditService.UNKNOWN);
-                                    LOG.error("Invalid client id");
+                                    LOG.warn("Invalid client id");
                                     return generateApiGatewayProxyResponse(
                                             400,
                                             OAuth2Error.INVALID_CLIENT
@@ -110,7 +110,7 @@ public class UpdateClientConfigHandler
                                         validationService.validateClientUpdateConfig(
                                                 updateClientConfigRequest);
                                 if (errorResponse.isPresent()) {
-                                    LOG.error(
+                                    LOG.warn(
                                             "Failed validation. ErrorCode: {}. ErrorDescription: {}",
                                             errorResponse.get().getCode(),
                                             errorResponse.get().getDescription());
@@ -154,7 +154,7 @@ public class UpdateClientConfigHandler
                                         ipAddress,
                                         AuditService.UNKNOWN,
                                         AuditService.UNKNOWN);
-                                LOG.error(
+                                LOG.warn(
                                         "Invalid Client registration request. Missing parameters from request");
                                 return generateApiGatewayProxyResponse(
                                         400,

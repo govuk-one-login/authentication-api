@@ -107,7 +107,7 @@ public class ClientSessionService {
                         CLIENT_SESSION_ID_HEADER,
                         configurationService.getHeadersCaseInsensitive());
         if (clientSessionId == null) {
-            LOG.error("Value not found for Client-Session-Id header");
+            LOG.warn("Value not found for Client-Session-Id header");
             return Optional.empty();
         }
         try {

@@ -204,7 +204,7 @@ public class TokenHandler
                                         AuthenticationRequest.parse(
                                                 clientSession.getAuthRequestParams());
                             } catch (ParseException e) {
-                                LOG.error(
+                                LOG.warn(
                                         "Could not parse authentication request from client session",
                                         e);
                                 throw new RuntimeException(
