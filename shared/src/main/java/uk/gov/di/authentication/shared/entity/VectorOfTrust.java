@@ -59,7 +59,7 @@ public class VectorOfTrust {
         try {
             vtrJsonArray = (JSONArray) parser.parse(vtr.get(0));
         } catch (net.minidev.json.parser.ParseException | ClassCastException e) {
-            LOG.error("Error when parsing vtr attribute", e);
+            LOG.warn("Error when parsing vtr attribute", e);
             throw new IllegalArgumentException("Invalid VTR attribute", e);
         }
         VectorOfTrust vectorOfTrust = parseVtrSet(vtrJsonArray);

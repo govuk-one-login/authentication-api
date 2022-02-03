@@ -43,7 +43,7 @@ public class TrustMarkHandler
                                 return generateApiGatewayProxyResponse(
                                         200, createTrustMarkResponse());
                             } catch (JsonProcessingException | NoSuchElementException e) {
-                                LOG.error("Unable to generate TrustMark response", e);
+                                LOG.warn("Unable to generate TrustMark response", e);
                                 return generateApiGatewayProxyResponse(
                                         400,
                                         OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString());

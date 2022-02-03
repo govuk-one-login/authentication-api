@@ -71,7 +71,7 @@ public class SessionService {
     public Optional<Session> getSessionFromRequestHeaders(Map<String, String> headers) {
         if (!headersContainValidHeader(
                 headers, SESSION_ID_HEADER, configurationService.getHeadersCaseInsensitive())) {
-            LOG.error("Headers are missing Session-Id header");
+            LOG.warn("Headers are missing Session-Id header");
             return Optional.empty();
         }
         String sessionId =
@@ -80,7 +80,7 @@ public class SessionService {
                         SESSION_ID_HEADER,
                         configurationService.getHeadersCaseInsensitive());
         if (sessionId == null) {
-            LOG.error("Value not found for Session-Id header");
+            LOG.warn("Value not found for Session-Id header");
             return Optional.empty();
         }
 

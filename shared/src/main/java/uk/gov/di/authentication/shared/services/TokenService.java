@@ -176,16 +176,16 @@ public class TokenService {
         try {
             privateKeyJWT = PrivateKeyJWT.parse(requestString);
         } catch (ParseException e) {
-            LOG.error("Could not parse Private Key JWT");
+            LOG.warn("Could not parse Private Key JWT");
             return Optional.of(OAuth2Error.INVALID_CLIENT);
         }
         if (hasPrivateKeyJwtExpired(privateKeyJWT.getClientAssertion())) {
-            LOG.error("PrivateKeyJWT has expired");
+            LOG.warn("PrivateKeyJWT has expired");
             return Optional.of(OAuth2Error.INVALID_GRANT);
         }
         if (Objects.isNull(privateKeyJWT.getClientID())
                 || !privateKeyJWT.getClientID().toString().equals(clientID)) {
-            LOG.error("Invalid ClientID in PrivateKeyJWT");
+            LOG.warn("Invalid ClientID in PrivateKeyJWT");
             return Optional.of(OAuth2Error.INVALID_CLIENT);
         }
         ClientAuthenticationVerifier<?> authenticationVerifier =
@@ -195,7 +195,7 @@ public class TokenService {
         try {
             authenticationVerifier.verify(privateKeyJWT, null, null);
         } catch (InvalidClientException | JOSEException e) {
-            LOG.error("Unable to Verify Signature of Private Key JWT", e);
+            LOG.warn("Unable to Verify Signature of Private Key JWT", e);
             return Optional.of(OAuth2Error.INVALID_CLIENT);
         }
         return Optional.empty();
@@ -209,7 +209,7 @@ public class TokenService {
                         .findFirst()
                         .orElse(null);
         if (clientConsent == null) {
-            LOG.error("Client consent is empty for user");
+            LOG.warn("Client consent is empty for user");
             throw new RuntimeException("Client consent is empty for user");
         }
         Set<String> claimsFromAuthnRequest =
@@ -234,7 +234,7 @@ public class TokenService {
         try {
             RefreshToken refreshToken = new RefreshToken(requestBody.get("refresh_token"));
         } catch (IllegalArgumentException e) {
-            LOG.error("Invalid RefreshToken", e);
+            LOG.warn("Invalid RefreshToken", e);
             return Optional.of(
                     new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Invalid refresh token"));
         }
@@ -416,7 +416,7 @@ public class TokenService {
                 return true;
             }
         } catch (java.text.ParseException e) {
-            LOG.error("Unable to parse PrivateKeyJwt when checking if expired", e);
+            LOG.warn("Unable to parse PrivateKeyJwt when checking if expired", e);
             return true;
         }
         return false;

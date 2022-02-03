@@ -28,7 +28,7 @@ public class ClientDoesNotRequireMfa implements Condition<UserContext> {
                                     try {
                                         return AuthenticationRequest.parse(t);
                                     } catch (ParseException e) {
-                                        LOG.error("Unable to parse AuthRequest", e);
+                                        LOG.warn("Unable to parse AuthRequest", e);
                                         throw new RuntimeException(e);
                                     }
                                 })

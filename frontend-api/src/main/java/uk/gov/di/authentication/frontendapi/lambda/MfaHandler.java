@@ -143,7 +143,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             }
 
             if (!userContext.getSession().validateSession(email)) {
-                LOG.error("Email does not match Email in Request");
+                LOG.warn("Email does not match Email in Request");
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.MFA_MISMATCHED_EMAIL,
@@ -233,7 +233,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         } catch (StateMachine.InvalidStateTransitionException e) {
             return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
         } catch (ClientNotFoundException e) {
-            LOG.error("Client not found");
+            LOG.warn("Client not found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
     }

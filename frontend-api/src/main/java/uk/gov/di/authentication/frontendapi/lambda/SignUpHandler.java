@@ -161,7 +161,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                 return generateApiGatewayProxyErrorResponse(400, passwordValidationErrors.get());
             }
         } catch (JsonProcessingException e) {
-            LOG.error("Error parsing request");
+            LOG.warn("Error parsing request");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (StateMachine.InvalidStateTransitionException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
