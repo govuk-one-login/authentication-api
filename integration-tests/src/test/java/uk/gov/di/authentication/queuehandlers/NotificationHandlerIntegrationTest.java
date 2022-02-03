@@ -132,6 +132,7 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
         JsonNode personalisation = request.get("personalisation");
         assertThat(
                 personalisation,
-                hasFieldWithValue("sign-in-page-url", equalTo("http://localhost:3000/")));
+                hasFieldWithValue(
+                        "contact-us-link", equalTo("http://localhost:3000/frontend/contact-us")));
     }
 }
