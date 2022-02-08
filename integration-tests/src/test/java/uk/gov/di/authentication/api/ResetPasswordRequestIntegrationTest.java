@@ -43,7 +43,7 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
                         constructFrontendHeaders(sessionId, null, persistentSessionId),
                         Map.of());
 
-        assertThat(response, hasStatus(200));
+        assertThat(response, hasStatus(204));
 
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
 

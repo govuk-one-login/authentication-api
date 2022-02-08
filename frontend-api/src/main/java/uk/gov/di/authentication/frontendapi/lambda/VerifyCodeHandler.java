@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
@@ -57,7 +56,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
     private static final Logger LOG = LogManager.getLogger(VerifyCodeHandler.class);
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
     private final CodeStorageService codeStorageService;
     private final ValidationService validationService;
     private final AuditService auditService;
@@ -242,7 +240,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         AuditableEvent auditableEvent;
         if (List.of(ErrorResponse.ERROR_1027, ErrorResponse.ERROR_1033, ErrorResponse.ERROR_1034)
                 .contains(errorResponse)) {
-
             blockCodeForSessionAndResetCount(session);
             auditableEvent = FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
         } else {
