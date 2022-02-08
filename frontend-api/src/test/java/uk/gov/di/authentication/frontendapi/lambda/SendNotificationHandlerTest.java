@@ -79,6 +79,7 @@ class SendNotificationHandlerTest {
     private static final String TEST_PHONE_NUMBER = "01234567891";
     private static final String TEST_SIX_DIGIT_CODE = "123456";
     private static final long CODE_EXPIRY_TIME = 900;
+    private static final long BLOCKED_EMAIL_DURATION = 799;
     private static final String CLIENT_ID = "client-id";
     private static final String TEST_CLIENT_ID = "test-client-id";
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
@@ -144,6 +145,7 @@ class SendNotificationHandlerTest {
     @BeforeEach
     void setup() {
         when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
+        when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
         when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
@@ -429,7 +431,9 @@ class SendNotificationHandlerTest {
         assertEquals(SessionState.EMAIL_MAX_CODES_SENT, codeResponse.getSessionState());
         verify(codeStorageService)
                 .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, CODE_REQUEST_BLOCKED_KEY_PREFIX, CODE_EXPIRY_TIME);
+                        TEST_EMAIL_ADDRESS,
+                        CODE_REQUEST_BLOCKED_KEY_PREFIX,
+                        BLOCKED_EMAIL_DURATION);
         verify(codeStorageService, never())
                 .saveOtpCode(
                         TEST_EMAIL_ADDRESS, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
@@ -459,7 +463,9 @@ class SendNotificationHandlerTest {
         assertEquals(SessionState.PHONE_NUMBER_MAX_CODES_SENT, codeResponse.getSessionState());
         verify(codeStorageService)
                 .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, CODE_REQUEST_BLOCKED_KEY_PREFIX, CODE_EXPIRY_TIME);
+                        TEST_EMAIL_ADDRESS,
+                        CODE_REQUEST_BLOCKED_KEY_PREFIX,
+                        BLOCKED_EMAIL_DURATION);
         verify(codeStorageService, never())
                 .saveOtpCode(
                         TEST_EMAIL_ADDRESS,

@@ -234,7 +234,9 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         if (session.getCodeRequestCount() == configurationService.getCodeMaxRetries()) {
             LOG.info("User has requested too many OTP codes");
             codeStorageService.saveBlockedForEmail(
-                    email, CODE_REQUEST_BLOCKED_KEY_PREFIX, configurationService.getCodeExpiry());
+                    email,
+                    CODE_REQUEST_BLOCKED_KEY_PREFIX,
+                    configurationService.getBlockedEmailDuration());
             SessionState nextState =
                     stateMachine.transition(
                             session.getState(),

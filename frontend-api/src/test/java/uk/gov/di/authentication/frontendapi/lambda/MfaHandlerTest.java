@@ -72,6 +72,7 @@ public class MfaHandlerTest {
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final String CODE = "123456";
     private static final long CODE_EXPIRY_TIME = 900;
+    private static final long BLOCKED_EMAIL_DURATION = 799;
     private static final String TEST_CLIENT_ID = "test-client-id";
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private final Context context = mock(Context.class);
@@ -295,6 +296,7 @@ public class MfaHandlerTest {
     @Test
     public void shouldReturn400IfUserHasReachedTheMfaCodeRequestLimit()
             throws JsonProcessingException {
+        when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
         usingValidSession();
         session.setState(MFA_SMS_CODE_SENT);
         session.incrementCodeRequestCount();
@@ -316,7 +318,9 @@ public class MfaHandlerTest {
         assertEquals(SessionState.MFA_SMS_MAX_CODES_SENT, codeResponse.getSessionState());
         verify(codeStorageService)
                 .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, CODE_REQUEST_BLOCKED_KEY_PREFIX, CODE_EXPIRY_TIME);
+                        TEST_EMAIL_ADDRESS,
+                        CODE_REQUEST_BLOCKED_KEY_PREFIX,
+                        BLOCKED_EMAIL_DURATION);
 
         verify(auditService)
                 .submitAuditEvent(

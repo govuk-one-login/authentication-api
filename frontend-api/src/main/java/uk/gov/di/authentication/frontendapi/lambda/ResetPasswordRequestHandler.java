@@ -201,7 +201,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             codeStorageService.saveBlockedForEmail(
                     userContext.getSession().getEmailAddress(),
                     PASSWORD_RESET_BLOCKED_KEY_PREFIX,
-                    configurationService.getCodeExpiry());
+                    configurationService.getBlockedEmailDuration());
             sessionService.save(userContext.getSession().resetPasswordResetCount());
             SessionState nextState =
                     stateMachine.transition(

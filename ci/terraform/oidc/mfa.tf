@@ -8,6 +8,7 @@ module "mfa" {
 
   handler_environment_variables = {
     ENVIRONMENT             = var.environment
+    BLOCKED_EMAIL_DURATION  = var.blocked_email_duration
     EMAIL_QUEUE_URL         = aws_sqs_queue.email_queue.id
     EVENTS_SNS_TOPIC_ARN    = aws_sns_topic.events.arn
     AUDIT_SIGNING_KEY_ALIAS = local.audit_signing_key_alias_name

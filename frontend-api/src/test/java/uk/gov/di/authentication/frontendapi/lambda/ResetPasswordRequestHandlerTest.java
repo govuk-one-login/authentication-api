@@ -72,6 +72,7 @@ class ResetPasswordRequestHandlerTest {
     private static final String TEST_RESET_PASSWORD_LINK =
             "https://localhost:8080/frontend?reset-password?code=123456.54353464565";
     private static final long CODE_EXPIRY_TIME = 900;
+    private static final long BLOCKED_EMAIL_DURATION = 799;
     private final ValidationService validationService = mock(ValidationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
@@ -271,6 +272,7 @@ class ResetPasswordRequestHandlerTest {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
         when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
+        when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
         Session session = mock(Session.class);
         when(session.getState()).thenReturn(RESET_PASSWORD_LINK_SENT);
         when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
@@ -288,7 +290,10 @@ class ResetPasswordRequestHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         verify(codeStorageService)
-                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, PASSWORD_RESET_BLOCKED_KEY_PREFIX, 900);
+                .saveBlockedForEmail(
+                        TEST_EMAIL_ADDRESS,
+                        PASSWORD_RESET_BLOCKED_KEY_PREFIX,
+                        BLOCKED_EMAIL_DURATION);
         verify(session).resetPasswordResetCount();
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1022));
     }
