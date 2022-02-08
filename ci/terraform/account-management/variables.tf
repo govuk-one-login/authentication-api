@@ -147,7 +147,7 @@ variable "dlq_alarm_threshold" {
 }
 
 variable "waf_alarm_blocked_reqeuest_threshold" {
-  default     = 20
+  default     = 100
   type        = number
   description = "The number of blocked requests caught by the WAF before a Cloudwatch alarm is generated"
 }
