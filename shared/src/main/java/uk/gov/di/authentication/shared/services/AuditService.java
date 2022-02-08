@@ -17,7 +17,6 @@ import java.util.UUID;
 
 public class AuditService {
 
-    @Deprecated // All audit arguments currently marked as unknown will need to be reviewed later.
     public static final String UNKNOWN = "";
 
     private final Clock clock;

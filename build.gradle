@@ -136,6 +136,14 @@ subprojects {
     }
 }
 
+allprojects {
+    gradle.projectsEvaluated {
+        tasks.withType(JavaCompile) {
+            options.compilerArgs << "-Xlint:deprecation" << "-Werror"
+        }
+    }
+}
+
 spotless {
     java {
         target "**/*.java"
