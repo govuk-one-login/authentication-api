@@ -22,7 +22,7 @@ apply plugin: "idea"
 ext {
     dependencyVersions = [
         jackson_version: "2.13.1",
-        aws_sdk_version: "1.12.141",
+        aws_sdk_version: "1.12.153",
         aws_lambda_core_version: "1.2.1",
         aws_lambda_events_version: "3.11.0",
         nimbusds_oauth_version: "9.22",
@@ -120,7 +120,7 @@ subprojects {
 
         sns "com.amazonaws:aws-java-sdk-sns:${dependencyVersions.aws_sdk_version}"
 
-        sqs "software.amazon.awssdk:sqs:2.17.107"
+        sqs "software.amazon.awssdk:sqs:2.17.124"
 
         ssm "com.amazonaws:aws-java-sdk-ssm:${dependencyVersions.aws_sdk_version}"
 
