@@ -147,7 +147,7 @@ allprojects {
 spotless {
     java {
         target "**/*.java"
-        googleJavaFormat("1.12.0").aosp()
+        googleJavaFormat("1.13.0").aosp()
         importOrder "", "javax", "java", "\\#"
     }
 
