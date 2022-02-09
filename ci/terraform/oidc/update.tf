@@ -28,7 +28,7 @@ module "update" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = local.authentication_subnet_ids
-  lambda_role_arn                        = module.oidc_default_role.arn
+  lambda_role_arn                        = module.client_registry_role.arn
   environment                            = var.environment
   logging_endpoint_enabled               = var.logging_endpoint_enabled
   logging_endpoint_arn                   = var.logging_endpoint_arn
