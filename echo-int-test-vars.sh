@@ -6,7 +6,7 @@ export AWS_SECRET_ACCESS_KEY="mock-secret-key"
 
 pushd ci/terraform/oidc >/dev/null
 export API_GATEWAY_ID="$(terraform output -raw api_gateway_root_id)"
-export API_KEY="$(terraform output -raw oidc_api_key)"
+export API_KEY="$(terraform output -raw di-auth-frontend-api-key)"
 export FRONTEND_API_GATEWAY_ID="$(terraform output -raw frontend_api_gateway_root_id)"
 export FRONTEND_API_KEY="$(terraform output -raw frontend_api_key)"
 export RESET_PASSWORD_URL="http://localhost:3000/reset-password?code="
