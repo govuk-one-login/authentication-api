@@ -23,7 +23,7 @@ module "oidc_default_role" {
 module "spot_response_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
-  role_name   = "oidc-default-role"
+  role_name   = "spot-response-role"
   vpc_arn     = local.authentication_vpc_arn
 
   policies_to_attach = var.use_localstack ? [
@@ -36,7 +36,7 @@ module "spot_response_role" {
 module "identity_lambda_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
-  role_name   = "oidc-default-role"
+  role_name   = "identity-role"
   vpc_arn     = local.authentication_vpc_arn
 
   policies_to_attach = var.use_localstack ? [

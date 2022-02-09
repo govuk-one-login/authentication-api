@@ -90,13 +90,6 @@ resource "aws_iam_role_policy_attachment" "data_transfer_s3" {
   policy_arn = aws_iam_policy.data_transfer_s3_policy[0].arn
 }
 
-resource "aws_iam_role_policy_attachment" "data_transfer_dynamo" {
-  count = var.use_localstack ? 0 : 1
-
-  role       = aws_iam_role.data_transfer_lambda_role[0].name
-  policy_arn = aws_iam_policy.lambda_dynamo_policy[0].arn
-}
-
 resource "aws_lambda_function" "data_transfer_lambda" {
   count = var.use_localstack ? 0 : 1
 
