@@ -52,6 +52,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Optional.ofNullable(System.getenv("BASE_URL"));
     }
 
+    public long getBlockedEmailDuration() {
+        return Long.parseLong(System.getenv().getOrDefault("BLOCKED_EMAIL_DURATION", "900"));
+    }
+
     public long getCodeExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("CODE_EXPIRY", "900"));
     }

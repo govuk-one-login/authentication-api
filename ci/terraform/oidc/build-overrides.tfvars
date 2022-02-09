@@ -1,0 +1,1 @@
+blocked_email_duration = 30

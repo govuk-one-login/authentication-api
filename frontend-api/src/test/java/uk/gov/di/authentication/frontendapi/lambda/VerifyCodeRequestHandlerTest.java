@@ -99,6 +99,8 @@ class VerifyCodeRequestHandlerTest {
     private static final String TEST_CLIENT_CODE = "654321";
     private static final String TEST_CLIENT_EMAIL =
             "testclient.user1@digital.cabinet-office.gov.uk";
+    private static final long CODE_EXPIRY_TIME = 900;
+    private static final long BLOCKED_EMAIL_DURATION = 799;
 
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private final Context context = mock(Context.class);
@@ -389,7 +391,8 @@ class VerifyCodeRequestHandlerTest {
         final String USER_INPUT = "123456";
         session.setState(PHONE_NUMBER_CODE_NOT_VALID);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(configurationService.getCodeExpiry()).thenReturn(900L);
+        when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
+        when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
 
         when(validationService.validateVerificationCode(
                         eq(VERIFY_PHONE_NUMBER),
@@ -412,7 +415,8 @@ class VerifyCodeRequestHandlerTest {
         verify(authenticationService, never())
                 .updatePhoneNumberVerifiedStatus(TEST_EMAIL_ADDRESS, true);
         verify(codeStorageService)
-                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900);
+                .saveBlockedForEmail(
+                        TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, BLOCKED_EMAIL_DURATION);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
@@ -453,7 +457,8 @@ class VerifyCodeRequestHandlerTest {
 
         final String USER_INPUT = "123456";
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(configurationService.getCodeExpiry()).thenReturn(900L);
+        when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
+        when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
         when(validationService.validateVerificationCode(
                         eq(VERIFY_EMAIL),
                         eq(Optional.of(CODE)),
@@ -472,7 +477,8 @@ class VerifyCodeRequestHandlerTest {
         assertThat(codeResponse.getSessionState(), equalTo(EMAIL_CODE_MAX_RETRIES_REACHED));
         assertThat(session.getRetryCount(), equalTo(0));
         verify(codeStorageService)
-                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900);
+                .saveBlockedForEmail(
+                        TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, BLOCKED_EMAIL_DURATION);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
@@ -598,7 +604,8 @@ class VerifyCodeRequestHandlerTest {
         session.setState(MFA_CODE_NOT_VALID);
         final String USER_INPUT = "123456";
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(configurationService.getCodeExpiry()).thenReturn(900L);
+        when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
+        when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
         when(validationService.validateVerificationCode(
                         eq(MFA_SMS),
                         eq(Optional.of(CODE)),
@@ -617,7 +624,8 @@ class VerifyCodeRequestHandlerTest {
         assertThat(codeResponse.getSessionState(), equalTo(MFA_CODE_MAX_RETRIES_REACHED));
         assertThat(session.getRetryCount(), equalTo(0));
         verify(codeStorageService)
-                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900);
+                .saveBlockedForEmail(
+                        TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, BLOCKED_EMAIL_DURATION);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,

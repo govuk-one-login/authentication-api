@@ -144,6 +144,11 @@ variable "reset_password_route" {
   default = "reset-password?code="
 }
 
+variable "blocked_email_duration" {
+  type    = number
+  default = 900
+}
+
 variable "customer_support_link_route" {
   type    = string
   default = "support"

@@ -11,6 +11,7 @@ module "reset-password-request" {
     BASE_URL                = local.frontend_api_base_url
     FRONTEND_BASE_URL       = module.dns.frontend_url
     RESET_PASSWORD_ROUTE    = var.reset_password_route
+    BLOCKED_EMAIL_DURATION  = var.blocked_email_duration
     SQS_ENDPOINT            = var.use_localstack ? "http://localhost:45678/" : null
     EMAIL_QUEUE_URL         = aws_sqs_queue.email_queue.id
     EVENTS_SNS_TOPIC_ARN    = aws_sns_topic.events.arn

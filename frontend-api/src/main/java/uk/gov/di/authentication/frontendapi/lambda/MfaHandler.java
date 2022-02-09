@@ -243,7 +243,9 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         if (session.getCodeRequestCount() == configurationService.getCodeMaxRetries()) {
             LOG.info("User has requested too many OTP codes");
             codeStorageService.saveBlockedForEmail(
-                    email, CODE_REQUEST_BLOCKED_KEY_PREFIX, configurationService.getCodeExpiry());
+                    email,
+                    CODE_REQUEST_BLOCKED_KEY_PREFIX,
+                    configurationService.getBlockedEmailDuration());
             SessionState nextState =
                     stateMachine.transition(
                             session.getState(), SYSTEM_HAS_SENT_TOO_MANY_MFA_CODES, userContext);
