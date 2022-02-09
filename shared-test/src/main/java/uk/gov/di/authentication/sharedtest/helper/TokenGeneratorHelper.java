@@ -29,6 +29,8 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static uk.gov.di.authentication.sharedtest.exceptions.Unchecked.unchecked;
+
 public class TokenGeneratorHelper {
 
     private static final String KEY_ID = "14342354354353";
@@ -143,12 +145,11 @@ public class TokenGeneratorHelper {
         }
 
         JWSHeader jwsHeader = new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(keyId).build();
-        try {
-            var signedJWT = new SignedJWT(jwsHeader, claimsBuilder.build());
-            signedJWT.sign(signer);
-            return signedJWT;
-        } catch (JOSEException e) {
-            throw new RuntimeException(e);
-        }
+
+        var signedJWT = new SignedJWT(jwsHeader, claimsBuilder.build());
+
+        unchecked(signedJWT::sign).accept(signer);
+
+        return signedJWT;
     }
 }
