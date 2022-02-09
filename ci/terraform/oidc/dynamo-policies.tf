@@ -102,7 +102,7 @@ resource "aws_iam_policy" "dynamo_access_policy" {
   policy = data.aws_iam_policy_document.dynamo_access_policy_document.json
 }
 
-resource "aws_iam_policy" "dynamo_client_registry_write_policy" {
+resource "aws_iam_policy" "dynamo_client_registry_access_policy" {
   name_prefix = "dynamo-client-registry-write-policy"
   path        = "/${var.environment}/oidc-default/"
   description = "IAM policy for managing write permissions to the Dynamo Client Registration table"

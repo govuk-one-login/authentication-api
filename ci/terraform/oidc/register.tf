@@ -1,3 +1,16 @@
+module "client_registry_role" {
+  source      = "../modules/lambda-role"
+  environment = var.environment
+  role_name   = "client-registry-role"
+  vpc_arn     = local.authentication_vpc_arn
+
+  policies_to_attach = [
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
+    aws_iam_policy.dynamo_client_registry_access_policy.arn,
+    aws_iam_policy.lambda_sns_policy.arn,
+  ]
+}
+
 module "register" {
   count  = var.client_registry_api_enabled ? 1 : 0
   source = "../modules/endpoint-module"
