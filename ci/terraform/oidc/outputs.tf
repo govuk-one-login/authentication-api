@@ -18,11 +18,6 @@ output "token_signing_key_alias" {
   value = local.id_token_signing_key_alias_name
 }
 
-output "oidc_api_key" {
-  value     = aws_api_gateway_api_key.di_auth_api_key.value
-  sensitive = true
-}
-
 output "frontend_api_key" {
   value     = aws_api_gateway_api_key.di_auth_frontend_api_key.value
   sensitive = true

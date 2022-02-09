@@ -77,16 +77,6 @@ resource "aws_api_gateway_usage_plan" "di_auth_usage_plan" {
   ]
 }
 
-resource "aws_api_gateway_api_key" "di_auth_api_key" {
-  name = "${var.environment}-di-auth-api-key"
-}
-
-resource "aws_api_gateway_usage_plan_key" "di_auth_usage_plan_key" {
-  key_id        = aws_api_gateway_api_key.di_auth_api_key.id
-  key_type      = "API_KEY"
-  usage_plan_id = aws_api_gateway_usage_plan.di_auth_usage_plan.id
-}
-
 resource "aws_api_gateway_resource" "wellknown_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
