@@ -4,15 +4,10 @@ module "oidc_default_role" {
   role_name   = "oidc-default-role"
   vpc_arn     = local.authentication_vpc_arn
 
-  policies_to_attach = var.use_localstack ? [
-    aws_iam_policy.lambda_sns_policy.arn,
-    aws_iam_policy.redis_parameter_policy.arn,
-    aws_iam_policy.pepper_parameter_policy.arn,
-    aws_iam_policy.ipv_capacity_parameter_policy.arn,
-    ] : [
-    aws_iam_policy.oidc_default_id_token_public_key_kms_policy[0].arn,
-    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0].arn,
-    aws_iam_policy.dynamo_access_policy[0].arn,
+  policies_to_attach = [
+    aws_iam_policy.oidc_default_id_token_public_key_kms_policy.arn,
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
+    aws_iam_policy.dynamo_access_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
     aws_iam_policy.pepper_parameter_policy.arn,
@@ -26,11 +21,9 @@ module "client_registry_role" {
   role_name   = "client-registry-role"
   vpc_arn     = local.authentication_vpc_arn
 
-  policies_to_attach = var.use_localstack ? [
-    aws_iam_policy.lambda_sns_policy.arn,
-    ] : [
-    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0].arn,
-    aws_iam_policy.dynamo_client_registry_write_policy[0].arn,
+  policies_to_attach = [
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
+    aws_iam_policy.dynamo_client_registry_write_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
   ]
 }
@@ -41,10 +34,8 @@ module "spot_response_role" {
   role_name   = "oidc-default-role"
   vpc_arn     = local.authentication_vpc_arn
 
-  policies_to_attach = var.use_localstack ? [
-    null
-    ] : [
-    aws_iam_policy.dynamo_spot_write_access_policy[0].arn,
+  policies_to_attach = [
+    aws_iam_policy.dynamo_spot_write_access_policy.arn,
   ]
 }
 
@@ -54,14 +45,12 @@ module "identity_lambda_role" {
   role_name   = "oidc-default-role"
   vpc_arn     = local.authentication_vpc_arn
 
-  policies_to_attach = var.use_localstack ? [
-    null
-    ] : [
-    aws_iam_policy.dynamo_access_policy[0].arn,
-    aws_iam_policy.dynamo_spot_read_access_policy[0].arn,
+  policies_to_attach = [
+    aws_iam_policy.dynamo_access_policy.arn,
+    aws_iam_policy.dynamo_spot_read_access_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
-    aws_iam_policy.oidc_default_id_token_public_key_kms_policy[0].arn,
-    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0].arn,
+    aws_iam_policy.oidc_default_id_token_public_key_kms_policy.arn,
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
   ]
 }
 
@@ -82,12 +71,9 @@ module "oidc_dynamo_sqs_role" {
   role_name   = "oidc-dynamo-sqs"
   vpc_arn     = local.authentication_vpc_arn
 
-  policies_to_attach = var.use_localstack ? [
-    aws_iam_policy.lambda_sns_policy.arn,
-    aws_iam_policy.redis_parameter_policy.arn
-    ] : [
-    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0].arn,
-    aws_iam_policy.dynamo_access_policy[0].arn,
+  policies_to_attach = [
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
+    aws_iam_policy.dynamo_access_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn
   ]
@@ -97,7 +83,6 @@ module "oidc_dynamo_sqs_role" {
 ### ID Token signing key access
 
 data "aws_iam_policy_document" "kms_policy_document" {
-  count = var.use_localstack ? 0 : 1
   statement {
     sid       = "AllowAccessToKmsSigningKey"
     effect    = "Allow"
@@ -107,18 +92,16 @@ data "aws_iam_policy_document" "kms_policy_document" {
 }
 
 resource "aws_iam_policy" "oidc_default_id_token_public_key_kms_policy" {
-  count       = var.use_localstack ? 0 : 1
   name_prefix = "id-token-kms-policy"
   path        = "/${var.environment}/oidc-default/"
   description = "IAM policy for managing ID token public signing key access"
 
-  policy = data.aws_iam_policy_document.kms_policy_document[0].json
+  policy = data.aws_iam_policy_document.kms_policy_document.json
 }
 
 ### Audit signing key access
 
 data "aws_iam_policy_document" "audit_payload_kms_signing_policy_document" {
-  count = var.use_localstack ? 0 : 1
   statement {
     sid       = "AllowAccessToKmsAuditSigningKey"
     effect    = "Allow"
@@ -128,10 +111,9 @@ data "aws_iam_policy_document" "audit_payload_kms_signing_policy_document" {
 }
 
 resource "aws_iam_policy" "audit_signing_key_lambda_kms_signing_policy" {
-  count       = var.use_localstack ? 0 : 1
   name_prefix = "audit-payload-kms-signing-policy"
   path        = "/${var.environment}/oidc-default/"
   description = "IAM policy for managing KMS connection for a lambda which allows signing of audit payloads"
 
-  policy = data.aws_iam_policy_document.audit_payload_kms_signing_policy_document[0].json
+  policy = data.aws_iam_policy_document.audit_payload_kms_signing_policy_document.json
 }
