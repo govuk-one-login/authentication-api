@@ -185,7 +185,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Optional.of(codeRequest), constructFrontendHeaders(sessionId), Map.of());
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1032));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1034));
 
         assertNoAuditEventsReceived(auditTopic);
     }
@@ -203,7 +203,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Optional.of(codeRequest), constructFrontendHeaders(sessionId), Map.of());
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1031));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1033));
 
         assertNoAuditEventsReceived(auditTopic);
     }

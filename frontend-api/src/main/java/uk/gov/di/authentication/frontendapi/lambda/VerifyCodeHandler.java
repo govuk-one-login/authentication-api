@@ -141,6 +141,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             }
 
             if (errorResponse.isPresent()) {
+                sessionService.save(session);
                 processBlockedCodeSession(
                         errorResponse.get(),
                         session,
@@ -169,8 +170,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
     private ErrorResponse blockedCodeBehaviour(VerifyCodeRequest codeRequest) {
         return Map.ofEntries(
-                        entry(VERIFY_EMAIL, ErrorResponse.ERROR_1031),
-                        entry(VERIFY_PHONE_NUMBER, ErrorResponse.ERROR_1032),
+                        entry(VERIFY_EMAIL, ErrorResponse.ERROR_1033),
+                        entry(VERIFY_PHONE_NUMBER, ErrorResponse.ERROR_1034),
                         entry(MFA_SMS, ErrorResponse.ERROR_1027))
                 .get(codeRequest.getNotificationType());
     }

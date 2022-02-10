@@ -340,7 +340,7 @@ class VerifyCodeRequestHandlerTest {
                 makeCallWithCode(USER_INPUT, VERIFY_PHONE_NUMBER.toString());
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1032));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
         verify(codeStorageService, never())
                 .getOtpCode(session.getEmailAddress(), VERIFY_PHONE_NUMBER);
     }
@@ -393,7 +393,7 @@ class VerifyCodeRequestHandlerTest {
         APIGatewayProxyResponseEvent result = makeCallWithCode(USER_INPUT, VERIFY_EMAIL.toString());
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1031));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1033));
     }
 
     @Test
