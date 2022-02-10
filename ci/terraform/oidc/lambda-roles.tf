@@ -15,32 +15,6 @@ module "oidc_default_role" {
   ]
 }
 
-module "spot_response_role" {
-  source      = "../modules/lambda-role"
-  environment = var.environment
-  role_name   = "spot-response-role"
-  vpc_arn     = local.authentication_vpc_arn
-
-  policies_to_attach = [
-    aws_iam_policy.dynamo_spot_write_access_policy.arn,
-  ]
-}
-
-module "identity_lambda_role" {
-  source      = "../modules/lambda-role"
-  environment = var.environment
-  role_name   = "identity-role"
-  vpc_arn     = local.authentication_vpc_arn
-
-  policies_to_attach = [
-    aws_iam_policy.dynamo_access_policy.arn,
-    aws_iam_policy.dynamo_spot_read_access_policy.arn,
-    aws_iam_policy.redis_parameter_policy.arn,
-    aws_iam_policy.oidc_default_id_token_public_key_kms_policy.arn,
-    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
-  ]
-}
-
 module "oidc_sqs_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
