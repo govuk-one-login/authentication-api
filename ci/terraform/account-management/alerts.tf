@@ -23,7 +23,7 @@ resource "aws_cloudwatch_metric_alarm" "waf_am_blocked_request_cloudwatch_alarm"
   evaluation_periods  = "1"
   metric_name         = "BlockedRequests"
   namespace           = "AWS/WAFV2"
-  period              = "3600"
+  period              = "300"
   statistic           = "Sum"
   threshold           = var.waf_alarm_blocked_reqeuest_threshold
 
@@ -33,7 +33,7 @@ resource "aws_cloudwatch_metric_alarm" "waf_am_blocked_request_cloudwatch_alarm"
     WebACL = aws_wafv2_web_acl.wafregional_web_acl_am_api[count.index].name
   }
 
-  alarm_description = "${var.waf_alarm_blocked_reqeuest_threshold} or more blocked requests have been received by the ${aws_wafv2_web_acl.wafregional_web_acl_am_api[count.index].name} in the last hour"
+  alarm_description = "${var.waf_alarm_blocked_reqeuest_threshold} or more blocked requests have been received by the ${aws_wafv2_web_acl.wafregional_web_acl_am_api[count.index].name} in the last 5 minutes"
   alarm_actions     = [data.aws_sns_topic.slack_events.arn]
 }
 
