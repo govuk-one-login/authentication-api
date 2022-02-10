@@ -52,8 +52,7 @@ public class RemoveAccountHandler
         this.auditService = auditService;
     }
 
-    public RemoveAccountHandler() {
-        ConfigurationService configurationService = ConfigurationService.getInstance();
+    public RemoveAccountHandler(ConfigurationService configurationService) {
         this.authenticationService =
                 new DynamoService(
                         configurationService.getAwsRegion(),
@@ -65,6 +64,10 @@ public class RemoveAccountHandler
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
         this.auditService = new AuditService(configurationService);
+    }
+
+    public RemoveAccountHandler() {
+        this(ConfigurationService.getInstance());
     }
 
     @Override
@@ -87,6 +90,11 @@ public class RemoveAccountHandler
 
                                 UserProfile userProfile =
                                         authenticationService.getUserProfileByEmail(email);
+
+                                if (userProfile == null) {
+                                    throw new RuntimeException("User not found");
+                                }
+
                                 Map<String, Object> authorizerParams =
                                         input.getRequestContext().getAuthorizer();
                                 RequestBodyHelper.validatePrincipal(
