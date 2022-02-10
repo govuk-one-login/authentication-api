@@ -146,8 +146,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             }
 
             String email = session.getEmailAddress();
-            var userProfile =
-                    Optional.ofNullable(authenticationService.getUserProfileByEmail(email));
+            var userProfile = authenticationService.getUserProfileByEmailMaybe(email);
 
             switch (request.getUpdateProfileType()) {
                 case ADD_PHONE_NUMBER:

@@ -34,7 +34,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.UserContext;
 
-import java.util.Objects;
+import java.util.Optional;
 
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.LOG_IN_SUCCESS;
 import static uk.gov.di.authentication.shared.entity.SessionAction.ACCOUNT_LOCK_EXPIRED;
@@ -104,9 +104,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         try {
             String persistentSessionId =
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
-            UserProfile userProfile =
-                    authenticationService.getUserProfileByEmail(request.getEmail());
-            if (Objects.isNull(userProfile)) {
+            Optional<UserProfile> userProfileMaybe =
+                    authenticationService.getUserProfileByEmailMaybe(request.getEmail());
+            if (userProfileMaybe.isEmpty()) {
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
@@ -121,6 +121,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
             }
+
+            UserProfile userProfile = userProfileMaybe.get();
 
             SessionState currentState = userContext.getSession().getState();
             int incorrectPasswordCount =

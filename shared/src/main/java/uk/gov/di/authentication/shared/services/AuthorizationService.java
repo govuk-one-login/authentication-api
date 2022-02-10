@@ -18,7 +18,6 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
@@ -200,13 +199,10 @@ public class AuthorizationService {
                             .findFirst()
                             .orElseThrow();
             ClientRegistry clientRegistry = dynamoClientService.getClient(clientId).orElseThrow();
-            if (session.getEmailAddress() != null) {
-                UserProfile userProfile =
-                        dynamoService.getUserProfileByEmail(session.getEmailAddress());
-                if (userProfile != null) {
-                    builder.withUserProfile(userProfile);
-                }
-            }
+            Optional.of(session)
+                    .map(Session::getEmailAddress)
+                    .flatMap(dynamoService::getUserProfileByEmailMaybe)
+                    .ifPresent(builder::withUserProfile);
             userContext = builder.withClient(clientRegistry).build();
         } catch (NoSuchElementException e) {
             LOG.error("Error creating UserContext");

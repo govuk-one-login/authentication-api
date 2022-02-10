@@ -127,7 +127,8 @@ class LoginHandlerTest {
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
         headers.put("Session-Id", session.getSessionId());
         UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
         when(userMigrationService.userHasBeenPartlyMigrated(
                         userProfile.getLegacySubjectID(), EMAIL))
                 .thenReturn(false);
@@ -152,7 +153,7 @@ class LoginHandlerTest {
         assertThat(
                 response.getRedactedPhoneNumber(),
                 equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
-        verify(authenticationService).getUserProfileByEmail(EMAIL);
+        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 
         verify(auditService)
                 .submitAuditEvent(
@@ -172,7 +173,8 @@ class LoginHandlerTest {
             throws JsonProcessingException {
         String legacySubjectId = new Subject().getValue();
         UserProfile userProfile = generateUserProfile(legacySubjectId);
-        when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
         when(userMigrationService.userHasBeenPartlyMigrated(
                         userProfile.getLegacySubjectID(), EMAIL))
                 .thenReturn(true);
@@ -198,7 +200,8 @@ class LoginHandlerTest {
     @Test
     public void shouldReturn200IfPasswordIsEnteredAgain() throws JsonProcessingException {
         UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
         when(userMigrationService.userHasBeenPartlyMigrated(
                         userProfile.getLegacySubjectID(), EMAIL))
                 .thenReturn(false);
@@ -227,7 +230,8 @@ class LoginHandlerTest {
     public void shouldChangeStateToAccountTemporarilyLockedAfter5UnsuccessfulAttempts()
             throws JsonProcessingException {
         UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
         when(userMigrationService.userHasBeenPartlyMigrated(
                         userProfile.getLegacySubjectID(), EMAIL))
                 .thenReturn(false);
@@ -251,7 +255,8 @@ class LoginHandlerTest {
     public void shouldKeepUserLockedWhenTheyEnterSuccessfulLoginRequestInNewSession()
             throws JsonProcessingException {
         UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
         when(userMigrationService.userHasBeenPartlyMigrated(
                         userProfile.getLegacySubjectID(), EMAIL))
                 .thenReturn(false);
@@ -288,7 +293,8 @@ class LoginHandlerTest {
     public void shouldRemoveIncorrectPasswordCountRemovesUponSuccessfulLogin()
             throws JsonProcessingException {
         UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
         when(userMigrationService.userHasBeenPartlyMigrated(
                         userProfile.getLegacySubjectID(), EMAIL))
                 .thenReturn(false);
@@ -317,7 +323,8 @@ class LoginHandlerTest {
     @Test
     public void shouldReturn401IfUserHasInvalidCredentials() {
         UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
         when(userMigrationService.userHasBeenPartlyMigrated(
                         userProfile.getLegacySubjectID(), EMAIL))
                 .thenReturn(false);
@@ -350,7 +357,8 @@ class LoginHandlerTest {
     public void shouldReturn401IfMigratedUserHasInvalidCredentials() {
         String legacySubjectId = new Subject().getValue();
         UserProfile userProfile = generateUserProfile(legacySubjectId);
-        when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
         when(userMigrationService.userHasBeenPartlyMigrated(
                         userProfile.getLegacySubjectID(), EMAIL))
                 .thenReturn(true);
@@ -398,7 +406,7 @@ class LoginHandlerTest {
 
     @Test
     public void shouldReturn400IfUserDoesNotHaveAnAccount() {
-        when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.empty());
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -426,7 +434,8 @@ class LoginHandlerTest {
     @Test
     public void shouldReturn400IfUserTransitionsFromWrongState() {
         UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
         when(userMigrationService.userHasBeenPartlyMigrated(
                         userProfile.getLegacySubjectID(), EMAIL))
                 .thenReturn(false);
@@ -449,7 +458,8 @@ class LoginHandlerTest {
     public void shouldSetSessionCredentialStrengthIfClientSessionsVtrIsLow()
             throws JsonProcessingException {
         UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
         when(userMigrationService.userHasBeenPartlyMigrated(
                         userProfile.getLegacySubjectID(), EMAIL))
                 .thenReturn(false);
@@ -479,7 +489,8 @@ class LoginHandlerTest {
     public void shouldNotSetSessionCredentialStrengthIfClientSessionsVtrIsMedium()
             throws JsonProcessingException {
         UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
         when(userMigrationService.userHasBeenPartlyMigrated(
                         userProfile.getLegacySubjectID(), EMAIL))
                 .thenReturn(false);
