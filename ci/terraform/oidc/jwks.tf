@@ -1,3 +1,14 @@
+module "oidc_jwks_role" {
+  source      = "../modules/lambda-role"
+  environment = var.environment
+  role_name   = "oidc-jwks-role"
+  vpc_arn     = local.authentication_vpc_arn
+
+  policies_to_attach = [
+    aws_iam_policy.oidc_default_id_token_public_key_kms_policy.arn,
+  ]
+}
+
 module "jwks" {
   source = "../modules/endpoint-module"
 
@@ -23,7 +34,7 @@ module "jwks" {
   authentication_vpc_arn                 = local.authentication_vpc_arn
   security_group_ids                     = [local.authentication_security_group_id]
   subnet_id                              = local.authentication_subnet_ids
-  lambda_role_arn                        = module.oidc_default_role.arn
+  lambda_role_arn                        = module.oidc_jwks_role.arn
   logging_endpoint_enabled               = var.logging_endpoint_enabled
   logging_endpoint_arn                   = var.logging_endpoint_arn
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
