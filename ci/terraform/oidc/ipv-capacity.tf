@@ -1,3 +1,16 @@
+module "ipv_capacity_role" {
+  source      = "../modules/lambda-role"
+  environment = var.environment
+  role_name   = "ipv-capacity-role"
+  vpc_arn     = local.authentication_vpc_arn
+
+  policies_to_attach = [
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
+    aws_iam_policy.lambda_sns_policy.arn,
+    aws_iam_policy.ipv_capacity_parameter_policy.arn,
+  ]
+}
+
 module "ipv-capacity" {
   count  = var.ipv_api_enabled ? 1 : 0
   source = "../modules/endpoint-module"
@@ -32,7 +45,7 @@ module "ipv-capacity" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = local.authentication_subnet_ids
-  lambda_role_arn                        = module.oidc_default_role.arn
+  lambda_role_arn                        = module.ipv_capacity_role.arn
   logging_endpoint_enabled               = var.logging_endpoint_enabled
   logging_endpoint_arn                   = var.logging_endpoint_arn
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
