@@ -7,7 +7,7 @@ version "unspecified"
 
 ext {
     dependencyVersions = [
-        protobuf_version: "3.19.3",
+        protobuf_version: "3.19.4",
     ]
 }
 
