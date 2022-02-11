@@ -89,11 +89,12 @@ public class RemoveAccountHandler
                                 String email = removeAccountRequest.getEmail();
 
                                 UserProfile userProfile =
-                                        authenticationService.getUserProfileByEmail(email);
-
-                                if (userProfile == null) {
-                                    throw new RuntimeException("User not found");
-                                }
+                                        authenticationService
+                                                .getUserProfileByEmailMaybe(email)
+                                                .orElseThrow(
+                                                        () ->
+                                                                new RuntimeException(
+                                                                        "User not found"));
 
                                 Map<String, Object> authorizerParams =
                                         input.getRequestContext().getAuthorizer();

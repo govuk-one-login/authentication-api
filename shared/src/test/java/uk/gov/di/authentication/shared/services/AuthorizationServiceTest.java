@@ -448,7 +448,8 @@ class AuthorizationServiceTest {
                         Optional.of(
                                 generateClientRegistry(
                                         REDIRECT_URI.toString(), clientId.getValue())));
-        when(dynamoService.getUserProfileByEmail(email)).thenReturn(mock(UserProfile.class));
+        when(dynamoService.getUserProfileByEmailMaybe(email))
+                .thenReturn(Optional.of(mock(UserProfile.class)));
         Scope scopes =
                 new Scope(
                         OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);

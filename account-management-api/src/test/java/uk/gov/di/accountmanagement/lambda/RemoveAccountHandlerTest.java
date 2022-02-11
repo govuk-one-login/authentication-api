@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -48,7 +49,8 @@ class RemoveAccountHandlerTest {
     public void shouldReturn204IfAccountRemovalIsSuccessful() throws JsonProcessingException {
         String persistentIdValue = "some-persistent-session-id";
         UserProfile userProfile = new UserProfile().setPublicSubjectID(SUBJECT.getValue());
-        when(authenticationService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
                 new APIGatewayProxyRequestEvent.ProxyRequestContext();
         Map<String, Object> authorizerParams = new HashMap<>();

@@ -142,6 +142,11 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
+    public Optional<UserProfile> getUserProfileByEmailMaybe(String email) {
+        return Optional.ofNullable(getUserProfileByEmail(email));
+    }
+
+    @Override
     public void updateTermsAndConditions(String email, String version) {
         TermsAndConditions termsAndConditions =
                 new TermsAndConditions(version, LocalDateTime.now(ZoneId.of("UTC")).toString());

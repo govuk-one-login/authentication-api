@@ -23,7 +23,13 @@ public interface AuthenticationService {
 
     void updateConsent(String email, ClientConsent clientConsent);
 
+    /**
+     * Deprecated - use getUserProfileByEmailMaybe instead. Can't literally deprecate it, because
+     * -Werror will complain.
+     */
     UserProfile getUserProfileByEmail(String email);
+
+    Optional<UserProfile> getUserProfileByEmailMaybe(String email);
 
     Optional<List<ClientConsent>> getUserConsents(String email);
 
