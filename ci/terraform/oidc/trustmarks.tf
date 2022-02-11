@@ -1,3 +1,11 @@
+module "oidc_trustmarks_role" {
+  source = "../modules/lambda-role"
+
+  role_name   = "oidc-trustmarks-role"
+  environment = var.environment
+  vpc_arn     = local.authentication_vpc_arn
+}
+
 module "trustmarks" {
   source = "../modules/endpoint-module"
 
@@ -24,7 +32,7 @@ module "trustmarks" {
   authentication_vpc_arn                 = local.authentication_vpc_arn
   security_group_ids                     = [local.authentication_security_group_id]
   subnet_id                              = local.authentication_subnet_ids
-  lambda_role_arn                        = module.oidc_default_role.arn
+  lambda_role_arn                        = module.oidc_trustmarks_role.arn
   logging_endpoint_enabled               = var.logging_endpoint_enabled
   logging_endpoint_arn                   = var.logging_endpoint_arn
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
