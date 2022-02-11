@@ -13,11 +13,12 @@ import java.io.File;
 import java.io.IOException;
 import java.security.KeyStore;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
+
+import static uk.gov.di.authentication.sharedtest.exceptions.Unchecked.unchecked;
 
 class HttpStub {
 
@@ -156,14 +157,6 @@ class HttpStub {
 
     public List<RecordedRequest> getRecordedRequests() {
         return recordedRequests;
-    }
-
-    public static <T> T unchecked(Callable<T> callable) {
-        try {
-            return callable.call();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
     }
 
     private class Handler extends AbstractHandler {

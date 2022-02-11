@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.sharedtest.matchers;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
@@ -11,6 +10,7 @@ import java.net.URI;
 import java.util.function.Function;
 
 import static org.hamcrest.Matchers.equalTo;
+import static uk.gov.di.authentication.sharedtest.exceptions.Unchecked.unchecked;
 
 public class APIGatewayProxyResponseEventMatcher<T, M extends Matcher>
         extends TypeSafeDiagnosingMatcher<APIGatewayProxyResponseEvent> {
@@ -69,13 +69,10 @@ public class APIGatewayProxyResponseEventMatcher<T, M extends Matcher>
 
     public static APIGatewayProxyResponseEventMatcher<String, Matcher<String>> hasJsonBody(
             Object body) {
-        try {
-            var expectedValue = new ObjectMapper().writeValueAsString(body);
-            return new APIGatewayProxyResponseEventMatcher<>(
-                    "body", APIGatewayProxyResponseEvent::getBody, equalTo(expectedValue));
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
+        var expectedValue = unchecked(new ObjectMapper()::writeValueAsString).apply(body);
+
+        return new APIGatewayProxyResponseEventMatcher<>(
+                "body", APIGatewayProxyResponseEvent::getBody, equalTo(expectedValue));
     }
 
     public static APIGatewayProxyResponseEventMatcher<Integer, Matcher<Integer>> isRedirect() {

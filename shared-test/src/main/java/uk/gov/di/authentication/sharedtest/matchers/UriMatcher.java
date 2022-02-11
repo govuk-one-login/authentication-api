@@ -1,12 +1,12 @@
 package uk.gov.di.authentication.sharedtest.matchers;
 
+import org.apache.http.client.utils.URIBuilder;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.util.Arrays;
 import java.util.Map;
@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.Matchers.equalTo;
+import static uk.gov.di.authentication.sharedtest.exceptions.Unchecked.unchecked;
 
 public class UriMatcher<T> extends TypeSafeDiagnosingMatcher<URI> {
 
@@ -53,14 +54,7 @@ public class UriMatcher<T> extends TypeSafeDiagnosingMatcher<URI> {
     public static UriMatcher<URI> baseUri(URI expected) {
         return new UriMatcher<>(
                 "base URI",
-                uri -> {
-                    try {
-                        return new URI(
-                                uri.getScheme(), uri.getAuthority(), uri.getPath(), null, null);
-                    } catch (URISyntaxException e) {
-                        throw new RuntimeException(e);
-                    }
-                },
+                uri -> unchecked(new URIBuilder(uri).removeQuery().setFragment(null)::build),
                 equalTo(expected));
     }
 
