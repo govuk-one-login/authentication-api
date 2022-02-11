@@ -138,6 +138,20 @@ data "aws_iam_policy_document" "dynamo_spot_write_access_policy_document" {
   }
 }
 
+data "aws_iam_policy_document" "dynamo_spot_delete_access_policy_document" {
+  statement {
+    sid    = "AllowAccessToDynamoTables"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:DeleteItem",
+    ]
+    resources = [
+      data.aws_dynamodb_table.spot_credential_table.arn,
+    ]
+  }
+}
+
 data "aws_iam_policy_document" "dynamo_spot_read_access_policy_document" {
   statement {
     sid    = "AllowAccessToDynamoTables"
@@ -203,7 +217,15 @@ resource "aws_iam_policy" "dynamo_spot_write_access_policy" {
 resource "aws_iam_policy" "dynamo_spot_read_access_policy" {
   name_prefix = "dynamo-access-policy"
   path        = "/${var.environment}/oidc-default/"
-  description = "IAM policy for managing write permissions to the Dynamo SPOT credential table"
+  description = "IAM policy for managing read permissions to the Dynamo SPOT credential table"
 
   policy = data.aws_iam_policy_document.dynamo_spot_read_access_policy_document.json
+}
+
+resource "aws_iam_policy" "dynamo_spot_delete_access_policy" {
+  name_prefix = "dynamo-access-policy"
+  path        = "/${var.environment}/oidc-default/"
+  description = "IAM policy for managing delete permissions to the Dynamo SPOT credential table"
+
+  policy = data.aws_iam_policy_document.dynamo_spot_delete_access_policy_document.json
 }
