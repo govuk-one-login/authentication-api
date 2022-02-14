@@ -1,3 +1,18 @@
+module "frontend_api_verify_code_role" {
+  source      = "../modules/lambda-role"
+  environment = var.environment
+  role_name   = "frontend-api-verify-code-role"
+  vpc_arn     = local.authentication_vpc_arn
+
+  policies_to_attach = [
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
+    aws_iam_policy.dynamo_user_read_access_policy.arn,
+    aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
+    aws_iam_policy.lambda_sns_policy.arn,
+    aws_iam_policy.redis_parameter_policy.arn,
+  ]
+}
+
 module "verify_code" {
   source = "../modules/endpoint-module"
 
@@ -32,7 +47,7 @@ module "verify_code" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = local.authentication_subnet_ids
-  lambda_role_arn                        = module.oidc_default_role.arn
+  lambda_role_arn                        = module.frontend_api_verify_code_role.arn
   logging_endpoint_enabled               = var.logging_endpoint_enabled
   logging_endpoint_arn                   = var.logging_endpoint_arn
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
