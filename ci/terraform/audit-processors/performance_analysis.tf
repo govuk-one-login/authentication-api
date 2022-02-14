@@ -44,7 +44,6 @@ resource "random_password" "performance_analysis_hmac_key" {
 }
 
 resource "aws_lambda_function" "performance_analysis_logging_lambda" {
-  filename      = var.lambda_zip_file
   function_name = "${var.environment}-performance-analysis-logging-lambda"
   role          = module.performance_analysis_logging_role.arn
   handler       = "uk.gov.di.authentication.audit.lambda.PerformanceAnalysisAuditLambda::handleRequest"
@@ -56,7 +55,10 @@ resource "aws_lambda_function" "performance_analysis_logging_lambda" {
     mode = "Active"
   }
 
-  source_code_hash = filebase64sha256(var.lambda_zip_file)
+  s3_bucket         = aws_s3_bucket.source_bucket.bucket
+  s3_key            = aws_s3_bucket_object.audit_processor_release_zip.key
+  s3_object_version = aws_s3_bucket_object.audit_processor_release_zip.version_id
+
   vpc_config {
     security_group_ids = [local.authentication_security_group_id]
     subnet_ids         = local.authentication_subnet_ids
