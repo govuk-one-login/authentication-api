@@ -155,7 +155,7 @@ resource "aws_lambda_event_source_mapping" "lambda_sqs_mapping" {
     aws_sqs_queue.email_queue,
     aws_sqs_queue_policy.email_queue_policy,
     aws_lambda_function.email_sqs_lambda,
-    module.account_notification_default_role
+    module.account_management_sqs_role
   ]
 }
 
@@ -189,7 +189,7 @@ resource "aws_lambda_function" "email_sqs_lambda" {
   tags = local.default_tags
 
   depends_on = [
-    module.account_notification_default_role,
+    module.account_management_sqs_role,
   ]
 }
 
