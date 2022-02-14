@@ -26,7 +26,7 @@ ext {
         aws_lambda_core_version: "1.2.1",
         aws_lambda_events_version: "3.11.0",
         nimbusds_oauth_version: "9.25",
-        nimbusds_jwt_version: "9.15.1",
+        nimbusds_jwt_version: "9.19",
         protobuf_version: "3.19.4",
         junit: "5.8.2",
         jackson_version: "2.13.1",
