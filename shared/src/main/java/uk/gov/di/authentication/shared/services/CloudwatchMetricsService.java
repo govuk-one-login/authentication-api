@@ -1,10 +1,12 @@
 package uk.gov.di.authentication.shared.services;
 
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
 import software.amazon.awssdk.services.cloudwatch.model.Dimension;
 import software.amazon.awssdk.services.cloudwatch.model.MetricDatum;
 import software.amazon.awssdk.services.cloudwatch.model.PutMetricDataRequest;
 
+import java.net.URI;
 import java.util.Map;
 
 import static java.util.stream.Collectors.toList;
@@ -12,6 +14,18 @@ import static java.util.stream.Collectors.toList;
 public class CloudwatchMetricsService {
 
     private final CloudWatchClient cloudwatch;
+
+    public CloudwatchMetricsService(ConfigurationService configurationService) {
+        var client =
+                CloudWatchClient.builder().region(Region.of(configurationService.getAwsRegion()));
+
+        configurationService
+                .getLocalstackEndpointUri()
+                .map(URI::create)
+                .ifPresent(client::endpointOverride);
+
+        this.cloudwatch = client.build();
+    }
 
     public CloudwatchMetricsService(CloudWatchClient cloudwatch) {
         this.cloudwatch = cloudwatch;

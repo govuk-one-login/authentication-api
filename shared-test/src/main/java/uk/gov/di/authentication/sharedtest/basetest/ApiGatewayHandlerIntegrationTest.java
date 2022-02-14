@@ -11,6 +11,7 @@ import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.extensions.AuditSnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.ClientStoreExtension;
+import uk.gov.di.authentication.sharedtest.extensions.CloudwatchMetricsExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.authentication.sharedtest.extensions.ParameterStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.RedisExtension;
@@ -59,6 +60,10 @@ public abstract class ApiGatewayHandlerIntegrationTest {
     @RegisterExtension
     protected static final KmsKeyExtension auditSigningKey =
             new KmsKeyExtension("audit-signing-key");
+
+    @RegisterExtension
+    protected static final CloudwatchMetricsExtension cloudwatchMetrics =
+            new CloudwatchMetricsExtension();
 
     @RegisterExtension
     protected static final TokenSigningExtension tokenSigner = new TokenSigningExtension();
