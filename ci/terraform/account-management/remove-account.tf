@@ -1,3 +1,16 @@
+module "account_management_api_remove_account_role" {
+  source      = "../modules/lambda-role"
+  environment = var.environment
+  role_name   = "account-management-api-remove-account-role"
+  vpc_arn     = local.vpc_arn
+
+  policies_to_attach = [
+    aws_iam_policy.dynamo_am_user_read_access_policy.arn,
+    aws_iam_policy.dynamo_am_user_delete_access_policy.arn,
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn
+  ]
+}
+
 module "delete_account" {
   source = "../modules/endpoint-module"
 
@@ -32,7 +45,7 @@ module "delete_account" {
   ]
   subnet_id                              = local.private_subnet_ids
   environment                            = var.environment
-  lambda_role_arn                        = module.account_notification_dynamo_sqs_role.arn
+  lambda_role_arn                        = module.account_management_api_remove_account_role.arn
   use_localstack                         = var.use_localstack
   default_tags                           = local.default_tags
   logging_endpoint_enabled               = var.logging_endpoint_enabled

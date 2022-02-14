@@ -1,3 +1,15 @@
+module "account_management_api_authenticate_role" {
+  source      = "../modules/lambda-role"
+  environment = var.environment
+  role_name   = "account-management-api-authenticate-role"
+  vpc_arn     = local.vpc_arn
+
+  policies_to_attach = [
+    aws_iam_policy.dynamo_am_user_read_access_policy.arn,
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn
+  ]
+}
+
 module "authenticate" {
   source = "../modules/endpoint-module"
 
@@ -32,7 +44,7 @@ module "authenticate" {
   ]
   subnet_id                              = local.private_subnet_ids
   environment                            = var.environment
-  lambda_role_arn                        = module.account_notification_default_role.arn
+  lambda_role_arn                        = module.account_management_api_authenticate_role.arn
   logging_endpoint_enabled               = var.logging_endpoint_enabled
   logging_endpoint_arn                   = var.logging_endpoint_arn
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
