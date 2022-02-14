@@ -1,14 +1,3 @@
-module "oidc_sqs_role" {
-  source      = "../modules/lambda-role"
-  environment = var.environment
-  role_name   = "oidc-sqs"
-  vpc_arn     = local.authentication_vpc_arn
-
-  policies_to_attach = [
-    aws_iam_policy.lambda_sns_policy.arn
-  ]
-}
-
 module "oidc_dynamo_sqs_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
