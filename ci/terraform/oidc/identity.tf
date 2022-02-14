@@ -26,6 +26,7 @@ module "identity" {
   handler_environment_variables = {
     ENVIRONMENT             = var.environment
     EVENTS_SNS_TOPIC_ARN    = aws_sns_topic.events.arn
+    REDIS_KEY               = local.redis_key
     AUDIT_SIGNING_KEY_ALIAS = local.audit_signing_key_alias_name
     LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
     DYNAMO_ENDPOINT         = var.use_localstack ? var.lambda_dynamo_endpoint : null
