@@ -1,5 +1,4 @@
 resource "aws_lambda_function" "endpoint_lambda" {
-  filename      = var.lambda_zip_file
   function_name = replace("${var.environment}-${var.endpoint_name}-lambda", ".", "")
   role          = var.lambda_role_arn
   handler       = var.handler_function_name
@@ -11,7 +10,10 @@ resource "aws_lambda_function" "endpoint_lambda" {
     mode = "Active"
   }
 
-  source_code_hash = filebase64sha256(var.lambda_zip_file)
+  s3_bucket         = var.source_bucket
+  s3_key            = var.lambda_zip_file
+  s3_object_version = var.lambda_zip_file_version
+
   vpc_config {
     security_group_ids = var.security_group_ids
     subnet_ids         = var.subnet_id

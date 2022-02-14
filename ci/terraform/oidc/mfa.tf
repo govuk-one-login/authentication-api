@@ -19,10 +19,16 @@ module "mfa" {
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.MfaHandler::handleRequest"
 
-  rest_api_id            = aws_api_gateway_rest_api.di_authentication_frontend_api.id
-  root_resource_id       = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id
-  execution_arn          = aws_api_gateway_rest_api.di_authentication_frontend_api.execution_arn
-  lambda_zip_file        = var.frontend_api_lambda_zip_file
+  rest_api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
+  root_resource_id = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id
+  execution_arn    = aws_api_gateway_rest_api.di_authentication_frontend_api.execution_arn
+
+  source_bucket                  = aws_s3_bucket.source_bucket.bucket
+  lambda_zip_file                = aws_s3_bucket_object.frontend_api_release_zip.key
+  lambda_zip_file_version        = aws_s3_bucket_object.frontend_api_release_zip.version_id
+  warmer_lambda_zip_file         = aws_s3_bucket_object.warmer_release_zip.key
+  warmer_lambda_zip_file_version = aws_s3_bucket_object.warmer_release_zip.version_id
+
   authentication_vpc_arn = local.authentication_vpc_arn
   security_group_ids = [
     local.authentication_security_group_id,
@@ -40,7 +46,6 @@ module "mfa" {
 
   keep_lambda_warm             = var.keep_lambdas_warm
   warmer_handler_function_name = "uk.gov.di.lambdawarmer.lambda.LambdaWarmerHandler::handleRequest"
-  warmer_lambda_zip_file       = var.lambda_warmer_zip_file
   warmer_security_group_ids    = [local.authentication_security_group_id]
   warmer_handler_environment_variables = {
     LAMBDA_MIN_CONCURRENCY = var.lambda_min_concurrency

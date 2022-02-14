@@ -30,7 +30,15 @@ variable "endpoint_method" {
   type = string
 }
 
+variable "source_bucket" {
+  type = string
+}
+
 variable "lambda_zip_file" {
+  type = string
+}
+
+variable "lambda_zip_file_version" {
   type = string
 }
 
@@ -114,6 +122,11 @@ variable "keep_lambda_warm" {
 }
 
 variable "warmer_lambda_zip_file" {
+  type    = string
+  default = null
+}
+
+variable "warmer_lambda_zip_file_version" {
   type    = string
   default = null
 }

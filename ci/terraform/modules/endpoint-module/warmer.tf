@@ -121,7 +121,6 @@ resource "aws_iam_role_policy_attachment" "lambda_warmer_ogs" {
 resource "aws_lambda_function" "warmer_function" {
   count = var.keep_lambda_warm && var.warmer_handler_function_name != null ? 1 : 0
 
-  filename      = var.warmer_lambda_zip_file
   function_name = replace("${var.environment}-${var.endpoint_name}-lambda-warmer", ".", "")
   role          = aws_iam_role.lambda_warmer_role[0].arn
   handler       = var.warmer_handler_function_name
@@ -132,7 +131,9 @@ resource "aws_lambda_function" "warmer_function" {
     mode = "Active"
   }
 
-  source_code_hash = filebase64sha256(var.warmer_lambda_zip_file)
+  s3_bucket         = var.source_bucket
+  s3_key            = var.warmer_lambda_zip_file
+  s3_object_version = var.warmer_lambda_zip_file_version
 
   vpc_config {
     security_group_ids = var.warmer_security_group_ids
