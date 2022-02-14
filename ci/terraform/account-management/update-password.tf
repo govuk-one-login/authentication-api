@@ -7,8 +7,7 @@ module "account_management_api_update_password_role" {
   policies_to_attach = [
     aws_iam_policy.dynamo_am_user_read_access_policy.arn,
     aws_iam_policy.dynamo_am_user_write_access_policy.arn,
-    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
-    aws_iam_policy.parameter_policy.arn
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn
   ]
 }
 
