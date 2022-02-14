@@ -19,7 +19,13 @@ class CloudwatchMetricsServiceTest {
     void shouldPublishMetricValueWithDimensions() {
         var cloudwatch = mock(CloudWatchClient.class);
 
-        var metrics = new CloudwatchMetricsService(cloudwatch);
+        var metrics =
+                new CloudwatchMetricsService(cloudwatch) {
+                    @Override
+                    protected boolean enabled() {
+                        return true;
+                    }
+                };
 
         metrics.putValue("metric-name", 10, Map.of("dimension1", "value"));
 
@@ -31,7 +37,13 @@ class CloudwatchMetricsServiceTest {
     void shouldIncrementCounter() {
         var cloudwatch = mock(CloudWatchClient.class);
 
-        var metrics = new CloudwatchMetricsService(cloudwatch);
+        var metrics =
+                new CloudwatchMetricsService(cloudwatch) {
+                    @Override
+                    protected boolean enabled() {
+                        return true;
+                    }
+                };
 
         metrics.incrementCounter("counter-name", Map.of("dimension2", "value2"));
 
