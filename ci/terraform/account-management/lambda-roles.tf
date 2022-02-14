@@ -54,19 +54,6 @@ resource "aws_iam_policy" "lambda_kms_policy" {
 }
 
 ### DynamoDB permissions
-
-data "aws_dynamodb_table" "user_credentials_table" {
-  name = "${var.environment}-user-credentials"
-}
-
-data "aws_dynamodb_table" "user_profile_table" {
-  name = "${var.environment}-user-profile"
-}
-
-data "aws_dynamodb_table" "client_registry_table" {
-  name = "${var.environment}-client-registry"
-}
-
 data "aws_iam_policy_document" "dynamo_policy_document" {
   statement {
     sid    = "AllowAccessToDynamoTables"
