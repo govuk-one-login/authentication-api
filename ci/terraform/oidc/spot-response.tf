@@ -10,7 +10,7 @@ module "ipv_spot_response_role" {
 }
 
 resource "aws_lambda_function" "spot_response_lambda" {
-  count         = var.ipv_api_enabled ? 1 : 0
+  count = var.ipv_api_enabled ? 1 : 0
 
   function_name = "${var.environment}-spot-response-lambda"
   role          = module.ipv_spot_response_role.arn

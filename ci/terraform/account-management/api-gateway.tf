@@ -75,18 +75,18 @@ EOF
 }
 
 resource "aws_lambda_function" "authorizer" {
-  function_name    = "${var.environment}-api_gateway_authorizer"
-  role             = module.account_notification_default_role.arn
-  handler          = "uk.gov.di.accountmanagement.lambda.AuthoriseAccessTokenHandler::handleRequest"
-  runtime          = "java11"
+  function_name = "${var.environment}-api_gateway_authorizer"
+  role          = module.account_notification_default_role.arn
+  handler       = "uk.gov.di.accountmanagement.lambda.AuthoriseAccessTokenHandler::handleRequest"
+  runtime       = "java11"
 
   s3_bucket         = aws_s3_bucket.source_bucket.bucket
   s3_key            = aws_s3_bucket_object.account_management_api_release_zip.key
   s3_object_version = aws_s3_bucket_object.account_management_api_release_zip.version_id
 
-  publish          = true
-  timeout          = 30
-  memory_size      = 2048
+  publish     = true
+  timeout     = 30
+  memory_size = 2048
   vpc_config {
     security_group_ids = [local.allow_egress_security_group_id]
     subnet_ids         = local.private_subnet_ids
