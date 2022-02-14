@@ -149,7 +149,6 @@ resource "aws_lambda_event_source_mapping" "lambda_sqs_mapping" {
 }
 
 resource "aws_lambda_function" "email_sqs_lambda" {
-  filename      = var.frontend_api_lambda_zip_file
   function_name = "${var.environment}-email-notification-sqs-lambda"
   role          = module.oidc_email_role.arn
   handler       = "uk.gov.di.authentication.frontendapi.lambda.NotificationHandler::handleRequest"
@@ -158,7 +157,10 @@ resource "aws_lambda_function" "email_sqs_lambda" {
   runtime       = "java11"
   publish       = true
 
-  source_code_hash = filebase64sha256(var.frontend_api_lambda_zip_file)
+  s3_bucket         = aws_s3_bucket.source_bucket.bucket
+  s3_key            = aws_s3_bucket_object.frontend_api_release_zip.key
+  s3_object_version = aws_s3_bucket_object.frontend_api_release_zip.version_id
+
   vpc_config {
     security_group_ids = [local.authentication_egress_security_group_id]
     subnet_ids         = local.authentication_subnet_ids
