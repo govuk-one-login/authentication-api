@@ -163,11 +163,6 @@ variable "customer_support_link_route" {
   default = "support"
 }
 
-variable "contact_us_link_route" {
-  type    = string
-  default = "contact-us"
-}
-
 variable "localstack_endpoint" {
   type    = string
   default = "http://localhost:45678/"

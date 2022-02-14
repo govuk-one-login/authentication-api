@@ -67,7 +67,6 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             emailPersonalisation.put("validation-code", notifyRequest.getCode());
                             emailPersonalisation.put(
                                     "email-address", notifyRequest.getDestination());
-                            emailPersonalisation.put("contact-us-link", buildContactUsUrl());
                             LOG.info("Sending VERIFY_EMAIL email using Notify");
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
@@ -173,12 +172,5 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             }
         }
         return null;
-    }
-
-    private String buildContactUsUrl() {
-        return buildURI(
-                        configurationService.getFrontendBaseUrl(),
-                        configurationService.getContactUsLinkRoute())
-                .toString();
     }
 }
