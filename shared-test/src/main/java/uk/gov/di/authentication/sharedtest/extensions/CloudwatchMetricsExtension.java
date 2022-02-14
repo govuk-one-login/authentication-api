@@ -12,6 +12,7 @@ import software.amazon.awssdk.services.cloudwatch.model.MetricStat;
 import java.net.URI;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.UUID;
 
 public class CloudwatchMetricsExtension extends BaseAwsResourceExtension
         implements BeforeAllCallback {
@@ -42,7 +43,7 @@ public class CloudwatchMetricsExtension extends BaseAwsResourceExtension
                                                         .period(60)
                                                         .stat("Sum")
                                                         .build())
-                                        .id("foo")
+                                        .id(UUID.randomUUID().toString())
                                         .build())
                         .startTime(Instant.now().minus(1, ChronoUnit.DAYS))
                         .endTime(Instant.now())

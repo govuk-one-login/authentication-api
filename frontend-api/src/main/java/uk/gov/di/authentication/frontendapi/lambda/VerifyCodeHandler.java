@@ -28,6 +28,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
@@ -80,6 +81,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private final ValidationService validationService;
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine;
     private final AuditService auditService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
 
     protected VerifyCodeHandler(
             ConfigurationService configurationService,
@@ -90,7 +92,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             CodeStorageService codeStorageService,
             ValidationService validationService,
             StateMachine<SessionState, SessionAction, UserContext> stateMachine,
-            AuditService auditService) {
+            AuditService auditService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         super(
                 VerifyCodeRequest.class,
                 configurationService,
@@ -102,6 +105,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.validationService = validationService;
         this.stateMachine = stateMachine;
         this.auditService = auditService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public VerifyCodeHandler() {
@@ -115,6 +119,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.validationService = new ValidationService();
         this.stateMachine = userJourneyStateMachine();
         this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
     }
 
     @Override
@@ -278,6 +283,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     AuditService.UNKNOWN,
                     extractPersistentIdFromHeaders(input.getHeaders()),
                     pair("notification-type", notificationType.name()));
+
+            cloudwatchMetricsService.incrementCounter(
+                    "SignUpSuccess", Map.of("Environment", configurationService.getEnvironment()));
 
             codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
             authenticationService.updatePhoneNumberVerifiedStatus(session.getEmailAddress(), true);

@@ -31,6 +31,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -124,6 +125,9 @@ class VerifyCodeRequestHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
+
     private final ClientRegistry clientRegistry =
             new ClientRegistry().setTestClient(false).setClientID(CLIENT_ID);
     private final ClientRegistry testClientRegistry =
@@ -164,7 +168,8 @@ class VerifyCodeRequestHandlerTest {
                         codeStorageService,
                         validationService,
                         stateMachine,
-                        auditService);
+                        auditService,
+                        cloudwatchMetricsService);
 
         when(authenticationService.getUserProfileFromEmail(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.of(userProfile));
@@ -173,6 +178,8 @@ class VerifyCodeRequestHandlerTest {
                 .thenReturn(Optional.of(userProfile));
 
         when(userProfile.getSubjectID()).thenReturn("test-subject-id");
+
+        when(configurationService.getEnvironment()).thenReturn("unit-test");
 
         when(stateMachine.transition(
                         eq(VERIFY_EMAIL_CODE_SENT),
@@ -304,6 +311,9 @@ class VerifyCodeRequestHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("notification-type", VERIFY_PHONE_NUMBER.name()));
+
+        verify(cloudwatchMetricsService)
+                .incrementCounter("SignUpSuccess", Map.of("Environment", "unit-test"));
     }
 
     @Test

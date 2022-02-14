@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
@@ -157,6 +158,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertEquals(SessionState.PHONE_NUMBER_CODE_VERIFIED, codeResponse.getSessionState());
 
         assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));
+
+        assertThat(cloudwatchMetrics.getLastValue("SignUpSuccess"), is(1.0));
     }
 
     @Test
