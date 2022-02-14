@@ -12,19 +12,6 @@ module "account_notification_default_role" {
   ]
 }
 
-module "account_notification_dynamo_sqs_role" {
-  source      = "../modules/lambda-role"
-  environment = var.environment
-  role_name   = "account-management-dynamo-sqs"
-  vpc_arn     = local.vpc_arn
-
-  policies_to_attach = [
-    aws_iam_policy.lambda_dynamo_policy.arn,
-    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
-    aws_iam_policy.parameter_policy.arn
-  ]
-}
-
 ### ID token key permissions
 
 data "aws_kms_key" "id_token_public_key" {

@@ -49,7 +49,7 @@ data "aws_iam_policy_document" "email_queue_policy_document" {
 
     principals {
       type        = "AWS"
-      identifiers = [module.account_notification_dynamo_sqs_role.arn, module.account_management_api_remove_account_role.arn, module.account_management_api_update_email_role.arn, module.account_management_api_update_password_role.arn, module.account_management_api_update_phone_number_role.arn, module.account_management_api_send_notification_role.arn]
+      identifiers = [module.account_management_api_remove_account_role.arn, module.account_management_api_update_email_role.arn, module.account_management_api_update_password_role.arn, module.account_management_api_update_phone_number_role.arn, module.account_management_api_send_notification_role.arn]
     }
 
     actions = [
@@ -86,7 +86,6 @@ data "aws_iam_policy_document" "email_queue_policy_document" {
   depends_on = [
     time_sleep.wait_60_seconds,
     module.account_management_sqs_role,
-    module.account_notification_dynamo_sqs_role,
     module.account_management_api_remove_account_role,
     module.account_management_api_update_email_role,
     module.account_management_api_update_password_role,
@@ -120,7 +119,6 @@ data "aws_iam_policy_document" "email_dlq_queue_policy_document" {
   depends_on = [
     time_sleep.wait_60_seconds,
     module.account_management_sqs_role,
-    module.account_notification_dynamo_sqs_role,
     module.account_management_api_remove_account_role,
     module.account_management_api_update_email_role,
     module.account_management_api_update_password_role,
