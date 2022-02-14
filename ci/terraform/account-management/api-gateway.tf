@@ -45,14 +45,6 @@ data "aws_iam_policy_document" "api_gateway_logging_policy" {
   }
 }
 
-resource "aws_api_gateway_authorizer" "di_account_management_api" {
-  name                             = "${var.environment}-authorise-access-token"
-  rest_api_id                      = aws_api_gateway_rest_api.di_account_management_api.id
-  authorizer_uri                   = aws_lambda_alias.authorizer_alias.invoke_arn
-  authorizer_credentials           = aws_iam_role.invocation_role.arn
-  authorizer_result_ttl_in_seconds = 0
-}
-
 resource "aws_iam_role_policy" "invocation_policy" {
   name = "default"
   role = aws_iam_role.invocation_role.id
@@ -74,32 +66,6 @@ resource "aws_iam_role_policy" "invocation_policy" {
 EOF
 }
 
-resource "aws_lambda_function" "authorizer" {
-  function_name = "${var.environment}-api_gateway_authorizer"
-  role          = module.account_notification_default_role.arn
-  handler       = "uk.gov.di.accountmanagement.lambda.AuthoriseAccessTokenHandler::handleRequest"
-  runtime       = "java11"
-
-  s3_bucket         = aws_s3_bucket.source_bucket.bucket
-  s3_key            = aws_s3_bucket_object.account_management_api_release_zip.key
-  s3_object_version = aws_s3_bucket_object.account_management_api_release_zip.version_id
-
-  publish     = true
-  timeout     = 30
-  memory_size = 2048
-  vpc_config {
-    security_group_ids = [local.allow_egress_security_group_id]
-    subnet_ids         = local.private_subnet_ids
-  }
-  environment {
-    variables = {
-      TOKEN_SIGNING_KEY_ALIAS = data.aws_kms_key.id_token_public_key.key_id
-      ENVIRONMENT             = var.environment
-    }
-  }
-  kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
-}
-
 resource "aws_cloudwatch_log_subscription_filter" "authorizer_log_subscription" {
   count           = var.logging_endpoint_enabled ? 1 : 0
   name            = "authorizer-log-subscription"
@@ -113,13 +79,6 @@ resource "aws_iam_role" "invocation_role" {
   path = "/"
 
   assume_role_policy = data.aws_iam_policy_document.api_gateway_can_assume_policy.json
-}
-
-resource "aws_lambda_alias" "authorizer_alias" {
-  name             = "${var.environment}-authorizer-alias-lambda-active"
-  description      = "Alias pointing at active version of Lambda"
-  function_name    = aws_lambda_function.authorizer.arn
-  function_version = aws_lambda_function.authorizer.version
 }
 
 resource "aws_cloudwatch_log_group" "lambda_log_group" {
