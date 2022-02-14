@@ -51,7 +51,7 @@ data "aws_iam_policy_document" "email_queue_policy_document" {
 
     principals {
       type        = "AWS"
-      identifiers = [module.oidc_dynamo_sqs_role.arn, module.frontend_api_send_notification_role.arn, module.frontend_api_mfa_role.arn]
+      identifiers = [module.oidc_dynamo_sqs_role.arn, module.frontend_api_send_notification_role.arn, module.frontend_api_mfa_role.arn, module.frontend_api_reset_password_request_role.arn]
     }
 
     actions = [
