@@ -124,7 +124,11 @@ data "aws_iam_policy_document" "dynamo_spot_read_access_policy_document" {
     effect = "Allow"
 
     actions = [
+      "dynamodb:BatchGetItem",
+      "dynamodb:DescribeTable",
       "dynamodb:Get*",
+      "dynamodb:Query",
+      "dynamodb:Scan",
     ]
     resources = [
       data.aws_dynamodb_table.spot_credential_table.arn,
