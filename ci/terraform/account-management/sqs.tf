@@ -152,7 +152,6 @@ resource "aws_lambda_event_source_mapping" "lambda_sqs_mapping" {
 }
 
 resource "aws_lambda_function" "email_sqs_lambda" {
-  filename      = var.lambda_zip_file
   function_name = "${var.environment}-account-management-sqs-lambda"
   role          = module.account_management_sqs_role.arn
   handler       = "uk.gov.di.accountmanagement.lambda.NotificationHandler::handleRequest"
@@ -161,7 +160,10 @@ resource "aws_lambda_function" "email_sqs_lambda" {
   runtime       = "java11"
   publish       = true
 
-  source_code_hash = filebase64sha256(var.lambda_zip_file)
+  s3_bucket         = aws_s3_bucket.source_bucket.bucket
+  s3_key            = aws_s3_bucket_object.account_management_api_release_zip.key
+  s3_object_version = aws_s3_bucket_object.account_management_api_release_zip.version_id
+
   vpc_config {
     security_group_ids = [local.allow_egress_security_group_id]
     subnet_ids         = local.private_subnet_ids

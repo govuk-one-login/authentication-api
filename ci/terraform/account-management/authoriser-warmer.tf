@@ -35,7 +35,6 @@ resource "aws_iam_policy" "lambda_warmer_policy" {
 resource "aws_lambda_function" "warmer_function" {
   count = var.keep_lambdas_warm ? 1 : 0
 
-  filename      = var.lambda_warmer_zip_file
   function_name = "${aws_lambda_function.authorizer.function_name}-lambda-warmer"
   role          = module.lambda_warmer_role[0].arn
   handler       = "uk.gov.di.lambdawarmer.lambda.LambdaWarmerHandler::handleRequest"
@@ -46,7 +45,9 @@ resource "aws_lambda_function" "warmer_function" {
     mode = "Active"
   }
 
-  source_code_hash = filebase64sha256(var.lambda_warmer_zip_file)
+  s3_bucket         = aws_s3_bucket.source_bucket.bucket
+  s3_key            = aws_s3_bucket_object.warmer_release_zip.key
+  s3_object_version = aws_s3_bucket_object.warmer_release_zip.version_id
 
   vpc_config {
     security_group_ids = [local.allow_aws_service_access_security_group_id]

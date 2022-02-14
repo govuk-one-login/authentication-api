@@ -10,8 +10,8 @@ module "ipv_spot_response_role" {
 }
 
 resource "aws_lambda_function" "spot_response_lambda" {
-  count         = var.ipv_api_enabled ? 1 : 0
-  filename      = var.ipv_api_lambda_zip_file
+  count = var.ipv_api_enabled ? 1 : 0
+
   function_name = "${var.environment}-spot-response-lambda"
   role          = module.ipv_spot_response_role.arn
   handler       = "uk.gov.di.authentication.ipv-api.lambda.SPOTResponseHandler::handleRequest"
@@ -20,7 +20,10 @@ resource "aws_lambda_function" "spot_response_lambda" {
   runtime       = "java11"
   publish       = true
 
-  source_code_hash = filebase64sha256(var.ipv_api_lambda_zip_file)
+  s3_bucket         = aws_s3_bucket.source_bucket.bucket
+  s3_key            = aws_s3_bucket_object.ipv_api_release_zip.key
+  s3_object_version = aws_s3_bucket_object.ipv_api_release_zip.version_id
+
   vpc_config {
     security_group_ids = [local.authentication_egress_security_group_id]
     subnet_ids         = local.authentication_subnet_ids
