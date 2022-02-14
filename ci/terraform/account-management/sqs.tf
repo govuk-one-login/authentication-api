@@ -49,7 +49,7 @@ data "aws_iam_policy_document" "email_queue_policy_document" {
 
     principals {
       type        = "AWS"
-      identifiers = [module.account_notification_dynamo_sqs_role.arn, module.account_management_api_remove_account_role.arn]
+      identifiers = [module.account_notification_dynamo_sqs_role.arn, module.account_management_api_remove_account_role.arn, module.account_management_api_update_email_role.arn]
     }
 
     actions = [
@@ -88,6 +88,7 @@ data "aws_iam_policy_document" "email_queue_policy_document" {
     module.account_management_sqs_role,
     module.account_notification_dynamo_sqs_role,
     module.account_management_api_remove_account_role,
+    module.account_management_api_update_email_role,
   ]
 }
 
@@ -118,6 +119,7 @@ data "aws_iam_policy_document" "email_dlq_queue_policy_document" {
     module.account_management_sqs_role,
     module.account_notification_dynamo_sqs_role,
     module.account_management_api_remove_account_role,
+    module.account_management_api_update_email_role,
   ]
 }
 
