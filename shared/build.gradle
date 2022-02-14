@@ -19,9 +19,9 @@ dependencies {
             configurations.sns,
             configurations.sqs,
             configurations.ssm,
+            configurations.cloudwatch,
             "com.googlecode.libphonenumber:libphonenumber:8.12.42",
-            "com.google.protobuf:protobuf-java:3.19.4",
-            "software.amazon.awssdk:cloudwatch:2.17.128"
+            "com.google.protobuf:protobuf-java:3.19.4"
 
     testImplementation configurations.tests,
             configurations.lambda_tests,
