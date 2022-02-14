@@ -5,7 +5,6 @@ module "account_management_api_authenticate_role" {
   vpc_arn     = local.vpc_arn
 
   policies_to_attach = [
-    aws_iam_policy.lambda_kms_policy.arn,
     aws_iam_policy.dynamo_am_user_read_access_policy.arn,
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn
   ]
