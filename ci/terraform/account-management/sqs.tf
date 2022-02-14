@@ -180,6 +180,7 @@ resource "aws_lambda_function" "email_sqs_lambda" {
     variables = merge(var.notify_template_map, {
       FRONTEND_BASE_URL           = module.dns.frontend_url
       CUSTOMER_SUPPORT_LINK_ROUTE = var.customer_support_link_route
+      CONTACT_US_LINK_ROUTE       = var.contact_us_link_route
       NOTIFY_API_KEY              = var.notify_api_key
       NOTIFY_URL                  = var.notify_url
     })
