@@ -6,7 +6,8 @@ module "client_registry_role" {
 
   policies_to_attach = [
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
-    aws_iam_policy.dynamo_client_registry_access_policy.arn,
+    aws_iam_policy.dynamo_client_registry_write_access_policy.arn,
+    aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
   ]
 }

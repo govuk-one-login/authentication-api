@@ -55,19 +55,12 @@ data "aws_iam_policy_document" "dynamo_user_read_policy_document" {
   }
 }
 
-data "aws_iam_policy_document" "dynamo_client_registration_policy_document" {
+data "aws_iam_policy_document" "dynamo_client_registration_write_policy_document" {
   statement {
     sid    = "AllowAccessToDynamoTables"
     effect = "Allow"
 
     actions = [
-      "dynamodb:BatchGetItem",
-      "dynamodb:DescribeStream",
-      "dynamodb:DescribeTable",
-      "dynamodb:DeleteItem",
-      "dynamodb:Get*",
-      "dynamodb:Query",
-      "dynamodb:Scan",
       "dynamodb:BatchWriteItem",
       "dynamodb:UpdateItem",
       "dynamodb:PutItem",
@@ -139,12 +132,12 @@ data "aws_iam_policy_document" "dynamo_spot_read_access_policy_document" {
   }
 }
 
-resource "aws_iam_policy" "dynamo_client_registry_access_policy" {
+resource "aws_iam_policy" "dynamo_client_registry_write_access_policy" {
   name_prefix = "dynamo-client-registry-write-policy"
   path        = "/${var.environment}/oidc-default/"
   description = "IAM policy for managing write permissions to the Dynamo Client Registration table"
 
-  policy = data.aws_iam_policy_document.dynamo_client_registration_policy_document.json
+  policy = data.aws_iam_policy_document.dynamo_client_registration_write_policy_document.json
 }
 
 resource "aws_iam_policy" "dynamo_client_registry_read_access_policy" {
