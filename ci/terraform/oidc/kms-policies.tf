@@ -1,18 +1,3 @@
-module "oidc_dynamo_sqs_role" {
-  source      = "../modules/lambda-role"
-  environment = var.environment
-  role_name   = "oidc-dynamo-sqs"
-  vpc_arn     = local.authentication_vpc_arn
-
-  policies_to_attach = [
-    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
-    aws_iam_policy.dynamo_access_policy.arn,
-    aws_iam_policy.lambda_sns_policy.arn,
-    aws_iam_policy.redis_parameter_policy.arn
-  ]
-
-}
-
 ### ID Token signing key access
 
 data "aws_iam_policy_document" "kms_policy_document" {
