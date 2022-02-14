@@ -4,10 +4,10 @@ module "account_notification_default_role" {
   role_name   = "account-management-default-role"
   vpc_arn     = local.vpc_arn
 
-  policies_to_attach = var.use_localstack ? [aws_iam_policy.parameter_policy.arn] : [
-    aws_iam_policy.lambda_kms_policy[0].arn,
-    aws_iam_policy.lambda_dynamo_policy[0].arn,
-    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0].arn,
+  policies_to_attach = [
+    aws_iam_policy.lambda_kms_policy.arn,
+    aws_iam_policy.lambda_dynamo_policy.arn,
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
     aws_iam_policy.parameter_policy.arn
   ]
 }
@@ -18,9 +18,9 @@ module "account_notification_dynamo_sqs_role" {
   role_name   = "account-management-dynamo-sqs"
   vpc_arn     = local.vpc_arn
 
-  policies_to_attach = var.use_localstack ? [aws_iam_policy.parameter_policy.arn] : [
-    aws_iam_policy.lambda_dynamo_policy[0].arn,
-    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0].arn,
+  policies_to_attach = [
+    aws_iam_policy.lambda_dynamo_policy.arn,
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
     aws_iam_policy.parameter_policy.arn
   ]
 }
@@ -32,7 +32,6 @@ data "aws_kms_key" "id_token_public_key" {
 }
 
 data "aws_iam_policy_document" "kms_policy_document" {
-  count = var.use_localstack ? 0 : 1
   statement {
     sid    = "AllowAccessToKmsPublicKey"
     effect = "Allow"
@@ -47,12 +46,11 @@ data "aws_iam_policy_document" "kms_policy_document" {
 }
 
 resource "aws_iam_policy" "lambda_kms_policy" {
-  count       = var.use_localstack ? 0 : 1
   name        = "${var.environment}--account-mgmt-lambda-kms-policy"
   path        = "/"
   description = "IAM policy for managing KMS connection for a lambda"
 
-  policy = data.aws_iam_policy_document.kms_policy_document[0].json
+  policy = data.aws_iam_policy_document.kms_policy_document.json
 }
 
 ### DynamoDB permissions
@@ -70,7 +68,6 @@ data "aws_dynamodb_table" "client_registry_table" {
 }
 
 data "aws_iam_policy_document" "dynamo_policy_document" {
-  count = var.use_localstack ? 0 : 1
   statement {
     sid    = "AllowAccessToDynamoTables"
     effect = "Allow"
@@ -92,18 +89,16 @@ data "aws_iam_policy_document" "dynamo_policy_document" {
 }
 
 resource "aws_iam_policy" "lambda_dynamo_policy" {
-  count       = var.use_localstack ? 0 : 1
   name        = "${var.environment}-account-management-lambda-dynamo-policy"
   path        = "/"
   description = "IAM policy for managing Dynamo connection for an account management lambdas"
 
-  policy = data.aws_iam_policy_document.dynamo_policy_document[0].json
+  policy = data.aws_iam_policy_document.dynamo_policy_document.json
 }
 
 ### Audit signing key permissions
 
 data "aws_iam_policy_document" "account_management_audit_payload_kms_signing_policy_document" {
-  count = var.use_localstack ? 0 : 1
   statement {
     sid    = "AllowAccessToKmsAuditSigningKey"
     effect = "Allow"
@@ -149,10 +144,9 @@ data "aws_iam_policy_document" "account_management_audit_payload_kms_signing_pol
 }
 
 resource "aws_iam_policy" "audit_signing_key_lambda_kms_signing_policy" {
-  count       = var.use_localstack ? 0 : 1
   name        = "${var.environment}-account-management-lambda-audit-payload-kms-signing-policy"
   path        = "/"
   description = "IAM policy for managing KMS connection for a lambda which allows signing of audit payloads"
 
-  policy = data.aws_iam_policy_document.account_management_audit_payload_kms_signing_policy_document[0].json
+  policy = data.aws_iam_policy_document.account_management_audit_payload_kms_signing_policy_document.json
 }
