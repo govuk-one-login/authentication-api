@@ -13,8 +13,10 @@ dependencies {
             configurations.jackson,
             configurations.nimbus,
             configurations.sqs,
+            configurations.cloudwatch,
             configurations.bouncycastle,
             project(":shared")
+
     runtimeOnly configurations.logging_runtime
 
     testImplementation configurations.tests,

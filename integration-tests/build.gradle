@@ -12,6 +12,7 @@ dependencies {
             configurations.nimbus,
             configurations.bouncycastle,
             configurations.sqs,
+            configurations.cloudwatch,
             configurations.dynamodb,
             configurations.lettuce,
             configurations.lambda,
@@ -23,6 +24,7 @@ dependencies {
             project(":ipv-api"),
             project(":shared"),
             project(":shared-test")
+
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
 }
 

@@ -15,6 +15,7 @@ dependencies {
             configurations.dynamodb,
             configurations.sns,
             configurations.ssm,
+            configurations.cloudwatch,
             "org.eclipse.jetty:jetty-server:11.0.7",
             "com.google.protobuf:protobuf-java:3.19.4",
             "com.google.code.gson:gson:2.8.9",
