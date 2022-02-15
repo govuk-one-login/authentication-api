@@ -32,11 +32,6 @@ public class CloudwatchMetricsService {
     }
 
     public void putValue(String metricName, Number metricValue, Map<String, String> dimensions) {
-
-        if (!enabled()) {
-            return;
-        }
-
         var dimensionList = dimensions.entrySet().stream().map(this::toDimension).collect(toList());
 
         var dataPoint =
@@ -61,9 +56,5 @@ public class CloudwatchMetricsService {
 
     public void incrementCounter(String name, Map<String, String> dimensions) {
         putValue(name, 1, dimensions);
-    }
-
-    protected boolean enabled() {
-        return System.getenv("ENABLE_METRICS") != null;
     }
 }
