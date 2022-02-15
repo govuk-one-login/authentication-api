@@ -41,11 +41,13 @@ import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -305,6 +307,24 @@ class AuthorisationHandlerTest {
                         "",
                         PERSISTENT_SESSION_ID,
                         pair("description", "Invalid request: Missing response_type parameter"));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenNoQueryStringParametersArePresent() {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(
+                new ProxyRequestContext()
+                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
+        RuntimeException expectedException =
+                assertThrows(
+                        RuntimeException.class,
+                        () -> makeHandlerRequest(event),
+                        "Expected to throw AccessTokenException");
+
+        assertThat(
+                expectedException.getMessage(),
+                equalTo("No query string parameters are present in the Authentication request"));
     }
 
     @Test

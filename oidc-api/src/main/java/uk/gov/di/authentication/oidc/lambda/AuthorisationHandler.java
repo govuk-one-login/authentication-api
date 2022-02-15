@@ -122,10 +122,10 @@ public class AuthorisationHandler
                             attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
                             LOG.info("Received authentication request");
 
-                            Map<String, List<String>> queryStringParameters =
-                                    getQueryStringParametersAsMap(input);
+                            Map<String, List<String>> queryStringParameters;
                             AuthenticationRequest authRequest;
                             try {
+                                queryStringParameters = getQueryStringParametersAsMap(input);
                                 authRequest = AuthenticationRequest.parse(queryStringParameters);
                             } catch (ParseException e) {
                                 if (e.getRedirectionURI() == null) {
@@ -146,6 +146,13 @@ public class AuthorisationHandler
                                         context,
                                         ipAddress,
                                         persistentSessionId);
+                            } catch (NullPointerException e) {
+                                LOG.warn(
+                                        "No query string parameters are present in the Authentication request",
+                                        e);
+                                throw new RuntimeException(
+                                        "No query string parameters are present in the Authentication request",
+                                        e);
                             }
                             Optional<ErrorObject> error =
                                     authorizationService.validateAuthRequest(authRequest);
