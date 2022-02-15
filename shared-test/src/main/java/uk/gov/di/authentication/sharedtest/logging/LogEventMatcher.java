@@ -8,6 +8,7 @@ import org.hamcrest.TypeSafeMatcher;
 
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Optional;
 
 public class LogEventMatcher {
 
@@ -84,6 +85,43 @@ public class LogEventMatcher {
             public void describeTo(Description description) {
                 description.appendText(
                         "a log event with message containing [" + Arrays.asList(values) + "]");
+            }
+        };
+    }
+
+    public static Matcher<LogEvent> withMessage(String value) {
+        return new TypeSafeMatcher<>() {
+
+            @Override
+            protected boolean matchesSafely(LogEvent item) {
+                var message = item.getMessage().getFormattedMessage();
+
+                return value.equals(message);
+            }
+
+            @Override
+            public void describeTo(Description description) {
+                description.appendText("a log event with message [" + value + "]");
+            }
+        };
+    }
+
+    public static Matcher<LogEvent> withExceptionMessage(String message) {
+        return new TypeSafeMatcher<>() {
+
+            @Override
+            protected boolean matchesSafely(LogEvent item) {
+                return Optional.of(item)
+                        .map(LogEvent::getThrown)
+                        .map(Throwable::getMessage)
+                        .filter(message::equals)
+                        .isPresent();
+            }
+
+            @Override
+            public void describeTo(Description description) {
+                description.appendText(
+                        "a log event containing an exception with message [" + message + "]");
             }
         };
     }

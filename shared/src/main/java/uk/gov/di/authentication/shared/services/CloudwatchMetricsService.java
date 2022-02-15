@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.shared.services;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
 import software.amazon.awssdk.services.cloudwatch.model.Dimension;
@@ -12,6 +14,8 @@ import java.util.Map;
 import static java.util.stream.Collectors.toList;
 
 public class CloudwatchMetricsService {
+
+    private static final Logger LOG = LogManager.getLogger(CloudwatchMetricsService.class);
 
     private final CloudWatchClient cloudwatch;
 
@@ -47,7 +51,11 @@ public class CloudwatchMetricsService {
                         .namespace("Authentication")
                         .build();
 
-        cloudwatch.putMetricData(request);
+        try {
+            cloudwatch.putMetricData(request);
+        } catch (Exception e) {
+            LOG.error("Could not publish metrics", e);
+        }
     }
 
     private Dimension toDimension(Map.Entry<String, String> entry) {

@@ -1,19 +1,31 @@
 package uk.gov.di.authentication.shared.services;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.ArgumentMatcher;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
 import software.amazon.awssdk.services.cloudwatch.model.MetricDatum;
 import software.amazon.awssdk.services.cloudwatch.model.PutMetricDataRequest;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.List;
 import java.util.Map;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withExceptionMessage;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class CloudwatchMetricsServiceTest {
+
+    @RegisterExtension
+    public final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(CloudwatchMetricsService.class);
 
     @Test
     void shouldPublishMetricValueWithDimensions() {
@@ -37,6 +49,21 @@ class CloudwatchMetricsServiceTest {
 
         verify(cloudwatch).putMetricData(argThat(hasNameAndValue("counter-name", 1.0d)));
         verify(cloudwatch).putMetricData(argThat(hasDimension("dimension2", "value2")));
+    }
+
+    @Test
+    void shouldLogErrorAndContinueIfProblemPublishingMetric() {
+        var cloudwatch = mock(CloudWatchClient.class);
+
+        var metrics = new CloudwatchMetricsService(cloudwatch);
+
+        when(cloudwatch.putMetricData(any(PutMetricDataRequest.class)))
+                .thenThrow(new RuntimeException("Cloudwatch problem"));
+
+        metrics.incrementCounter("counter-name", Map.of("dimension2", "value2"));
+
+        assertThat(logging.events(), hasItem(withMessageContaining("Could not publish metrics")));
+        assertThat(logging.events(), hasItem(withExceptionMessage("Cloudwatch problem")));
     }
 
     private ArgumentMatcher<PutMetricDataRequest> hasNameAndValue(String name, Double value) {
