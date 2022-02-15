@@ -38,6 +38,8 @@ public class NotificationHandlerTest {
     private static final String CUSTOMER_SUPPORT_LINK_URL =
             "https://localhost:8080/frontend/support";
     private static final String CUSTOMER_SUPPORT_LINK_ROUTE = "support";
+    private static final String CONTACT_US_LINK_URL = "https://localhost:8080/frontend/contact-us";
+    private static final String CONTACT_US_LINK_ROUTE = "contact-us";
     private final Context context = mock(Context.class);
     private final NotificationService notificationService = mock(NotificationService.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
@@ -53,6 +55,8 @@ public class NotificationHandlerTest {
     public void shouldSuccessfullyProcessVerifyEmailMessageFromSQSQueue()
             throws JsonProcessingException, NotificationClientException {
         when(notificationService.getNotificationTemplateId(VERIFY_EMAIL)).thenReturn(TEMPLATE_ID);
+        when(configService.getFrontendBaseUrl()).thenReturn(FRONTEND_BASE_URL);
+        when(configService.getContactUsLinkRoute()).thenReturn(CONTACT_US_LINK_ROUTE);
 
         NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -63,6 +67,7 @@ public class NotificationHandlerTest {
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
         personalisation.put("email-address", notifyRequest.getDestination());
+        personalisation.put("contact-us-link", CONTACT_US_LINK_URL);
 
         verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, TEMPLATE_ID);
     }
@@ -183,6 +188,8 @@ public class NotificationHandlerTest {
     public void shouldThrowExceptionIfNotifyIsUnableToSendEmail()
             throws JsonProcessingException, NotificationClientException {
         when(notificationService.getNotificationTemplateId(VERIFY_EMAIL)).thenReturn(TEMPLATE_ID);
+        when(configService.getFrontendBaseUrl()).thenReturn(FRONTEND_BASE_URL);
+        when(configService.getContactUsLinkRoute()).thenReturn(CONTACT_US_LINK_ROUTE);
 
         NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -191,6 +198,8 @@ public class NotificationHandlerTest {
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
         personalisation.put("email-address", notifyRequest.getDestination());
+        personalisation.put("contact-us-link", CONTACT_US_LINK_URL);
+
         Mockito.doThrow(NotificationClientException.class)
                 .when(notificationService)
                 .sendEmail(TEST_EMAIL_ADDRESS, personalisation, TEMPLATE_ID);
