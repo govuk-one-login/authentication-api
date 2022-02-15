@@ -11,6 +11,7 @@ module "frontend_api_verify_code_role" {
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
+    aws_iam_policy.cloudwatch_metrics_putdata_policy.arn,
   ]
 }
 
@@ -78,4 +79,19 @@ module "verify_code" {
     aws_api_gateway_resource.wellknown_resource,
     aws_sqs_queue.email_queue,
   ]
+}
+
+resource "aws_iam_policy" "cloudwatch_metrics_putdata_policy" {
+  name_prefix = "cloudwatch-put-metrics-policy-"
+  path        = "/${var.environment}/frontend-shared/"
+  description = "IAM policy enabling pushing metrics to CloudWatch"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["cloudwatch:PutMetricData"]
+      Resource = ["*"]
+    }]
+  })
 }
