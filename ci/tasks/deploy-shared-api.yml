@@ -14,7 +14,7 @@ params:
   STATE_BUCKET: digital-identity-dev-tfstate
   TEST_CLIENT_EMAIL_ALLOWLIST: ((test-client-email-allowlist))
 inputs:
-  - name: api-src
+  - name: api-terraform-src
   - name: account-migration-release
 outputs:
   - name: terraform-outputs
@@ -23,7 +23,7 @@ run:
   args:
     - -euc
     - |
-      cd "api-src/ci/terraform/shared"
+      cd "api-terraform-src/ci/terraform/shared"
       terraform init -input=false \
         -backend-config "role_arn=${DEPLOYER_ROLE_ARN}" \
         -backend-config "bucket=${STATE_BUCKET}" \
