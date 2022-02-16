@@ -13,6 +13,7 @@ params:
   PASSWORD_PEPPER: ((build-password-pepper))
   STATE_BUCKET: digital-identity-dev-tfstate
   TEST_CLIENT_EMAIL_ALLOWLIST: ((test-client-email-allowlist))
+  DI_TOOLS_SIGNING_PROFILE_VERSION_ARN: ((di-tools-signing-profile-version-arn))
 inputs:
   - name: api-terraform-src
   - name: account-migration-release
@@ -40,6 +41,7 @@ run:
         -var 'account_migration_lambda_zip_file=../../../../account-migration-release/account-migrations.zip' \
         -var "password_pepper=${PASSWORD_PEPPER}" \
         -var "common_state_bucket=${STATE_BUCKET}" \
+        -var "di_tools_signing_profile_version_arn=${DI_TOOLS_SIGNING_PROFILE_VERSION_ARN}" \
         -var-file ${DEPLOY_ENVIRONMENT}-stub-clients.tfvars \
         -var-file ${DEPLOY_ENVIRONMENT}-sizing.tfvars \
 

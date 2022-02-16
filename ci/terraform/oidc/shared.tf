@@ -34,4 +34,5 @@ locals {
   redis_ssm_parameter_policy                  = data.terraform_remote_state.shared.outputs.redis_ssm_parameter_policy
   pepper_ssm_parameter_policy                 = data.terraform_remote_state.shared.outputs.pepper_ssm_parameter_policy
   ipv_capacity_ssm_parameter_policy           = data.terraform_remote_state.shared.outputs.ipv_capacity_ssm_parameter_policy
+  lambda_code_signing_configuration_arn       = data.terraform_remote_state.shared.outputs.lambda_code_signing_configuration_arn
 }

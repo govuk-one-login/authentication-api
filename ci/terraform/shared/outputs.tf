@@ -129,3 +129,7 @@ output "pepper_ssm_parameter_policy" {
 output "ipv_capacity_ssm_parameter_policy" {
   value = aws_iam_policy.ipv_capacity_parameter_policy.arn
 }
+
+output "lambda_code_signing_configuration_arn" {
+  value = aws_lambda_code_signing_config.code_signing_config.arn
+}
