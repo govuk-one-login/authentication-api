@@ -180,3 +180,7 @@ variable "lambda_log_alarm_threshold" {
 variable "lambda_env_vars_encryption_kms_key_arn" {
   type = string
 }
+
+variable "code_signing_config_arn" {
+  default = null
+}

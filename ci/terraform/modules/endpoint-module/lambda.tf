@@ -27,6 +27,8 @@ resource "aws_lambda_function" "endpoint_lambda" {
 
   runtime = var.handler_runtime
 
+  code_signing_config_arn = var.code_signing_config_arn
+
   tags = var.default_tags
 }
 
