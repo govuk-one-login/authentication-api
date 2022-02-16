@@ -51,7 +51,7 @@ run:
         -var 'oidc_api_lambda_zip_file=../../../../oidc-api-release/oidc-api.zip' \
         -var 'frontend_api_lambda_zip_file=../../../../frontend-api-release/frontend-api.zip' \
         -var 'client_registry_api_lambda_zip_file=../../../../client-registry-api-release/client-registry-api.zip' \
-        -var 'ipv_api_lambda_zip_file=../../../../ipv-api-release/ipv-api.zip' \
+        -var "ipv_api_lambda_zip_file=$(ls -1 ../../../../ipv-api-release/*.zip)" \
         -var 'lambda_warmer_zip_file=../../../../lambda-warmer-release/lambda-warmer.zip' \
         -var "deployer_role_arn=${DEPLOYER_ROLE_ARN}" \
         -var "notify_api_key=${NOTIFY_API_KEY}" \
