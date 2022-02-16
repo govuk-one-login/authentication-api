@@ -68,8 +68,8 @@ public class SendOtpNotificationHandler
         this.auditService = auditService;
     }
 
-    public SendOtpNotificationHandler() {
-        this.configurationService = ConfigurationService.getInstance();
+    public SendOtpNotificationHandler(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
@@ -81,6 +81,10 @@ public class SendOtpNotificationHandler
                 new CodeStorageService(new RedisConnectionService(configurationService));
         this.dynamoService = new DynamoService(configurationService);
         this.auditService = new AuditService(configurationService);
+    }
+
+    public SendOtpNotificationHandler() {
+        this(ConfigurationService.getInstance());
     }
 
     @Override
