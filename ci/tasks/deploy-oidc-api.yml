@@ -22,7 +22,7 @@ params:
   IPV_AUTHORISATION_CALLBACK_URI: undefined
   IPV_AUTHORISATION_CLIENT_ID: undefined
 inputs:
-  - name: api-src
+  - name: api-terraform-src
   - name: oidc-api-release
   - name: frontend-api-release
   - name: client-registry-api-release
@@ -39,7 +39,7 @@ run:
     - |
       source oidc-api-env-vars/env.sh
 
-      cd "api-src/ci/terraform/oidc"
+      cd "api-terraform-src/ci/terraform/oidc"
       terraform init -input=false \
         -backend-config "role_arn=${DEPLOYER_ROLE_ARN}" \
         -backend-config "bucket=${STATE_BUCKET}" \
