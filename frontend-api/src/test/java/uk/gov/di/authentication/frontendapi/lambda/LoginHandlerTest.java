@@ -17,14 +17,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
@@ -55,12 +53,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
@@ -156,7 +152,7 @@ class LoginHandlerTest {
                 response.getRedactedPhoneNumber(),
                 equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
-        verify(authenticationService).getUserProfileByEmail(EMAIL);
+        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 
         verify(auditService)
                 .submitAuditEvent(
@@ -479,61 +475,6 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
-    }
-
-    @Test
-    public void shouldSetSessionCredentialStrengthIfClientSessionsVtrIsLow() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-        when(userMigrationService.userHasBeenPartlyMigrated(
-                userProfile.getLegacySubjectID(), EMAIL))
-                .thenReturn(false);
-        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest().toParameters());
-
-        VectorOfTrust vectorOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf("Cl")));
-        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vectorOfTrust);
-
-        usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        ArgumentCaptor<Session> sessionArgumentCaptor = ArgumentCaptor.forClass(Session.class);
-        verify(sessionService, times(1)).save(sessionArgumentCaptor.capture());
-
-        Session session = sessionArgumentCaptor.getValue();
-        assertThat(session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.LOW_LEVEL));
-    }
-
-    @Test
-    public void shouldNotSetSessionCredentialStrengthIfClientSessionsVtrIsMedium() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-        when(userMigrationService.userHasBeenPartlyMigrated(
-                userProfile.getLegacySubjectID(), EMAIL))
-                .thenReturn(false);
-        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest().toParameters());
-
-        usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        ArgumentCaptor<Session> sessionArgumentCaptor = ArgumentCaptor.forClass(Session.class);
-        verify(sessionService, times(1)).save(sessionArgumentCaptor.capture());
-
-        Session session = sessionArgumentCaptor.getValue();
-        assertThat(session.getCurrentCredentialStrength(), nullValue());
     }
 
     private AuthenticationRequest generateAuthRequest() {
