@@ -252,8 +252,6 @@ class AuthorisationHandlerTest {
     @Test
     void shouldRedirectToLoginWithPromptParamWhenSetToLoginAndExistingSessionIsPresent() {
         withExistingSession(session);
-        when(authorizationService.buildUserContext(eq(session), any(ClientSession.class)))
-                .thenReturn(userContext);
         when(userContext.getClientSession()).thenReturn(clientSession);
         when(userContext.getSession()).thenReturn(session);
         when(clientSession.getAuthRequestParams())
@@ -268,7 +266,6 @@ class AuthorisationHandlerTest {
         assertThat(response, hasStatus(302));
         assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
         assertThat(uri.getQuery(), containsString("prompt=login"));
-        assertThat(uri.getQuery(), containsString("consent=false"));
 
         assertTrue(
                 response.getMultiValueHeaders()
@@ -295,12 +292,10 @@ class AuthorisationHandlerTest {
     }
 
     @Test
-    void shouldRedirectToLoginWithUpliftParamWhenUserRequiresUplift() {
+    void shouldRedirectToLoginWhenUserNeedsToBeUplifted() {
         session.setCurrentCredentialStrength(CredentialTrustLevel.LOW_LEVEL);
         withExistingSession(session);
         when(clientSession.getEffectiveVectorOfTrust()).thenReturn(VectorOfTrust.getDefaults());
-        when(authorizationService.buildUserContext(eq(session), any(ClientSession.class)))
-                .thenReturn(userContext);
         when(userContext.getClientSession()).thenReturn(clientSession);
         when(userContext.getSession()).thenReturn(session);
         when(clientSession.getAuthRequestParams())
@@ -314,8 +309,6 @@ class AuthorisationHandlerTest {
 
         assertThat(response, hasStatus(302));
         assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
-        assertThat(uri.getQuery(), containsString("uplift=true"));
-        assertThat(uri.getQuery(), containsString("consent=false"));
 
         assertTrue(
                 response.getMultiValueHeaders()
@@ -342,10 +335,8 @@ class AuthorisationHandlerTest {
     }
 
     @Test
-    void shouldRedirectToLoginWitIdentityParamWhenIdentityIsRequired() {
+    void shouldRedirectToLoginWhenIdentityIsPresentInVtr() {
         withExistingSession(session);
-        when(authorizationService.buildUserContext(eq(session), any(ClientSession.class)))
-                .thenReturn(userContext);
         when(userContext.getClientSession()).thenReturn(clientSession);
         when(userContext.getSession()).thenReturn(session);
         when(clientSession.getAuthRequestParams())
@@ -360,8 +351,6 @@ class AuthorisationHandlerTest {
 
         assertThat(response, hasStatus(302));
         assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
-        assertThat(uri.getQuery(), containsString("identity=true"));
-        assertThat(uri.getQuery(), containsString("consent=false"));
 
         assertTrue(
                 response.getMultiValueHeaders()

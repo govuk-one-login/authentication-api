@@ -22,19 +22,13 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
-import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
-import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -63,7 +57,6 @@ class AuthorizationServiceTest {
     private static final Nonce NONCE = new Nonce();
     private AuthorizationService authorizationService;
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
-    private final DynamoService dynamoService = mock(DynamoService.class);
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -71,7 +64,7 @@ class AuthorizationServiceTest {
 
     @BeforeEach
     void setUp() {
-        authorizationService = new AuthorizationService(dynamoClientService, dynamoService);
+        authorizationService = new AuthorizationService(dynamoClientService);
     }
 
     @AfterEach
@@ -435,40 +428,6 @@ class AuthorizationServiceTest {
         assertThat(
                 exception.getMessage(),
                 equalTo(format("Invalid Redirect in request %s", redirectURi)));
-    }
-
-    @Test
-    void shouldCreateUserContextFromSessionAndClientSession() {
-        String email = "joe.bloggs@example.com";
-        Session session = new Session("a-session-id");
-        session.setEmailAddress(email);
-        ClientID clientId = new ClientID("client-id");
-        when(dynamoClientService.getClient(clientId.getValue()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), clientId.getValue())));
-        when(dynamoService.getUserProfileByEmailMaybe(email))
-                .thenReturn(Optional.of(mock(UserProfile.class)));
-        Scope scopes =
-                new Scope(
-                        OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
-        AuthenticationRequest authRequest =
-                new AuthenticationRequest.Builder(
-                                new ResponseType(ResponseType.Value.CODE),
-                                scopes,
-                                clientId,
-                                REDIRECT_URI)
-                        .state(new State())
-                        .nonce(new Nonce())
-                        .build();
-        ClientSession clientSession =
-                new ClientSession(
-                        authRequest.toParameters(), LocalDateTime.now(), mock(VectorOfTrust.class));
-        UserContext userContext = authorizationService.buildUserContext(session, clientSession);
-
-        assertEquals(userContext.getSession(), session);
-        assertEquals(userContext.getClientSession(), clientSession);
     }
 
     @Test

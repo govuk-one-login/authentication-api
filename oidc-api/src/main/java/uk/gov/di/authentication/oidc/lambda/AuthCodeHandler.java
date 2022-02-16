@@ -31,6 +31,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URISyntaxException;
+import java.util.Map;
 import java.util.Objects;
 
 import static java.util.Objects.isNull;

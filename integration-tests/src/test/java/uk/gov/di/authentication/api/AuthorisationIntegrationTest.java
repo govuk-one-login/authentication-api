@@ -266,7 +266,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(302));
         String redirectUri = getLocationResponseHeader(response);
-        assertThat(URI.create(redirectUri).getQuery(), equalTo("consent=true&uplift=false"));
         assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
         var cookie =
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
@@ -297,8 +296,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         constructQueryStringParameters(CLIENT_ID, null, "openid", null));
 
         assertThat(response, hasStatus(302));
-        String redirectUri = getLocationResponseHeader(response);
-        assertThat(URI.create(redirectUri).getQuery(), equalTo("consent=false&uplift=false"));
 
         var cookie =
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
@@ -329,10 +326,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm"));
 
         assertThat(response, hasStatus(302));
-        String redirectUri = getLocationResponseHeader(response);
-        assertThat(
-                URI.create(redirectUri).getQuery(),
-                equalTo("consent=false&uplift=false&identity=true"));
 
         var cookie =
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
@@ -391,11 +384,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(cookie.isPresent(), equalTo(true));
         assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
 
-        String redirectUri = getLocationResponseHeader(response);
         assertThat(
                 getLocationResponseHeader(response),
                 startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
-        assertThat(URI.create(redirectUri).getQuery(), equalTo("consent=false&uplift=false"));
 
         assertEventTypesReceived(
                 auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
@@ -429,9 +420,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         String redirectUri = getLocationResponseHeader(response);
         assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
-        assertThat(
-                URI.create(redirectUri).getQuery(),
-                equalTo("consent=true&uplift=false&prompt=login"));
+        assertThat(URI.create(redirectUri).getQuery(), equalTo("prompt=login"));
 
         assertEventTypesReceived(
                 auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
@@ -466,7 +455,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         String redirectUri = getLocationResponseHeader(response);
         assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
-        assertThat(URI.create(redirectUri).getQuery(), equalTo("consent=false&uplift=true"));
 
         assertEventTypesReceived(
                 auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
@@ -501,7 +489,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         String redirectUri = getLocationResponseHeader(response);
         assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
-        assertThat(URI.create(redirectUri).getQuery(), equalTo("consent=true&uplift=false"));
 
         assertEventTypesReceived(
                 auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));

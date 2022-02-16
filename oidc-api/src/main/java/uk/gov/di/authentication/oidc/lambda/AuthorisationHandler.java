@@ -16,9 +16,6 @@ import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
-import uk.gov.di.authentication.shared.conditions.ConsentHelper;
-import uk.gov.di.authentication.shared.conditions.IdentityHelper;
-import uk.gov.di.authentication.shared.conditions.UpliftHelper;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -30,7 +27,6 @@ import uk.gov.di.authentication.shared.services.AuthorizationService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -227,7 +223,6 @@ public class AuthorisationHandler
                         LocalDateTime.now(),
                         authorizationService.getEffectiveVectorOfTrust(authenticationRequest));
         String clientSessionID = clientSessionService.generateClientSession(clientSession);
-        UserContext userContext = authorizationService.buildUserContext(session, clientSession);
         String oldSessionId = session.getSessionId();
         sessionService.updateSessionId(session);
         session.addClientSession(clientSessionID);
@@ -238,8 +233,7 @@ public class AuthorisationHandler
         sessionService.save(session);
         LOG.info("Session saved successfully");
 
-        String redirectUri =
-                buildRedirectURI(authRequestParameters, authenticationRequest, userContext);
+        String redirectUri = buildRedirectURI(authRequestParameters, authenticationRequest);
 
         return redirect(session, clientSessionID, redirectUri, persistentSessionId);
     }
@@ -264,34 +258,21 @@ public class AuthorisationHandler
         sessionService.save(session);
         LOG.info("Session saved successfully");
 
-        var redirectURI = buildRedirectURI(authRequest, authenticationRequest, null);
+        var redirectURI = buildRedirectURI(authRequest, authenticationRequest);
         return redirect(session, clientSessionID, redirectURI, persistentSessionId);
     }
 
     private String buildRedirectURI(
             Map<String, List<String>> authRequestParameters,
-            AuthenticationRequest authenticationRequest,
-            UserContext userContext) {
+            AuthenticationRequest authenticationRequest) {
 
         URI redirectUri;
         try {
             URIBuilder redirectUriBuilder = new URIBuilder(configurationService.getLoginURI());
 
-            if (Objects.nonNull(userContext)) {
-                boolean consent = ConsentHelper.userHasNotGivenConsent(userContext);
-                redirectUriBuilder.addParameter("consent", String.valueOf(consent));
-                if (Objects.nonNull(userContext.getSession().getCurrentCredentialStrength())) {
-                    boolean uplift = UpliftHelper.upliftRequired(userContext);
-                    redirectUriBuilder.addParameter("uplift", String.valueOf(uplift));
-                }
-                if (IdentityHelper.identityRequired(
-                        userContext.getClientSession().getAuthRequestParams())) {
-                    redirectUriBuilder.addParameter("identity", String.valueOf(true));
-                }
-                if (Objects.nonNull(authenticationRequest.getPrompt())
-                        && authenticationRequest.getPrompt().contains(Prompt.Type.LOGIN)) {
-                    redirectUriBuilder.addParameter("prompt", String.valueOf(Prompt.Type.LOGIN));
-                }
+            if (Objects.nonNull(authenticationRequest.getPrompt())
+                    && authenticationRequest.getPrompt().contains(Prompt.Type.LOGIN)) {
+                redirectUriBuilder.addParameter("prompt", String.valueOf(Prompt.Type.LOGIN));
             }
 
             var cookieConsent = getCookieConsentValue(authRequestParameters, authenticationRequest);

@@ -42,7 +42,8 @@ public enum ErrorResponse {
     ERROR_1034(1034, "User entered invalid phone verification code too many times"),
     ERROR_1035(1035, "User entered invalid mfa code"),
     ERROR_1036(1036, "User entered invalid email verification code"),
-    ERROR_1037(1037, "User entered invalid phone verification code");
+    ERROR_1037(1037, "User entered invalid phone verification code"),
+    ERROR_1038(1038, "Invalid Authentication Request");
 
     @JsonProperty("code")
     private int code;
