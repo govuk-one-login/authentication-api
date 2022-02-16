@@ -1,4 +1,3 @@
-
 data "terraform_remote_state" "shared" {
   backend = "s3"
   config = {
@@ -13,4 +12,8 @@ data "terraform_remote_state" "shared" {
     skip_metadata_api_check     = var.use_localstack
     force_path_style            = var.use_localstack
   }
+}
+
+locals {
+  lambda_code_signing_configuration_arn = data.terraform_remote_state.shared.outputs.lambda_code_signing_configuration_arn
 }
