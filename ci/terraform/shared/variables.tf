@@ -139,3 +139,7 @@ variable "password_pepper" {
 variable "common_state_bucket" {
   type = string
 }
+
+variable "di_tools_signing_profile_version_arn" {
+  description = "The AWS Signer profile version to use from the `di-tools-prod` account"
+}
