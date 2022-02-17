@@ -172,6 +172,8 @@ resource "aws_lambda_function" "email_sqs_lambda" {
   s3_key            = aws_s3_bucket_object.account_management_api_release_zip.key
   s3_object_version = aws_s3_bucket_object.account_management_api_release_zip.version_id
 
+  code_signing_config_arn = local.lambda_code_signing_configuration_arn
+
   vpc_config {
     security_group_ids = [local.allow_egress_security_group_id]
     subnet_ids         = local.private_subnet_ids

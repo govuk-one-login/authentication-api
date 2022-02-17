@@ -22,6 +22,8 @@ resource "aws_lambda_function" "authorizer" {
   s3_key            = aws_s3_bucket_object.account_management_api_release_zip.key
   s3_object_version = aws_s3_bucket_object.account_management_api_release_zip.version_id
 
+  code_signing_config_arn = local.lambda_code_signing_configuration_arn
+
   publish     = true
   timeout     = 30
   memory_size = 2048
