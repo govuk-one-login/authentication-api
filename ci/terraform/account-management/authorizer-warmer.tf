@@ -49,6 +49,8 @@ resource "aws_lambda_function" "warmer_function" {
   s3_key            = aws_s3_bucket_object.warmer_release_zip.key
   s3_object_version = aws_s3_bucket_object.warmer_release_zip.version_id
 
+  code_signing_config_arn = local.lambda_code_signing_configuration_arn
+
   vpc_config {
     security_group_ids = [local.allow_aws_service_access_security_group_id]
     subnet_ids         = local.private_subnet_ids

@@ -14,6 +14,8 @@ resource "aws_lambda_function" "endpoint_lambda" {
   s3_key            = var.lambda_zip_file
   s3_object_version = var.lambda_zip_file_version
 
+  code_signing_config_arn = var.code_signing_config_arn
+
   vpc_config {
     security_group_ids = var.security_group_ids
     subnet_ids         = var.subnet_id
@@ -26,8 +28,6 @@ resource "aws_lambda_function" "endpoint_lambda" {
   kms_key_arn = var.lambda_env_vars_encryption_kms_key_arn
 
   runtime = var.handler_runtime
-
-  code_signing_config_arn = var.code_signing_config_arn
 
   tags = var.default_tags
 }
