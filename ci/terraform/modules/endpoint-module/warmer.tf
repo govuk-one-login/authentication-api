@@ -135,6 +135,8 @@ resource "aws_lambda_function" "warmer_function" {
   s3_key            = var.warmer_lambda_zip_file
   s3_object_version = var.warmer_lambda_zip_file_version
 
+  code_signing_config_arn = var.code_signing_config_arn
+
   vpc_config {
     security_group_ids = var.warmer_security_group_ids
     subnet_ids         = var.subnet_id
