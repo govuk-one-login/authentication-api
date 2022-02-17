@@ -31,7 +31,7 @@ run:
         -backend-config "region=eu-west-2"
 
       terraform apply -auto-approve \
-        -var "lambda_zip_file=../../../../audit-processors-release/audit-processors.zip" \
+        -var "lambda_zip_file=$(ls -1 ../../../../audit-processors-release/*.zip)" \
         -var "deployer_role_arn=${DEPLOYER_ROLE_ARN}" \
         -var "environment=${DEPLOY_ENVIRONMENT}" \
         -var "shared_state_bucket=${STATE_BUCKET}" \
