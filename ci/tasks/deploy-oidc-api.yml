@@ -48,7 +48,7 @@ run:
         -backend-config "region=eu-west-2"
 
       terraform apply -auto-approve \
-        -var 'oidc_api_lambda_zip_file=../../../../oidc-api-release/oidc-api.zip' \
+        -var "oidc_api_lambda_zip_file=$(ls -1 ../../../../oidc-api-release/*.zip)" \
         -var "frontend_api_lambda_zip_file=$(ls -1 ../../../../frontend-api-release/*.zip)" \
         -var "client_registry_api_lambda_zip_file=$(ls -1 ../../../../client-registry-api-release/*.zip)" \
         -var "ipv_api_lambda_zip_file=$(ls -1 ../../../../ipv-api-release/*.zip)" \
