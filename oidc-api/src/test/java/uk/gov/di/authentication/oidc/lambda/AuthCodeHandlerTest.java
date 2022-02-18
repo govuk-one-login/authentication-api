@@ -38,6 +38,8 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.AuthorizationService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -69,6 +71,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.entity.RequestParameters.COOKIE_CONSENT;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
+import static uk.gov.di.authentication.shared.entity.Session.AccountState.NEW;
 import static uk.gov.di.authentication.shared.services.AuthorizationService.COOKIE_CONSENT_ACCEPT;
 import static uk.gov.di.authentication.shared.services.AuthorizationService.COOKIE_CONSENT_NOT_ENGAGED;
 import static uk.gov.di.authentication.shared.services.AuthorizationService.COOKIE_CONSENT_REJECT;
@@ -94,6 +97,9 @@ class AuthCodeHandlerTest {
     private final ClientSession clientSession = mock(ClientSession.class);
     private final AuditService auditService = mock(AuditService.class);
     private final VectorOfTrust vectorOfTrust = mock(VectorOfTrust.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private AuthCodeHandler handler;
 
     private final Session session =
@@ -129,8 +135,11 @@ class AuthCodeHandlerTest {
                         authorisationCodeService,
                         authorizationService,
                         clientSessionService,
-                        auditService);
+                        auditService,
+                        cloudwatchMetricsService,
+                        configurationService);
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
+        when(configurationService.getEnvironment()).thenReturn("unit-test");
     }
 
     private static Stream<Arguments> upliftTestParameters() {
@@ -155,7 +164,7 @@ class AuthCodeHandlerTest {
             throws ClientNotFoundException, URISyntaxException {
         AuthorizationCode authorizationCode = new AuthorizationCode();
         AuthenticationRequest authRequest = generateValidSessionAndAuthRequest(requestedLevel);
-        session.setCurrentCredentialStrength(initialLevel);
+        session.setCurrentCredentialStrength(initialLevel).setNewAccount(NEW);
         AuthenticationSuccessResponse authSuccessResponse =
                 new AuthenticationSuccessResponse(
                         authRequest.getRedirectionURI(),
@@ -200,6 +209,9 @@ class AuthCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID);
+
+        verify(cloudwatchMetricsService)
+                .incrementCounter("SignIn", Map.of("Account", "NEW", "Environment", "unit-test"));
     }
 
     @ParameterizedTest
@@ -208,7 +220,7 @@ class AuthCodeHandlerTest {
             throws ClientNotFoundException, URISyntaxException {
         AuthorizationCode authorizationCode = new AuthorizationCode();
         AuthenticationRequest authRequest = generateValidSessionAndAuthRequest(MEDIUM_LEVEL);
-        session.setCurrentCredentialStrength(MEDIUM_LEVEL);
+        session.setCurrentCredentialStrength(MEDIUM_LEVEL).setNewAccount(NEW);
         AuthenticationSuccessResponse authSuccessResponse =
                 generateSuccessfulAuthResponse(
                         authRequest, authorizationCode, COOKIE_CONSENT, cookieValue);
@@ -249,6 +261,9 @@ class AuthCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID);
+
+        verify(cloudwatchMetricsService)
+                .incrementCounter("SignIn", Map.of("Account", "NEW", "Environment", "unit-test"));
     }
 
     @Test
@@ -256,7 +271,7 @@ class AuthCodeHandlerTest {
             throws ClientNotFoundException, URISyntaxException {
         String invalidCookieValue = "rubbish-cookie-consent";
         AuthorizationCode authorizationCode = new AuthorizationCode();
-        session.setCurrentCredentialStrength(MEDIUM_LEVEL);
+        session.setCurrentCredentialStrength(MEDIUM_LEVEL).setNewAccount(NEW);
         generateValidSessionAndAuthRequest(MEDIUM_LEVEL);
         when(authorizationService.isClientRedirectUriValid(eq(CLIENT_ID), eq(REDIRECT_URI)))
                 .thenReturn(true);
@@ -289,6 +304,9 @@ class AuthCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID);
+
+        verify(cloudwatchMetricsService)
+                .incrementCounter("SignIn", Map.of("Account", "NEW", "Environment", "unit-test"));
     }
 
     @Test

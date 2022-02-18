@@ -30,6 +30,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.AuthorizationService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.StateMachine;
@@ -64,20 +65,26 @@ public class AuthCodeHandler
     private final AuthorizationService authorizationService;
     private final ClientSessionService clientSessionService;
     private final AuditService auditService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
     private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
             userJourneyStateMachine();
+    private final ConfigurationService configurationService;
 
     public AuthCodeHandler(
             SessionService sessionService,
             AuthorisationCodeService authorisationCodeService,
             AuthorizationService authorizationService,
             ClientSessionService clientSessionService,
-            AuditService auditService) {
+            AuditService auditService,
+            CloudwatchMetricsService cloudwatchMetricsService,
+            ConfigurationService configurationService) {
         this.sessionService = sessionService;
         this.authorisationCodeService = authorisationCodeService;
         this.authorizationService = authorizationService;
         this.clientSessionService = clientSessionService;
         this.auditService = auditService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.configurationService = configurationService;
     }
 
     public AuthCodeHandler(ConfigurationService configurationService) {
@@ -86,6 +93,8 @@ public class AuthCodeHandler
         authorizationService = new AuthorizationService(configurationService);
         clientSessionService = new ClientSessionService(configurationService);
         auditService = new AuditService(configurationService);
+        cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.configurationService = configurationService;
     }
 
     public AuthCodeHandler() {
@@ -208,6 +217,15 @@ public class AuthCodeHandler
 
                                 sessionService.save(session.setState(nextState));
                                 LOG.info("Successfully processed request");
+
+                                cloudwatchMetricsService.incrementCounter(
+                                        "SignIn",
+                                        Map.of(
+                                                "Account",
+                                                session.isNewAccount().name(),
+                                                "Environment",
+                                                configurationService.getEnvironment()));
+
                                 auditService.submitAuditEvent(
                                         OidcAuditableEvent.AUTH_CODE_ISSUED,
                                         context.getAwsRequestId(),
