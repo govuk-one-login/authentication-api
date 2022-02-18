@@ -16,6 +16,7 @@ dependencies {
             configurations.jackson,
             configurations.nimbus,
             configurations.bouncycastle,
+            configurations.cloudwatch,
             project(":shared"),
             project(":client-registry-api")
 

@@ -53,6 +53,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -166,6 +167,9 @@ class LoginHandlerTest {
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),
                         persistentId);
+
+        verify(sessionService)
+                .save(argThat(session -> session.isNewAccount() == Session.AccountState.EXISTING));
     }
 
     @Test
@@ -195,6 +199,9 @@ class LoginHandlerTest {
         assertThat(
                 response.getRedactedPhoneNumber(),
                 equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+
+        verify(sessionService)
+                .save(argThat(session -> session.isNewAccount() == Session.AccountState.EXISTING));
     }
 
     @Test
@@ -224,6 +231,9 @@ class LoginHandlerTest {
         assertThat(
                 response.getRedactedPhoneNumber(),
                 equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+
+        verify(sessionService)
+                .save(argThat(session -> session.isNewAccount() == Session.AccountState.EXISTING));
     }
 
     @Test

@@ -10,6 +10,12 @@ import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
 
 public class Session {
 
+    public enum AccountState {
+        NEW,
+        EXISTING,
+        UNKNOWN
+    }
+
     @JsonProperty("session_id")
     private String sessionId;
 
@@ -34,10 +40,14 @@ public class Session {
     @JsonProperty("current_credential_strength")
     private CredentialTrustLevel currentCredentialStrength;
 
+    @JsonProperty("is_new_account")
+    private AccountState isNewAccount;
+
     public Session(String sessionId) {
         this.sessionId = sessionId;
         this.state = NEW;
         this.clientSessions = new ArrayList<>();
+        this.isNewAccount = AccountState.UNKNOWN;
     }
 
     @JsonCreator
@@ -50,6 +60,7 @@ public class Session {
         this.clientSessions = clientSessions;
         this.state = state;
         this.emailAddress = emailAddress;
+        this.isNewAccount = AccountState.UNKNOWN;
     }
 
     public String getSessionId() {
@@ -139,6 +150,15 @@ public class Session {
 
     public Session setCurrentCredentialStrength(CredentialTrustLevel currentCredentialStrength) {
         this.currentCredentialStrength = currentCredentialStrength;
+        return this;
+    }
+
+    public AccountState isNewAccount() {
+        return isNewAccount;
+    }
+
+    public Session setNewAccount(AccountState isNewAccount) {
+        this.isNewAccount = isNewAccount;
         return this;
     }
 }

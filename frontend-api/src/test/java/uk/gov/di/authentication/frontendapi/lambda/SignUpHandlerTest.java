@@ -145,6 +145,9 @@ class SignUpHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         persistentId);
+
+        verify(sessionService)
+                .save(argThat(session -> session.isNewAccount() == Session.AccountState.NEW));
     }
 
     @Test

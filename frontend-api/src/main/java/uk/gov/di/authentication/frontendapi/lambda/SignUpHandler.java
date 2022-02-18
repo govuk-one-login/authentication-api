@@ -33,6 +33,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.entity.Session.AccountState.NEW;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_HAS_CREATED_A_PASSWORD;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -152,6 +153,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                         userContext
                                 .getSession()
                                 .setState(nextState)
+                                .setNewAccount(NEW)
                                 .setEmailAddress(request.getEmail()));
 
                 LOG.info("Successfully processed request");

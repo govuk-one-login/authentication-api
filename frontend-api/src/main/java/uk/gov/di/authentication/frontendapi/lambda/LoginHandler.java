@@ -37,6 +37,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.LOG_IN_SUCCESS;
+import static uk.gov.di.authentication.shared.entity.Session.AccountState.EXISTING;
 import static uk.gov.di.authentication.shared.entity.SessionAction.ACCOUNT_LOCK_EXPIRED;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_PASSWORD_TOO_MANY_TIMES;
 import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_CREDENTIALS;
@@ -212,7 +213,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             if (credentialTrustLevel.equals(CredentialTrustLevel.LOW_LEVEL)) {
                 session.setCurrentCredentialStrength(credentialTrustLevel);
             }
-            sessionService.save(session);
+
+            sessionService.save(session.setNewAccount(EXISTING));
 
             if (nextState.equals(TWO_FACTOR_REQUIRED)) {
                 return generateApiGatewayProxyResponse(
