@@ -224,7 +224,9 @@ public class AuthCodeHandler
                                                 "Account",
                                                 session.isNewAccount().name(),
                                                 "Environment",
-                                                configurationService.getEnvironment()));
+                                                configurationService.getEnvironment(),
+                                                "Client",
+                                                authenticationRequest.getClientID().getValue()));
 
                                 auditService.submitAuditEvent(
                                         OidcAuditableEvent.AUTH_CODE_ISSUED,

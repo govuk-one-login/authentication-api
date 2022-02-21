@@ -211,7 +211,15 @@ class AuthCodeHandlerTest {
                         PERSISTENT_SESSION_ID);
 
         verify(cloudwatchMetricsService)
-                .incrementCounter("SignIn", Map.of("Account", "NEW", "Environment", "unit-test"));
+                .incrementCounter(
+                        "SignIn",
+                        Map.of(
+                                "Account",
+                                "NEW",
+                                "Environment",
+                                "unit-test",
+                                "Client",
+                                CLIENT_ID.getValue()));
     }
 
     @ParameterizedTest
@@ -263,7 +271,15 @@ class AuthCodeHandlerTest {
                         PERSISTENT_SESSION_ID);
 
         verify(cloudwatchMetricsService)
-                .incrementCounter("SignIn", Map.of("Account", "NEW", "Environment", "unit-test"));
+                .incrementCounter(
+                        "SignIn",
+                        Map.of(
+                                "Account",
+                                "NEW",
+                                "Environment",
+                                "unit-test",
+                                "Client",
+                                CLIENT_ID.getValue()));
     }
 
     @Test
@@ -306,7 +322,15 @@ class AuthCodeHandlerTest {
                         PERSISTENT_SESSION_ID);
 
         verify(cloudwatchMetricsService)
-                .incrementCounter("SignIn", Map.of("Account", "NEW", "Environment", "unit-test"));
+                .incrementCounter(
+                        "SignIn",
+                        Map.of(
+                                "Account",
+                                "NEW",
+                                "Environment",
+                                "unit-test",
+                                "Client",
+                                CLIENT_ID.getValue()));
     }
 
     @Test
