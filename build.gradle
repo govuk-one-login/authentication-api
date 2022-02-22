@@ -92,7 +92,7 @@ subprojects {
         glassfish "org.glassfish.jersey.core:jersey-client:${dependencyVersions.glassfish_version}",
                 "org.glassfish.jersey.inject:jersey-hk2:${dependencyVersions.glassfish_version}",
                 "org.glassfish.jersey.media:jersey-media-json-jackson:${dependencyVersions.glassfish_version}",
-                "jakarta.activation:jakarta.activation-api:2.0.1"
+                "jakarta.activation:jakarta.activation-api:2.1.0"
 
         govuk_notify "uk.gov.service.notify:notifications-java-client:3.17.2-RELEASE"
 
