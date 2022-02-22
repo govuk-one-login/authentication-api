@@ -53,7 +53,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     }
 
     @Test
-    public void shouldCallVerifyCodeEndpointToVerifyEmailCodeAndReturn204() throws IOException {
+    void shouldCallVerifyCodeEndpointToVerifyEmailCodeAndReturn204() throws IOException {
         String sessionId = redis.createSession();
         setUpTestWithoutSignUp(sessionId, withScope());
         String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
@@ -70,7 +70,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     }
 
     @Test
-    public void shouldCallVerifyCodeEndpointAndReturn400WhenEmailCodeHasExpired()
+    void shouldCallVerifyCodeEndpointAndReturn400WhenEmailCodeHasExpired()
             throws IOException, InterruptedException {
         String sessionId = redis.createSession();
         setUpTestWithoutSignUp(sessionId, withScope());
@@ -93,7 +93,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     }
 
     @Test
-    public void shouldReturn400WithErrorWhenUserTriesEmailCodeThatTheyHaveAlreadyUsed()
+    void shouldReturn400WithErrorWhenUserTriesEmailCodeThatTheyHaveAlreadyUsed()
             throws IOException {
         String sessionId = redis.createSession();
         setUpTestWithoutSignUp(sessionId, withScope());
@@ -121,7 +121,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     }
 
     @Test
-    public void shouldCallVerifyCodeEndpointToVerifyPhoneCodeAndReturn204() throws IOException {
+    void shouldCallVerifyCodeEndpointToVerifyPhoneCodeAndReturn204() throws IOException {
         String sessionId = redis.createSession();
         Scope scope = withScope();
         setUpTestWithoutClientConsent(sessionId, scope);
@@ -147,7 +147,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     }
 
     @Test
-    public void shouldCallVerifyCodeEndpointAndReturn400WithErrorWhenPhoneNumberCodeHasExpired()
+    void shouldCallVerifyCodeEndpointAndReturn400WithErrorWhenPhoneNumberCodeHasExpired()
             throws IOException, InterruptedException {
         String sessionId = redis.createSession();
         setUpTestWithoutSignUp(sessionId, withScope());
@@ -171,7 +171,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     }
 
     @Test
-    public void shouldReturnMaxCodesReachedIfPhoneNumberCodeIsBlocked() throws IOException {
+    void shouldReturnMaxCodesReachedIfPhoneNumberCodeIsBlocked() throws IOException {
         String sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
         redis.blockPhoneCode(EMAIL_ADDRESS);
@@ -190,7 +190,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     }
 
     @Test
-    public void shouldReturnMaxCodesReachedIfEmailCodeIsBlocked() throws IOException {
+    void shouldReturnMaxCodesReachedIfEmailCodeIsBlocked() throws IOException {
         String sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
         redis.blockPhoneCode(EMAIL_ADDRESS);
@@ -208,7 +208,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     }
 
     @Test
-    public void shouldReturn204WhenUserHasAcceptedCurrentTermsAndConditions() throws Exception {
+    void shouldReturn204WhenUserHasAcceptedCurrentTermsAndConditions() throws Exception {
         String sessionId = redis.createSession();
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);

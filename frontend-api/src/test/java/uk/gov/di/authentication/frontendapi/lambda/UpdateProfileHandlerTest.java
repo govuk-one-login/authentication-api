@@ -100,11 +100,11 @@ class UpdateProfileHandlerTest {
     private final Session session = new Session(SESSION_ID).setEmailAddress(TEST_EMAIL_ADDRESS);
 
     @RegisterExtension
-    public final CaptureLoggingExtension logging =
+    private final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(UpdateProfileHandler.class);
 
     @AfterEach
-    public void tearDown() {
+    void tearDown() {
         assertThat(
                 logging.events(),
                 not(
@@ -114,10 +114,11 @@ class UpdateProfileHandlerTest {
                                         CLIENT_SESSION_ID,
                                         CLIENT_ID,
                                         TEST_EMAIL_ADDRESS))));
+        verifyNoMoreInteractions(auditService);
     }
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         when(context.getAwsRequestId()).thenReturn("request-id");
         handler =
                 new UpdateProfileHandler(
@@ -129,13 +130,8 @@ class UpdateProfileHandlerTest {
                         clientService);
     }
 
-    @AfterEach
-    public void afterEach() {
-        verifyNoMoreInteractions(auditService);
-    }
-
     @Test
-    public void shouldReturn204WhenUpdatingPhoneNumber() {
+    void shouldReturn204WhenUpdatingPhoneNumber() {
         usingValidSession();
         String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
@@ -167,7 +163,7 @@ class UpdateProfileHandlerTest {
     }
 
     @Test
-    public void shouldReturn204WhenUpdatingTermsAndConditions() {
+    void shouldReturn204WhenUpdatingTermsAndConditions() {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -205,7 +201,7 @@ class UpdateProfileHandlerTest {
     }
 
     @Test
-    public void shouldReturn204WhenUpdatingProfileWithConsent()
+    void shouldReturn204WhenUpdatingProfileWithConsent()
             throws ClientNotFoundException, URISyntaxException {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -265,7 +261,7 @@ class UpdateProfileHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenRequestIsMissingParameters() {
+    void shouldReturn400WhenRequestIsMissingParameters() {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));

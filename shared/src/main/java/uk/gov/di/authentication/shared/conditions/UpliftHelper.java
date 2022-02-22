@@ -4,6 +4,8 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 public class UpliftHelper {
 
+    private UpliftHelper() {}
+
     public static boolean upliftRequired(UserContext context) {
         return (context.getSession()
                         .getCurrentCredentialStrength()

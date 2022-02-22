@@ -33,7 +33,7 @@ import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.a
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-public class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String CLIENT_ID = "test-client-id";
@@ -49,7 +49,7 @@ public class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    public void shouldReturn200AndStartResponse() throws IOException {
+    void shouldReturn200AndStartResponse() throws IOException {
         String sessionId = redis.createSession();
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
@@ -90,7 +90,7 @@ public class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    public void shouldReturn400WhenClientSessionIdMissing() {
+    void shouldReturn400WhenClientSessionIdMissing() {
         var headers = Map.of("X-API-Key", FRONTEND_API_KEY);
 
         var response = makeRequest(Optional.empty(), headers, Map.of());

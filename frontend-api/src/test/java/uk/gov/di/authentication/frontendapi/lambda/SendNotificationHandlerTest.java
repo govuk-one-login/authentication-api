@@ -115,11 +115,11 @@ class SendNotificationHandlerTest {
                     codeStorageService);
 
     @RegisterExtension
-    public final CaptureLoggingExtension logging =
+    private final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(SendNotificationHandler.class);
 
     @AfterEach
-    public void tearDown() {
+    void tearDown() {
         assertThat(
                 logging.events(),
                 not(
@@ -223,7 +223,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfRequestIsMissingEmail() {
+    void shouldReturn400IfRequestIsMissingEmail() {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -235,7 +235,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfEmailAddressIsInvalid() {
+    void shouldReturn400IfEmailAddressIsInvalid() {
         session.setEmailAddress("joe.bloggs");
 
         usingValidSession();
@@ -257,7 +257,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn500IfMessageCannotBeSentToQueue() throws JsonProcessingException {
+    void shouldReturn500IfMessageCannotBeSentToQueue() throws JsonProcessingException {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
         NotifyRequest notifyRequest =
@@ -280,7 +280,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenInvalidNotificationType() {
+    void shouldReturn400WhenInvalidNotificationType() {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
 
@@ -302,7 +302,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn204AndPutMessageOnQueueForAValidVerifyPhoneNumberRequest() {
+    void shouldReturn204AndPutMessageOnQueueForAValidVerifyPhoneNumberRequest() {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -317,7 +317,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenVerifyTypeIsVerifyPhoneNumberButRequestIsMissingNumber() {
+    void shouldReturn400WhenVerifyTypeIsVerifyPhoneNumberButRequestIsMissingNumber() {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -332,7 +332,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenPhoneNumberIsInvalid() {
+    void shouldReturn400WhenPhoneNumberIsInvalid() {
         when(validationService.validatePhoneNumber(eq("123456789")))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1012));
         usingValidSession();
@@ -349,7 +349,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserHasReachedTheEmailCodeRequestLimit() {
+    void shouldReturn400IfUserHasReachedTheEmailCodeRequestLimit() {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
         maxOutCodeRequestCount();
@@ -377,7 +377,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserHasReachedThePhoneCodeRequestLimit() {
+    void shouldReturn400IfUserHasReachedThePhoneCodeRequestLimit() {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
         maxOutCodeRequestCount();
@@ -408,7 +408,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreOtpCodes() {
+    void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreOtpCodes() {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
         when(codeStorageService.isBlockedForEmail(
@@ -430,7 +430,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserIsBlockedFromEnteringEmailOtpCodes() {
+    void shouldReturn400IfUserIsBlockedFromEnteringEmailOtpCodes() {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
@@ -451,7 +451,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserIsBlockedFromEnteringPhoneOtpCodes() {
+    void shouldReturn400IfUserIsBlockedFromEnteringPhoneOtpCodes() {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
@@ -472,7 +472,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn204WhenSendingAccountCreationEmail() throws JsonProcessingException {
+    void shouldReturn204WhenSendingAccountCreationEmail() throws JsonProcessingException {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -490,7 +490,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn204AndNotSendAccountCreationEmailForTestClientAndTestUser()
+    void shouldReturn204AndNotSendAccountCreationEmailForTestClientAndTestUser()
             throws JsonProcessingException {
         usingValidSession();
         usingValidClientSession(TEST_CLIENT_ID);

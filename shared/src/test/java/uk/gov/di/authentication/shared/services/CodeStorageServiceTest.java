@@ -48,14 +48,14 @@ class CodeStorageServiceTest {
     private static final String CODE_BLOCKED_VALUE = "blocked";
 
     @Test
-    public void shouldCallRedisWithValidEmailCodeAndHashedEmail() {
+    void shouldCallRedisWithValidEmailCodeAndHashedEmail() {
         codeStorageService.saveOtpCode(TEST_EMAIL, CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
 
         verify(redisConnectionService).saveWithExpiry(REDIS_EMAIL_KEY, CODE, CODE_EXPIRY_TIME);
     }
 
     @Test
-    public void shouldCallRedisWithValidResetPasswordCodeAndSubject() {
+    void shouldCallRedisWithValidResetPasswordCodeAndSubject() {
         codeStorageService.savePasswordResetCode(SUBJECT, CODE, CODE_EXPIRY_TIME, RESET_PASSWORD);
 
         verify(redisConnectionService)
@@ -63,7 +63,7 @@ class CodeStorageServiceTest {
     }
 
     @Test
-    public void shouldRetrievePasswordResetSubject() {
+    void shouldRetrievePasswordResetSubject() {
         when(redisConnectionService.getValue(RESET_PASSWORD_KEY)).thenReturn(SUBJECT);
 
         String subject = codeStorageService.getSubjectWithPasswordResetCode(CODE).get();
@@ -72,14 +72,14 @@ class CodeStorageServiceTest {
     }
 
     @Test
-    public void shouldCallRedisToDeletePasswordResetSubject() {
+    void shouldCallRedisToDeletePasswordResetSubject() {
         codeStorageService.deleteSubjectWithPasswordResetCode(CODE);
 
         verify(redisConnectionService).deleteValue(RESET_PASSWORD_KEY);
     }
 
     @Test
-    public void shouldRetrieveEmailCode() {
+    void shouldRetrieveEmailCode() {
         when(redisConnectionService.getValue(REDIS_EMAIL_KEY)).thenReturn(CODE);
 
         String codeForEmail = codeStorageService.getOtpCode(TEST_EMAIL, VERIFY_EMAIL).get();
@@ -88,21 +88,21 @@ class CodeStorageServiceTest {
     }
 
     @Test
-    public void shouldReturnEmptyOptionalIfEmailCodeDoesNotExist() {
+    void shouldReturnEmptyOptionalIfEmailCodeDoesNotExist() {
         when(redisConnectionService.getValue(REDIS_EMAIL_KEY)).thenReturn(null);
 
         assertTrue(codeStorageService.getOtpCode(TEST_EMAIL, VERIFY_EMAIL).isEmpty());
     }
 
     @Test
-    public void shouldCallRedisToDeleteEmailCodeWithHashedEmail() {
+    void shouldCallRedisToDeleteEmailCodeWithHashedEmail() {
         codeStorageService.deleteOtpCode(TEST_EMAIL, VERIFY_EMAIL);
 
         verify(redisConnectionService).deleteValue(REDIS_EMAIL_KEY);
     }
 
     @Test
-    public void shouldCallRedisWithValidPhoneNumberCodeAndHashedEmailAddress() {
+    void shouldCallRedisWithValidPhoneNumberCodeAndHashedEmailAddress() {
         codeStorageService.saveOtpCode(
                 TEST_EMAIL, CODE, CODE_EXPIRY_TIME, NotificationType.VERIFY_PHONE_NUMBER);
 
@@ -111,7 +111,7 @@ class CodeStorageServiceTest {
     }
 
     @Test
-    public void shouldRetrievePhoneNumberCode() {
+    void shouldRetrievePhoneNumberCode() {
         when(redisConnectionService.getValue(REDIS_PHONE_NUMBER_KEY)).thenReturn(CODE);
 
         String codeForEmail =
@@ -123,7 +123,7 @@ class CodeStorageServiceTest {
     }
 
     @Test
-    public void shouldReturnEmptyOptionalIfPhoneNumberCodeDoesNotExist() {
+    void shouldReturnEmptyOptionalIfPhoneNumberCodeDoesNotExist() {
         when(redisConnectionService.getValue(REDIS_PHONE_NUMBER_KEY)).thenReturn(null);
 
         assertTrue(
@@ -133,14 +133,14 @@ class CodeStorageServiceTest {
     }
 
     @Test
-    public void shouldCallRedisToDeletePhoneNumberCodeWithHashedEmail() {
+    void shouldCallRedisToDeletePhoneNumberCodeWithHashedEmail() {
         codeStorageService.deleteOtpCode(TEST_EMAIL, NotificationType.VERIFY_PHONE_NUMBER);
 
         verify(redisConnectionService).deleteValue(REDIS_PHONE_NUMBER_KEY);
     }
 
     @Test
-    public void shouldSaveToRedisWhenCodeIsBlockedForEmail() {
+    void shouldSaveToRedisWhenCodeIsBlockedForEmail() {
         codeStorageService.saveBlockedForEmail(
                 TEST_EMAIL, CODE_BLOCKED_KEY_PREFIX, CODE_EXPIRY_TIME);
 
@@ -149,7 +149,7 @@ class CodeStorageServiceTest {
     }
 
     @Test
-    public void shouldSaveToRedisWhenCodeRequestIsBlockedForEmail() {
+    void shouldSaveToRedisWhenCodeRequestIsBlockedForEmail() {
         codeStorageService.saveBlockedForEmail(
                 TEST_EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX, CODE_EXPIRY_TIME);
 
@@ -158,7 +158,7 @@ class CodeStorageServiceTest {
     }
 
     @Test
-    public void shouldSaveToRedisWhenPasswordResetIsBlockedForEmail() {
+    void shouldSaveToRedisWhenPasswordResetIsBlockedForEmail() {
         codeStorageService.saveBlockedForEmail(
                 TEST_EMAIL, PASSWORD_RESET_BLOCKED_KEY_PREFIX, CODE_EXPIRY_TIME);
 
@@ -168,14 +168,14 @@ class CodeStorageServiceTest {
     }
 
     @Test
-    public void shouldRetrieveEmailWhenCodeIsBlocked() {
+    void shouldRetrieveEmailWhenCodeIsBlocked() {
         when(redisConnectionService.getValue(REDIS_BLOCKED_KEY)).thenReturn(CODE_BLOCKED_VALUE);
 
         assertTrue(codeStorageService.isBlockedForEmail(TEST_EMAIL, CODE_BLOCKED_KEY_PREFIX));
     }
 
     @Test
-    public void shouldRetrieveEmailWhenCodeRequestIsBlocked() {
+    void shouldRetrieveEmailWhenCodeRequestIsBlocked() {
         when(redisConnectionService.getValue(REDIS_BLOCKED_REQUEST_KEY))
                 .thenReturn(CODE_BLOCKED_VALUE);
 
@@ -184,7 +184,7 @@ class CodeStorageServiceTest {
     }
 
     @Test
-    public void shouldRetrieveEmailWhenPasswordResettIsBlocked() {
+    void shouldRetrieveEmailWhenPasswordResettIsBlocked() {
         when(redisConnectionService.getValue(REDIS_BLOCKED_PASSWORD_RESET_KEY))
                 .thenReturn(CODE_BLOCKED_VALUE);
 
@@ -194,14 +194,14 @@ class CodeStorageServiceTest {
     }
 
     @Test
-    public void shouldReturnEmptyOptionalWhenCodeIsNotBlockedForSession() {
+    void shouldReturnEmptyOptionalWhenCodeIsNotBlockedForSession() {
         when(redisConnectionService.getValue(REDIS_BLOCKED_KEY)).thenReturn(null);
 
         assertFalse(codeStorageService.isBlockedForEmail(TEST_EMAIL, CODE_BLOCKED_KEY_PREFIX));
     }
 
     @Test
-    public void shouldReturnEmptyOptionalWhenCodeRequestIsNotBlockedForSession() {
+    void shouldReturnEmptyOptionalWhenCodeRequestIsNotBlockedForSession() {
         when(redisConnectionService.getValue(REDIS_BLOCKED_REQUEST_KEY)).thenReturn(null);
 
         assertFalse(
@@ -209,7 +209,7 @@ class CodeStorageServiceTest {
     }
 
     @Test
-    public void shouldReturnEmptyOptionalWhenPasswordResetIsNotBlockedForSession() {
+    void shouldReturnEmptyOptionalWhenPasswordResetIsNotBlockedForSession() {
         when(redisConnectionService.getValue(REDIS_BLOCKED_PASSWORD_RESET_KEY)).thenReturn(null);
 
         assertFalse(
@@ -218,7 +218,7 @@ class CodeStorageServiceTest {
     }
 
     @Test
-    public void shouldCallRedisWithValidMfaCodeAndHashedEmail() {
+    void shouldCallRedisWithValidMfaCodeAndHashedEmail() {
         codeStorageService.saveOtpCode(
                 TEST_EMAIL, CODE, CODE_EXPIRY_TIME, NotificationType.MFA_SMS);
 
@@ -226,7 +226,7 @@ class CodeStorageServiceTest {
     }
 
     @Test
-    public void shouldCallRedisWithAuthorizationCode() {
+    void shouldCallRedisWithAuthorizationCode() {
         String authorizationCode = new AuthorizationCode().getValue();
         String clientSessionId = IdGenerator.generate();
         codeStorageService.saveAuthorizationCode(
@@ -237,20 +237,20 @@ class CodeStorageServiceTest {
     }
 
     @Test
-    public void shouldReturn0WhenThereHasBeenNoInvalidPasswordAttempts() {
+    void shouldReturn0WhenThereHasBeenNoInvalidPasswordAttempts() {
         when(redisConnectionService.getValue(REDIS_INCORRECT_PASSWORDS_KEY)).thenReturn(null);
         assertThat(codeStorageService.getIncorrectPasswordCount(TEST_EMAIL), equalTo(0));
     }
 
     @Test
-    public void shouldReturnNumberOfInvalidPasswordAttempts() {
+    void shouldReturnNumberOfInvalidPasswordAttempts() {
         when(redisConnectionService.getValue(REDIS_INCORRECT_PASSWORDS_KEY))
                 .thenReturn(String.valueOf(4));
         assertThat(codeStorageService.getIncorrectPasswordCount(TEST_EMAIL), equalTo(4));
     }
 
     @Test
-    public void shouldCreateCountInRedisWhenThereHasBeenNoPreviousIncorrectPasswordAttempt() {
+    void shouldCreateCountInRedisWhenThereHasBeenNoPreviousIncorrectPasswordAttempt() {
         when(redisConnectionService.getValue(REDIS_INCORRECT_PASSWORDS_KEY)).thenReturn(null);
         codeStorageService.increaseIncorrectPasswordCount(TEST_EMAIL);
 
@@ -259,7 +259,7 @@ class CodeStorageServiceTest {
     }
 
     @Test
-    public void shouldIncrementCountWhenThereHasBeenPreviousIncorrectPasswordAttempts() {
+    void shouldIncrementCountWhenThereHasBeenPreviousIncorrectPasswordAttempts() {
         when(redisConnectionService.getValue(REDIS_INCORRECT_PASSWORDS_KEY))
                 .thenReturn(String.valueOf(3));
         codeStorageService.increaseIncorrectPasswordCount(TEST_EMAIL);
@@ -269,7 +269,7 @@ class CodeStorageServiceTest {
     }
 
     @Test
-    public void shouldCallRedisToDeleteIncorrectPasswordCount() {
+    void shouldCallRedisToDeleteIncorrectPasswordCount() {
         codeStorageService.deleteIncorrectPasswordCount(TEST_EMAIL);
 
         verify(redisConnectionService).deleteValue(REDIS_INCORRECT_PASSWORDS_KEY);

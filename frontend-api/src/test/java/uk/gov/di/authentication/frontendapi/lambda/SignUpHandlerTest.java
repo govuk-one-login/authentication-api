@@ -60,15 +60,16 @@ class SignUpHandlerTest {
     private final Session session = new Session(IdGenerator.generate());
 
     @RegisterExtension
-    public final CaptureLoggingExtension logging = new CaptureLoggingExtension(SignUpHandler.class);
+    private final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(SignUpHandler.class);
 
     @AfterEach
-    public void tearDown() {
+    void tearDown() {
         assertThat(logging.events(), not(hasItem(withMessageContaining(session.getSessionId()))));
     }
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         handler =
                 new SignUpHandler(
@@ -82,7 +83,7 @@ class SignUpHandlerTest {
     }
 
     @Test
-    public void shouldReturn204IfSignUpIsSuccessful() {
+    void shouldReturn204IfSignUpIsSuccessful() {
         String email = "joe.bloggs@test.com";
         String password = "computer-1";
         String persistentId = "some-persistent-id-value";
@@ -136,7 +137,7 @@ class SignUpHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfSessionIdMissing() {
+    void shouldReturn400IfSessionIdMissing() {
         String password = "computer-1";
         when(validationService.validatePassword(eq(password))).thenReturn(Optional.empty());
 
@@ -151,7 +152,7 @@ class SignUpHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfAnyRequestParametersAreMissing() {
+    void shouldReturn400IfAnyRequestParametersAreMissing() {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -165,7 +166,7 @@ class SignUpHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfPasswordFailsValidation() {
+    void shouldReturn400IfPasswordFailsValidation() {
         String password = "computer";
         when(validationService.validatePassword(eq(password)))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1007));
@@ -183,7 +184,7 @@ class SignUpHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserAlreadyExists() {
+    void shouldReturn400IfUserAlreadyExists() {
         String password = "computer-1";
         when(validationService.validatePassword(eq(password))).thenReturn(Optional.empty());
         when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(true);

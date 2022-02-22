@@ -68,7 +68,7 @@ class AuthorizationServiceTest {
     }
 
     @AfterEach
-    public void tearDown() {
+    void tearDown() {
         assertThat(logging.events(), not(hasItem(withMessageContaining(CLIENT_ID.toString()))));
     }
 

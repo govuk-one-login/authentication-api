@@ -46,7 +46,7 @@ import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.cont
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-public class StartHandlerTest {
+class StartHandlerTest {
 
     public static final String TEST_CLIENT_ID = "test_client_id";
     public static final String TEST_CLIENT_NAME = "test_client_name";
@@ -68,7 +68,7 @@ public class StartHandlerTest {
     private final ClientSession clientSession = getClientSession();
 
     @BeforeEach
-    public void beforeEach() {
+    void beforeEach() {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(sessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(new Session("session-id")));
@@ -79,7 +79,7 @@ public class StartHandlerTest {
     }
 
     @Test
-    public void shouldReturn200WithStartResponse() throws JsonProcessingException, ParseException {
+    void shouldReturn200WithStartResponse() throws JsonProcessingException, ParseException {
         when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
         when(startService.buildClientStartInfo(userContext)).thenReturn(getClientStartInfo());
         when(startService.buildUserStartInfo(userContext)).thenReturn(getUserStartInfo());
@@ -134,7 +134,7 @@ public class StartHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenClientSessionIsNotFound() throws JsonProcessingException {
+    void shouldReturn400WhenClientSessionIsNotFound() throws JsonProcessingException {
         usingInvalidClientSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID));
@@ -149,7 +149,7 @@ public class StartHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenSessionIsNotFound() throws JsonProcessingException {
+    void shouldReturn400WhenSessionIsNotFound() throws JsonProcessingException {
         usingValidClientSession();
         usingInvalidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -169,7 +169,7 @@ public class StartHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenBuildClientStartInfoThrowsException()
+    void shouldReturn400WhenBuildClientStartInfoThrowsException()
             throws ParseException, JsonProcessingException {
         when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
         when(startService.buildClientStartInfo(userContext))
@@ -202,11 +202,6 @@ public class StartHandlerTest {
     private void usingInvalidClientSession() {
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.empty());
-    }
-
-    private void usingUnregisteredClientSession() {
-        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(getClientSession()));
     }
 
     private void usingValidSession() {

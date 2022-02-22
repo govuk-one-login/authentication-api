@@ -51,7 +51,7 @@ class TokenValidationServiceTest {
     private ECKey ecJWK;
 
     @BeforeEach
-    public void setUp() throws JOSEException {
+    void setUp() throws JOSEException {
         Optional<String> baseUrl = Optional.of(BASE_URL);
         when(configurationService.getBaseURL()).thenReturn(baseUrl);
         ecJWK = generateECKeyPair();
@@ -69,7 +69,7 @@ class TokenValidationServiceTest {
     }
 
     @Test
-    public void shouldSuccessfullyValidateIDToken() {
+    void shouldSuccessfullyValidateIDToken() {
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         SignedJWT signedIdToken = createSignedIdToken(expiryDate);
@@ -77,7 +77,7 @@ class TokenValidationServiceTest {
     }
 
     @Test
-    public void shouldNotFailSignatureValidationIfIdTokenHasExpired() {
+    void shouldNotFailSignatureValidationIfIdTokenHasExpired() {
         LocalDateTime localDateTime = LocalDateTime.now().minusMinutes(2);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
         SignedJWT signedIdToken = createSignedIdToken(expiryDate);
@@ -85,7 +85,7 @@ class TokenValidationServiceTest {
     }
 
     @Test
-    public void shouldSuccessfullyValidateAccessToken() {
+    void shouldSuccessfullyValidateAccessToken() {
         SignedJWT signedAccessToken = createSignedAccessToken(signer);
         assertTrue(
                 tokenValidationService.validateAccessTokenSignature(
@@ -93,7 +93,7 @@ class TokenValidationServiceTest {
     }
 
     @Test
-    public void shouldSuccessfullyValidateRefreshToken() {
+    void shouldSuccessfullyValidateRefreshToken() {
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
 
@@ -104,7 +104,7 @@ class TokenValidationServiceTest {
     }
 
     @Test
-    public void shouldFailToValidateRefreshTokenIfExpired() {
+    void shouldFailToValidateRefreshTokenIfExpired() {
         LocalDateTime localDateTime = LocalDateTime.now().minusMinutes(2);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
 
@@ -115,7 +115,7 @@ class TokenValidationServiceTest {
     }
 
     @Test
-    public void shouldRetrievePublicKeyfromKmsAndParseToJwk() {
+    void shouldRetrievePublicKeyfromKmsAndParseToJwk() {
         String keyId = "3423543t5435345";
         byte[] publicKey =
                 Base64.getDecoder()
@@ -137,21 +137,20 @@ class TokenValidationServiceTest {
     }
 
     @Test
-    public void shouldSuccessfullyValidateRefreshTokenScopes() {
+    void shouldSuccessfullyValidateRefreshTokenScopes() {
         List<String> clientScopes = List.of("openid", "email", "phone", "offline_access");
         assertTrue(tokenValidationService.validateRefreshTokenScopes(clientScopes, REFRESH_SCOPES));
     }
 
     @Test
-    public void shouldFailToValidateRefreshTokenScopesWhenMissingOfflineAccess() {
+    void shouldFailToValidateRefreshTokenScopesWhenMissingOfflineAccess() {
         List<String> clientScopes = List.of("openid", "email", "phone", "offline_access");
         List<String> refreshScopes = List.of("openid", "email", "phone");
         assertFalse(tokenValidationService.validateRefreshTokenScopes(clientScopes, refreshScopes));
     }
 
     @Test
-    public void
-            shouldFailToValidateRefreshTokenScopesWhenClientScopesDoNotContainAllRefreshTokenScopes() {
+    void shouldFailToValidateRefreshTokenScopesWhenClientScopesDoNotContainAllRefreshTokenScopes() {
         List<String> clientScopes = List.of("openid", "phone", "offline_access");
         assertFalse(
                 tokenValidationService.validateRefreshTokenScopes(clientScopes, REFRESH_SCOPES));

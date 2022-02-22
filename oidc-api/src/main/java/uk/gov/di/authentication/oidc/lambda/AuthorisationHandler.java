@@ -174,18 +174,19 @@ public class AuthorisationHandler
             Context context,
             String ipAddress,
             String persistentSessionId) {
-        if (Objects.nonNull(authenticationRequest.getPrompt())) {
-            if (authenticationRequest.getPrompt().contains(Prompt.Type.CONSENT)
-                    || authenticationRequest.getPrompt().contains(Prompt.Type.SELECT_ACCOUNT)) {
-                return generateErrorResponse(
-                        authenticationRequest.getRedirectionURI(),
-                        authenticationRequest.getState(),
-                        authenticationRequest.getResponseMode(),
-                        OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS,
-                        context,
-                        ipAddress,
-                        persistentSessionId);
-            }
+        if (Objects.nonNull(authenticationRequest.getPrompt())
+                && (authenticationRequest.getPrompt().contains(Prompt.Type.CONSENT)
+                        || authenticationRequest
+                                .getPrompt()
+                                .contains(Prompt.Type.SELECT_ACCOUNT))) {
+            return generateErrorResponse(
+                    authenticationRequest.getRedirectionURI(),
+                    authenticationRequest.getState(),
+                    authenticationRequest.getResponseMode(),
+                    OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS,
+                    context,
+                    ipAddress,
+                    persistentSessionId);
         }
 
         var session = existingSession.orElseGet(sessionService::createSession);

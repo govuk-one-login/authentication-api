@@ -11,6 +11,8 @@ import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LE
 
 public class MfaHelper {
 
+    private MfaHelper() {}
+
     public static boolean mfaRequired(Map<String, List<String>> authRequestParams) {
         AuthenticationRequest authRequest;
         try {
@@ -20,10 +22,7 @@ public class MfaHelper {
         }
         List<String> vtr = authRequest.getCustomParameter("vtr");
         VectorOfTrust vectorOfTrust = VectorOfTrust.parseFromAuthRequestAttribute(vtr);
-        if (vectorOfTrust.getCredentialTrustLevel().equals(LOW_LEVEL)) {
-            return false;
-        } else {
-            return true;
-        }
+
+        return !vectorOfTrust.getCredentialTrustLevel().equals(LOW_LEVEL);
     }
 }

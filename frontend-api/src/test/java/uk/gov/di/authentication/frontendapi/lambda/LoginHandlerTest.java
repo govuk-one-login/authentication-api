@@ -86,15 +86,15 @@ class LoginHandlerTest {
     private final Session session = new Session(IdGenerator.generate());
 
     @RegisterExtension
-    public final CaptureLoggingExtension logging = new CaptureLoggingExtension(LoginHandler.class);
+    private final CaptureLoggingExtension logging = new CaptureLoggingExtension(LoginHandler.class);
 
     @AfterEach
-    public void tearDown() {
+    void tearDown() {
         assertThat(logging.events(), not(hasItem(withMessageContaining(session.getSessionId()))));
     }
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         when(configurationService.getMaxPasswordRetries()).thenReturn(5);
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(clientSession));
@@ -120,7 +120,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    public void shouldReturn200IfLoginIsSuccessful() throws JsonProcessingException {
+    void shouldReturn200IfLoginIsSuccessful() throws JsonProcessingException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
@@ -168,7 +168,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    public void shouldReturn200IfLoginIsSuccessfulAndTermsAndConditionsNotAccepted()
+    void shouldReturn200IfLoginIsSuccessfulAndTermsAndConditionsNotAccepted()
             throws JsonProcessingException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("2.0");
         String persistentId = "some-persistent-id-value";
@@ -220,7 +220,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    public void shouldReturn200IfMigratedUserHasBeenProcessesSuccessfully()
+    void shouldReturn200IfMigratedUserHasBeenProcessesSuccessfully()
             throws JsonProcessingException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         String legacySubjectId = new Subject().getValue();
@@ -252,7 +252,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    public void shouldReturn200IfPasswordIsEnteredAgain() throws JsonProcessingException {
+    void shouldReturn200IfPasswordIsEnteredAgain() throws JsonProcessingException {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -282,7 +282,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    public void shouldChangeStateToAccountTemporarilyLockedAfter5UnsuccessfulAttempts() {
+    void shouldChangeStateToAccountTemporarilyLockedAfter5UnsuccessfulAttempts() {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -304,7 +304,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    public void shouldKeepUserLockedWhenTheyEnterSuccessfulLoginRequestInNewSession() {
+    void shouldKeepUserLockedWhenTheyEnterSuccessfulLoginRequestInNewSession() {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -338,7 +338,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    public void shouldRemoveIncorrectPasswordCountRemovesUponSuccessfulLogin()
+    void shouldRemoveIncorrectPasswordCountRemovesUponSuccessfulLogin()
             throws JsonProcessingException {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
@@ -367,7 +367,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    public void shouldReturn401IfUserHasInvalidCredentials() {
+    void shouldReturn401IfUserHasInvalidCredentials() {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -400,7 +400,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    public void shouldReturn401IfMigratedUserHasInvalidCredentials() {
+    void shouldReturn401IfMigratedUserHasInvalidCredentials() {
         String legacySubjectId = new Subject().getValue();
         UserProfile userProfile = generateUserProfile(legacySubjectId);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
@@ -421,7 +421,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfAnyRequestParametersAreMissing() {
+    void shouldReturn400IfAnyRequestParametersAreMissing() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\"}", PASSWORD));
@@ -435,7 +435,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfSessionIdIsInvalid() {
+    void shouldReturn400IfSessionIdIsInvalid() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\"}", PASSWORD));
@@ -451,7 +451,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserDoesNotHaveAnAccount() {
+    void shouldReturn400IfUserDoesNotHaveAnAccount() {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.empty());
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));

@@ -93,17 +93,17 @@ public class MfaHandlerTest {
                                     "jb2@digital.cabinet-office.gov.uk"));
 
     @RegisterExtension
-    public final CaptureLoggingExtension logging = new CaptureLoggingExtension(MfaHandler.class);
+    private final CaptureLoggingExtension logging = new CaptureLoggingExtension(MfaHandler.class);
 
     @AfterEach
-    public void tearDown() {
+    void tearDown() {
         assertThat(
                 logging.events(),
                 not(hasItem(withMessageContaining(session.getSessionId(), TEST_CLIENT_ID))));
     }
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
@@ -122,7 +122,7 @@ public class MfaHandlerTest {
     }
 
     @Test
-    public void shouldReturn204ForSuccessfulMfaRequest() throws JsonProcessingException {
+    void shouldReturn204ForSuccessfulMfaRequest() throws JsonProcessingException {
         usingValidSession();
         String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
@@ -157,7 +157,7 @@ public class MfaHandlerTest {
     }
 
     @Test
-    public void shouldReturn204AndAllowMfaRequestDuringUplift() throws JsonProcessingException {
+    void shouldReturn204AndAllowMfaRequestDuringUplift() throws JsonProcessingException {
         usingValidSession();
 
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
@@ -189,7 +189,7 @@ public class MfaHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenSessionIdIsInvalid() {
+    void shouldReturn400WhenSessionIdIsInvalid() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
@@ -203,7 +203,7 @@ public class MfaHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenEmailInSessionDoesNotMatchEmailInRequest() {
+    void shouldReturn400WhenEmailInSessionDoesNotMatchEmailInRequest() {
         usingValidSession();
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(PHONE_NUMBER));
@@ -231,7 +231,7 @@ public class MfaHandlerTest {
     }
 
     @Test
-    public void shouldReturnErrorResponseWhenUsersPhoneNumberIsNotStored() {
+    void shouldReturnErrorResponseWhenUsersPhoneNumberIsNotStored() {
         usingValidSession();
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS)).thenReturn(Optional.empty());
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -258,7 +258,7 @@ public class MfaHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserHasReachedTheMfaCodeRequestLimit() {
+    void shouldReturn400IfUserHasReachedTheMfaCodeRequestLimit() {
         usingValidSession();
         when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
         session.incrementCodeRequestCount();
@@ -297,7 +297,7 @@ public class MfaHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreMfaCodes() {
+    void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreMfaCodes() {
         usingValidSession();
         when(codeStorageService.isBlockedForEmail(
                         TEST_EMAIL_ADDRESS, CODE_REQUEST_BLOCKED_KEY_PREFIX))
@@ -327,7 +327,7 @@ public class MfaHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserIsBlockedFromAttemptingMfaCodes() {
+    void shouldReturn400IfUserIsBlockedFromAttemptingMfaCodes() {
         usingValidSession();
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
@@ -356,7 +356,7 @@ public class MfaHandlerTest {
     }
 
     @Test
-    public void shouldReturn204AndNotSendMessageForSuccessfulMfaRequestOnTestClient()
+    void shouldReturn204AndNotSendMessageForSuccessfulMfaRequestOnTestClient()
             throws JsonProcessingException {
         usingValidSession();
         usingValidClientSession(TEST_CLIENT_ID);

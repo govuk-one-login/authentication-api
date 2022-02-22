@@ -10,6 +10,8 @@ import java.util.Objects;
 
 public class IdentityHelper {
 
+    private IdentityHelper() {}
+
     public static boolean identityRequired(Map<String, List<String>> authRequestParams) {
         AuthenticationRequest authRequest;
         try {
@@ -19,10 +21,6 @@ public class IdentityHelper {
         }
         List<String> vtr = authRequest.getCustomParameter("vtr");
         VectorOfTrust vectorOfTrust = VectorOfTrust.parseFromAuthRequestAttribute(vtr);
-        if (Objects.nonNull(vectorOfTrust.getLevelOfConfidence())) {
-            return true;
-        } else {
-            return false;
-        }
+        return Objects.nonNull(vectorOfTrust.getLevelOfConfidence());
     }
 }

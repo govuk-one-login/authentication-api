@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class Argon2HelperTest {
 
     @Test
-    public void correctPasswordShouldMatchEncodedPassword() {
+    void correctPasswordShouldMatchEncodedPassword() {
         String testPassword = "test-password123";
         String encodedPassword = Argon2EncoderHelper.argon2Hash(testPassword);
 
@@ -16,7 +16,7 @@ class Argon2HelperTest {
     }
 
     @Test
-    public void wrongPasswordShouldNotMatchEncodedPassword() {
+    void wrongPasswordShouldNotMatchEncodedPassword() {
         String testPassword = "test-password123";
         String wrongPassword = "test-password";
         String encodedPassword = Argon2EncoderHelper.argon2Hash(testPassword);

@@ -223,7 +223,7 @@ class AuthorisationHandlerTest {
 
     @Test
     void shouldRedirectToLoginAndForwardGAParameterWhenPresent() throws ClientNotFoundException {
-        when(authorizationService.isClientCookieConsentShared(eq(CLIENT_ID))).thenReturn(false);
+        when(authorizationService.isClientCookieConsentShared(CLIENT_ID)).thenReturn(false);
         when(clientSessionService.generateClientSession(any(ClientSession.class)))
                 .thenReturn(CLIENT_SESSION_ID);
 

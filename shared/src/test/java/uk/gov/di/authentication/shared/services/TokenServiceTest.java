@@ -108,7 +108,7 @@ public class TokenServiceTest {
     public final CaptureLoggingExtension logging = new CaptureLoggingExtension(TokenService.class);
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         Optional<String> baseUrl = Optional.of(BASE_URL);
         when(configurationService.getBaseURL()).thenReturn(baseUrl);
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
@@ -118,12 +118,12 @@ public class TokenServiceTest {
     }
 
     @AfterEach
-    public void tearDown() {
+    void tearDown() {
         assertThat(logging.events(), not(hasItem(withMessageContaining(CLIENT_ID))));
     }
 
     @Test
-    public void shouldGenerateTokenResponseWithRefreshToken()
+    void shouldGenerateTokenResponseWithRefreshToken()
             throws ParseException, JOSEException, JsonProcessingException {
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
         createSignedIdToken();
@@ -165,7 +165,7 @@ public class TokenServiceTest {
     }
 
     @Test
-    public void shouldOnlyIncludeIdentityClaimsInAccessTokenWhenRequested()
+    void shouldOnlyIncludeIdentityClaimsInAccessTokenWhenRequested()
             throws ParseException, JOSEException, JsonProcessingException,
                     com.nimbusds.oauth2.sdk.ParseException {
         var claimsSetRequest = new ClaimsSetRequest().add("nickname").add("birthdate");
@@ -224,7 +224,7 @@ public class TokenServiceTest {
     }
 
     @Test
-    public void shouldGenerateTokenResponseWithoutRefreshTokenWhenOfflineAccessScopeIsMissing()
+    void shouldGenerateTokenResponseWithoutRefreshTokenWhenOfflineAccessScopeIsMissing()
             throws ParseException, JOSEException, JsonProcessingException {
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
@@ -256,7 +256,7 @@ public class TokenServiceTest {
     }
 
     @Test
-    public void shouldSuccessfullyValidatePrivateKeyJWT() throws JOSEException {
+    void shouldSuccessfullyValidatePrivateKeyJWT() throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
         String publicKey = Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded());
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(5);
@@ -268,7 +268,7 @@ public class TokenServiceTest {
     }
 
     @Test
-    public void shouldFailToValidatePrivateKeyJWTIfExpired() throws JOSEException {
+    void shouldFailToValidatePrivateKeyJWTIfExpired() throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
         String publicKey = Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded());
         LocalDateTime localDateTime = LocalDateTime.now().minusMinutes(2);
@@ -280,7 +280,7 @@ public class TokenServiceTest {
     }
 
     @Test
-    public void shouldFailToValidatePrivateKeyJWTIfInvalidClientId() throws JOSEException {
+    void shouldFailToValidatePrivateKeyJWTIfInvalidClientId() throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
         String publicKey = Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded());
         LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(5);
@@ -293,7 +293,7 @@ public class TokenServiceTest {
     }
 
     @Test
-    public void shouldReturnErrorIfUnableToValidatePrivateKeyJWTSignature() throws JOSEException {
+    void shouldReturnErrorIfUnableToValidatePrivateKeyJWTSignature() throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
         KeyPair keyPairTwo = generateRsaKeyPair();
         String publicKey =
@@ -307,7 +307,7 @@ public class TokenServiceTest {
     }
 
     @Test
-    public void shouldSuccessfullyValidateTokenRequest() {
+    void shouldSuccessfullyValidateTokenRequest() {
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
                 "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
@@ -321,7 +321,7 @@ public class TokenServiceTest {
     }
 
     @Test
-    public void shouldReturnErrorIfClientIdIsMissingWhenValidatingTokenRequest() {
+    void shouldReturnErrorIfClientIdIsMissingWhenValidatingTokenRequest() {
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
                 "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
@@ -340,7 +340,7 @@ public class TokenServiceTest {
     }
 
     @Test
-    public void shouldReturnErrorIfRedirectUriIsMissingWhenValidatingTokenRequest() {
+    void shouldReturnErrorIfRedirectUriIsMissingWhenValidatingTokenRequest() {
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
                 "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
@@ -359,7 +359,7 @@ public class TokenServiceTest {
     }
 
     @Test
-    public void shouldReturnErrorIfGrantTypeIsMissingWhenValidatingTokenRequest() {
+    void shouldReturnErrorIfGrantTypeIsMissingWhenValidatingTokenRequest() {
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put("client_id", Collections.singletonList(CLIENT_ID));
         customParams.put("code", Collections.singletonList(AUTH_CODE));
@@ -377,7 +377,7 @@ public class TokenServiceTest {
     }
 
     @Test
-    public void shouldReturnErrorIfCodeIsMissingWhenValidatingTokenRequest() {
+    void shouldReturnErrorIfCodeIsMissingWhenValidatingTokenRequest() {
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
                 "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
@@ -396,7 +396,7 @@ public class TokenServiceTest {
     }
 
     @Test
-    public void shouldReturnErrorIfGrantIsInvalidWhenValidatingTokenRequest() {
+    void shouldReturnErrorIfGrantIsInvalidWhenValidatingTokenRequest() {
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put("grant_type", Collections.singletonList("client_credentials"));
         customParams.put("client_id", Collections.singletonList(CLIENT_ID));
@@ -409,7 +409,7 @@ public class TokenServiceTest {
     }
 
     @Test
-    public void shouldSuccessfullyValidateRefreshTokenRequest() {
+    void shouldSuccessfullyValidateRefreshTokenRequest() {
         Scope scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
         RefreshToken refreshToken = new RefreshToken();
         Map<String, List<String>> customParams = new HashMap<>();
@@ -425,7 +425,7 @@ public class TokenServiceTest {
     }
 
     @Test
-    public void shouldReturnErrorWhenValidatingRefreshTokenRequestWithWrongGrant() {
+    void shouldReturnErrorWhenValidatingRefreshTokenRequestWithWrongGrant() {
         Scope scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
         RefreshToken refreshToken = new RefreshToken();
         Map<String, List<String>> customParams = new HashMap<>();

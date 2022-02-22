@@ -282,7 +282,7 @@ class AuthCodeHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfSessionIdMissing() {
+    void shouldReturn400IfSessionIdMissing() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -294,7 +294,7 @@ class AuthCodeHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfClientSessionIdMissing() {
+    void shouldReturn400IfClientSessionIdMissing() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(

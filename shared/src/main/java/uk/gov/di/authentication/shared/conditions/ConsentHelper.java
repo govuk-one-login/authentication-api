@@ -14,8 +14,11 @@ public class ConsentHelper {
 
     private static final Logger LOG = LogManager.getLogger(ConsentHelper.class);
 
+    private ConsentHelper() {}
+
     public static boolean userHasNotGivenConsent(UserContext context) {
-        if (context.getClient().map(t -> !t.isConsentRequired()).orElseThrow()) {
+        if (Boolean.FALSE.equals(
+                context.getClient().map(ClientRegistry::isConsentRequired).orElseThrow())) {
             return false;
         }
         AuthenticationRequest authRequest;
