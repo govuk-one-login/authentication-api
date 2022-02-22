@@ -31,7 +31,7 @@ ext {
         protobuf_version: "3.19.4",
         junit: "5.8.2",
         jackson_version: "2.13.1",
-        glassfish_version: "3.0.3",
+        glassfish_version: "3.0.4",
     ]
 
     terraformEnvironment = project.properties["terraformEnvironment"] ?: "localstack"
