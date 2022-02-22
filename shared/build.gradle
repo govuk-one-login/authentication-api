@@ -20,7 +20,7 @@ dependencies {
             configurations.sqs,
             configurations.ssm,
             configurations.cloudwatch,
-            "com.googlecode.libphonenumber:libphonenumber:8.12.42",
+            "com.googlecode.libphonenumber:libphonenumber:8.12.43",
             "com.google.protobuf:protobuf-java:3.19.4"
 
     testImplementation configurations.tests,
