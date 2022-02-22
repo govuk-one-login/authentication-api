@@ -18,7 +18,7 @@ dependencies {
             project(":shared"),
             "com.google.protobuf:protobuf-java:${dependencyVersions.protobuf_version}",
             "com.google.protobuf:protobuf-java-util:${dependencyVersions.protobuf_version}",
-            "com.google.code.gson:gson:2.8.9"
+            "com.google.code.gson:gson:2.9.0"
 
     runtimeOnly configurations.logging_runtime
 
