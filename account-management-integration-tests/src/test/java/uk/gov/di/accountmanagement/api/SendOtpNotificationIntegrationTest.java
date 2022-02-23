@@ -26,7 +26,7 @@ import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.a
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-public class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String TEST_EMAIL = "joe.bloggs+3@digital.cabinet-office.gov.uk";
     private static final String TEST_PHONE_NUMBER =
@@ -41,7 +41,7 @@ public class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegra
     }
 
     @Test
-    public void shouldSendNotificationAndReturn204ForVerifyEmailRequest() {
+    void shouldSendNotificationAndReturn204ForVerifyEmailRequest() {
         var response =
                 makeRequest(
                         Optional.of(
@@ -59,7 +59,7 @@ public class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegra
     }
 
     @Test
-    public void shouldReturn400ForVerifyEmailRequestWhenUserAlreadyExists() throws Exception {
+    void shouldReturn400ForVerifyEmailRequestWhenUserAlreadyExists() throws Exception {
         String password = "password-1";
         userStore.signUp(TEST_EMAIL, password);
 
@@ -81,7 +81,7 @@ public class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegra
     }
 
     @Test
-    public void shouldSendNotificationAndReturn204ForVerifyPhoneNumberRequest() {
+    void shouldSendNotificationAndReturn204ForVerifyPhoneNumberRequest() {
         var response =
                 makeRequest(
                         Optional.of(
@@ -100,7 +100,7 @@ public class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegra
     }
 
     @Test
-    public void shouldReturn204ForVerifyPhoneNumberRequestWhenUserDoesNotExist() {
+    void shouldReturn204ForVerifyPhoneNumberRequestWhenUserDoesNotExist() {
         var nonExistentUserEmail = "i.do.not.exist@digital.cabinet-office.gov.uk";
 
         var response =

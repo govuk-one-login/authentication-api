@@ -56,8 +56,9 @@ public class NotificationAssertionHelper {
                                                 hasNotificationType(
                                                         notifyRequest.getNotificationType())))));
 
-        // Check that no more notifications came through while we were looking for the ones we
-        // expected.
-        assertThat(notificationsQueue.getMessages(Object.class), hasSize(0));
+        assertThat(
+                "Expected no more notifications to come through",
+                notificationsQueue.getMessages(Object.class),
+                hasSize(0));
     }
 }
