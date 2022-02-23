@@ -234,6 +234,6 @@ class StartHandlerTest {
     }
 
     private UserStartInfo getUserStartInfo() {
-        return new UserStartInfo(true, false, false);
+        return new UserStartInfo(true, false, false, true);
     }
 }

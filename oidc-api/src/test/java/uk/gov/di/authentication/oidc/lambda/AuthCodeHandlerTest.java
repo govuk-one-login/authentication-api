@@ -178,6 +178,7 @@ class AuthCodeHandlerTest {
                 new ObjectMapper().readValue(response.getBody(), AuthCodeResponse.class);
         assertThat(authCodeResponse.getLocation(), equalTo(authSuccessResponse.toURI().toString()));
         assertThat(session.getCurrentCredentialStrength(), equalTo(finalLevel));
+        verify(sessionService).save(session.setAuthenticated(true));
 
         verify(auditService)
                 .submitAuditEvent(

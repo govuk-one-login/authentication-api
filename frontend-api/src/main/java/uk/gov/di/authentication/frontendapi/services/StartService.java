@@ -94,6 +94,10 @@ public class StartService {
                 uplift,
                 identityRequired);
 
-        return new UserStartInfo(consentRequired, uplift, identityRequired);
+        return new UserStartInfo(
+                consentRequired,
+                uplift,
+                identityRequired,
+                userContext.getSession().isAuthenticated());
     }
 }

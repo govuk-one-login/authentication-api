@@ -192,6 +192,8 @@ public class AuthCodeHandler
                                                 "Client",
                                                 authenticationRequest.getClientID().getValue()));
 
+                                sessionService.save(session.setAuthenticated(true));
+
                                 auditService.submitAuditEvent(
                                         OidcAuditableEvent.AUTH_CODE_ISSUED,
                                         context.getAwsRequestId(),

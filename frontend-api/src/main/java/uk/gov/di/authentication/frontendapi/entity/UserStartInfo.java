@@ -13,13 +13,18 @@ public class UserStartInfo {
     @JsonProperty("identityRequired")
     private boolean identityRequired;
 
+    @JsonProperty("authenticated")
+    private boolean authenticated;
+
     public UserStartInfo(
             @JsonProperty(required = true, value = "consentRequired") boolean consentRequired,
             @JsonProperty(required = true, value = "upliftRequired") boolean upliftRequired,
-            @JsonProperty(required = true, value = "identityRequired") boolean identityRequired) {
+            @JsonProperty(required = true, value = "identityRequired") boolean identityRequired,
+            @JsonProperty(required = true, value = "authenticated") boolean authenticated) {
         this.consentRequired = consentRequired;
         this.upliftRequired = upliftRequired;
         this.identityRequired = identityRequired;
+        this.authenticated = authenticated;
     }
 
     public boolean isConsentRequired() {
@@ -32,5 +37,9 @@ public class UserStartInfo {
 
     public boolean isIdentityRequired() {
         return identityRequired;
+    }
+
+    public boolean isAuthenticated() {
+        return authenticated;
     }
 }

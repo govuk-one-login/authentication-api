@@ -38,6 +38,9 @@ public class Session {
     @JsonProperty("is_new_account")
     private AccountState isNewAccount;
 
+    @JsonProperty("authenticated")
+    private boolean authenticated;
+
     public Session(String sessionId) {
         this.sessionId = sessionId;
         this.clientSessions = new ArrayList<>();
@@ -142,6 +145,15 @@ public class Session {
 
     public Session setNewAccount(AccountState isNewAccount) {
         this.isNewAccount = isNewAccount;
+        return this;
+    }
+
+    public boolean isAuthenticated() {
+        return authenticated;
+    }
+
+    public Session setAuthenticated(boolean authenticated) {
+        this.authenticated = authenticated;
         return this;
     }
 }
