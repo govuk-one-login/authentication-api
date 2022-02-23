@@ -248,7 +248,7 @@ class ResetPasswordRequestHandlerTest {
         when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
         when(session.getSessionId()).thenReturn(sessionId);
         when(session.validateSession(TEST_EMAIL_ADDRESS)).thenReturn(true);
-        when(session.getPasswordResetCount()).thenReturn(6);
+        when(session.getPasswordResetCount()).thenReturn(5);
 
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));

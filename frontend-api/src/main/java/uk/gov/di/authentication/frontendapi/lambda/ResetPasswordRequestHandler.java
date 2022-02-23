@@ -179,7 +179,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         if (codeStorageService.isBlockedForEmail(email, PASSWORD_RESET_BLOCKED_KEY_PREFIX)) {
             return Optional.of(ErrorResponse.ERROR_1023);
         } else if (userContext.getSession().getPasswordResetCount()
-                > configurationService.getCodeMaxRetries()) {
+                >= configurationService.getCodeMaxRetries()) {
             codeStorageService.saveBlockedForEmail(
                     userContext.getSession().getEmailAddress(),
                     PASSWORD_RESET_BLOCKED_KEY_PREFIX,
