@@ -12,12 +12,10 @@ import uk.gov.di.authentication.frontendapi.entity.LoginRequest;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
-import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.conditions.ConsentHelper;
+import uk.gov.di.authentication.shared.conditions.MfaHelper;
+import uk.gov.di.authentication.shared.conditions.TermsAndConditionsHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.SessionAction;
-import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -31,21 +29,16 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.LOG_IN_SUCCESS;
 import static uk.gov.di.authentication.shared.entity.Session.AccountState.EXISTING;
-import static uk.gov.di.authentication.shared.entity.SessionAction.ACCOUNT_LOCK_EXPIRED;
-import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_INVALID_PASSWORD_TOO_MANY_TIMES;
-import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_VALID_CREDENTIALS;
-import static uk.gov.di.authentication.shared.entity.SessionState.TWO_FACTOR_REQUIRED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
-import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -54,8 +47,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     private final CodeStorageService codeStorageService;
     private final UserMigrationService userMigrationService;
     private final AuditService auditService;
-    private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
-            userJourneyStateMachine();
 
     public LoginHandler(
             ConfigurationService configurationService,
@@ -103,7 +94,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         LOG.info("Request received");
         try {
-            String persistentSessionId =
+            var persistentSessionId =
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
             Optional<UserProfile> userProfileMaybe =
                     authenticationService.getUserProfileByEmailMaybe(request.getEmail());
@@ -125,17 +116,11 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
             UserProfile userProfile = userProfileMaybe.get();
 
-            SessionState currentState = userContext.getSession().getState();
             int incorrectPasswordCount =
                     codeStorageService.getIncorrectPasswordCount(request.getEmail());
 
             if (incorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
                 LOG.info("User has exceeded max password retries");
-                var nextState =
-                        stateMachine.transition(
-                                userContext.getSession().getState(),
-                                USER_ENTERED_INVALID_PASSWORD_TOO_MANY_TIMES,
-                                userContext);
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
@@ -148,22 +133,10 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         userProfile.getPhoneNumber(),
                         persistentSessionId);
 
-                sessionService.save(userContext.getSession().setState(nextState));
-                return generateApiGatewayProxyResponse(
-                        200, new LoginResponse(null, userContext.getSession().getState()));
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1028);
             }
 
-            if (incorrectPasswordCount == 0
-                    && currentState.equals(SessionState.ACCOUNT_TEMPORARILY_LOCKED)) {
-                var nextState =
-                        stateMachine.transition(
-                                userContext.getSession().getState(),
-                                ACCOUNT_LOCK_EXPIRED,
-                                userContext);
-                sessionService.save(userContext.getSession().setState(nextState));
-            }
-
-            boolean userIsAMigratedUser =
+            var userIsAMigratedUser =
                     userMigrationService.userHasBeenPartlyMigrated(
                             userProfile.getLegacySubjectID(), request.getEmail());
             boolean hasValidCredentials;
@@ -198,38 +171,29 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 codeStorageService.deleteIncorrectPasswordCount(request.getEmail());
             }
 
-            var nextState =
-                    stateMachine.transition(
-                            userContext.getSession().getState(),
-                            USER_ENTERED_VALID_CREDENTIALS,
-                            userContext);
-
-            CredentialTrustLevel credentialTrustLevel =
-                    userContext
-                            .getClientSession()
-                            .getEffectiveVectorOfTrust()
-                            .getCredentialTrustLevel();
-            Session session = userContext.getSession().setState(nextState);
-            if (credentialTrustLevel.equals(CredentialTrustLevel.LOW_LEVEL)) {
-                session.setCurrentCredentialStrength(credentialTrustLevel);
+            var isPhoneNumberVerified = userProfile.isPhoneNumberVerified();
+            String redactedPhoneNumber = null;
+            if (isPhoneNumberVerified) {
+                redactedPhoneNumber =
+                        RedactPhoneNumberHelper.redactPhoneNumber(userProfile.getPhoneNumber());
             }
-
-            sessionService.save(session.setNewAccount(EXISTING));
-
-            if (nextState.equals(TWO_FACTOR_REQUIRED)) {
-                return generateApiGatewayProxyResponse(
-                        200, new BaseAPIResponse(userContext.getSession().getState()));
+            boolean termsAndConditionsAccepted = false;
+            if (Objects.nonNull(userProfile.getTermsAndConditions())) {
+                termsAndConditionsAccepted =
+                        TermsAndConditionsHelper.hasTermsAndConditionsBeenAccepted(
+                                userProfile.getTermsAndConditions(),
+                                configurationService.getTermsAndConditionsVersion());
             }
-            String phoneNumber = userProfile.getPhoneNumber();
-
-            String concatPhoneNumber = RedactPhoneNumberHelper.redactPhoneNumber(phoneNumber);
-
+            sessionService.save(userContext.getSession().setNewAccount(EXISTING));
+            var isMfaRequired =
+                    MfaHelper.mfaRequired(userContext.getClientSession().getAuthRequestParams());
+            var consentRequired = ConsentHelper.userHasNotGivenConsent(userContext);
             LOG.info("User has successfully logged in");
 
             auditService.submitAuditEvent(
                     LOG_IN_SUCCESS,
                     context.getAwsRequestId(),
-                    session.getSessionId(),
+                    userContext.getSession().getSessionId(),
                     AuditService.UNKNOWN,
                     userProfile.getSubjectID(),
                     userProfile.getEmail(),
@@ -238,11 +202,15 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     persistentSessionId);
 
             return generateApiGatewayProxyResponse(
-                    200, new LoginResponse(concatPhoneNumber, userContext.getSession().getState()));
+                    200,
+                    new LoginResponse(
+                            redactedPhoneNumber,
+                            isMfaRequired,
+                            isPhoneNumberVerified,
+                            termsAndConditionsAccepted,
+                            consentRequired));
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
-        } catch (StateMachine.InvalidStateTransitionException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         }
     }
 }

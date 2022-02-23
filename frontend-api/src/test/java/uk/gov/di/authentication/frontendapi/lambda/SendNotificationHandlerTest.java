@@ -18,14 +18,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
-import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
@@ -45,7 +43,6 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -63,15 +60,10 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
-import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
-import static uk.gov.di.authentication.shared.entity.SessionState.USER_NOT_FOUND;
-import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_EMAIL_CODE_SENT;
-import static uk.gov.di.authentication.shared.entity.SessionState.VERIFY_PHONE_NUMBER_CODE_SENT;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class SendNotificationHandlerTest {
 
@@ -108,9 +100,7 @@ class SendNotificationHandlerTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final Session session =
-            new Session(IdGenerator.generate())
-                    .setEmailAddress(TEST_EMAIL_ADDRESS)
-                    .setState(USER_NOT_FOUND);
+            new Session(IdGenerator.generate()).setEmailAddress(TEST_EMAIL_ADDRESS);
 
     private final SendNotificationHandler handler =
             new SendNotificationHandler(
@@ -125,11 +115,11 @@ class SendNotificationHandlerTest {
                     codeStorageService);
 
     @RegisterExtension
-    public final CaptureLoggingExtension logging =
+    private final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(SendNotificationHandler.class);
 
     @AfterEach
-    public void tearDown() {
+    void tearDown() {
         assertThat(
                 logging.events(),
                 not(
@@ -155,7 +145,8 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    void shouldReturn200AndPutMessageOnQueueForAValidRequest() throws JsonProcessingException {
+    void shouldReturn204AndPutMessageOnQueueForAValidVerifyEmailRequest()
+            throws JsonProcessingException {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
         NotifyRequest notifyRequest =
@@ -172,9 +163,7 @@ class SendNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        assertEquals(200, result.getStatusCode());
-        BaseAPIResponse response = objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
-        assertThat(VERIFY_EMAIL_CODE_SENT, equalTo(response.getSessionState()));
+        assertEquals(204, result.getStatusCode());
 
         verify(awsSqsClient).send(serialisedRequest);
         verify(codeStorageService)
@@ -184,7 +173,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    void shouldReturn200AndNotPutMessageOnQueueForAValidRequestUsingTestClientWithAllowedEmail()
+    void shouldReturn204AndNotPutMessageOnQueueForAValidRequestUsingTestClientWithAllowedEmail()
             throws JsonProcessingException {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
@@ -204,10 +193,7 @@ class SendNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        assertEquals(200, result.getStatusCode());
-        BaseAPIResponse response =
-                new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
-        assertThat(VERIFY_EMAIL_CODE_SENT, equalTo(response.getSessionState()));
+        assertEquals(204, result.getStatusCode());
 
         verify(awsSqsClient, never()).send(serialisedRequest);
         verify(codeStorageService)
@@ -237,7 +223,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfRequestIsMissingEmail() {
+    void shouldReturn400IfRequestIsMissingEmail() {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -249,7 +235,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfEmailAddressIsInvalid() {
+    void shouldReturn400IfEmailAddressIsInvalid() {
         session.setEmailAddress("joe.bloggs");
 
         usingValidSession();
@@ -271,7 +257,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn500IfMessageCannotBeSentToQueue() throws JsonProcessingException {
+    void shouldReturn500IfMessageCannotBeSentToQueue() throws JsonProcessingException {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
         NotifyRequest notifyRequest =
@@ -294,7 +280,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenInvalidNotificationType() {
+    void shouldReturn400WhenInvalidNotificationType() {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
 
@@ -316,8 +302,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn200WhenVerifyTypeIsVerifyPhoneNumber() throws JsonProcessingException {
-        session.setState(SessionState.ADDED_UNVERIFIED_PHONE_NUMBER);
+    void shouldReturn204AndPutMessageOnQueueForAValidVerifyPhoneNumberRequest() {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -328,14 +313,11 @@ class SendNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        assertEquals(200, result.getStatusCode());
-        BaseAPIResponse response = objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
-        assertThat(VERIFY_PHONE_NUMBER_CODE_SENT, equalTo(response.getSessionState()));
+        assertEquals(204, result.getStatusCode());
     }
 
     @Test
-    public void shouldReturn400WhenVerifyTypeIsVerifyPhoneNumberButRequestIsMissingNumber() {
-        session.setState(SessionState.ADDED_UNVERIFIED_PHONE_NUMBER);
+    void shouldReturn400WhenVerifyTypeIsVerifyPhoneNumberButRequestIsMissingNumber() {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -350,8 +332,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenPhoneNumberIsInvalid() {
-        session.setState(SessionState.ADDED_UNVERIFIED_PHONE_NUMBER);
+    void shouldReturn400WhenPhoneNumberIsInvalid() {
         when(validationService.validatePhoneNumber(eq("123456789")))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1012));
         usingValidSession();
@@ -368,51 +349,9 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn200IfUserTransitionsToVerifyEmailCodeSentFromNewState() {
-        session.setState(NEW);
-
+    void shouldReturn400IfUserHasReachedTheEmailCodeRequestLimit() {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
-
-        usingValidSession();
-        usingValidClientSession(CLIENT_ID);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(200));
-        assertThat(VERIFY_EMAIL_CODE_SENT, equalTo(session.getState()));
-    }
-
-    @Test
-    public void shouldReturn400IfUserTransitionsToHelperFromWrongState_PhoneCode() {
-        session.setState(NEW);
-
-        usingValidSession();
-
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
-
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1017));
-    }
-
-    @Test
-    public void shouldReturn400IfUserHasReachedTheEmailCodeRequestLimit()
-            throws JsonProcessingException {
-        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
-                .thenReturn(Optional.empty());
-        session.setState(VERIFY_EMAIL_CODE_SENT);
         maxOutCodeRequestCount();
         usingValidSession();
 
@@ -426,9 +365,7 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        BaseAPIResponse codeResponse =
-                objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
-        assertEquals(SessionState.EMAIL_MAX_CODES_SENT, codeResponse.getSessionState());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1029));
         verify(codeStorageService)
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS,
@@ -440,11 +377,9 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserHasReachedThePhoneCodeRequestLimit()
-            throws JsonProcessingException {
+    void shouldReturn400IfUserHasReachedThePhoneCodeRequestLimit() {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
-        session.setState(SessionState.VERIFY_PHONE_NUMBER_CODE_SENT);
         maxOutCodeRequestCount();
         usingValidSession();
 
@@ -458,9 +393,7 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        BaseAPIResponse codeResponse =
-                objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
-        assertEquals(SessionState.PHONE_NUMBER_MAX_CODES_SENT, codeResponse.getSessionState());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1030));
         verify(codeStorageService)
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS,
@@ -475,14 +408,12 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreOtpCodes()
-            throws JsonProcessingException {
+    void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreOtpCodes() {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
         when(codeStorageService.isBlockedForEmail(
                         TEST_EMAIL_ADDRESS, CODE_REQUEST_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
-        session.setState(SessionState.EMAIL_MAX_CODES_SENT);
         usingValidSession();
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -495,19 +426,15 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        BaseAPIResponse codeResponse =
-                objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
-        assertEquals(SessionState.EMAIL_CODE_REQUESTS_BLOCKED, codeResponse.getSessionState());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1031));
     }
 
     @Test
-    public void shouldReturn400IfUserIsBlockedFromEnteringEmailOtpCodes()
-            throws JsonProcessingException {
+    void shouldReturn400IfUserIsBlockedFromEnteringEmailOtpCodes() {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
-        session.setState(SessionState.EMAIL_CODE_MAX_RETRIES_REACHED);
         usingValidSession();
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -520,19 +447,15 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        BaseAPIResponse codeResponse =
-                objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
-        assertEquals(SessionState.EMAIL_CODE_MAX_RETRIES_REACHED, codeResponse.getSessionState());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1033));
     }
 
     @Test
-    public void shouldReturn400IfUserIsBlockedFromEnteringPhoneOtpCodes()
-            throws JsonProcessingException {
+    void shouldReturn400IfUserIsBlockedFromEnteringPhoneOtpCodes() {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
-        session.setState(SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED);
         usingValidSession();
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -545,14 +468,11 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        BaseAPIResponse codeResponse =
-                objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
-        assertEquals(
-                SessionState.PHONE_NUMBER_CODE_MAX_RETRIES_REACHED, codeResponse.getSessionState());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
     }
 
     @Test
-    public void shouldReturn204WhenSendingAccountCreationEmail() throws JsonProcessingException {
+    void shouldReturn204WhenSendingAccountCreationEmail() throws JsonProcessingException {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -570,7 +490,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn204AndNotSendAccountCreationEmailForTestClientAndTestUser()
+    void shouldReturn204AndNotSendAccountCreationEmailForTestClientAndTestUser()
             throws JsonProcessingException {
         usingValidSession();
         usingValidClientSession(TEST_CLIENT_ID);
@@ -604,28 +524,24 @@ class SendNotificationHandlerTest {
     }
 
     private void usingValidClientSession(String clientId) {
-        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(clientSession));
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(withAuthenticationRequest(clientId).toParameters());
-    }
-
-    private AuthenticationRequest withAuthenticationRequest(String clientId) {
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
-        return new AuthenticationRequest.Builder(
-                        new ResponseType(ResponseType.Value.CODE),
-                        scope,
-                        new ClientID(clientId),
-                        REDIRECT_URI)
-                .state(new State())
-                .nonce(new Nonce())
-                .build();
+        var authRequest =
+                new AuthenticationRequest.Builder(
+                                new ResponseType(ResponseType.Value.CODE),
+                                scope,
+                                new ClientID(clientId),
+                                REDIRECT_URI)
+                        .state(new State())
+                        .nonce(new Nonce())
+                        .build();
+        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(clientSession));
+        when(clientSession.getAuthRequestParams()).thenReturn(authRequest.toParameters());
     }
 
     private boolean isSessionWithEmailSent(Session session) {
-        return session.getState().equals(VERIFY_EMAIL_CODE_SENT)
-                && session.getEmailAddress().equals(TEST_EMAIL_ADDRESS)
+        return session.getEmailAddress().equals(TEST_EMAIL_ADDRESS)
                 && session.getCodeRequestCount() == 1;
     }
 }

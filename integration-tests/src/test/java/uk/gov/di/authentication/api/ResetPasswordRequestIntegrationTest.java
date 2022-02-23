@@ -4,7 +4,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
 import uk.gov.di.authentication.frontendapi.lambda.ResetPasswordRequestHandler;
-import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
@@ -17,12 +16,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_REQUESTED;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
-import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
-import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
-import static uk.gov.di.authentication.shared.entity.SessionState.RESET_PASSWORD_LINK_SENT;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -42,7 +36,6 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         String sessionId = redis.createSession();
         String persistentSessionId = "test-persistent-id";
         redis.addEmailToSession(sessionId, email);
-        redis.setSessionState(sessionId, AUTHENTICATION_REQUIRED);
 
         var response =
                 makeRequest(
@@ -50,7 +43,7 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
                         constructFrontendHeaders(sessionId, null, persistentSessionId),
                         Map.of());
 
-        assertThat(response, hasStatus(200));
+        assertThat(response, hasStatus(204));
 
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
 
@@ -65,36 +58,5 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         assertThat(resetLinkSplit.length, equalTo(4));
         assertThat(resetLinkSplit[2], equalTo(sessionId));
         assertThat(resetLinkSplit[3], equalTo(persistentSessionId));
-
-        BaseAPIResponse resetPasswordResponse =
-                objectMapper.readValue(response.getBody(), BaseAPIResponse.class);
-        assertThat(resetPasswordResponse.getSessionState(), equalTo(RESET_PASSWORD_LINK_SENT));
-
-        assertEventTypesReceived(auditTopic, List.of(PASSWORD_RESET_REQUESTED));
-    }
-
-    @Test
-    public void shouldCallResetPasswordEndpointAndReturn400WhenInvalidState() throws IOException {
-        String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
-        String password = "password-1";
-        String phoneNumber = "01234567890";
-        userStore.signUp(email, password);
-        userStore.addPhoneNumber(email, phoneNumber);
-        String sessionId = redis.createSession();
-        redis.addEmailToSession(sessionId, email);
-        redis.setSessionState(sessionId, NEW);
-
-        var response =
-                makeRequest(
-                        Optional.of(new ResetPasswordRequest(email)),
-                        constructFrontendHeaders(sessionId),
-                        Map.of());
-
-        assertThat(response, hasStatus(400));
-        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
-
-        assertThat(requests, hasSize(0));
-
-        assertEventTypesReceived(auditTopic, List.of(PASSWORD_RESET_REQUESTED));
     }
 }

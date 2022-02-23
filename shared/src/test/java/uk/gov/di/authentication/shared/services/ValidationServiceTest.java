@@ -5,7 +5,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.SessionAction;
 
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -28,7 +27,7 @@ public class ValidationServiceTest {
 
     @ParameterizedTest
     @MethodSource("blankEmailAddresses")
-    public void shouldRejectBlankEmail(String emailAddress) {
+    void shouldRejectBlankEmail(String emailAddress) {
 
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1003),
@@ -74,7 +73,7 @@ public class ValidationServiceTest {
 
     @ParameterizedTest
     @MethodSource("invalidEmailAddresses")
-    public void shouldRejectMalformattedEmail(String emailAddress) {
+    void shouldRejectMalformattedEmail(String emailAddress) {
 
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1004),
@@ -96,13 +95,13 @@ public class ValidationServiceTest {
 
     @ParameterizedTest
     @MethodSource("validEmailAddresses")
-    public void shouldAcceptValidEmail(String emailAddress) {
+    void shouldAcceptValidEmail(String emailAddress) {
 
         assertTrue(validationService.validateEmailAddress(emailAddress).isEmpty());
     }
 
     @Test
-    public void shouldRejectPasswordLessThan8Characters() {
+    void shouldRejectPasswordLessThan8Characters() {
         var shortPassword = "passw0r";
 
         assertEquals(
@@ -111,12 +110,12 @@ public class ValidationServiceTest {
     }
 
     @Test
-    public void shouldRejectEmptyPassword() {
+    void shouldRejectEmptyPassword() {
         assertEquals(Optional.of(ErrorResponse.ERROR_1005), validationService.validatePassword(""));
     }
 
     @Test
-    public void shouldNotThrowNullPointerIfPasswordInputsAreNull() {
+    void shouldNotThrowNullPointerIfPasswordInputsAreNull() {
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1005), validationService.validatePassword(null));
     }
@@ -128,16 +127,16 @@ public class ValidationServiceTest {
 
     @ParameterizedTest
     @MethodSource("invalidPhoneNumbers")
-    public void shouldReturnErrorIfMobileNumberIsInvalid(String phoneNumber) {
+    void shouldReturnErrorIfMobileNumberIsInvalid(String phoneNumber) {
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1012),
                 validationService.validatePhoneNumber(phoneNumber));
     }
 
     @Test
-    public void shouldReturnCorrectStateWhenPhoneCodeMatchesStored() {
+    void shouldReturnNoErrorWhenPhoneCodeMatchesStored() {
         assertEquals(
-                SessionAction.USER_ENTERED_VALID_PHONE_VERIFICATION_CODE,
+                Optional.empty(),
                 validationService.validateVerificationCode(
                         VERIFY_PHONE_NUMBER,
                         Optional.of("123456"),
@@ -147,113 +146,107 @@ public class ValidationServiceTest {
     }
 
     @Test
-    public void shouldReturnCorrectStateWhenStoredPhoneCodeIsEmpty() {
+    void shouldReturnCorrectErrorWhenStoredPhoneCodeIsEmpty() {
         assertEquals(
-                SessionAction.USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE,
+                Optional.of(ErrorResponse.ERROR_1037),
                 validationService.validateVerificationCode(
                         VERIFY_PHONE_NUMBER, Optional.empty(), "123456", mock(Session.class), 5));
     }
 
     @Test
-    public void
-            shouldReturnCorrectStateWhenStoredPhoneCodeDoesMatchInputAndRetryLimitHasNotBeenReached() {
+    void shouldReturnCorrectErrorWhenStoredPhoneCodeDoesMatchInputAndRetryLimitHasNotBeenReached() {
         Session session = mock(Session.class);
         when(session.getRetryCount()).thenReturn(1);
         assertEquals(
-                SessionAction.USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE,
+                Optional.of(ErrorResponse.ERROR_1037),
                 validationService.validateVerificationCode(
                         VERIFY_PHONE_NUMBER, Optional.of("654321"), "123456", session, 5));
     }
 
     @Test
-    public void
-            shouldReturnCorrectStateWhenStoredPhoneCodeDoesMatchInputAndRetryLimitHasBeenReached() {
+    void shouldReturnCorrectErrorWhenStoredPhoneCodeDoesMatchInputAndRetryLimitHasBeenReached() {
         Session session = mock(Session.class);
         when(session.getRetryCount()).thenReturn(6);
         assertEquals(
-                SessionAction.USER_ENTERED_INVALID_PHONE_VERIFICATION_CODE_TOO_MANY_TIMES,
+                Optional.of(ErrorResponse.ERROR_1034),
                 validationService.validateVerificationCode(
                         VERIFY_PHONE_NUMBER, Optional.of("654321"), "123456", session, 5));
     }
 
     @Test
-    public void shouldReturnCorrectStateWhenEmailCodeMatchesStored() {
+    void shouldReturnNoErrorWhenEmailCodeMatchesStored() {
         assertEquals(
-                SessionAction.USER_ENTERED_VALID_EMAIL_VERIFICATION_CODE,
+                Optional.empty(),
                 validationService.validateVerificationCode(
                         VERIFY_EMAIL, Optional.of("123456"), "123456", mock(Session.class), 5));
     }
 
     @Test
-    public void shouldReturnCorrectStateWhenStoredEmailCodeIsEmpty() {
+    void shouldReturnCorrectErrorWhenStoredEmailCodeIsEmpty() {
         assertEquals(
-                SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE,
+                Optional.of(ErrorResponse.ERROR_1036),
                 validationService.validateVerificationCode(
                         VERIFY_EMAIL, Optional.empty(), "123456", mock(Session.class), 5));
     }
 
     @Test
-    public void
-            shouldReturnCorrectStateWhenStoredEmailCodeDoesMatchInputAndRetryLimitHasNotBeenReached() {
+    void shouldReturnCorrectErrorWhenStoredEmailCodeDoesMatchInputAndRetryLimitHasNotBeenReached() {
         Session session = mock(Session.class);
         when(session.getRetryCount()).thenReturn(1);
         assertEquals(
-                SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE,
+                Optional.of(ErrorResponse.ERROR_1036),
                 validationService.validateVerificationCode(
                         VERIFY_EMAIL, Optional.of("654321"), "123456", session, 5));
     }
 
     @Test
-    public void
-            shouldReturnCorrectStateWhenStoredEmailCodeDoesMatchInputAndRetryLimitHasBeenReached() {
+    void shouldReturnCorrectErrorWhenStoredEmailCodeDoesMatchInputAndRetryLimitHasBeenReached() {
         Session session = mock(Session.class);
         when(session.getRetryCount()).thenReturn(6);
         assertEquals(
-                SessionAction.USER_ENTERED_INVALID_EMAIL_VERIFICATION_CODE_TOO_MANY_TIMES,
+                Optional.of(ErrorResponse.ERROR_1033),
                 validationService.validateVerificationCode(
                         VERIFY_EMAIL, Optional.of("654321"), "123456", session, 5));
     }
 
     @Test
-    public void shouldReturnCorrectStateWhenMfaCodeMatchesStored() {
+    void shouldReturnNoErrorWhenMfaCodeMatchesStored() {
         assertEquals(
-                SessionAction.USER_ENTERED_VALID_MFA_CODE,
+                Optional.empty(),
                 validationService.validateVerificationCode(
                         MFA_SMS, Optional.of("123456"), "123456", mock(Session.class), 5));
     }
 
     @Test
-    public void shouldReturnCorrectStateWhenStoredMfaCodeIsEmpty() {
+    void shouldReturnCorrectErrorWhenStoredMfaCodeIsEmpty() {
         assertEquals(
-                SessionAction.USER_ENTERED_INVALID_MFA_CODE,
+                Optional.of(ErrorResponse.ERROR_1035),
                 validationService.validateVerificationCode(
                         MFA_SMS, Optional.empty(), "123456", mock(Session.class), 5));
     }
 
     @Test
-    public void
-            shouldReturnCorrectStateWhenStoredMfaCodeDoesMatchInputAndRetryLimitHasNotBeenReached() {
+    void shouldReturnNoErrorWhenStoredMfaCodeDoesMatchInputAndRetryLimitHasNotBeenReached() {
         Session session = mock(Session.class);
         when(session.getRetryCount()).thenReturn(1);
         assertEquals(
-                SessionAction.USER_ENTERED_INVALID_MFA_CODE,
+                Optional.of(ErrorResponse.ERROR_1035),
                 validationService.validateVerificationCode(
                         MFA_SMS, Optional.of("654321"), "123456", session, 5));
     }
 
     @Test
-    public void
-            shouldReturnCorrectStateWhenStoredMfaCodeDoesMatchInputAndRetryLimitHasBeenReached() {
+    void shouldReturnCorrectErrorWhenStoredMfaCodeDoesMatchInputAndRetryLimitHasBeenReached() {
         Session session = mock(Session.class);
         when(session.getRetryCount()).thenReturn(6);
         assertEquals(
-                SessionAction.USER_ENTERED_INVALID_MFA_CODE_TOO_MANY_TIMES,
+                Optional.of(ErrorResponse.ERROR_1027),
                 validationService.validateVerificationCode(
                         MFA_SMS, Optional.of("654321"), "123456", session, 5));
     }
 
     @Test
-    public void shouldReturnErrorWhenEmailAddressesAreTheSame() {
+    void shouldReturnErrorWhenEmailAddressesAreTheSame() {
         String email = "joe.bloggs@digital.cabinet-office.gov.uk";
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1019),
@@ -261,7 +254,7 @@ public class ValidationServiceTest {
     }
 
     @Test
-    public void shouldReturnErrorWhenExistingEmailIsInvalid() {
+    void shouldReturnErrorWhenExistingEmailIsInvalid() {
         String existingEmail = "joe.bloggs";
         String replacementEmail = "joe.bloggs@digital.cabinet-office.gov.uk";
         assertEquals(
@@ -270,7 +263,7 @@ public class ValidationServiceTest {
     }
 
     @Test
-    public void shouldReturnErrorWhenReplacementEmailIsInvalid() {
+    void shouldReturnErrorWhenReplacementEmailIsInvalid() {
         String existingEmail = "joe.bloggs@digital.cabinet-office.gov.uk";
         String replacementEmail = "joe.bloggs";
         assertEquals(

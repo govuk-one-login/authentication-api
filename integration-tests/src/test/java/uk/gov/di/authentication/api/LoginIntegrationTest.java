@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.api;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -16,7 +17,6 @@ import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.lambda.LoginHandler;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ServiceType;
-import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.io.IOException;
@@ -30,15 +30,11 @@ import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.hamcrest.Matchers.equalTo;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CREDENTIALS;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.LOG_IN_SUCCESS;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
-import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
-import static uk.gov.di.authentication.shared.entity.SessionState.CONSENT_REQUIRED;
-import static uk.gov.di.authentication.shared.entity.SessionState.LOGGED_IN;
-import static uk.gov.di.authentication.shared.entity.SessionState.UPDATED_TERMS_AND_CONDITIONS;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
@@ -58,12 +54,9 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @ParameterizedTest
-    @MethodSource("vectorOfTrustEndStates")
-    void shouldReturnCorrectStateForClientsTrustLevel(
-            CredentialTrustLevel level,
-            String termsAndConditionsVersion,
-            SessionState expectedState)
-            throws IOException {
+    @MethodSource("vectorOfTrust")
+    void shouldSuccessfullyProcessLoginRequestForDifferentVectorOfTrusts(
+            CredentialTrustLevel level, String termsAndConditionsVersion) throws IOException {
         String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         String password = "password-1";
         String phoneNumber = "01234567890";
@@ -71,7 +64,6 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         userStore.addPhoneNumber(email, phoneNumber);
         userStore.updateTermsAndConditions(email, termsAndConditionsVersion);
         String sessionId = redis.createSession();
-        redis.setSessionState(sessionId, AUTHENTICATION_REQUIRED);
 
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
@@ -112,20 +104,24 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(200));
 
         LoginResponse loginResponse =
-                objectMapper.readValue(response.getBody(), LoginResponse.class);
-        assertEquals(expectedState, loginResponse.getSessionState());
+                new ObjectMapper().readValue(response.getBody(), LoginResponse.class);
+
+        assertThat(loginResponse.isMfaRequired(), equalTo(level != LOW_LEVEL));
+        assertThat(
+                loginResponse.getLatestTermsAndConditionsAccepted(),
+                equalTo(termsAndConditionsVersion.equals(CURRENT_TERMS_AND_CONDITIONS)));
 
         assertEventTypesReceived(auditTopic, List.of(LOG_IN_SUCCESS));
     }
 
-    private static Stream<Arguments> vectorOfTrustEndStates() {
+    private static Stream<Arguments> vectorOfTrust() {
         return Stream.of(
-                Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, LOGGED_IN),
-                Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, CONSENT_REQUIRED),
-                Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, LOGGED_IN),
-                Arguments.of(null, OLD_TERMS_AND_CONDITIONS, LOGGED_IN),
-                Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, UPDATED_TERMS_AND_CONDITIONS),
-                Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, LOGGED_IN));
+                Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS),
+                Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS),
+                Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS),
+                Arguments.of(null, OLD_TERMS_AND_CONDITIONS),
+                Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS),
+                Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS));
     }
 
     @Test
@@ -134,7 +130,6 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String password = "password-1";
         userStore.signUp(email, "wrong-password");
         String sessionId = redis.createSession();
-        redis.setSessionState(sessionId, AUTHENTICATION_REQUIRED);
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
         headers.put("X-API-Key", FRONTEND_API_KEY);

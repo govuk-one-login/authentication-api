@@ -13,7 +13,6 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -60,7 +59,7 @@ class CheckUserExistsHandlerTest {
     private CheckUserExistsHandler handler;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    private final Session session = new Session(IdGenerator.generate()).setState(SessionState.NEW);
+    private final Session session = new Session(IdGenerator.generate());
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -216,7 +215,6 @@ class CheckUserExistsHandlerTest {
     public void shouldReturn200IfUserTransitionsFromUserNotFoundAndUserDoesNotExist()
             throws JsonProcessingException {
         usingValidSession();
-        session.setState(SessionState.USER_NOT_FOUND);
         when(authenticationService.userExists(eq("joe.bloggs"))).thenReturn(false);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -231,7 +229,6 @@ class CheckUserExistsHandlerTest {
                 objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
         assertEquals("joe.bloggs", checkUserExistsResponse.getEmail());
         assertFalse(checkUserExistsResponse.doesUserExist());
-        assertTrue(checkUserExistsResponse.getSessionState().equals(SessionState.USER_NOT_FOUND));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -249,12 +246,5 @@ class CheckUserExistsHandlerTest {
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
-    }
-
-    private APIGatewayProxyRequestEvent usingTestEventWithSession(Session testEventSession) {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody("{ \"email\": \"joe.bloggs\" }");
-        event.setHeaders(Map.of("Session-Id", testEventSession.getSessionId()));
-        return event;
     }
 }

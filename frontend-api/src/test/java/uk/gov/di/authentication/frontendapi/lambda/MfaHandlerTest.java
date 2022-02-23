@@ -17,13 +17,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -54,10 +52,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
-import static uk.gov.di.authentication.shared.entity.SessionState.MFA_CODE_MAX_RETRIES_REACHED;
-import static uk.gov.di.authentication.shared.entity.SessionState.MFA_SMS_CODE_SENT;
-import static uk.gov.di.authentication.shared.entity.SessionState.MFA_SMS_MAX_CODES_SENT;
-import static uk.gov.di.authentication.shared.entity.SessionState.UPLIFT_REQUIRED_CM;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -87,10 +81,7 @@ public class MfaHandlerTest {
     private final ClientSession clientSession = mock(ClientSession.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final Session session =
-            new Session("a-session-id")
-                    .setEmailAddress(TEST_EMAIL_ADDRESS)
-                    .setState(SessionState.LOGGED_IN);
+    private final Session session = new Session("a-session-id").setEmailAddress(TEST_EMAIL_ADDRESS);
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
                     .setTestClient(true)
@@ -102,17 +93,17 @@ public class MfaHandlerTest {
                                     "jb2@digital.cabinet-office.gov.uk"));
 
     @RegisterExtension
-    public final CaptureLoggingExtension logging = new CaptureLoggingExtension(MfaHandler.class);
+    private final CaptureLoggingExtension logging = new CaptureLoggingExtension(MfaHandler.class);
 
     @AfterEach
-    public void tearDown() {
+    void tearDown() {
         assertThat(
                 logging.events(),
                 not(hasItem(withMessageContaining(session.getSessionId(), TEST_CLIENT_ID))));
     }
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
@@ -131,7 +122,7 @@ public class MfaHandlerTest {
     }
 
     @Test
-    public void shouldReturn200ForSuccessfulMfaRequest() throws JsonProcessingException {
+    void shouldReturn204ForSuccessfulMfaRequest() throws JsonProcessingException {
         usingValidSession();
         String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
@@ -150,7 +141,7 @@ public class MfaHandlerTest {
 
         verify(sqsClient).send(new ObjectMapper().writeValueAsString(notifyRequest));
         verify(codeStorageService).saveOtpCode(TEST_EMAIL_ADDRESS, CODE, CODE_EXPIRY_TIME, MFA_SMS);
-        assertThat(result, hasStatus(200));
+        assertThat(result, hasStatus(204));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -166,9 +157,8 @@ public class MfaHandlerTest {
     }
 
     @Test
-    public void shouldAllowMfaRequestDuringUplift() throws JsonProcessingException {
+    void shouldReturn204AndAllowMfaRequestDuringUplift() throws JsonProcessingException {
         usingValidSession();
-        session.setState(UPLIFT_REQUIRED_CM);
 
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(PHONE_NUMBER));
@@ -183,7 +173,7 @@ public class MfaHandlerTest {
 
         verify(sqsClient).send(new ObjectMapper().writeValueAsString(notifyRequest));
         verify(codeStorageService).saveOtpCode(TEST_EMAIL_ADDRESS, CODE, CODE_EXPIRY_TIME, MFA_SMS);
-        assertThat(result, hasStatus(200));
+        assertThat(result, hasStatus(204));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -199,7 +189,7 @@ public class MfaHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenSessionIdIsInvalid() {
+    void shouldReturn400WhenSessionIdIsInvalid() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
@@ -213,13 +203,11 @@ public class MfaHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenEmailInSessionDoesNotMatchEmailInRequest()
-            throws JsonProcessingException {
+    void shouldReturn400WhenEmailInSessionDoesNotMatchEmailInRequest() {
         usingValidSession();
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(PHONE_NUMBER));
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
-        NotifyRequest notifyRequest = new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"email\": \"%s\"}", "wrong.email@gov.uk"));
@@ -243,7 +231,7 @@ public class MfaHandlerTest {
     }
 
     @Test
-    public void shouldReturnErrorResponseWhenUsersPhoneNumberIsNotStored() {
+    void shouldReturnErrorResponseWhenUsersPhoneNumberIsNotStored() {
         usingValidSession();
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS)).thenReturn(Optional.empty());
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -270,35 +258,9 @@ public class MfaHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserTransitionsFromWrongState() {
-        session.setState(SessionState.NEW);
-
+    void shouldReturn400IfUserHasReachedTheMfaCodeRequestLimit() {
         usingValidSession();
-
-        when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(PHONE_NUMBER));
-        when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
-
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
-
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        verifyNoInteractions(sqsClient);
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1017));
-
-        verifyNoInteractions(auditService);
-    }
-
-    @Test
-    public void shouldReturn400IfUserHasReachedTheMfaCodeRequestLimit()
-            throws JsonProcessingException {
         when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
-        usingValidSession();
-        session.setState(MFA_SMS_CODE_SENT);
         session.incrementCodeRequestCount();
         session.incrementCodeRequestCount();
         session.incrementCodeRequestCount();
@@ -313,9 +275,8 @@ public class MfaHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        BaseAPIResponse codeResponse =
-                objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
-        assertEquals(SessionState.MFA_SMS_MAX_CODES_SENT, codeResponse.getSessionState());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1025));
+
         verify(codeStorageService)
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS,
@@ -336,10 +297,8 @@ public class MfaHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreMfaCodes()
-            throws JsonProcessingException {
+    void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreMfaCodes() {
         usingValidSession();
-        session.setState(MFA_SMS_MAX_CODES_SENT);
         when(codeStorageService.isBlockedForEmail(
                         TEST_EMAIL_ADDRESS, CODE_REQUEST_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
@@ -352,9 +311,7 @@ public class MfaHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        BaseAPIResponse codeResponse =
-                objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
-        assertEquals(SessionState.MFA_CODE_REQUESTS_BLOCKED, codeResponse.getSessionState());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1026));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -370,10 +327,8 @@ public class MfaHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserIsBlockedFromAttemptingMfaCodes()
-            throws JsonProcessingException {
+    void shouldReturn400IfUserIsBlockedFromAttemptingMfaCodes() {
         usingValidSession();
-        session.setState(MFA_CODE_MAX_RETRIES_REACHED);
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
 
@@ -385,9 +340,7 @@ public class MfaHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        BaseAPIResponse codeResponse =
-                objectMapper.readValue(result.getBody(), BaseAPIResponse.class);
-        assertEquals(MFA_CODE_MAX_RETRIES_REACHED, codeResponse.getSessionState());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -403,7 +356,7 @@ public class MfaHandlerTest {
     }
 
     @Test
-    public void shouldReturn200AndNotSendMessageForSuccessfulMfaRequestOnTestClient()
+    void shouldReturn204AndNotSendMessageForSuccessfulMfaRequestOnTestClient()
             throws JsonProcessingException {
         usingValidSession();
         usingValidClientSession(TEST_CLIENT_ID);
@@ -421,7 +374,7 @@ public class MfaHandlerTest {
 
         verify(sqsClient, never()).send(objectMapper.writeValueAsString(notifyRequest));
         verify(codeStorageService).saveOtpCode(TEST_EMAIL_ADDRESS, CODE, CODE_EXPIRY_TIME, MFA_SMS);
-        assertThat(result, hasStatus(200));
+        assertThat(result, hasStatus(204));
 
         verify(auditService)
                 .submitAuditEvent(

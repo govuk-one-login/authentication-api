@@ -47,7 +47,7 @@ class ClientSessionServiceTest {
     private final String sessionId = IdGenerator.generate();
 
     @AfterEach
-    public void tearDown() {
+    void tearDown() {
         assertThat(
                 logging.events(), not(hasItem(withMessageContaining(clientSessionId, sessionId))));
     }
@@ -113,12 +113,16 @@ class ClientSessionServiceTest {
 
     @Test
     void shouldNotRetrieveClientSessionAndThrowExceptionIfNotPresentInRedis() {
-        final Map headers = Map.of("Session-Id", sessionId, "Client-Session-Id", clientSessionId);
-
         RuntimeException exception =
                 assertThrows(
                         RuntimeException.class,
-                        () -> clientSessionService.getClientSessionFromRequestHeaders(headers),
+                        () ->
+                                clientSessionService.getClientSessionFromRequestHeaders(
+                                        Map.of(
+                                                "Session-Id",
+                                                sessionId,
+                                                "Client-Session-Id",
+                                                clientSessionId)),
                         "Expected to throw exception");
 
         assertTrue(

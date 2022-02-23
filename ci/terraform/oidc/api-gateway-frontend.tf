@@ -36,8 +36,8 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
 
   triggers = {
     redeployment = sha1(jsonencode([
-      module.client-info.integration_trigger_value,
-      module.client-info.method_trigger_value,
+      module.start.integration_trigger_value,
+      module.start.method_trigger_value,
       module.login.integration_trigger_value,
       module.login.method_trigger_value,
       module.mfa.integration_trigger_value,
@@ -69,7 +69,7 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
     create_before_destroy = true
   }
   depends_on = [
-    module.client-info,
+    module.start,
     module.login,
     module.mfa,
     module.send_notification,
@@ -147,7 +147,7 @@ resource "aws_api_gateway_stage" "endpoint_frontend_stage" {
   tags = local.default_tags
 
   depends_on = [
-    module.client-info,
+    module.start,
     module.login,
     module.mfa,
     module.send_notification,

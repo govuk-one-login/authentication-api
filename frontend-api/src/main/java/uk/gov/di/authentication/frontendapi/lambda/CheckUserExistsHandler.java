@@ -10,10 +10,9 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
+import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.SessionAction;
-import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
@@ -24,13 +23,10 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.ValidationService;
-import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
 
-import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_REGISTERED_EMAIL_ADDRESS;
-import static uk.gov.di.authentication.shared.entity.SessionAction.USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -38,7 +34,6 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
-import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -47,8 +42,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
     private final ValidationService validationService;
     private final AuditService auditService;
-    private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
-            userJourneyStateMachine();
 
     public CheckUserExistsHandler(
             ConfigurationService configurationService,
@@ -96,14 +89,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         try {
             LOG.info("Processing request");
 
-            userContext
-                    .getSession()
-                    .setState(
-                            stateMachine.transition(
-                                    userContext.getSession().getState(),
-                                    USER_ENTERED_UNREGISTERED_EMAIL_ADDRESS,
-                                    userContext));
-
             String emailAddress = request.getEmail().toLowerCase();
             Optional<ErrorResponse> errorResponse =
                     validationService.validateEmailAddress(emailAddress);
@@ -127,45 +112,27 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             }
             boolean userExists = authenticationService.userExists(emailAddress);
             userContext.getSession().setEmailAddress(emailAddress);
+            AuditableEvent auditableEvent;
             if (userExists) {
-                userContext
-                        .getSession()
-                        .setState(
-                                stateMachine.transition(
-                                        userContext.getSession().getState(),
-                                        USER_ENTERED_REGISTERED_EMAIL_ADDRESS,
-                                        userContext));
-                auditService.submitAuditEvent(
-                        FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL,
-                        context.getAwsRequestId(),
-                        userContext.getSession().getSessionId(),
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
-                        AuditService.UNKNOWN,
-                        emailAddress,
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        persistentSessionId);
+                auditableEvent = FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL;
             } else {
-                auditService.submitAuditEvent(
-                        FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL,
-                        context.getAwsRequestId(),
-                        userContext.getSession().getSessionId(),
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
-                        AuditService.UNKNOWN,
-                        emailAddress,
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        persistentSessionId);
+                auditableEvent = FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
             }
+            auditService.submitAuditEvent(
+                    auditableEvent,
+                    context.getAwsRequestId(),
+                    userContext.getSession().getSessionId(),
+                    userContext
+                            .getClient()
+                            .map(ClientRegistry::getClientID)
+                            .orElse(AuditService.UNKNOWN),
+                    AuditService.UNKNOWN,
+                    emailAddress,
+                    IpAddressHelper.extractIpAddress(input),
+                    AuditService.UNKNOWN,
+                    persistentSessionId);
             CheckUserExistsResponse checkUserExistsResponse =
-                    new CheckUserExistsResponse(
-                            emailAddress, userExists, userContext.getSession().getState());
+                    new CheckUserExistsResponse(emailAddress, userExists);
             sessionService.save(userContext.getSession());
 
             LOG.info("Successfully processed request");
@@ -174,8 +141,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
-        } catch (StateMachine.InvalidStateTransitionException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1017);
         }
     }
 }

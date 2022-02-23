@@ -29,7 +29,21 @@ public enum ErrorResponse {
     ERROR_1021(1021, "Invalid Password reset code"),
     ERROR_1022(1022, "User has requested too many password resets"),
     ERROR_1023(1023, "User cannot request another password reset"),
-    ERROR_1024(1024, "New password cannot be the same as current password");
+    ERROR_1024(1024, "New password cannot be the same as current password"),
+    ERROR_1025(1025, "User has sent too many MFA OTP codes"),
+    ERROR_1026(1026, "User is blocked from sending any MFA OTP codes"),
+    ERROR_1027(1027, "User has entered invalid mfa code too many times"),
+    ERROR_1028(1028, "User has entered the incorrect password too many times"),
+    ERROR_1029(1029, "System has sent too many email verifications codes"),
+    ERROR_1030(1030, "System has sent too many phone verifications codes"),
+    ERROR_1031(1031, "System is blocked from sending any email verifications codes"),
+    ERROR_1032(1032, "System is blocked from sending any phone verifications codes"),
+    ERROR_1033(1033, "User entered invalid email verification code too many times"),
+    ERROR_1034(1034, "User entered invalid phone verification code too many times"),
+    ERROR_1035(1035, "User entered invalid mfa code"),
+    ERROR_1036(1036, "User entered invalid email verification code"),
+    ERROR_1037(1037, "User entered invalid phone verification code"),
+    ERROR_1038(1038, "Invalid Authentication Request");
 
     @JsonProperty("code")
     private int code;

@@ -59,14 +59,14 @@ class AuditServiceTest {
     }
 
     @BeforeEach
-    public void beforeEach() {
+    void beforeEach() {
         var stubSignature = new SignResult().withSignature(ByteBuffer.wrap("signature".getBytes()));
         when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(stubSignature);
         MockitoAnnotations.openMocks(this);
     }
 
     @AfterEach
-    public void afterEach() {
+    void afterEach() {
         verifyNoMoreInteractions(snsService);
     }
 

@@ -3,18 +3,14 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -33,7 +29,6 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
@@ -44,9 +39,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.shared.entity.SessionState.EMAIL_CODE_VERIFIED;
-import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
-import static uk.gov.di.authentication.shared.entity.SessionState.TWO_FACTOR_REQUIRED;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -65,19 +57,19 @@ class SignUpHandlerTest {
 
     private SignUpHandler handler;
 
-    private final Session session =
-            new Session(IdGenerator.generate()).setState(SessionState.USER_NOT_FOUND);
+    private final Session session = new Session(IdGenerator.generate());
 
     @RegisterExtension
-    public final CaptureLoggingExtension logging = new CaptureLoggingExtension(SignUpHandler.class);
+    private final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(SignUpHandler.class);
 
     @AfterEach
-    public void tearDown() {
+    void tearDown() {
         assertThat(logging.events(), not(hasItem(withMessageContaining(session.getSessionId()))));
     }
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         handler =
                 new SignUpHandler(
@@ -91,9 +83,8 @@ class SignUpHandlerTest {
     }
 
     @Test
-    public void shouldReturn200IfSignUpIsSuccessful() throws JsonProcessingException {
+    void shouldReturn204IfSignUpIsSuccessful() {
         String email = "joe.bloggs@test.com";
-        session.setState(EMAIL_CODE_VERIFIED);
         String password = "computer-1";
         String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
@@ -119,14 +110,9 @@ class SignUpHandlerTest {
                 .save(
                         argThat(
                                 (session) ->
-                                        session.getState().equals(TWO_FACTOR_REQUIRED)
-                                                && session.getEmailAddress()
-                                                        .equals("joe.bloggs@test.com")));
+                                        session.getEmailAddress().equals("joe.bloggs@test.com")));
 
-        assertThat(result, hasStatus(200));
-        BaseAPIResponse response =
-                new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
-        assertThat(response.getSessionState(), equalTo(TWO_FACTOR_REQUIRED));
+        assertThat(result, hasStatus(204));
         verify(authenticationService)
                 .signUp(
                         eq(email),
@@ -151,7 +137,7 @@ class SignUpHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfSessionIdMissing() {
+    void shouldReturn400IfSessionIdMissing() {
         String password = "computer-1";
         when(validationService.validatePassword(eq(password))).thenReturn(Optional.empty());
 
@@ -166,8 +152,7 @@ class SignUpHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfAnyRequestParametersAreMissing() {
-        session.setState(EMAIL_CODE_VERIFIED);
+    void shouldReturn400IfAnyRequestParametersAreMissing() {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -181,8 +166,7 @@ class SignUpHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfPasswordFailsValidation() {
-        session.setState(EMAIL_CODE_VERIFIED);
+    void shouldReturn400IfPasswordFailsValidation() {
         String password = "computer";
         when(validationService.validatePassword(eq(password)))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1007));
@@ -200,8 +184,7 @@ class SignUpHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserAlreadyExists() {
-        session.setState(EMAIL_CODE_VERIFIED);
+    void shouldReturn400IfUserAlreadyExists() {
         String password = "computer-1";
         when(validationService.validatePassword(eq(password))).thenReturn(Optional.empty());
         when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(true);
@@ -227,25 +210,6 @@ class SignUpHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
-    }
-
-    @Test
-    public void shouldReturn400IfUserTransitionsToHelperFromWrongState() {
-        session.setState(NEW);
-
-        String password = "computer-1";
-        when(validationService.validatePassword(eq(password))).thenReturn(Optional.empty());
-        when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(false);
-        usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody("{ \"password\": \"computer-1\", \"email\": \"joe.bloggs@test.com\" }");
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1017));
-
-        verifyNoInteractions(auditService);
     }
 
     private void usingValidSession() {

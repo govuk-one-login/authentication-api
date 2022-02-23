@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.api;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -9,10 +10,9 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
 import uk.gov.di.authentication.oidc.lambda.AuthCodeHandler;
-import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ServiceType;
-import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
@@ -20,14 +20,14 @@ import java.io.IOException;
 import java.net.URI;
 import java.security.KeyPair;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.startsWith;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTH_CODE_ISSUED;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -49,22 +49,25 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String clientSessionId = "some-client-session-id";
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         redis.createSession(sessionId);
-        redis.setSessionState(sessionId, SessionState.MFA_CODE_VERIFIED);
         redis.addAuthRequestToSession(
                 clientSessionId, sessionId, generateAuthRequest().toParameters(), EMAIL);
         setUpDynamo(keyPair);
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Session-Id", sessionId);
+        headers.put("X-API-Key", FRONTEND_API_KEY);
+        headers.put("Client-Session-Id", clientSessionId);
 
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                Optional.of(buildSessionCookie(sessionId, clientSessionId))),
-                        Map.of());
+        var response = makeRequest(Optional.empty(), headers, Map.of());
 
-        assertThat(response, hasStatus(302));
+        assertThat(response, hasStatus(200));
+
+        AuthCodeResponse authCodeResponse =
+                new ObjectMapper().readValue(response.getBody(), AuthCodeResponse.class);
+
         assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION).toString(),
-                not(containsString("cookie_consent")));
+                authCodeResponse.getLocation(),
+                startsWith(
+                        "https://di-auth-stub-relying-party-build.london.cloudapps.digital/?code="));
 
         assertEventTypesReceived(auditTopic, List.of(AUTH_CODE_ISSUED));
     }

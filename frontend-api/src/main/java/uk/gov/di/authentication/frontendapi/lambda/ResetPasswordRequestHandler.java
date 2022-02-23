@@ -11,13 +11,10 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
 import uk.gov.di.authentication.frontendapi.services.ResetPasswordService;
-import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
-import uk.gov.di.authentication.shared.entity.SessionAction;
-import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
@@ -32,20 +29,16 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.ValidationService;
-import uk.gov.di.authentication.shared.state.StateMachine;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1017;
-import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_RESET_PASSWORD_LINK;
-import static uk.gov.di.authentication.shared.entity.SessionAction.SYSTEM_HAS_SENT_RESET_PASSWORD_LINK_TOO_MANY_TIMES;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.PASSWORD_RESET_BLOCKED_KEY_PREFIX;
-import static uk.gov.di.authentication.shared.state.StateMachine.userJourneyStateMachine;
 
 public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswordRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -58,8 +51,6 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     private final CodeStorageService codeStorageService;
     private final AuditService auditService;
     private final ResetPasswordService resetPasswordService;
-    private final StateMachine<SessionState, SessionAction, UserContext> stateMachine =
-            userJourneyStateMachine();
 
     public ResetPasswordRequestHandler(
             ConfigurationService configurationService,
@@ -157,8 +148,6 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
-        } catch (StateMachine.InvalidStateTransitionException e) {
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1017);
         }
     }
 
@@ -168,11 +157,6 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             UserContext userContext,
             String persistentSessionId)
             throws JsonProcessingException {
-        SessionState nextState =
-                stateMachine.transition(
-                        userContext.getSession().getState(),
-                        SYSTEM_HAS_SENT_RESET_PASSWORD_LINK,
-                        userContext);
         String subjectId = authenticationService.getSubjectFromEmail(email).getValue();
         String code = codeGeneratorService.twentyByteEncodedRandomCode();
         String resetPasswordLink =
@@ -184,12 +168,10 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                 code,
                 configurationService.getCodeExpiry(),
                 NotificationType.RESET_PASSWORD);
-        sessionService.save(
-                userContext.getSession().setState(nextState).incrementPasswordResetCount());
+        sessionService.save(userContext.getSession().incrementPasswordResetCount());
         sqsClient.send(serialiseRequest(notifyRequest));
         LOG.info("Successfully processed request");
-        return generateApiGatewayProxyResponse(
-                200, new BaseAPIResponse(userContext.getSession().getState()));
+        return generateEmptySuccessApiGatewayResponse();
     }
 
     private Optional<ErrorResponse> validatePasswordResetCount(
@@ -203,12 +185,6 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                     PASSWORD_RESET_BLOCKED_KEY_PREFIX,
                     configurationService.getBlockedEmailDuration());
             sessionService.save(userContext.getSession().resetPasswordResetCount());
-            SessionState nextState =
-                    stateMachine.transition(
-                            userContext.getSession().getState(),
-                            SYSTEM_HAS_SENT_RESET_PASSWORD_LINK_TOO_MANY_TIMES,
-                            userContext);
-            sessionService.save(userContext.getSession().setState(nextState));
             return Optional.of(ErrorResponse.ERROR_1022);
         }
         return Optional.empty();

@@ -15,7 +15,6 @@ import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.SessionState;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
@@ -106,16 +105,10 @@ public class RedisExtension
                 session.getSessionId(), objectMapper.writeValueAsString(session), 3600);
     }
 
-    public void setSessionState(String sessionId, SessionState state)
-            throws JsonProcessingException {
-        setSessionState(sessionId, state, null);
-    }
-
-    public void setSessionState(
-            String sessionId, SessionState state, CredentialTrustLevel credentialTrustLevel)
+    public void setSessionCredentialTrustLevel(
+            String sessionId, CredentialTrustLevel credentialTrustLevel)
             throws JsonProcessingException {
         Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
-        session.setState(state);
         session.setCurrentCredentialStrength(credentialTrustLevel);
         redis.saveWithExpiry(
                 session.getSessionId(), objectMapper.writeValueAsString(session), 3600);

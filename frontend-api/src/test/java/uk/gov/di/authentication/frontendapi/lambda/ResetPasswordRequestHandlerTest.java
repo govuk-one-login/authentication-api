@@ -14,7 +14,6 @@ import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.services.ResetPasswordService;
-import uk.gov.di.authentication.shared.entity.BaseAPIResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
@@ -39,7 +38,6 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -55,15 +53,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
-import static uk.gov.di.authentication.shared.entity.SessionState.AUTHENTICATION_REQUIRED;
-import static uk.gov.di.authentication.shared.entity.SessionState.NEW;
-import static uk.gov.di.authentication.shared.entity.SessionState.RESET_PASSWORD_LINK_MAX_RETRIES_REACHED;
-import static uk.gov.di.authentication.shared.entity.SessionState.RESET_PASSWORD_LINK_SENT;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.PASSWORD_RESET_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class ResetPasswordRequestHandlerTest {
 
@@ -87,9 +80,7 @@ class ResetPasswordRequestHandlerTest {
     private final Context context = mock(Context.class);
 
     private final Session session =
-            new Session(IdGenerator.generate())
-                    .setEmailAddress(TEST_EMAIL_ADDRESS)
-                    .setState(AUTHENTICATION_REQUIRED);
+            new Session(IdGenerator.generate()).setEmailAddress(TEST_EMAIL_ADDRESS);
     private final ResetPasswordRequestHandler handler =
             new ResetPasswordRequestHandler(
                     configurationService,
@@ -147,10 +138,7 @@ class ResetPasswordRequestHandlerTest {
         event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        assertEquals(200, result.getStatusCode());
-        BaseAPIResponse response =
-                new ObjectMapper().readValue(result.getBody(), BaseAPIResponse.class);
-        assertThat(RESET_PASSWORD_LINK_SENT, equalTo(response.getSessionState()));
+        assertEquals(204, result.getStatusCode());
 
         verify(awsSqsClient).send(serialisedRequest);
         verify(codeStorageService)
@@ -249,23 +237,6 @@ class ResetPasswordRequestHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserTransitionsToHelperFromWrongState() {
-        session.setState(NEW);
-
-        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
-                .thenReturn(Optional.empty());
-
-        usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1017));
-    }
-
-    @Test
     public void shouldReturn400IfUserHasExceededPasswordResetCount() {
         Subject subject = new Subject("subject_1");
         String sessionId = "1233455677";
@@ -274,7 +245,6 @@ class ResetPasswordRequestHandlerTest {
         when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
         when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
         Session session = mock(Session.class);
-        when(session.getState()).thenReturn(RESET_PASSWORD_LINK_SENT);
         when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
         when(session.getSessionId()).thenReturn(sessionId);
         when(session.validateSession(TEST_EMAIL_ADDRESS)).thenReturn(true);
@@ -306,7 +276,6 @@ class ResetPasswordRequestHandlerTest {
                 .thenReturn(Optional.empty());
         when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
         Session session = mock(Session.class);
-        when(session.getState()).thenReturn(RESET_PASSWORD_LINK_MAX_RETRIES_REACHED);
         when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
         when(session.getSessionId()).thenReturn(sessionId);
         when(session.validateSession(TEST_EMAIL_ADDRESS)).thenReturn(true);
@@ -332,7 +301,6 @@ class ResetPasswordRequestHandlerTest {
     }
 
     private boolean isSessionWithEmailSent(Session session) {
-        return session.getState().equals(RESET_PASSWORD_LINK_SENT)
-                && session.getEmailAddress().equals(TEST_EMAIL_ADDRESS);
+        return session.getEmailAddress().equals(TEST_EMAIL_ADDRESS);
     }
 }

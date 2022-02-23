@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class PhoneNumberHelperTest {
 
     @Test
-    public void testShouldFormatPhoneNumbersUsingE164() {
+    void testShouldFormatPhoneNumbersUsingE164() {
         final String phoneNumber = "07316763843";
 
         final String result = PhoneNumberHelper.formatPhoneNumber(phoneNumber);
@@ -17,7 +17,7 @@ public class PhoneNumberHelperTest {
     }
 
     @Test
-    public void testShouldThrowExceptionIfInvalidPhoneNumber() {
+    void testShouldThrowExceptionIfInvalidPhoneNumber() {
         final String phoneNumber = "Invalid phone number";
 
         assertThrows(

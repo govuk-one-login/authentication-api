@@ -1,7 +1,7 @@
-module "frontend_api_client_info_role" {
+module "frontend_api_start_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
-  role_name   = "frontend-api-client-info-role"
+  role_name   = "frontend-api-start-role"
   vpc_arn     = local.authentication_vpc_arn
 
   policies_to_attach = [
@@ -9,14 +9,15 @@ module "frontend_api_client_info_role" {
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
+    aws_iam_policy.dynamo_user_read_access_policy.arn
   ]
 }
 
-module "client-info" {
+module "start" {
   source = "../modules/endpoint-module"
 
-  endpoint_name   = "client-info"
-  path_part       = "client-info"
+  endpoint_name   = "start"
+  path_part       = "start"
   endpoint_method = "GET"
   environment     = var.environment
 
@@ -30,7 +31,7 @@ module "client-info" {
     DYNAMO_ENDPOINT          = var.use_localstack ? var.lambda_dynamo_endpoint : null
     HEADERS_CASE_INSENSITIVE = var.use_localstack ? "true" : "false"
   }
-  handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.ClientInfoHandler::handleRequest"
+  handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.StartHandler::handleRequest"
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
   root_resource_id = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id
@@ -49,7 +50,7 @@ module "client-info" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = local.authentication_subnet_ids
-  lambda_role_arn                        = module.frontend_api_client_info_role.arn
+  lambda_role_arn                        = module.frontend_api_start_role.arn
   logging_endpoint_enabled               = var.logging_endpoint_enabled
   logging_endpoint_arn                   = var.logging_endpoint_arn
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
