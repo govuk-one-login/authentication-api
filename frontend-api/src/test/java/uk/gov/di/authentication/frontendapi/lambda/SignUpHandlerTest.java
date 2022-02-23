@@ -3,12 +3,26 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.entity.SignUpResponse;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
@@ -23,12 +37,15 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.ValidationService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
@@ -54,10 +71,15 @@ class SignUpHandlerTest {
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private static final String CLIENT_SESSION_ID = "a-client-session-id";
+    private static final ClientID CLIENT_ID = new ClientID();
+    private static final URI REDIRECT_URI = URI.create("test-uri");
 
     private SignUpHandler handler;
 
     private final Session session = new Session(IdGenerator.generate());
+    private final ClientSession clientSession =
+            new ClientSession(generateAuthRequest().toParameters(), null, null);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
@@ -82,8 +104,14 @@ class SignUpHandlerTest {
                         auditService);
     }
 
-    @Test
-    void shouldReturn204IfSignUpIsSuccessful() {
+    private static Stream<Boolean> consentValues() {
+        return Stream.of(true, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("consentValues")
+    void shouldReturn200IfSignUpIsSuccessful(boolean consentRequired)
+            throws JsonProcessingException {
         String email = "joe.bloggs@test.com";
         String password = "computer-1";
         String persistentId = "some-persistent-id-value";
@@ -92,7 +120,12 @@ class SignUpHandlerTest {
         headers.put("Session-Id", session.getSessionId());
         when(validationService.validatePassword(eq(password))).thenReturn(Optional.empty());
         when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(false);
+        when(clientService.getClient(CLIENT_ID.getValue()))
+                .thenReturn(Optional.of(generateClientRegistry(consentRequired)));
+        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(clientSession));
         usingValidSession();
+        usingValidClientSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(headers);
@@ -112,7 +145,12 @@ class SignUpHandlerTest {
                                 (session) ->
                                         session.getEmailAddress().equals("joe.bloggs@test.com")));
 
-        assertThat(result, hasStatus(204));
+        assertThat(result, hasStatus(200));
+
+        SignUpResponse signUpResponse =
+                new ObjectMapper().readValue(result.getBody(), SignUpResponse.class);
+
+        assertThat(signUpResponse.isConsentRequired(), equalTo(consentRequired));
         verify(authenticationService)
                 .signUp(
                         eq(email),
@@ -125,7 +163,7 @@ class SignUpHandlerTest {
                         FrontendAuditableEvent.CREATE_ACCOUNT,
                         context.getAwsRequestId(),
                         session.getSessionId(),
-                        AuditService.UNKNOWN,
+                        CLIENT_ID.getValue(),
                         AuditService.UNKNOWN,
                         "joe.bloggs@test.com",
                         "123.123.123.123",
@@ -215,5 +253,32 @@ class SignUpHandlerTest {
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
+    }
+
+    public static AuthenticationRequest generateAuthRequest() {
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        State state = new State();
+        Scope scope = new Scope();
+        Nonce nonce = new Nonce();
+        scope.add(OIDCScopeValue.OPENID);
+        scope.add("phone");
+        scope.add("email");
+        return new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
+                .state(state)
+                .nonce(nonce)
+                .build();
+    }
+
+    private void usingValidClientSession() {
+        when(clientSessionService.getClientSession(CLIENT_SESSION_ID)).thenReturn(clientSession);
+    }
+
+    private ClientRegistry generateClientRegistry(boolean consentRequired) {
+        return new ClientRegistry()
+                .setClientID(CLIENT_ID.getValue())
+                .setConsentRequired(consentRequired)
+                .setClientName("test-client")
+                .setSectorIdentifierUri("https://test.com")
+                .setSubjectType("public");
     }
 }
