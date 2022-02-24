@@ -48,17 +48,7 @@ public class UpdatePhoneNumberHandler
     private final AuditService auditService;
 
     public UpdatePhoneNumberHandler() {
-        ConfigurationService configurationService = ConfigurationService.getInstance();
-        this.dynamoService = new DynamoService(configurationService);
-        this.sqsClient =
-                new AwsSqsClient(
-                        configurationService.getAwsRegion(),
-                        configurationService.getEmailQueueUri(),
-                        configurationService.getSqsEndpointUri());
-        this.validationService = new ValidationService();
-        this.codeStorageService =
-                new CodeStorageService(new RedisConnectionService(configurationService));
-        this.auditService = new AuditService(configurationService);
+        this(ConfigurationService.getInstance());
     }
 
     public UpdatePhoneNumberHandler(
@@ -72,6 +62,19 @@ public class UpdatePhoneNumberHandler
         this.validationService = validationService;
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
+    }
+
+    public UpdatePhoneNumberHandler(ConfigurationService configurationService) {
+        this.dynamoService = new DynamoService(configurationService);
+        this.sqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEmailQueueUri(),
+                        configurationService.getSqsEndpointUri());
+        this.validationService = new ValidationService();
+        this.codeStorageService =
+                new CodeStorageService(new RedisConnectionService(configurationService));
+        this.auditService = new AuditService(configurationService);
     }
 
     @Override
