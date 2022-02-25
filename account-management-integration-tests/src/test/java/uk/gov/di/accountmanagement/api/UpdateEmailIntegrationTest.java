@@ -54,6 +54,7 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of("principalId", publicSubjectID));
 
         assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
+        assertThat(userStore.getEmailForUser(SUBJECT), is(NEW_EMAIL_ADDRESS));
 
         assertNotificationsReceived(
                 notificationsQueue, List.of(new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED)));
