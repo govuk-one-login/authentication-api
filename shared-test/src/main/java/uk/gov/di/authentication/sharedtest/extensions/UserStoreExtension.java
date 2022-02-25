@@ -38,6 +38,11 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         return dynamoService.userExists(email);
     }
 
+    public String getPasswordForUser(String email) {
+        var credentials = dynamoService.getUserCredentialsFromEmail(email);
+        return credentials.getPassword();
+    }
+
     public Optional<String> getPhoneNumberForUser(String email) {
         return dynamoService.getPhoneNumber(email);
     }

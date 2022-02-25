@@ -18,6 +18,7 @@ import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.UPDATE_PASSWORD;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PASSWORD_UPDATED;
@@ -41,6 +42,7 @@ public class UpdatePasswordIntegrationTest extends ApiGatewayHandlerIntegrationT
     @Test
     void shouldSendNotificationAndReturn204WhenUpdatingPasswordIsSuccessful() {
         String publicSubjectID = userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
+        String hashedOriginalPassword = userStore.getPasswordForUser(TEST_EMAIL);
 
         var response =
                 makeRequest(
@@ -51,6 +53,7 @@ public class UpdatePasswordIntegrationTest extends ApiGatewayHandlerIntegrationT
                         Map.of("principalId", publicSubjectID));
 
         assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
+        assertThat(userStore.getPasswordForUser(TEST_EMAIL), not(is(hashedOriginalPassword)));
 
         assertNotificationsReceived(
                 notificationsQueue, List.of(new NotifyRequest(TEST_EMAIL, PASSWORD_UPDATED)));
