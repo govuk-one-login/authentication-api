@@ -5,6 +5,7 @@ import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.AmazonSQSClient;
 import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.PurgeQueueRequest;
+import com.amazonaws.services.sqs.model.QueueAttributeName;
 import com.amazonaws.services.sqs.model.QueueDoesNotExistException;
 import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -41,6 +42,16 @@ public class SqsQueueExtension extends BaseAwsResourceExtension implements Befor
 
     public String getQueueUrl() {
         return queueUrl;
+    }
+
+    public int getApproximateMessageCount() {
+        var result =
+                sqsClient.getQueueAttributes(
+                        queueUrl, List.of(QueueAttributeName.ApproximateNumberOfMessages.name()));
+        var countString =
+                result.getAttributes().get(QueueAttributeName.ApproximateNumberOfMessages.name());
+
+        return Integer.parseInt(countString);
     }
 
     public <T> List<T> getMessages(Class<T> messageClass) {

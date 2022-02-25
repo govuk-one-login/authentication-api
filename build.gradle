@@ -66,6 +66,7 @@ subprojects {
         lambda
         lambda_tests
         lettuce
+        libphonenumber
         logging_runtime
         nimbus
         s3
@@ -106,6 +107,8 @@ subprojects {
 
         lettuce "org.apache.commons:commons-pool2:2.11.1",
                 "io.lettuce:lettuce-core:6.1.6.RELEASE"
+
+        libphonenumber "com.googlecode.libphonenumber:libphonenumber:8.12.43"
 
         logging_runtime "com.amazonaws:aws-lambda-java-log4j2:1.5.0",
                 "org.slf4j:slf4j-nop:1.7.36"
