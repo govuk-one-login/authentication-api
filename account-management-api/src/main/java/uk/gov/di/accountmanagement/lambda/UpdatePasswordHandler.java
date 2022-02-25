@@ -44,14 +44,7 @@ public class UpdatePasswordHandler
     private static final Logger LOG = LogManager.getLogger(UpdatePasswordHandler.class);
 
     public UpdatePasswordHandler() {
-        ConfigurationService configurationService = ConfigurationService.getInstance();
-        this.dynamoService = new DynamoService(ConfigurationService.getInstance());
-        this.sqsClient =
-                new AwsSqsClient(
-                        configurationService.getAwsRegion(),
-                        configurationService.getEmailQueueUri(),
-                        configurationService.getSqsEndpointUri());
-        this.auditService = new AuditService(configurationService);
+        this(ConfigurationService.getInstance());
     }
 
     public UpdatePasswordHandler(
@@ -59,6 +52,16 @@ public class UpdatePasswordHandler
         this.dynamoService = dynamoService;
         this.sqsClient = sqsClient;
         this.auditService = auditService;
+    }
+
+    public UpdatePasswordHandler(ConfigurationService configurationService) {
+        this.dynamoService = new DynamoService(ConfigurationService.getInstance());
+        this.sqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEmailQueueUri(),
+                        configurationService.getSqsEndpointUri());
+        this.auditService = new AuditService(configurationService);
     }
 
     @Override
