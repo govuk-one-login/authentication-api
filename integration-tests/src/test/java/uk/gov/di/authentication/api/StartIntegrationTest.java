@@ -85,6 +85,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(startResponse.getClient().getServiceType(), equalTo("MANDATORY"));
         assertThat(startResponse.getClient().getCookieConsentShared(), equalTo(false));
         assertThat(startResponse.getClient().getScopes(), equalTo(scope.toStringList()));
+        assertThat(startResponse.getUser().getCookieConsent(), equalTo(null));
+        assertThat(startResponse.getUser().getGaCrossDomainTrackingId(), equalTo(null));
 
         assertEventTypesReceived(auditTopic, List.of(START_INFO_FOUND));
     }

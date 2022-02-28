@@ -19,7 +19,6 @@ import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -37,8 +36,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static uk.gov.di.authentication.oidc.entity.RequestParameters.COOKIE_CONSENT;
-import static uk.gov.di.authentication.oidc.entity.RequestParameters.GA;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
@@ -92,10 +89,10 @@ public class AuthorisationHandler
         return isWarming(input)
                 .orElseGet(
                         () -> {
-                            String persistentSessionId =
+                            var persistentSessionId =
                                     authorizationService.getExistingOrCreateNewPersistentSessionId(
                                             input.getHeaders());
-                            String ipAddress = IpAddressHelper.extractIpAddress(input);
+                            var ipAddress = IpAddressHelper.extractIpAddress(input);
                             auditService.submitAuditEvent(
                                     OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
                                     context.getAwsRequestId(),
@@ -113,7 +110,13 @@ public class AuthorisationHandler
                             Map<String, List<String>> queryStringParameters;
                             AuthenticationRequest authRequest;
                             try {
-                                queryStringParameters = getQueryStringParametersAsMap(input);
+                                queryStringParameters =
+                                        input.getQueryStringParameters().entrySet().stream()
+                                                .collect(
+                                                        Collectors.toMap(
+                                                                Map.Entry::getKey,
+                                                                entry ->
+                                                                        List.of(entry.getValue())));
                                 authRequest = AuthenticationRequest.parse(queryStringParameters);
                             } catch (ParseException e) {
                                 if (e.getRedirectionURI() == null) {
@@ -140,8 +143,7 @@ public class AuthorisationHandler
                                         "No query string parameters are present in the Authentication request",
                                         e);
                             }
-                            Optional<ErrorObject> error =
-                                    authorizationService.validateAuthRequest(authRequest);
+                            var error = authorizationService.validateAuthRequest(authRequest);
 
                             return error.map(
                                             e ->
@@ -188,9 +190,7 @@ public class AuthorisationHandler
                     ipAddress,
                     persistentSessionId);
         }
-
         var session = existingSession.orElseGet(sessionService::createSession);
-
         attachSessionIdToLogs(session);
 
         auditService.submitAuditEvent(
@@ -205,97 +205,49 @@ public class AuthorisationHandler
                 persistentSessionId);
 
         if (existingSession.isEmpty()) {
-            return createSessionAndRedirect(
-                    session, authRequestParameters, authenticationRequest, persistentSessionId);
+            updateAttachedSessionIdToLogs(session.getSessionId());
+            LOG.info("Created session");
         } else {
-            return updateSessionAndRedirect(
-                    authRequestParameters, authenticationRequest, session, persistentSessionId);
+            var oldSessionId = session.getSessionId();
+            sessionService.updateSessionId(session);
+            updateAttachedSessionIdToLogs(session.getSessionId());
+            LOG.info("Updated session id from {} - new", oldSessionId);
         }
-    }
-
-    private APIGatewayProxyResponseEvent updateSessionAndRedirect(
-            Map<String, List<String>> authRequestParameters,
-            AuthenticationRequest authenticationRequest,
-            Session session,
-            String persistentSessionId) {
-        ClientSession clientSession =
-                new ClientSession(
-                        authRequestParameters,
-                        LocalDateTime.now(),
-                        authorizationService.getEffectiveVectorOfTrust(authenticationRequest));
-        String clientSessionID = clientSessionService.generateClientSession(clientSession);
-        String oldSessionId = session.getSessionId();
-        sessionService.updateSessionId(session);
-        session.addClientSession(clientSessionID);
-        updateAttachedSessionIdToLogs(session.getSessionId());
-        updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionID);
-        LOG.info("Updated session id from {} - new", oldSessionId);
-
-        sessionService.save(session);
-        LOG.info("Session saved successfully");
-
-        String redirectUri = buildRedirectURI(authRequestParameters, authenticationRequest);
-
-        return redirect(session, clientSessionID, redirectUri, persistentSessionId);
-    }
-
-    private APIGatewayProxyResponseEvent createSessionAndRedirect(
-            Session session,
-            Map<String, List<String>> authRequest,
-            AuthenticationRequest authenticationRequest,
-            String persistentSessionId) {
-        String clientSessionID =
+        var clientSessionID =
                 clientSessionService.generateClientSession(
                         new ClientSession(
-                                authRequest,
+                                authRequestParameters,
                                 LocalDateTime.now(),
                                 authorizationService.getEffectiveVectorOfTrust(
                                         authenticationRequest)));
+
         session.addClientSession(clientSessionID);
-        updateAttachedSessionIdToLogs(session.getSessionId());
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionID);
         updateAttachedLogFieldToLogs(CLIENT_ID, authenticationRequest.getClientID().getValue());
-        LOG.info("Created session");
         sessionService.save(session);
         LOG.info("Session saved successfully");
-
-        var redirectURI = buildRedirectURI(authRequest, authenticationRequest);
-        return redirect(session, clientSessionID, redirectURI, persistentSessionId);
-    }
-
-    private String buildRedirectURI(
-            Map<String, List<String>> authRequestParameters,
-            AuthenticationRequest authenticationRequest) {
-
-        URI redirectUri;
-        try {
-            URIBuilder redirectUriBuilder = new URIBuilder(configurationService.getLoginURI());
-
-            if (Objects.nonNull(authenticationRequest.getPrompt())
-                    && authenticationRequest.getPrompt().contains(Prompt.Type.LOGIN)) {
-                redirectUriBuilder.addParameter("prompt", String.valueOf(Prompt.Type.LOGIN));
-            }
-
-            var cookieConsent = getCookieConsentValue(authRequestParameters, authenticationRequest);
-            cookieConsent.ifPresent(c -> redirectUriBuilder.addParameter(COOKIE_CONSENT, c));
-
-            var gaValue = getGAUserIdValue(authRequestParameters);
-            gaValue.ifPresent(ga -> redirectUriBuilder.addParameter(GA, ga));
-
-            redirectUri = redirectUriBuilder.build();
-        } catch (URISyntaxException e) {
-            throw new RuntimeException("Error constructing redirect URI", e);
-        }
-        return redirectUri.toString();
+        return redirect(session, clientSessionID, authenticationRequest, persistentSessionId);
     }
 
     private APIGatewayProxyResponseEvent redirect(
             Session session,
             String clientSessionID,
-            String redirectURI,
+            AuthenticationRequest authenticationRequest,
             String persistentSessionId) {
         LOG.info("Redirecting");
-        List<String> cookies =
+        String redirectURI;
+        try {
+            var redirectUriBuilder = new URIBuilder(configurationService.getLoginURI());
+
+            if (Objects.nonNull(authenticationRequest.getPrompt())
+                    && authenticationRequest.getPrompt().contains(Prompt.Type.LOGIN)) {
+                redirectUriBuilder.addParameter("prompt", String.valueOf(Prompt.Type.LOGIN));
+            }
+            redirectURI = redirectUriBuilder.build().toString();
+        } catch (URISyntaxException e) {
+            throw new RuntimeException("Error constructing redirect URI", e);
+        }
+        var cookies =
                 List.of(
                         CookieHelper.buildCookieString(
                                 CookieHelper.SESSION_COOKIE_NAME,
@@ -340,47 +292,9 @@ public class AuthorisationHandler
                 "Returning error response: {} {}",
                 errorObject.getCode(),
                 errorObject.getDescription());
-        AuthenticationErrorResponse error =
-                new AuthenticationErrorResponse(redirectUri, errorObject, state, responseMode);
+        var error = new AuthenticationErrorResponse(redirectUri, errorObject, state, responseMode);
         return new APIGatewayProxyResponseEvent()
                 .withStatusCode(302)
                 .withHeaders(Map.of(ResponseHeaders.LOCATION, error.toURI().toString()));
-    }
-
-    private Map<String, List<String>> getQueryStringParametersAsMap(
-            APIGatewayProxyRequestEvent input) {
-        return input.getQueryStringParameters().entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, entry -> List.of(entry.getValue())));
-    }
-
-    private Optional<String> getCookieConsentValue(
-            Map<String, List<String>> authRequestParameters,
-            AuthenticationRequest authenticationRequest) {
-
-        if (authRequestParameters.containsKey(COOKIE_CONSENT)) {
-            try {
-                if (authorizationService.isClientCookieConsentShared(
-                                authenticationRequest.getClientID())
-                        && !authRequestParameters.get(COOKIE_CONSENT).isEmpty()
-                        && authorizationService.isValidCookieConsentValue(
-                                authRequestParameters.get(COOKIE_CONSENT).get(0))) {
-                    LOG.info("Sharing cookie_consent");
-                    return Optional.of(authRequestParameters.get(COOKIE_CONSENT).get(0));
-                }
-            } catch (ClientNotFoundException e) {
-                throw new RuntimeException("Client not found", e);
-            }
-        }
-
-        return Optional.empty();
-    }
-
-    private Optional<String> getGAUserIdValue(Map<String, List<String>> authRequestParameters) {
-        if (authRequestParameters.containsKey(GA)) {
-            String gaId = authRequestParameters.get(GA).get(0);
-            LOG.info("GA value present in request {}", gaId);
-            return Optional.of(gaId);
-        }
-        return Optional.empty();
     }
 }

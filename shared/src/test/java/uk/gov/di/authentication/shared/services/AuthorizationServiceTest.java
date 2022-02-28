@@ -18,9 +18,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
@@ -32,7 +29,6 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -441,24 +437,6 @@ class AuthorizationServiceTest {
                 authorizationService.getExistingOrCreateNewPersistentSessionId(requestCookieHeader);
 
         assertEquals(persistentSessionId, "some-persistent-id");
-    }
-
-    @ParameterizedTest
-    @MethodSource("cookieConsentValues")
-    void shouldValidateCookieConsentValue(String cookieConsentValue, boolean expectedResult) {
-        assertThat(
-                authorizationService.isValidCookieConsentValue(cookieConsentValue),
-                equalTo(expectedResult));
-    }
-
-    private static Stream<Arguments> cookieConsentValues() {
-        return Stream.of(
-                Arguments.of("accept", true),
-                Arguments.of("reject", true),
-                Arguments.of("not-engaged", true),
-                Arguments.of("Accept", false),
-                Arguments.of("some-value", false),
-                Arguments.of("", false));
     }
 
     private ClientRegistry generateClientRegistry(String redirectURI, String clientID) {

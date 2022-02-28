@@ -94,13 +94,13 @@ public class StartHandler
                                 var clientStartInfo =
                                         startService.buildClientStartInfo(userContext);
 
-                                String cookieConsent =
+                                var cookieConsent =
                                         startService.getCookieConsentValue(
                                                 userContext
                                                         .getClientSession()
                                                         .getAuthRequestParams(),
                                                 userContext.getClient().get().getClientID());
-                                String gaTrackingId =
+                                var gaTrackingId =
                                         startService.getGATrackingId(
                                                 userContext
                                                         .getClientSession()
