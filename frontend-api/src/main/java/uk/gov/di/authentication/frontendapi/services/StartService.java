@@ -98,6 +98,8 @@ public class StartService {
                 consentRequired,
                 uplift,
                 identityRequired,
-                userContext.getSession().isAuthenticated());
+                userContext.getSession().isAuthenticated(),
+                null,
+                null);
     }
 }
