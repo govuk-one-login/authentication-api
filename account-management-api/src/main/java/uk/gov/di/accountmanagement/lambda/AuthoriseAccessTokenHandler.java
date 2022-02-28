@@ -61,6 +61,19 @@ public class AuthoriseAccessTokenHandler
                         configurationService.getDynamoEndpointUri());
     }
 
+    public AuthoriseAccessTokenHandler(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
+        tokenValidationService =
+                new TokenValidationService(
+                        configurationService, new KmsConnectionService(configurationService));
+        dynamoService = new DynamoService(configurationService);
+        clientService =
+                new DynamoClientService(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEnvironment(),
+                        configurationService.getDynamoEndpointUri());
+    }
+
     @Override
     public AuthPolicy handleRequest(TokenAuthorizerContext input, Context context) {
         if (input.getType().equals(WARMUP_HEADER)) {
