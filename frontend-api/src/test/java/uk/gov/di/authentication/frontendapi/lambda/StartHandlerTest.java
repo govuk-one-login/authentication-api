@@ -13,6 +13,9 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
@@ -33,11 +36,13 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -73,16 +78,32 @@ class StartHandlerTest {
         when(sessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(new Session("session-id")));
         when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
+        when(userContext.getClientSession()).thenReturn(clientSession);
         when(clientRegistry.getClientID()).thenReturn(TEST_CLIENT_ID);
         handler =
                 new StartHandler(clientSessionService, sessionService, auditService, startService);
     }
 
-    @Test
-    void shouldReturn200WithStartResponse() throws JsonProcessingException, ParseException {
+    private static Stream<Arguments> cookieConsentGaTrackingIdValues() {
+        return Stream.of(
+                Arguments.of(null, "some-ga-tracking-id"),
+                Arguments.of("some-cookie-consent-value", null),
+                Arguments.of(null, null),
+                Arguments.of("some-cookie-consent-value", "some-ga-tracking-id"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("cookieConsentGaTrackingIdValues")
+    void shouldReturn200WithStartResponse(String cookieConsentValue, String gaTrackingId)
+            throws JsonProcessingException, ParseException {
+        var userStartInfo = getUserStartInfo(cookieConsentValue, gaTrackingId);
         when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
         when(startService.buildClientStartInfo(userContext)).thenReturn(getClientStartInfo());
-        when(startService.buildUserStartInfo(userContext)).thenReturn(getUserStartInfo());
+        when(startService.getGATrackingId(anyMap())).thenReturn(gaTrackingId);
+        when(startService.getCookieConsentValue(anyMap(), anyString()))
+                .thenReturn(cookieConsentValue);
+        when(startService.buildUserStartInfo(userContext, cookieConsentValue, gaTrackingId))
+                .thenReturn(userStartInfo);
         usingValidClientSession();
         usingValidSession();
 
@@ -111,14 +132,14 @@ class StartHandlerTest {
                 response.getClient().getCookieConsentShared(),
                 equalTo(getClientStartInfo().getCookieConsentShared()));
         assertThat(
-                response.getUser().isConsentRequired(),
-                equalTo(getUserStartInfo().isConsentRequired()));
+                response.getUser().isConsentRequired(), equalTo(userStartInfo.isConsentRequired()));
         assertThat(
                 response.getUser().isIdentityRequired(),
-                equalTo(getUserStartInfo().isIdentityRequired()));
+                equalTo(userStartInfo.isIdentityRequired()));
         assertThat(
-                response.getUser().isUpliftRequired(),
-                equalTo(getUserStartInfo().isUpliftRequired()));
+                response.getUser().isUpliftRequired(), equalTo(userStartInfo.isUpliftRequired()));
+        assertThat(response.getUser().getCookieConsent(), equalTo(cookieConsentValue));
+        assertThat(response.getUser().getGaCrossDomainTrackingId(), equalTo(gaTrackingId));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -233,7 +254,7 @@ class StartHandlerTest {
         return new ClientStartInfo(TEST_CLIENT_NAME, scope.toStringList(), "MANDATORY", false);
     }
 
-    private UserStartInfo getUserStartInfo() {
-        return new UserStartInfo(true, false, false, true, null, null);
+    private UserStartInfo getUserStartInfo(String cookieConsent, String gaCrossDomainTrackingId) {
+        return new UserStartInfo(true, false, false, true, cookieConsent, gaCrossDomainTrackingId);
     }
 }
