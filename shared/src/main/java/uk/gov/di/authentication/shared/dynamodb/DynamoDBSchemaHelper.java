@@ -47,6 +47,7 @@ public class DynamoDBSchemaHelper {
         return new DynamoDBMapper(
                 dynamoDB,
                 new DynamoDBMapperConfig.Builder()
+                        .withConsistentReads(DynamoDBMapperConfig.ConsistentReads.CONSISTENT)
                         .withTableNameOverride(
                                 DynamoDBMapperConfig.TableNameOverride.withTableNameReplacement(
                                         getFullyQualifiedTableName(table)))
