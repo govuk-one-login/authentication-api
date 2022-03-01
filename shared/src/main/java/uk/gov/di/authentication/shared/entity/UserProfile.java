@@ -3,11 +3,30 @@ package uk.gov.di.authentication.shared.entity;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBIndexHashKey;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import uk.gov.di.authentication.shared.dynamodb.DynamoDBItem;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-public class UserProfile {
+public class UserProfile implements DynamoDBItem {
+
+    public static final String EMAIL = "Email";
+    public static final String SUBJECT_ID = "SubjectID";
+    public static final String EMAIL_VERIFIED = "EmailVerified";
+    public static final String PHONE_NUMBER = "PhoneNumber";
+    public static final String PHONE_NUMBER_VERIFIED = "PhoneNumberVerified";
+    public static final String CREATED = "Created";
+    public static final String UPDATED = "Updated";
+    public static final String TERMS_AND_CONDITIONS = "termsAndConditions";
+    public static final String CLIENT_CONSENT = "ClientConsent";
+    public static final String PUBLIC_SUBJECT_ID = "PublicSubjectID";
+    public static final String LEGACY_SUBJECT_ID = "LegacySubjectID";
+    public static final String SALT = "salt";
 
     private String email;
     private String subjectID;
@@ -24,7 +43,7 @@ public class UserProfile {
 
     public UserProfile() {}
 
-    @DynamoDBHashKey(attributeName = "Email")
+    @DynamoDBHashKey(attributeName = EMAIL)
     public String getEmail() {
         return email;
     }
@@ -34,7 +53,7 @@ public class UserProfile {
         return this;
     }
 
-    @DynamoDBIndexHashKey(globalSecondaryIndexName = "SubjectIDIndex", attributeName = "SubjectID")
+    @DynamoDBIndexHashKey(globalSecondaryIndexName = "SubjectIDIndex", attributeName = SUBJECT_ID)
     public String getSubjectID() {
         return subjectID;
     }
@@ -44,7 +63,7 @@ public class UserProfile {
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "EmailVerified")
+    @DynamoDBAttribute(attributeName = EMAIL_VERIFIED)
     public boolean isEmailVerified() {
         return emailVerified;
     }
@@ -54,7 +73,7 @@ public class UserProfile {
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "PhoneNumber")
+    @DynamoDBAttribute(attributeName = PHONE_NUMBER)
     public String getPhoneNumber() {
         return phoneNumber;
     }
@@ -64,7 +83,7 @@ public class UserProfile {
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "PhoneNumberVerified")
+    @DynamoDBAttribute(attributeName = PHONE_NUMBER_VERIFIED)
     public boolean isPhoneNumberVerified() {
         return phoneNumberVerified;
     }
@@ -74,7 +93,7 @@ public class UserProfile {
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "Created")
+    @DynamoDBAttribute(attributeName = CREATED)
     public String getCreated() {
         return created;
     }
@@ -84,7 +103,7 @@ public class UserProfile {
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "Updated")
+    @DynamoDBAttribute(attributeName = UPDATED)
     public String getUpdated() {
         return updated;
     }
@@ -94,7 +113,7 @@ public class UserProfile {
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "termsAndConditions")
+    @DynamoDBAttribute(attributeName = TERMS_AND_CONDITIONS)
     public TermsAndConditions getTermsAndConditions() {
         return termsAndConditions;
     }
@@ -104,7 +123,7 @@ public class UserProfile {
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "ClientConsent")
+    @DynamoDBAttribute(attributeName = CLIENT_CONSENT)
     public List<ClientConsent> getClientConsent() {
         return clientConsent;
     }
@@ -126,7 +145,7 @@ public class UserProfile {
 
     @DynamoDBIndexHashKey(
             globalSecondaryIndexName = "PublicSubjectIDIndex",
-            attributeName = "PublicSubjectID")
+            attributeName = PUBLIC_SUBJECT_ID)
     public String getPublicSubjectID() {
         return publicSubjectID;
     }
@@ -136,7 +155,7 @@ public class UserProfile {
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "LegacySubjectID")
+    @DynamoDBAttribute(attributeName = LEGACY_SUBJECT_ID)
     public String getLegacySubjectID() {
         return legacySubjectID;
     }
@@ -146,7 +165,7 @@ public class UserProfile {
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "salt")
+    @DynamoDBAttribute(attributeName = SALT)
     public ByteBuffer getSalt() {
         return salt;
     }
@@ -159,5 +178,33 @@ public class UserProfile {
     public UserProfile setSalt(byte[] salt) {
         this.salt = ByteBuffer.wrap(salt);
         return this;
+    }
+
+    @Override
+    public Map<String, AttributeValue> toItem() {
+        Map<String, AttributeValue> attributes = new HashMap<>();
+        if (getEmail() != null) attributes.put(EMAIL, new AttributeValue(getEmail()));
+        if (getSubjectID() != null) attributes.put(SUBJECT_ID, new AttributeValue(getSubjectID()));
+        attributes.put(EMAIL_VERIFIED, new AttributeValue().withN(isEmailVerified() ? "1" : "0"));
+        if (getPhoneNumber() != null)
+            attributes.put(PHONE_NUMBER, new AttributeValue(getPhoneNumber()));
+        attributes.put(
+                PHONE_NUMBER_VERIFIED,
+                new AttributeValue().withN(isPhoneNumberVerified() ? "1" : "0"));
+        if (getCreated() != null) attributes.put(CREATED, new AttributeValue(getCreated()));
+        if (getUpdated() != null) attributes.put(UPDATED, new AttributeValue(getUpdated()));
+        if (getTermsAndConditions() != null)
+            attributes.put(TERMS_AND_CONDITIONS, getTermsAndConditions().toAttributeValue());
+        if (getClientConsent() != null) {
+            Collection<AttributeValue> consents = new ArrayList<>();
+            getClientConsent().stream().forEach(c -> consents.add(c.toAttributeValue()));
+            attributes.put(CLIENT_CONSENT, new AttributeValue().withL(consents));
+        }
+        if (getPublicSubjectID() != null)
+            attributes.put(PUBLIC_SUBJECT_ID, new AttributeValue(getPublicSubjectID()));
+        if (getLegacySubjectID() != null)
+            attributes.put(LEGACY_SUBJECT_ID, new AttributeValue(getLegacySubjectID()));
+        if (getSalt() != null) attributes.put(SALT, new AttributeValue().withB(getSalt()));
+        return attributes;
     }
 }
