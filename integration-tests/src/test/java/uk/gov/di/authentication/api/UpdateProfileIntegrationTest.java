@@ -9,6 +9,8 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
 import uk.gov.di.authentication.frontendapi.lambda.UpdateProfileHandler;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
@@ -25,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -46,14 +49,27 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
         handler = new UpdateProfileHandler(TEST_CONFIGURATION_SERVICE);
     }
 
-    @Test
-    public void shouldCallUpdateProfileEndpointToUpdatePhoneNumberAndReturn200()
+    private static Stream<String> phoneNumbers() {
+        return Stream.of(
+                "+447316763843",
+                "+4407316763843",
+                "+33645453322",
+                "+447316763843",
+                "+33645453322",
+                "+33645453322",
+                "07911123456",
+                "07123456789");
+    }
+
+    @ParameterizedTest
+    @MethodSource("phoneNumbers")
+    public void shouldCallUpdateProfileEndpointToUpdatePhoneNumberAndReturn204(String phonenumber)
             throws IOException {
         String sessionId = redis.createSession();
         String clientSessionId = IdGenerator.generate();
         setUpTest(sessionId, clientSessionId);
         UpdateProfileRequest request =
-                new UpdateProfileRequest(EMAIL_ADDRESS, ADD_PHONE_NUMBER, "07123456789");
+                new UpdateProfileRequest(EMAIL_ADDRESS, ADD_PHONE_NUMBER, phonenumber);
 
         var response =
                 makeRequest(

@@ -6,6 +6,8 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdatePhoneNumberRequest;
 import uk.gov.di.accountmanagement.lambda.UpdatePhoneNumberHandler;
@@ -17,6 +19,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.MOBILE;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -45,27 +48,45 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         handler = new UpdatePhoneNumberHandler(TEST_CONFIGURATION_SERVICE);
     }
 
-    @Test
-    void shouldSendNotificationAndReturn204WhenUpdatingPhoneNumberIsSuccessful() {
+    private static Stream<String> phoneNumbers() {
+        return Stream.of(
+                "+447316763843",
+                "+4407316763843",
+                "+33645453322",
+                "+447316763843",
+                "+33645453322",
+                "+33645453322",
+                "07911123456",
+                NEW_PHONE_NUMBER);
+    }
+
+    @ParameterizedTest
+    @MethodSource("phoneNumbers")
+    void shouldSendNotificationAndReturn204WhenUpdatingPhoneNumberIsSuccessful(String phoneNumber) {
         String publicSubjectID = userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
         String otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 300);
 
         var response =
                 makeRequest(
-                        Optional.of(
-                                new UpdatePhoneNumberRequest(TEST_EMAIL, NEW_PHONE_NUMBER, otp)),
+                        Optional.of(new UpdatePhoneNumberRequest(TEST_EMAIL, phoneNumber, otp)),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("principalId", publicSubjectID));
 
         assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
+
+        var expectedMatchType = PhoneNumberUtil.MatchType.NSN_MATCH;
+
+        if (phoneNumber.startsWith("+")) {
+            expectedMatchType = PhoneNumberUtil.MatchType.EXACT_MATCH;
+        }
+
         assertThat(
                 PhoneNumberUtil.getInstance()
                         .isNumberMatch(
-                                userStore.getPhoneNumberForUser(TEST_EMAIL).get(),
-                                NEW_PHONE_NUMBER),
-                is(PhoneNumberUtil.MatchType.NSN_MATCH));
+                                userStore.getPhoneNumberForUser(TEST_EMAIL).get(), phoneNumber),
+                is(expectedMatchType));
 
         NotificationAssertionHelper.assertNotificationsReceived(
                 notificationsQueue, List.of(new NotifyRequest(TEST_EMAIL, PHONE_NUMBER_UPDATED)));
@@ -76,7 +97,7 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     @Test
     void shouldReturn400WhenOtpIsInvalid() throws Exception {
         String publicSubjectID = userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
-        String realOtp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 300);
+        redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 300);
         String badOtp = "This is not the correct OTP";
 
         var response =
@@ -120,7 +141,7 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     @Test
     void shouldThrowExceptionWhenUserAttemptsToUpdateDifferentAccount() {
-        String correctSubjectID = userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
+        userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
         String otherSubjectID =
                 userStore.signUp(
                         "other.user@digital.cabinet-office.gov.uk", "password-2", new Subject());
