@@ -29,7 +29,6 @@ inputs:
   - name: ipv-api-release
   - name: lambda-warmer-release
   - name: shared-terraform-outputs
-  - name: oidc-api-env-vars
 outputs:
   - name: terraform-outputs
 run:
@@ -37,8 +36,6 @@ run:
   args:
     - -euc
     - |
-      source oidc-api-env-vars/env.sh
-
       cd "api-terraform-src/ci/terraform/oidc"
       terraform init -input=false \
         -backend-config "role_arn=${DEPLOYER_ROLE_ARN}" \
