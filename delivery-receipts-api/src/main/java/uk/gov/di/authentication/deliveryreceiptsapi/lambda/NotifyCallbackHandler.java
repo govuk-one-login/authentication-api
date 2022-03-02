@@ -23,6 +23,7 @@ import static uk.gov.di.authentication.deliveryreceiptsapi.entity.DeliveryMetric
 public class NotifyCallbackHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
+    private static final String AUTHORIZATION_HEADER = "Authorization";
     private final ConfigurationService configurationService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private static final Logger LOG = LogManager.getLogger(NotifyCallbackHandler.class);
@@ -52,7 +53,7 @@ public class NotifyCallbackHandler
         try {
             deliveryReceipt =
                     new ObjectMapper().readValue(input.getBody(), NotifyDeliveryReceipt.class);
-            if (deliveryReceipt.getNotification_type().equals("sms")) {
+            if (deliveryReceipt.getNotificationType().equals("sms")) {
                 var countryCode = getCountryCodeFromNumber(deliveryReceipt.getTo());
                 var deliveryStatus = getDeliveryStatus(deliveryReceipt.getStatus());
                 LOG.info(
@@ -80,12 +81,12 @@ public class NotifyCallbackHandler
 
     private void validateBearerToken(Map<String, String> headers) {
         var notifyCallbackBearerToken = configurationService.getNotifyCallbackBearerToken();
-        if (Objects.isNull(headers.get("Authorization"))
-                || !headers.get("Authorization").startsWith("Bearer ")) {
+        if (Objects.isNull(headers.get(AUTHORIZATION_HEADER))
+                || !headers.get(AUTHORIZATION_HEADER).startsWith("Bearer ")) {
             LOG.error("No bearer token in request");
             throw new RuntimeException("No bearer token in request");
         }
-        var token = headers.get("Authorization").substring(7);
+        var token = headers.get(AUTHORIZATION_HEADER).substring(7);
         if (!token.equals(notifyCallbackBearerToken)) {
             LOG.error("Invalid bearer token in request");
             throw new RuntimeException("Invalid bearer token in request");
@@ -93,13 +94,9 @@ public class NotifyCallbackHandler
     }
 
     private int getCountryCodeFromNumber(String number) {
-        String defaultRegion = null;
-        if (!number.startsWith("+")) {
-            defaultRegion = "GB";
-        }
         var phoneUtil = PhoneNumberUtil.getInstance();
         try {
-            return phoneUtil.parse(number, defaultRegion).getCountryCode();
+            return phoneUtil.parse(number, "GB").getCountryCode();
         } catch (NumberParseException e) {
             LOG.error("Unable to parse number");
             throw new RuntimeException("Unable to parse number");
@@ -108,7 +105,7 @@ public class NotifyCallbackHandler
 
     private String getDeliveryStatus(String notifyStatus) {
         var deliveryStatus = SMS_FAILURE.toString();
-        if (notifyStatus.equals("delivered")) {
+        if ("delivered".equals(notifyStatus)) {
             deliveryStatus = SMS_DELIVERED.toString();
         }
         return deliveryStatus;

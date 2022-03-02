@@ -9,9 +9,6 @@ image_resource:
 params:
   DEPLOYER_ROLE_ARN: ((deployer-role-arn-non-prod))
   DEPLOY_ENVIRONMENT: build
-  DNS_DEPLOYER_ROLE_ARN: ((deployer-role-arn-production))
-  DNS_STATE_BUCKET: ((dns-state-bucket))
-  DNS_STATE_KEY: ((dns-state-key))
   STATE_BUCKET: digital-identity-dev-tfstate
 inputs:
   - name: api-terraform-src
@@ -38,9 +35,6 @@ run:
         -var 'logging_endpoint_arn=arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod' \
         -var "lambda_zip_file=$(ls -1 ../../../../delivery-receipts-api-release/*.zip)" \
         -var "common_state_bucket=${STATE_BUCKET}" \
-        -var "dns_state_bucket=${DNS_STATE_BUCKET}" \
-        -var "dns_state_key=${DNS_STATE_KEY}" \
-        -var "dns_state_role=${DNS_DEPLOYER_ROLE_ARN}" \
         -var-file "${DEPLOY_ENVIRONMENT}-overrides.tfvars" \
         -var-file ${DEPLOY_ENVIRONMENT}-sizing.tfvars \
 

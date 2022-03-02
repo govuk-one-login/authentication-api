@@ -70,19 +70,6 @@ variable "aws_region" {
   default = "eu-west-2"
 }
 
-variable "dns_state_bucket" {
-  type = string
-}
-
-variable "dns_state_key" {
-  type = string
-}
-
-variable "dns_state_role" {
-  type = string
-}
-
-
 variable "cloudwatch_log_retention" {
   default     = 1
   type        = number

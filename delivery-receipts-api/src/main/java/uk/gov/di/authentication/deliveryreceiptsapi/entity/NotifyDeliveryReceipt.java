@@ -17,44 +17,44 @@ public class NotifyDeliveryReceipt {
     private String status;
 
     @JsonProperty("created_at")
-    private String created_at;
+    private String createdAt;
 
     @JsonProperty("completed_at")
-    private String completed_at;
+    private String completedAt;
 
     @JsonProperty("sent_at")
-    private String sent_at;
+    private String sentAt;
 
     @JsonProperty("notification_type")
-    private String notification_type;
+    private String notificationType;
 
     @JsonProperty("template_id")
-    private String template_id;
+    private String templateId;
 
     @JsonProperty("template_version")
-    private int template_version;
+    private int templateVersion;
 
     public NotifyDeliveryReceipt(
             @JsonProperty(required = true, value = "id") String id,
             @JsonProperty(required = true, value = "reference") String reference,
             @JsonProperty(required = true, value = "to") String to,
             @JsonProperty(required = true, value = "status") String status,
-            @JsonProperty(required = true, value = "created_at") String created_at,
-            @JsonProperty(required = true, value = "completed_at") String completed_at,
-            @JsonProperty(required = true, value = "sent_at") String sent_at,
-            @JsonProperty(required = true, value = "notification_type") String notification_type,
-            @JsonProperty(required = true, value = "template_id") String template_id,
-            @JsonProperty(required = true, value = "template_version") int template_version) {
+            @JsonProperty(required = true, value = "created_at") String createdAt,
+            @JsonProperty(required = true, value = "completed_at") String completedAt,
+            @JsonProperty(required = true, value = "sent_at") String sentAt,
+            @JsonProperty(required = true, value = "notification_type") String notificationType,
+            @JsonProperty(required = true, value = "template_id") String templateId,
+            @JsonProperty(required = true, value = "template_version") int templateVersion) {
         this.id = id;
         this.reference = reference;
         this.to = to;
         this.status = status;
-        this.created_at = created_at;
-        this.completed_at = completed_at;
-        this.sent_at = sent_at;
-        this.notification_type = notification_type;
-        this.template_id = template_id;
-        this.template_version = template_version;
+        this.createdAt = createdAt;
+        this.completedAt = completedAt;
+        this.sentAt = sentAt;
+        this.notificationType = notificationType;
+        this.templateId = templateId;
+        this.templateVersion = templateVersion;
     }
 
     public String getId() {
@@ -73,27 +73,27 @@ public class NotifyDeliveryReceipt {
         return status;
     }
 
-    public String getCreated_at() {
-        return created_at;
+    public String getCreatedAt() {
+        return createdAt;
     }
 
-    public String getCompleted_at() {
-        return completed_at;
+    public String getCompletedAt() {
+        return completedAt;
     }
 
-    public String getSent_at() {
-        return sent_at;
+    public String getSentAt() {
+        return sentAt;
     }
 
-    public String getNotification_type() {
-        return notification_type;
+    public String getNotificationType() {
+        return notificationType;
     }
 
-    public String getTemplate_id() {
-        return template_id;
+    public String getTemplateId() {
+        return templateId;
     }
 
-    public int getTemplate_version() {
-        return template_version;
+    public int getTemplateVersion() {
+        return templateVersion;
     }
 }
