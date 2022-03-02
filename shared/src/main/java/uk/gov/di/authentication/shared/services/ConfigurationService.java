@@ -132,6 +132,15 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Optional.ofNullable(System.getenv("NOTIFY_URL"));
     }
 
+    public String getNotifyCallbackBearerToken() {
+        var request =
+                new GetParameterRequest()
+                        .withWithDecryption(true)
+                        .withName(format("{0}-notify-callback-bearer-token", getEnvironment()));
+
+        return getSsmClient().getParameter(request).getParameter().getValue();
+    }
+
     public Optional<String> getNotifyTestPhoneNumber() {
         return Optional.ofNullable(System.getenv("NOTIFY_TEST_PHONE_NUMBER"));
     }
