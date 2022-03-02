@@ -9,6 +9,7 @@ include 'account-management-integration-tests'
 include 'oidc-api'
 include 'shared'
 include 'shared-test'
+include 'delivery-receipts-api'
 
 rootProject.name = 'di-authentication-api'
 include 'ipv-api'
