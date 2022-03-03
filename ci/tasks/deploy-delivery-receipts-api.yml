@@ -36,6 +36,5 @@ run:
         -var "lambda_zip_file=$(ls -1 ../../../../delivery-receipts-api-release/*.zip)" \
         -var "common_state_bucket=${STATE_BUCKET}" \
         -var-file "${DEPLOY_ENVIRONMENT}-overrides.tfvars" \
-        -var-file ${DEPLOY_ENVIRONMENT}-sizing.tfvars \
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-delivery-receipts-api-terraform-outputs.json
