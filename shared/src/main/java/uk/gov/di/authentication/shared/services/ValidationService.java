@@ -75,16 +75,13 @@ public class ValidationService {
     }
 
     public Optional<ErrorResponse> validatePhoneNumber(String phoneNumberInput) {
-        String defaultRegion = null;
-        if (!phoneNumberInput.startsWith("+")) {
-            defaultRegion = "GB";
-            if ((!phoneNumberInput.matches("[0-9]+")) || (phoneNumberInput.length() < 10)) {
-                return Optional.of(ErrorResponse.ERROR_1012);
-            }
+        if ((!phoneNumberInput.startsWith("+"))
+                && ((!phoneNumberInput.matches("[0-9]+")) || (phoneNumberInput.length() < 10))) {
+            return Optional.of(ErrorResponse.ERROR_1012);
         }
         var phoneUtil = PhoneNumberUtil.getInstance();
         try {
-            var phoneNumber = phoneUtil.parse(phoneNumberInput, defaultRegion);
+            var phoneNumber = phoneUtil.parse(phoneNumberInput, "GB");
             if (!phoneUtil.getNumberType(phoneNumber).equals(MOBILE)) {
                 return Optional.of(ErrorResponse.ERROR_1012);
             }

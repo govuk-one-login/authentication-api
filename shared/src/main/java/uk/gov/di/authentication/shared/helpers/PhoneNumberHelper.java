@@ -10,13 +10,9 @@ public class PhoneNumberHelper {
     private static final Logger LOG = LogManager.getLogger(PhoneNumberHelper.class);
 
     public static String formatPhoneNumber(String phoneNumber) {
-        String defaultRegion = null;
-        if (!phoneNumber.startsWith("+")) {
-            defaultRegion = "GB";
-        }
         var phoneUtil = PhoneNumberUtil.getInstance();
         try {
-            var parsedPhoneNumber = phoneUtil.parse(phoneNumber, defaultRegion);
+            var parsedPhoneNumber = phoneUtil.parse(phoneNumber, "GB");
             return phoneUtil.format(parsedPhoneNumber, PhoneNumberUtil.PhoneNumberFormat.E164);
         } catch (NumberParseException e) {
             LOG.warn("Error when trying to parse phone number");
