@@ -5,7 +5,8 @@ module "delivery_receipts_api_notify_callback_role" {
   vpc_arn     = local.vpc_arn
 
   policies_to_attach = [
-    aws_iam_policy.parameter_policy.arn
+    aws_iam_policy.parameter_policy.arn,
+    aws_iam_policy.cloudwatch_metrics_delivery-receipts_putdata_policy.arn,
   ]
 }
 
@@ -60,4 +61,19 @@ module "notify_callback" {
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_delivery_receipts_api,
   ]
+}
+
+resource "aws_iam_policy" "cloudwatch_metrics_delivery-receipts_putdata_policy" {
+  name_prefix = "cloudwatch-put-delivery-receipts-metrics-policy-"
+  path        = "/${var.environment}/delivery-receipts/"
+  description = "IAM policy enabling pushing metrics to CloudWatch"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["cloudwatch:PutMetricData"]
+      Resource = ["*"]
+    }]
+  })
 }
