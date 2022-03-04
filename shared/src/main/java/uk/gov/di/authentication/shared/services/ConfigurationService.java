@@ -12,7 +12,6 @@ import uk.gov.di.authentication.shared.configuration.AuditPublisherConfiguration
 import uk.gov.di.authentication.shared.configuration.BaseLambdaConfiguration;
 
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;

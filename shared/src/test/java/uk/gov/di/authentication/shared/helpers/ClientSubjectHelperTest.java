@@ -9,6 +9,7 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -70,7 +71,7 @@ class ClientSubjectHelperTest {
 
         assertEquals(subject1, subject2);
         assertNotNull(userProfile.getSalt());
-        assertEquals(32, Base64.getDecoder().decode(userProfile.getSalt()).length);
+        assertEquals(32, userProfile.getSalt().array().length);
     }
 
     @Test
@@ -79,7 +80,7 @@ class ClientSubjectHelperTest {
         KeyPair keyPair = generateRsaKeyPair();
         final String SALT_VALUE = "a-pre-existing-salt-value";
         byte[] salt = SALT_VALUE.getBytes(StandardCharsets.UTF_8);
-        UserProfile userProfile = generateUserProfile(Base64.getEncoder().encodeToString(salt));
+        UserProfile userProfile = generateUserProfile(ByteBuffer.wrap(salt));
 
         ClientRegistry clientRegistry1 =
                 generateClientRegistryPairwise(
@@ -92,7 +93,7 @@ class ClientSubjectHelperTest {
         Subject subject2 = ClientSubjectHelper.getSubject(userProfile, clientRegistry2);
 
         assertEquals(subject1, subject2);
-        assertEquals(SALT_VALUE, new String(Base64.getDecoder().decode(userProfile.getSalt())));
+        assertEquals(SALT_VALUE, new String(userProfile.getSalt().array()));
     }
 
     @Test
@@ -142,7 +143,7 @@ class ClientSubjectHelperTest {
         return generateUserProfile(null);
     }
 
-    private UserProfile generateUserProfile(String salt) {
+    private UserProfile generateUserProfile(ByteBuffer salt) {
         Set<String> claims = ValidScopes.getClaimsForListOfScopes(SCOPES.toStringList());
         return new UserProfile()
                 .setEmail(TEST_EMAIL)

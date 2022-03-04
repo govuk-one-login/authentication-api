@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.shared.helpers;
 
-import com.amazonaws.util.Base64;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -14,8 +13,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.NoSuchElementException;
-
-import static org.apache.commons.lang3.StringUtils.isBlank;
 
 public class ClientSubjectHelper {
 
@@ -78,15 +75,15 @@ public class ClientSubjectHelper {
     }
 
     private static byte[] getUserSalt(UserProfile userProfile) {
-        if (isBlank(userProfile.getSalt())) {
+        if (userProfile.getSalt() == null || userProfile.getSalt().array().length == 0) {
             userProfile.setSalt(generateNewSalt());
         }
-        return Base64.decode(userProfile.getSalt());
+        return userProfile.getSalt().array();
     }
 
-    private static String generateNewSalt() {
+    private static byte[] generateNewSalt() {
         byte[] salt = new byte[SALT_BYTES];
         SECURE_RANDOM.nextBytes(salt);
-        return Base64.encodeAsString(salt);
+        return salt;
     }
 }
