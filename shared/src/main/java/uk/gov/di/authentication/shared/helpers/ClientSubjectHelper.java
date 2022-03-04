@@ -5,22 +5,23 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.util.NoSuchElementException;
 
 public class ClientSubjectHelper {
 
     private static final Logger LOG = LogManager.getLogger(ClientSubjectHelper.class);
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-    private static final int SALT_BYTES = 32;
 
-    public static Subject getSubject(UserProfile userProfile, ClientRegistry client) {
+    public static Subject getSubject(
+            UserProfile userProfile,
+            ClientRegistry client,
+            AuthenticationService authenticationService) {
         if (client.getSubjectType().equalsIgnoreCase("public")) {
             return new Subject(userProfile.getPublicSubjectID());
         } else {
@@ -30,7 +31,9 @@ public class ClientSubjectHelper {
                             : returnHost(client);
             return new Subject(
                     calculatePairwiseIdentifier(
-                            userProfile.getSubjectID(), uri, getUserSalt(userProfile)));
+                            userProfile.getSubjectID(),
+                            uri,
+                            authenticationService.getOrGenerateSalt(userProfile)));
         }
     }
 
@@ -72,18 +75,5 @@ public class ClientSubjectHelper {
             LOG.error("Failed to hash", e);
             throw new RuntimeException(e);
         }
-    }
-
-    private static byte[] getUserSalt(UserProfile userProfile) {
-        if (userProfile.getSalt() == null || userProfile.getSalt().array().length == 0) {
-            userProfile.setSalt(generateNewSalt());
-        }
-        return userProfile.getSalt().array();
-    }
-
-    private static byte[] generateNewSalt() {
-        byte[] salt = new byte[SALT_BYTES];
-        SECURE_RANDOM.nextBytes(salt);
-        return salt;
     }
 }

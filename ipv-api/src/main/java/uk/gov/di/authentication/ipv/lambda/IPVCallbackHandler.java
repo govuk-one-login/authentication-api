@@ -145,8 +145,8 @@ public class IPVCallbackHandler
                                             "IPV TokenResponse was not successful");
                                 }
                                 Subject pairwiseSubject =
-                                        ClientSubjectHelper.getSubject(userProfile, clientRegistry);
-                                dynamoService.updateSalt(userProfile);
+                                        ClientSubjectHelper.getSubject(
+                                                userProfile, clientRegistry, dynamoService);
                                 String serializedCredential =
                                         ipvTokenService.sendIpvInfoRequest(
                                                 tokenResponse

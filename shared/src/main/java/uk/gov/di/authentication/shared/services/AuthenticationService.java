@@ -59,5 +59,5 @@ public interface AuthenticationService {
 
     void bulkAdd(List<UserCredentials> userCredentialsList, List<UserProfile> userProfileList);
 
-    void updateSalt(UserProfile userProfile);
+    byte[] getOrGenerateSalt(UserProfile userProfile);
 }
