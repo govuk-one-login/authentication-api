@@ -146,6 +146,7 @@ public class IPVCallbackHandler
                                 }
                                 Subject pairwiseSubject =
                                         ClientSubjectHelper.getSubject(userProfile, clientRegistry);
+                                dynamoService.updateSalt(userProfile);
                                 String serializedCredential =
                                         ipvTokenService.sendIpvInfoRequest(
                                                 tokenResponse

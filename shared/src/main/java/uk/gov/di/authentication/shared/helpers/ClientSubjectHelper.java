@@ -6,7 +6,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -14,7 +13,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.security.SecureRandomParameters;
 import java.util.NoSuchElementException;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
@@ -33,7 +31,9 @@ public class ClientSubjectHelper {
                     client.getSectorIdentifierUri() != null
                             ? client.getSectorIdentifierUri()
                             : returnHost(client);
-            return new Subject(calculatePairwiseIdentifier(userProfile.getSubjectID(), uri, getUserSalt(userProfile)));
+            return new Subject(
+                    calculatePairwiseIdentifier(
+                            userProfile.getSubjectID(), uri, getUserSalt(userProfile)));
         }
     }
 
@@ -55,7 +55,8 @@ public class ClientSubjectHelper {
         return redirectUri;
     }
 
-    private static String calculatePairwiseIdentifier(String subjectID, String sector, byte[] salt) {
+    private static String calculatePairwiseIdentifier(
+            String subjectID, String sector, byte[] salt) {
         try {
             var md = MessageDigest.getInstance("SHA-256");
 

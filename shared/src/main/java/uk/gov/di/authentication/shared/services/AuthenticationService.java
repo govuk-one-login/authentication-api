@@ -58,4 +58,6 @@ public interface AuthenticationService {
     void migrateLegacyPassword(String email, String password);
 
     void bulkAdd(List<UserCredentials> userCredentialsList, List<UserProfile> userProfileList);
+
+    void updateSalt(UserProfile userProfile);
 }

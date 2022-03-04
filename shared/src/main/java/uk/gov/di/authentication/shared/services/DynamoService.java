@@ -246,6 +246,13 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
+    public void updateSalt(UserProfile userProfile) {
+        userProfileMapper.save(
+                getUserProfileFromSubject(userProfile.getSubjectID())
+                        .setSalt(userProfile.getSalt()));
+    }
+
+    @Override
     public Optional<List<ClientConsent>> getUserConsents(String email) {
         return Optional.ofNullable(
                 userProfileMapper

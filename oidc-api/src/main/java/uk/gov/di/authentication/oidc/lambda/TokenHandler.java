@@ -229,6 +229,7 @@ public class TokenHandler
                                             authCodeExchangeData.getEmail());
                             Subject publicSubject =
                                     ClientSubjectHelper.getSubject(userProfile, client);
+                            dynamoService.updateSalt(userProfile);
                             Map<String, Object> additionalTokenClaims = new HashMap<>();
                             if (authRequest.getNonce() != null) {
                                 additionalTokenClaims.put("nonce", authRequest.getNonce());

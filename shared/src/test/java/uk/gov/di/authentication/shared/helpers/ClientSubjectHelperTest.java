@@ -53,7 +53,8 @@ class ClientSubjectHelperTest {
     }
 
     @Test
-    void shouldReturnSameSubjectIDAndGenerateNewUserSaltForMultipleClientsWithSameSectorWhenUserHasNoSalt() {
+    void
+            shouldReturnSameSubjectIDAndGenerateNewUserSaltForMultipleClientsWithSameSectorWhenUserHasNoSalt() {
         KeyPair keyPair = generateRsaKeyPair();
         UserProfile userProfile = generateUserProfile();
 
@@ -73,7 +74,8 @@ class ClientSubjectHelperTest {
     }
 
     @Test
-    void shouldReturnSameSubjectIDAndKeepExistingUserSaltForMultipleClientsWithSameSectorWhenUserHasPreexistingSalt() {
+    void
+            shouldReturnSameSubjectIDAndKeepExistingUserSaltForMultipleClientsWithSameSectorWhenUserHasPreexistingSalt() {
         KeyPair keyPair = generateRsaKeyPair();
         final String SALT_VALUE = "a-pre-existing-salt-value";
         byte[] salt = SALT_VALUE.getBytes(StandardCharsets.UTF_8);
