@@ -20,6 +20,8 @@ public class UserProfile {
     private String publicSubjectID;
     private String legacySubjectID;
 
+    private String salt;
+
     public UserProfile() {}
 
     @DynamoDBHashKey(attributeName = "Email")
@@ -141,6 +143,16 @@ public class UserProfile {
 
     public UserProfile setLegacySubjectID(String legacySubjectID) {
         this.legacySubjectID = legacySubjectID;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "salt")
+    public String getSalt() {
+        return salt;
+    }
+
+    public UserProfile setSalt(String salt) {
+        this.salt = salt;
         return this;
     }
 }
