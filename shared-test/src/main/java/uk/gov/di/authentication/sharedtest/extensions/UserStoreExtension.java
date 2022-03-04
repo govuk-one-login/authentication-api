@@ -11,6 +11,7 @@ import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
 import java.time.LocalDateTime;
@@ -48,6 +49,13 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         return credentials.getPassword();
     }
 
+    public String getPublicSubjectIdForEmail(String email) {
+        return dynamoService
+                .getUserProfileByEmailMaybe(email)
+                .map(u -> u.getPublicSubjectID())
+                .orElseThrow();
+    }
+
     public Optional<String> getPhoneNumberForUser(String email) {
         return dynamoService.getPhoneNumber(email);
     }
@@ -74,6 +82,12 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
 
     public void setPhoneNumberVerified(String email, boolean isVerified) {
         dynamoService.updatePhoneNumberVerifiedStatus(email, isVerified);
+    }
+
+    public byte[] addSalt(String email) {
+        UserProfile userProfile = dynamoService.getUserProfileByEmailMaybe(email).orElseThrow();
+
+        return dynamoService.getOrGenerateSalt(userProfile);
     }
 
     public Optional<List<ClientConsent>> getUserConsents(String email) {
