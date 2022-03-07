@@ -8,7 +8,9 @@ import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -20,6 +22,9 @@ import java.util.Set;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class ClientSubjectHelperTest {
 
@@ -32,8 +37,11 @@ class ClientSubjectHelperTest {
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
 
+    private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+
     @Test
     void shouldReturnDifferentSubjectIDForMultipleClientsWithDifferentSectors() {
+        stubAuthenticationService();
         KeyPair keyPair = generateRsaKeyPair();
         UserProfile userProfile = generateUserProfile();
 
@@ -44,14 +52,17 @@ class ClientSubjectHelperTest {
                 generateClientRegistryPairwise(
                         keyPair, "test-client-id-2", "pairwise", "https://not-test.com");
 
-        Subject subject1 = ClientSubjectHelper.getSubject(userProfile, clientRegistry1);
-        Subject subject2 = ClientSubjectHelper.getSubject(userProfile, clientRegistry2);
+        Subject subject1 =
+                ClientSubjectHelper.getSubject(userProfile, clientRegistry1, authenticationService);
+        Subject subject2 =
+                ClientSubjectHelper.getSubject(userProfile, clientRegistry2, authenticationService);
 
         assertNotEquals(subject1, subject2);
     }
 
     @Test
     void shouldReturnSameSubjectIDForMultipleClientsWithSameSector() {
+        stubAuthenticationService();
         KeyPair keyPair = generateRsaKeyPair();
         UserProfile userProfile = generateUserProfile();
 
@@ -62,8 +73,10 @@ class ClientSubjectHelperTest {
                 generateClientRegistryPairwise(
                         keyPair, "test-client-id-2", "pairwise", "https://test.com");
 
-        Subject subject1 = ClientSubjectHelper.getSubject(userProfile, clientRegistry1);
-        Subject subject2 = ClientSubjectHelper.getSubject(userProfile, clientRegistry2);
+        Subject subject1 =
+                ClientSubjectHelper.getSubject(userProfile, clientRegistry1, authenticationService);
+        Subject subject2 =
+                ClientSubjectHelper.getSubject(userProfile, clientRegistry2, authenticationService);
 
         assertEquals(subject1, subject2);
     }
@@ -80,8 +93,10 @@ class ClientSubjectHelperTest {
                 generateClientRegistryPairwise(
                         keyPair, "test-client-id-2", "public", "https://test.com");
 
-        Subject subject1 = ClientSubjectHelper.getSubject(userProfile, clientRegistry1);
-        Subject subject2 = ClientSubjectHelper.getSubject(userProfile, clientRegistry2);
+        Subject subject1 =
+                ClientSubjectHelper.getSubject(userProfile, clientRegistry1, authenticationService);
+        Subject subject2 =
+                ClientSubjectHelper.getSubject(userProfile, clientRegistry2, authenticationService);
 
         assertEquals(subject1, subject2);
     }
@@ -125,5 +140,10 @@ class ClientSubjectHelperTest {
                 .setClientConsent(
                         new ClientConsent(
                                 CLIENT_ID, claims, LocalDateTime.now(ZoneId.of("UTC")).toString()));
+    }
+
+    private void stubAuthenticationService() {
+        when(authenticationService.getOrGenerateSalt(any(UserProfile.class)))
+                .thenReturn("a-test-salt".getBytes(StandardCharsets.UTF_8));
     }
 }

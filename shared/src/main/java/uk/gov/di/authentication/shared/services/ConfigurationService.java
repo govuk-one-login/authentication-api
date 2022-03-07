@@ -12,7 +12,6 @@ import uk.gov.di.authentication.shared.configuration.AuditPublisherConfiguration
 import uk.gov.di.authentication.shared.configuration.BaseLambdaConfiguration;
 
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -244,10 +243,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public int getWarmupDelayMillis() {
         return Integer.parseInt(System.getenv().getOrDefault("WARMER_DELAY", "75"));
-    }
-
-    public byte[] getSalt() {
-        return System.getenv().getOrDefault("SALT", "random").getBytes(StandardCharsets.UTF_8);
     }
 
     public String getAuditHmacSecret() {

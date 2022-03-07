@@ -65,6 +65,7 @@ import java.util.stream.Stream;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -126,6 +127,70 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .getJWTClaimsSet()
                         .getClaim("vot"),
                 equalTo(vtr.get()));
+
+        assertNoAuditEventsReceived(auditTopic);
+    }
+
+    @Test
+    void shouldReturnIdTokenWithPublicSubjectId() throws Exception {
+        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        Scope scope =
+                new Scope(
+                        OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
+        setUpDynamo(keyPair, scope, new Subject());
+        var response = generateTokenRequest(keyPair, scope, Optional.empty(), Optional.empty());
+
+        assertThat(response, hasStatus(200));
+        JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
+        assertNotNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getRefreshToken());
+        assertNotNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getBearerAccessToken());
+        assertThat(
+                OIDCTokenResponse.parse(jsonResponse)
+                        .getOIDCTokens()
+                        .getIDToken()
+                        .getJWTClaimsSet()
+                        .getSubject(),
+                equalTo(userStore.getPublicSubjectIdForEmail(TEST_EMAIL)));
+
+        assertNoAuditEventsReceived(auditTopic);
+    }
+
+    @Test
+    void shouldReturnIdTokenWithPairwiseSubjectId() throws Exception {
+        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        Scope scope =
+                new Scope(
+                        OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
+        setUpDynamo(keyPair, scope, new Subject(), "pairwise");
+        var response = generateTokenRequest(keyPair, scope, Optional.empty(), Optional.empty());
+
+        assertThat(response, hasStatus(200));
+        JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
+        assertNotNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getRefreshToken());
+        assertNotNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getBearerAccessToken());
+        assertThat(
+                OIDCTokenResponse.parse(jsonResponse)
+                        .getOIDCTokens()
+                        .getIDToken()
+                        .getJWTClaimsSet()
+                        .getSubject(),
+                not(equalTo(userStore.getPublicSubjectIdForEmail(TEST_EMAIL))));
 
         assertNoAuditEventsReceived(auditTopic);
     }
@@ -265,6 +330,11 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private void setUpDynamo(KeyPair keyPair, Scope scope, Subject internalSubject) {
+        setUpDynamo(keyPair, scope, internalSubject, "public");
+    }
+
+    private void setUpDynamo(
+            KeyPair keyPair, Scope scope, Subject internalSubject, String subjectType) {
         clientStore.registerClient(
                 CLIENT_ID,
                 "test-client",
@@ -275,7 +345,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 singletonList("http://localhost/post-logout-redirect"),
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public",
+                subjectType,
                 true);
         userStore.signUp(TEST_EMAIL, "password-1", internalSubject);
         Set<String> claims = ValidScopes.getClaimsForListOfScopes(scope.toStringList());

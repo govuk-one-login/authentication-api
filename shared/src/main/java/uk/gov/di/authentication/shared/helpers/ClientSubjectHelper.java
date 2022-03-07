@@ -5,7 +5,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -18,10 +18,10 @@ public class ClientSubjectHelper {
 
     private static final Logger LOG = LogManager.getLogger(ClientSubjectHelper.class);
 
-    private static final ConfigurationService configurationService =
-            ConfigurationService.getInstance();
-
-    public static Subject getSubject(UserProfile userProfile, ClientRegistry client) {
+    public static Subject getSubject(
+            UserProfile userProfile,
+            ClientRegistry client,
+            AuthenticationService authenticationService) {
         if (client.getSubjectType().equalsIgnoreCase("public")) {
             return new Subject(userProfile.getPublicSubjectID());
         } else {
@@ -29,7 +29,11 @@ public class ClientSubjectHelper {
                     client.getSectorIdentifierUri() != null
                             ? client.getSectorIdentifierUri()
                             : returnHost(client);
-            return new Subject(calculatePairwiseIdentifier(userProfile.getSubjectID(), uri));
+            return new Subject(
+                    calculatePairwiseIdentifier(
+                            userProfile.getSubjectID(),
+                            uri,
+                            authenticationService.getOrGenerateSalt(userProfile)));
         }
     }
 
@@ -51,14 +55,15 @@ public class ClientSubjectHelper {
         return redirectUri;
     }
 
-    private static String calculatePairwiseIdentifier(String subjectID, String sector) {
+    private static String calculatePairwiseIdentifier(
+            String subjectID, String sector, byte[] salt) {
         try {
             var md = MessageDigest.getInstance("SHA-256");
 
             md.update(sector.getBytes(StandardCharsets.UTF_8));
             md.update(subjectID.getBytes(StandardCharsets.UTF_8));
 
-            byte[] bytes = md.digest(configurationService.getSalt());
+            byte[] bytes = md.digest(salt);
 
             var sb = new StringBuilder();
             for (byte aByte : bytes) {

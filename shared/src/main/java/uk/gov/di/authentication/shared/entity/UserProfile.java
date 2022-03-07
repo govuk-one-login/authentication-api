@@ -4,6 +4,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBIndexHashKey;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 
 public class UserProfile {
@@ -19,6 +20,7 @@ public class UserProfile {
     private TermsAndConditions termsAndConditions;
     private String publicSubjectID;
     private String legacySubjectID;
+    private ByteBuffer salt;
 
     public UserProfile() {}
 
@@ -141,6 +143,21 @@ public class UserProfile {
 
     public UserProfile setLegacySubjectID(String legacySubjectID) {
         this.legacySubjectID = legacySubjectID;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "salt")
+    public ByteBuffer getSalt() {
+        return salt;
+    }
+
+    public UserProfile setSalt(ByteBuffer salt) {
+        this.salt = salt;
+        return this;
+    }
+
+    public UserProfile setSalt(byte[] salt) {
+        this.salt = ByteBuffer.wrap(salt);
         return this;
     }
 }
