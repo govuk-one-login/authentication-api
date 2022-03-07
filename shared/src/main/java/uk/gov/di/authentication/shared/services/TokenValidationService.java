@@ -46,16 +46,14 @@ public class TokenValidationService {
     }
 
     public boolean validateAccessTokenSignature(AccessToken accessToken) {
-        LOG.info("Validating Access Token signature");
         return isTokenSignatureValid(accessToken.getValue());
     }
 
     public boolean validateRefreshTokenSignatureAndExpiry(RefreshToken refreshToken) {
-        LOG.info("Validating Refresh Token signature");
         if (!isTokenSignatureValid(refreshToken.getValue())) {
+            LOG.warn("Refresh token has invalid signature");
             return false;
         }
-        LOG.info("Validating Refresh Token expiry");
         if (hasTokenExpired(refreshToken.getValue())) {
             LOG.warn("Refresh token has expired");
             return false;
@@ -79,17 +77,14 @@ public class TokenValidationService {
     }
 
     public boolean isTokenSignatureValid(String tokenValue) {
-        boolean isVerified;
         try {
-            LOG.info("TokenSigningKeyID: " + configService.getTokenSigningKeyAlias());
-            SignedJWT signedJwt = SignedJWT.parse(tokenValue);
             JWSVerifier verifier = new ECDSAVerifier(getPublicJwk().toECKey());
-            isVerified = signedJwt.verify(verifier);
+
+            return SignedJWT.parse(tokenValue).verify(verifier);
         } catch (JOSEException | java.text.ParseException e) {
             LOG.warn("Unable to validate Signature of Token", e);
             return false;
         }
-        return isVerified;
     }
 
     public boolean validateRefreshTokenScopes(
@@ -106,8 +101,6 @@ public class TokenValidationService {
     }
 
     public JWK getPublicJwk() {
-        LOG.info("Creating GetPublicKeyRequest to retrieve PublicKey from KMS");
-
         GetPublicKeyRequest getPublicKeyRequest = new GetPublicKeyRequest();
         getPublicKeyRequest.setKeyId(configService.getTokenSigningKeyAlias());
         GetPublicKeyResult publicKeyResult = kmsConnectionService.getPublicKey(getPublicKeyRequest);
