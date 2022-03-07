@@ -31,6 +31,8 @@ import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 
+import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
+
 public class TokenValidationService {
 
     private final ConfigurationService configService;
@@ -114,7 +116,7 @@ public class TokenValidationService {
 
         ECKey jwk =
                 new ECKey.Builder(Curve.P_256, (ECPublicKey) publicKey)
-                        .keyID(configService.getTokenSigningKeyAlias())
+                        .keyID(hashSha256String(publicKeyResult.getKeyId()))
                         .keyUse(KeyUse.SIGNATURE)
                         .algorithm(new Algorithm(JWSAlgorithm.ES256.getName()))
                         .build();

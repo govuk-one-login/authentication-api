@@ -23,17 +23,18 @@ import java.nio.ByteBuffer;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
+import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
 
 class TokenValidationServiceTest {
 
@@ -47,6 +48,7 @@ class TokenValidationServiceTest {
     private static final String CLIENT_ID = "client-id";
     private static final String BASE_URL = "http://example.com";
     private static final String KEY_ID = "14342354354353";
+    private static final String HASHED_KEY_ID = hashSha256String(KEY_ID);
     private JWSSigner signer;
     private ECKey ecJWK;
 
@@ -60,8 +62,7 @@ class TokenValidationServiceTest {
         GetPublicKeyResult getPublicKeyResult = new GetPublicKeyResult();
         getPublicKeyResult.setKeyUsage("SIGN_VERIFY");
         getPublicKeyResult.setKeyId(KEY_ID);
-        getPublicKeyResult.setSigningAlgorithms(
-                Collections.singletonList(JWSAlgorithm.ES256.getName()));
+        getPublicKeyResult.setSigningAlgorithms(singletonList(JWSAlgorithm.ES256.getName()));
         getPublicKeyResult.setPublicKey(
                 ByteBuffer.wrap(ecJWK.toPublicJWK().toECPublicKey().getEncoded()));
         when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
@@ -115,23 +116,26 @@ class TokenValidationServiceTest {
     }
 
     @Test
-    void shouldRetrievePublicKeyfromKmsAndParseToJwk() {
-        String keyId = "3423543t5435345";
+    void shouldRetrievePublicKeyFromKmsAndParseToJwk() {
         byte[] publicKey =
                 Base64.getDecoder()
                         .decode(
                                 "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEpRm+QZsh2IkUWcqXUhBI9ulOzO8dz0Z8HIS6m77tI4eWoZgKYUcbByshDtN4gWPql7E5mN4uCLsg5+6SDXlQcA==");
-        when(configurationService.getTokenSigningKeyAlias()).thenReturn(keyId);
-        GetPublicKeyResult getPublicKeyResult = new GetPublicKeyResult();
-        getPublicKeyResult.setKeyUsage("SIGN_VERIFY");
-        getPublicKeyResult.setKeyId(keyId);
-        getPublicKeyResult.setSigningAlgorithms(
-                Collections.singletonList(JWSAlgorithm.ES256.getName()));
-        getPublicKeyResult.setPublicKey(ByteBuffer.wrap(publicKey));
-        when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
-                .thenReturn(getPublicKeyResult);
+
+        when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
+
+        var result =
+                new GetPublicKeyResult()
+                        .withKeyUsage("SIGN_VERIFY")
+                        .withKeyId(KEY_ID)
+                        .withSigningAlgorithms(singletonList(JWSAlgorithm.ES256.getName()))
+                        .withPublicKey(ByteBuffer.wrap(publicKey));
+
+        when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class))).thenReturn(result);
+
         JWK publicKeyJwk = tokenValidationService.getPublicJwk();
-        assertEquals(publicKeyJwk.getKeyID(), keyId);
+
+        assertEquals(publicKeyJwk.getKeyID(), HASHED_KEY_ID);
         assertEquals(publicKeyJwk.getAlgorithm(), JWSAlgorithm.ES256);
         assertEquals(publicKeyJwk.getKeyUse(), KeyUse.SIGNATURE);
     }
