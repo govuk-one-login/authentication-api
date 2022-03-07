@@ -24,7 +24,6 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMException;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 
-import java.security.Provider;
 import java.security.PublicKey;
 import java.security.interfaces.ECPublicKey;
 import java.time.LocalDateTime;
@@ -105,38 +104,40 @@ public class TokenValidationService {
     }
 
     public JWK getPublicJwk() {
-        PublicKey result;
         LOG.info("Creating GetPublicKeyRequest to retrieve PublicKey from KMS");
 
-        Provider bcProvider = new BouncyCastleProvider();
         GetPublicKeyRequest getPublicKeyRequest = new GetPublicKeyRequest();
         getPublicKeyRequest.setKeyId(configService.getTokenSigningKeyAlias());
         GetPublicKeyResult publicKeyResult = kmsConnectionService.getPublicKey(getPublicKeyRequest);
 
-        try {
-            LOG.info("PUBLICKEYRESULT: " + publicKeyResult.toString());
-            SubjectPublicKeyInfo subjectKeyInfo =
-                    SubjectPublicKeyInfo.getInstance(publicKeyResult.getPublicKey().array());
-            result = new JcaPEMKeyConverter().setProvider(bcProvider).getPublicKey(subjectKeyInfo);
-        } catch (PEMException e) {
-            LOG.error("Error getting the PublicKey using the JcaPEMKeyConverter", e);
-            throw new RuntimeException();
-        }
+        PublicKey publicKey = createPublicKey(publicKeyResult);
 
-        PublicKey publicKey = result;
         ECKey jwk =
                 new ECKey.Builder(Curve.P_256, (ECPublicKey) publicKey)
                         .keyID(configService.getTokenSigningKeyAlias())
                         .keyUse(KeyUse.SIGNATURE)
                         .algorithm(new Algorithm(JWSAlgorithm.ES256.getName()))
                         .build();
-        LOG.info("ECKey KeyID: " + jwk.getKeyID());
 
         try {
             return JWK.parse(jwk.toString());
         } catch (java.text.ParseException e) {
             LOG.error("Error parsing the ECKey to JWK", e);
             throw new RuntimeException(e);
+        }
+    }
+
+    private PublicKey createPublicKey(GetPublicKeyResult publicKeyResult) {
+        SubjectPublicKeyInfo subjectKeyInfo =
+                SubjectPublicKeyInfo.getInstance(publicKeyResult.getPublicKey().array());
+
+        try {
+            return new JcaPEMKeyConverter()
+                    .setProvider(new BouncyCastleProvider())
+                    .getPublicKey(subjectKeyInfo);
+        } catch (PEMException e) {
+            LOG.error("Error getting the PublicKey using the JcaPEMKeyConverter", e);
+            throw new RuntimeException();
         }
     }
 }
