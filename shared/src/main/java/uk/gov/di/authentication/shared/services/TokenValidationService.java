@@ -104,33 +104,35 @@ public class TokenValidationService {
         return true;
     }
 
-    public PublicKey getPublicKey() {
+    public JWK getPublicJwk() {
+        PublicKey result;
         LOG.info("Creating GetPublicKeyRequest to retrieve PublicKey from KMS");
+
         Provider bcProvider = new BouncyCastleProvider();
         GetPublicKeyRequest getPublicKeyRequest = new GetPublicKeyRequest();
         getPublicKeyRequest.setKeyId(configService.getTokenSigningKeyAlias());
         GetPublicKeyResult publicKeyResult = kmsConnectionService.getPublicKey(getPublicKeyRequest);
+
         try {
             LOG.info("PUBLICKEYRESULT: " + publicKeyResult.toString());
             SubjectPublicKeyInfo subjectKeyInfo =
                     SubjectPublicKeyInfo.getInstance(publicKeyResult.getPublicKey().array());
-            return new JcaPEMKeyConverter().setProvider(bcProvider).getPublicKey(subjectKeyInfo);
+            result = new JcaPEMKeyConverter().setProvider(bcProvider).getPublicKey(subjectKeyInfo);
         } catch (PEMException e) {
             LOG.error("Error getting the PublicKey using the JcaPEMKeyConverter", e);
             throw new RuntimeException();
         }
-    }
 
-    public JWK getPublicJwk() {
+        PublicKey publicKey = result;
+        ECKey jwk =
+                new ECKey.Builder(Curve.P_256, (ECPublicKey) publicKey)
+                        .keyID(configService.getTokenSigningKeyAlias())
+                        .keyUse(KeyUse.SIGNATURE)
+                        .algorithm(new Algorithm(JWSAlgorithm.ES256.getName()))
+                        .build();
+        LOG.info("ECKey KeyID: " + jwk.getKeyID());
+
         try {
-            PublicKey publicKey = getPublicKey();
-            ECKey jwk =
-                    new ECKey.Builder(Curve.P_256, (ECPublicKey) publicKey)
-                            .keyID(configService.getTokenSigningKeyAlias())
-                            .keyUse(KeyUse.SIGNATURE)
-                            .algorithm(new Algorithm(JWSAlgorithm.ES256.getName()))
-                            .build();
-            LOG.info("ECKey KeyID: " + jwk.getKeyID());
             return JWK.parse(jwk.toString());
         } catch (java.text.ParseException e) {
             LOG.error("Error parsing the ECKey to JWK", e);
