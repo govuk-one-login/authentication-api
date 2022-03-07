@@ -67,7 +67,7 @@ resource "aws_dynamodb_table_item" "stub_rp_client" {
       S = "MANDATORY"
     }
     SubjectType = {
-      S = "public"
+      S = "pairwise"
     }
     CookieConsentShared = {
       N = "1"
