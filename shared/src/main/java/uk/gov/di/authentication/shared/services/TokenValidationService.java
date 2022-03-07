@@ -24,13 +24,14 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMException;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 
-import java.security.Provider;
 import java.security.PublicKey;
 import java.security.interfaces.ECPublicKey;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
+
+import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
 
 public class TokenValidationService {
 
@@ -45,16 +46,14 @@ public class TokenValidationService {
     }
 
     public boolean validateAccessTokenSignature(AccessToken accessToken) {
-        LOG.info("Validating Access Token signature");
         return isTokenSignatureValid(accessToken.getValue());
     }
 
     public boolean validateRefreshTokenSignatureAndExpiry(RefreshToken refreshToken) {
-        LOG.info("Validating Refresh Token signature");
         if (!isTokenSignatureValid(refreshToken.getValue())) {
+            LOG.warn("Refresh token has invalid signature");
             return false;
         }
-        LOG.info("Validating Refresh Token expiry");
         if (hasTokenExpired(refreshToken.getValue())) {
             LOG.warn("Refresh token has expired");
             return false;
@@ -78,17 +77,14 @@ public class TokenValidationService {
     }
 
     public boolean isTokenSignatureValid(String tokenValue) {
-        boolean isVerified;
         try {
-            LOG.info("TokenSigningKeyID: " + configService.getTokenSigningKeyAlias());
-            SignedJWT signedJwt = SignedJWT.parse(tokenValue);
             JWSVerifier verifier = new ECDSAVerifier(getPublicJwk().toECKey());
-            isVerified = signedJwt.verify(verifier);
+
+            return SignedJWT.parse(tokenValue).verify(verifier);
         } catch (JOSEException | java.text.ParseException e) {
             LOG.warn("Unable to validate Signature of Token", e);
             return false;
         }
-        return isVerified;
     }
 
     public boolean validateRefreshTokenScopes(
@@ -104,37 +100,39 @@ public class TokenValidationService {
         return true;
     }
 
-    public PublicKey getPublicKey() {
-        LOG.info("Creating GetPublicKeyRequest to retrieve PublicKey from KMS");
-        Provider bcProvider = new BouncyCastleProvider();
+    public JWK getPublicJwk() {
         GetPublicKeyRequest getPublicKeyRequest = new GetPublicKeyRequest();
         getPublicKeyRequest.setKeyId(configService.getTokenSigningKeyAlias());
         GetPublicKeyResult publicKeyResult = kmsConnectionService.getPublicKey(getPublicKeyRequest);
-        try {
-            LOG.info("PUBLICKEYRESULT: " + publicKeyResult.toString());
-            SubjectPublicKeyInfo subjectKeyInfo =
-                    SubjectPublicKeyInfo.getInstance(publicKeyResult.getPublicKey().array());
-            return new JcaPEMKeyConverter().setProvider(bcProvider).getPublicKey(subjectKeyInfo);
-        } catch (PEMException e) {
-            LOG.error("Error getting the PublicKey using the JcaPEMKeyConverter", e);
-            throw new RuntimeException();
-        }
-    }
 
-    public JWK getPublicJwk() {
+        PublicKey publicKey = createPublicKey(publicKeyResult);
+
+        ECKey jwk =
+                new ECKey.Builder(Curve.P_256, (ECPublicKey) publicKey)
+                        .keyID(hashSha256String(publicKeyResult.getKeyId()))
+                        .keyUse(KeyUse.SIGNATURE)
+                        .algorithm(new Algorithm(JWSAlgorithm.ES256.getName()))
+                        .build();
+
         try {
-            PublicKey publicKey = getPublicKey();
-            ECKey jwk =
-                    new ECKey.Builder(Curve.P_256, (ECPublicKey) publicKey)
-                            .keyID(configService.getTokenSigningKeyAlias())
-                            .keyUse(KeyUse.SIGNATURE)
-                            .algorithm(new Algorithm(JWSAlgorithm.ES256.getName()))
-                            .build();
-            LOG.info("ECKey KeyID: " + jwk.getKeyID());
             return JWK.parse(jwk.toString());
         } catch (java.text.ParseException e) {
             LOG.error("Error parsing the ECKey to JWK", e);
             throw new RuntimeException(e);
+        }
+    }
+
+    private PublicKey createPublicKey(GetPublicKeyResult publicKeyResult) {
+        SubjectPublicKeyInfo subjectKeyInfo =
+                SubjectPublicKeyInfo.getInstance(publicKeyResult.getPublicKey().array());
+
+        try {
+            return new JcaPEMKeyConverter()
+                    .setProvider(new BouncyCastleProvider())
+                    .getPublicKey(subjectKeyInfo);
+        } catch (PEMException e) {
+            LOG.error("Error getting the PublicKey using the JcaPEMKeyConverter", e);
+            throw new RuntimeException();
         }
     }
 }
