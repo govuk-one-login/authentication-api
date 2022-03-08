@@ -78,7 +78,7 @@ public class TokenValidationService {
 
     public boolean isTokenSignatureValid(String tokenValue) {
         try {
-            JWSVerifier verifier = new ECDSAVerifier(getPublicJwk().toECKey());
+            JWSVerifier verifier = new ECDSAVerifier(getPublicJwkWithOpaqueId().toECKey());
 
             return SignedJWT.parse(tokenValue).verify(verifier);
         } catch (JOSEException | java.text.ParseException e) {
@@ -100,26 +100,37 @@ public class TokenValidationService {
         return true;
     }
 
-    public JWK getPublicJwk() {
+    public JWK getPublicJwkWithOpaqueId() {
+        try {
+            return JWK.parse(createJwk().build().toString());
+        } catch (java.text.ParseException e) {
+            LOG.error("Error parsing the ECKey to JWK", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Deprecated
+    public JWK getPublicJwkWithAlias() {
+        try {
+            return JWK.parse(
+                    createJwk().keyID(configService.getTokenSigningKeyAlias()).build().toString());
+        } catch (java.text.ParseException e) {
+            LOG.error("Error parsing the ECKey to JWK", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    private ECKey.Builder createJwk() {
         GetPublicKeyRequest getPublicKeyRequest = new GetPublicKeyRequest();
         getPublicKeyRequest.setKeyId(configService.getTokenSigningKeyAlias());
         GetPublicKeyResult publicKeyResult = kmsConnectionService.getPublicKey(getPublicKeyRequest);
 
         PublicKey publicKey = createPublicKey(publicKeyResult);
 
-        ECKey jwk =
-                new ECKey.Builder(Curve.P_256, (ECPublicKey) publicKey)
-                        .keyID(hashSha256String(publicKeyResult.getKeyId()))
-                        .keyUse(KeyUse.SIGNATURE)
-                        .algorithm(new Algorithm(JWSAlgorithm.ES256.getName()))
-                        .build();
-
-        try {
-            return JWK.parse(jwk.toString());
-        } catch (java.text.ParseException e) {
-            LOG.error("Error parsing the ECKey to JWK", e);
-            throw new RuntimeException(e);
-        }
+        return new ECKey.Builder(Curve.P_256, (ECPublicKey) publicKey)
+                .keyID(hashSha256String(publicKeyResult.getKeyId()))
+                .keyUse(KeyUse.SIGNATURE)
+                .algorithm(new Algorithm(JWSAlgorithm.ES256.getName()));
     }
 
     private PublicKey createPublicKey(GetPublicKeyResult publicKeyResult) {

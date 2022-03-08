@@ -133,7 +133,7 @@ class TokenValidationServiceTest {
 
         when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class))).thenReturn(result);
 
-        JWK publicKeyJwk = tokenValidationService.getPublicJwk();
+        JWK publicKeyJwk = tokenValidationService.getPublicJwkWithOpaqueId();
 
         assertEquals(publicKeyJwk.getKeyID(), HASHED_KEY_ID);
         assertEquals(publicKeyJwk.getAlgorithm(), JWSAlgorithm.ES256);

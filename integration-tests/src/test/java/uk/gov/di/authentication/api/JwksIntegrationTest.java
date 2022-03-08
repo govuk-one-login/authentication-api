@@ -28,7 +28,7 @@ public class JwksIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response = makeRequest(Optional.empty(), Map.of(), Map.of());
 
         assertThat(response, hasStatus(200));
-        assertThat(JWKSet.parse(response.getBody()).getKeys(), hasSize(1));
+        assertThat(JWKSet.parse(response.getBody()).getKeys(), hasSize(2));
 
         assertNoAuditEventsReceived(auditTopic);
     }
