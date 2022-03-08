@@ -70,7 +70,7 @@ jobs:
       - name: Run Unit Tests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew --parallel test jacocoTestReport -x integration-tests:test -x account-management-integration-tests:test -x spotlessApply -x spotlessCheck
+        run: ./gradlew --parallel test jacocoTestReport -x integration-tests:test -x account-management-integration-tests:test -x delivery-receipts-integration-tests:test -x spotlessApply -x spotlessCheck
       - name: Upload Unit Test Reports
         uses: actions/upload-artifact@v2
         if: failure()
@@ -80,6 +80,7 @@ jobs:
             */build/reports/
             !integration-tests/build/reports/
             !account-management-integration-tests/build/reports/
+            !delivery-receipts-integration-tests/build/reports/
 
           retention-days: 5
       - name: Cache Unit Test Reports
@@ -93,6 +94,8 @@ jobs:
             !integration-tests/build/reports/
             !account-management-integration-tests/build/jacoco/
             !account-management-integration-tests/build/reports/
+            !delivery-receipts-integration-tests/build/jacoco/
+            !delivery-receipts-integration-tests/build/reports/
 
   run-integration-tests:
     runs-on: ubuntu-latest
@@ -161,13 +164,23 @@ jobs:
           retention-days: 5
       - name: Run Account Management Integration Tests
         run: |
-          ./gradlew :account-management-integration-tests:test :integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
+          ./gradlew :account-management-integration-tests:test :account-management-integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
       - name: Upload Account Management Integration Test Reports
         uses: actions/upload-artifact@v2
         if: failure()
         with:
           name: account-management-integration-test-reports
           path: account-management-integration-tests/build/reports/tests/test/
+          retention-days: 5
+      - name: Run Delivery Receipts Integration Tests
+        run: |
+          ./gradlew :delivery-receipts-integration-tests:test :delivery-receipts-integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
+      - name: Upload Account Management Integration Test Reports
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: delivery-receipts-integration-test-reports
+          path: delivery-receipts-integration-tests/build/reports/tests/test/
           retention-days: 5
       - name: Cache Test Reports
         uses: actions/cache@v2
@@ -178,6 +191,8 @@ jobs:
             integration-tests/build/reports/
             account-management-integration-tests/build/jacoco/
             account-management-integration-tests/build/reports/
+            delivery-receipts-integration-tests/build/jacoco/
+            delivery--receipts-integration-tests/build/reports/
 
   run-sonar-analysis:
     runs-on: ubuntu-latest
@@ -213,6 +228,8 @@ jobs:
             !integration-tests/build/reports/
             !account-management-integration-tests/build/jacoco/
             !account-management-integration-tests/build/reports/
+            !delivery-receipts-integration-tests/build/jacoco/
+            !delivery-receipts-integration-tests/build/reports/
       - name: Cache Test Reports
         uses: actions/cache@v2
         with:
@@ -222,6 +239,8 @@ jobs:
             integration-tests/build/reports/
             account-management-integration-tests/build/jacoco/
             account-management-integration-tests/build/reports/
+            delivery-receipts-integration-tests/build/jacoco/
+            delivery-receipts-integration-tests/build/reports/
       - name: Run SonarCloud Analysis
         if: ${{ github.actor != 'dependabot[bot]' }}
         env:
