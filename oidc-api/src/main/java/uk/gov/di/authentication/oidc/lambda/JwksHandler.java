@@ -11,6 +11,8 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
+import java.util.Arrays;
+
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
@@ -40,22 +42,28 @@ public class JwksHandler
     }
 
     @Override
+    @SuppressWarnings("deprecation") // Only until we remove the alias-based key id
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         return isWarming(input)
                 .orElseGet(
                         () -> {
-                            JWKSet jwkSet;
                             try {
                                 LOG.info("JWKs request received");
-                                jwkSet = new JWKSet(tokenValidationService.getPublicJwk());
-                            } catch (IllegalArgumentException e) {
-                                LOG.error("Error in JWKs lambda. Public Jwk is null", e);
+
+                                var signingKeys =
+                                        Arrays.asList(
+                                                tokenValidationService.getPublicJwkWithOpaqueId(),
+                                                tokenValidationService.getPublicJwkWithAlias());
+
+                                LOG.info("Generating JWKs successful response");
                                 return generateApiGatewayProxyResponse(
-                                        500, "Signing key is not present");
+                                        200, new JWKSet(signingKeys).toString(true));
+                            } catch (Exception e) {
+                                LOG.error("Error in JWKs lambda", e);
+                                return generateApiGatewayProxyResponse(
+                                        500, "Error providing JWKs data");
                             }
-                            LOG.info("Generating JWKs successful response");
-                            return generateApiGatewayProxyResponse(200, jwkSet.toString(true));
                         });
     }
 }
