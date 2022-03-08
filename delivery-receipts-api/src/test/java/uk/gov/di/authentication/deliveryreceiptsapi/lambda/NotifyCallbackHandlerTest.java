@@ -115,6 +115,7 @@ class NotifyCallbackHandlerTest {
                         () -> handler.handleRequest(event, context),
                         "Expected to throw exception");
 
+        verifyNoInteractions(cloudwatchMetricsService);
         assertThat(exception.getMessage(), equalTo("No bearer token in request"));
     }
 
@@ -129,6 +130,7 @@ class NotifyCallbackHandlerTest {
                         () -> handler.handleRequest(event, context),
                         "Expected to throw exception");
 
+        verifyNoInteractions(cloudwatchMetricsService);
         assertThat(exception.getMessage(), equalTo("Invalid bearer token in request"));
     }
 
@@ -143,6 +145,7 @@ class NotifyCallbackHandlerTest {
                         () -> handler.handleRequest(event, context),
                         "Expected to throw exception");
 
+        verifyNoInteractions(cloudwatchMetricsService);
         assertThat(exception.getMessage(), equalTo("No bearer token in request"));
     }
 
