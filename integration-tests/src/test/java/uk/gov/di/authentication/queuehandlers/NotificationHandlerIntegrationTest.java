@@ -133,6 +133,8 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
         assertThat(
                 personalisation,
                 hasFieldWithValue(
-                        "contact-us-link", equalTo("http://localhost:3000/frontend/contact-us")));
+                        "contact-us-link",
+                        equalTo(
+                                "http://localhost:3000/frontend/contact-us?referer=accountCreatedEmail")));
     }
 }
