@@ -206,6 +206,20 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             .setEffectiveVectorOfTrust(VectorOfTrust.getDefaults()));
             sessionService.save(
                     session.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL));
+
+            var clientName =
+                    userContext
+                            .getClient()
+                            .map(ClientRegistry::getClientID)
+                            .orElse(AuditService.UNKNOWN);
+
+            cloudwatchMetricsService.incrementCounter(
+                    "NewAccount",
+                    Map.of(
+                            "Environment",
+                            configurationService.getEnvironment(),
+                            "Client",
+                            clientName));
         } else {
             codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
         }
@@ -226,9 +240,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 AuditService.UNKNOWN,
                 extractPersistentIdFromHeaders(input.getHeaders()),
                 pair("notification-type", notificationType.name()));
-
-        cloudwatchMetricsService.incrementCounter(
-                "SignUpSuccess", Map.of("Environment", configurationService.getEnvironment()));
     }
 
     private void processBlockedCodeSession(

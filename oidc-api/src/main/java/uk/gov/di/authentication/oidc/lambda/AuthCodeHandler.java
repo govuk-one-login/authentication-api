@@ -36,6 +36,7 @@ import java.util.Objects;
 
 import static java.util.Objects.isNull;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.entity.Session.AccountState.EXISTING;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
@@ -192,7 +193,8 @@ public class AuthCodeHandler
                                                 "Client",
                                                 authenticationRequest.getClientID().getValue()));
 
-                                sessionService.save(session.setAuthenticated(true));
+                                sessionService.save(
+                                        session.setAuthenticated(true).setNewAccount(EXISTING));
 
                                 auditService.submitAuditEvent(
                                         OidcAuditableEvent.AUTH_CODE_ISSUED,
