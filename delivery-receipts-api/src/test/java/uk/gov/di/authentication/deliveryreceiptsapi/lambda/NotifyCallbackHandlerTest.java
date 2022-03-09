@@ -2,6 +2,7 @@ package uk.gov.di.authentication.deliveryreceiptsapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +29,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.deliveryreceiptsapi.entity.DeliveryMetricStatus.SMS_DELIVERED;
 import static uk.gov.di.authentication.deliveryreceiptsapi.entity.DeliveryMetricStatus.SMS_FAILURE;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class NotifyCallbackHandlerTest {
 
@@ -74,7 +76,7 @@ class NotifyCallbackHandlerTest {
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN));
         event.setBody(objectMapper.writeValueAsString(deliveryReceipt));
-        handler.handleRequest(event, context);
+        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
         var counterName = SMS_DELIVERED.toString();
         if (!status.equals("delivered")) {
@@ -91,6 +93,8 @@ class NotifyCallbackHandlerTest {
                                 ENVIRONMENT,
                                 "NotifyStatus",
                                 status));
+
+        assertThat(response, hasStatus(204));
     }
 
     @Test

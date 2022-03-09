@@ -2,6 +2,7 @@ package uk.gov.di.deliveryreceipts;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +23,7 @@ import java.util.UUID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.mockito.Mockito.mock;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class NotifyCallbackHandlerIntegrationTest {
 
@@ -44,26 +46,29 @@ public class NotifyCallbackHandlerIntegrationTest {
 
     @Test
     void shouldAddToCloudwatchWhenSmsDeliveryReceiptIsReceived() {
-        makeRequest(
-                new NotifyDeliveryReceipt(
-                        IdGenerator.generate(),
-                        null,
-                        "+447316763843",
-                        "delivered",
-                        new Date().toString(),
-                        new Date().toString(),
-                        new Date().toString(),
-                        "sms",
-                        IdGenerator.generate(),
-                        1),
-                Map.of("Authorization", "Bearer " + BEARER_TOKEN));
+        APIGatewayProxyResponseEvent response =
+                makeRequest(
+                        new NotifyDeliveryReceipt(
+                                IdGenerator.generate(),
+                                null,
+                                "+447316763843",
+                                "delivered",
+                                new Date().toString(),
+                                new Date().toString(),
+                                new Date().toString(),
+                                "sms",
+                                IdGenerator.generate(),
+                                1),
+                        Map.of("Authorization", "Bearer " + BEARER_TOKEN));
 
         assertThat(
                 cloudwatchMetrics.getLastValue(DeliveryMetricStatus.SMS_DELIVERED.toString()),
                 is(1.0));
+        assertThat(response, hasStatus(204));
     }
 
-    private void makeRequest(NotifyDeliveryReceipt body, Map<String, String> headers) {
+    private APIGatewayProxyResponseEvent makeRequest(
+            NotifyDeliveryReceipt body, Map<String, String> headers) {
         var request = new APIGatewayProxyRequestEvent();
         request.withHeaders(headers)
                 .withRequestContext(
@@ -75,6 +80,6 @@ public class NotifyCallbackHandlerIntegrationTest {
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Could not serialise test body", e);
         }
-        handler.handleRequest(request, context);
+        return handler.handleRequest(request, context);
     }
 }

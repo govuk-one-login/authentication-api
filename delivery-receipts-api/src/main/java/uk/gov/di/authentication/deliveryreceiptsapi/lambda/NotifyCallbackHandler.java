@@ -3,6 +3,7 @@ package uk.gov.di.authentication.deliveryreceiptsapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.i18n.phonenumbers.NumberParseException;
@@ -18,8 +19,10 @@ import java.util.Objects;
 
 import static uk.gov.di.authentication.deliveryreceiptsapi.entity.DeliveryMetricStatus.SMS_DELIVERED;
 import static uk.gov.di.authentication.deliveryreceiptsapi.entity.DeliveryMetricStatus.SMS_FAILURE;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 
-public class NotifyCallbackHandler implements RequestHandler<APIGatewayProxyRequestEvent, Void> {
+public class NotifyCallbackHandler
+        implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private final ConfigurationService configurationService;
@@ -43,7 +46,8 @@ public class NotifyCallbackHandler implements RequestHandler<APIGatewayProxyRequ
     }
 
     @Override
-    public Void handleRequest(APIGatewayProxyRequestEvent input, Context context) {
+    public APIGatewayProxyResponseEvent handleRequest(
+            APIGatewayProxyRequestEvent input, Context context) {
         LOG.info("Received request");
         validateBearerToken(input.getHeaders());
         NotifyDeliveryReceipt deliveryReceipt;
@@ -73,7 +77,7 @@ public class NotifyCallbackHandler implements RequestHandler<APIGatewayProxyRequ
             LOG.error("Unable to parse Notify Delivery Receipt");
             throw new RuntimeException("Unable to parse Notify Delivery Receipt");
         }
-        return null;
+        return generateEmptySuccessApiGatewayResponse();
     }
 
     private void validateBearerToken(Map<String, String> headers) {
