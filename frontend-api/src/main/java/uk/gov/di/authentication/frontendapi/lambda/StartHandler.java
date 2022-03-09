@@ -93,7 +93,21 @@ public class StartHandler
                                                 session.get(), clientSession.get());
                                 var clientStartInfo =
                                         startService.buildClientStartInfo(userContext);
-                                var userStartInfo = startService.buildUserStartInfo(userContext);
+
+                                var cookieConsent =
+                                        startService.getCookieConsentValue(
+                                                userContext
+                                                        .getClientSession()
+                                                        .getAuthRequestParams(),
+                                                userContext.getClient().get().getClientID());
+                                var gaTrackingId =
+                                        startService.getGATrackingId(
+                                                userContext
+                                                        .getClientSession()
+                                                        .getAuthRequestParams());
+                                var userStartInfo =
+                                        startService.buildUserStartInfo(
+                                                userContext, cookieConsent, gaTrackingId);
 
                                 var startResponse =
                                         new StartResponse(userStartInfo, clientStartInfo);

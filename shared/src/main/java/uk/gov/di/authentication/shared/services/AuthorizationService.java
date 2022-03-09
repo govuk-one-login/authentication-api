@@ -36,9 +36,6 @@ public class AuthorizationService {
 
     public static final String VTR_PARAM = "vtr";
     private final DynamoClientService dynamoClientService;
-    public static final String COOKIE_CONSENT_ACCEPT = "accept";
-    public static final String COOKIE_CONSENT_REJECT = "reject";
-    public static final String COOKIE_CONSENT_NOT_ENGAGED = "not-engaged";
 
     private static final Logger LOG = LogManager.getLogger(AuthorizationService.class);
 
@@ -57,13 +54,6 @@ public class AuthorizationService {
             throw new ClientNotFoundException(clientID.toString());
         }
         return client.get().getRedirectUrls().contains(redirectURI.toString());
-    }
-
-    public boolean isClientCookieConsentShared(ClientID clientID) throws ClientNotFoundException {
-        return dynamoClientService
-                .getClient(clientID.toString())
-                .map(ClientRegistry::isCookieConsentShared)
-                .orElseThrow();
     }
 
     public AuthenticationSuccessResponse generateSuccessfulAuthResponse(
@@ -197,10 +187,5 @@ public class AuthorizationService {
 
     public String getExistingOrCreateNewPersistentSessionId(Map<String, String> headers) {
         return PersistentIdHelper.getExistingOrCreateNewPersistentSessionId(headers);
-    }
-
-    public boolean isValidCookieConsentValue(String cookieConsent) {
-        return List.of(COOKIE_CONSENT_ACCEPT, COOKIE_CONSENT_REJECT, COOKIE_CONSENT_NOT_ENGAGED)
-                .contains(cookieConsent);
     }
 }

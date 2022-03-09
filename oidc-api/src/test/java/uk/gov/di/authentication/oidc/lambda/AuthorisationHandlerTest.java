@@ -31,7 +31,6 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
-import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthorizationService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -51,7 +50,6 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -164,89 +162,6 @@ class AuthorisationHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID);
-    }
-
-    @Test
-    void shouldRedirectToLoginAndForwardCookieConsentWhenPresent() throws ClientNotFoundException {
-        when(authorizationService.isClientCookieConsentShared(eq(new ClientID("test-id"))))
-                .thenReturn(true);
-        when(clientSessionService.generateClientSession(any(ClientSession.class)))
-                .thenReturn(CLIENT_SESSION_ID);
-        when(authorizationService.isValidCookieConsentValue("accept")).thenReturn(true);
-
-        new APIGatewayProxyRequestEvent();
-        Map<String, String> requestParams = buildRequestParams(Map.of("cookie_consent", "accept"));
-        APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent(requestParams));
-        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
-
-        assertThat(response, hasStatus(302));
-        assertThat(uri.getQuery(), containsString("cookie_consent=accept"));
-        assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
-        assertTrue(
-                response.getMultiValueHeaders()
-                        .get(ResponseHeaders.SET_COOKIE)
-                        .contains(EXPECTED_SESSION_COOKIE_STRING));
-        assertTrue(
-                response.getMultiValueHeaders()
-                        .get(ResponseHeaders.SET_COOKIE)
-                        .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
-        verify(sessionService).save(eq(session));
-    }
-
-    @Test
-    void shouldRedirectToLoginAndNotForwardCookieConsentWhenValueIsInvalid()
-            throws ClientNotFoundException {
-        when(authorizationService.isClientCookieConsentShared(eq(new ClientID("test-id"))))
-                .thenReturn(true);
-        when(clientSessionService.generateClientSession(any(ClientSession.class)))
-                .thenReturn(CLIENT_SESSION_ID);
-        when(authorizationService.isValidCookieConsentValue("rubbish")).thenReturn(false);
-
-        new APIGatewayProxyRequestEvent();
-        Map<String, String> requestParams = buildRequestParams(Map.of("cookie_consent", "rubbish"));
-        APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent(requestParams));
-        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
-
-        assertThat(response, hasStatus(302));
-        assertNull(uri.getQuery());
-        assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
-        assertTrue(
-                response.getMultiValueHeaders()
-                        .get(ResponseHeaders.SET_COOKIE)
-                        .contains(EXPECTED_SESSION_COOKIE_STRING));
-        assertTrue(
-                response.getMultiValueHeaders()
-                        .get(ResponseHeaders.SET_COOKIE)
-                        .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
-        verify(sessionService).save(eq(session));
-    }
-
-    @Test
-    void shouldRedirectToLoginAndForwardGAParameterWhenPresent() throws ClientNotFoundException {
-        when(authorizationService.isClientCookieConsentShared(CLIENT_ID)).thenReturn(false);
-        when(clientSessionService.generateClientSession(any(ClientSession.class)))
-                .thenReturn(CLIENT_SESSION_ID);
-
-        Map<String, String> requestParams =
-                buildRequestParams(
-                        Map.of("_ga", "2.172053219.1139384417.1636392870-547301795.1635165988"));
-        APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent(requestParams));
-        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
-
-        assertThat(response, hasStatus(302));
-        assertThat(
-                uri.getQuery(),
-                containsString("_ga=2.172053219.1139384417.1636392870-547301795.1635165988"));
-        assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
-        assertTrue(
-                response.getMultiValueHeaders()
-                        .get(ResponseHeaders.SET_COOKIE)
-                        .contains(EXPECTED_SESSION_COOKIE_STRING));
-        assertTrue(
-                response.getMultiValueHeaders()
-                        .get(ResponseHeaders.SET_COOKIE)
-                        .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
-        verify(sessionService).save(eq(session));
     }
 
     @Test

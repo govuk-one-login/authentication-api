@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -58,7 +59,7 @@ class StartServiceTest {
                 .thenReturn(
                         Optional.of(
                                 generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.getValue())));
+                                        REDIRECT_URI.toString(), CLIENT_ID.getValue(), false)));
         when(dynamoService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(mock(UserProfile.class)));
         var authRequest =
@@ -86,13 +87,18 @@ class StartServiceTest {
             boolean isIdentityRequired,
             boolean isUpliftRequired,
             boolean clientConsentRequired,
-            boolean isConsentRequired) {
-        var userContext = buildUserContext(vtr, clientConsentRequired, false);
-        var userStartInfo = startService.buildUserStartInfo(userContext);
+            boolean isConsentRequired,
+            String cookieConsent,
+            String gaTrackingId) {
+        var userContext = buildUserContext(vtr, clientConsentRequired, true);
+        var userStartInfo =
+                startService.buildUserStartInfo(userContext, cookieConsent, gaTrackingId);
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(isUpliftRequired));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(isIdentityRequired));
         assertThat(userStartInfo.isConsentRequired(), equalTo(isConsentRequired));
+        assertThat(userStartInfo.getCookieConsent(), equalTo(cookieConsent));
+        assertThat(userStartInfo.getGaCrossDomainTrackingId(), equalTo(gaTrackingId));
     }
 
     @ParameterizedTest
@@ -107,23 +113,114 @@ class StartServiceTest {
         assertThat(clientStartInfo.getScopes(), equalTo(SCOPES.toStringList()));
     }
 
+    @Test
+    void shouldReturnGaTrackingIdWhenPresentInAuthRequest() {
+        var gaTrackingId = IdGenerator.generate();
+        var authRequest =
+                new AuthenticationRequest.Builder(
+                                new ResponseType(ResponseType.Value.CODE),
+                                SCOPES,
+                                CLIENT_ID,
+                                REDIRECT_URI)
+                        .state(new State())
+                        .nonce(new Nonce())
+                        .customParameter("_ga", gaTrackingId)
+                        .build();
+
+        assertThat(startService.getGATrackingId(authRequest.toParameters()), equalTo(gaTrackingId));
+    }
+
+    @Test
+    void shouldReturnNullWhenGaTrackingIdIsNotPresentInAuthRequest() {
+        var authRequest =
+                new AuthenticationRequest.Builder(
+                                new ResponseType(ResponseType.Value.CODE),
+                                SCOPES,
+                                CLIENT_ID,
+                                REDIRECT_URI)
+                        .state(new State())
+                        .nonce(new Nonce())
+                        .build();
+
+        assertThat(startService.getGATrackingId(authRequest.toParameters()), equalTo(null));
+    }
+
+    @ParameterizedTest
+    @MethodSource("cookieConsentValues")
+    void shouldReturnCookieConsentValueWhenPresentAndValid(
+            String cookieConsentValue, boolean cookieConsentShared, String expectedValue) {
+        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(),
+                                        CLIENT_ID.getValue(),
+                                        cookieConsentShared)));
+        var authRequest =
+                new AuthenticationRequest.Builder(
+                                new ResponseType(ResponseType.Value.CODE),
+                                SCOPES,
+                                CLIENT_ID,
+                                REDIRECT_URI)
+                        .state(new State())
+                        .nonce(new Nonce())
+                        .customParameter("cookie_consent", cookieConsentValue)
+                        .build();
+
+        assertThat(
+                startService.getCookieConsentValue(
+                        authRequest.toParameters(), CLIENT_ID.getValue()),
+                equalTo(expectedValue));
+    }
+
+    private static Stream<Arguments> cookieConsentValues() {
+        return Stream.of(
+                Arguments.of("accept", true, "accept"),
+                Arguments.of("reject", true, "reject"),
+                Arguments.of("not-engaged", true, "not-engaged"),
+                Arguments.of("accept", false, null),
+                Arguments.of("reject", false, null),
+                Arguments.of("not-engaged", false, null),
+                Arguments.of("Accept", true, null),
+                Arguments.of("Accept", false, null),
+                Arguments.of("", true, null),
+                Arguments.of(null, true, null),
+                Arguments.of("some-value", true, null));
+    }
+
     private static Stream<Arguments> userStartInfo() {
         return Stream.of(
-                Arguments.of(jsonArrayOf("Cl.Cm"), false, false, false, false),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), true, false, true, true));
+                Arguments.of(
+                        jsonArrayOf("Cl.Cm"),
+                        false,
+                        false,
+                        false,
+                        false,
+                        "some-cookie-consent",
+                        null),
+                Arguments.of(
+                        jsonArrayOf("P2.Cl.Cm"),
+                        true,
+                        false,
+                        true,
+                        true,
+                        null,
+                        "some-ga-tracking-id"));
     }
 
     private static Stream<Boolean> clientStartInfo() {
         return Stream.of(false, true);
     }
 
-    private ClientRegistry generateClientRegistry(String redirectURI, String clientID) {
+    private ClientRegistry generateClientRegistry(
+            String redirectURI, String clientID, boolean cookieConsentShared) {
         return new ClientRegistry()
                 .setRedirectUrls(singletonList(redirectURI))
                 .setClientID(clientID)
                 .setContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
                 .setPublicKey(null)
-                .setScopes(singletonList("openid"));
+                .setScopes(singletonList("openid"))
+                .setCookieConsentShared(cookieConsentShared);
     }
 
     private UserContext buildUserContext(
