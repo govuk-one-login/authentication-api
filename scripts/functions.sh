@@ -39,7 +39,7 @@ startup() {
 
 run-integration-tests() {
   run_integration_tests_start_seconds=$SECONDS
-  ./gradlew :integration-tests:test :account-management-integration-tests:test :composeDownForced
+  ./gradlew :integration-tests:test :account-management-integration-tests:test :delivery-receipts-integration-tests:test :composeDownForced
   EXIT_CODE=$?
   record_timings "run-integration-tests" $run_integration_tests_start_seconds $SECONDS false
   return ${EXIT_CODE}

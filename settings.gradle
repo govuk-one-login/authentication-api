@@ -13,4 +13,5 @@ include 'delivery-receipts-api'
 
 rootProject.name = 'di-authentication-api'
 include 'ipv-api'
+include 'delivery-receipts-integration-tests'
 

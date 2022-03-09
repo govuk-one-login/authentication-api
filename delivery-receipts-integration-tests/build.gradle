@@ -1,0 +1,54 @@
+plugins {
+    id "java"
+    id "jacoco"
+}
+
+group "uk.gov.di"
+version "unspecified"
+
+dependencies {
+    testImplementation configurations.nimbus,
+            configurations.glassfish,
+            configurations.tests,
+            configurations.lambda,
+            configurations.lettuce,
+            project(":delivery-receipts-api"),
+            project(":shared"),
+            project(":shared-test")
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
+}
+
+test {
+    useJUnitPlatform()
+    filter {
+        includeTestsMatching "*"
+    }
+
+    environment "AWS_ACCESS_KEY_ID", "mock-access-key"
+    environment "AWS_REGION", "eu-west-2"
+    environment "AWS_SECRET_ACCESS_KEY", "mock-secret-key "
+    environment "ENVIRONMENT", "local"
+    environment "HEADERS_CASE_INSENSITIVE", "true"
+    environment "LOCALSTACK_ENDPOINT", "http://localhost:45678"
+
+    testLogging {
+        showStandardStreams = false
+    }
+
+    doLast {
+        tasks.getByName("jacocoTestReport").sourceDirectories.from(
+                project(":account-management-api").sourceSets.main.java,
+                project(":shared").sourceSets.main.java)
+
+        tasks.getByName("jacocoTestReport").classDirectories.from(
+                project(":account-management-api").sourceSets.main.output,
+                project(":shared").sourceSets.main.output)
+    }
+    dependsOn ":composeUp"
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled true
+    }
+}
