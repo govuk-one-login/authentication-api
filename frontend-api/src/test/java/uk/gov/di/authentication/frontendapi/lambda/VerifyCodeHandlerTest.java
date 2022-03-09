@@ -215,7 +215,8 @@ class VerifyCodeHandlerTest {
                         pair("notification-type", VERIFY_PHONE_NUMBER.name()));
 
         verify(cloudwatchMetricsService)
-                .incrementCounter("SignUpSuccess", Map.of("Environment", "unit-test"));
+                .incrementCounter(
+                        "NewAccount", Map.of("Environment", "unit-test", "Client", "client-id"));
     }
 
     @Test

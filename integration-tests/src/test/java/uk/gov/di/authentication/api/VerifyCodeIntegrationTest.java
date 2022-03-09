@@ -143,7 +143,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(response, hasStatus(204));
         assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));
 
-        assertThat(cloudwatchMetrics.getLastValue("SignUpSuccess"), is(1.0));
+        assertThat(cloudwatchMetrics.getLastValue("NewAccount"), is(1.0));
     }
 
     @Test
