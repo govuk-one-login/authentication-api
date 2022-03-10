@@ -42,6 +42,12 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
         assertThat(
                 personalisation, hasFieldWithValue("email-address", equalTo(TEST_EMAIL_ADDRESS)));
         assertThat(personalisation, hasFieldWithValue("validation-code", equalTo(CODE)));
+        assertThat(
+                personalisation,
+                hasFieldWithValue(
+                        "contact-us-link",
+                        equalTo(
+                                "http://localhost:3000/frontend/contact-us?referer=confirmEmailAddressEmail")));
     }
 
     @Test

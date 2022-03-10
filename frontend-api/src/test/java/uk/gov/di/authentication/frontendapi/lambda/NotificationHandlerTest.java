@@ -42,7 +42,6 @@ public class NotificationHandlerTest {
     private static final String FRONTEND_BASE_URL = "https://localhost:8080/frontend";
     private static final String CUSTOMER_SUPPORT_LINK_URL =
             "https://localhost:8080/frontend/support";
-    private static final String CONTACT_US_LINK_URL = "https://localhost:8080/frontend/contact-us";
     private static final String CUSTOMER_SUPPORT_LINK_ROUTE = "support";
     private static final String CONTACT_US_LINK_ROUTE = "contact-us";
     private final Context context = mock(Context.class);
@@ -50,7 +49,7 @@ public class NotificationHandlerTest {
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final AmazonS3 s3Client = mock(AmazonS3.class);
     private NotificationHandler handler;
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
@@ -69,13 +68,15 @@ public class NotificationHandlerTest {
         NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+        var contactUsLinkUrl =
+                "https://localhost:8080/frontend/contact-us?referer=confirmEmailAddressEmail";
 
         handler.handleRequest(sqsEvent, context);
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
         personalisation.put("email-address", notifyRequest.getDestination());
-        personalisation.put("contact-us-link", CONTACT_US_LINK_URL);
+        personalisation.put("contact-us-link", contactUsLinkUrl);
 
         verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, VERIFY_EMAIL);
     }
@@ -87,11 +88,14 @@ public class NotificationHandlerTest {
                 new NotifyRequest(TEST_EMAIL_ADDRESS, PASSWORD_RESET_CONFIRMATION);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+        var contactUsLinkUrl =
+                "https://localhost:8080/frontend/contact-us?referer=passwordResetConfirmationEmail";
 
         handler.handleRequest(sqsEvent, context);
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("customer-support-link", CUSTOMER_SUPPORT_LINK_URL);
+        personalisation.put("contact-us-link", contactUsLinkUrl);
 
         verify(notificationService)
                 .sendEmail(TEST_EMAIL_ADDRESS, personalisation, PASSWORD_RESET_CONFIRMATION);
@@ -104,12 +108,14 @@ public class NotificationHandlerTest {
                 new NotifyRequest(TEST_EMAIL_ADDRESS, RESET_PASSWORD, TEST_RESET_PASSWORD_LINK);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+        var contactUsLinkUrl =
+                "https://localhost:8080/frontend/contact-us?referer=passwordResetRequestEmail";
 
         handler.handleRequest(sqsEvent, context);
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("reset-password-link", TEST_RESET_PASSWORD_LINK);
-        personalisation.put("contact-us-link", CONTACT_US_LINK_URL);
+        personalisation.put("contact-us-link", contactUsLinkUrl);
 
         verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, RESET_PASSWORD);
     }
@@ -117,8 +123,9 @@ public class NotificationHandlerTest {
     @Test
     void shouldSuccessfullyProcessAccountCreatedConfirmationFromSQSQueue()
             throws JsonProcessingException, NotificationClientException {
-        String accountManagementUrl = "http://account-management/";
         String baseUrl = "http://account-management";
+        var contactUsLinkUrl =
+                "https://localhost:8080/frontend/contact-us?referer=accountCreatedEmail";
         when(configService.getAccountManagementURI()).thenReturn(baseUrl);
 
         NotifyRequest notifyRequest =
@@ -129,7 +136,7 @@ public class NotificationHandlerTest {
         handler.handleRequest(sqsEvent, context);
 
         Map<String, Object> personalisation = new HashMap<>();
-        personalisation.put("contact-us-link", CONTACT_US_LINK_URL);
+        personalisation.put("contact-us-link", contactUsLinkUrl);
 
         verify(notificationService)
                 .sendEmail(TEST_EMAIL_ADDRESS, personalisation, ACCOUNT_CREATED_CONFIRMATION);
@@ -172,11 +179,13 @@ public class NotificationHandlerTest {
         NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+        var contactUsLinkUrl =
+                "https://localhost:8080/frontend/contact-us?referer=confirmEmailAddressEmail";
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
         personalisation.put("email-address", notifyRequest.getDestination());
-        personalisation.put("contact-us-link", CONTACT_US_LINK_URL);
+        personalisation.put("contact-us-link", contactUsLinkUrl);
         Mockito.doThrow(NotificationClientException.class)
                 .when(notificationService)
                 .sendEmail(TEST_EMAIL_ADDRESS, personalisation, VERIFY_EMAIL);

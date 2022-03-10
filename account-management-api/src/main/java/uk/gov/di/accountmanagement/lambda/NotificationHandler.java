@@ -67,7 +67,9 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             emailPersonalisation.put("validation-code", notifyRequest.getCode());
                             emailPersonalisation.put(
                                     "email-address", notifyRequest.getDestination());
-                            emailPersonalisation.put("contact-us-link", buildContactUsUrl());
+                            emailPersonalisation.put(
+                                    "contact-us-link",
+                                    buildContactUsUrl("confirmEmailAddressEmail"));
                             LOG.info("Sending VERIFY_EMAIL email using Notify");
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
@@ -92,6 +94,9 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             emailUpdatePersonalisation.put(
                                     "email-address", notifyRequest.getDestination());
                             emailUpdatePersonalisation.put(
+                                    "contact-us-link",
+                                    buildContactUsUrl("emailAddressUpdatedEmail"));
+                            emailUpdatePersonalisation.put(
                                     "customer-support-link",
                                     buildURI(
                                                     configurationService.getFrontendBaseUrl(),
@@ -110,6 +115,8 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             LOG.info("Sending DELETE_ACCOUNT email using Notify");
                             Map<String, Object> accountDeletedPersonalisation = new HashMap<>();
                             accountDeletedPersonalisation.put(
+                                    "contact-us-link", buildContactUsUrl("accountDeletedEmail"));
+                            accountDeletedPersonalisation.put(
                                     "customer-support-link",
                                     buildURI(
                                                     configurationService.getFrontendBaseUrl(),
@@ -127,6 +134,9 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             LOG.info("Sending PHONE_NUMBER_UPDATED email using Notify");
                             Map<String, Object> phoneNumberUpdatedPersonalisation = new HashMap<>();
                             phoneNumberUpdatedPersonalisation.put(
+                                    "contact-us-link",
+                                    buildContactUsUrl("phoneNumberUpdatedEmail"));
+                            phoneNumberUpdatedPersonalisation.put(
                                     "customer-support-link",
                                     buildURI(
                                                     configurationService.getFrontendBaseUrl(),
@@ -143,6 +153,8 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                         case PASSWORD_UPDATED:
                             LOG.info("Sending PASSWORD_UPDATED email using Notify");
                             Map<String, Object> passwordUpdatedPersonalisation = new HashMap<>();
+                            passwordUpdatedPersonalisation.put(
+                                    "contact-us-link", buildContactUsUrl("passwordUpdatedEmail"));
                             passwordUpdatedPersonalisation.put(
                                     "customer-support-link",
                                     buildURI(
@@ -175,10 +187,12 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
         return null;
     }
 
-    private String buildContactUsUrl() {
+    private String buildContactUsUrl(String referer) {
+        var queryParam = Map.of("referer", referer);
         return buildURI(
                         configurationService.getFrontendBaseUrl(),
-                        configurationService.getContactUsLinkRoute())
+                        configurationService.getContactUsLinkRoute(),
+                        queryParam)
                 .toString();
     }
 }
