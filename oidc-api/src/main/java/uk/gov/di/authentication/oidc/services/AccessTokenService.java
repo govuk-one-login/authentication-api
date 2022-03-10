@@ -118,11 +118,7 @@ public class AccessTokenService {
                 LOG.warn(
                         "Access Token in Access Token Store is different to Access Token sent in request");
                 String storeJwtId =
-                        SignedJWT.parse(
-                                        AccessToken.parse(
-                                                        accessTokenStore.get().getToken(),
-                                                        AccessTokenType.BEARER)
-                                                .getValue())
+                        SignedJWT.parse(accessTokenStore.get().getToken())
                                 .getJWTClaimsSet()
                                 .getJWTID();
                 LOG.warn(

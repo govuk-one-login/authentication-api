@@ -281,6 +281,9 @@ public class TokenService {
         LocalDateTime localDateTime =
                 LocalDateTime.now().plusSeconds(configService.getAccessTokenExpiry());
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        var jwtID = UUID.randomUUID().toString();
+
+        LOG.info("AccessToken being created with JWTID: {}", jwtID);
 
         JWTClaimsSet.Builder claimSetBuilder =
                 new JWTClaimsSet.Builder()
@@ -291,7 +294,7 @@ public class TokenService {
                                 Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()))
                         .claim("client_id", clientId)
                         .subject(publicSubject.getValue())
-                        .jwtID(UUID.randomUUID().toString());
+                        .jwtID(jwtID);
 
         if (Objects.nonNull(claimsRequest)) {
             claimSetBuilder.claim(
