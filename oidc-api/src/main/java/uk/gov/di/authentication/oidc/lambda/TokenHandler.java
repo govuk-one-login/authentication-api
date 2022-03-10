@@ -46,7 +46,9 @@ import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.updateAttachedLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestBodyHelper.parseRequestBody;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
@@ -196,6 +198,8 @@ public class TokenHandler
                                         400,
                                         OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
                             }
+                            updateAttachedLogFieldToLogs(
+                                    CLIENT_SESSION_ID, authCodeExchangeData.getClientSessionId());
                             ClientSession clientSession =
                                     clientSessionService.getClientSession(
                                             authCodeExchangeData.getClientSessionId());
