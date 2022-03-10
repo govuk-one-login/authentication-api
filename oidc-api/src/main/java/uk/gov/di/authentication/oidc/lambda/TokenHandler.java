@@ -45,6 +45,8 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestBodyHelper.parseRequestBody;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
@@ -132,13 +134,12 @@ public class TokenHandler
 
                             Map<String, String> requestBody = parseRequestBody(input.getBody());
                             String clientID = requestBody.get("client_id");
+                            attachLogFieldToLogs(CLIENT_ID, clientID);
                             ClientRegistry client;
                             try {
                                 client = clientService.getClient(clientID).orElseThrow();
                             } catch (NoSuchElementException e) {
-                                LOG.warn(
-                                        "Client not found in Client Registry with Client ID {}",
-                                        clientID);
+                                LOG.warn("Client not found in Client Registry");
                                 return generateApiGatewayProxyResponse(
                                         400,
                                         OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString());

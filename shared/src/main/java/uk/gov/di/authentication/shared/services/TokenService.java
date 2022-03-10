@@ -67,8 +67,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
 public class TokenService {
 
@@ -248,8 +246,6 @@ public class TokenService {
             AccessTokenHash accessTokenHash,
             String vot) {
 
-        attachLogFieldToLogs(CLIENT_ID, clientId);
-
         LOG.info("Generating IdToken");
         URI trustMarkUri = buildURI(configService.getBaseURL().get(), "/trustmark");
         LocalDateTime localDateTime =
@@ -280,8 +276,6 @@ public class TokenService {
             List<String> scopes,
             Subject publicSubject,
             OIDCClaimsRequest claimsRequest) {
-
-        attachLogFieldToLogs(CLIENT_ID, clientId);
 
         LOG.info("Generating AccessToken");
         LocalDateTime localDateTime =
@@ -327,9 +321,6 @@ public class TokenService {
 
     private RefreshToken generateAndStoreRefreshToken(
             String clientId, Subject internalSubject, List<String> scopes, Subject publicSubject) {
-
-        attachLogFieldToLogs(CLIENT_ID, clientId);
-
         LOG.info("Generating RefreshToken");
         LocalDateTime localDateTime =
                 LocalDateTime.now().plusSeconds(configService.getSessionExpiry());
