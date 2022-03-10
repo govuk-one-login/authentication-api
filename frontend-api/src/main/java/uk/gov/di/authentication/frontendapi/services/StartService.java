@@ -100,7 +100,8 @@ public class StartService {
                         userContext.getClientSession().getAuthRequestParams());
 
         LOG.info(
-                "Found UserStartInfo for ConsentRequired: {} UpliftRequired: {} IdentityRequired: {}. CookieConsent: {}. GATrackingId: {}",
+                "Found UserStartInfo for Authenticated: {} ConsentRequired: {} UpliftRequired: {} IdentityRequired: {}. CookieConsent: {}. GATrackingId: {}",
+                userContext.getSession().isAuthenticated(),
                 consentRequired,
                 uplift,
                 identityRequired,
