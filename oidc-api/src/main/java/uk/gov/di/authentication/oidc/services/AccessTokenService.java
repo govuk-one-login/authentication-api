@@ -117,6 +117,14 @@ public class AccessTokenService {
             if (!accessTokenStore.get().getToken().equals(accessToken.getValue())) {
                 LOG.warn(
                         "Access Token in Access Token Store is different to Access Token sent in request");
+                String storeJwtId =
+                        SignedJWT.parse(accessTokenStore.get().getToken())
+                                .getJWTClaimsSet()
+                                .getJWTID();
+                LOG.warn(
+                        "JWTID in AccessTokenStore: {} compared to JWTID in Access Token sent in request: {}",
+                        storeJwtId,
+                        signedJWT.getJWTClaimsSet().getJWTID());
                 throw new AccessTokenException(
                         INVALID_ACCESS_TOKEN, BearerTokenError.INVALID_TOKEN);
             }
