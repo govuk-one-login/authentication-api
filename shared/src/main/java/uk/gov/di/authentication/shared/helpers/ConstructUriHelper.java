@@ -17,11 +17,16 @@ public class ConstructUriHelper {
                 Objects.isNull(path)
                         ? URI.create(baseUrl)
                         : URI.create(baseUrl + path.replaceAll("^/+", ""));
-
-        if (Objects.nonNull(queryParams)) {
-            return appendQueryParams(uri, queryParams);
-        } else {
-            return uri;
+        try {
+            var uriBuilder = new URIBuilder(uri);
+            if (Objects.nonNull(queryParams)) {
+                for (Map.Entry<String, String> entry : queryParams.entrySet()) {
+                    uriBuilder.addParameter(entry.getKey(), entry.getValue());
+                }
+            }
+            return uriBuilder.build();
+        } catch (URISyntaxException e) {
+            throw new RuntimeException("Unable to build URI", e);
         }
     }
 
@@ -31,17 +36,5 @@ public class ConstructUriHelper {
 
     public static URI buildURI(String baseUrl) {
         return buildURI(baseUrl, null, null);
-    }
-
-    private static URI appendQueryParams(URI uri, Map<String, String> queryParams) {
-        try {
-            var uriBuilder = new URIBuilder(uri);
-            for (String key : queryParams.keySet()) {
-                uriBuilder.addParameter(key, queryParams.get(key));
-            }
-            return uriBuilder.build();
-        } catch (URISyntaxException e) {
-            throw new RuntimeException("Unable to build URI", e);
-        }
     }
 }
