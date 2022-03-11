@@ -67,10 +67,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("CONTACT_US_LINK_ROUTE", "");
     }
 
-    public String getCustomerSupportLinkRoute() {
-        return System.getenv().getOrDefault("CUSTOMER_SUPPORT_LINK_ROUTE", "");
-    }
-
     public int getMaxPasswordRetries() {
         return Integer.parseInt(System.getenv().getOrDefault("PASSWORD_MAX_RETRIES", "5"));
     }

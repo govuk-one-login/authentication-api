@@ -96,13 +96,6 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             emailUpdatePersonalisation.put(
                                     "contact-us-link",
                                     buildContactUsUrl("emailAddressUpdatedEmail"));
-                            emailUpdatePersonalisation.put(
-                                    "customer-support-link",
-                                    buildURI(
-                                                    configurationService.getFrontendBaseUrl(),
-                                                    configurationService
-                                                            .getCustomerSupportLinkRoute())
-                                            .toString());
                             LOG.info("Sending EMAIL_UPDATED email using Notify");
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
@@ -116,13 +109,6 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             Map<String, Object> accountDeletedPersonalisation = new HashMap<>();
                             accountDeletedPersonalisation.put(
                                     "contact-us-link", buildContactUsUrl("accountDeletedEmail"));
-                            accountDeletedPersonalisation.put(
-                                    "customer-support-link",
-                                    buildURI(
-                                                    configurationService.getFrontendBaseUrl(),
-                                                    configurationService
-                                                            .getCustomerSupportLinkRoute())
-                                            .toString());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     accountDeletedPersonalisation,
@@ -136,13 +122,6 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             phoneNumberUpdatedPersonalisation.put(
                                     "contact-us-link",
                                     buildContactUsUrl("phoneNumberUpdatedEmail"));
-                            phoneNumberUpdatedPersonalisation.put(
-                                    "customer-support-link",
-                                    buildURI(
-                                                    configurationService.getFrontendBaseUrl(),
-                                                    configurationService
-                                                            .getCustomerSupportLinkRoute())
-                                            .toString());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     phoneNumberUpdatedPersonalisation,
@@ -155,13 +134,6 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             Map<String, Object> passwordUpdatedPersonalisation = new HashMap<>();
                             passwordUpdatedPersonalisation.put(
                                     "contact-us-link", buildContactUsUrl("passwordUpdatedEmail"));
-                            passwordUpdatedPersonalisation.put(
-                                    "customer-support-link",
-                                    buildURI(
-                                                    configurationService.getFrontendBaseUrl(),
-                                                    configurationService
-                                                            .getCustomerSupportLinkRoute())
-                                            .toString());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     passwordUpdatedPersonalisation,

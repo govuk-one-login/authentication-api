@@ -40,9 +40,6 @@ public class NotificationHandlerTest {
     private static final String TEST_RESET_PASSWORD_LINK =
             "https://localhost:8080/frontend?reset-password?code=123456.54353464565";
     private static final String FRONTEND_BASE_URL = "https://localhost:8080/frontend";
-    private static final String CUSTOMER_SUPPORT_LINK_URL =
-            "https://localhost:8080/frontend/support";
-    private static final String CUSTOMER_SUPPORT_LINK_ROUTE = "support";
     private static final String CONTACT_US_LINK_ROUTE = "contact-us";
     private final Context context = mock(Context.class);
     private final NotificationService notificationService = mock(NotificationService.class);
@@ -56,7 +53,6 @@ public class NotificationHandlerTest {
         when(configService.getNotifyTestPhoneNumber()).thenReturn(Optional.of(NOTIFY_PHONE_NUMBER));
         when(configService.getSmoketestBucketName()).thenReturn(BUCKET_NAME);
         when(configService.getFrontendBaseUrl()).thenReturn(FRONTEND_BASE_URL);
-        when(configService.getCustomerSupportLinkRoute()).thenReturn(CUSTOMER_SUPPORT_LINK_ROUTE);
         when(configService.getContactUsLinkRoute()).thenReturn(CONTACT_US_LINK_ROUTE);
         handler = new NotificationHandler(notificationService, configService, s3Client);
     }
@@ -94,7 +90,6 @@ public class NotificationHandlerTest {
         handler.handleRequest(sqsEvent, context);
 
         Map<String, Object> personalisation = new HashMap<>();
-        personalisation.put("customer-support-link", CUSTOMER_SUPPORT_LINK_URL);
         personalisation.put("contact-us-link", contactUsLinkUrl);
 
         verify(notificationService)

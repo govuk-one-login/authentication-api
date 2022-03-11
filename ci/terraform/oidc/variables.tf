@@ -149,11 +149,6 @@ variable "blocked_email_duration" {
   default = 900
 }
 
-variable "customer_support_link_route" {
-  type    = string
-  default = "support"
-}
-
 variable "contact_us_link_route" {
   type    = string
   default = "contact-us"

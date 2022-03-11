@@ -122,8 +122,6 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             Map<String, Object> passwordResetConfirmationPersonalisation =
                                     new HashMap<>();
                             passwordResetConfirmationPersonalisation.put(
-                                    "customer-support-link", buildCustomerSupportUrl());
-                            passwordResetConfirmationPersonalisation.put(
                                     "contact-us-link",
                                     buildContactUsUrl("passwordResetConfirmationEmail"));
                             notificationService.sendEmail(
@@ -150,13 +148,6 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             }
         }
         return null;
-    }
-
-    private String buildCustomerSupportUrl() {
-        return buildURI(
-                        configurationService.getFrontendBaseUrl(),
-                        configurationService.getCustomerSupportLinkRoute())
-                .toString();
     }
 
     private String buildContactUsUrl(String referer) {

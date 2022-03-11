@@ -158,11 +158,6 @@ variable "lambda_min_concurrency" {
   description = "The number of lambda instance to keep 'warm'"
 }
 
-variable "customer_support_link_route" {
-  type    = string
-  default = "support"
-}
-
 variable "contact_us_link_route" {
   type    = string
   default = "contact-us"
