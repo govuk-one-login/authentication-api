@@ -19,6 +19,7 @@ import java.util.Objects;
 
 import static uk.gov.di.authentication.deliveryreceiptsapi.entity.DeliveryMetricStatus.SMS_DELIVERED;
 import static uk.gov.di.authentication.deliveryreceiptsapi.entity.DeliveryMetricStatus.SMS_FAILURE;
+import static uk.gov.di.authentication.deliveryreceiptsapi.entity.DeliveryMetricStatus.SMS_UNDETERMINED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 
 public class NotifyCallbackHandler
@@ -108,6 +109,9 @@ public class NotifyCallbackHandler
         var deliveryStatus = SMS_FAILURE.toString();
         if ("delivered".equals(notifyStatus)) {
             deliveryStatus = SMS_DELIVERED.toString();
+        }
+        if ("sent".equals(notifyStatus)) {
+            deliveryStatus = SMS_UNDETERMINED.toString();
         }
         return deliveryStatus;
     }

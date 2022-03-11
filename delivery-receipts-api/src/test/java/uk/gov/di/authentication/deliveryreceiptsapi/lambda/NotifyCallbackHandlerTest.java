@@ -2,7 +2,6 @@ package uk.gov.di.authentication.deliveryreceiptsapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +28,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.deliveryreceiptsapi.entity.DeliveryMetricStatus.SMS_DELIVERED;
 import static uk.gov.di.authentication.deliveryreceiptsapi.entity.DeliveryMetricStatus.SMS_FAILURE;
+import static uk.gov.di.authentication.deliveryreceiptsapi.entity.DeliveryMetricStatus.SMS_UNDETERMINED;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class NotifyCallbackHandlerTest {
@@ -51,37 +51,37 @@ class NotifyCallbackHandlerTest {
 
     private static Stream<Arguments> phoneNumbers() {
         return Stream.of(
-                Arguments.of("+447316763843", "44", "delivered"),
-                Arguments.of("+4407316763843", "44", "delivered"),
-                Arguments.of("+33645453322", "33", "delivered"),
-                Arguments.of("+330645453322", "33", "delivered"),
-                Arguments.of("+447316763843", "44", "delivered"),
-                Arguments.of("+447316763843", "44", "delivered"),
-                Arguments.of("+33645453322", "33", "delivered"),
-                Arguments.of("+33645453322", "33", "delivered"),
-                Arguments.of("07911123456", "44", "delivered"),
-                Arguments.of("+447316763843", "44", "permanent-failure"),
-                Arguments.of("+4407316763843", "44", "permanent-failure"),
-                Arguments.of("+330645453322", "33", "technical-failure"),
-                Arguments.of("+33645453322", "33", "technical-failure"),
-                Arguments.of("07911123456", "44", "temporary-failure"));
+                Arguments.of("+447316763843", "44", "delivered", SMS_DELIVERED.toString()),
+                Arguments.of("+4407316763843", "44", "delivered", SMS_DELIVERED.toString()),
+                Arguments.of("+33645453322", "33", "delivered", SMS_DELIVERED.toString()),
+                Arguments.of("+330645453322", "33", "delivered", SMS_DELIVERED.toString()),
+                Arguments.of("+447316763843", "44", "delivered", SMS_DELIVERED.toString()),
+                Arguments.of("+447316763843", "44", "delivered", SMS_DELIVERED.toString()),
+                Arguments.of("+33645453322", "33", "delivered", SMS_DELIVERED.toString()),
+                Arguments.of("+33645453322", "33", "delivered", SMS_DELIVERED.toString()),
+                Arguments.of("07911123456", "44", "delivered", SMS_DELIVERED.toString()),
+                Arguments.of("+447316763843", "44", "permanent-failure", SMS_FAILURE.toString()),
+                Arguments.of("+4407316763843", "44", "permanent-failure", SMS_FAILURE.toString()),
+                Arguments.of("+330645453322", "33", "technical-failure", SMS_FAILURE.toString()),
+                Arguments.of("+33645453322", "33", "technical-failure", SMS_FAILURE.toString()),
+                Arguments.of("07911123456", "44", "sent", SMS_UNDETERMINED.toString()),
+                Arguments.of("+447316763843", "44", "sent", SMS_UNDETERMINED.toString()),
+                Arguments.of("+4407316763843", "44", "sent", SMS_UNDETERMINED.toString()),
+                Arguments.of("+330645453322", "33", "sent", SMS_UNDETERMINED.toString()),
+                Arguments.of("+33645453322", "33", "sent", SMS_UNDETERMINED.toString()),
+                Arguments.of("07911123456", "44", "sent", SMS_UNDETERMINED.toString()));
     }
 
     @ParameterizedTest
     @MethodSource("phoneNumbers")
     void shouldCallCloudwatchMetricServiceWhenSmsReceiptIsReceived(
-            String number, String expectedCountryCode, String status)
+            String number, String expectedCountryCode, String status, String counterName)
             throws JsonProcessingException {
         var deliveryReceipt = createDeliveryReceipt(number, status, "sms");
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN));
         event.setBody(objectMapper.writeValueAsString(deliveryReceipt));
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
-
-        var counterName = SMS_DELIVERED.toString();
-        if (!status.equals("delivered")) {
-            counterName = SMS_FAILURE.toString();
-        }
+        var response = handler.handleRequest(event, context);
 
         verify(cloudwatchMetricsService)
                 .incrementCounter(
