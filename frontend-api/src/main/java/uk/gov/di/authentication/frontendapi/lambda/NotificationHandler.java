@@ -23,6 +23,7 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CR
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
+import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
@@ -122,6 +123,16 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                     notifyRequest.getDestination(),
                                     passwordResetConfirmationPersonalisation,
                                     PASSWORD_RESET_CONFIRMATION);
+                            break;
+                        case RESET_PASSWORD_WITH_CODE:
+                            notifyPersonalisation.put("validation-code", notifyRequest.getCode());
+                            notifyPersonalisation.put(
+                                    "email-address", notifyRequest.getDestination());
+                            notifyPersonalisation.put("contact-us-link", buildContactUsUrl());
+                            notificationService.sendEmail(
+                                    notifyRequest.getDestination(),
+                                    notifyPersonalisation,
+                                    RESET_PASSWORD_WITH_CODE);
                             break;
                     }
                     writeTestClientOtpToS3(notifyRequest.getCode(), notifyRequest.getDestination());
