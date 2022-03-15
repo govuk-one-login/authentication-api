@@ -28,6 +28,7 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CR
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
+import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 
@@ -240,7 +241,7 @@ public class NotificationHandlerTest {
     }
 
     @Test
-    void shouldSuccessfullyProcessMfaessageFromSQSQueue()
+    void shouldSuccessfullyProcessMfaMessageFromSQSQueue()
             throws JsonProcessingException, NotificationClientException {
         NotifyRequest notifyRequest = new NotifyRequest(TEST_PHONE_NUMBER, MFA_SMS, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -270,6 +271,25 @@ public class NotificationHandlerTest {
         verify(notificationService)
                 .sendText(notifyRequest.getDestination(), personalisation, MFA_SMS);
         verify(s3Client).putObject(BUCKET_NAME, NOTIFY_PHONE_NUMBER, "654321");
+    }
+
+    @Test
+    void shouldSuccessfullyProcessPasswordResetWithCodeMessageFromSQSQueue()
+            throws JsonProcessingException, NotificationClientException {
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_EMAIL_ADDRESS, RESET_PASSWORD_WITH_CODE, "654321");
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        Map<String, Object> personalisation = new HashMap<>();
+        personalisation.put("validation-code", "654321");
+        personalisation.put("email-address", notifyRequest.getDestination());
+        personalisation.put("contact-us-link", CONTACT_US_LINK_URL);
+
+        verify(notificationService)
+                .sendEmail(TEST_EMAIL_ADDRESS, personalisation, RESET_PASSWORD_WITH_CODE);
     }
 
     private SQSEvent generateSQSEvent(String messageBody) {
