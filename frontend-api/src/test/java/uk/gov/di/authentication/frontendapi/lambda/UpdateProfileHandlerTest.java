@@ -73,7 +73,7 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 class UpdateProfileHandlerTest {
 
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final String PHONE_NUMBER = "01234567891";
+    private static final String PHONE_NUMBER = "07755551084";
     private static final boolean UPDATED_TERMS_AND_CONDITIONS_VALUE = true;
     private static final boolean CONSENT_VALUE = true;
     private static final String SESSION_ID = "a-session-id";
@@ -160,6 +160,32 @@ class UpdateProfileHandlerTest {
                         "",
                         PHONE_NUMBER,
                         persistentId);
+    }
+
+    @Test
+    void shouldReturn400WhenPhoneNumberFailsValidation() {
+        usingValidSession();
+        String persistentId = "some-persistent-id-value";
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
+        headers.put("Session-Id", session.getSessionId());
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(headers);
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
+                        TEST_EMAIL_ADDRESS, ADD_PHONE_NUMBER, "0123456789A"));
+        APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
+
+        verify(authenticationService, never())
+                .updatePhoneNumber(eq(TEST_EMAIL_ADDRESS), eq("0123456789A"));
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1012));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        UPDATE_PROFILE_REQUEST_ERROR, "request-id", "", "", "", "", "", "", "");
     }
 
     @Test

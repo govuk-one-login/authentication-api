@@ -17,11 +17,9 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.ValidationService;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -42,11 +40,10 @@ class UpdatePhoneNumberHandlerTest {
     private final Context context = mock(Context.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
-    private final ValidationService validationService = mock(ValidationService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private UpdatePhoneNumberHandler handler;
     private static final String EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final String NEW_PHONE_NUMBER = "01234567891";
+    private static final String NEW_PHONE_NUMBER = "07755551084";
     private static final String OLD_PHONE_NUMBER = "09876543219";
     private static final String INVALID_PHONE_NUMBER = "12345";
     private static final String OTP = "123456";
@@ -57,11 +54,7 @@ class UpdatePhoneNumberHandlerTest {
     public void setUp() {
         handler =
                 new UpdatePhoneNumberHandler(
-                        dynamoService,
-                        sqsClient,
-                        validationService,
-                        codeStorageService,
-                        auditService);
+                        dynamoService, sqsClient, codeStorageService, auditService);
     }
 
     @Test
@@ -87,7 +80,6 @@ class UpdatePhoneNumberHandlerTest {
         event.setRequestContext(proxyRequestContext);
         when(codeStorageService.isValidOtpCode(EMAIL_ADDRESS, OTP, VERIFY_PHONE_NUMBER))
                 .thenReturn(true);
-        when(validationService.validatePhoneNumber(NEW_PHONE_NUMBER)).thenReturn(Optional.empty());
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -171,8 +163,6 @@ class UpdatePhoneNumberHandlerTest {
         event.setRequestContext(proxyRequestContext);
         when(codeStorageService.isValidOtpCode(EMAIL_ADDRESS, OTP, VERIFY_PHONE_NUMBER))
                 .thenReturn(true);
-        when(validationService.validatePhoneNumber(INVALID_PHONE_NUMBER))
-                .thenReturn(Optional.of(ErrorResponse.ERROR_1012));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));

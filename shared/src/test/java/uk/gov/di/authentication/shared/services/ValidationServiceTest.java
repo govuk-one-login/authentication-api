@@ -9,8 +9,6 @@ import uk.gov.di.authentication.shared.entity.Session;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -120,42 +118,6 @@ public class ValidationServiceTest {
     void shouldNotThrowNullPointerIfPasswordInputsAreNull() {
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1005), validationService.validatePassword(null));
-    }
-
-    private static Stream<String> invalidPhoneNumbers() {
-        return Stream.of(
-                "0123456789A", "0123456789", "012345678999", "01234567891", "202-456-1111");
-    }
-
-    @ParameterizedTest
-    @MethodSource("invalidPhoneNumbers")
-    void shouldReturnErrorIfMobileNumberIsInvalid(String phoneNumber) {
-        assertEquals(
-                Optional.of(ErrorResponse.ERROR_1012),
-                validationService.validatePhoneNumber(phoneNumber));
-    }
-
-    private static Stream<String> internationalPhoneNumbers() {
-        return Stream.of(
-                "+447316763843",
-                "+4407316763843",
-                "+33645453322",
-                "+330645453322",
-                "+447316763843",
-                "+447316763843",
-                "+33645453322",
-                "+33645453322");
-    }
-
-    @ParameterizedTest
-    @MethodSource("internationalPhoneNumbers")
-    void shouldAcceptValidInternationPhoneNumbers(String phoneNumber) {
-        assertThat(validationService.validatePhoneNumber(phoneNumber), equalTo(Optional.empty()));
-    }
-
-    @Test
-    void shouldAcceptValidBritishPhoneNumbers() {
-        assertThat(validationService.validatePhoneNumber("07911123456"), equalTo(Optional.empty()));
     }
 
     @Test

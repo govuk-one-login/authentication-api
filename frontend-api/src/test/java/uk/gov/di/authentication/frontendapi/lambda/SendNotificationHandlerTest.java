@@ -33,7 +33,6 @@ import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.shared.services.ValidationService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -68,14 +67,13 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 class SendNotificationHandlerTest {
 
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final String TEST_PHONE_NUMBER = "01234567891";
+    private static final String TEST_PHONE_NUMBER = "07755551084";
     private static final String TEST_SIX_DIGIT_CODE = "123456";
     private static final long CODE_EXPIRY_TIME = 900;
     private static final long BLOCKED_EMAIL_DURATION = 799;
     private static final String CLIENT_ID = "client-id";
     private static final String TEST_CLIENT_ID = "test-client-id";
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
-    private final ValidationService validationService = mock(ValidationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
     private final SessionService sessionService = mock(SessionService.class);
@@ -109,7 +107,6 @@ class SendNotificationHandlerTest {
                     clientSessionService,
                     clientService,
                     authenticationService,
-                    validationService,
                     awsSqsClient,
                     codeGeneratorService,
                     codeStorageService);
@@ -147,8 +144,6 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn204AndPutMessageOnQueueForAValidVerifyEmailRequest()
             throws JsonProcessingException {
-        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
-                .thenReturn(Optional.empty());
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_SIX_DIGIT_CODE);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
@@ -176,8 +171,6 @@ class SendNotificationHandlerTest {
     void shouldReturn204AndNotPutMessageOnQueueForAValidRequestUsingTestClientWithAllowedEmail()
             throws JsonProcessingException {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
-                .thenReturn(Optional.empty());
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_SIX_DIGIT_CODE);
         ObjectMapper objectMapper = new ObjectMapper();
@@ -204,9 +197,6 @@ class SendNotificationHandlerTest {
 
     @Test
     void shouldReturn400IfInvalidSessionProvided() {
-        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
-                .thenReturn(Optional.empty());
-
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
                 format(
@@ -236,8 +226,6 @@ class SendNotificationHandlerTest {
 
     @Test
     void shouldReturn500IfMessageCannotBeSentToQueue() throws JsonProcessingException {
-        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
-                .thenReturn(Optional.empty());
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_SIX_DIGIT_CODE);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
@@ -259,9 +247,6 @@ class SendNotificationHandlerTest {
 
     @Test
     void shouldReturn400WhenInvalidNotificationType() {
-        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
-                .thenReturn(Optional.empty());
-
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -310,26 +295,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    void shouldReturn400WhenPhoneNumberIsInvalid() {
-        when(validationService.validatePhoneNumber(eq("123456789")))
-                .thenReturn(Optional.of(ErrorResponse.ERROR_1012));
-        usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, "123456789"));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1012));
-    }
-
-    @Test
     void shouldReturn400IfUserHasReachedTheEmailCodeRequestLimit() {
-        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
-                .thenReturn(Optional.empty());
         maxOutCodeRequestCount();
         usingValidSession();
 
@@ -356,8 +322,6 @@ class SendNotificationHandlerTest {
 
     @Test
     void shouldReturn400IfUserHasReachedThePhoneCodeRequestLimit() {
-        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
-                .thenReturn(Optional.empty());
         maxOutCodeRequestCount();
         usingValidSession();
 
@@ -387,8 +351,6 @@ class SendNotificationHandlerTest {
 
     @Test
     void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreOtpCodes() {
-        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
-                .thenReturn(Optional.empty());
         when(codeStorageService.isBlockedForEmail(
                         TEST_EMAIL_ADDRESS, CODE_REQUEST_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
@@ -409,8 +371,6 @@ class SendNotificationHandlerTest {
 
     @Test
     void shouldReturn400IfUserIsBlockedFromEnteringEmailOtpCodes() {
-        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
-                .thenReturn(Optional.empty());
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
         usingValidSession();
@@ -430,8 +390,6 @@ class SendNotificationHandlerTest {
 
     @Test
     void shouldReturn400IfUserIsBlockedFromEnteringPhoneOtpCodes() {
-        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
-                .thenReturn(Optional.empty());
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
         usingValidSession();

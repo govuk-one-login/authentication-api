@@ -19,4 +19,8 @@ public class PhoneNumberHelper {
             throw new RuntimeException(e);
         }
     }
+
+    public static String removeWhitespaceFromPhoneNumber(String phoneNumber) {
+        return phoneNumber.replaceAll("\\s+", "");
+    }
 }

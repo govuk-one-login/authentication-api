@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
@@ -25,7 +26,6 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.shared.services.ValidationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
@@ -48,7 +48,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
     private static final Logger LOG = LogManager.getLogger(SendNotificationHandler.class);
 
-    private final ValidationService validationService;
     private final AwsSqsClient sqsClient;
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
@@ -59,7 +58,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
-            ValidationService validationService,
             AwsSqsClient sqsClient,
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService) {
@@ -70,7 +68,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 clientSessionService,
                 clientService,
                 authenticationService);
-        this.validationService = validationService;
         this.sqsClient = sqsClient;
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
@@ -83,7 +80,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
-        this.validationService = new ValidationService();
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
@@ -136,14 +132,9 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                     if (request.getPhoneNumber() == null) {
                         return generateApiGatewayProxyResponse(400, ERROR_1011);
                     }
-                    String phoneNumber = removeWhitespaceFromPhoneNumber(request.getPhoneNumber());
-                    Optional<ErrorResponse> errorResponse =
-                            validationService.validatePhoneNumber(phoneNumber);
-                    if (errorResponse.isPresent()) {
-                        return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
-                    }
                     return handleNotificationRequest(
-                            phoneNumber,
+                            PhoneNumberHelper.removeWhitespaceFromPhoneNumber(
+                                    request.getPhoneNumber()),
                             request.getNotificationType(),
                             userContext.getSession(),
                             userContext);
@@ -157,10 +148,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         } catch (ClientNotFoundException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
-    }
-
-    private String removeWhitespaceFromPhoneNumber(String phoneNumber) {
-        return phoneNumber.replaceAll("\\s+", "");
     }
 
     private APIGatewayProxyResponseEvent handleNotificationRequest(
