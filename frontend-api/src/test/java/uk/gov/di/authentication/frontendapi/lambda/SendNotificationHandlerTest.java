@@ -235,28 +235,6 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    void shouldReturn400IfEmailAddressIsInvalid() {
-        session.setEmailAddress("joe.bloggs");
-
-        usingValidSession();
-
-        when(validationService.validateEmailAddress(eq("joe.bloggs")))
-                .thenReturn(Optional.of(ErrorResponse.ERROR_1004));
-
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                        "joe.bloggs", VERIFY_EMAIL));
-
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1004));
-    }
-
-    @Test
     void shouldReturn500IfMessageCannotBeSentToQueue() throws JsonProcessingException {
         when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
                 .thenReturn(Optional.empty());

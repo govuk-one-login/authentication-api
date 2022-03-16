@@ -127,11 +127,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             }
             switch (request.getNotificationType()) {
                 case VERIFY_EMAIL:
-                    Optional<ErrorResponse> emailErrorResponse =
-                            validationService.validateEmailAddress(request.getEmail());
-                    if (emailErrorResponse.isPresent()) {
-                        return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
-                    }
                     return handleNotificationRequest(
                             request.getEmail(),
                             request.getNotificationType(),
