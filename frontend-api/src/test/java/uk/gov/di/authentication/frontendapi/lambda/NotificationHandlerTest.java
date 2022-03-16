@@ -280,13 +280,15 @@ public class NotificationHandlerTest {
                 new NotifyRequest(TEST_EMAIL_ADDRESS, RESET_PASSWORD_WITH_CODE, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+        var contactUsLinkUrl =
+                "https://localhost:8080/frontend/contact-us?referer=passwordResetRequestEmail";
 
         handler.handleRequest(sqsEvent, context);
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
         personalisation.put("email-address", notifyRequest.getDestination());
-        personalisation.put("contact-us-link", CONTACT_US_LINK_URL);
+        personalisation.put("contact-us-link", contactUsLinkUrl);
 
         verify(notificationService)
                 .sendEmail(TEST_EMAIL_ADDRESS, personalisation, RESET_PASSWORD_WITH_CODE);

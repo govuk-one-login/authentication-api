@@ -134,7 +134,9 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notifyPersonalisation.put("validation-code", notifyRequest.getCode());
                             notifyPersonalisation.put(
                                     "email-address", notifyRequest.getDestination());
-                            notifyPersonalisation.put("contact-us-link", buildContactUsUrl("passwordResetRequestEmail"));
+                            notifyPersonalisation.put(
+                                    "contact-us-link",
+                                    buildContactUsUrl("passwordResetRequestEmail"));
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,
