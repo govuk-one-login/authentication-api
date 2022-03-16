@@ -20,6 +20,7 @@ import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -31,7 +32,6 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.shared.services.ValidationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
@@ -45,7 +45,6 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordWithC
     private final AuthenticationService authenticationService;
     private final AwsSqsClient sqsClient;
     private final CodeStorageService codeStorageService;
-    private final ValidationService validationService;
     private final AuditService auditService;
     private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
 
@@ -55,7 +54,6 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordWithC
             AuthenticationService authenticationService,
             AwsSqsClient sqsClient,
             CodeStorageService codeStorageService,
-            ValidationService validationService,
             ConfigurationService configurationService,
             SessionService sessionService,
             ClientSessionService clientSessionService,
@@ -71,7 +69,6 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordWithC
         this.authenticationService = authenticationService;
         this.sqsClient = sqsClient;
         this.codeStorageService = codeStorageService;
-        this.validationService = validationService;
         this.auditService = auditService;
     }
 
@@ -89,7 +86,6 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordWithC
                         configurationService.getSqsEndpointUri());
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
-        this.validationService = new ValidationService();
         this.auditService = new AuditService(configurationService);
     }
 
@@ -102,7 +98,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordWithC
         LOG.info("Request received to ResetPasswordHandler");
         try {
             Optional<ErrorResponse> errorResponse =
-                    validationService.validatePassword(request.getPassword());
+                    ValidationHelper.validatePassword(request.getPassword());
             if (errorResponse.isPresent()) {
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }

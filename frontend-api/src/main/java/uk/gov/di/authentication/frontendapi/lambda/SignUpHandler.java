@@ -17,6 +17,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -24,7 +25,6 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.shared.services.ValidationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.LocalDateTime;
@@ -45,7 +45,6 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
     private static final Logger LOG = LogManager.getLogger(SignUpHandler.class);
 
-    private final ValidationService validationService;
     private final AuditService auditService;
 
     public SignUpHandler(
@@ -54,7 +53,6 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
-            ValidationService validationService,
             AuditService auditService) {
         super(
                 SignupRequest.class,
@@ -63,7 +61,6 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                 clientSessionService,
                 clientService,
                 authenticationService);
-        this.validationService = validationService;
         this.auditService = auditService;
     }
 
@@ -73,7 +70,6 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
     public SignUpHandler(ConfigurationService configurationService) {
         super(SignupRequest.class, configurationService);
-        this.validationService = new ValidationService();
         this.auditService = new AuditService(configurationService);
     }
 
@@ -94,7 +90,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
         LOG.info("Received request");
 
         Optional<ErrorResponse> passwordValidationErrors =
-                validationService.validatePassword(request.getPassword());
+                ValidationHelper.validatePassword(request.getPassword());
 
         if (passwordValidationErrors.isEmpty()) {
             if (authenticationService.userExists(request.getEmail())) {

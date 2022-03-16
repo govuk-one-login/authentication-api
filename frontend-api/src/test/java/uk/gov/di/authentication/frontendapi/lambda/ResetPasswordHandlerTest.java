@@ -24,7 +24,6 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.shared.services.ValidationService;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -48,7 +47,6 @@ class ResetPasswordHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
-    private final ValidationService validationService = mock(ValidationService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final ClientService clientService = mock(ClientService.class);
@@ -70,7 +68,6 @@ class ResetPasswordHandlerTest {
                         authenticationService,
                         sqsClient,
                         codeStorageService,
-                        validationService,
                         configurationService,
                         sessionService,
                         clientSessionService,
@@ -167,9 +164,6 @@ class ResetPasswordHandlerTest {
     @Test
     public void shouldReturn400IfPasswordFailsValidation() {
         usingValidSession();
-        String invalidPassword = "password";
-        when(validationService.validatePassword(invalidPassword))
-                .thenReturn(Optional.of(ErrorResponse.ERROR_1007));
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(format("{ \"code\": \"%s\", \"password\": \"%s\"}", CODE, "password"));
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
