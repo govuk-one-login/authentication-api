@@ -48,7 +48,7 @@ class SendOtpNotificationHandlerTest {
 
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_SIX_DIGIT_CODE = "123456";
-    private static final String TEST_PHONE_NUMBER = "01234567891";
+    private static final String TEST_PHONE_NUMBER = "07755551084";
     private static final long CODE_EXPIRY_TIME = 900;
     private final ValidationService validationService = mock(ValidationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -191,9 +191,6 @@ class SendOtpNotificationHandlerTest {
 
     @Test
     public void shouldReturn400IfPhoneNumberIsInvalid() {
-        when(validationService.validatePhoneNumber(eq("12345")))
-                .thenReturn(Optional.of(ErrorResponse.ERROR_1012));
-
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of());
         event.setBody(

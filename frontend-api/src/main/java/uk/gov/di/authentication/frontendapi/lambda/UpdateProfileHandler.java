@@ -21,6 +21,8 @@ import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LogLineHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
+import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -145,6 +147,14 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         switch (request.getUpdateProfileType()) {
             case ADD_PHONE_NUMBER:
                 {
+                    String phoneNumber =
+                            PhoneNumberHelper.removeWhitespaceFromPhoneNumber(
+                                    request.getProfileInformation());
+                    Optional<ErrorResponse> errorResponse =
+                            ValidationHelper.validatePhoneNumber(phoneNumber);
+                    if (errorResponse.isPresent()) {
+                        return generateErrorResponse(errorResponse.get(), context);
+                    }
                     authenticationService.updatePhoneNumber(
                             request.getEmail(), request.getProfileInformation());
                     auditableEvent = UPDATE_PROFILE_PHONE_NUMBER;

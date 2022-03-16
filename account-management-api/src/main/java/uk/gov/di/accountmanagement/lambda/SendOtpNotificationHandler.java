@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
+import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -125,7 +126,7 @@ public class SendOtpNotificationHandler
                                     case VERIFY_PHONE_NUMBER:
                                         LOG.info("NotificationType is VERIFY_PHONE_NUMBER");
                                         Optional<ErrorResponse> phoneNumberValidationError =
-                                                validationService.validatePhoneNumber(
+                                                ValidationHelper.validatePhoneNumber(
                                                         sendNotificationRequest.getPhoneNumber());
                                         if (phoneNumberValidationError.isPresent()) {
                                             return generateApiGatewayProxyErrorResponse(
