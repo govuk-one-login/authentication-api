@@ -108,49 +108,11 @@ public class ValidationServiceTest {
         assertTrue(validationService.validateEmailAddress(emailAddress).isEmpty());
     }
 
-    @Test
-    void shouldReturnNoErrorWhenPhoneCodeMatchesStored() {
-        assertEquals(
-                Optional.empty(),
-                validationService.validateVerificationCode(
-                        VERIFY_PHONE_NUMBER,
-                        Optional.of("123456"),
-                        "123456",
-                        mock(Session.class),
-                        5));
-    }
-
-    @Test
-    void shouldReturnCorrectErrorWhenStoredPhoneCodeIsEmpty() {
-        assertEquals(
-                Optional.of(ErrorResponse.ERROR_1037),
-                validationService.validateVerificationCode(
-                        VERIFY_PHONE_NUMBER, Optional.empty(), "123456", mock(Session.class), 5));
-    }
-
-    @Test
-    void shouldReturnCorrectErrorWhenStoredPhoneCodeDoesMatchInputAndRetryLimitHasNotBeenReached() {
-        Session session = mock(Session.class);
-        when(session.getRetryCount()).thenReturn(1);
-        assertEquals(
-                Optional.of(ErrorResponse.ERROR_1037),
-                validationService.validateVerificationCode(
-                        VERIFY_PHONE_NUMBER, Optional.of("654321"), "123456", session, 5));
-    }
-
-    @Test
-    void shouldReturnCorrectErrorWhenStoredPhoneCodeDoesMatchInputAndRetryLimitHasBeenReached() {
-        Session session = mock(Session.class);
-        when(session.getRetryCount()).thenReturn(6);
-        assertEquals(
-                Optional.of(ErrorResponse.ERROR_1034),
-                validationService.validateVerificationCode(
-                        VERIFY_PHONE_NUMBER, Optional.of("654321"), "123456", session, 5));
-    }
-
-    private static Stream<Arguments> emailCodeTestParameters() {
+    private static Stream<Arguments> validateCodeTestParameters() {
         return Stream.of(
                 arguments(VERIFY_EMAIL, Optional.empty(), VALID_CODE, 0, STORED_VALID_CODE),
+                arguments(VERIFY_PHONE_NUMBER, Optional.empty(), VALID_CODE, 0, STORED_VALID_CODE),
+                arguments(MFA_SMS, Optional.empty(), VALID_CODE, 0, STORED_VALID_CODE),
                 arguments(
                         RESET_PASSWORD_WITH_CODE,
                         Optional.empty(),
@@ -164,6 +126,18 @@ public class ValidationServiceTest {
                         0,
                         NO_CODE_STORED),
                 arguments(
+                        VERIFY_PHONE_NUMBER,
+                        Optional.of(ErrorResponse.ERROR_1037),
+                        VALID_CODE,
+                        0,
+                        NO_CODE_STORED),
+                arguments(
+                        MFA_SMS,
+                        Optional.of(ErrorResponse.ERROR_1035),
+                        VALID_CODE,
+                        0,
+                        NO_CODE_STORED),
+                arguments(
                         RESET_PASSWORD_WITH_CODE,
                         Optional.of(ErrorResponse.ERROR_1039),
                         VALID_CODE,
@@ -172,6 +146,18 @@ public class ValidationServiceTest {
                 arguments(
                         VERIFY_EMAIL,
                         Optional.of(ErrorResponse.ERROR_1036),
+                        INVALID_CODE,
+                        1,
+                        STORED_VALID_CODE),
+                arguments(
+                        VERIFY_PHONE_NUMBER,
+                        Optional.of(ErrorResponse.ERROR_1037),
+                        INVALID_CODE,
+                        1,
+                        STORED_VALID_CODE),
+                arguments(
+                        MFA_SMS,
+                        Optional.of(ErrorResponse.ERROR_1035),
                         INVALID_CODE,
                         1,
                         STORED_VALID_CODE),
@@ -188,6 +174,18 @@ public class ValidationServiceTest {
                         6,
                         STORED_VALID_CODE),
                 arguments(
+                        VERIFY_PHONE_NUMBER,
+                        Optional.of(ErrorResponse.ERROR_1034),
+                        INVALID_CODE,
+                        6,
+                        STORED_VALID_CODE),
+                arguments(
+                        MFA_SMS,
+                        Optional.of(ErrorResponse.ERROR_1027),
+                        INVALID_CODE,
+                        6,
+                        STORED_VALID_CODE),
+                arguments(
                         RESET_PASSWORD_WITH_CODE,
                         Optional.of(ErrorResponse.ERROR_1040),
                         INVALID_CODE,
@@ -196,8 +194,8 @@ public class ValidationServiceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("emailCodeTestParameters")
-    void shouldReturnCorrectErrorForEmailValidation(
+    @MethodSource("validateCodeTestParameters")
+    void shouldReturnCorrectErrorForCodeValidationScenarios(
             NotificationType notificationType,
             Optional<ErrorResponse> expectedResult,
             String input,
@@ -210,42 +208,6 @@ public class ValidationServiceTest {
                 expectedResult,
                 validationService.validateVerificationCode(
                         notificationType, storedCode, input, session, 5));
-    }
-
-    @Test
-    void shouldReturnNoErrorWhenMfaCodeMatchesStored() {
-        assertEquals(
-                Optional.empty(),
-                validationService.validateVerificationCode(
-                        MFA_SMS, Optional.of("123456"), "123456", mock(Session.class), 5));
-    }
-
-    @Test
-    void shouldReturnCorrectErrorWhenStoredMfaCodeIsEmpty() {
-        assertEquals(
-                Optional.of(ErrorResponse.ERROR_1035),
-                validationService.validateVerificationCode(
-                        MFA_SMS, Optional.empty(), "123456", mock(Session.class), 5));
-    }
-
-    @Test
-    void shouldReturnNoErrorWhenStoredMfaCodeDoesMatchInputAndRetryLimitHasNotBeenReached() {
-        Session session = mock(Session.class);
-        when(session.getRetryCount()).thenReturn(1);
-        assertEquals(
-                Optional.of(ErrorResponse.ERROR_1035),
-                validationService.validateVerificationCode(
-                        MFA_SMS, Optional.of("654321"), "123456", session, 5));
-    }
-
-    @Test
-    void shouldReturnCorrectErrorWhenStoredMfaCodeDoesMatchInputAndRetryLimitHasBeenReached() {
-        Session session = mock(Session.class);
-        when(session.getRetryCount()).thenReturn(6);
-        assertEquals(
-                Optional.of(ErrorResponse.ERROR_1027),
-                validationService.validateVerificationCode(
-                        MFA_SMS, Optional.of("654321"), "123456", session, 5));
     }
 
     @Test
