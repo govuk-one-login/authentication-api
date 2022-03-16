@@ -29,7 +29,6 @@ import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.shared.services.ValidationService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.HashMap;
@@ -66,7 +65,6 @@ class ResetPasswordRequestHandlerTest {
             "https://localhost:8080/frontend?reset-password?code=123456.54353464565";
     private static final long CODE_EXPIRY_TIME = 900;
     private static final long BLOCKED_EMAIL_DURATION = 799;
-    private final ValidationService validationService = mock(ValidationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
     private final SessionService sessionService = mock(SessionService.class);
@@ -88,7 +86,6 @@ class ResetPasswordRequestHandlerTest {
                     clientSessionService,
                     clientService,
                     authenticationService,
-                    validationService,
                     awsSqsClient,
                     codeGeneratorService,
                     codeStorageService,
@@ -120,8 +117,6 @@ class ResetPasswordRequestHandlerTest {
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
         headers.put("Session-Id", session.getSessionId());
         Subject subject = new Subject("subject_1");
-        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
-                .thenReturn(Optional.empty());
         when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
         when(resetPasswordService.buildResetPasswordLink(
                         TEST_SIX_DIGIT_CODE, session.getSessionId(), persistentId))
@@ -161,9 +156,6 @@ class ResetPasswordRequestHandlerTest {
 
     @Test
     void shouldReturn400IfInvalidSessionProvided() {
-        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
-                .thenReturn(Optional.empty());
-
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -189,31 +181,10 @@ class ResetPasswordRequestHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfEmailAddressIsInvalid() {
-        session.setEmailAddress("joe.bloggs");
-
-        usingValidSession();
-
-        when(validationService.validateEmailAddress(eq("joe.bloggs")))
-                .thenReturn(Optional.of(ErrorResponse.ERROR_1004));
-
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(format("{ \"email\": \"%s\" }", "joe.bloggs"));
-
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1004));
-    }
-
-    @Test
     public void shouldReturn500IfMessageCannotBeSentToQueue() throws JsonProcessingException {
         String persistentId = "some-persistent-id-value";
         Subject subject = new Subject("subject_1");
         when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
-        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
-                .thenReturn(Optional.empty());
         when(resetPasswordService.buildResetPasswordLink(
                         TEST_SIX_DIGIT_CODE, session.getSessionId(), persistentId))
                 .thenReturn(TEST_RESET_PASSWORD_LINK);
@@ -240,8 +211,6 @@ class ResetPasswordRequestHandlerTest {
     public void shouldReturn400IfUserHasExceededPasswordResetCount() {
         Subject subject = new Subject("subject_1");
         String sessionId = "1233455677";
-        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
-                .thenReturn(Optional.empty());
         when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
         when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
         Session session = mock(Session.class);
@@ -272,8 +241,6 @@ class ResetPasswordRequestHandlerTest {
     public void shouldReturn400IfUserIsBlockedFromRequestingAnyMorePasswordResets() {
         Subject subject = new Subject("subject_1");
         String sessionId = "1233455677";
-        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
-                .thenReturn(Optional.empty());
         when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
         Session session = mock(Session.class);
         when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);

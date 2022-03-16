@@ -28,7 +28,6 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.shared.services.ValidationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
@@ -45,7 +44,6 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
 
     private static final Logger LOG = LogManager.getLogger(ResetPasswordRequestHandler.class);
 
-    private final ValidationService validationService;
     private final AwsSqsClient sqsClient;
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
@@ -58,7 +56,6 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
-            ValidationService validationService,
             AwsSqsClient sqsClient,
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService,
@@ -71,7 +68,6 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                 clientSessionService,
                 clientService,
                 authenticationService);
-        this.validationService = validationService;
         this.sqsClient = sqsClient;
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
@@ -90,7 +86,6 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
-        this.validationService = new ValidationService();
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
@@ -110,11 +105,6 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         try {
             if (!userContext.getSession().validateSession(request.getEmail())) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-            }
-            Optional<ErrorResponse> emailErrorResponse =
-                    validationService.validateEmailAddress(request.getEmail());
-            if (emailErrorResponse.isPresent()) {
-                return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
             }
             String persistentSessionId =
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
