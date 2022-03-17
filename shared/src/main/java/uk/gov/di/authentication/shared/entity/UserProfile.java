@@ -205,7 +205,7 @@ public class UserProfile implements DynamoDBItem {
                     ATTRIBUTE_TERMS_AND_CONDITIONS, getTermsAndConditions().toAttributeValue());
         if (getClientConsent() != null) {
             Collection<AttributeValue> consents = new ArrayList<>();
-            getClientConsent().stream().forEach(c -> consents.add(c.toAttributeValue()));
+            getClientConsent().forEach(c -> consents.add(c.toAttributeValue()));
             attributes.put(ATTRIBUTE_CLIENT_CONSENT, new AttributeValue().withL(consents));
         }
         if (getPublicSubjectID() != null)
