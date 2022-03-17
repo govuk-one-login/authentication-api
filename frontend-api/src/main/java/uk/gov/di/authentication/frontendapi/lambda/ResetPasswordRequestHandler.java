@@ -33,6 +33,8 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
+import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
+import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
@@ -127,11 +129,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             if (errorResponse.isPresent()) {
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
-            return processPasswordResetRequest(
-                    request.getEmail(),
-                    NotificationType.RESET_PASSWORD,
-                    userContext,
-                    persistentSessionId);
+            return processPasswordResetRequest(request, userContext, persistentSessionId);
 
         } catch (SdkClientException ex) {
             LOG.error("Error sending message to queue", ex);
@@ -142,22 +140,32 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     }
 
     private APIGatewayProxyResponseEvent processPasswordResetRequest(
-            String email,
-            NotificationType notificationType,
+            ResetPasswordRequest resetPasswordRequest,
             UserContext userContext,
             String persistentSessionId)
             throws JsonProcessingException {
-        String subjectId = authenticationService.getSubjectFromEmail(email).getValue();
-        String code = codeGeneratorService.twentyByteEncodedRandomCode();
-        String resetPasswordLink =
-                resetPasswordService.buildResetPasswordLink(
-                        code, userContext.getSession().getSessionId(), persistentSessionId);
-        NotifyRequest notifyRequest = new NotifyRequest(email, notificationType, resetPasswordLink);
+        String subjectId =
+                authenticationService
+                        .getSubjectFromEmail(resetPasswordRequest.getEmail())
+                        .getValue();
+        String code;
+        String notifyText;
+        NotificationType notificationType;
+        if (resetPasswordRequest.isUseCodeFlow()) {
+            code = codeGeneratorService.sixDigitCode();
+            notifyText = code;
+            notificationType = RESET_PASSWORD_WITH_CODE;
+        } else {
+            code = codeGeneratorService.twentyByteEncodedRandomCode();
+            notifyText =
+                    resetPasswordService.buildResetPasswordLink(
+                            code, userContext.getSession().getSessionId(), persistentSessionId);
+            notificationType = RESET_PASSWORD;
+        }
+        NotifyRequest notifyRequest =
+                new NotifyRequest(resetPasswordRequest.getEmail(), notificationType, notifyText);
         codeStorageService.savePasswordResetCode(
-                subjectId,
-                code,
-                configurationService.getCodeExpiry(),
-                NotificationType.RESET_PASSWORD);
+                subjectId, code, configurationService.getCodeExpiry(), notificationType);
         sessionService.save(userContext.getSession().incrementPasswordResetCount());
         sqsClient.send(serialiseRequest(notifyRequest));
         LOG.info("Successfully processed request");

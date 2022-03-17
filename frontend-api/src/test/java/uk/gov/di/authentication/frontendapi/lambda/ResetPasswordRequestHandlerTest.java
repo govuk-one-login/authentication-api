@@ -52,6 +52,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
+import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.PASSWORD_RESET_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -107,11 +108,13 @@ class ResetPasswordRequestHandlerTest {
     void setup() {
         when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
         when(codeGeneratorService.twentyByteEncodedRandomCode()).thenReturn(TEST_SIX_DIGIT_CODE);
+        when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
     }
 
     @Test
-    void shouldReturn200AndPutMessageOnQueueForAValidRequest() throws JsonProcessingException {
+    void shouldReturn200AndPutMessageOnQueueForAValidLinkFlowRequest()
+            throws JsonProcessingException {
         String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
@@ -139,6 +142,52 @@ class ResetPasswordRequestHandlerTest {
         verify(codeStorageService)
                 .savePasswordResetCode(
                         subject.getValue(), TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, RESET_PASSWORD);
+        verify(sessionService).save(argThat(this::isSessionWithEmailSent));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
+                        context.getAwsRequestId(),
+                        session.getSessionId(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        persistentId);
+    }
+
+    @Test
+    void shouldReturn200AndPutMessageOnQueueForAValidCodeFlowRequest()
+            throws JsonProcessingException {
+        String persistentId = "some-persistent-id-value";
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
+        headers.put("Session-Id", session.getSessionId());
+        Subject subject = new Subject("subject_1");
+        when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
+        NotifyRequest notifyRequest =
+                new NotifyRequest(
+                        TEST_EMAIL_ADDRESS, RESET_PASSWORD_WITH_CODE, TEST_SIX_DIGIT_CODE);
+        ObjectMapper objectMapper = new ObjectMapper();
+        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
+
+        usingValidSession();
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setHeaders(headers);
+        event.setBody(format("{ \"email\": \"%s\", \"useCodeFlow\": true }", TEST_EMAIL_ADDRESS));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(204, result.getStatusCode());
+
+        verify(awsSqsClient).send(serialisedRequest);
+        verify(codeStorageService)
+                .savePasswordResetCode(
+                        subject.getValue(),
+                        TEST_SIX_DIGIT_CODE,
+                        CODE_EXPIRY_TIME,
+                        RESET_PASSWORD_WITH_CODE);
         verify(sessionService).save(argThat(this::isSessionWithEmailSent));
 
         verify(auditService)

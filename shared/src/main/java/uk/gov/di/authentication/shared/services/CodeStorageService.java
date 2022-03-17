@@ -155,6 +155,7 @@ public class CodeStorageService {
             case MFA_SMS:
                 return MFA_KEY_PREFIX;
             case RESET_PASSWORD:
+            case RESET_PASSWORD_WITH_CODE:
                 return RESET_PASSWORD_KEY_PREFIX;
         }
         throw new RuntimeException(
