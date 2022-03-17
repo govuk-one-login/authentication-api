@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -29,7 +30,6 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.shared.services.ValidationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.List;
@@ -57,7 +57,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private static final Logger LOG = LogManager.getLogger(VerifyCodeHandler.class);
 
     private final CodeStorageService codeStorageService;
-    private final ValidationService validationService;
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
 
@@ -68,7 +67,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             ClientService clientService,
             AuthenticationService authenticationService,
             CodeStorageService codeStorageService,
-            ValidationService validationService,
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService) {
         super(
@@ -79,7 +77,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 clientService,
                 authenticationService);
         this.codeStorageService = codeStorageService;
-        this.validationService = validationService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
@@ -92,7 +89,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         super(VerifyCodeRequest.class, configurationService);
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
-        this.validationService = new ValidationService();
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
     }
@@ -129,7 +125,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                                     session.getEmailAddress(), codeRequest.getNotificationType());
 
             var errorResponse =
-                    validationService.validateVerificationCode(
+                    ValidationHelper.validateVerificationCode(
                             codeRequest.getNotificationType(),
                             code,
                             codeRequest.getCode(),
