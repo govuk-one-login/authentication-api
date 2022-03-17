@@ -3,8 +3,20 @@ package uk.gov.di.authentication.shared.entity;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBIndexHashKey;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import uk.gov.di.authentication.shared.dynamodb.DynamoDBItem;
 
-public class UserCredentials {
+import java.util.HashMap;
+import java.util.Map;
+
+public class UserCredentials implements DynamoDBItem {
+
+    public static final String ATTRIBUTE_EMAIL = "Email";
+    public static final String ATTRIBUTE_SUBJECT_ID = "SubjectID";
+    public static final String ATTRIBUTE_PASSWORD = "Password";
+    public static final String ATTRIBUTE_CREATED = "Created";
+    public static final String ATTRIBUTE_UPDATED = "Updated";
+    public static final String ATTRIBUTE_MIGRATED_PASSWORD = "MigratedPassword";
 
     private String email;
     private String subjectID;
@@ -15,7 +27,7 @@ public class UserCredentials {
 
     public UserCredentials() {}
 
-    @DynamoDBHashKey(attributeName = "Email")
+    @DynamoDBHashKey(attributeName = ATTRIBUTE_EMAIL)
     public String getEmail() {
         return email;
     }
@@ -25,7 +37,9 @@ public class UserCredentials {
         return this;
     }
 
-    @DynamoDBIndexHashKey(globalSecondaryIndexName = "SubjectIDIndex", attributeName = "SubjectID")
+    @DynamoDBIndexHashKey(
+            globalSecondaryIndexName = "SubjectIDIndex",
+            attributeName = ATTRIBUTE_SUBJECT_ID)
     public String getSubjectID() {
         return subjectID;
     }
@@ -35,7 +49,7 @@ public class UserCredentials {
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "Password")
+    @DynamoDBAttribute(attributeName = ATTRIBUTE_PASSWORD)
     public String getPassword() {
         return password;
     }
@@ -45,7 +59,7 @@ public class UserCredentials {
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "Created")
+    @DynamoDBAttribute(attributeName = ATTRIBUTE_CREATED)
     public String getCreated() {
         return created;
     }
@@ -55,7 +69,7 @@ public class UserCredentials {
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "Updated")
+    @DynamoDBAttribute(attributeName = ATTRIBUTE_UPDATED)
     public String getUpdated() {
         return updated;
     }
@@ -65,7 +79,7 @@ public class UserCredentials {
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "MigratedPassword")
+    @DynamoDBAttribute(attributeName = ATTRIBUTE_MIGRATED_PASSWORD)
     public String getMigratedPassword() {
         return migratedPassword;
     }
@@ -73,5 +87,22 @@ public class UserCredentials {
     public UserCredentials setMigratedPassword(String migratedPassword) {
         this.migratedPassword = migratedPassword;
         return this;
+    }
+
+    @Override
+    public Map<String, AttributeValue> toItem() {
+        Map<String, AttributeValue> attributes = new HashMap<>();
+        if (getEmail() != null) attributes.put(ATTRIBUTE_EMAIL, new AttributeValue(getEmail()));
+        if (getSubjectID() != null)
+            attributes.put(ATTRIBUTE_SUBJECT_ID, new AttributeValue(getSubjectID()));
+        if (getPassword() != null)
+            attributes.put(ATTRIBUTE_PASSWORD, new AttributeValue(getPassword()));
+        if (getCreated() != null)
+            attributes.put(ATTRIBUTE_CREATED, new AttributeValue(getCreated()));
+        if (getUpdated() != null)
+            attributes.put(ATTRIBUTE_UPDATED, new AttributeValue(getUpdated()));
+        if (getMigratedPassword() != null)
+            attributes.put(ATTRIBUTE_MIGRATED_PASSWORD, new AttributeValue(getMigratedPassword()));
+        return attributes;
     }
 }

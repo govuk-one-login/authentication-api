@@ -6,6 +6,7 @@ import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -44,6 +45,8 @@ public interface AuthenticationService {
     void updateTermsAndConditions(String email, String version);
 
     void updateEmail(String currentEmail, String newEmail);
+
+    void updateEmail(String currentEmail, String newEmail, LocalDateTime updatedDateTime);
 
     void updatePassword(String email, String newPassword);
 

@@ -5,6 +5,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.Delete;
+import com.amazonaws.services.dynamodbv2.model.Put;
 
 import java.util.Map;
 
@@ -57,5 +58,9 @@ public class DynamoDBSchemaHelper {
         return new Delete()
                 .withTableName(getFullyQualifiedTableName(table))
                 .withKey(Map.of(table.getPrimaryKey(), attributeValue));
+    }
+
+    public Put buildPut(Table table, DynamoDBItem item) {
+        return new Put().withTableName(getFullyQualifiedTableName(table)).withItem(item.toItem());
     }
 }
