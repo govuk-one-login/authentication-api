@@ -64,33 +64,39 @@ class UserProfileTest {
         UserProfile userProfile = generateUserProfile();
         Map<String, AttributeValue> userProfileItem = userProfile.toItem();
 
-        assertThat(userProfileItem.get(UserProfile.EMAIL).getS(), equalTo(userProfile.getEmail()));
         assertThat(
-                userProfileItem.get(UserProfile.SUBJECT_ID).getS(),
+                userProfileItem.get(UserProfile.ATTRIBUTE_EMAIL).getS(),
+                equalTo(userProfile.getEmail()));
+        assertThat(
+                userProfileItem.get(UserProfile.ATTRIBUTE_SUBJECT_ID).getS(),
                 equalTo(userProfile.getSubjectID()));
         assertThat(
-                userProfileItem.get(UserProfile.EMAIL_VERIFIED).getN(),
+                userProfileItem.get(UserProfile.ATTRIBUTE_EMAIL_VERIFIED).getN(),
                 equalTo(userProfile.isEmailVerified() ? "1" : "0"));
         assertThat(
-                userProfileItem.get(UserProfile.PHONE_NUMBER).getS(),
+                userProfileItem.get(UserProfile.ATTRIBUTE_PHONE_NUMBER).getS(),
                 equalTo(userProfile.getPhoneNumber()));
         assertThat(
-                userProfileItem.get(UserProfile.PHONE_NUMBER_VERIFIED).getN(),
+                userProfileItem.get(UserProfile.ATTRIBUTE_PHONE_NUMBER_VERIFIED).getN(),
                 equalTo(userProfile.isPhoneNumberVerified() ? "1" : "0"));
         assertThat(
-                userProfileItem.get(UserProfile.CREATED).getS(), equalTo(userProfile.getCreated()));
+                userProfileItem.get(UserProfile.ATTRIBUTE_CREATED).getS(),
+                equalTo(userProfile.getCreated()));
         assertThat(
-                userProfileItem.get(UserProfile.UPDATED).getS(), equalTo(userProfile.getUpdated()));
+                userProfileItem.get(UserProfile.ATTRIBUTE_UPDATED).getS(),
+                equalTo(userProfile.getUpdated()));
         assertThat(
-                userProfileItem.get(UserProfile.TERMS_AND_CONDITIONS),
+                userProfileItem.get(UserProfile.ATTRIBUTE_TERMS_AND_CONDITIONS),
                 equalTo(userProfile.getTermsAndConditions().toAttributeValue()));
         compareClientConsentList(
-                userProfileItem.get(UserProfile.CLIENT_CONSENT).getL(),
+                userProfileItem.get(UserProfile.ATTRIBUTE_CLIENT_CONSENT).getL(),
                 userProfile.getClientConsent());
         assertThat(
-                userProfileItem.get(UserProfile.LEGACY_SUBJECT_ID).getS(),
+                userProfileItem.get(UserProfile.ATTRIBUTE_LEGACY_SUBJECT_ID).getS(),
                 equalTo(userProfile.getLegacySubjectID()));
-        assertThat(userProfileItem.get(UserProfile.SALT).getB(), equalTo(userProfile.getSalt()));
+        assertThat(
+                userProfileItem.get(UserProfile.ATTRIBUTE_SALT).getB(),
+                equalTo(userProfile.getSalt()));
     }
 
     private void compareClientConsentList(

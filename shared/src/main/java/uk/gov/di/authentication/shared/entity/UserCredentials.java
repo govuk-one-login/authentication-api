@@ -11,12 +11,12 @@ import java.util.Map;
 
 public class UserCredentials implements DynamoDBItem {
 
-    public static final String EMAIL = "Email";
-    public static final String SUBJECT_ID = "SubjectID";
-    public static final String PASSWORD = "Password";
-    public static final String CREATED = "Created";
-    public static final String UPDATED = "Updated";
-    public static final String MIGRATED_PASSWORD = "MigratedPassword";
+    public static final String ATTRIBUTE_EMAIL = "Email";
+    public static final String ATTRIBUTE_SUBJECT_ID = "SubjectID";
+    public static final String ATTRIBUTE_PASSWORD = "Password";
+    public static final String ATTRIBUTE_CREATED = "Created";
+    public static final String ATTRIBUTE_UPDATED = "Updated";
+    public static final String ATTRIBUTE_MIGRATED_PASSWORD = "MigratedPassword";
 
     private String email;
     private String subjectID;
@@ -27,7 +27,7 @@ public class UserCredentials implements DynamoDBItem {
 
     public UserCredentials() {}
 
-    @DynamoDBHashKey(attributeName = EMAIL)
+    @DynamoDBHashKey(attributeName = ATTRIBUTE_EMAIL)
     public String getEmail() {
         return email;
     }
@@ -37,7 +37,9 @@ public class UserCredentials implements DynamoDBItem {
         return this;
     }
 
-    @DynamoDBIndexHashKey(globalSecondaryIndexName = "SubjectIDIndex", attributeName = SUBJECT_ID)
+    @DynamoDBIndexHashKey(
+            globalSecondaryIndexName = "SubjectIDIndex",
+            attributeName = ATTRIBUTE_SUBJECT_ID)
     public String getSubjectID() {
         return subjectID;
     }
@@ -47,7 +49,7 @@ public class UserCredentials implements DynamoDBItem {
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = PASSWORD)
+    @DynamoDBAttribute(attributeName = ATTRIBUTE_PASSWORD)
     public String getPassword() {
         return password;
     }
@@ -57,7 +59,7 @@ public class UserCredentials implements DynamoDBItem {
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = CREATED)
+    @DynamoDBAttribute(attributeName = ATTRIBUTE_CREATED)
     public String getCreated() {
         return created;
     }
@@ -67,7 +69,7 @@ public class UserCredentials implements DynamoDBItem {
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = UPDATED)
+    @DynamoDBAttribute(attributeName = ATTRIBUTE_UPDATED)
     public String getUpdated() {
         return updated;
     }
@@ -77,7 +79,7 @@ public class UserCredentials implements DynamoDBItem {
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = MIGRATED_PASSWORD)
+    @DynamoDBAttribute(attributeName = ATTRIBUTE_MIGRATED_PASSWORD)
     public String getMigratedPassword() {
         return migratedPassword;
     }
@@ -90,13 +92,17 @@ public class UserCredentials implements DynamoDBItem {
     @Override
     public Map<String, AttributeValue> toItem() {
         Map<String, AttributeValue> attributes = new HashMap<>();
-        if (getEmail() != null) attributes.put(EMAIL, new AttributeValue(getEmail()));
-        if (getSubjectID() != null) attributes.put(SUBJECT_ID, new AttributeValue(getSubjectID()));
-        if (getPassword() != null) attributes.put(PASSWORD, new AttributeValue(getPassword()));
-        if (getCreated() != null) attributes.put(CREATED, new AttributeValue(getCreated()));
-        if (getUpdated() != null) attributes.put(UPDATED, new AttributeValue(getUpdated()));
+        if (getEmail() != null) attributes.put(ATTRIBUTE_EMAIL, new AttributeValue(getEmail()));
+        if (getSubjectID() != null)
+            attributes.put(ATTRIBUTE_SUBJECT_ID, new AttributeValue(getSubjectID()));
+        if (getPassword() != null)
+            attributes.put(ATTRIBUTE_PASSWORD, new AttributeValue(getPassword()));
+        if (getCreated() != null)
+            attributes.put(ATTRIBUTE_CREATED, new AttributeValue(getCreated()));
+        if (getUpdated() != null)
+            attributes.put(ATTRIBUTE_UPDATED, new AttributeValue(getUpdated()));
         if (getMigratedPassword() != null)
-            attributes.put(MIGRATED_PASSWORD, new AttributeValue(getMigratedPassword()));
+            attributes.put(ATTRIBUTE_MIGRATED_PASSWORD, new AttributeValue(getMigratedPassword()));
         return attributes;
     }
 }

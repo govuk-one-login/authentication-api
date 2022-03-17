@@ -41,22 +41,22 @@ class UserCredentialsTest {
         Map<String, AttributeValue> userCredentialsItem = userCredentials.toItem();
 
         assertThat(
-                userCredentialsItem.get(UserCredentials.EMAIL).getS(),
+                userCredentialsItem.get(UserCredentials.ATTRIBUTE_EMAIL).getS(),
                 equalTo(userCredentials.getEmail()));
         assertThat(
-                userCredentialsItem.get(UserCredentials.PASSWORD).getS(),
+                userCredentialsItem.get(UserCredentials.ATTRIBUTE_PASSWORD).getS(),
                 equalTo(userCredentials.getPassword()));
         assertThat(
-                userCredentialsItem.get(UserCredentials.MIGRATED_PASSWORD).getS(),
+                userCredentialsItem.get(UserCredentials.ATTRIBUTE_MIGRATED_PASSWORD).getS(),
                 equalTo(userCredentials.getMigratedPassword()));
         assertThat(
-                userCredentialsItem.get(UserCredentials.SUBJECT_ID).getS(),
+                userCredentialsItem.get(UserCredentials.ATTRIBUTE_SUBJECT_ID).getS(),
                 equalTo(userCredentials.getSubjectID()));
         assertThat(
-                userCredentialsItem.get(UserCredentials.CREATED).getS(),
+                userCredentialsItem.get(UserCredentials.ATTRIBUTE_CREATED).getS(),
                 equalTo(userCredentials.getCreated()));
         assertThat(
-                userCredentialsItem.get(UserCredentials.UPDATED).getS(),
+                userCredentialsItem.get(UserCredentials.ATTRIBUTE_UPDATED).getS(),
                 equalTo(userCredentials.getUpdated()));
     }
 
