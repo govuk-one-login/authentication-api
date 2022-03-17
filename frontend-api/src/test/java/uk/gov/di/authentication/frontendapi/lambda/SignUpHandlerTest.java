@@ -34,7 +34,6 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.shared.services.ValidationService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -65,7 +64,6 @@ class SignUpHandlerTest {
 
     private final Context context = mock(Context.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
-    private final ValidationService validationService = mock(ValidationService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
@@ -100,7 +98,6 @@ class SignUpHandlerTest {
                         clientSessionService,
                         clientService,
                         authenticationService,
-                        validationService,
                         auditService);
     }
 
@@ -118,7 +115,6 @@ class SignUpHandlerTest {
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
         headers.put("Session-Id", session.getSessionId());
-        when(validationService.validatePassword(eq(password))).thenReturn(Optional.empty());
         when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(false);
         when(clientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(generateClientRegistry(consentRequired)));
@@ -176,9 +172,6 @@ class SignUpHandlerTest {
 
     @Test
     void shouldReturn400IfSessionIdMissing() {
-        String password = "computer-1";
-        when(validationService.validatePassword(eq(password))).thenReturn(Optional.empty());
-
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"password\": \"computer-1\", \"email\": \"joe.bloggs@test.com\" }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -205,10 +198,6 @@ class SignUpHandlerTest {
 
     @Test
     void shouldReturn400IfPasswordFailsValidation() {
-        String password = "computer";
-        when(validationService.validatePassword(eq(password)))
-                .thenReturn(Optional.of(ErrorResponse.ERROR_1007));
-
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -223,15 +212,13 @@ class SignUpHandlerTest {
 
     @Test
     void shouldReturn400IfUserAlreadyExists() {
-        String password = "computer-1";
-        when(validationService.validatePassword(eq(password))).thenReturn(Optional.empty());
         when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(true);
 
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(Map.of("Session-Id", "a-session-id"));
-        event.setBody("{ \"password\": \"computer\", \"email\": \"joe.bloggs@test.com\" }");
+        event.setBody("{ \"password\": \"computer-1\", \"email\": \"joe.bloggs@test.com\" }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));

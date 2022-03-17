@@ -101,26 +101,6 @@ public class ValidationServiceTest {
     }
 
     @Test
-    void shouldRejectPasswordLessThan8Characters() {
-        var shortPassword = "passw0r";
-
-        assertEquals(
-                Optional.of(ErrorResponse.ERROR_1006),
-                validationService.validatePassword(shortPassword));
-    }
-
-    @Test
-    void shouldRejectEmptyPassword() {
-        assertEquals(Optional.of(ErrorResponse.ERROR_1005), validationService.validatePassword(""));
-    }
-
-    @Test
-    void shouldNotThrowNullPointerIfPasswordInputsAreNull() {
-        assertEquals(
-                Optional.of(ErrorResponse.ERROR_1005), validationService.validatePassword(null));
-    }
-
-    @Test
     void shouldReturnNoErrorWhenPhoneCodeMatchesStored() {
         assertEquals(
                 Optional.empty(),

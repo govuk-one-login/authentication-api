@@ -2,6 +2,7 @@ package uk.gov.di.authentication.shared.helpers;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 
@@ -48,5 +49,28 @@ class ValidationHelperTest {
     @Test
     void shouldAcceptValidBritishPhoneNumbers() {
         assertThat(ValidationHelper.validatePhoneNumber("07911123456"), equalTo(Optional.empty()));
+    }
+
+    private static Stream<Arguments> invalidPasswords() {
+        return Stream.of(
+                Arguments.of("", ErrorResponse.ERROR_1005),
+                Arguments.of(null, ErrorResponse.ERROR_1005),
+                Arguments.of("passw0r", ErrorResponse.ERROR_1006));
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidPasswords")
+    void shouldRejectInvalidPasswords(String password, ErrorResponse expectedResponse) {
+        assertEquals(Optional.of(expectedResponse), ValidationHelper.validatePassword(password));
+    }
+
+    private static Stream<String> validPasswords() {
+        return Stream.of("+pa?55worD", "computer-1", "passsssssssssssswwwwoooordddd-2");
+    }
+
+    @ParameterizedTest
+    @MethodSource("validPasswords")
+    void shouldAcceptValidPassword(String password) {
+        assertEquals(Optional.empty(), ValidationHelper.validatePassword(password));
     }
 }
