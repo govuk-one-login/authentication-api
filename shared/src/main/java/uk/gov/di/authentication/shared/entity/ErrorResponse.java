@@ -26,7 +26,7 @@ public enum ErrorResponse {
     ERROR_1018(1018, "Client-Session-Id is missing or invalid"),
     ERROR_1019(1019, "Email addresses are the same"),
     ERROR_1020(1020, "Invalid OTP code"),
-    ERROR_1021(1021, "Invalid Password reset code"),
+    ERROR_1021(1021, "User entered invalid password reset code"),
     ERROR_1022(1022, "User has requested too many password resets"),
     ERROR_1023(1023, "User cannot request another password reset"),
     ERROR_1024(1024, "New password cannot be the same as current password"),
@@ -43,7 +43,8 @@ public enum ErrorResponse {
     ERROR_1035(1035, "User entered invalid mfa code"),
     ERROR_1036(1036, "User entered invalid email verification code"),
     ERROR_1037(1037, "User entered invalid phone verification code"),
-    ERROR_1038(1038, "Invalid Authentication Request");
+    ERROR_1038(1038, "Invalid Authentication Request"),
+    ERROR_1039(1039, "User entered invalid password reset code too many times");
 
     @JsonProperty("code")
     private int code;

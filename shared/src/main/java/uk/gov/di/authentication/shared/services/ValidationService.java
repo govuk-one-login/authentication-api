@@ -70,6 +70,7 @@ public class ValidationService {
                 case MFA_SMS:
                 case VERIFY_EMAIL:
                 case VERIFY_PHONE_NUMBER:
+                case RESET_PASSWORD_WITH_CODE:
                     return Optional.empty();
             }
             return Optional.of(ErrorResponse.ERROR_1002);
@@ -85,6 +86,8 @@ public class ValidationService {
                     return Optional.of(ErrorResponse.ERROR_1033);
                 case VERIFY_PHONE_NUMBER:
                     return Optional.of(ErrorResponse.ERROR_1034);
+                case RESET_PASSWORD_WITH_CODE:
+                    return Optional.of(ErrorResponse.ERROR_1039);
             }
         }
 
@@ -95,6 +98,8 @@ public class ValidationService {
                 return Optional.of(ErrorResponse.ERROR_1036);
             case VERIFY_PHONE_NUMBER:
                 return Optional.of(ErrorResponse.ERROR_1037);
+            case RESET_PASSWORD_WITH_CODE:
+                return Optional.of(ErrorResponse.ERROR_1021);
         }
         return Optional.of(ErrorResponse.ERROR_1002);
     }
