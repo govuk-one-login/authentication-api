@@ -145,32 +145,4 @@ class UpdatePhoneNumberHandlerTest {
         assertThat(result, hasBody(expectedResponse));
         verifyNoInteractions(auditService);
     }
-
-    @Test
-    public void shouldReturn400AndNotUpdatePhoneNumberWhenPhoneNumberIsInvalid()
-            throws JsonProcessingException {
-        when(dynamoService.getSubjectFromEmail(EMAIL_ADDRESS)).thenReturn(SUBJECT);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody(
-                format(
-                        "{\"email\": \"%s\", \"phoneNumber\": \"%s\", \"otp\": \"%s\"  }",
-                        EMAIL_ADDRESS, INVALID_PHONE_NUMBER, OTP));
-        APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
-                new APIGatewayProxyRequestEvent.ProxyRequestContext();
-        Map<String, Object> authorizerParams = new HashMap<>();
-        authorizerParams.put("principalId", SUBJECT.getValue());
-        proxyRequestContext.setAuthorizer(authorizerParams);
-        event.setRequestContext(proxyRequestContext);
-        when(codeStorageService.isValidOtpCode(EMAIL_ADDRESS, OTP, VERIFY_PHONE_NUMBER))
-                .thenReturn(true);
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(400));
-        verify(dynamoService, times(0)).updatePhoneNumber(EMAIL_ADDRESS, INVALID_PHONE_NUMBER);
-        NotifyRequest notifyRequest = new NotifyRequest(INVALID_PHONE_NUMBER, PHONE_NUMBER_UPDATED);
-        verify(sqsClient, times(0)).send(new ObjectMapper().writeValueAsString(notifyRequest));
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1012);
-        assertThat(result, hasBody(expectedResponse));
-        verifyNoInteractions(auditService);
-    }
 }

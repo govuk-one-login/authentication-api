@@ -119,27 +119,6 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     }
 
     @Test
-    void shouldReturn400WhenPhoneNumberIsInvalid() {
-        String publicSubjectID = userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
-        String otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 300);
-        String badPhoneNumber = "This is not a valid phone number";
-
-        var response =
-                makeRequest(
-                        Optional.of(new UpdatePhoneNumberRequest(TEST_EMAIL, badPhoneNumber, otp)),
-                        Collections.emptyMap(),
-                        Collections.emptyMap(),
-                        Collections.emptyMap(),
-                        Map.of("principalId", publicSubjectID));
-
-        assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
-
-        assertNoNotificationsReceived(notificationsQueue);
-
-        assertNoAuditEventsReceived(auditTopic);
-    }
-
-    @Test
     void shouldThrowExceptionWhenUserAttemptsToUpdateDifferentAccount() {
         userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
         String otherSubjectID =
