@@ -21,11 +21,11 @@ import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
+import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.ValidationService;
 
 import java.util.Map;
 import java.util.Optional;
@@ -42,7 +42,6 @@ public class UpdateEmailHandler
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final DynamoService dynamoService;
     private final AwsSqsClient sqsClient;
-    private final ValidationService validationService;
     private final CodeStorageService codeStorageService;
     private static final Logger LOG = LogManager.getLogger(UpdateEmailHandler.class);
     private final AuditService auditService;
@@ -54,12 +53,10 @@ public class UpdateEmailHandler
     public UpdateEmailHandler(
             DynamoService dynamoService,
             AwsSqsClient sqsClient,
-            ValidationService validationService,
             CodeStorageService codeStorageService,
             AuditService auditService) {
         this.dynamoService = dynamoService;
         this.sqsClient = sqsClient;
-        this.validationService = validationService;
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
     }
@@ -71,7 +68,6 @@ public class UpdateEmailHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
-        this.validationService = new ValidationService();
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
         this.auditService = new AuditService(configurationService);
@@ -102,7 +98,7 @@ public class UpdateEmailHandler
                                             400, ErrorResponse.ERROR_1020);
                                 }
                                 Optional<ErrorResponse> emailValidationErrors =
-                                        validationService.validateEmailAddressUpdate(
+                                        ValidationHelper.validateEmailAddressUpdate(
                                                 updateInfoRequest.getExistingEmailAddress(),
                                                 updateInfoRequest.getReplacementEmailAddress());
                                 if (emailValidationErrors.isPresent()) {

@@ -18,11 +18,9 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.ValidationService;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -43,7 +41,6 @@ class UpdateEmailHandlerTest {
     private final Context context = mock(Context.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
-    private final ValidationService validationService = mock(ValidationService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private UpdateEmailHandler handler;
     private static final String EXISTING_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
@@ -54,18 +51,13 @@ class UpdateEmailHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         handler =
-                new UpdateEmailHandler(
-                        dynamoService,
-                        sqsClient,
-                        validationService,
-                        codeStorageService,
-                        auditService);
+                new UpdateEmailHandler(dynamoService, sqsClient, codeStorageService, auditService);
     }
 
     @Test
-    public void shouldReturn204ForValidUpdateEmailRequest() throws JsonProcessingException {
+    void shouldReturn204ForValidUpdateEmailRequest() throws JsonProcessingException {
         String persistentIdValue = "some-persistent-session-id";
         UserProfile userProfile = new UserProfile().setPublicSubjectID(SUBJECT.getValue());
         when(dynamoService.getUserProfileByEmail(EXISTING_EMAIL_ADDRESS)).thenReturn(userProfile);
@@ -84,9 +76,6 @@ class UpdateEmailHandlerTest {
         event.setRequestContext(proxyRequestContext);
         when(codeStorageService.isValidOtpCode(NEW_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
                 .thenReturn(true);
-        when(validationService.validateEmailAddressUpdate(
-                        EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS))
-                .thenReturn(Optional.empty());
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -109,7 +98,7 @@ class UpdateEmailHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenReplacementEmailAlreadyExists() throws JsonProcessingException {
+    void shouldReturn400WhenReplacementEmailAlreadyExists() throws JsonProcessingException {
         when(dynamoService.getSubjectFromEmail(EXISTING_EMAIL_ADDRESS)).thenReturn(SUBJECT);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
@@ -124,9 +113,6 @@ class UpdateEmailHandlerTest {
         event.setRequestContext(proxyRequestContext);
         when(codeStorageService.isValidOtpCode(NEW_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
                 .thenReturn(true);
-        when(validationService.validateEmailAddressUpdate(
-                        EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS))
-                .thenReturn(Optional.empty());
         when(dynamoService.userExists(NEW_EMAIL_ADDRESS)).thenReturn(true);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -139,7 +125,7 @@ class UpdateEmailHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenRequestIsMissingParameters() {
+    void shouldReturn400WhenRequestIsMissingParameters() {
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
                 new APIGatewayProxyRequestEvent.ProxyRequestContext();
         Map<String, Object> authorizerParams = new HashMap<>();
@@ -181,8 +167,7 @@ class UpdateEmailHandlerTest {
     }
 
     @Test
-    public void shouldReturn400AndNotUpdateEmailWhenEmailIsInvalid()
-            throws JsonProcessingException {
+    void shouldReturn400AndNotUpdateEmailWhenEmailIsInvalid() throws JsonProcessingException {
         when(dynamoService.getSubjectFromEmail(EXISTING_EMAIL_ADDRESS)).thenReturn(SUBJECT);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
@@ -197,9 +182,6 @@ class UpdateEmailHandlerTest {
         event.setRequestContext(proxyRequestContext);
         when(codeStorageService.isValidOtpCode(INVALID_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
                 .thenReturn(true);
-        when(validationService.validateEmailAddressUpdate(
-                        EXISTING_EMAIL_ADDRESS, INVALID_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(ErrorResponse.ERROR_1004));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -211,7 +193,7 @@ class UpdateEmailHandlerTest {
     }
 
     @Test
-    public void shouldFormatAllEmailsToLowerCase() {
+    void shouldFormatAllEmailsToLowerCase() {
         final UpdateEmailRequest updateEmailRequest =
                 new UpdateEmailRequest(
                         "Joe.Bloggs@digital.cabinet-office.gov.uk",

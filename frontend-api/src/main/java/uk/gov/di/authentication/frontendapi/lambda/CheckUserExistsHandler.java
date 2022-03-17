@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -22,7 +23,6 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.shared.services.ValidationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
@@ -40,7 +40,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
     private static final Logger LOG = LogManager.getLogger(CheckUserExistsHandler.class);
 
-    private final ValidationService validationService;
     private final AuditService auditService;
 
     public CheckUserExistsHandler(
@@ -49,7 +48,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
-            ValidationService validationService,
             AuditService auditService) {
         super(
                 CheckUserExistsRequest.class,
@@ -58,7 +56,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 clientSessionService,
                 clientService,
                 authenticationService);
-        this.validationService = validationService;
         this.auditService = auditService;
     }
 
@@ -68,7 +65,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
     public CheckUserExistsHandler(ConfigurationService configurationService) {
         super(CheckUserExistsRequest.class, configurationService);
-        this.validationService = new ValidationService();
         this.auditService = new AuditService(configurationService);
     }
 
@@ -91,7 +87,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
             String emailAddress = request.getEmail().toLowerCase();
             Optional<ErrorResponse> errorResponse =
-                    validationService.validateEmailAddress(emailAddress);
+                    ValidationHelper.validateEmailAddress(emailAddress);
             String persistentSessionId =
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
             if (errorResponse.isPresent()) {
