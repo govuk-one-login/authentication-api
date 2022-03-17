@@ -139,7 +139,7 @@ public class ValidationServiceTest {
                         NO_CODE_STORED),
                 arguments(
                         RESET_PASSWORD_WITH_CODE,
-                        Optional.of(ErrorResponse.ERROR_1039),
+                        Optional.of(ErrorResponse.ERROR_1021),
                         VALID_CODE,
                         0,
                         NO_CODE_STORED),
@@ -163,7 +163,7 @@ public class ValidationServiceTest {
                         STORED_VALID_CODE),
                 arguments(
                         RESET_PASSWORD_WITH_CODE,
-                        Optional.of(ErrorResponse.ERROR_1039),
+                        Optional.of(ErrorResponse.ERROR_1021),
                         INVALID_CODE,
                         1,
                         STORED_VALID_CODE),
@@ -187,7 +187,7 @@ public class ValidationServiceTest {
                         STORED_VALID_CODE),
                 arguments(
                         RESET_PASSWORD_WITH_CODE,
-                        Optional.of(ErrorResponse.ERROR_1040),
+                        Optional.of(ErrorResponse.ERROR_1039),
                         INVALID_CODE,
                         6,
                         STORED_VALID_CODE));

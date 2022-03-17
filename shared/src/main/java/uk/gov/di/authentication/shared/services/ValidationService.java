@@ -87,7 +87,7 @@ public class ValidationService {
                 case VERIFY_PHONE_NUMBER:
                     return Optional.of(ErrorResponse.ERROR_1034);
                 case RESET_PASSWORD_WITH_CODE:
-                    return Optional.of(ErrorResponse.ERROR_1040);
+                    return Optional.of(ErrorResponse.ERROR_1039);
             }
         }
 
@@ -99,7 +99,7 @@ public class ValidationService {
             case VERIFY_PHONE_NUMBER:
                 return Optional.of(ErrorResponse.ERROR_1037);
             case RESET_PASSWORD_WITH_CODE:
-                return Optional.of(ErrorResponse.ERROR_1039);
+                return Optional.of(ErrorResponse.ERROR_1021);
         }
         return Optional.of(ErrorResponse.ERROR_1002);
     }
