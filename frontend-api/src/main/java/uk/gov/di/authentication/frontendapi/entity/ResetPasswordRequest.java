@@ -4,10 +4,17 @@ import uk.gov.di.authentication.shared.entity.BaseFrontendRequest;
 
 public class ResetPasswordRequest extends BaseFrontendRequest {
 
+    private boolean useCodeFlow = false;
+
     public ResetPasswordRequest() {}
 
-    public ResetPasswordRequest(String email) {
+    public ResetPasswordRequest(String email, boolean useCodeFlow) {
         this.email = email;
+        this.useCodeFlow = useCodeFlow;
+    }
+
+    public boolean isUseCodeFlow() {
+        return useCodeFlow;
     }
 
     @Override
