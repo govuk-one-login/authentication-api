@@ -8,7 +8,6 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
 import com.amazonaws.services.dynamodbv2.datamodeling.QueryResultPage;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.Delete;
-import com.amazonaws.services.dynamodbv2.model.Put;
 import com.amazonaws.services.dynamodbv2.model.TransactWriteItem;
 import com.amazonaws.services.dynamodbv2.model.TransactWriteItemsRequest;
 import com.nimbusds.oauth2.sdk.id.Subject;
@@ -24,7 +23,6 @@ import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -161,43 +159,19 @@ public class DynamoService implements AuthenticationService {
 
     @Override
     public void updateEmail(String currentEmail, String newEmail) {
-        updateEmail(currentEmail, newEmail, LocalDateTime.now(ZoneId.of("UTC")));
-    }
-
-    @Override
-    public void updateEmail(String currentEmail, String newEmail, LocalDateTime updatedDateTime) {
-        UserProfile userProfile =
+        userProfileMapper.save(
                 userProfileMapper
                         .load(UserProfile.class, currentEmail)
-                        .setEmail(newEmail.toLowerCase(Locale.ROOT))
-                        .setUpdated(updatedDateTime.toString());
-        UserCredentials userCredentials =
+                        .setEmail(newEmail.toLowerCase(Locale.ROOT)));
+        userProfileMapper.delete(
+                userProfileMapper.load(UserProfile.class, currentEmail.toLowerCase(Locale.ROOT)));
+        userCredentialsMapper.save(
                 userCredentialsMapper
                         .load(UserCredentials.class, currentEmail)
-                        .setEmail(newEmail.toLowerCase(Locale.ROOT))
-                        .setUpdated(updatedDateTime.toString());
-
-        Put userProfilePut = dynamoDBSchemaHelper.buildPut(USER_PROFILE_TABLE, userProfile);
-        Put userCredentialsPut =
-                dynamoDBSchemaHelper.buildPut(USER_CREDENTIALS_TABLE, userCredentials);
-        Delete userProfileDelete =
-                dynamoDBSchemaHelper.buildDelete(
-                        USER_PROFILE_TABLE,
-                        new AttributeValue(currentEmail.toLowerCase(Locale.ROOT)));
-        Delete userCredentialsDelete =
-                dynamoDBSchemaHelper.buildDelete(
-                        USER_CREDENTIALS_TABLE,
-                        new AttributeValue(currentEmail.toLowerCase(Locale.ROOT)));
-
-        dynamoDB.transactWriteItems(
-                new TransactWriteItemsRequest()
-                        .withTransactItems(
-                                Arrays.asList(
-                                        new TransactWriteItem().withPut(userProfilePut),
-                                        new TransactWriteItem().withPut(userCredentialsPut),
-                                        new TransactWriteItem().withDelete(userProfileDelete),
-                                        new TransactWriteItem()
-                                                .withDelete(userCredentialsDelete))));
+                        .setEmail(newEmail.toLowerCase(Locale.ROOT)));
+        userCredentialsMapper.delete(
+                userCredentialsMapper.load(
+                        UserCredentials.class, currentEmail.toLowerCase(Locale.ROOT)));
     }
 
     @Override

@@ -249,12 +249,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
         ClientConsent clientConsentToUpdate =
                 clientConsentForClientId
-                        .map(
-                                t ->
-                                        t.setClaims(claimsConsented)
-                                                .setUpdatedTimestamp(
-                                                        LocalDateTime.now(ZoneId.of("UTC"))
-                                                                .toString()))
+                        .map(t -> t.setClaims(claimsConsented))
                         .orElse(
                                 new ClientConsent(
                                         clientId,
