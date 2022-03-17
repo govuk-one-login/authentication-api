@@ -1,5 +1,6 @@
 package uk.gov.di.accountmanagement.api;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import org.apache.http.HttpStatus;
@@ -120,5 +121,27 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                 List.of(new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER)));
 
         assertEventTypesReceived(auditTopic, List.of(SEND_OTP));
+    }
+
+    @Test
+    void shouldReturn400WhenPhoneNumberIsInvalid() throws JsonProcessingException {
+        String badPhoneNumber = "This is not a valid phone number";
+
+        var response =
+                makeRequest(
+                        Optional.of(
+                                new SendNotificationRequest(
+                                        TEST_EMAIL, VERIFY_PHONE_NUMBER, badPhoneNumber)),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Collections.emptyMap());
+
+        assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
+        assertThat(
+                response, hasBody(new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1012)));
+
+        NotificationAssertionHelper.assertNoNotificationsReceived(notificationsQueue);
+
+        assertNoAuditEventsReceived(auditTopic);
     }
 }

@@ -21,14 +21,12 @@ import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
-import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 
 import java.util.Map;
-import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -96,13 +94,6 @@ public class UpdatePhoneNumberHandler
                                 if (!isValidOtpCode) {
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1020);
-                                }
-                                Optional<ErrorResponse> phoneValidationErrors =
-                                        ValidationHelper.validatePhoneNumber(
-                                                updatePhoneNumberRequest.getPhoneNumber());
-                                if (phoneValidationErrors.isPresent()) {
-                                    return generateApiGatewayProxyErrorResponse(
-                                            400, phoneValidationErrors.get());
                                 }
                                 UserProfile userProfile =
                                         dynamoService.getUserProfileByEmail(

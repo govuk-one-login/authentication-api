@@ -24,7 +24,6 @@ import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.ValidationService;
 
 import java.util.Optional;
 
@@ -44,7 +43,6 @@ public class SendOtpNotificationHandler
     private static final Logger LOG = LogManager.getLogger(SendOtpNotificationHandler.class);
 
     private final ConfigurationService configurationService;
-    private final ValidationService validationService;
     private final AwsSqsClient sqsClient;
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
@@ -54,14 +52,12 @@ public class SendOtpNotificationHandler
 
     public SendOtpNotificationHandler(
             ConfigurationService configurationService,
-            ValidationService validationService,
             AwsSqsClient sqsClient,
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService,
             DynamoService dynamoService,
             AuditService auditService) {
         this.configurationService = configurationService;
-        this.validationService = validationService;
         this.sqsClient = sqsClient;
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
@@ -76,7 +72,6 @@ public class SendOtpNotificationHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
-        this.validationService = new ValidationService();
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
@@ -107,7 +102,7 @@ public class SendOtpNotificationHandler
                                     case VERIFY_EMAIL:
                                         LOG.info("NotificationType is VERIFY_EMAIL");
                                         Optional<ErrorResponse> emailErrorResponse =
-                                                validationService.validateEmailAddress(
+                                                ValidationHelper.validateEmailAddress(
                                                         sendNotificationRequest.getEmail());
                                         if (emailErrorResponse.isPresent()) {
                                             return generateApiGatewayProxyErrorResponse(

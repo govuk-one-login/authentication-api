@@ -20,10 +20,8 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.ValidationService;
 
 import java.util.Map;
-import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -50,7 +48,6 @@ class SendOtpNotificationHandlerTest {
     private static final String TEST_SIX_DIGIT_CODE = "123456";
     private static final String TEST_PHONE_NUMBER = "07755551084";
     private static final long CODE_EXPIRY_TIME = 900;
-    private final ValidationService validationService = mock(ValidationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
@@ -62,7 +59,6 @@ class SendOtpNotificationHandlerTest {
     private final SendOtpNotificationHandler handler =
             new SendOtpNotificationHandler(
                     configurationService,
-                    validationService,
                     awsSqsClient,
                     codeGeneratorService,
                     codeStorageService,
@@ -78,8 +74,6 @@ class SendOtpNotificationHandlerTest {
     @Test
     void shouldReturn204AndPutMessageOnQueueForAValidEmailRequest() throws JsonProcessingException {
         String persistentIdValue = "some-persistent-session-id";
-        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
-                .thenReturn(Optional.empty());
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_SIX_DIGIT_CODE);
         ObjectMapper objectMapper = new ObjectMapper();
@@ -156,7 +150,7 @@ class SendOtpNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfRequestIsMissingEmail() {
+    void shouldReturn400IfRequestIsMissingEmail() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of());
         event.setBody("{ }");
@@ -169,11 +163,7 @@ class SendOtpNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfEmailAddressIsInvalid() {
-
-        when(validationService.validateEmailAddress(eq("joe.bloggs")))
-                .thenReturn(Optional.of(ErrorResponse.ERROR_1004));
-
+    void shouldReturn400IfEmailAddressIsInvalid() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of());
         event.setBody(
@@ -190,7 +180,7 @@ class SendOtpNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfPhoneNumberIsInvalid() {
+    void shouldReturn400IfPhoneNumberIsInvalid() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of());
         event.setBody(
@@ -207,9 +197,7 @@ class SendOtpNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn500IfMessageCannotBeSentToQueue() throws JsonProcessingException {
-        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
-                .thenReturn(Optional.empty());
+    void shouldReturn500IfMessageCannotBeSentToQueue() throws JsonProcessingException {
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_SIX_DIGIT_CODE);
         ObjectMapper objectMapper = new ObjectMapper();
@@ -231,10 +219,7 @@ class SendOtpNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenInvalidNotificationType() {
-        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
-                .thenReturn(Optional.empty());
-
+    void shouldReturn400WhenInvalidNotificationType() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of());
         event.setBody(
@@ -254,9 +239,7 @@ class SendOtpNotificationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenAccountAlreadyExistsWithGivenEmail() {
-        when(validationService.validateEmailAddress(eq(TEST_EMAIL_ADDRESS)))
-                .thenReturn(Optional.empty());
+    void shouldReturn400WhenAccountAlreadyExistsWithGivenEmail() {
         when(dynamoService.userExists(eq(TEST_EMAIL_ADDRESS))).thenReturn(true);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();

@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ValidationHelperTest {
 
@@ -72,5 +73,110 @@ class ValidationHelperTest {
     @MethodSource("validPasswords")
     void shouldAcceptValidPassword(String password) {
         assertEquals(Optional.empty(), ValidationHelper.validatePassword(password));
+    }
+
+    private static Stream<String> blankEmailAddresses() {
+        return Stream.of("", "  ", "\t\t", System.lineSeparator() + System.lineSeparator(), null);
+    }
+
+    @ParameterizedTest
+    @MethodSource("blankEmailAddresses")
+    void shouldRejectBlankEmail(String emailAddress) {
+
+        assertEquals(
+                Optional.of(ErrorResponse.ERROR_1003),
+                ValidationHelper.validateEmailAddress(emailAddress));
+    }
+
+    private static Stream<String> invalidEmailAddresses() {
+        return Stream.of(
+                "test.example.gov.uk",
+                "test@example@gov.uk",
+                "test@examplegovuk",
+                "testµ@example.gov.uk",
+                "email@123.123.123.123",
+                "email@[123.123.123.123]",
+                "plainaddress",
+                "@no-local-part.com",
+                "Outlook Contact <outlook-contact@domain.com>",
+                "no-at.domain.com",
+                "no-tld@domain",
+                ";beginning-semicolon@domain.co.uk",
+                "middle-semicolon@domain.co;uk",
+                "trailing-semicolon@domain.com;",
+                "\"email+leading-quotes@domain.com",
+                "email+middle\"-quotes@domain.com",
+                "quoted-local-part\"@domain.com",
+                "\"quoted@domain.com\"",
+                "lots-of-dots@domain..gov..uk",
+                "two-dots..in-local@domain.com",
+                "multiple@domains@domain.com",
+                "spaces in local@domain.com",
+                "spaces-in-domain@dom ain.com",
+                "underscores-in-domain@dom_ain.com",
+                "pipe-in-domain@example.com|gov.uk",
+                "comma,in-local@gov.uk",
+                "comma-in-domain@domain,gov.uk",
+                "pound-sign-in-local£@domain.com",
+                "local-with-’-apostrophe@domain.com",
+                "local-with-”-quotes@domain.com",
+                "domain-starts-with-a-dot@.domain.com",
+                "brackets(in)local@domain.com",
+                "incorrect-punycode@xn---something.com");
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidEmailAddresses")
+    void shouldRejectMalformattedEmail(String emailAddress) {
+
+        assertEquals(
+                Optional.of(ErrorResponse.ERROR_1004),
+                ValidationHelper.validateEmailAddress(emailAddress));
+    }
+
+    private static Stream<String> validEmailAddresses() {
+        return Stream.of(
+                "test@example.gov.uk",
+                "test@example.com",
+                "test@example.info",
+                "email@domain.com",
+                "email@domain.COM",
+                "firstname.lastname@domain.com",
+                "firstname.o\'lastname@domain.com",
+                "email@subdomain.domain.com",
+                "firstname+lastname@domain.com");
+    }
+
+    @ParameterizedTest
+    @MethodSource("validEmailAddresses")
+    void shouldAcceptValidEmail(String emailAddress) {
+
+        assertTrue(ValidationHelper.validateEmailAddress(emailAddress).isEmpty());
+    }
+
+    @Test
+    void shouldReturnErrorWhenEmailAddressesAreTheSame() {
+        String email = "joe.bloggs@digital.cabinet-office.gov.uk";
+        assertEquals(
+                Optional.of(ErrorResponse.ERROR_1019),
+                ValidationHelper.validateEmailAddressUpdate(email, email));
+    }
+
+    @Test
+    void shouldReturnErrorWhenExistingEmailIsInvalid() {
+        String existingEmail = "joe.bloggs";
+        String replacementEmail = "joe.bloggs@digital.cabinet-office.gov.uk";
+        assertEquals(
+                Optional.of(ErrorResponse.ERROR_1004),
+                ValidationHelper.validateEmailAddressUpdate(existingEmail, replacementEmail));
+    }
+
+    @Test
+    void shouldReturnErrorWhenReplacementEmailIsInvalid() {
+        String existingEmail = "joe.bloggs@digital.cabinet-office.gov.uk";
+        String replacementEmail = "joe.bloggs";
+        assertEquals(
+                Optional.of(ErrorResponse.ERROR_1004),
+                ValidationHelper.validateEmailAddressUpdate(existingEmail, replacementEmail));
     }
 }
