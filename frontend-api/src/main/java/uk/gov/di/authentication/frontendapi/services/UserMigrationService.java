@@ -25,20 +25,9 @@ public class UserMigrationService {
         this.configurationService = configurationService;
     }
 
-    public boolean userHasBeenPartlyMigrated(String legacySubjectId, String email) {
-        UserCredentials userCredentials = authenticationService.getUserCredentialsFromEmail(email);
-        return userHasBeenPartlyMigrated(legacySubjectId, userCredentials);
-    }
-
     public boolean userHasBeenPartlyMigrated(
             String legacySubjectId, UserCredentials userCredentials) {
         return Objects.nonNull(legacySubjectId) && Objects.isNull(userCredentials.getPassword());
-    }
-
-    public boolean processMigratedUser(String email, String inputPassword) {
-        UserCredentials userCredentials = authenticationService.getUserCredentialsFromEmail(email);
-
-        return processMigratedUser(userCredentials, inputPassword);
     }
 
     public boolean processMigratedUser(UserCredentials userCredentials, String inputPassword) {
