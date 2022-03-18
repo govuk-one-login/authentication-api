@@ -14,7 +14,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.mockito.ArgumentMatcher;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -30,8 +29,6 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.shared.services.ValidationService;
-import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -44,8 +41,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -65,6 +60,7 @@ class VerifyCodeHandlerTest {
 
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final String CODE = "123456";
+    private static final String INVALID_CODE = "6543221";
     private static final String CLIENT_ID = "client-id";
     private static final String TEST_CLIENT_ID = "test-client-id";
     private static final String TEST_CLIENT_CODE = "654321";
@@ -78,7 +74,6 @@ class VerifyCodeHandlerTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final ValidationService validationService = mock(ValidationService.class);
     private final UserProfile userProfile = mock(UserProfile.class);
     private final Session session = new Session("session-id").setEmailAddress(TEST_EMAIL_ADDRESS);
     private final Session testClientSession =
@@ -129,7 +124,6 @@ class VerifyCodeHandlerTest {
                         clientService,
                         authenticationService,
                         codeStorageService,
-                        validationService,
                         auditService,
                         cloudwatchMetricsService);
 
@@ -139,13 +133,11 @@ class VerifyCodeHandlerTest {
         when(authenticationService.getUserProfileFromEmail(TEST_CLIENT_EMAIL))
                 .thenReturn(Optional.of(userProfile));
 
+        when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
+
         when(userProfile.getSubjectID()).thenReturn("test-subject-id");
 
         when(configurationService.getEnvironment()).thenReturn("unit-test");
-    }
-
-    private ArgumentMatcher<UserContext> isContextWithUserProfile(UserProfile userProfile) {
-        return userContext -> userContext.getUserProfile().filter(userProfile::equals).isPresent();
     }
 
     @Test
@@ -153,13 +145,6 @@ class VerifyCodeHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
                 .thenReturn(Optional.of(CODE));
-        when(validationService.validateVerificationCode(
-                        eq(VERIFY_EMAIL),
-                        eq(Optional.of(CODE)),
-                        eq(CODE),
-                        any(Session.class),
-                        eq(5)))
-                .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, VERIFY_EMAIL.toString());
 
         verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL);
@@ -182,14 +167,6 @@ class VerifyCodeHandlerTest {
     @Test
     void shouldReturn204ForValidVerifyPhoneNumberRequest() {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
-
-        when(validationService.validateVerificationCode(
-                        eq(VERIFY_PHONE_NUMBER),
-                        eq(Optional.of(CODE)),
-                        eq(CODE),
-                        any(Session.class),
-                        eq(5)))
-                .thenReturn(Optional.empty());
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(CODE));
 
@@ -224,15 +201,9 @@ class VerifyCodeHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
                 .thenReturn(Optional.of(CODE));
-        when(validationService.validateVerificationCode(
-                        eq(VERIFY_EMAIL),
-                        eq(Optional.of(CODE)),
-                        eq("123457"),
-                        any(Session.class),
-                        eq(5)))
-                .thenReturn(Optional.of(ErrorResponse.ERROR_1036));
 
-        APIGatewayProxyResponseEvent result = makeCallWithCode("123457", VERIFY_EMAIL.toString());
+        APIGatewayProxyResponseEvent result =
+                makeCallWithCode(INVALID_CODE, VERIFY_EMAIL.toString());
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1036));
@@ -241,19 +212,11 @@ class VerifyCodeHandlerTest {
     @Test
     void shouldReturnPhoneNumberCodeNotValidStateIfRequestCodeDoesNotMatchStoredCode() {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
-
-        when(validationService.validateVerificationCode(
-                        eq(VERIFY_PHONE_NUMBER),
-                        eq(Optional.of(CODE)),
-                        eq(CODE),
-                        any(Session.class),
-                        eq(5)))
-                .thenReturn(Optional.of(ErrorResponse.ERROR_1037));
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(CODE));
 
         APIGatewayProxyResponseEvent result =
-                makeCallWithCode(CODE, VERIFY_PHONE_NUMBER.toString());
+                makeCallWithCode(INVALID_CODE, VERIFY_PHONE_NUMBER.toString());
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1037));
@@ -277,7 +240,7 @@ class VerifyCodeHandlerTest {
     @Test
     void shouldReturn400IfSessionIdIsInvalid() {
         APIGatewayProxyResponseEvent result =
-                makeCallWithCode("123456", VERIFY_EMAIL.toString(), Optional.empty(), CLIENT_ID);
+                makeCallWithCode(CODE, VERIFY_EMAIL.toString(), Optional.empty(), CLIENT_ID);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
@@ -293,23 +256,14 @@ class VerifyCodeHandlerTest {
 
     @Test
     void shouldUpdateRedisWhenUserHasReachedMaxPhoneNumberCodeAttempts() {
-        final String USER_INPUT = "123456";
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
+        when(configurationService.getCodeMaxRetries()).thenReturn(0);
         when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
 
-        when(validationService.validateVerificationCode(
-                        eq(VERIFY_PHONE_NUMBER),
-                        eq(Optional.of(CODE)),
-                        eq(USER_INPUT),
-                        any(Session.class),
-                        eq(5)))
-                .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(CODE));
 
         APIGatewayProxyResponseEvent result =
-                makeCallWithCode(USER_INPUT, VERIFY_PHONE_NUMBER.toString());
+                makeCallWithCode(INVALID_CODE, VERIFY_PHONE_NUMBER.toString());
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
@@ -335,12 +289,11 @@ class VerifyCodeHandlerTest {
 
     @Test
     void shouldReturnMaxReachedWhenPhoneNumberCodeIsBlocked() {
-        final String USER_INPUT = "123456";
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
 
         APIGatewayProxyResponseEvent result =
-                makeCallWithCode(USER_INPUT, VERIFY_PHONE_NUMBER.toString());
+                makeCallWithCode(CODE, VERIFY_PHONE_NUMBER.toString());
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
@@ -350,22 +303,14 @@ class VerifyCodeHandlerTest {
 
     @Test
     void shouldUpdateRedisWhenUserHasReachedMaxEmailCodeAttempts() {
+        when(configurationService.getCodeMaxRetries()).thenReturn(0);
 
-        final String USER_INPUT = "123456";
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
         when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
-        when(validationService.validateVerificationCode(
-                        eq(VERIFY_EMAIL),
-                        eq(Optional.of(CODE)),
-                        eq(USER_INPUT),
-                        any(Session.class),
-                        eq(5)))
-                .thenReturn(Optional.of(ErrorResponse.ERROR_1033));
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
                 .thenReturn(Optional.of(CODE));
 
-        APIGatewayProxyResponseEvent result = makeCallWithCode(USER_INPUT, VERIFY_EMAIL.toString());
+        APIGatewayProxyResponseEvent result =
+                makeCallWithCode(INVALID_CODE, VERIFY_EMAIL.toString());
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1033));
@@ -389,11 +334,10 @@ class VerifyCodeHandlerTest {
 
     @Test
     void shouldReturnMaxReachedWhenEmailCodeIsBlocked() {
-        final String USER_INPUT = "123456";
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
 
-        APIGatewayProxyResponseEvent result = makeCallWithCode(USER_INPUT, VERIFY_EMAIL.toString());
+        APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, VERIFY_EMAIL.toString());
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1033));
@@ -404,9 +348,6 @@ class VerifyCodeHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
                 .thenReturn(Optional.of(CODE));
-        when(validationService.validateVerificationCode(
-                        eq(MFA_SMS), eq(Optional.of(CODE)), eq(CODE), any(Session.class), eq(5)))
-                .thenReturn(Optional.empty());
 
         APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, MFA_SMS.toString());
 
@@ -432,15 +373,8 @@ class VerifyCodeHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
                 .thenReturn(Optional.of(CODE));
-        when(validationService.validateVerificationCode(
-                        eq(MFA_SMS),
-                        eq(Optional.of(CODE)),
-                        eq("123457"),
-                        any(Session.class),
-                        eq(5)))
-                .thenReturn(Optional.of(ErrorResponse.ERROR_1035));
 
-        APIGatewayProxyResponseEvent result = makeCallWithCode("123457", MFA_SMS.toString());
+        APIGatewayProxyResponseEvent result = makeCallWithCode(INVALID_CODE, MFA_SMS.toString());
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1035));
@@ -448,21 +382,12 @@ class VerifyCodeHandlerTest {
 
     @Test
     void shouldUpdateRedisWhenUserHasReachedMaxMfaCodeAttempts() {
-        final String USER_INPUT = "123456";
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
+        when(configurationService.getCodeMaxRetries()).thenReturn(0);
         when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
-        when(validationService.validateVerificationCode(
-                        eq(MFA_SMS),
-                        eq(Optional.of(CODE)),
-                        eq(USER_INPUT),
-                        any(Session.class),
-                        eq(5)))
-                .thenReturn(Optional.of(ErrorResponse.ERROR_1027));
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
                 .thenReturn(Optional.of(CODE));
 
-        APIGatewayProxyResponseEvent result = makeCallWithCode(USER_INPUT, MFA_SMS.toString());
+        APIGatewayProxyResponseEvent result = makeCallWithCode(INVALID_CODE, MFA_SMS.toString());
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
@@ -486,11 +411,10 @@ class VerifyCodeHandlerTest {
 
     @Test
     void shouldReturnMaxReachedWhenMfaCodeIsBlocked() {
-        final String USER_INPUT = "123456";
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
 
-        APIGatewayProxyResponseEvent result = makeCallWithCode(USER_INPUT, MFA_SMS.toString());
+        APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, MFA_SMS.toString());
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
@@ -506,13 +430,6 @@ class VerifyCodeHandlerTest {
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
         when(codeStorageService.getOtpCode(TEST_CLIENT_EMAIL, VERIFY_EMAIL))
                 .thenReturn(Optional.of(CODE));
-        when(validationService.validateVerificationCode(
-                        eq(VERIFY_EMAIL),
-                        eq(Optional.of(TEST_CLIENT_CODE)),
-                        eq(TEST_CLIENT_CODE),
-                        any(Session.class),
-                        eq(5)))
-                .thenReturn(Optional.empty());
         APIGatewayProxyResponseEvent result =
                 makeCallWithCode(
                         TEST_CLIENT_CODE,
@@ -552,6 +469,14 @@ class VerifyCodeHandlerTest {
         when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(clientSession));
         return handler.handleRequest(event, context);
+    }
+
+    private void maxOutSessionRetryCount() {
+        session.incrementRetryCount();
+        session.incrementRetryCount();
+        session.incrementRetryCount();
+        session.incrementRetryCount();
+        session.incrementRetryCount();
     }
 
     private AuthenticationRequest withAuthenticationRequest(String clientId) {
