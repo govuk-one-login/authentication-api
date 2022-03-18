@@ -110,7 +110,12 @@ public class DynamoService implements AuthenticationService {
     public boolean login(String email, String password) {
         UserCredentials userCredentials =
                 userCredentialsMapper.load(UserCredentials.class, email.toLowerCase(Locale.ROOT));
-        return verifyPassword(userCredentials.getPassword(), password);
+        return login(userCredentials, password);
+    }
+
+    @Override
+    public boolean login(UserCredentials credentials, String password) {
+        return Argon2MatcherHelper.matchRawStringWithEncoded(password, credentials.getPassword());
     }
 
     @Override
@@ -369,10 +374,6 @@ public class DynamoService implements AuthenticationService {
 
     private static String hashPassword(String password) {
         return Argon2EncoderHelper.argon2Hash(password);
-    }
-
-    private static boolean verifyPassword(String hashedPassword, String password) {
-        return Argon2MatcherHelper.matchRawStringWithEncoded(password, hashedPassword);
     }
 
     private void warmUp(String tableName) {
