@@ -136,21 +136,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1028);
             }
 
-            var userIsAMigratedUser =
-                    userMigrationService.userHasBeenPartlyMigrated(
-                            userProfile.getLegacySubjectID(), request.getEmail());
-            boolean hasValidCredentials;
-            if (userIsAMigratedUser) {
-                LOG.info("Processing migrated user");
-                hasValidCredentials =
-                        userMigrationService.processMigratedUser(
-                                request.getEmail(), request.getPassword());
-            } else {
-                hasValidCredentials =
-                        authenticationService.login(request.getEmail(), request.getPassword());
-            }
-
-            if (!hasValidCredentials) {
+            if (!credentialsAreValid(request, userProfile)) {
                 codeStorageService.increaseIncorrectPasswordCount(request.getEmail());
 
                 auditService.submitAuditEvent(
@@ -211,6 +197,20 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             consentRequired));
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        }
+    }
+
+    private boolean credentialsAreValid(LoginRequest request, UserProfile userProfile) {
+        var userIsAMigratedUser =
+                userMigrationService.userHasBeenPartlyMigrated(
+                        userProfile.getLegacySubjectID(), request.getEmail());
+
+        if (userIsAMigratedUser) {
+            LOG.info("Processing migrated user");
+            return userMigrationService.processMigratedUser(
+                    request.getEmail(), request.getPassword());
+        } else {
+            return authenticationService.login(request.getEmail(), request.getPassword());
         }
     }
 }
