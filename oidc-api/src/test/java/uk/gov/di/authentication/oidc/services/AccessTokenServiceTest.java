@@ -6,9 +6,7 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.jwk.Curve;
-import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
-import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
@@ -23,9 +21,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
@@ -38,6 +36,7 @@ import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
@@ -66,14 +65,14 @@ class AccessTokenServiceTest {
                     OIDCScopeValue.EMAIL.getValue(),
                     OIDCScopeValue.PHONE.getValue());
     private static final String CLIENT_ID = "client-id";
-    private static final String BASE_URL = "http://example.com";
+    private static final String BASE_URL = "https://example.com";
     private static final String KEY_ID = "14342354354353";
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
     private final ClaimsSetRequest claimsSetRequest =
-            new ClaimsSetRequest().add("name").add("birthdate");
+            new ClaimsSetRequest().add(ValidClaims.ADDRESS).add(ValidClaims.BIRTHDATE);
     private final OIDCClaimsRequest oidcValidClaimsRequest =
             new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
-    private AccessToken accessToken = createSignedAccessTokenWithoutIdentityClaims();
+    private AccessToken accessToken = createSignedAccessToken(null, false);
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -93,16 +92,21 @@ class AccessTokenServiceTest {
                         redisConnectionService, clientService, tokenValidationService);
     }
 
-    private static Stream<Boolean> identityEndpoint() {
+    private static Stream<Boolean> identityEnabled() {
         return Stream.of(true, false);
     }
 
     @ParameterizedTest
-    @MethodSource("identityEndpoint")
+    @MethodSource("identityEnabled")
     void shouldReturnAccessTokenInfoWhenAccessTokenIsValid(boolean identityEndpoint)
             throws JsonProcessingException, AccessTokenException {
+        List<String> expectedIdentityClaims = null;
         if (identityEndpoint) {
-            accessToken = createSignedAccessTokenWithIdentityClaims(oidcValidClaimsRequest);
+            accessToken = createSignedAccessToken(oidcValidClaimsRequest, false);
+            expectedIdentityClaims =
+                    oidcValidClaimsRequest.getUserInfoClaimsRequest().getEntries().stream()
+                            .map(ClaimsSetRequest.Entry::getClaimName)
+                            .collect(Collectors.toList());
         }
         when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
         when(clientService.getClient(CLIENT_ID))
@@ -115,7 +119,7 @@ class AccessTokenServiceTest {
                                                 accessToken.getValue(),
                                                 INTERNAL_SUBJECT.getValue())));
 
-        AccessTokenInfo accessTokenInfo =
+        var accessTokenInfo =
                 validationService.parse(accessToken.toAuthorizationHeader(), identityEndpoint);
 
         assertThat(
@@ -125,14 +129,15 @@ class AccessTokenServiceTest {
                 equalTo(INTERNAL_SUBJECT.getValue()));
         assertThat(accessTokenInfo.getPublicSubject(), equalTo(SUBJECT.getValue()));
         assertThat(accessTokenInfo.getScopes(), equalTo(SCOPES));
+        assertThat(accessTokenInfo.getIdentityClaims(), equalTo(expectedIdentityClaims));
     }
 
     @ParameterizedTest
-    @MethodSource("identityEndpoint")
+    @MethodSource("identityEnabled")
     void shouldThrowExceptionWhenTokenSignatureIsInvalid(boolean identityEndpoint) {
         when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(false);
 
-        AccessTokenException accessTokenException =
+        var accessTokenException =
                 assertThrows(
                         AccessTokenException.class,
                         () ->
@@ -147,10 +152,10 @@ class AccessTokenServiceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("identityEndpoint")
-    void shouldThrowExceptionWhenTokenHasExpired(boolean identityEndpoint) throws JOSEException {
-        accessToken = createSignedExpiredAccessToken();
-        AccessTokenException accessTokenException =
+    @MethodSource("identityEnabled")
+    void shouldThrowExceptionWhenTokenHasExpired(boolean identityEndpoint) {
+        accessToken = createSignedAccessToken(null, true);
+        var accessTokenException =
                 assertThrows(
                         AccessTokenException.class,
                         () ->
@@ -163,12 +168,12 @@ class AccessTokenServiceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("identityEndpoint")
+    @MethodSource("identityEnabled")
     void shouldThrowExceptionWhenClientIsNotFoundInClientRegistry(boolean identityEndpoint) {
         when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
         when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.empty());
 
-        AccessTokenException accessTokenException =
+        var accessTokenException =
                 assertThrows(
                         AccessTokenException.class,
                         () ->
@@ -181,15 +186,14 @@ class AccessTokenServiceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("identityEndpoint")
+    @MethodSource("identityEnabled")
     void shouldThrowExceptionWhenScopesAreInvalid(boolean identityEndpoint) {
-        List<String> scopes =
-                List.of(OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.ADDRESS.getValue());
+        var scopes = List.of(OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.ADDRESS.getValue());
         when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
         when(clientService.getClient(CLIENT_ID))
                 .thenReturn(Optional.of(generateClientRegistry(scopes)));
 
-        AccessTokenException accessTokenException =
+        var accessTokenException =
                 assertThrows(
                         AccessTokenException.class,
                         () ->
@@ -203,10 +207,10 @@ class AccessTokenServiceTest {
 
     @Test
     void shouldThrowExceptionWhenIdentityClaimsAreInvalid() throws JsonProcessingException {
-        ClaimsSetRequest claimsSetRequest = new ClaimsSetRequest().add("email").add("birthdate");
-        OIDCClaimsRequest invalidClaimsRequest =
+        var claimsSetRequest = new ClaimsSetRequest().add("email").add(ValidClaims.BIRTHDATE);
+        var invalidClaimsRequest =
                 new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
-        accessToken = createSignedAccessTokenWithIdentityClaims(invalidClaimsRequest);
+        accessToken = createSignedAccessToken(invalidClaimsRequest, false);
         when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
         when(clientService.getClient(CLIENT_ID))
                 .thenReturn(Optional.of(generateClientRegistry(SCOPES)));
@@ -218,32 +222,7 @@ class AccessTokenServiceTest {
                                                 accessToken.getValue(),
                                                 INTERNAL_SUBJECT.getValue())));
 
-        AccessTokenException accessTokenException =
-                assertThrows(
-                        AccessTokenException.class,
-                        () -> validationService.parse(accessToken.toAuthorizationHeader(), true),
-                        "Expected to throw AccessTokenException");
-
-        assertThat(accessTokenException.getMessage(), equalTo("Invalid Identity claims"));
-        assertThat(accessTokenException.getError(), equalTo(OAuth2Error.INVALID_REQUEST));
-    }
-
-    @Test
-    void shouldThrowExceptionWhenIdentityClaimsAreMissingFromIdentityAccessToken()
-            throws JsonProcessingException {
-        accessToken = createSignedAccessTokenWithoutIdentityClaims();
-        when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
-        when(clientService.getClient(CLIENT_ID))
-                .thenReturn(Optional.of(generateClientRegistry(SCOPES)));
-        when(redisConnectionService.getValue(ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + SUBJECT))
-                .thenReturn(
-                        new ObjectMapper()
-                                .writeValueAsString(
-                                        new AccessTokenStore(
-                                                accessToken.getValue(),
-                                                INTERNAL_SUBJECT.getValue())));
-
-        AccessTokenException accessTokenException =
+        var accessTokenException =
                 assertThrows(
                         AccessTokenException.class,
                         () -> validationService.parse(accessToken.toAuthorizationHeader(), true),
@@ -254,10 +233,10 @@ class AccessTokenServiceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("identityEndpoint")
+    @MethodSource("identityEnabled")
     void shouldThrowExceptionWhenAccessTokenNotFoundInRedis(boolean identityEndpoint) {
         if (identityEndpoint) {
-            accessToken = createSignedAccessTokenWithIdentityClaims(oidcValidClaimsRequest);
+            accessToken = createSignedAccessToken(oidcValidClaimsRequest, false);
         }
         when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
         when(clientService.getClient(CLIENT_ID))
@@ -265,7 +244,7 @@ class AccessTokenServiceTest {
         when(redisConnectionService.getValue(ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + SUBJECT))
                 .thenReturn(null);
 
-        AccessTokenException accessTokenException =
+        var accessTokenException =
                 assertThrows(
                         AccessTokenException.class,
                         () ->
@@ -278,11 +257,11 @@ class AccessTokenServiceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("identityEndpoint")
+    @MethodSource("identityEnabled")
     void shouldThrowExceptionWhenAccessTokenSentIsNotTheSameAsInRedis(boolean identityEndpoint)
             throws JsonProcessingException {
         if (identityEndpoint) {
-            accessToken = createSignedAccessTokenWithIdentityClaims(oidcValidClaimsRequest);
+            accessToken = createSignedAccessToken(oidcValidClaimsRequest, false);
         }
         when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
         when(clientService.getClient(CLIENT_ID))
@@ -292,11 +271,10 @@ class AccessTokenServiceTest {
                         new ObjectMapper()
                                 .writeValueAsString(
                                         new AccessTokenStore(
-                                                createSignedAccessTokenWithoutIdentityClaims()
-                                                        .getValue(),
+                                                createSignedAccessToken(null, false).getValue(),
                                                 INTERNAL_SUBJECT.getValue())));
 
-        AccessTokenException accessTokenException =
+        var accessTokenException =
                 assertThrows(
                         AccessTokenException.class,
                         () ->
@@ -309,9 +287,9 @@ class AccessTokenServiceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("identityEndpoint")
+    @MethodSource("identityEnabled")
     void shouldThrowExceptionWhenUnableToParseAccessToken(boolean identityEndpoint) {
-        AccessTokenException accessTokenException =
+        var accessTokenException =
                 assertThrows(
                         AccessTokenException.class,
                         () -> validationService.parse("rubbish-access-token", identityEndpoint),
@@ -330,48 +308,24 @@ class AccessTokenServiceTest {
                 .setScopes(scopes);
     }
 
-    private AccessToken createSignedExpiredAccessToken() throws JOSEException {
-        LocalDateTime localDateTime = LocalDateTime.now().minusMinutes(2);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
-        ECKey ecSigningKey =
-                new ECKeyGenerator(Curve.P_256)
-                        .keyID(KEY_ID)
-                        .algorithm(JWSAlgorithm.ES256)
-                        .generate();
-        ECDSASigner signer = new ECDSASigner(ecSigningKey);
-        SignedJWT signedJWT =
-                TokenGeneratorHelper.generateSignedToken(
-                        CLIENT_ID,
-                        BASE_URL,
-                        SCOPES,
-                        signer,
-                        SUBJECT,
-                        ecSigningKey.getKeyID(),
-                        expiryDate);
-        return new BearerAccessToken(signedJWT.serialize());
-    }
-
-    private AccessToken createSignedAccessTokenWithoutIdentityClaims() {
-        return createSignedAccessTokenWithIdentityClaims(null);
-    }
-
-    private AccessToken createSignedAccessTokenWithIdentityClaims(
-            OIDCClaimsRequest identityClaims) {
+    private AccessToken createSignedAccessToken(OIDCClaimsRequest identityClaims, boolean expired) {
         try {
-            LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(3);
-            Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
-            ECKey ecSigningKey =
+            var localDateTime = LocalDateTime.now().plusMinutes(3);
+            if (expired) {
+                localDateTime = LocalDateTime.now().minusMinutes(2);
+            }
+            var expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+            var ecSigningKey =
                     new ECKeyGenerator(Curve.P_256)
                             .keyID(KEY_ID)
                             .algorithm(JWSAlgorithm.ES256)
                             .generate();
-            ECDSASigner signer = new ECDSASigner(ecSigningKey);
-            SignedJWT signedJWT =
+            var signedJWT =
                     TokenGeneratorHelper.generateSignedToken(
                             CLIENT_ID,
                             BASE_URL,
                             SCOPES,
-                            signer,
+                            new ECDSASigner(ecSigningKey),
                             SUBJECT,
                             ecSigningKey.getKeyID(),
                             expiryDate,

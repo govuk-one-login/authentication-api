@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.DynamoSpotService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
@@ -51,10 +52,8 @@ public class UserInfoHandler
         this.configurationService = configurationService;
         this.userInfoService =
                 new UserInfoService(
-                        new DynamoService(
-                                configurationService.getAwsRegion(),
-                                configurationService.getEnvironment(),
-                                configurationService.getDynamoEndpointUri()));
+                        new DynamoService(configurationService),
+                        new DynamoSpotService(configurationService));
         this.accessTokenService =
                 new AccessTokenService(
                         new RedisConnectionService(configurationService),
@@ -92,8 +91,11 @@ public class UserInfoHandler
                                                         AUTHORIZATION_HEADER,
                                                         configurationService
                                                                 .getHeadersCaseInsensitive()),
-                                                false);
-                                userInfo = userInfoService.populateUserInfo(accessTokenInfo);
+                                                configurationService.isIdentityEnabled());
+                                userInfo =
+                                        userInfoService.populateUserInfo(
+                                                accessTokenInfo,
+                                                configurationService.isIdentityEnabled());
                             } catch (AccessTokenException e) {
                                 LOG.warn(
                                         "AccessTokenException. Sending back UserInfoErrorResponse");

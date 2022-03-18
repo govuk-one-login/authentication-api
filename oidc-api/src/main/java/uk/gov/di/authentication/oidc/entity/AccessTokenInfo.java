@@ -6,15 +6,20 @@ import java.util.List;
 
 public class AccessTokenInfo {
 
-    private AccessTokenStore accessTokenStore;
-    private String publicSubject;
-    private List<String> scopes;
+    private final AccessTokenStore accessTokenStore;
+    private final String publicSubject;
+    private final List<String> scopes;
+    private final List<String> identityClaims;
 
     public AccessTokenInfo(
-            AccessTokenStore accessTokenStore, String publicSubject, List<String> scopes) {
+            AccessTokenStore accessTokenStore,
+            String publicSubject,
+            List<String> scopes,
+            List<String> identityClaims) {
         this.accessTokenStore = accessTokenStore;
         this.publicSubject = publicSubject;
         this.scopes = scopes;
+        this.identityClaims = identityClaims;
     }
 
     public AccessTokenStore getAccessTokenStore() {
@@ -27,5 +32,9 @@ public class AccessTokenInfo {
 
     public List<String> getScopes() {
         return scopes;
+    }
+
+    public List<String> getIdentityClaims() {
+        return identityClaims;
     }
 }

@@ -99,6 +99,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("HEADERS_CASE_INSENSITIVE", "false").equals("true");
     }
 
+    public boolean isIdentityEnabled() {
+        return System.getenv().getOrDefault("IDENTITY_ENABLED", "false").equals("true");
+    }
+
     public long getIDTokenExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("ID_TOKEN_EXPIRY", "120"));
     }
