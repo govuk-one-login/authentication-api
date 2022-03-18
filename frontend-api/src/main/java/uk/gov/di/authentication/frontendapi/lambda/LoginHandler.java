@@ -201,16 +201,17 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     }
 
     private boolean credentialsAreValid(LoginRequest request, UserProfile userProfile) {
+        var userCredentials = authenticationService.getUserCredentialsFromEmail(request.getEmail());
+
         var userIsAMigratedUser =
                 userMigrationService.userHasBeenPartlyMigrated(
-                        userProfile.getLegacySubjectID(), request.getEmail());
+                        userProfile.getLegacySubjectID(), userCredentials);
 
         if (userIsAMigratedUser) {
             LOG.info("Processing migrated user");
-            return userMigrationService.processMigratedUser(
-                    request.getEmail(), request.getPassword());
+            return userMigrationService.processMigratedUser(userCredentials, request.getPassword());
         } else {
-            return authenticationService.login(request.getEmail(), request.getPassword());
+            return authenticationService.login(userCredentials, request.getPassword());
         }
     }
 }
