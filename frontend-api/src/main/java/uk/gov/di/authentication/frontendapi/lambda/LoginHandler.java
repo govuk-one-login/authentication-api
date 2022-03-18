@@ -35,6 +35,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.LOG_IN_SUCCESS;
+import static uk.gov.di.authentication.frontendapi.services.UserMigrationService.userHasBeenPartlyMigrated;
 import static uk.gov.di.authentication.shared.entity.Session.AccountState.EXISTING;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -204,8 +205,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         var userCredentials = authenticationService.getUserCredentialsFromEmail(request.getEmail());
 
         var userIsAMigratedUser =
-                userMigrationService.userHasBeenPartlyMigrated(
-                        userProfile.getLegacySubjectID(), userCredentials);
+                userHasBeenPartlyMigrated(userProfile.getLegacySubjectID(), userCredentials);
 
         if (userIsAMigratedUser) {
             LOG.info("Processing migrated user");

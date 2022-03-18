@@ -25,7 +25,7 @@ public class UserMigrationService {
         this.configurationService = configurationService;
     }
 
-    public boolean userHasBeenPartlyMigrated(
+    public static boolean userHasBeenPartlyMigrated(
             String legacySubjectId, UserCredentials userCredentials) {
         return Objects.nonNull(legacySubjectId) && Objects.isNull(userCredentials.getPassword());
     }
