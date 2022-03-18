@@ -431,7 +431,6 @@ class LoginHandlerTest {
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\"}", PASSWORD));
 
-        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
         usingValidSession();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -445,7 +444,6 @@ class LoginHandlerTest {
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\"}", PASSWORD));
 
-        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.empty());
 
