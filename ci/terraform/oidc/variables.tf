@@ -178,7 +178,7 @@ variable "cloudwatch_log_retention" {
 }
 
 variable "lambda_min_concurrency" {
-  default     = 10
+  default     = 20
   type        = number
   description = "The number of lambda instance to keep 'warm'"
 }
