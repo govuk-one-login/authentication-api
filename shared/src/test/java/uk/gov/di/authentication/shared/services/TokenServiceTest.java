@@ -1,11 +1,14 @@
 package uk.gov.di.authentication.shared.services;
 
+import com.amazonaws.services.kms.model.GetPublicKeyRequest;
+import com.amazonaws.services.kms.model.GetPublicKeyResult;
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
@@ -65,6 +68,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -114,6 +118,9 @@ public class TokenServiceTest {
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
         when(configurationService.getIDTokenExpiry()).thenReturn(120L);
         when(configurationService.getSessionExpiry()).thenReturn(300L);
+        when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
+                .thenReturn(new GetPublicKeyResult().withKeyId("789789789789789"));
+
         nonce = new Nonce();
     }
 
@@ -529,6 +536,13 @@ public class TokenServiceTest {
                         accessTokenKey,
                         new ObjectMapper().writeValueAsString(accessTokenStore),
                         300L);
+
+        var header = (JWSHeader) tokenResponse.getOIDCTokens().getIDToken().getHeader();
+
+        assertThat(
+                header.getKeyID(),
+                is("1d504aece298a14d74ee0a02b6740b4372a1fab4206778e486ba72770ff4beb8"));
+
         assertThat(
                 tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaims().size(),
                 equalTo(9));
