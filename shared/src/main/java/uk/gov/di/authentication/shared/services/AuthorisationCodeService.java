@@ -20,6 +20,15 @@ public class AuthorisationCodeService {
     private final long authorisationCodeExpiry;
     private final ObjectMapper objectMapper;
 
+    public AuthorisationCodeService(
+            ConfigurationService configurationService,
+            RedisConnectionService redisConnectionService,
+            ObjectMapper objectMapper) {
+        this.redisConnectionService = redisConnectionService;
+        this.authorisationCodeExpiry = configurationService.getAuthCodeExpiry();
+        this.objectMapper = objectMapper;
+    }
+
     public AuthorisationCodeService(ConfigurationService configurationService) {
         this.redisConnectionService =
                 new RedisConnectionService(
