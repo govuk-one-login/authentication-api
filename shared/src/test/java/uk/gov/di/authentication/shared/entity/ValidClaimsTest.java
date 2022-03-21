@@ -13,12 +13,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ValidClaimsTest {
 
     static Stream<String> suppportedClaims() {
-        return Stream.of("name", "birthdate", "address");
+        return Stream.of("name", "birthdate", "address", "passport-number");
     }
 
     @Test
     void shouldReturnCorrectNumberOfClaimsSupported() {
-        assertThat(ValidClaims.getAllowedClaimNames().size(), equalTo(3));
+        assertThat(ValidClaims.getAllowedClaimNames().size(), equalTo(4));
     }
 
     @ParameterizedTest

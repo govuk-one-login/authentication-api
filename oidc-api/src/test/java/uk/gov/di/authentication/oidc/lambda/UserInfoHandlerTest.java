@@ -60,7 +60,7 @@ public class UserInfoHandlerTest {
         userInfo.setEmailAddress(EMAIL_ADDRESS);
         when(accessTokenService.parse(accessToken.toAuthorizationHeader(), false))
                 .thenReturn(accessTokenInfo);
-        when(userInfoService.populateUserInfo(accessTokenInfo)).thenReturn(userInfo);
+        when(userInfoService.populateUserInfo(accessTokenInfo, false)).thenReturn(userInfo);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Authorization", accessToken.toAuthorizationHeader()));

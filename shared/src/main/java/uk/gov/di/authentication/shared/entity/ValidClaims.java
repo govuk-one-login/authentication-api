@@ -8,8 +8,18 @@ import java.util.stream.Collectors;
 
 public class ValidClaims {
 
+    public static final String NAME = "name";
+    public static final String ADDRESS = "address";
+    public static final String PASSPORT_NUMBER = "passport-number";
+    public static final String BIRTHDATE = "birthdate";
+
     protected static final Collection<ClaimsSetRequest.Entry> allowedClaims =
-            new ClaimsSetRequest().add("name").add("birthdate").add("address").getEntries();
+            new ClaimsSetRequest()
+                    .add(NAME)
+                    .add(BIRTHDATE)
+                    .add(ADDRESS)
+                    .add(PASSPORT_NUMBER)
+                    .getEntries();
 
     private ValidClaims() {}
 

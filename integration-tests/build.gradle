@@ -51,6 +51,7 @@ test {
     environment "STUB_RELYING_PARTY_REDIRECT_URI", "https://di-auth-stub-relying-party-build.london.cloudapps.digital/"
     environment "TERMS_CONDITIONS_VERSION", "1.0"
     environment "HEADERS_CASE_INSENSITIVE", "true"
+    environment "IDENTITY_ENABLED", "false"
 
     doLast {
         tasks.getByName("jacocoTestReport").sourceDirectories.from(

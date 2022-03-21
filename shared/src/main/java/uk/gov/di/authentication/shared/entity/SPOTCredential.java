@@ -7,6 +7,8 @@ public class SPOTCredential {
 
     private String subjectID;
     private String serializedCredential;
+    private String address;
+    private String passportNumber;
     private long timeToExist;
 
     public SPOTCredential() {}
@@ -38,6 +40,26 @@ public class SPOTCredential {
 
     public SPOTCredential setTimeToExist(long timeToExist) {
         this.timeToExist = timeToExist;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "Address")
+    public String getAddress() {
+        return address;
+    }
+
+    public SPOTCredential setAddress(String address) {
+        this.address = address;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "PassportNumber")
+    public String getPassportNumber() {
+        return passportNumber;
+    }
+
+    public SPOTCredential setPassportNumber(String passportNumber) {
+        this.passportNumber = passportNumber;
         return this;
     }
 }

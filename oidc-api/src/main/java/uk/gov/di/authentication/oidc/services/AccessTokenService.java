@@ -14,7 +14,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
@@ -52,7 +51,7 @@ public class AccessTokenService {
         this.tokenValidationService = tokenValidationService;
     }
 
-    public AccessTokenInfo parse(String authorizationHeader, boolean identityEndpoint)
+    public AccessTokenInfo parse(String authorizationHeader, boolean identityEnabled)
             throws AccessTokenException {
         AccessToken accessToken;
         try {
@@ -66,8 +65,8 @@ public class AccessTokenService {
         try {
             signedJWT = SignedJWT.parse(accessToken.getValue());
 
-            LocalDateTime localDateTime = LocalDateTime.now();
-            Date currentDateTime = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+            var localDateTime = LocalDateTime.now();
+            var currentDateTime = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
             if (DateUtils.isBefore(
                     signedJWT.getJWTClaimsSet().getExpirationTime(), currentDateTime, 0)) {
                 LOG.warn(
@@ -82,8 +81,8 @@ public class AccessTokenService {
                 throw new AccessTokenException(
                         "Unable to validate AccessToken signature", BearerTokenError.INVALID_TOKEN);
             }
-            String clientID = signedJWT.getJWTClaimsSet().getStringClaim("client_id");
-            Optional<ClientRegistry> client = clientService.getClient(clientID);
+            var clientID = signedJWT.getJWTClaimsSet().getStringClaim("client_id");
+            var client = clientService.getClient(clientID);
 
             attachLogFieldToLogs(CLIENT_ID, clientID);
 
@@ -100,12 +99,12 @@ public class AccessTokenService {
                 LOG.warn("Invalid Scopes: {}", scopes);
                 throw new AccessTokenException("Invalid Scopes", OAuth2Error.INVALID_SCOPE);
             }
-            if (identityEndpoint && !areIdentityClaimsValid(signedJWT.getJWTClaimsSet())) {
-                throw new AccessTokenException(
-                        "Invalid Identity claims", OAuth2Error.INVALID_REQUEST);
+            List<String> identityClaims = null;
+            if (identityEnabled) {
+                identityClaims = getIdentityClaims(signedJWT.getJWTClaimsSet());
             }
-            String subject = signedJWT.getJWTClaimsSet().getSubject();
-            Optional<AccessTokenStore> accessTokenStore = getAccessTokenStore(clientID, subject);
+            var subject = signedJWT.getJWTClaimsSet().getSubject();
+            var accessTokenStore = getAccessTokenStore(clientID, subject);
             if (accessTokenStore.isEmpty()) {
                 LOG.warn(
                         "Access Token Store is empty. Access Token expires at: {}. CurrentDateTime is: {}",
@@ -117,7 +116,7 @@ public class AccessTokenService {
             if (!accessTokenStore.get().getToken().equals(accessToken.getValue())) {
                 LOG.warn(
                         "Access Token in Access Token Store is different to Access Token sent in request");
-                String storeJwtId =
+                var storeJwtId =
                         SignedJWT.parse(accessTokenStore.get().getToken())
                                 .getJWTClaimsSet()
                                 .getJWTID();
@@ -128,7 +127,7 @@ public class AccessTokenService {
                 throw new AccessTokenException(
                         INVALID_ACCESS_TOKEN, BearerTokenError.INVALID_TOKEN);
             }
-            return new AccessTokenInfo(accessTokenStore.get(), subject, scopes);
+            return new AccessTokenInfo(accessTokenStore.get(), subject, scopes, identityClaims);
         } catch (ParseException e) {
             LOG.warn("Unable to parse AccessToken to SignedJWT");
             throw new AccessTokenException(
@@ -161,11 +160,11 @@ public class AccessTokenService {
         return true;
     }
 
-    private boolean areIdentityClaimsValid(JWTClaimsSet claimsSet)
-            throws com.nimbusds.oauth2.sdk.ParseException {
+    private List<String> getIdentityClaims(JWTClaimsSet claimsSet)
+            throws com.nimbusds.oauth2.sdk.ParseException, AccessTokenException {
         if (Objects.isNull(claimsSet.getClaim("claims"))) {
-            LOG.warn("Identity claims missing from access token");
-            return false;
+            LOG.warn("No identity claims in AccessToken");
+            return null;
         }
         var identityClaims =
                 JSONArrayUtils.parse(claimsSet.getClaim("claims").toString()).stream()
@@ -173,8 +172,8 @@ public class AccessTokenService {
                         .collect(Collectors.toList());
         if (!ValidClaims.getAllowedClaimNames().containsAll(identityClaims)) {
             LOG.warn("Invalid set of Identity claims present in access token: {}", identityClaims);
-            return false;
+            throw new AccessTokenException("Invalid Identity claims", OAuth2Error.INVALID_REQUEST);
         }
-        return true;
+        return identityClaims;
     }
 }
