@@ -18,6 +18,8 @@ public interface AuthenticationService {
 
     boolean login(String email, String password);
 
+    boolean login(UserCredentials credentials, String password);
+
     Subject getSubjectFromEmail(String email);
 
     void updatePhoneNumber(String email, String profileInformation);

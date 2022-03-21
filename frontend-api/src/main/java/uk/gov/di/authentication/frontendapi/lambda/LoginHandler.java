@@ -35,6 +35,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.LOG_IN_SUCCESS;
+import static uk.gov.di.authentication.frontendapi.services.UserMigrationService.userHasBeenPartlyMigrated;
 import static uk.gov.di.authentication.shared.entity.Session.AccountState.EXISTING;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -136,21 +137,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1028);
             }
 
-            var userIsAMigratedUser =
-                    userMigrationService.userHasBeenPartlyMigrated(
-                            userProfile.getLegacySubjectID(), request.getEmail());
-            boolean hasValidCredentials;
-            if (userIsAMigratedUser) {
-                LOG.info("Processing migrated user");
-                hasValidCredentials =
-                        userMigrationService.processMigratedUser(
-                                request.getEmail(), request.getPassword());
-            } else {
-                hasValidCredentials =
-                        authenticationService.login(request.getEmail(), request.getPassword());
-            }
-
-            if (!hasValidCredentials) {
+            if (!credentialsAreValid(request, userProfile)) {
                 codeStorageService.increaseIncorrectPasswordCount(request.getEmail());
 
                 auditService.submitAuditEvent(
@@ -211,6 +198,20 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             consentRequired));
         } catch (JsonProcessingException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        }
+    }
+
+    private boolean credentialsAreValid(LoginRequest request, UserProfile userProfile) {
+        var userCredentials = authenticationService.getUserCredentialsFromEmail(request.getEmail());
+
+        var userIsAMigratedUser =
+                userHasBeenPartlyMigrated(userProfile.getLegacySubjectID(), userCredentials);
+
+        if (userIsAMigratedUser) {
+            LOG.info("Processing migrated user");
+            return userMigrationService.processMigratedUser(userCredentials, request.getPassword());
+        } else {
+            return authenticationService.login(userCredentials, request.getPassword());
         }
     }
 }

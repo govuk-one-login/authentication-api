@@ -25,18 +25,16 @@ public class UserMigrationService {
         this.configurationService = configurationService;
     }
 
-    public boolean userHasBeenPartlyMigrated(String legacySubjectId, String email) {
-        UserCredentials userCredentials = authenticationService.getUserCredentialsFromEmail(email);
+    public static boolean userHasBeenPartlyMigrated(
+            String legacySubjectId, UserCredentials userCredentials) {
         return Objects.nonNull(legacySubjectId) && Objects.isNull(userCredentials.getPassword());
     }
 
-    public boolean processMigratedUser(String email, String inputPassword) {
+    public boolean processMigratedUser(UserCredentials userCredentials, String inputPassword) {
         Optional<String> passwordPepper = configurationService.getPasswordPepper();
         char[] passwordChar =
                 passwordPepper.map(t -> inputPassword + t).orElse(inputPassword).toCharArray();
         byte[] passwordByteArray = BCrypt.passwordToByteArray(passwordChar);
-
-        UserCredentials userCredentials = authenticationService.getUserCredentialsFromEmail(email);
 
         boolean hasValidCredentials =
                 OpenBSDBCrypt.checkPassword(
@@ -47,7 +45,7 @@ public class UserMigrationService {
             return hasValidCredentials;
         }
         LOG.info("Migrated user has valid credentials. About to migrate password");
-        authenticationService.migrateLegacyPassword(email, inputPassword);
+        authenticationService.migrateLegacyPassword(userCredentials.getEmail(), inputPassword);
         return true;
     }
 }

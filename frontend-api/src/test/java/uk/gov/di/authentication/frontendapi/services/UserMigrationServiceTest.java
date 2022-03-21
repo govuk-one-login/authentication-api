@@ -36,49 +36,56 @@ class UserMigrationServiceTest {
 
     @Test
     public void shouldReturnTrueIfUserHasBeenPartlyMigrated() {
-        when(authenticationService.getUserCredentialsFromEmail(TEST_EMAIL))
-                .thenReturn(generateUserCredentials(null, "migrated-password"));
-        assertTrue(userMigrationService.userHasBeenPartlyMigrated(LEGACY_SUBJECT, TEST_EMAIL));
+        var credentials = generateUserCredentials(null, "migrated-password");
+
+        when(authenticationService.getUserCredentialsFromEmail(TEST_EMAIL)).thenReturn(credentials);
+
+        assertTrue(userMigrationService.userHasBeenPartlyMigrated(LEGACY_SUBJECT, credentials));
     }
 
     @Test
     public void shouldReturnFalseIfUserHasAlreadyBeenFullyMigrated() {
-        when(authenticationService.getUserCredentialsFromEmail(TEST_EMAIL))
-                .thenReturn(generateUserCredentials("sign-in-password", "migrated-password"));
-        assertFalse(userMigrationService.userHasBeenPartlyMigrated(LEGACY_SUBJECT, TEST_EMAIL));
+        var credentials = generateUserCredentials("sign-in-password", "migrated-password");
+
+        when(authenticationService.getUserCredentialsFromEmail(TEST_EMAIL)).thenReturn(credentials);
+
+        assertFalse(userMigrationService.userHasBeenPartlyMigrated(LEGACY_SUBJECT, credentials));
     }
 
     @Test
     public void shouldReturnFalseIfUserDoesNotHaveALegacySubjectId() {
-        when(authenticationService.getUserCredentialsFromEmail(TEST_EMAIL))
-                .thenReturn(generateUserCredentials("sign-in-password", null));
+        var credentials = generateUserCredentials("sign-in-password", null);
 
-        assertFalse(userMigrationService.userHasBeenPartlyMigrated(null, TEST_EMAIL));
+        when(authenticationService.getUserCredentialsFromEmail(TEST_EMAIL)).thenReturn(credentials);
+
+        assertFalse(userMigrationService.userHasBeenPartlyMigrated(null, credentials));
         verify(authenticationService, never())
                 .migrateLegacyPassword(TEST_EMAIL, LEGACY_PASSWORD_DECRYPTED);
     }
 
     @Test
     public void shouldReturnTrueIfMigratedUserHasEnteredCorrectCredentials() {
-        when(authenticationService.getUserCredentialsFromEmail(TEST_EMAIL))
-                .thenReturn(generateUserCredentials("sign-in-password", LEGACY_PASSWORD_ENCRYPTED));
+        var credentials = generateUserCredentials("sign-in-password", LEGACY_PASSWORD_ENCRYPTED);
 
-        assertTrue(userMigrationService.processMigratedUser(TEST_EMAIL, LEGACY_PASSWORD_DECRYPTED));
+        when(authenticationService.getUserCredentialsFromEmail(TEST_EMAIL)).thenReturn(credentials);
+
+        assertTrue(
+                userMigrationService.processMigratedUser(credentials, LEGACY_PASSWORD_DECRYPTED));
         verify(authenticationService).migrateLegacyPassword(TEST_EMAIL, LEGACY_PASSWORD_DECRYPTED);
     }
 
     @Test
     public void shouldReturnFalseIfMigratedUserHasEnteredIncorrectCredentials() {
-        when(authenticationService.getUserCredentialsFromEmail(TEST_EMAIL))
-                .thenReturn(generateUserCredentials("sign-in-password", LEGACY_PASSWORD_ENCRYPTED));
-        assertFalse(userMigrationService.processMigratedUser(TEST_EMAIL, "wrong-password"));
+        var credentials = generateUserCredentials("sign-in-password", LEGACY_PASSWORD_ENCRYPTED);
+
+        when(authenticationService.getUserCredentialsFromEmail(TEST_EMAIL)).thenReturn(credentials);
+        assertFalse(userMigrationService.processMigratedUser(credentials, "wrong-password"));
     }
 
-    private UserCredentials generateUserCredentials(
-            String signInPassword, String migratedPassword) {
+    private UserCredentials generateUserCredentials(String newPassword, String migratedPassword) {
         return new UserCredentials()
                 .setEmail(TEST_EMAIL)
-                .setPassword(signInPassword)
+                .setPassword(newPassword)
                 .setMigratedPassword(migratedPassword);
     }
 }

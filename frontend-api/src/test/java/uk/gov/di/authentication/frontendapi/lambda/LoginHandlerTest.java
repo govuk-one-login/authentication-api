@@ -26,6 +26,7 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
@@ -69,6 +70,8 @@ class LoginHandlerTest {
 
     private static final String EMAIL = "joe.bloggs@test.com";
     private static final String PASSWORD = "computer-1";
+    private UserCredentials userCredentials =
+            new UserCredentials().setEmail(EMAIL).setPassword(PASSWORD);
     private static final String PHONE_NUMBER = "01234567890";
     private static final ClientID CLIENT_ID = new ClientID();
     private LoginHandler handler;
@@ -107,6 +110,8 @@ class LoginHandlerTest {
         when(clientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(generateClientRegistry()));
 
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
+
         handler =
                 new LoginHandler(
                         configurationService,
@@ -129,10 +134,7 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(userMigrationService.userHasBeenPartlyMigrated(
-                        userProfile.getLegacySubjectID(), EMAIL))
-                .thenReturn(false);
-        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
+        when(authenticationService.login(userCredentials, PASSWORD)).thenReturn(true);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -178,10 +180,8 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(userMigrationService.userHasBeenPartlyMigrated(
-                        userProfile.getLegacySubjectID(), EMAIL))
-                .thenReturn(false);
-        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
+
+        when(authenticationService.login(userCredentials, PASSWORD)).thenReturn(true);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -227,10 +227,10 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(legacySubjectId);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(userMigrationService.userHasBeenPartlyMigrated(
-                        userProfile.getLegacySubjectID(), EMAIL))
-                .thenReturn(true);
-        when(userMigrationService.processMigratedUser(EMAIL, PASSWORD)).thenReturn(true);
+
+        userCredentials.setPassword(null);
+
+        when(userMigrationService.processMigratedUser(userCredentials, PASSWORD)).thenReturn(true);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -256,10 +256,7 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(userMigrationService.userHasBeenPartlyMigrated(
-                        userProfile.getLegacySubjectID(), EMAIL))
-                .thenReturn(false);
-        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
+        when(authenticationService.login(userCredentials, PASSWORD)).thenReturn(true);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
 
         usingValidSession();
@@ -286,10 +283,8 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(userMigrationService.userHasBeenPartlyMigrated(
-                        userProfile.getLegacySubjectID(), EMAIL))
-                .thenReturn(false);
-        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
+
+        when(authenticationService.login(userCredentials, PASSWORD)).thenReturn(false);
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(5);
 
         usingValidSession();
@@ -308,10 +303,8 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(userMigrationService.userHasBeenPartlyMigrated(
-                        userProfile.getLegacySubjectID(), EMAIL))
-                .thenReturn(false);
-        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
+
+        when(authenticationService.login(userCredentials, PASSWORD)).thenReturn(true);
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(5);
 
         usingValidSession();
@@ -343,10 +336,7 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(userMigrationService.userHasBeenPartlyMigrated(
-                        userProfile.getLegacySubjectID(), EMAIL))
-                .thenReturn(false);
-        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
+
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(4);
 
         usingValidSession();
@@ -355,7 +345,7 @@ class LoginHandlerTest {
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
+        when(authenticationService.login(userCredentials, PASSWORD)).thenReturn(true);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
 
         APIGatewayProxyResponseEvent result2 = handler.handleRequest(event, context);
@@ -371,14 +361,12 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(userMigrationService.userHasBeenPartlyMigrated(
-                        userProfile.getLegacySubjectID(), EMAIL))
-                .thenReturn(false);
+
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
-        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
+        when(authenticationService.login(userCredentials, PASSWORD)).thenReturn(false);
         usingValidSession();
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -405,10 +393,8 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(legacySubjectId);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(userMigrationService.userHasBeenPartlyMigrated(
-                        userProfile.getLegacySubjectID(), EMAIL))
-                .thenReturn(true);
-        when(userMigrationService.processMigratedUser(EMAIL, PASSWORD)).thenReturn(false);
+
+        when(userMigrationService.processMigratedUser(userCredentials, PASSWORD)).thenReturn(false);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
@@ -426,7 +412,6 @@ class LoginHandlerTest {
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\"}", PASSWORD));
 
-        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
         usingValidSession();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -440,7 +425,6 @@ class LoginHandlerTest {
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\"}", PASSWORD));
 
-        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.empty());
 
