@@ -8,6 +8,8 @@ public class AuthCodeExchangeData {
 
     @JsonProperty private String email;
 
+    @JsonProperty private ClientSession clientSession;
+
     public String getClientSessionId() {
         return clientSessionId;
     }
@@ -23,6 +25,15 @@ public class AuthCodeExchangeData {
 
     public AuthCodeExchangeData setEmail(String email) {
         this.email = email;
+        return this;
+    }
+
+    public ClientSession getClientSession() {
+        return clientSession;
+    }
+
+    public AuthCodeExchangeData setClientSession(ClientSession clientSession) {
+        this.clientSession = clientSession;
         return this;
     }
 }

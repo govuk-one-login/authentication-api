@@ -165,7 +165,8 @@ class AuthCodeHandlerTest {
 
         when(authorizationService.isClientRedirectUriValid(eq(CLIENT_ID), eq(REDIRECT_URI)))
                 .thenReturn(true);
-        when(authorisationCodeService.generateAuthorisationCode(eq(CLIENT_SESSION_ID), eq(EMAIL)))
+        when(authorisationCodeService.generateAuthorisationCode(
+                        CLIENT_SESSION_ID, EMAIL, clientSession))
                 .thenReturn(authorizationCode);
         when(authorizationService.generateSuccessfulAuthResponse(
                         any(AuthenticationRequest.class), any(AuthorizationCode.class)))

@@ -175,7 +175,9 @@ public class AuthCodeHandler
                                 }
                                 AuthorizationCode authCode =
                                         authorisationCodeService.generateAuthorisationCode(
-                                                clientSessionId, session.getEmailAddress());
+                                                clientSessionId,
+                                                session.getEmailAddress(),
+                                                clientSession);
 
                                 AuthenticationSuccessResponse authenticationResponse =
                                         authorizationService.generateSuccessfulAuthResponse(
