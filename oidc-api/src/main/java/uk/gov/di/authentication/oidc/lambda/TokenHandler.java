@@ -203,9 +203,7 @@ public class TokenHandler
                             }
                             updateAttachedLogFieldToLogs(
                                     CLIENT_SESSION_ID, authCodeExchangeData.getClientSessionId());
-                            ClientSession clientSession =
-                                    clientSessionService.getClientSession(
-                                            authCodeExchangeData.getClientSessionId());
+                            ClientSession clientSession = authCodeExchangeData.getClientSession();
                             AuthenticationRequest authRequest;
                             try {
                                 authRequest =

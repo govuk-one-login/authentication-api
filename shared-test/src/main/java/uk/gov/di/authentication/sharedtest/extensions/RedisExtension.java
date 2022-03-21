@@ -166,17 +166,18 @@ public class RedisExtension
             Map<String, List<String>> authRequest,
             VectorOfTrust vtr)
             throws JsonProcessingException {
+        var clientSession = new ClientSession(authRequest, LocalDateTime.now(), vtr);
         redis.saveWithExpiry(
                 AUTH_CODE_PREFIX.concat(authCode),
                 objectMapper.writeValueAsString(
                         new AuthCodeExchangeData()
                                 .setClientSessionId(clientSessionId)
-                                .setEmail(email)),
+                                .setEmail(email)
+                                .setClientSession(clientSession)),
                 300);
         redis.saveWithExpiry(
                 CLIENT_SESSION_PREFIX.concat(clientSessionId),
-                objectMapper.writeValueAsString(
-                        new ClientSession(authRequest, LocalDateTime.now(), vtr)),
+                objectMapper.writeValueAsString(clientSession),
                 300);
     }
 
