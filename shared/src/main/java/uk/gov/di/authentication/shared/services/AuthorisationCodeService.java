@@ -6,6 +6,7 @@ import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
+import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 
 import java.util.Optional;
@@ -30,7 +31,8 @@ public class AuthorisationCodeService {
         this.objectMapper = ObjectMapperFactory.getInstance();
     }
 
-    public AuthorizationCode generateAuthorisationCode(String clientSessionId, String email) {
+    public AuthorizationCode generateAuthorisationCode(
+            String clientSessionId, String email, ClientSession clientSession) {
         AuthorizationCode authorizationCode = new AuthorizationCode();
         try {
             redisConnectionService.saveWithExpiry(
@@ -38,7 +40,8 @@ public class AuthorisationCodeService {
                     objectMapper.writeValueAsString(
                             new AuthCodeExchangeData()
                                     .setEmail(email)
-                                    .setClientSessionId(clientSessionId)),
+                                    .setClientSessionId(clientSessionId)
+                                    .setClientSession(clientSession)),
                     authorisationCodeExpiry);
             return authorizationCode;
         } catch (JsonProcessingException e) {
