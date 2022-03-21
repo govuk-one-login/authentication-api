@@ -161,21 +161,22 @@ public class TokenHandlerTest {
                         eq(CLIENT_ID)))
                 .thenReturn(Optional.empty());
         String authCode = new AuthorizationCode().toString();
-        when(authorisationCodeService.getExchangeDataForCode(authCode))
-                .thenReturn(
-                        Optional.of(
-                                new AuthCodeExchangeData()
-                                        .setEmail(TEST_EMAIL)
-                                        .setClientSessionId(CLIENT_SESSION_ID)));
         AuthenticationRequest authenticationRequest =
                 generateAuthRequest(JsonArrayHelper.jsonArrayOf(vectorValue));
         VectorOfTrust vtr =
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         authenticationRequest.getCustomParameter("vtr"));
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
+        when(authorisationCodeService.getExchangeDataForCode(authCode))
                 .thenReturn(
-                        new ClientSession(
-                                authenticationRequest.toParameters(), LocalDateTime.now(), vtr));
+                        Optional.of(
+                                new AuthCodeExchangeData()
+                                        .setEmail(TEST_EMAIL)
+                                        .setClientSessionId(CLIENT_SESSION_ID)
+                                        .setClientSession(
+                                                new ClientSession(
+                                                        authenticationRequest.toParameters(),
+                                                        LocalDateTime.now(),
+                                                        vtr))));
         when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
@@ -387,13 +388,12 @@ public class TokenHandlerTest {
                         Optional.of(
                                 new AuthCodeExchangeData()
                                         .setEmail(TEST_EMAIL)
-                                        .setClientSessionId(CLIENT_SESSION_ID)));
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(
-                        new ClientSession(
-                                generateAuthRequest().toParameters(),
-                                LocalDateTime.now(),
-                                mock(VectorOfTrust.class)));
+                                        .setClientSessionId(CLIENT_SESSION_ID)
+                                        .setClientSession(
+                                                new ClientSession(
+                                                        generateAuthRequest().toParameters(),
+                                                        LocalDateTime.now(),
+                                                        mock(VectorOfTrust.class)))));
 
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(privateKeyJWT, authCode, "http://invalid-redirect-uri");
