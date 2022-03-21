@@ -24,6 +24,7 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -88,24 +89,26 @@ public class TokenHandler
     }
 
     public TokenHandler(ConfigurationService configurationService) {
+        var kms = new KmsConnectionService(configurationService);
+
         this.configurationService = configurationService;
+        this.redisConnectionService = new RedisConnectionService(configurationService);
+
         this.clientService =
                 new DynamoClientService(
                         configurationService.getAwsRegion(),
                         configurationService.getEnvironment(),
                         configurationService.getDynamoEndpointUri());
         this.tokenService =
-                new TokenService(
-                        configurationService,
-                        new RedisConnectionService(configurationService),
-                        new KmsConnectionService(configurationService));
+                new TokenService(configurationService, this.redisConnectionService, kms);
         this.dynamoService = new DynamoService(configurationService);
-        this.authorisationCodeService = new AuthorisationCodeService(configurationService);
+        this.authorisationCodeService =
+                new AuthorisationCodeService(
+                        configurationService,
+                        redisConnectionService,
+                        ObjectMapperFactory.getInstance());
         this.clientSessionService = new ClientSessionService(configurationService);
-        this.tokenValidationService =
-                new TokenValidationService(
-                        configurationService, new KmsConnectionService(configurationService));
-        this.redisConnectionService = new RedisConnectionService(configurationService);
+        this.tokenValidationService = new TokenValidationService(configurationService, kms);
     }
 
     public TokenHandler() {

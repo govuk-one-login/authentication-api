@@ -5,11 +5,12 @@ import io.lettuce.core.RedisURI;
 import io.lettuce.core.TransactionResult;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
-import io.lettuce.core.support.ConnectionPoolSupport;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 
 import java.util.Optional;
+
+import static io.lettuce.core.support.ConnectionPoolSupport.createGenericObjectPool;
 
 public class RedisConnectionService implements AutoCloseable {
 
@@ -23,9 +24,7 @@ public class RedisConnectionService implements AutoCloseable {
         password.ifPresent(s -> builder.withPassword(s.toCharArray()));
         RedisURI redisURI = builder.build();
         this.client = RedisClient.create(redisURI);
-        this.pool =
-                ConnectionPoolSupport.createGenericObjectPool(
-                        client::connect, new GenericObjectPoolConfig());
+        this.pool = createGenericObjectPool(client::connect, new GenericObjectPoolConfig<>());
         warmUp();
     }
 
