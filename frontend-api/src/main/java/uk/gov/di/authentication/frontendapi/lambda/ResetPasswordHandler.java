@@ -10,7 +10,7 @@ import jakarta.validation.ConstraintViolationException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.frontendapi.entity.ResetPasswordWithCodeRequest;
+import uk.gov.di.authentication.frontendapi.entity.ResetPasswordCompletionRequest;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
@@ -36,10 +36,11 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
 
+import static java.util.Objects.nonNull;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 
-public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordWithCodeRequest>
+public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompletionRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final AuthenticationService authenticationService;
@@ -60,7 +61,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordWithC
             ClientService clientService,
             AuditService auditService) {
         super(
-                ResetPasswordWithCodeRequest.class,
+                ResetPasswordCompletionRequest.class,
                 configurationService,
                 sessionService,
                 clientSessionService,
@@ -77,7 +78,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordWithC
     }
 
     public ResetPasswordHandler(ConfigurationService configurationService) {
-        super(ResetPasswordWithCodeRequest.class, configurationService);
+        super(ResetPasswordCompletionRequest.class, configurationService);
         this.authenticationService = new DynamoService(configurationService);
         this.sqsClient =
                 new AwsSqsClient(
@@ -93,7 +94,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordWithC
     public APIGatewayProxyResponseEvent handleRequestWithUserContext(
             APIGatewayProxyRequestEvent input,
             Context context,
-            ResetPasswordWithCodeRequest request,
+            ResetPasswordCompletionRequest request,
             UserContext userContext) {
         LOG.info("Request received to ResetPasswordHandler");
         try {

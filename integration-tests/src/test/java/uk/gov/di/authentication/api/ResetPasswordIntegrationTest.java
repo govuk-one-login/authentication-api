@@ -3,7 +3,7 @@ package uk.gov.di.authentication.api;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.frontendapi.entity.ResetPasswordWithCodeRequest;
+import uk.gov.di.authentication.frontendapi.entity.ResetPasswordCompletionRequest;
 import uk.gov.di.authentication.frontendapi.lambda.ResetPasswordHandler;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -41,7 +41,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         var response =
                 makeRequest(
-                        Optional.of(new ResetPasswordWithCodeRequest(CODE, PASSWORD)),
+                        Optional.of(new ResetPasswordCompletionRequest(CODE, PASSWORD)),
                         constructFrontendHeaders(sessionId),
                         Map.of());
 
