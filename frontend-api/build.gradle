@@ -7,12 +7,14 @@ group "uk.gov.di.authentication.frontendapi"
 version "unspecified"
 
 dependencies {
-    implementation configurations.dynamodb,
-            configurations.govuk_notify,
-            configurations.lambda,
+
+    compileOnly configurations.lambda,
+            configurations.sqs,
+            configurations.dynamodb
+
+    implementation configurations.govuk_notify,
             configurations.jackson,
             configurations.nimbus,
-            configurations.sqs,
             configurations.cloudwatch,
             configurations.bouncycastle,
             project(":shared")
@@ -21,7 +23,10 @@ dependencies {
 
     testImplementation configurations.tests,
             configurations.lambda_tests,
-            project(":shared-test")
+            project(":shared-test"),
+            configurations.lambda,
+            configurations.sqs,
+            configurations.dynamodb
 
     testRuntimeOnly configurations.test_runtime
 }
