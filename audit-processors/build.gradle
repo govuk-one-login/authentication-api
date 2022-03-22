@@ -12,10 +12,14 @@ ext {
 }
 
 dependencies {
-    implementation configurations.lambda,
+    compileOnly configurations.lambda,
             configurations.sqs,
+            configurations.ssm,
+            configurations.sns,
             configurations.s3,
-            project(":shared"),
+            configurations.dynamodb
+
+    implementation project(":shared"),
             "com.google.protobuf:protobuf-java:${dependencyVersions.protobuf_version}",
             "com.google.protobuf:protobuf-java-util:${dependencyVersions.protobuf_version}",
             "com.google.code.gson:gson:2.9.0"
@@ -24,7 +28,10 @@ dependencies {
 
     testImplementation configurations.tests,
             configurations.lambda_tests,
-            project(":shared-test")
+            project(":shared-test"),
+            configurations.lambda,
+            configurations.sqs,
+            configurations.dynamodb
 
     testRuntimeOnly configurations.test_runtime
 }
