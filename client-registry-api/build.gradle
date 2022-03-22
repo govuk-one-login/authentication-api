@@ -9,10 +9,8 @@ version "unspecified"
 dependencies {
 
     compileOnly configurations.lambda,
-            configurations.sqs,
             configurations.ssm,
             configurations.sns,
-            configurations.s3,
             configurations.dynamodb
 
     implementation configurations.nimbus,
