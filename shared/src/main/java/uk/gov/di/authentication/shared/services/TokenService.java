@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.shared.services;
 
+import com.amazonaws.services.kms.model.GetPublicKeyRequest;
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;
 import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
@@ -67,6 +68,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
 
 public class TokenService {
 
@@ -373,10 +375,18 @@ public class TokenService {
     }
 
     private SignedJWT generateSignedJWT(JWTClaimsSet claimsSet) {
+
+        var signingKeyId =
+                kmsConnectionService
+                        .getPublicKey(
+                                new GetPublicKeyRequest()
+                                        .withKeyId(configService.getTokenSigningKeyAlias()))
+                        .getKeyId();
+
         try {
             JWSHeader jwsHeader =
                     new JWSHeader.Builder(TOKEN_ALGORITHM)
-                            .keyID(configService.getTokenSigningKeyAlias())
+                            .keyID(hashSha256String(signingKeyId))
                             .build();
             Base64URL encodedHeader = jwsHeader.toBase64URL();
             Base64URL encodedClaims = Base64URL.encode(claimsSet.toString());
