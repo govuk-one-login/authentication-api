@@ -8,28 +8,24 @@ version "unspecified"
 
 dependencies {
 
-    compileOnly configurations.lambda,
-            configurations.sqs,
-            configurations.sns,
-            configurations.ssm,
-            configurations.dynamodb
-
-    implementation configurations.nimbus,
+    implementation configurations.lambda,
+            configurations.nimbus,
             configurations.jackson,
             configurations.bouncycastle,
             configurations.govuk_notify,
+            configurations.dynamodb,
             configurations.lettuce,
             configurations.libphonenumber,
             configurations.hamcrest,
+            configurations.sns,
+            configurations.sqs,
+            configurations.ssm,
             configurations.cloudwatch,
             "com.google.protobuf:protobuf-java:3.19.4"
 
     testImplementation configurations.tests,
             configurations.lambda_tests,
-            project(":shared-test"),
-            configurations.lambda,
-            configurations.sqs,
-            configurations.dynamodb
+            project(":shared-test")
     testRuntimeOnly configurations.test_runtime
 }
 
