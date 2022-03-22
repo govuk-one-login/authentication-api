@@ -7,9 +7,13 @@ group "uk.gov.di.authentication.ipvapi"
 version "unspecified"
 
 dependencies {
-    implementation configurations.dynamodb,
-            configurations.lambda,
-            configurations.jackson,
+    compileOnly configurations.lambda,
+            configurations.sqs,
+            configurations.ssm,
+            configurations.sns,
+            configurations.dynamodb
+
+    implementation configurations.jackson,
             configurations.nimbus,
             project(":shared")
     runtimeOnly configurations.logging_runtime
@@ -17,7 +21,9 @@ dependencies {
     testImplementation configurations.tests,
             configurations.lambda_tests,
             project(":shared-test"),
-            project(":shared")
+            configurations.lambda,
+            configurations.sqs,
+            configurations.dynamodb
 
     testRuntimeOnly configurations.test_runtime
 }
