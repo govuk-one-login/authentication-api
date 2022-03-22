@@ -12,13 +12,11 @@ dependencies {
             configurations.sqs,
             configurations.dynamodb
 
-    implementation configurations.govuk_notify,
-            configurations.jackson,
+    implementation configurations.jackson,
             configurations.nimbus,
             configurations.bouncycastle,
             configurations.cloudwatch,
-            project(":shared"),
-            project(":client-registry-api")
+            project(":shared")
 
     testImplementation configurations.tests,
             configurations.lambda_tests,
