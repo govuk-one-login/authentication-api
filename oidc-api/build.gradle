@@ -10,16 +10,16 @@ dependencies {
 
     compileOnly configurations.lambda,
             configurations.sqs,
-            configurations.ssm,
             configurations.sns,
-            configurations.s3,
             configurations.dynamodb
 
-    implementation configurations.jackson,
+    implementation configurations.govuk_notify,
+            configurations.jackson,
             configurations.nimbus,
             configurations.bouncycastle,
             configurations.cloudwatch,
-            project(":shared")
+            project(":shared"),
+            project(":client-registry-api")
 
     testImplementation configurations.tests,
             configurations.lambda_tests,
