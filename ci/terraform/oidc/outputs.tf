@@ -18,6 +18,10 @@ output "token_signing_key_alias" {
   value = local.id_token_signing_key_alias_name
 }
 
+output "ipv_token_auth_key_alias" {
+  value = local.ipv_token_auth_key_alias_name
+}
+
 output "frontend_api_key" {
   value     = aws_api_gateway_api_key.di_auth_frontend_api_key.value
   sensitive = true

@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
@@ -69,7 +70,9 @@ public class IPVCallbackHandler
         this.ipvAuthorisationService =
                 new IPVAuthorisationService(
                         configurationService, new RedisConnectionService(configurationService));
-        this.ipvTokenService = new IPVTokenService(configurationService);
+        this.ipvTokenService =
+                new IPVTokenService(
+                        configurationService, new KmsConnectionService(configurationService));
         this.sessionService = new SessionService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);

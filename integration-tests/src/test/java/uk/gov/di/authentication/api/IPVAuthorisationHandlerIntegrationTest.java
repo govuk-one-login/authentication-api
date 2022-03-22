@@ -114,7 +114,12 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         private final IPVStubExtension ipvStubExtension;
 
         public IPVTestConfigurationService(IPVStubExtension ipvStub) {
-            super(auditTopic, notificationsQueue, auditSigningKey, tokenSigner);
+            super(
+                    auditTopic,
+                    notificationsQueue,
+                    auditSigningKey,
+                    tokenSigner,
+                    ipvPrivateKeyJwtSigner);
             this.ipvStubExtension = ipvStub;
         }
 

@@ -207,7 +207,12 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private class UserInfoConfigurationService extends IntegrationTestConfigurationService {
 
         public UserInfoConfigurationService() {
-            super(auditTopic, notificationsQueue, auditSigningKey, tokenSigner);
+            super(
+                    auditTopic,
+                    notificationsQueue,
+                    auditSigningKey,
+                    tokenSigner,
+                    ipvPrivateKeyJwtSigner);
         }
 
         @Override
