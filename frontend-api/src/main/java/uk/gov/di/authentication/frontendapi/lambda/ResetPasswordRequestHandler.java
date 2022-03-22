@@ -155,17 +155,22 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             code = codeGeneratorService.sixDigitCode();
             notifyText = code;
             notificationType = RESET_PASSWORD_WITH_CODE;
+            codeStorageService.saveOtpCode(
+                    resetPasswordRequest.getEmail(),
+                    code,
+                    configurationService.getCodeExpiry(),
+                    notificationType);
         } else {
             code = codeGeneratorService.twentyByteEncodedRandomCode();
             notifyText =
                     resetPasswordService.buildResetPasswordLink(
                             code, userContext.getSession().getSessionId(), persistentSessionId);
             notificationType = RESET_PASSWORD;
+            codeStorageService.savePasswordResetCode(
+                    subjectId, code, configurationService.getCodeExpiry(), notificationType);
         }
         NotifyRequest notifyRequest =
                 new NotifyRequest(resetPasswordRequest.getEmail(), notificationType, notifyText);
-        codeStorageService.savePasswordResetCode(
-                subjectId, code, configurationService.getCodeExpiry(), notificationType);
         sessionService.save(userContext.getSession().incrementPasswordResetCount());
         sqsClient.send(serialiseRequest(notifyRequest));
         LOG.info("Successfully processed request");

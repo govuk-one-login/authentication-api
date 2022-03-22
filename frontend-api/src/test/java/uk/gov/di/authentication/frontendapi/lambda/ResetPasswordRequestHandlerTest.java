@@ -183,8 +183,8 @@ class ResetPasswordRequestHandlerTest {
 
         verify(awsSqsClient).send(serialisedRequest);
         verify(codeStorageService)
-                .savePasswordResetCode(
-                        subject.getValue(),
+                .saveOtpCode(
+                        TEST_EMAIL_ADDRESS,
                         TEST_SIX_DIGIT_CODE,
                         CODE_EXPIRY_TIME,
                         RESET_PASSWORD_WITH_CODE);

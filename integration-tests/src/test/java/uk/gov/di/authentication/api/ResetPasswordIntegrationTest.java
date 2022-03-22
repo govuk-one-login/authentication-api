@@ -3,7 +3,7 @@ package uk.gov.di.authentication.api;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.frontendapi.entity.ResetPasswordWithCodeRequest;
+import uk.gov.di.authentication.frontendapi.entity.ResetPasswordCompletionRequest;
 import uk.gov.di.authentication.frontendapi.lambda.ResetPasswordHandler;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -33,7 +33,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
-    public void shouldUpdatePasswordAndReturn204() throws IOException {
+    public void shouldUpdatePasswordAndReturn204ForRequestWithCode() throws IOException {
         String subject = "new-subject";
         String sessionId = redis.createSession();
         userStore.signUp(EMAIL_ADDRESS, "password-1", new Subject(subject));
@@ -41,7 +41,31 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         var response =
                 makeRequest(
-                        Optional.of(new ResetPasswordWithCodeRequest(CODE, PASSWORD)),
+                        Optional.of(new ResetPasswordCompletionRequest(CODE, PASSWORD)),
+                        constructFrontendHeaders(sessionId),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
+
+        assertThat(requests, hasSize(1));
+        assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
+        assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
+
+        assertEventTypesReceived(auditTopic, List.of(PASSWORD_RESET_SUCCESSFUL));
+    }
+
+    @Test
+    public void shouldUpdatePasswordAndReturn204ForRequestWithNoCode() throws IOException {
+        String subject = "new-subject";
+        String sessionId = redis.createSession();
+        userStore.signUp(EMAIL_ADDRESS, "password-1", new Subject(subject));
+        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+
+        var response =
+                makeRequest(
+                        Optional.of(new ResetPasswordCompletionRequest(null, PASSWORD)),
                         constructFrontendHeaders(sessionId),
                         Map.of());
 
