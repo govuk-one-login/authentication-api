@@ -103,13 +103,21 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             if (errorResponse.isPresent()) {
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
-            Optional<String> subject =
-                    codeStorageService.getSubjectWithPasswordResetCode(request.getCode());
-            if (subject.isEmpty()) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1021);
+            UserCredentials userCredentials;
+            if (nonNull(request.getCode())) {
+                Optional<String> subject =
+                        codeStorageService.getSubjectWithPasswordResetCode(request.getCode());
+                if (subject.isEmpty()) {
+                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1021);
+                }
+                userCredentials =
+                        authenticationService.getUserCredentialsFromSubject(subject.get());
+            } else {
+                userCredentials =
+                        authenticationService.getUserCredentialsFromEmail(
+                                userContext.getSession().getEmailAddress());
             }
-            UserCredentials userCredentials =
-                    authenticationService.getUserCredentialsFromSubject(subject.get());
+
             if (userCredentials.getPassword() != null) {
                 if (verifyPassword(userCredentials.getPassword(), request.getPassword())) {
                     return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1024);
@@ -117,7 +125,9 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             } else {
                 LOG.info("Resetting password for migrated user");
             }
-            codeStorageService.deleteSubjectWithPasswordResetCode(request.getCode());
+            if (nonNull(request.getCode())) {
+                codeStorageService.deleteSubjectWithPasswordResetCode(request.getCode());
+            }
             authenticationService.updatePassword(userCredentials.getEmail(), request.getPassword());
 
             int incorrectPasswordCount =

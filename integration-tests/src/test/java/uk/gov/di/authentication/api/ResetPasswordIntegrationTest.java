@@ -33,7 +33,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
-    public void shouldUpdatePasswordAndReturn204() throws IOException {
+    public void shouldUpdatePasswordAndReturn204ForRequestWithCode() throws IOException {
         String subject = "new-subject";
         String sessionId = redis.createSession();
         userStore.signUp(EMAIL_ADDRESS, "password-1", new Subject(subject));
@@ -42,6 +42,30 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         var response =
                 makeRequest(
                         Optional.of(new ResetPasswordCompletionRequest(CODE, PASSWORD)),
+                        constructFrontendHeaders(sessionId),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
+
+        assertThat(requests, hasSize(1));
+        assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
+        assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
+
+        assertEventTypesReceived(auditTopic, List.of(PASSWORD_RESET_SUCCESSFUL));
+    }
+
+    @Test
+    public void shouldUpdatePasswordAndReturn204ForRequestWithNoCode() throws IOException {
+        String subject = "new-subject";
+        String sessionId = redis.createSession();
+        userStore.signUp(EMAIL_ADDRESS, "password-1", new Subject(subject));
+        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+
+        var response =
+                makeRequest(
+                        Optional.of(new ResetPasswordCompletionRequest(null, PASSWORD)),
                         constructFrontendHeaders(sessionId),
                         Map.of());
 
