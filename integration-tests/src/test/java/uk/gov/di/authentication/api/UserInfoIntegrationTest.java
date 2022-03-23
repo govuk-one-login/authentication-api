@@ -212,7 +212,8 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     notificationsQueue,
                     auditSigningKey,
                     tokenSigner,
-                    ipvPrivateKeyJwtSigner);
+                    ipvPrivateKeyJwtSigner,
+                    spotQueue);
         }
 
         @Override

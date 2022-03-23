@@ -119,7 +119,8 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     notificationsQueue,
                     auditSigningKey,
                     tokenSigner,
-                    ipvPrivateKeyJwtSigner);
+                    ipvPrivateKeyJwtSigner,
+                    spotQueue);
             this.ipvStubExtension = ipvStub;
         }
 

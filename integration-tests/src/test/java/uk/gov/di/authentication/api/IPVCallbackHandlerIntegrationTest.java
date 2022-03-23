@@ -5,6 +5,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -12,17 +13,20 @@ import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.IPVStubExtension;
+import uk.gov.di.authentication.testsupport.helpers.SpotQueueAssertionHelper;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -51,24 +55,24 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     }
 
     @Test
-    void shouldReturn200AndClientInfoResponseForValidClient() throws IOException {
-        String sessionId = "some-session-id";
-        String clientSessionId = "some-client-session-id";
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        AuthenticationRequest.Builder authRequestBuilder =
+    void shouldRedirectToLoginWhenSuccessfullyProcessedIpvResponse() throws IOException {
+        var sessionId = "some-session-id";
+        var clientSessionId = "some-client-session-id";
+        var scope = new Scope(OIDCScopeValue.OPENID);
+        var authRequestBuilder =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE,
                                 scope,
                                 new ClientID(CLIENT_ID),
                                 URI.create(REDIRECT_URI))
                         .nonce(new Nonce());
-        State state = new State();
+        var state = new State();
         redis.createSession(sessionId);
         redis.createClientSession(clientSessionId, authRequestBuilder.build().toParameters());
         redis.addStateToRedis(state, sessionId);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
-        setUpDynamo();
+        var publicSubject = setUpDynamo();
+
         var response =
                 makeRequest(
                         Optional.empty(),
@@ -82,10 +86,12 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
 
         assertNoAuditEventsReceived(auditTopic);
+        SpotQueueAssertionHelper.assertSpotRequestReceived(
+                spotQueue, List.of(new SPOTRequest("", publicSubject)));
     }
 
-    private void setUpDynamo() {
-        userStore.signUp(TEST_EMAIL_ADDRESS, "password");
+    private String setUpDynamo() {
+        var publicSubject = userStore.signUp(TEST_EMAIL_ADDRESS, "password", new Subject());
         clientStore.registerClient(
                 CLIENT_ID,
                 "test-client",
@@ -98,6 +104,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 "https://test.com",
                 "public",
                 true);
+        return publicSubject;
     }
 
     private Map<String, String> constructQueryStringParameters(State state) {
@@ -141,6 +148,11 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         @Override
         public String getIPVTokenSigningKeyAlias() {
             return ipvPrivateKeyJwtSigner.getKeyAlias();
+        }
+
+        @Override
+        public String getSpotQueueUri() {
+            return spotQueue.getQueueUrl();
         }
     }
 }
