@@ -107,9 +107,10 @@ public class AccessTokenService {
             var accessTokenStore = getAccessTokenStore(clientID, subject);
             if (accessTokenStore.isEmpty()) {
                 LOG.warn(
-                        "Access Token Store is empty. Access Token expires at: {}. CurrentDateTime is: {}",
+                        "Access Token Store is empty. Access Token expires at: {}. CurrentDateTime is: {}. JWTID in Access Token sent in request: {}",
                         signedJWT.getJWTClaimsSet().getExpirationTime(),
-                        currentDateTime);
+                        currentDateTime,
+                        signedJWT.getJWTClaimsSet().getJWTID());
                 throw new AccessTokenException(
                         INVALID_ACCESS_TOKEN, BearerTokenError.INVALID_TOKEN);
             }
@@ -146,7 +147,7 @@ public class AccessTokenService {
             return Optional.ofNullable(
                     new ObjectMapper().readValue(result, AccessTokenStore.class));
         } catch (JsonProcessingException | IllegalArgumentException e) {
-            LOG.error("Error getting AccessToken from Redis");
+            LOG.error("Error getting AccessToken from Redis", e);
             return Optional.empty();
         }
     }
