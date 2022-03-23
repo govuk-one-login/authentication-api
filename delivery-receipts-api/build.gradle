@@ -7,13 +7,8 @@ group "uk.gov.di.authentication.deliveryreceiptsapi"
 version "unspecified"
 
 dependencies {
-    compileOnly configurations.lambda,
-            configurations.sqs,
-            configurations.ssm,
-            configurations.sns,
-            configurations.dynamodb
-
     implementation configurations.govuk_notify,
+            configurations.lambda,
             configurations.jackson,
             configurations.libphonenumber,
             configurations.cloudwatch,
