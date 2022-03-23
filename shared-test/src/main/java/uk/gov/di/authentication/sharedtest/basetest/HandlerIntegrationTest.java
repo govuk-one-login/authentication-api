@@ -65,6 +65,10 @@ public abstract class HandlerIntegrationTest<Q, S> {
     protected static final TokenSigningExtension tokenSigner = new TokenSigningExtension();
 
     @RegisterExtension
+    protected static final TokenSigningExtension ipvPrivateKeyJwtSigner =
+            new TokenSigningExtension("ipv-token-auth-key");
+
+    @RegisterExtension
     protected static final ParameterStoreExtension configurationParameters =
             new ParameterStoreExtension(
                     Map.of(
@@ -80,7 +84,11 @@ public abstract class HandlerIntegrationTest<Q, S> {
 
     protected final ConfigurationService TEST_CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
-                    auditTopic, notificationsQueue, auditSigningKey, tokenSigner);
+                    auditTopic,
+                    notificationsQueue,
+                    auditSigningKey,
+                    tokenSigner,
+                    ipvPrivateKeyJwtSigner);
 
     protected RequestHandler<Q, S> handler;
     protected final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
@@ -142,16 +150,19 @@ public abstract class HandlerIntegrationTest<Q, S> {
         private final KmsKeyExtension auditSigningKey;
         private final TokenSigningExtension tokenSigningKey;
         private final SnsTopicExtension auditEventTopic;
+        private final TokenSigningExtension ipvPrivateKeyJwtSigner;
 
         public IntegrationTestConfigurationService(
                 SnsTopicExtension auditEventTopic,
                 SqsQueueExtension notificationQueue,
                 KmsKeyExtension auditSigningKey,
-                TokenSigningExtension tokenSigningKey) {
+                TokenSigningExtension tokenSigningKey,
+                TokenSigningExtension ipvPrivateKeyJwtSigner) {
             this.auditEventTopic = auditEventTopic;
             this.notificationQueue = notificationQueue;
             this.tokenSigningKey = tokenSigningKey;
             this.auditSigningKey = auditSigningKey;
+            this.ipvPrivateKeyJwtSigner = ipvPrivateKeyJwtSigner;
         }
 
         @Override
@@ -172,6 +183,11 @@ public abstract class HandlerIntegrationTest<Q, S> {
         @Override
         public String getTokenSigningKeyAlias() {
             return tokenSigningKey.getKeyAlias();
+        }
+
+        @Override
+        public String getIPVTokenSigningKeyAlias() {
+            return ipvPrivateKeyJwtSigner.getKeyAlias();
         }
 
         @Override

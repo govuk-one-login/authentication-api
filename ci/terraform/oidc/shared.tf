@@ -24,6 +24,8 @@ locals {
   authentication_subnet_ids                   = data.terraform_remote_state.shared.outputs.authentication_subnet_ids
   id_token_signing_key_alias_name             = data.terraform_remote_state.shared.outputs.id_token_signing_key_alias_name
   id_token_signing_key_arn                    = data.terraform_remote_state.shared.outputs.id_token_signing_key_arn
+  ipv_token_auth_key_alias_name               = data.terraform_remote_state.shared.outputs.ipv_token_auth_signing_key_alias_name
+  ipv_token_auth_signing_key_arn              = data.terraform_remote_state.shared.outputs.ipv_token_auth_signing_key_arn
   audit_signing_key_alias_name                = data.terraform_remote_state.shared.outputs.audit_signing_key_alias_name
   audit_signing_key_arn                       = data.terraform_remote_state.shared.outputs.audit_signing_key_arn
   sms_bucket_name                             = data.terraform_remote_state.shared.outputs.sms_bucket_name

@@ -119,6 +119,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("IPV_AUTHORISATION_CLIENT_ID", "");
     }
 
+    public String getIPVTokenSigningKeyAlias() {
+        return System.getenv("IPV_TOKEN_SIGNING_KEY_ALIAS");
+    }
+
     public URI getLoginURI() {
         return URI.create(System.getenv("LOGIN_URI"));
     }

@@ -24,6 +24,10 @@ public class TokenSigningExtension extends KmsKeyExtension {
         super("token-signing-key");
     }
 
+    public TokenSigningExtension(String keyAliasSuffix) {
+        super(keyAliasSuffix);
+    }
+
     @Override
     public void beforeAll(ExtensionContext context) {
         super.beforeAll(context);
