@@ -106,7 +106,7 @@ variable "provision_dynamo" {
 }
 
 variable "ipv_api_enabled" {
-  default = true
+  default = false
 }
 
 variable "dynamo_default_read_capacity" {
