@@ -271,7 +271,7 @@ task oidcTerraform (type: Terraform) {
             environment "API_GATEWAY_ID", json.api_gateway_root_id.value
             environment "TOKEN_SIGNING_KEY_ALIAS", json.token_signing_key_alias.value
             environment "IPV_TOKEN_SIGNING_KEY_ALIAS", json.ipv_token_auth_key_alias.value
-            environment "BASE_URL", json.base_url.value
+            environment "OIDC_API_BASE_URL", json.base_url.value
             environment "API_KEY", json.frontend_api_key.value
             environment "FRONTEND_API_GATEWAY_ID", json.frontend_api_gateway_root_id.value
             environment "FRONTEND_API_KEY", json.frontend_api_key.value
@@ -307,7 +307,7 @@ task acctMgmtTerraform (type: Terraform) {
         def json = outputs()
         allprojects.findAll {it.name == "account-management-integration-tests"}.first().tasks.getByName("test") {
             environment "API_GATEWAY_ID", json.api_gateway_root_id.value
-            environment "BASE_URL", json.base_url.value
+            environment "OIDC_API_BASE_URL", json.base_url.value
             environment "EMAIL_QUEUE_URL", json.email_queue.value
         }
     }

@@ -16,7 +16,7 @@ module "openid_configuration_discovery" {
 
   handler_environment_variables = {
     ENVIRONMENT         = var.environment
-    BASE_URL            = local.api_base_url
+    OIDC_API_BASE_URL   = local.api_base_url
     LOCALSTACK_ENDPOINT = var.use_localstack ? var.localstack_endpoint : null
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.WellknownHandler::handleRequest"

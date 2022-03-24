@@ -23,7 +23,6 @@ module "reset_password" {
   environment     = var.environment
 
   handler_environment_variables = {
-    BASE_URL                 = local.frontend_api_base_url
     DYNAMO_ENDPOINT          = var.use_localstack ? var.lambda_dynamo_endpoint : null
     LOCALSTACK_ENDPOINT      = var.use_localstack ? var.localstack_endpoint : null
     EMAIL_QUEUE_URL          = aws_sqs_queue.email_queue.id

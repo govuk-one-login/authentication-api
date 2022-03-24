@@ -31,15 +31,15 @@ class TrustMarkHandlerTest {
     public void setUp() {
         handler = new TrustMarkHandler(configurationService);
         Optional<String> baseUrl = Optional.of(BASE_URL);
-        when(configurationService.getBaseURL()).thenReturn(baseUrl);
+        when(configurationService.getOidcApiBaseURL()).thenReturn(baseUrl);
     }
 
     @Test
     public void shouldReturn200WhenRequestIsSuccessful() throws JsonProcessingException {
         TrustMarkResponse trustMarkResponse =
                 new TrustMarkResponse(
-                        configurationService.getBaseURL().orElseThrow(),
-                        configurationService.getBaseURL().orElseThrow(),
+                        configurationService.getOidcApiBaseURL().orElseThrow(),
+                        configurationService.getOidcApiBaseURL().orElseThrow(),
                         List.of(
                                 CredentialTrustLevel.LOW_LEVEL.getValue(),
                                 CredentialTrustLevel.MEDIUM_LEVEL.getValue()),

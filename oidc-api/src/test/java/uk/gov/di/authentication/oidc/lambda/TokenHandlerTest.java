@@ -118,7 +118,7 @@ public class TokenHandlerTest {
 
     @BeforeEach
     public void setUp() {
-        when(configurationService.getBaseURL()).thenReturn(Optional.of(BASE_URI));
+        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(BASE_URI));
         when(configurationService.getSessionExpiry()).thenReturn(1234L);
         handler =
                 new TokenHandler(

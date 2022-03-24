@@ -249,13 +249,13 @@ public class TokenService {
             String vot) {
 
         LOG.info("Generating IdToken");
-        URI trustMarkUri = buildURI(configService.getBaseURL().get(), "/trustmark");
+        URI trustMarkUri = buildURI(configService.getOidcApiBaseURL().get(), "/trustmark");
         LocalDateTime localDateTime =
                 LocalDateTime.now().plusSeconds(configService.getIDTokenExpiry());
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         IDTokenClaimsSet idTokenClaims =
                 new IDTokenClaimsSet(
-                        new Issuer(configService.getBaseURL().get()),
+                        new Issuer(configService.getOidcApiBaseURL().get()),
                         publicSubject,
                         List.of(new Audience(clientId)),
                         expiryDate,
@@ -290,7 +290,7 @@ public class TokenService {
         JWTClaimsSet.Builder claimSetBuilder =
                 new JWTClaimsSet.Builder()
                         .claim("scope", scopes)
-                        .issuer(configService.getBaseURL().get())
+                        .issuer(configService.getOidcApiBaseURL().get())
                         .expirationTime(expiryDate)
                         .issueTime(
                                 Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()))
@@ -333,7 +333,7 @@ public class TokenService {
         JWTClaimsSet claimsSet =
                 new JWTClaimsSet.Builder()
                         .claim("scope", scopes)
-                        .issuer(configService.getBaseURL().get())
+                        .issuer(configService.getOidcApiBaseURL().get())
                         .expirationTime(expiryDate)
                         .issueTime(
                                 Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()))

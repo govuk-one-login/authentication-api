@@ -38,7 +38,7 @@ public class WellknownHandler
 
     public WellknownHandler(ConfigurationService configService) {
         this.configService = configService;
-        baseUrl = configService.getBaseURL().orElseThrow();
+        baseUrl = configService.getOidcApiBaseURL().orElseThrow();
         providerMetadata =
                 new OIDCProviderMetadata(
                         new Issuer(baseUrl),
@@ -48,10 +48,10 @@ public class WellknownHandler
 
     public WellknownHandler() {
         this.configService = ConfigurationService.getInstance();
-        baseUrl = configService.getBaseURL().orElseThrow();
+        baseUrl = configService.getOidcApiBaseURL().orElseThrow();
         providerMetadata =
                 new OIDCProviderMetadata(
-                        new Issuer(configService.getBaseURL().get()),
+                        new Issuer(configService.getOidcApiBaseURL().get()),
                         List.of(SubjectType.PUBLIC, SubjectType.PAIRWISE),
                         buildURI(baseUrl, "/.well-known/jwks.json"));
     }

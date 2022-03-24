@@ -25,7 +25,6 @@ module "verify_code" {
 
   handler_environment_variables = {
     ENVIRONMENT                         = var.environment
-    BASE_URL                            = local.frontend_api_base_url
     BLOCKED_EMAIL_DURATION              = var.blocked_email_duration
     EVENTS_SNS_TOPIC_ARN                = aws_sns_topic.events.arn
     AUDIT_SIGNING_KEY_ALIAS             = local.audit_signing_key_alias_name

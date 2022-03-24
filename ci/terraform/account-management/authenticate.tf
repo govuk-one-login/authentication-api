@@ -18,7 +18,6 @@ module "authenticate" {
   endpoint_method = "POST"
   handler_environment_variables = {
     ENVIRONMENT             = var.environment
-    BASE_URL                = local.oidc_api_base_url
     DYNAMO_ENDPOINT         = var.use_localstack ? var.lambda_dynamo_endpoint : null
     LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
     EVENTS_SNS_TOPIC_ARN    = data.aws_sns_topic.events.arn

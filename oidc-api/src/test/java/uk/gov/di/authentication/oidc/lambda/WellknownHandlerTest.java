@@ -30,7 +30,7 @@ class WellknownHandlerTest {
 
     @Test
     void shouldReturn200WhenRequestIsSuccessful() throws ParseException {
-        when(configService.getBaseURL()).thenReturn(Optional.of("http://localhost:8080"));
+        when(configService.getOidcApiBaseURL()).thenReturn(Optional.of("http://localhost:8080"));
         handler = new WellknownHandler(configService);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -63,7 +63,7 @@ class WellknownHandlerTest {
 
     @Test
     void shouldThrowExceptionWhenBaseUrlIsMissing() {
-        when(configService.getBaseURL()).thenReturn(Optional.empty());
+        when(configService.getOidcApiBaseURL()).thenReturn(Optional.empty());
 
         assertThrows(
                 NoSuchElementException.class,

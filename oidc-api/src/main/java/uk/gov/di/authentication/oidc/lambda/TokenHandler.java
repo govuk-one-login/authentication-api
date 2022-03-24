@@ -151,7 +151,7 @@ public class TokenHandler
                             }
                             String baseUrl =
                                     configurationService
-                                            .getBaseURL()
+                                            .getOidcApiBaseURL()
                                             .orElseThrow(
                                                     () -> {
                                                         LOG.error(

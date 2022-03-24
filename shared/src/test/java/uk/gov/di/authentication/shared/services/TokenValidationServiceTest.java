@@ -55,7 +55,7 @@ class TokenValidationServiceTest {
     @BeforeEach
     void setUp() throws JOSEException {
         Optional<String> baseUrl = Optional.of(BASE_URL);
-        when(configurationService.getBaseURL()).thenReturn(baseUrl);
+        when(configurationService.getOidcApiBaseURL()).thenReturn(baseUrl);
         ecJWK = generateECKeyPair();
         signer = new ECDSASigner(ecJWK);
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
