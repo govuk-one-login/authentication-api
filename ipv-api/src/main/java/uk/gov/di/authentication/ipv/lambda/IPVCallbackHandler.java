@@ -4,19 +4,21 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ParseException;
-import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
@@ -42,6 +44,8 @@ public class IPVCallbackHandler
     private final DynamoService dynamoService;
     private final ClientSessionService clientSessionService;
     private final DynamoClientService dynamoClientService;
+    private final AwsSqsClient sqsClient;
+    protected final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
     private static final String REDIRECT_PATH = "auth-code";
 
     public IPVCallbackHandler() {
@@ -55,7 +59,8 @@ public class IPVCallbackHandler
             SessionService sessionService,
             DynamoService dynamoService,
             ClientSessionService clientSessionService,
-            DynamoClientService dynamoClientService) {
+            DynamoClientService dynamoClientService,
+            AwsSqsClient sqsClient) {
         this.configurationService = configurationService;
         this.ipvAuthorisationService = responseService;
         this.ipvTokenService = ipvTokenService;
@@ -63,6 +68,7 @@ public class IPVCallbackHandler
         this.dynamoService = dynamoService;
         this.clientSessionService = clientSessionService;
         this.dynamoClientService = dynamoClientService;
+        this.sqsClient = sqsClient;
     }
 
     public IPVCallbackHandler(ConfigurationService configurationService) {
@@ -77,6 +83,11 @@ public class IPVCallbackHandler
         this.dynamoService = new DynamoService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
+        this.sqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getSpotQueueUri(),
+                        configurationService.getSqsEndpointUri());
     }
 
     @Override
@@ -107,7 +118,7 @@ public class IPVCallbackHandler
                                                         clientSession.getAuthRequestParams())
                                                 .getClientID()
                                                 .getValue();
-                                ClientRegistry clientRegistry =
+                                var clientRegistry =
                                         dynamoClientService.getClient(clientId).orElse(null);
                                 if (Objects.isNull(clientRegistry)) {
                                     LOG.error("Client registry not found with given clientId");
@@ -147,18 +158,20 @@ public class IPVCallbackHandler
                                     throw new RuntimeException(
                                             "IPV TokenResponse was not successful");
                                 }
-                                Subject pairwiseSubject =
+                                var pairwiseSubject =
                                         ClientSubjectHelper.getSubject(
                                                 userProfile, clientRegistry, dynamoService);
-                                String serializedCredential =
+                                var serializedCredential =
                                         ipvTokenService.sendIpvInfoRequest(
                                                 tokenResponse
                                                         .toSuccessResponse()
                                                         .getTokens()
                                                         .getBearerAccessToken());
-                                SPOTRequest spotRequest =
+                                var spotRequest =
                                         new SPOTRequest(
                                                 serializedCredential, pairwiseSubject.getValue());
+                                sqsClient.send(objectMapper.writeValueAsString(spotRequest));
+                                LOG.info("SPOT request placed on queue");
                             } catch (NoSuchElementException e) {
                                 LOG.error("Session not found");
                                 throw new RuntimeException("Session not found", e);
@@ -166,6 +179,9 @@ public class IPVCallbackHandler
                                 LOG.info(
                                         "Cannot retrieve auth request params from client session id");
                                 throw new RuntimeException();
+                            } catch (JsonProcessingException e) {
+                                LOG.error("Unable to serialize SPOTRequest when placing on queue");
+                                throw new RuntimeException(e);
                             }
                             var redirectURI =
                                     ConstructUriHelper.buildURI(

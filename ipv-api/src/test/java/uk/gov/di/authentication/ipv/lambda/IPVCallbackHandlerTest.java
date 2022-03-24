@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.ipv.lambda;
 
+import com.amazonaws.lambda.thirdparty.com.fasterxml.jackson.core.JsonProcessingException;
+import com.amazonaws.lambda.thirdparty.com.fasterxml.jackson.databind.ObjectMapper;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
@@ -9,7 +11,6 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.TokenRequest;
-import com.nimbusds.oauth2.sdk.TokenResponse;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
@@ -21,12 +22,14 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
@@ -48,6 +51,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -62,6 +66,7 @@ class IPVCallbackHandlerTest {
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
+    private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
     private static final URI LOGIN_URL = URI.create("https://example.com");
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final String COOKIE = "Cookie";
@@ -89,17 +94,20 @@ class IPVCallbackHandlerTest {
                         sessionService,
                         dynamoService,
                         clientSessionService,
-                        dynamoClientService);
+                        dynamoClientService,
+                        awsSqsClient);
         when(configService.getLoginURI()).thenReturn(LOGIN_URL);
     }
 
     @Test
-    void shouldRedirectToLoginUriForSuccessfulResponse() throws URISyntaxException {
+    void shouldRedirectToLoginUriForSuccessfulResponse()
+            throws URISyntaxException, JsonProcessingException {
+        var credential = SignedCredentialHelper.generateCredential().serialize();
         usingValidSession();
         usingValidClientSession();
-        TokenResponse successfulTokenResponse =
+        var successfulTokenResponse =
                 new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
-        TokenRequest tokenRequest = mock(TokenRequest.class);
+        var tokenRequest = mock(TokenRequest.class);
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
         responseHeaders.put("state", STATE.getValue());
@@ -116,16 +124,23 @@ class IPVCallbackHandlerTest {
                                 .toSuccessResponse()
                                 .getTokens()
                                 .getBearerAccessToken()))
-                .thenReturn(SignedCredentialHelper.generateCredential().serialize());
+                .thenReturn(credential);
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        var event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(responseHeaders);
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
-        APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+
+        var response = makeHandlerRequest(event);
 
         assertThat(response, hasStatus(302));
-        URI redirectUri = new URIBuilder(LOGIN_URL).setPath("auth-code").build();
-        assertThat(response.getHeaders().get("Location"), equalTo(redirectUri.toString()));
+        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("auth-code").build();
+        assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
+
+        verify(awsSqsClient)
+                .send(
+                        new ObjectMapper()
+                                .writeValueAsString(
+                                        new SPOTRequest(credential, PUBLIC_SUBJECT.getValue())));
     }
 
     @Test

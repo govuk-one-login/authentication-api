@@ -51,6 +51,9 @@ public abstract class HandlerIntegrationTest<Q, S> {
             new SqsQueueExtension("notification-queue");
 
     @RegisterExtension
+    protected static final SqsQueueExtension spotQueue = new SqsQueueExtension("spot-queue");
+
+    @RegisterExtension
     protected final AuditSnsTopicExtension auditTopic = new AuditSnsTopicExtension("local-events");
 
     @RegisterExtension
@@ -88,7 +91,8 @@ public abstract class HandlerIntegrationTest<Q, S> {
                     notificationsQueue,
                     auditSigningKey,
                     tokenSigner,
-                    ipvPrivateKeyJwtSigner);
+                    ipvPrivateKeyJwtSigner,
+                    spotQueue);
 
     protected RequestHandler<Q, S> handler;
     protected final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
@@ -151,18 +155,21 @@ public abstract class HandlerIntegrationTest<Q, S> {
         private final TokenSigningExtension tokenSigningKey;
         private final SnsTopicExtension auditEventTopic;
         private final TokenSigningExtension ipvPrivateKeyJwtSigner;
+        private final SqsQueueExtension spotQueue;
 
         public IntegrationTestConfigurationService(
                 SnsTopicExtension auditEventTopic,
                 SqsQueueExtension notificationQueue,
                 KmsKeyExtension auditSigningKey,
                 TokenSigningExtension tokenSigningKey,
-                TokenSigningExtension ipvPrivateKeyJwtSigner) {
+                TokenSigningExtension ipvPrivateKeyJwtSigner,
+                SqsQueueExtension spotQueue) {
             this.auditEventTopic = auditEventTopic;
             this.notificationQueue = notificationQueue;
             this.tokenSigningKey = tokenSigningKey;
             this.auditSigningKey = auditSigningKey;
             this.ipvPrivateKeyJwtSigner = ipvPrivateKeyJwtSigner;
+            this.spotQueue = spotQueue;
         }
 
         @Override
@@ -193,6 +200,11 @@ public abstract class HandlerIntegrationTest<Q, S> {
         @Override
         public String getFrontendBaseUrl() {
             return "http://localhost:3000/reset-password?code=";
+        }
+
+        @Override
+        public String getSpotQueueUri() {
+            return spotQueue.getQueueUrl();
         }
     }
 }
