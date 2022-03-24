@@ -7,7 +7,7 @@ version "unspecified"
 
 dependencies {
     implementation configurations.lambda,
-            "com.amazonaws:aws-java-sdk-lambda:1.12.183"
+            "com.amazonaws:aws-java-sdk-lambda:1.12.184"
 
     runtimeOnly configurations.logging_runtime
 
