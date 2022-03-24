@@ -53,8 +53,8 @@ public class TrustMarkHandler
 
     private TrustMarkResponse createTrustMarkResponse() {
         return new TrustMarkResponse(
-                configurationService.getBaseURL().orElseThrow(),
-                configurationService.getBaseURL().orElseThrow(),
+                configurationService.getOidcApiBaseURL().orElseThrow(),
+                configurationService.getOidcApiBaseURL().orElseThrow(),
                 Arrays.asList(
                         CredentialTrustLevel.LOW_LEVEL.getValue(),
                         CredentialTrustLevel.MEDIUM_LEVEL.getValue()),

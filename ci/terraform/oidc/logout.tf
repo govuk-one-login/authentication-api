@@ -23,7 +23,6 @@ module "logout" {
 
   handler_environment_variables = {
     DEFAULT_LOGOUT_URI      = "${module.dns.frontend_url}signed-out"
-    BASE_URL                = local.api_base_url
     EVENTS_SNS_TOPIC_ARN    = aws_sns_topic.events.arn
     AUDIT_SIGNING_KEY_ALIAS = local.audit_signing_key_alias_name
     LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null

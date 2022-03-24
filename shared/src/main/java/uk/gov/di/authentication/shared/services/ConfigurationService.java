@@ -47,10 +47,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Long.parseLong(System.getenv().getOrDefault("AUTH_CODE_EXPIRY", "300"));
     }
 
-    public Optional<String> getBaseURL() {
-        return Optional.ofNullable(System.getenv("BASE_URL"));
-    }
-
     public long getBlockedEmailDuration() {
         return Long.parseLong(System.getenv().getOrDefault("BLOCKED_EMAIL_DURATION", "900"));
     }
@@ -146,6 +142,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public Optional<String> getNotifyTestPhoneNumber() {
         return Optional.ofNullable(System.getenv("NOTIFY_TEST_PHONE_NUMBER"));
+    }
+
+    public Optional<String> getOidcApiBaseURL() {
+        return Optional.ofNullable(System.getenv("OIDC_API_BASE_URL"));
     }
 
     public Optional<String> getPasswordPepper() {

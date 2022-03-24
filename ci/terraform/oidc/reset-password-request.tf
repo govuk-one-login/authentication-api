@@ -23,7 +23,6 @@ module "reset-password-request" {
 
   handler_environment_variables = {
     ENVIRONMENT             = var.environment
-    BASE_URL                = local.frontend_api_base_url
     FRONTEND_BASE_URL       = module.dns.frontend_url
     RESET_PASSWORD_ROUTE    = var.reset_password_route
     BLOCKED_EMAIL_DURATION  = var.blocked_email_duration

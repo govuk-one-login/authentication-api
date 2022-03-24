@@ -37,7 +37,7 @@ test {
     environment "AWS_ACCESS_KEY_ID", "mock-access-key"
     environment "AWS_REGION", "eu-west-2"
     environment "AWS_SECRET_ACCESS_KEY", "mock-secret-key "
-    environment "BASE_URL", "http://localhost"
+    environment "OIDC_API_BASE_URL", "http://localhost"
     environment "DEFAULT_LOGOUT_URI", "http://localhost:3000/signed-out"
     environment "DOMAIN_NAME", "localhost"
     environment "DYNAMO_ENDPOINT", "http://localhost:8000"
