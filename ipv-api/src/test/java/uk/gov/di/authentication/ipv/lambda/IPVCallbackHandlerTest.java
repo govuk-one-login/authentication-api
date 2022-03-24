@@ -1,10 +1,10 @@
 package uk.gov.di.authentication.ipv.lambda;
 
-import com.amazonaws.lambda.thirdparty.com.fasterxml.jackson.core.JsonProcessingException;
-import com.amazonaws.lambda.thirdparty.com.fasterxml.jackson.databind.ObjectMapper;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.AccessTokenResponse;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
@@ -22,13 +22,17 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.ipv.entity.LogIds;
+import uk.gov.di.authentication.ipv.entity.SPOTClaims;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -58,6 +62,7 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 class IPVCallbackHandlerTest {
 
+    private static final Subject SUBJECT = new Subject();
     private final Context context = mock(Context.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final IPVAuthorisationService responseService = mock(IPVAuthorisationService.class);
@@ -75,7 +80,8 @@ class IPVCallbackHandlerTest {
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final URI REDIRECT_URI = URI.create("test-uri");
     private static final ClientID CLIENT_ID = new ClientID();
-    private static final Subject PUBLIC_SUBJECT = new Subject();
+    private static final Subject PUBLIC_SUBJECT =
+            new Subject("TsEVC7vg0NPAmzB33vRUFztL2c0-fecKWKcc73fuDhc");
     private static final State STATE = new State();
     private IPVCallbackHandler handler;
 
@@ -102,6 +108,9 @@ class IPVCallbackHandlerTest {
     @Test
     void shouldRedirectToLoginUriForSuccessfulResponse()
             throws URISyntaxException, JsonProcessingException {
+        var salt = "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes();
+        var clientRegistry = generateClientRegistry();
+        var userProfile = generateUserProfile();
         var credential = SignedCredentialHelper.generateCredential().serialize();
         usingValidSession();
         usingValidClientSession();
@@ -112,11 +121,12 @@ class IPVCallbackHandlerTest {
         responseHeaders.put("code", AUTH_CODE.getValue());
         responseHeaders.put("state", STATE.getValue());
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistry()));
+                .thenReturn(Optional.of(clientRegistry));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.empty());
         when(dynamoService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(generateUserProfile()));
+                .thenReturn(Optional.of(userProfile));
+        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
         when(ipvTokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
         when(ipvTokenService.sendTokenRequest(tokenRequest)).thenReturn(successfulTokenResponse);
         when(ipvTokenService.sendIpvInfoRequest(
@@ -129,26 +139,33 @@ class IPVCallbackHandlerTest {
         var event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(responseHeaders);
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
-
         var response = makeHandlerRequest(event);
 
         assertThat(response, hasStatus(302));
         var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("auth-code").build();
         assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
-
+        var expectedPairwiseSub =
+                ClientSubjectHelper.getSubject(userProfile, clientRegistry, dynamoService);
         verify(awsSqsClient)
                 .send(
                         new ObjectMapper()
                                 .writeValueAsString(
-                                        new SPOTRequest(credential, PUBLIC_SUBJECT.getValue())));
+                                        new SPOTRequest(
+                                                new SPOTClaims(
+                                                        LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                                                        null),
+                                                SUBJECT.getValue(),
+                                                salt,
+                                                expectedPairwiseSub.getValue(),
+                                                new LogIds(session.getSessionId()))));
     }
 
     @Test
     void shouldThrowWhenSessionIsNotFoundInRedis() {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        var event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(Collections.emptyMap());
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
-        RuntimeException expectedException =
+        var expectedException =
                 assertThrows(
                         RuntimeException.class,
                         () -> handler.handleRequest(event, context),
@@ -268,7 +285,7 @@ class IPVCallbackHandlerTest {
                 .setPhoneNumber("012345678902")
                 .setPhoneNumberVerified(true)
                 .setPublicSubjectID(PUBLIC_SUBJECT.getValue())
-                .setSubjectID(new Subject().getValue());
+                .setSubjectID(SUBJECT.getValue());
     }
 
     private ClientRegistry generateClientRegistry() {
@@ -278,7 +295,7 @@ class IPVCallbackHandlerTest {
                 .setClientName("test-client")
                 .setRedirectUrls(singletonList(REDIRECT_URI.toString()))
                 .setSectorIdentifierUri("https://test.com")
-                .setSubjectType("public");
+                .setSubjectType("pairwise");
     }
 
     public static AuthenticationRequest generateAuthRequest() {

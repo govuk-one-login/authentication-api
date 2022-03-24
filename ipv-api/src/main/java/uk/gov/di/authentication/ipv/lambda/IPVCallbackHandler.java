@@ -10,9 +10,12 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.ipv.entity.LogIds;
+import uk.gov.di.authentication.ipv.entity.SPOTClaims;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
+import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
@@ -161,7 +164,7 @@ public class IPVCallbackHandler
                                 var pairwiseSubject =
                                         ClientSubjectHelper.getSubject(
                                                 userProfile, clientRegistry, dynamoService);
-                                var serializedCredential =
+                                var ipvInfoResponse =
                                         ipvTokenService.sendIpvInfoRequest(
                                                 tokenResponse
                                                         .toSuccessResponse()
@@ -169,9 +172,25 @@ public class IPVCallbackHandler
                                                         .getBearerAccessToken());
                                 var spotRequest =
                                         new SPOTRequest(
-                                                serializedCredential, pairwiseSubject.getValue());
+                                                new SPOTClaims(
+                                                        LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                                                        null),
+                                                userProfile.getSubjectID(),
+                                                dynamoService.getOrGenerateSalt(userProfile),
+                                                pairwiseSubject.getValue(),
+                                                new LogIds(session.getSessionId()));
                                 sqsClient.send(objectMapper.writeValueAsString(spotRequest));
                                 LOG.info("SPOT request placed on queue");
+                                var redirectURI =
+                                        ConstructUriHelper.buildURI(
+                                                configurationService.getLoginURI().toString(),
+                                                REDIRECT_PATH);
+                                return new APIGatewayProxyResponseEvent()
+                                        .withStatusCode(302)
+                                        .withHeaders(
+                                                Map.of(
+                                                        ResponseHeaders.LOCATION,
+                                                        redirectURI.toString()));
                             } catch (NoSuchElementException e) {
                                 LOG.error("Session not found");
                                 throw new RuntimeException("Session not found", e);
@@ -183,16 +202,6 @@ public class IPVCallbackHandler
                                 LOG.error("Unable to serialize SPOTRequest when placing on queue");
                                 throw new RuntimeException(e);
                             }
-                            var redirectURI =
-                                    ConstructUriHelper.buildURI(
-                                            configurationService.getLoginURI().toString(),
-                                            REDIRECT_PATH);
-                            return new APIGatewayProxyResponseEvent()
-                                    .withStatusCode(302)
-                                    .withHeaders(
-                                            Map.of(
-                                                    ResponseHeaders.LOCATION,
-                                                    redirectURI.toString()));
                         });
     }
 }

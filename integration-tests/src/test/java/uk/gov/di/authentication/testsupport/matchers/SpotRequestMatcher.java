@@ -18,18 +18,16 @@ public class SpotRequestMatcher<T> extends TypeSafeDiagnosingMatcher<SPOTRequest
         this.expected = expected;
     }
 
-    public static SpotRequestMatcher<String> hasCredential(String credential) {
-        Function<SPOTRequest, String> extractCredential = SPOTRequest::getSerializedCredential;
+    public static SpotRequestMatcher<String> hasAccountId(String accountId) {
+        Function<SPOTRequest, String> extractAccountId = SPOTRequest::getLocalAccountId;
 
-        return new SpotRequestMatcher<>("serialized credential", extractCredential, credential);
+        return new SpotRequestMatcher<>("local account id", extractAccountId, accountId);
     }
 
-    public static SpotRequestMatcher<String> hasPairwiseIdentifier(String pairwiseIdentifier) {
-        Function<SPOTRequest, String> extractPairwiseIdentifier =
-                SPOTRequest::getPairwiseIdentifier;
+    public static SpotRequestMatcher<String> hasSub(String sub) {
+        Function<SPOTRequest, String> extractSub = SPOTRequest::getSub;
 
-        return new SpotRequestMatcher<>(
-                "pairwise identifier", extractPairwiseIdentifier, pairwiseIdentifier);
+        return new SpotRequestMatcher<>("sub", extractSub, sub);
     }
 
     @Override

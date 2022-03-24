@@ -13,8 +13,11 @@ import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.authentication.ipv.entity.LogIds;
+import uk.gov.di.authentication.ipv.entity.SPOTClaims;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler;
+import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -33,6 +36,7 @@ import java.util.Optional;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
+import static uk.gov.di.authentication.shared.helpers.ClientSubjectHelper.calculatePairwiseIdentifier;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -47,6 +51,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String REDIRECT_URI = "http://localhost/redirect";
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
+    private static final Subject INTERNAL_SUBJECT = new Subject();
 
     @BeforeEach
     void setup() {
@@ -72,6 +77,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         redis.addStateToRedis(state, sessionId);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         var publicSubject = setUpDynamo();
+        var salt = addSalt();
 
         var response =
                 makeRequest(
@@ -87,11 +93,19 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
         assertNoAuditEventsReceived(auditTopic);
         SpotQueueAssertionHelper.assertSpotRequestReceived(
-                spotQueue, List.of(new SPOTRequest("", publicSubject)));
+                spotQueue,
+                List.of(
+                        new SPOTRequest(
+                                new SPOTClaims(LevelOfConfidence.MEDIUM_LEVEL.getValue(), null),
+                                INTERNAL_SUBJECT.getValue(),
+                                salt,
+                                calculatePairwiseIdentifier(
+                                        INTERNAL_SUBJECT.getValue(), "https://test.com", salt),
+                                new LogIds(sessionId))));
     }
 
     private String setUpDynamo() {
-        var publicSubject = userStore.signUp(TEST_EMAIL_ADDRESS, "password", new Subject());
+        var publicSubject = userStore.signUp(TEST_EMAIL_ADDRESS, "password", INTERNAL_SUBJECT);
         clientStore.registerClient(
                 CLIENT_ID,
                 "test-client",
@@ -102,9 +116,13 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 singletonList("http://localhost/post-redirect-logout"),
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public",
+                "pairwise",
                 true);
         return publicSubject;
+    }
+
+    private byte[] addSalt() {
+        return userStore.addSalt(TEST_EMAIL_ADDRESS);
     }
 
     private Map<String, String> constructQueryStringParameters(State state) {
