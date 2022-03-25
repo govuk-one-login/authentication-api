@@ -85,7 +85,7 @@ variable "lambda_zip_file" {
 
 variable "logging_endpoint_enabled" {
   type        = bool
-  default     = false
+  default     = true
   description = "Whether the service should ship its Lambda logs to the `logging_endpoint_arn`"
 }
 

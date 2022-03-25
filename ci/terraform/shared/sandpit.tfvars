@@ -20,3 +20,5 @@ stub_rp_clients = [
     test_client = "0"
   },
 ]
+
+logging_endpoint_enabled = false
