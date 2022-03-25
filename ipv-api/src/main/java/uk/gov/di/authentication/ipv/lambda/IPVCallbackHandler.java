@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
+import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class IPVCallbackHandler
@@ -174,7 +175,12 @@ public class IPVCallbackHandler
                                         new SPOTRequest(
                                                 new SPOTClaims(
                                                         LevelOfConfidence.MEDIUM_LEVEL.getValue(),
-                                                        null),
+                                                        buildURI(
+                                                                        configurationService
+                                                                                .getOidcApiBaseURL()
+                                                                                .orElseThrow(),
+                                                                        "/trustmark")
+                                                                .toString()),
                                                 userProfile.getSubjectID(),
                                                 dynamoService.getOrGenerateSalt(userProfile),
                                                 pairwiseSubject.getValue(),

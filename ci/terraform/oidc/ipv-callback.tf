@@ -25,17 +25,18 @@ module "ipv-callback" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT                    = var.environment
-    EVENTS_SNS_TOPIC_ARN           = aws_sns_topic.events.arn
     AUDIT_SIGNING_KEY_ALIAS        = local.audit_signing_key_alias_name
-    LOGIN_URI                      = module.dns.frontend_url
-    LOCALSTACK_ENDPOINT            = var.use_localstack ? var.localstack_endpoint : null
-    REDIS_KEY                      = local.redis_key
     DYNAMO_ENDPOINT                = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    EVENTS_SNS_TOPIC_ARN           = aws_sns_topic.events.arn
+    ENVIRONMENT                    = var.environment
     IPV_TOKEN_SIGNING_KEY_ALIAS    = local.ipv_token_auth_key_alias_name
     IPV_AUTHORISATION_CLIENT_ID    = var.ipv_authorisation_client_id
     IPV_AUTHORISATION_CALLBACK_URI = var.ipv_authorisation_callback_uri
     IPV_AUTHORISATION_URI          = var.ipv_authorisation_uri
+    LOGIN_URI                      = module.dns.frontend_url
+    LOCALSTACK_ENDPOINT            = var.use_localstack ? var.localstack_endpoint : null
+    OIDC_API_BASE_URL              = local.api_base_url
+    REDIS_KEY                      = local.redis_key
   }
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler::handleRequest"
 

@@ -73,6 +73,7 @@ class IPVCallbackHandlerTest {
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
     private static final URI LOGIN_URL = URI.create("https://example.com");
+    private static final String OIDC_BASE_URL = "https://base-url.com";
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final String COOKIE = "Cookie";
     private static final String SESSION_ID = "a-session-id";
@@ -103,6 +104,7 @@ class IPVCallbackHandlerTest {
                         dynamoClientService,
                         awsSqsClient);
         when(configService.getLoginURI()).thenReturn(LOGIN_URL);
+        when(configService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
     }
 
     @Test
@@ -153,7 +155,7 @@ class IPVCallbackHandlerTest {
                                         new SPOTRequest(
                                                 new SPOTClaims(
                                                         LevelOfConfidence.MEDIUM_LEVEL.getValue(),
-                                                        null),
+                                                        OIDC_BASE_URL + "/trustmark"),
                                                 SUBJECT.getValue(),
                                                 salt,
                                                 expectedPairwiseSub.getValue(),
