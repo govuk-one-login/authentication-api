@@ -36,7 +36,6 @@ run:
       terraform apply -auto-approve \
         -var "deployer_role_arn=${DEPLOYER_ROLE_ARN}" \
         -var "environment=${DEPLOY_ENVIRONMENT}" \
-        -var 'logging_endpoint_enabled=true' \
         -var "notify_api_key=${NOTIFY_API_KEY}" \
         -var 'logging_endpoint_arn=arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod' \
         -var "lambda_zip_file=$(ls -1 ../../../../api-release/*.zip)" \
