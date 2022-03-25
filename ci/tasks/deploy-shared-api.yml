@@ -35,7 +35,6 @@ run:
       terraform apply -auto-approve \
         -var "deployer_role_arn=${DEPLOYER_ROLE_ARN}" \
         -var "environment=${DEPLOY_ENVIRONMENT}" \
-        -var 'logging_endpoint_enabled=true' \
         -var 'logging_endpoint_arn=arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod' \
         -var "test_client_email_allowlist=${TEST_CLIENT_EMAIL_ALLOWLIST}" \
         -var 'account_migration_lambda_zip_file=../../../../account-migration-release/account-migrations.zip' \
