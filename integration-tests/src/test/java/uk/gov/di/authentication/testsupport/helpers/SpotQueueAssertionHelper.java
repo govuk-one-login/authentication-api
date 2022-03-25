@@ -3,6 +3,7 @@ package uk.gov.di.authentication.testsupport.helpers;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
 
+import java.util.Arrays;
 import java.util.Collection;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -12,8 +13,9 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
-import static uk.gov.di.authentication.testsupport.matchers.SpotRequestMatcher.hasCredential;
-import static uk.gov.di.authentication.testsupport.matchers.SpotRequestMatcher.hasPairwiseIdentifier;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.testsupport.matchers.SpotRequestMatcher.hasAccountId;
+import static uk.gov.di.authentication.testsupport.matchers.SpotRequestMatcher.hasSub;
 
 public class SpotQueueAssertionHelper {
 
@@ -34,16 +36,31 @@ public class SpotQueueAssertionHelper {
                                         equalTo(expectedRequests.size())));
 
         var actualRequests = spotQueue.getMessages(SPOTRequest.class);
+
+        var expectedSpotRequest = expectedRequests.stream().findFirst().orElseThrow();
+
+        assertTrue(
+                Arrays.equals(
+                        actualRequests.stream().findFirst().orElseThrow().getSalt(),
+                        expectedSpotRequest.getSalt()));
+
+        assertThat(
+                expectedSpotRequest.getLogIds().getSessionId(),
+                equalTo(
+                        actualRequests.stream()
+                                .findFirst()
+                                .orElseThrow()
+                                .getLogIds()
+                                .getSessionId()));
+
         expectedRequests.forEach(
                 spotRequest ->
                         assertThat(
                                 actualRequests,
                                 hasItem(
                                         allOf(
-                                                hasPairwiseIdentifier(
-                                                        spotRequest.getPairwiseIdentifier()),
-                                                hasCredential(
-                                                        spotRequest.getSerializedCredential())))));
+                                                hasAccountId(spotRequest.getLocalAccountId()),
+                                                hasSub(spotRequest.getSub())))));
 
         assertThat(
                 "Expected no more notifications to come through",

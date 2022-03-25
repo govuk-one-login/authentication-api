@@ -55,8 +55,7 @@ public class ClientSubjectHelper {
         return redirectUri;
     }
 
-    private static String calculatePairwiseIdentifier(
-            String subjectID, String sector, byte[] salt) {
+    public static String calculatePairwiseIdentifier(String subjectID, String sector, byte[] salt) {
         try {
             var md = MessageDigest.getInstance("SHA-256");
 
