@@ -2,26 +2,34 @@ package uk.gov.di.authentication.ipv.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Map;
+
 public class SPOTResponse {
 
-    @JsonProperty private String serializedCredential;
+    @JsonProperty private Map<String, Object> claims;
 
-    @JsonProperty private String pairwiseIdentifier;
+    @JsonProperty private String sub;
+
+    @JsonProperty private String status;
 
     public SPOTResponse(
-            @JsonProperty(required = true, value = "serializedCredential")
-                    String serializedCredential,
-            @JsonProperty(required = true, value = "pairwiseIdentifier")
-                    String pairwiseIdentifier) {
-        this.serializedCredential = serializedCredential;
-        this.pairwiseIdentifier = pairwiseIdentifier;
+            @JsonProperty(value = "claim") Map<String, Object> claims,
+            @JsonProperty(required = true, value = "sub") String sub,
+            @JsonProperty(required = true, value = "status") String status) {
+        this.claims = claims;
+        this.sub = sub;
+        this.status = status;
     }
 
-    public String getSerializedCredential() {
-        return serializedCredential;
+    public Map<String, Object> getClaims() {
+        return claims;
     }
 
-    public String getPairwiseIdentifier() {
-        return pairwiseIdentifier;
+    public String getSub() {
+        return sub;
+    }
+
+    public String getStatus() {
+        return status;
     }
 }
