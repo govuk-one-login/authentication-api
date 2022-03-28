@@ -277,14 +277,15 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new ObjectMapper().writeValueAsString(tokenStore),
                 900L);
         PrivateKey privateKey = keyPair.getPrivate();
-        PrivateKeyJWT privateKeyJWT =
+        JWTAuthenticationClaimsSet claimsSet =
+                new JWTAuthenticationClaimsSet(
+                        new ClientID(CLIENT_ID), new Audience(ROOT_RESOURCE_URL + TOKEN_ENDPOINT));
+        var expiryDate =
+                Date.from(LocalDateTime.now().plusMinutes(5).atZone(ZoneId.of("UTC")).toInstant());
+        claimsSet.getExpirationTime().setTime(expiryDate.getTime());
+        var privateKeyJWT =
                 new PrivateKeyJWT(
-                        new ClientID(CLIENT_ID),
-                        URI.create(ROOT_RESOURCE_URL + TOKEN_ENDPOINT),
-                        JWSAlgorithm.RS256,
-                        (RSAPrivateKey) privateKey,
-                        null,
-                        null);
+                        claimsSet, JWSAlgorithm.RS256, (RSAPrivateKey) privateKey, null, null);
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
                 "grant_type", Collections.singletonList(GrantType.REFRESH_TOKEN.getValue()));
