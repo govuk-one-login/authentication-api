@@ -49,7 +49,7 @@ public class DynamoSpotService {
     }
 
     public void addSpotResponse(String subjectID, String serializedCredential) {
-        SPOTCredential spotCredential =
+        var spotCredential =
                 new SPOTCredential()
                         .setSubjectID(subjectID)
                         .setSerializedCredential(serializedCredential)

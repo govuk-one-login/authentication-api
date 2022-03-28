@@ -1,16 +1,11 @@
 package uk.gov.di.authentication.ipv.lambda;
 
-import com.amazonaws.services.lambda.runtime.events.SNSEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.ipv.entity.SPOTResponse;
 import uk.gov.di.authentication.shared.services.DynamoSpotService;
 
-import java.util.List;
-import java.util.Optional;
-
+import static java.util.Collections.singletonList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -26,30 +21,49 @@ class SPOTResponseHandlerTest {
     }
 
     @Test
-    void shouldWriteToDynamoForSuccesssfulSPOTResponse() throws JsonProcessingException {
-        var spotResponse =
-                new SPOTResponse("this-is-a-searalized-credential", "some-pairwise-identifier");
-        var searlizedSpotResponse = new ObjectMapper().writeValueAsString(spotResponse);
+    void shouldWriteToDynamoForSuccesssfulSPOTResponse() {
+        String json =
+                "{\"sub\":\"some-pairwise-identifier\",\"status\":\"OK\","
+                        + "\"claims\":{\"http://something/v1/verifiableIdentityJWT\":\"random-searalized-credential\"}}";
 
-        handler.handleRequest(inputEvent(searlizedSpotResponse), null);
+        handler.handleRequest(generateSQSEvent(json), null);
 
         verify(dynamoSpotService)
-                .addSpotResponse("some-pairwise-identifier", "this-is-a-searalized-credential");
+                .addSpotResponse("some-pairwise-identifier", "random-searalized-credential");
     }
 
     @Test
     void shouldNotWriteToDynamoWhenLambdaReceivedInvalidSPOTResponse() {
-        handler.handleRequest(inputEvent("invalid-payload"), null);
+        handler.handleRequest(generateSQSEvent("invalid-payload"), null);
 
         verifyNoInteractions(dynamoSpotService);
     }
 
-    private SNSEvent inputEvent(String payload) {
-        return Optional.of(payload)
-                .map(new SNSEvent.SNS()::withMessage)
-                .map(new SNSEvent.SNSRecord()::withSns)
-                .map(List::of)
-                .map(new SNSEvent()::withRecords)
-                .get();
+    @Test
+    void shouldNotWriteToDynamoWhenSPOTResponseStatusIsNotOK() {
+        String json =
+                "{\"sub\":\"some-pairwise-identifier\",\"status\":\"OTHER\","
+                        + "\"claims\":{\"http://something/v1/verifiableIdentityJWT\":\"random-searalized-credential\"}}";
+
+        handler.handleRequest(generateSQSEvent(json), null);
+
+        verifyNoInteractions(dynamoSpotService);
+    }
+
+    @Test
+    void shouldNotWriteToDynamoWhenStatusIsOKButNoCredentialIsPresent() {
+        String json = "{\"sub\":\"some-pairwise-identifier\",\"status\":\"OK\"," + "\"claims\":{}}";
+
+        handler.handleRequest(generateSQSEvent(json), null);
+
+        verifyNoInteractions(dynamoSpotService);
+    }
+
+    private SQSEvent generateSQSEvent(String messageBody) {
+        SQSEvent.SQSMessage sqsMessage = new SQSEvent.SQSMessage();
+        sqsMessage.setBody(messageBody);
+        SQSEvent sqsEvent = new SQSEvent();
+        sqsEvent.setRecords(singletonList(sqsMessage));
+        return sqsEvent;
     }
 }
