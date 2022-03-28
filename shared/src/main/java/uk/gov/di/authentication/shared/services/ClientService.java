@@ -24,7 +24,8 @@ public interface ClientService {
             String sectorIdentifierUri,
             String subjectType,
             boolean consentRequired,
-            List<String> claims);
+            List<String> claims,
+            List<String> requestUris);
 
     Optional<ClientRegistry> getClient(String clientId);
 

@@ -53,7 +53,8 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 sectorIdentifierUri,
                 subjectType,
                 consentRequired,
-                Collections.emptyList());
+                Collections.emptyList(),
+                null);
     }
 
     public boolean clientExists(String clientID) {

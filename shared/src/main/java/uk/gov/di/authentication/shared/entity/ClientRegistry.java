@@ -23,6 +23,7 @@ public class ClientRegistry {
     private boolean cookieConsentShared = false;
     private boolean consentRequired = false;
     private boolean testClient = false;
+    private List<String> requestUris = new ArrayList<>();
     private List<String> testClientEmailAllowlist = new ArrayList<>();
     private List<String> claims = new ArrayList<>();
 
@@ -175,6 +176,16 @@ public class ClientRegistry {
 
     public ClientRegistry setConsentRequired(boolean consentRequired) {
         this.consentRequired = consentRequired;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "RequestUris")
+    public List<String> getRequestUris() {
+        return requestUris;
+    }
+
+    public ClientRegistry setRequestUris(List<String> requestUris) {
+        this.requestUris = requestUris;
         return this;
     }
 

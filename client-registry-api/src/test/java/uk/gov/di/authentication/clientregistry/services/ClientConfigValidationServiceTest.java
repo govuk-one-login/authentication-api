@@ -34,20 +34,22 @@ class ClientConfigValidationServiceTest {
 
     private static Stream<Arguments> registrationRequestParams() {
         return Stream.of(
-                Arguments.of(emptyList(), null, emptyList(), null),
-                Arguments.of(null, null, null, null),
+                Arguments.of(emptyList(), null, emptyList(), null, emptyList()),
+                Arguments.of(null, null, null, null, null),
                 Arguments.of(
                         singletonList("http://localhost/post-redirect-logout"),
                         "http://back-channel.com",
                         List.of("address"),
-                        String.valueOf(MANDATORY)),
+                        String.valueOf(MANDATORY),
+                        singletonList("http://localhost/request-uri")),
                 Arguments.of(
                         List.of(
                                 "http://localhost/post-redirect-logout",
                                 "http://localhost/post-redirect-logout-v2"),
                         "http://back-channel.com",
                         List.of("address", "birthdate", "name"),
-                        String.valueOf(OPTIONAL)));
+                        String.valueOf(OPTIONAL),
+                        singletonList("http://localhost/request-uri")));
     }
 
     @ParameterizedTest
@@ -56,7 +58,8 @@ class ClientConfigValidationServiceTest {
             List<String> postlogoutUris,
             String backChannelLogoutUri,
             List<String> claims,
-            String serviceType) {
+            String serviceType,
+            List<String> requestURIs) {
         Optional<ErrorObject> errorResponse =
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
@@ -68,7 +71,8 @@ class ClientConfigValidationServiceTest {
                                 serviceType,
                                 "http://test.com",
                                 "public",
-                                claims));
+                                claims,
+                                requestURIs));
         assertThat(errorResponse, equalTo(Optional.empty()));
     }
 
@@ -85,6 +89,7 @@ class ClientConfigValidationServiceTest {
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 "public",
+                                emptyList(),
                                 emptyList()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_POST_LOGOUT_URI)));
     }
@@ -102,6 +107,7 @@ class ClientConfigValidationServiceTest {
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 "public",
+                                emptyList(),
                                 emptyList()));
         assertThat(errorResponse, equalTo(Optional.of(RegistrationError.INVALID_REDIRECT_URI)));
     }
@@ -119,6 +125,7 @@ class ClientConfigValidationServiceTest {
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 "public",
+                                emptyList(),
                                 emptyList()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_PUBLIC_KEY)));
     }
@@ -136,6 +143,7 @@ class ClientConfigValidationServiceTest {
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 "public",
+                                emptyList(),
                                 emptyList()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
     }
@@ -153,6 +161,7 @@ class ClientConfigValidationServiceTest {
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 "public",
+                                emptyList(),
                                 emptyList()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
     }
@@ -170,7 +179,8 @@ class ClientConfigValidationServiceTest {
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 "public",
-                                List.of("name", "email")));
+                                List.of("name", "email"),
+                                emptyList()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_CLAIM)));
     }
 
@@ -189,6 +199,7 @@ class ClientConfigValidationServiceTest {
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 subjectType,
+                                emptyList(),
                                 emptyList()));
         assertThat(errorResponse, equalTo(expectedResult));
     }
@@ -282,7 +293,8 @@ class ClientConfigValidationServiceTest {
             String serviceType,
             String sectorIdentifierUri,
             String subjectType,
-            List<String> claims) {
+            List<String> claims,
+            List<String> requestURIs) {
         return new ClientRegistrationRequest(
                 "The test client",
                 redirectUri,
@@ -295,7 +307,8 @@ class ClientConfigValidationServiceTest {
                 sectorIdentifierUri,
                 subjectType,
                 false,
-                claims);
+                claims,
+                requestURIs);
     }
 
     private UpdateClientConfigRequest generateClientUpdateRequest(

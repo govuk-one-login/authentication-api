@@ -113,6 +113,7 @@ class ClientRegistrationHandlerTest {
                         sectorIdentifierUri,
                         subjectType,
                         true,
+                        emptyList(),
                         emptyList());
     }
 
@@ -159,6 +160,7 @@ class ClientRegistrationHandlerTest {
                         sectorIdentifierUri,
                         subjectType,
                         false,
+                        emptyList(),
                         emptyList());
     }
 
@@ -183,8 +185,6 @@ class ClientRegistrationHandlerTest {
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
         assertThat(result, hasStatus(200));
-        ClientRegistrationResponse clientRegistrationResponseResult =
-                objectMapper.readValue(result.getBody(), ClientRegistrationResponse.class);
         verify(clientService)
                 .addClient(
                         clientId,
@@ -199,6 +199,7 @@ class ClientRegistrationHandlerTest {
                         sectorIdentifierUri,
                         subjectType,
                         true,
+                        emptyList(),
                         emptyList());
     }
 
