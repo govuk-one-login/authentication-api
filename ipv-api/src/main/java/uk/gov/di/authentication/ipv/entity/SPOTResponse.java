@@ -10,12 +10,12 @@ public class SPOTResponse {
 
     @JsonProperty private String sub;
 
-    @JsonProperty private String status;
+    @JsonProperty private SPOTStatus status;
 
     public SPOTResponse(
             @JsonProperty(value = "claim") Map<String, Object> claims,
             @JsonProperty(required = true, value = "sub") String sub,
-            @JsonProperty(required = true, value = "status") String status) {
+            @JsonProperty(required = true, value = "status") SPOTStatus status) {
         this.claims = claims;
         this.sub = sub;
         this.status = status;
@@ -29,7 +29,7 @@ public class SPOTResponse {
         return sub;
     }
 
-    public String getStatus() {
+    public SPOTStatus getStatus() {
         return status;
     }
 }

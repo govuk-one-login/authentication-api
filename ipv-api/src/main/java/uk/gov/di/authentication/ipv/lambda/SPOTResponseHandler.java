@@ -39,7 +39,7 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
         for (SQSMessage msg : event.getRecords()) {
             try {
                 var spotResponse = objectMapper.readValue(msg.getBody(), SPOTResponse.class);
-                if (!spotResponse.getStatus().equals(SPOTStatus.OK.toString())) {
+                if (spotResponse.getStatus() != SPOTStatus.OK) {
                     LOG.warn(
                             "SPOTResponse Status is not OK. Actual Status: {}",
                             spotResponse.getStatus());
