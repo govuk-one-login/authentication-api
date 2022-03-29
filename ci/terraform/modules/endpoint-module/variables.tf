@@ -186,5 +186,5 @@ variable "code_signing_config_arn" {
 }
 
 variable "memory_size" {
-  type    = number
+  type = number
 }
