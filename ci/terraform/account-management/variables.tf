@@ -167,3 +167,8 @@ variable "localstack_endpoint" {
   type    = string
   default = "http://localhost:45678/"
 }
+
+variable "endpoint_memory_size" {
+  default = 4096
+  type    = number
+}

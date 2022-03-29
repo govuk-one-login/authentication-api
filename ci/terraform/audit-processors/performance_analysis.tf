@@ -48,7 +48,7 @@ resource "aws_lambda_function" "performance_analysis_logging_lambda" {
   role          = module.performance_analysis_logging_role.arn
   handler       = "uk.gov.di.authentication.audit.lambda.PerformanceAnalysisAuditLambda::handleRequest"
   timeout       = 30
-  memory_size   = 4096
+  memory_size   = var.lambda_memory_size
   publish       = true
 
   tracing_config {

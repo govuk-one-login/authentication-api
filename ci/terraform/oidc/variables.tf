@@ -227,3 +227,8 @@ variable "ipv_authorisation_callback_uri" {
 variable "ipv_authorisation_client_id" {
   type = string
 }
+
+variable "endpoint_memory_size" {
+  default = 4096
+  type    = number
+}
