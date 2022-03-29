@@ -75,3 +75,8 @@ variable "cloudwatch_log_retention" {
   type        = number
   description = "The number of day to retain Cloudwatch logs for"
 }
+
+variable "endpoint_memory_size" {
+  default = 4096
+  type    = number
+}
