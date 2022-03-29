@@ -1,5 +1,11 @@
 package uk.gov.di.authentication.shared.services;
 
+import com.amazonaws.services.lambda.AWSLambda;
+import com.amazonaws.services.lambda.AWSLambdaClientBuilder;
+import com.amazonaws.services.lambda.model.InvocationType;
+import com.amazonaws.services.lambda.model.InvokeRequest;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
@@ -15,6 +21,8 @@ import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.RequestUriPayload;
+import uk.gov.di.authentication.shared.entity.RequestUriResponsePayload;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
@@ -23,11 +31,13 @@ import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static com.amazonaws.regions.Regions.EU_WEST_2;
 import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -36,15 +46,25 @@ public class AuthorizationService {
 
     public static final String VTR_PARAM = "vtr";
     private final DynamoClientService dynamoClientService;
+    private final AWSLambda awsLambda;
+    private final ConfigurationService configurationService;
 
     private static final Logger LOG = LogManager.getLogger(AuthorizationService.class);
 
-    public AuthorizationService(DynamoClientService dynamoClientService) {
+    public AuthorizationService(
+            DynamoClientService dynamoClientService,
+            AWSLambda awsLambda,
+            ConfigurationService configurationService) {
         this.dynamoClientService = dynamoClientService;
+        this.awsLambda = awsLambda;
+        this.configurationService = configurationService;
     }
 
     public AuthorizationService(ConfigurationService configurationService) {
-        this(new DynamoClientService(configurationService));
+        this(
+                new DynamoClientService(configurationService),
+                AWSLambdaClientBuilder.standard().withRegion(EU_WEST_2).build(),
+                configurationService);
     }
 
     public boolean isClientRedirectUriValid(ClientID clientID, URI redirectURI)
@@ -74,6 +94,7 @@ public class AuthorizationService {
 
     public Optional<ErrorObject> validateAuthRequest(AuthenticationRequest authRequest) {
         var clientId = authRequest.getClientID().toString();
+        var isRequestUri = authRequest.getRequestURI() != null;
 
         attachLogFieldToLogs(CLIENT_ID, clientId);
 
@@ -84,7 +105,10 @@ public class AuthorizationService {
             return Optional.of(OAuth2Error.UNAUTHORIZED_CLIENT);
         }
 
-        if (!client.get().getRedirectUrls().contains(authRequest.getRedirectionURI().toString())) {
+        if (!isRequestUri
+                && !client.get()
+                        .getRedirectUrls()
+                        .contains(authRequest.getRedirectionURI().toString())) {
             LOG.warn(
                     "Invalid Redirect URI in request {}",
                     authRequest.getRedirectionURI().toString());
@@ -126,6 +150,9 @@ public class AuthorizationService {
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "Request is missing state parameter"));
         }
+        if (isRequestUri) {
+            return invokeAuthorizeRequestUriLambda(authRequest, client.get());
+        }
         List<String> authRequestVtr = authRequest.getCustomParameter(VTR_PARAM);
         try {
             VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
@@ -148,6 +175,38 @@ public class AuthorizationService {
                 authRequest.getState(),
                 authRequest.getResponseMode(),
                 errorObject);
+    }
+
+    public Optional<ErrorObject> invokeAuthorizeRequestUriLambda(
+            AuthenticationRequest authenticationRequest, ClientRegistry clientRegistry) {
+        var lambdaArn = configurationService.getAuthorizeRequestLambdaArn();
+        try {
+            var invokeRequest =
+                    new InvokeRequest()
+                            .withFunctionName(lambdaArn)
+                            .withQualifier(
+                                    configurationService.getAuthorizeRequestLambdaQualifier())
+                            .withPayload(
+                                    new ObjectMapper()
+                                            .writeValueAsString(
+                                                    new RequestUriPayload(
+                                                            clientRegistry, authenticationRequest)))
+                            .withInvocationType(InvocationType.RequestResponse);
+            LOG.info("About to invoke the AuthorizeRequestUriHandler");
+            var invokeResult = awsLambda.invoke(invokeRequest);
+            var ans = new String(invokeResult.getPayload().array(), StandardCharsets.UTF_8);
+            var requestUriResponsePayload =
+                    new ObjectMapper().readValue(ans, RequestUriResponsePayload.class);
+            if (requestUriResponsePayload.isSuccessfulRequest()) {
+                LOG.info("Received successful response from AuthorizeRequestUriHandler");
+                return Optional.empty();
+            } else {
+                LOG.warn("Received unsuccessful response from AuthorizeRequestUriHandler");
+                return Optional.of(requestUriResponsePayload.getErrorObject());
+            }
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public AuthenticationErrorResponse generateAuthenticationErrorResponse(

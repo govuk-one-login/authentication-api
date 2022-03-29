@@ -43,6 +43,14 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("ACCOUNT_MANAGEMENT_URI");
     }
 
+    public String getAuthorizeRequestLambdaArn() {
+        return System.getenv().get("AUTHORIZE_REQUEST_LAMBDA_ARN");
+    }
+
+    public String getAuthorizeRequestLambdaQualifier() {
+        return System.getenv().get("AUTHORIZE_REQUEST_LAMBDA_QUALIFIER");
+    }
+
     public long getAuthCodeExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("AUTH_CODE_EXPIRY", "300"));
     }

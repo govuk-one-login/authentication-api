@@ -38,3 +38,11 @@ output "analytics_cookie_domain" {
 output "events_sns_topic_arn" {
   value = aws_sns_topic.events.arn
 }
+
+output "authorize_request_uri_lambda_arn" {
+  value = aws_lambda_function.authorize_request_uri_lambda.arn
+}
+
+output "authorize_request_uri_lambda_qualifier" {
+  value = aws_lambda_alias.authorize_request_uri_lambda_active.name
+}

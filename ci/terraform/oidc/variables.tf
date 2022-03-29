@@ -87,6 +87,11 @@ variable "use_localstack" {
   default = false
 }
 
+variable "handler_runtime" {
+  type    = string
+  default = "java11"
+}
+
 variable "terms_and_conditions" {
   type    = string
   default = "1.1"

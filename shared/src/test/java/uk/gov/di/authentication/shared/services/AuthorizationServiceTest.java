@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.shared.services;
 
+import com.amazonaws.services.lambda.AWSLambda;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
@@ -53,6 +54,8 @@ class AuthorizationServiceTest {
     private static final Nonce NONCE = new Nonce();
     private AuthorizationService authorizationService;
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
+    private final AWSLambda awsLambda = mock(AWSLambda.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -60,7 +63,8 @@ class AuthorizationServiceTest {
 
     @BeforeEach
     void setUp() {
-        authorizationService = new AuthorizationService(dynamoClientService);
+        authorizationService =
+                new AuthorizationService(dynamoClientService, awsLambda, configurationService);
     }
 
     @AfterEach
