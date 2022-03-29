@@ -164,7 +164,9 @@ data "aws_iam_policy_document" "cloudwatch" {
     actions = [
       "kms:Encrypt*",
       "kms:Decrypt*",
-      "kms:Describe*"
+      "kms:Describe*",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
     ]
     effect = "Allow"
     principals {
