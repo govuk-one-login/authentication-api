@@ -46,7 +46,7 @@ resource "aws_lambda_function" "audit_processor_lambda" {
   role          = module.audit_storage_lambda_role.arn
   handler       = "uk.gov.di.authentication.audit.lambda.StorageSQSAuditHandler::handleRequest"
   timeout       = 30
-  memory_size   = 4096
+  memory_size   = var.lambda_memory_size
   publish       = true
 
   tracing_config {

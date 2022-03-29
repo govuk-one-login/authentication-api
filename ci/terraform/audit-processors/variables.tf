@@ -54,3 +54,8 @@ variable "audit_storage_expiry_days" {
   description = "How long before files in the audit store are expired (default: 7 years)"
   default     = 7 * 365
 }
+
+variable "lambda_memory_size" {
+  default = 4096
+  type    = number
+}
