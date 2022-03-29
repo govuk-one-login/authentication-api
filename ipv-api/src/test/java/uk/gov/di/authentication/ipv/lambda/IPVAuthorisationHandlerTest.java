@@ -17,6 +17,7 @@ import com.nimbusds.openid.connect.sdk.claims.ClaimRequirement;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -128,6 +129,18 @@ public class IPVAuthorisationHandlerTest {
                 splitQuery(body.getRedirectUri()).get("claims"),
                 equalTo(claimsSetRequest.toJSONString()));
         verify(authorisationService).storeState(eq(session.getSessionId()), any(State.class));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
+                        context.getAwsRequestId(),
+                        SESSION_ID,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID);
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
