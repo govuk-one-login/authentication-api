@@ -8,8 +8,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.SPOTResponse;
 import uk.gov.di.authentication.ipv.entity.SPOTStatus;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoSpotService;
 
@@ -19,6 +21,7 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final DynamoSpotService dynamoSpotService;
+    private final AuditService auditService;
 
     private static final Logger LOG = LogManager.getLogger(SPOTResponseHandler.class);
 
@@ -28,14 +31,27 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
 
     public SPOTResponseHandler(ConfigurationService configurationService) {
         this.dynamoSpotService = new DynamoSpotService(configurationService);
+        this.auditService = new AuditService(configurationService);
     }
 
-    public SPOTResponseHandler(DynamoSpotService dynamoSpotService) {
+    public SPOTResponseHandler(DynamoSpotService dynamoSpotService, AuditService auditService) {
         this.dynamoSpotService = dynamoSpotService;
+        this.auditService = auditService;
     }
 
     @Override
     public Object handleRequest(SQSEvent event, Context context) {
+        auditService.submitAuditEvent(
+                IPVAuditableEvent.SPOT_RESPONSE_RECEIVED,
+                context.getAwsRequestId(),
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN);
+
         for (SQSMessage msg : event.getRecords()) {
             try {
                 var spotResponse = objectMapper.readValue(msg.getBody(), SPOTResponse.class);
@@ -45,6 +61,7 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
                             spotResponse.getStatus());
                     return null;
                 }
+
                 dynamoSpotService.addSpotResponse(
                         spotResponse.getSub(),
                         spotResponse.getClaims().values().stream()

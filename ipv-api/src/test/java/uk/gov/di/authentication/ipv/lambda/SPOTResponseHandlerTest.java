@@ -1,23 +1,33 @@
 package uk.gov.di.authentication.ipv.lambda;
 
+import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.DynamoSpotService;
 
 import static java.util.Collections.singletonList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 class SPOTResponseHandlerTest {
 
+    private static final String REQUEST_ID = "request-id";
+
     private SPOTResponseHandler handler;
+    private final Context context = mock(Context.class);
     private final DynamoSpotService dynamoSpotService = mock(DynamoSpotService.class);
+    private final AuditService auditService = mock(AuditService.class);
 
     @BeforeEach
     void setup() {
-        handler = new SPOTResponseHandler(dynamoSpotService);
+        handler = new SPOTResponseHandler(dynamoSpotService, auditService);
+
+        when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
     }
 
     @Test
@@ -26,17 +36,41 @@ class SPOTResponseHandlerTest {
                 "{\"sub\":\"some-pairwise-identifier\",\"status\":\"OK\","
                         + "\"claims\":{\"http://something/v1/verifiableIdentityJWT\":\"random-searalized-credential\"}}";
 
-        handler.handleRequest(generateSQSEvent(json), null);
+        handler.handleRequest(generateSQSEvent(json), context);
 
         verify(dynamoSpotService)
                 .addSpotResponse("some-pairwise-identifier", "random-searalized-credential");
+
+        verify(auditService)
+                .submitAuditEvent(
+                        IPVAuditableEvent.SPOT_RESPONSE_RECEIVED,
+                        REQUEST_ID,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN);
     }
 
     @Test
     void shouldNotWriteToDynamoWhenLambdaReceivedInvalidSPOTResponse() {
-        handler.handleRequest(generateSQSEvent("invalid-payload"), null);
+        handler.handleRequest(generateSQSEvent("invalid-payload"), context);
 
         verifyNoInteractions(dynamoSpotService);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        IPVAuditableEvent.SPOT_RESPONSE_RECEIVED,
+                        REQUEST_ID,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN);
     }
 
     @Test
@@ -45,18 +79,42 @@ class SPOTResponseHandlerTest {
                 "{\"sub\":\"some-pairwise-identifier\",\"status\":\"OTHER\","
                         + "\"claims\":{\"http://something/v1/verifiableIdentityJWT\":\"random-searalized-credential\"}}";
 
-        handler.handleRequest(generateSQSEvent(json), null);
+        handler.handleRequest(generateSQSEvent(json), context);
 
         verifyNoInteractions(dynamoSpotService);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        IPVAuditableEvent.SPOT_RESPONSE_RECEIVED,
+                        REQUEST_ID,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN);
     }
 
     @Test
     void shouldNotWriteToDynamoWhenStatusIsOKButNoCredentialIsPresent() {
         String json = "{\"sub\":\"some-pairwise-identifier\",\"status\":\"OK\"," + "\"claims\":{}}";
 
-        handler.handleRequest(generateSQSEvent(json), null);
+        handler.handleRequest(generateSQSEvent(json), context);
 
         verifyNoInteractions(dynamoSpotService);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        IPVAuditableEvent.SPOT_RESPONSE_RECEIVED,
+                        REQUEST_ID,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN);
     }
 
     private SQSEvent generateSQSEvent(String messageBody) {
