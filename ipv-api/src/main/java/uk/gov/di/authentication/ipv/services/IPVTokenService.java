@@ -38,7 +38,6 @@ public class IPVTokenService {
 
     private final ConfigurationService configurationService;
     private final KmsConnectionService kmsService;
-    private static final String TOKEN_PATH = "token";
     private static final JWSAlgorithm TOKEN_ALGORITHM = JWSAlgorithm.ES256;
     public static final String IPV_ACCESS_TOKEN_PREFIX = "IPV_ACCESS_TOKEN:";
     private static final Long PRIVATE_KEY_JWT_EXPIRY = 5L;
