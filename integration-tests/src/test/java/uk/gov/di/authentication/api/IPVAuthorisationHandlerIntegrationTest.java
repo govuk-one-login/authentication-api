@@ -77,7 +77,7 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
         assertThat(
                 body.getRedirectUri(),
-                startsWith(configurationService.getIPVAuthorisationURI() + "/authorize"));
+                startsWith(configurationService.getIPVAuthorisationURI().toString()));
 
         assertEventTypesReceived(auditTopic, List.of(IPV_AUTHORISATION_REQUESTED));
     }

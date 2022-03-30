@@ -42,7 +42,7 @@ class IPVTokenServiceTest {
 
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final KmsConnectionService kmsService = mock(KmsConnectionService.class);
-    private static final URI IPV_URI = URI.create("http://ipv");
+    private static final URI IPV_URI = URI.create("http://ipv/token");
     private static final URI REDIRECT_URI = URI.create("http://redirect");
     private static final Subject PUBLIC_SUBJECT = new Subject("public-subject");
     private static final String BASE_URL = "https://example.com";
@@ -54,7 +54,7 @@ class IPVTokenServiceTest {
     @BeforeEach
     void setUp() {
         ipvTokenService = new IPVTokenService(configService, kmsService);
-        when(configService.getIPVAuthorisationURI()).thenReturn(IPV_URI);
+        when(configService.getIPVTokenURI()).thenReturn(IPV_URI);
         when(configService.getIPVAuthorisationClientId()).thenReturn(CLIENT_ID.getValue());
         when(configService.getAccessTokenExpiry()).thenReturn(300L);
         when(configService.getIPVAuthorisationCallbackURI()).thenReturn(REDIRECT_URI);
@@ -65,7 +65,7 @@ class IPVTokenServiceTest {
         signJWTWithKMS();
         TokenRequest tokenRequest = ipvTokenService.constructTokenRequest(AUTH_CODE.getValue());
 
-        assertThat(tokenRequest.getEndpointURI(), equalTo(buildURI(IPV_URI.toString(), "token")));
+        assertThat(tokenRequest.getEndpointURI(), equalTo(IPV_URI));
         assertThat(
                 tokenRequest.getClientAuthentication().getMethod().getValue(),
                 equalTo("private_key_jwt"));

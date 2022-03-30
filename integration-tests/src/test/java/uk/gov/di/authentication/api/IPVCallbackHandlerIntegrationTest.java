@@ -141,12 +141,13 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         }
 
         @Override
-        public URI getIPVAuthorisationURI() {
+        public URI getIPVTokenURI() {
             try {
                 return new URIBuilder()
                         .setHost("localhost")
                         .setPort(ipvStubExtension.getHttpPort())
                         .setScheme("http")
+                        .setPath("/token")
                         .build();
             } catch (URISyntaxException e) {
                 throw new RuntimeException(e);

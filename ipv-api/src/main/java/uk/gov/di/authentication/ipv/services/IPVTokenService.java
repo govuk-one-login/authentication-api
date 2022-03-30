@@ -33,7 +33,6 @@ import java.util.Date;
 import java.util.Map;
 
 import static java.util.Collections.singletonList;
-import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 
 public class IPVTokenService {
 
@@ -56,8 +55,7 @@ public class IPVTokenService {
                 new AuthorizationCodeGrant(
                         new AuthorizationCode(authCode),
                         configurationService.getIPVAuthorisationCallbackURI());
-        var tokenUri =
-                buildURI(configurationService.getIPVAuthorisationURI().toString(), TOKEN_PATH);
+        var tokenUri = configurationService.getIPVTokenURI();
         var expiryDate = LocalDateTime.now().plusMinutes(PRIVATE_KEY_JWT_EXPIRY);
         var claimsSet =
                 new JWTAuthenticationClaimsSet(
@@ -72,7 +70,7 @@ public class IPVTokenService {
                 generatePrivateKeyJwt(claimsSet),
                 codeGrant,
                 null,
-                singletonList(configurationService.getIPVAuthorisationCallbackURI()),
+                singletonList(configurationService.getIPVTokenURI()),
                 Map.of(
                         "client_id",
                         singletonList(configurationService.getIPVAuthorisationClientId())));

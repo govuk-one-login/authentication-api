@@ -59,7 +59,7 @@ public class IPVAuthorisationHandlerTest {
 
     private static final URI REDIRECT_URI = URI.create("http://localhost/oidc/redirect");
     private static final URI IPV_CALLBACK_URI = URI.create("http://localhost/oidc/ipv/callback");
-    private static final URI IPV_AUTHORISATION_URI = URI.create("http://localhost/ipv");
+    private static final URI IPV_AUTHORISATION_URI = URI.create("http://localhost/ipv/authorize");
 
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
 
@@ -123,7 +123,7 @@ public class IPVAuthorisationHandlerTest {
         IPVAuthorisationResponse body =
                 new ObjectMapper().readValue(response.getBody(), IPVAuthorisationResponse.class);
 
-        assertThat(body.getRedirectUri(), startsWith(IPV_AUTHORISATION_URI + "/authorize"));
+        assertThat(body.getRedirectUri(), startsWith(IPV_AUTHORISATION_URI.toString()));
         assertThat(
                 splitQuery(body.getRedirectUri()).get("claims"),
                 equalTo(claimsSetRequest.toJSONString()));
