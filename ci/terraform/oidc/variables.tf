@@ -217,15 +217,23 @@ variable "ipv_api_enabled" {
 }
 
 variable "ipv_authorisation_uri" {
-  type = string
+  type    = string
+  default = "undefined"
 }
 
 variable "ipv_authorisation_callback_uri" {
-  type = string
+  type    = string
+  default = "undefined"
 }
 
 variable "ipv_authorisation_client_id" {
-  type = string
+  type    = string
+  default = "undefined"
+}
+
+variable "ipv_token_uri" {
+  type    = string
+  default = "undefined"
 }
 
 variable "endpoint_memory_size" {
