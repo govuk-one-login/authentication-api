@@ -38,14 +38,12 @@ import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 
 public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisationRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(IPVAuthorisationHandler.class);
 
-    private static final String IPV_AUTHORIZE_ROUTE = "/authorize";
     private final AuditService auditService;
     private final IPVAuthorisationService authorisationService;
 
@@ -102,12 +100,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                             .customParameter("nonce", IdGenerator.generate())
                             .state(state)
                             .redirectionURI(configurationService.getIPVAuthorisationCallbackURI())
-                            .endpointURI(
-                                    buildURI(
-                                            configurationService
-                                                    .getIPVAuthorisationURI()
-                                                    .toString(),
-                                            IPV_AUTHORIZE_ROUTE));
+                            .endpointURI(configurationService.getIPVAuthorisationURI());
             claimsSetRequest.ifPresent(
                     t -> authRequestBuilder.customParameter("claims", t.toJSONString()));
 
