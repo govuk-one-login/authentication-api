@@ -5,11 +5,12 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.entity.SPOTResponse;
 import uk.gov.di.authentication.ipv.entity.SPOTStatus;
 import uk.gov.di.authentication.ipv.lambda.SPOTResponseHandler;
-import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
 
 import java.util.Arrays;
 import java.util.Locale;
@@ -22,9 +23,12 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
-public class SpotResponseIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent, Object> {
 
-    private final SPOTResponseHandler handler = new SPOTResponseHandler(TEST_CONFIGURATION_SERVICE);
+    @BeforeEach
+    void setup() {
+        handler = new SPOTResponseHandler(TEST_CONFIGURATION_SERVICE);
+    }
 
     @Test
     void shouldAddSpotCredentialToDBForValidResponse() {
