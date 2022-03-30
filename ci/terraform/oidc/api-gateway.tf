@@ -127,6 +127,8 @@ resource "aws_api_gateway_deployment" "deployment" {
       var.client_registry_api_enabled ? module.update[0].method_trigger_value : null,
       module.userinfo.integration_trigger_value,
       module.userinfo.method_trigger_value,
+      var.ipv_api_enabled ? module.ipv-callback[0].integration_trigger_value : null,
+      var.ipv_api_enabled ? module.ipv-callback[0].method_trigger_value : null,
     ]))
   }
 
@@ -222,6 +224,7 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
     module.trustmarks,
     module.update,
     module.userinfo,
+    module.ipv-callback,
     aws_api_gateway_deployment.deployment,
   ]
 }
