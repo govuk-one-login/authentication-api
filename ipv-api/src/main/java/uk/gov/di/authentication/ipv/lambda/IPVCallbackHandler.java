@@ -191,7 +191,7 @@ public class IPVCallbackHandler
                                 }
                                 var redirectURI =
                                         ConstructUriHelper.buildURI(
-                                                configurationService.getLoginURI().toString(),
+                                                configurationService.getOidcApiBaseURL().get(),
                                                 REDIRECT_PATH);
                                 return new APIGatewayProxyResponseEvent()
                                         .withStatusCode(302)

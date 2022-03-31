@@ -20,6 +20,7 @@ import uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.IPVStubExtension;
@@ -35,7 +36,7 @@ import java.util.Optional;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.startsWith;
+import static org.hamcrest.Matchers.equalTo;
 import static uk.gov.di.authentication.shared.helpers.ClientSubjectHelper.calculatePairwiseIdentifier;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -60,7 +61,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     }
 
     @Test
-    void shouldRedirectToLoginWhenSuccessfullyProcessedIpvResponse() throws IOException {
+    void shouldRedirectToAuthCodeWhenSuccessfullyProcessedIpvResponse() throws IOException {
         var sessionId = "some-session-id";
         var clientSessionId = "some-client-session-id";
         var scope = new Scope(OIDCScopeValue.OPENID);
@@ -89,7 +90,11 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+                equalTo(
+                        ConstructUriHelper.buildURI(
+                                        TEST_CONFIGURATION_SERVICE.getOidcApiBaseURL().get(),
+                                        "/auth-code")
+                                .toString()));
 
         assertNoAuditEventsReceived(auditTopic);
         SpotQueueAssertionHelper.assertSpotRequestReceived(

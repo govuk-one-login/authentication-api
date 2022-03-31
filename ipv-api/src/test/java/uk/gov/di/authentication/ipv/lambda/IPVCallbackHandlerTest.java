@@ -145,7 +145,7 @@ class IPVCallbackHandlerTest {
         var response = makeHandlerRequest(event);
 
         assertThat(response, hasStatus(302));
-        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("auth-code").build();
+        var expectedRedirectURI = new URIBuilder(OIDC_BASE_URL).setPath("auth-code").build();
         assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
         var expectedPairwiseSub =
                 ClientSubjectHelper.getSubject(userProfile, clientRegistry, dynamoService);
