@@ -35,6 +35,7 @@ resource "aws_lambda_function" "authorizer" {
     variables = {
       TOKEN_SIGNING_KEY_ALIAS = data.aws_kms_key.id_token_public_key.key_id
       ENVIRONMENT             = var.environment
+      JAVA_TOOL_OPTIONS       = "-XXx:+TieredCompilation -XX:TieredStopAtLevel=1"
     }
   }
   kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
