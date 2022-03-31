@@ -5,7 +5,8 @@ data "aws_iam_policy_document" "warmer_can_execute_endpoint_lambda" {
       "lambda:InvokeFunction"
     ]
     resources = [
-      aws_lambda_function.endpoint_lambda.arn
+      aws_lambda_function.endpoint_lambda.arn,
+      aws_lambda_alias.endpoint_lambda.arn,
     ]
     effect = "Allow"
   }
