@@ -240,3 +240,13 @@ variable "endpoint_memory_size" {
   default = 4096
   type    = number
 }
+
+variable "spot_enabled" {
+  default = false
+  type    = bool
+}
+
+variable "spot_queue_url" {
+  default = "undefined"
+  type    = string
+}

@@ -105,6 +105,7 @@ class IPVCallbackHandlerTest {
                         awsSqsClient);
         when(configService.getLoginURI()).thenReturn(LOGIN_URL);
         when(configService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
+        when(configService.isSpotEnabled()).thenReturn(true);
     }
 
     @Test

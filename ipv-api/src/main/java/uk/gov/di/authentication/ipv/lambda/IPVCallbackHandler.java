@@ -185,8 +185,10 @@ public class IPVCallbackHandler
                                                 dynamoService.getOrGenerateSalt(userProfile),
                                                 pairwiseSubject.getValue(),
                                                 new LogIds(session.getSessionId()));
-                                sqsClient.send(objectMapper.writeValueAsString(spotRequest));
-                                LOG.info("SPOT request placed on queue");
+                                if (configurationService.isSpotEnabled()) {
+                                    sqsClient.send(objectMapper.writeValueAsString(spotRequest));
+                                    LOG.info("SPOT request placed on queue");
+                                }
                                 var redirectURI =
                                         ConstructUriHelper.buildURI(
                                                 configurationService.getLoginURI().toString(),
