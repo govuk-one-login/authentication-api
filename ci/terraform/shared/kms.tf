@@ -299,5 +299,5 @@ resource "aws_kms_key" "ipv_token_auth_signing_key" {
 
 resource "aws_kms_alias" "ipv_token_auth_signing_key_alias" {
   name          = "alias/${var.environment}-ipv-token-auth-kms-key-alias"
-  target_key_id = aws_kms_key.id_token_signing_key.key_id
+  target_key_id = aws_kms_key.ipv_token_auth_signing_key.key_id
 }
