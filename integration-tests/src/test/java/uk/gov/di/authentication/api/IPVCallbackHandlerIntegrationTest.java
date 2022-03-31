@@ -23,6 +23,10 @@ import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.IPVStubExtension;
+import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
+import uk.gov.di.authentication.sharedtest.extensions.SnsTopicExtension;
+import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
+import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
 import uk.gov.di.authentication.testsupport.helpers.SpotQueueAssertionHelper;
 
 import java.io.IOException;
@@ -36,16 +40,27 @@ import java.util.Optional;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
+import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED;
+import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SPOT_REQUESTED;
+import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED;
+import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.shared.helpers.ClientSubjectHelper.calculatePairwiseIdentifier;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @RegisterExtension public static final IPVStubExtension ipvStub = new IPVStubExtension();
 
-    protected static final ConfigurationService configurationService =
-            new IPVCallbackHandlerIntegrationTest.TestConfigurationService(ipvStub);
+    protected final ConfigurationService configurationService =
+            new IPVCallbackHandlerIntegrationTest.TestConfigurationService(
+                    ipvStub,
+                    auditTopic,
+                    notificationsQueue,
+                    auditSigningKey,
+                    tokenSigner,
+                    ipvPrivateKeyJwtSigner,
+                    spotQueue);
 
     private static final String CLIENT_ID = "test-client-id";
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
@@ -91,7 +106,13 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
 
-        assertNoAuditEventsReceived(auditTopic);
+        assertEventTypesReceived(
+                auditTopic,
+                List.of(
+                        IPV_AUTHORISATION_RESPONSE_RECEIVED,
+                        IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                        IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED,
+                        IPV_SPOT_REQUESTED));
         SpotQueueAssertionHelper.assertSpotRequestReceived(
                 spotQueue,
                 List.of(
@@ -132,11 +153,25 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         return queryStringParameters;
     }
 
-    protected static class TestConfigurationService extends ConfigurationService {
+    protected static class TestConfigurationService extends IntegrationTestConfigurationService {
 
         private final IPVStubExtension ipvStubExtension;
 
-        public TestConfigurationService(IPVStubExtension ipvStub) {
+        public TestConfigurationService(
+                IPVStubExtension ipvStub,
+                SnsTopicExtension auditEventTopic,
+                SqsQueueExtension notificationQueue,
+                KmsKeyExtension auditSigningKey,
+                TokenSigningExtension tokenSigningKey,
+                TokenSigningExtension ipvPrivateKeyJwtSigner,
+                SqsQueueExtension spotQueue) {
+            super(
+                    auditEventTopic,
+                    notificationQueue,
+                    auditSigningKey,
+                    tokenSigningKey,
+                    ipvPrivateKeyJwtSigner,
+                    spotQueue);
             this.ipvStubExtension = ipvStub;
         }
 
@@ -162,16 +197,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         @Override
         public URI getIPVAuthorisationCallbackURI() {
             return URI.create("http://localhost/redirect");
-        }
-
-        @Override
-        public String getIPVTokenSigningKeyAlias() {
-            return ipvPrivateKeyJwtSigner.getKeyAlias();
-        }
-
-        @Override
-        public String getSpotQueueUri() {
-            return spotQueue.getQueueUrl();
         }
     }
 }

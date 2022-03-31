@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.entity.SPOTClaims;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
@@ -21,6 +22,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -48,6 +50,7 @@ public class IPVCallbackHandler
     private final DynamoService dynamoService;
     private final ClientSessionService clientSessionService;
     private final DynamoClientService dynamoClientService;
+    private final AuditService auditService;
     private final AwsSqsClient sqsClient;
     protected final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
     private static final String REDIRECT_PATH = "auth-code";
@@ -64,6 +67,7 @@ public class IPVCallbackHandler
             DynamoService dynamoService,
             ClientSessionService clientSessionService,
             DynamoClientService dynamoClientService,
+            AuditService auditService,
             AwsSqsClient sqsClient) {
         this.configurationService = configurationService;
         this.ipvAuthorisationService = responseService;
@@ -72,6 +76,7 @@ public class IPVCallbackHandler
         this.dynamoService = dynamoService;
         this.clientSessionService = clientSessionService;
         this.dynamoClientService = dynamoClientService;
+        this.auditService = auditService;
         this.sqsClient = sqsClient;
     }
 
@@ -87,6 +92,7 @@ public class IPVCallbackHandler
         this.dynamoService = new DynamoService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
+        this.auditService = new AuditService(configurationService);
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
@@ -151,14 +157,49 @@ public class IPVCallbackHandler
                                     throw new RuntimeException(
                                             "Email from session does not have a user profile");
                                 }
+
+                                auditService.submitAuditEvent(
+                                        IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED,
+                                        context.getAwsRequestId(),
+                                        session.getSessionId(),
+                                        clientId,
+                                        userProfile.getSubjectID(),
+                                        userProfile.getEmail(),
+                                        AuditService.UNKNOWN,
+                                        userProfile.getPhoneNumber(),
+                                        AuditService.UNKNOWN);
+
                                 var tokenRequest =
                                         ipvTokenService.constructTokenRequest(
                                                 input.getQueryStringParameters().get("code"));
                                 var tokenResponse = ipvTokenService.sendTokenRequest(tokenRequest);
-                                if (!tokenResponse.indicatesSuccess()) {
+                                if (tokenResponse.indicatesSuccess()) {
+                                    auditService.submitAuditEvent(
+                                            IPVAuditableEvent
+                                                    .IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                                            context.getAwsRequestId(),
+                                            session.getSessionId(),
+                                            clientId,
+                                            userProfile.getSubjectID(),
+                                            userProfile.getEmail(),
+                                            AuditService.UNKNOWN,
+                                            userProfile.getPhoneNumber(),
+                                            AuditService.UNKNOWN);
+                                } else {
                                     LOG.error(
                                             "IPV TokenResponse was not successful: {}",
                                             tokenResponse.toErrorResponse().toJSONObject());
+                                    auditService.submitAuditEvent(
+                                            IPVAuditableEvent
+                                                    .IPV_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                                            context.getAwsRequestId(),
+                                            session.getSessionId(),
+                                            clientId,
+                                            userProfile.getSubjectID(),
+                                            userProfile.getEmail(),
+                                            AuditService.UNKNOWN,
+                                            userProfile.getPhoneNumber(),
+                                            AuditService.UNKNOWN);
                                     throw new RuntimeException(
                                             "IPV TokenResponse was not successful");
                                 }
@@ -171,6 +212,16 @@ public class IPVCallbackHandler
                                                         .toSuccessResponse()
                                                         .getTokens()
                                                         .getBearerAccessToken());
+                                auditService.submitAuditEvent(
+                                        IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED,
+                                        context.getAwsRequestId(),
+                                        session.getSessionId(),
+                                        clientId,
+                                        userProfile.getSubjectID(),
+                                        userProfile.getEmail(),
+                                        AuditService.UNKNOWN,
+                                        userProfile.getPhoneNumber(),
+                                        AuditService.UNKNOWN);
                                 var spotRequest =
                                         new SPOTRequest(
                                                 new SPOTClaims(
@@ -189,6 +240,16 @@ public class IPVCallbackHandler
                                     sqsClient.send(objectMapper.writeValueAsString(spotRequest));
                                     LOG.info("SPOT request placed on queue");
                                 }
+                                auditService.submitAuditEvent(
+                                        IPVAuditableEvent.IPV_SPOT_REQUESTED,
+                                        context.getAwsRequestId(),
+                                        session.getSessionId(),
+                                        clientId,
+                                        userProfile.getSubjectID(),
+                                        userProfile.getEmail(),
+                                        AuditService.UNKNOWN,
+                                        userProfile.getPhoneNumber(),
+                                        AuditService.UNKNOWN);
                                 var redirectURI =
                                         ConstructUriHelper.buildURI(
                                                 configurationService.getLoginURI().toString(),
