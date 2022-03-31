@@ -78,7 +78,8 @@ public class StartService {
                         clientRegistry.getClientName(),
                         scopes,
                         clientRegistry.getServiceType(),
-                        clientRegistry.isCookieConsentShared());
+                        clientRegistry.isCookieConsentShared(),
+                        authenticationRequest.getRedirectionURI());
         LOG.info(
                 "Found ClientStartInfo for ClientName: {} Scopes: {} ServiceType: {}",
                 clientRegistry.getClientName(),

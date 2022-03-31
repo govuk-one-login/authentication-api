@@ -111,6 +111,7 @@ class StartServiceTest {
         assertThat(clientStartInfo.getCookieConsentShared(), equalTo(cookieConsentShared));
         assertThat(clientStartInfo.getClientName(), equalTo(CLIENT_NAME));
         assertThat(clientStartInfo.getScopes(), equalTo(SCOPES.toStringList()));
+        assertThat(clientStartInfo.getRedirectUri(), equalTo(REDIRECT_URI));
     }
 
     @Test
