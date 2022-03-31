@@ -147,7 +147,7 @@ resource "aws_lambda_function" "warmer_function" {
     variables = merge(var.warmer_handler_environment_variables, {
       LAMBDA_ARN        = aws_lambda_function.endpoint_lambda.arn
       LAMBDA_QUALIFIER  = aws_lambda_alias.endpoint_lambda.name
-      JAVA_TOOL_OPTIONS = "-XXx:+TieredCompilation -XX:TieredStopAtLevel=1"
+      JAVA_TOOL_OPTIONS = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
     })
   }
   kms_key_arn = var.lambda_env_vars_encryption_kms_key_arn
