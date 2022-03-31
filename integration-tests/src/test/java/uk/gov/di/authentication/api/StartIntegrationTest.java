@@ -37,7 +37,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String CLIENT_ID = "test-client-id";
-    private static final String REDIRECT_URI = "http://localhost";
+    private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     public static final String TEST_CLIENT_NAME = "test-client-name";
 
@@ -55,10 +55,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         scope.add(OIDCScopeValue.OPENID);
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                scope,
-                                new ClientID(CLIENT_ID),
-                                URI.create("http://localhost/redirect"))
+                                ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
                         .nonce(new Nonce())
                         .state(new State())
                         .build();
@@ -85,6 +82,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(startResponse.getClient().getServiceType(), equalTo("MANDATORY"));
         assertThat(startResponse.getClient().getCookieConsentShared(), equalTo(false));
         assertThat(startResponse.getClient().getScopes(), equalTo(scope.toStringList()));
+        assertThat(startResponse.getClient().getRedirectUri(), equalTo(REDIRECT_URI));
         assertThat(startResponse.getUser().getCookieConsent(), equalTo(null));
         assertThat(startResponse.getUser().getGaCrossDomainTrackingId(), equalTo(null));
 
@@ -105,7 +103,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         clientStore.registerClient(
                 CLIENT_ID,
                 TEST_CLIENT_NAME,
-                singletonList(REDIRECT_URI),
+                singletonList(REDIRECT_URI.toString()),
                 singletonList(EMAIL),
                 List.of("openid", "email"),
                 Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),

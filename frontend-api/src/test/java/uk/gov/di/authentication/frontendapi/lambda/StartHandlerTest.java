@@ -60,6 +60,7 @@ class StartHandlerTest {
     public static final String CLIENT_SESSION_ID = "known-client-session-id";
     public static final String SESSION_ID = "some-session-id";
     public static final String PERSISTENT_ID = "some-persistent-id-value";
+    public static final URI REDIRECT_URL = URI.create("https://localhost/redirect");
 
     private StartHandler handler;
     private final Context context = mock(Context.class);
@@ -131,6 +132,7 @@ class StartHandlerTest {
         assertThat(
                 response.getClient().getCookieConsentShared(),
                 equalTo(getClientStartInfo().getCookieConsentShared()));
+        assertThat(response.getClient().getRedirectUri(), equalTo(REDIRECT_URL));
         assertThat(
                 response.getUser().isConsentRequired(), equalTo(userStartInfo.isConsentRequired()));
         assertThat(
@@ -251,7 +253,8 @@ class StartHandlerTest {
     private ClientStartInfo getClientStartInfo() {
         Scope scope = new Scope(OIDCScopeValue.OPENID.getValue());
 
-        return new ClientStartInfo(TEST_CLIENT_NAME, scope.toStringList(), "MANDATORY", false);
+        return new ClientStartInfo(
+                TEST_CLIENT_NAME, scope.toStringList(), "MANDATORY", false, REDIRECT_URL);
     }
 
     private UserStartInfo getUserStartInfo(String cookieConsent, String gaCrossDomainTrackingId) {

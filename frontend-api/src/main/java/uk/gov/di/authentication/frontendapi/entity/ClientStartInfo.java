@@ -2,6 +2,7 @@ package uk.gov.di.authentication.frontendapi.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.net.URI;
 import java.util.List;
 
 public class ClientStartInfo {
@@ -18,15 +19,20 @@ public class ClientStartInfo {
     @JsonProperty("cookieConsentShared")
     private boolean cookieConsentShared;
 
+    @JsonProperty("redirectUri")
+    private URI redirectUri;
+
     public ClientStartInfo(
             @JsonProperty(required = true, value = "clientName") String clientName,
             @JsonProperty(required = true, value = "scopes") List<String> scopes,
             @JsonProperty(required = true, value = "serviceType") String serviceType,
-            @JsonProperty(value = "cookieConsentShared") boolean cookieConsentShared) {
+            @JsonProperty(value = "cookieConsentShared") boolean cookieConsentShared,
+            @JsonProperty(value = "redirectUri") URI redirectUri) {
         this.clientName = clientName;
         this.scopes = scopes;
         this.serviceType = serviceType;
         this.cookieConsentShared = cookieConsentShared;
+        this.redirectUri = redirectUri;
     }
 
     public String getClientName() {
@@ -43,5 +49,9 @@ public class ClientStartInfo {
 
     public boolean getCookieConsentShared() {
         return cookieConsentShared;
+    }
+
+    public URI getRedirectUri() {
+        return redirectUri;
     }
 }
