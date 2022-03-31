@@ -38,6 +38,8 @@ module "ipv-callback" {
     LOCALSTACK_ENDPOINT            = var.use_localstack ? var.localstack_endpoint : null
     OIDC_API_BASE_URL              = local.api_base_url
     REDIS_KEY                      = local.redis_key
+    SPOT_ENABLED                   = tostring(var.spot_enabled)
+    SPOT_QUEUE_URL                 = var.spot_queue_url
   }
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler::handleRequest"
 
