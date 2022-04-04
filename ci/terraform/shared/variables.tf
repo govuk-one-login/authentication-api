@@ -87,6 +87,12 @@ variable "stub_rp_clients" {
   description = "The details of RP clients to provision in the Client table"
 }
 
+variable "test_users" {
+  default     = []
+  type        = list(object({ username : string, hashed_password : string, phone : string, terms_and_conditions_version : string }))
+  description = "Test users to add in the database"
+}
+
 variable "aws_region" {
   default = "eu-west-2"
 }
