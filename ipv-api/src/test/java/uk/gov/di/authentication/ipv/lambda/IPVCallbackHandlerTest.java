@@ -117,7 +117,7 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToLoginUriForSuccessfulResponse()
+    void shouldRedirectToFrontendCallbackForSuccessfulResponse()
             throws URISyntaxException, JsonProcessingException {
         var salt = "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes();
         var clientRegistry = generateClientRegistry();
@@ -153,7 +153,7 @@ class IPVCallbackHandlerTest {
         var response = makeHandlerRequest(event);
 
         assertThat(response, hasStatus(302));
-        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("auth-code").build();
+        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("ipv-callback").build();
         assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
         var expectedPairwiseSub =
                 ClientSubjectHelper.getSubject(userProfile, clientRegistry, dynamoService);

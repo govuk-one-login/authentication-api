@@ -53,7 +53,7 @@ public class IPVCallbackHandler
     private final AuditService auditService;
     private final AwsSqsClient sqsClient;
     protected final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
-    private static final String REDIRECT_PATH = "auth-code";
+    private static final String REDIRECT_PATH = "ipv-callback";
 
     public IPVCallbackHandler() {
         this(ConfigurationService.getInstance());
