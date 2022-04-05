@@ -60,7 +60,14 @@ public class AuthorizeRequestUriHandler
         try {
             LOG.info("Request received to the AuthorizeRequestUriHandler");
             var client = input.getClientRegistry();
-            var signedJWT = getSignedJWT(input.getAuthRequest().getRequestURI());
+            var signedJWTResponse = getSignedJWTResponse(input.getAuthRequest().getRequestURI());
+            if (signedJWTResponse.statusCode() < 200 && signedJWTResponse.statusCode() >= 300) {
+                LOG.error(
+                        "Unsuccessful response when requesting `request_uri`. Status code was: {}",
+                        signedJWTResponse.statusCode());
+                throw new RuntimeException();
+            }
+            var signedJWT = SignedJWT.parse(signedJWTResponse.body());
             var signatureValid = isSignatureValid(signedJWT, client.getPublicKey());
             if (!signatureValid) {
                 LOG.error("Invalid Signature on request JWT");
@@ -118,18 +125,17 @@ public class AuthorizeRequestUriHandler
             LOG.error("Error when retrieving request JWT", e);
             throw new RuntimeException(e);
         } catch (ParseException e) {
-            LOG.error("Error when parsing request JWT");
+            LOG.error("Error when parsing request JWT", e);
             throw new RuntimeException(e);
         }
         LOG.info("Generating RequestUriResponsePayload response");
         return new RequestUriResponsePayload(true);
     }
 
-    private SignedJWT getSignedJWT(URI requestUri)
+    private HttpResponse<String> getSignedJWTResponse(URI requestUri)
             throws IOException, InterruptedException, ParseException {
         var request = HttpRequest.newBuilder().GET().uri(requestUri).build();
-        var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        return SignedJWT.parse(response.body());
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
     }
 
     public static boolean isSignatureValid(SignedJWT signedJWT, String publicKey) {
