@@ -41,6 +41,9 @@ public class ClientConfigValidationService {
         if (!areUrisValid(registrationRequest.getRedirectUris())) {
             return Optional.of(RegistrationError.INVALID_REDIRECT_URI);
         }
+        if (!areUrisValid(List.of(registrationRequest.getBackChannelLogoutUri()))) {
+            return Optional.of(RegistrationError.INVALID_REDIRECT_URI);
+        }
         if (!isPublicKeyValid(registrationRequest.getPublicKey())) {
             return Optional.of(INVALID_PUBLIC_KEY);
         }

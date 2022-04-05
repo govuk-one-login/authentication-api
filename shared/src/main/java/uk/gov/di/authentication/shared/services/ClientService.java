@@ -19,6 +19,7 @@ public interface ClientService {
             List<String> scopes,
             String publicKey,
             List<String> postLogoutRedirectUris,
+            String backChannelLogoutUri,
             String serviceType,
             String sectorIdentifierUri,
             String subjectType,

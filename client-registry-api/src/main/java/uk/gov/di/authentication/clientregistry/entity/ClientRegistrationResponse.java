@@ -24,6 +24,9 @@ public class ClientRegistrationResponse {
     @JsonProperty("post_logout_redirect_uris")
     private final List<String> postLogoutRedirectUris;
 
+    @JsonProperty("back_channel_logout_uri")
+    private final String backChannelLogoutUri;
+
     @JsonProperty("subject_type")
     private final String subjectType;
 
@@ -43,6 +46,7 @@ public class ClientRegistrationResponse {
             @JsonProperty(required = true, value = "contacts") List<String> contacts,
             @JsonProperty(required = true, value = "scopes") List<String> scopes,
             @JsonProperty(value = "post_logout_redirect_uris") List<String> postLogoutRedirectUris,
+            @JsonProperty(value = "back_channel_logout_uri") String backChannelLogoutUri,
             @JsonProperty(required = true, value = "service_type") String serviceType,
             @JsonProperty(required = true, value = "subject_type") String subjectType) {
         this.clientName = clientName;
@@ -51,6 +55,7 @@ public class ClientRegistrationResponse {
         this.contacts = contacts;
         this.scopes = scopes;
         this.postLogoutRedirectUris = postLogoutRedirectUris;
+        this.backChannelLogoutUri = backChannelLogoutUri;
         this.serviceType = serviceType;
         this.subjectType = subjectType;
     }
@@ -77,6 +82,10 @@ public class ClientRegistrationResponse {
 
     public List<String> getPostLogoutRedirectUris() {
         return postLogoutRedirectUris;
+    }
+
+    public String getBackChannelLogoutUri() {
+        return backChannelLogoutUri;
     }
 
     public String getSubjectType() {

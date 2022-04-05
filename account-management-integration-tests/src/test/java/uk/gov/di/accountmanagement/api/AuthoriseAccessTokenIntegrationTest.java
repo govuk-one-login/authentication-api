@@ -147,6 +147,7 @@ class AuthoriseAccessTokenIntegrationTest
                 scopes,
                 Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
                 singletonList("http://localhost/post-redirect-logout"),
+                "http://example.com",
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",

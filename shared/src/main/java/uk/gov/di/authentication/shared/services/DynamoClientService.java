@@ -64,6 +64,7 @@ public class DynamoClientService implements ClientService {
             List<String> scopes,
             String publicKey,
             List<String> postLogoutRedirectUris,
+            String backChannelLogoutUri,
             String serviceType,
             String sectorIdentifierUri,
             String subjectType,
@@ -77,6 +78,7 @@ public class DynamoClientService implements ClientService {
                         .setScopes(scopes)
                         .setPublicKey(publicKey)
                         .setPostLogoutRedirectUrls(postLogoutRedirectUris)
+                        .setBackChannelLogoutUri(backChannelLogoutUri)
                         .setServiceType(serviceType)
                         .setSectorIdentifierUri(sectorIdentifierUri)
                         .setSubjectType(subjectType)

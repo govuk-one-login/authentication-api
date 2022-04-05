@@ -257,6 +257,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                 List.of("openid", "email", "phone"),
                 "public-key",
                 singletonList("http://localhost/post-redirect-logout"),
+                "http://example.com",
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",

@@ -344,6 +344,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 scope.toStringList(),
                 Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
                 singletonList("http://localhost/post-logout-redirect"),
+                "http://example.com",
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 subjectType,

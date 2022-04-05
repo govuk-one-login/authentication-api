@@ -27,6 +27,9 @@ public class ClientRegistrationRequest {
     @JsonProperty("post_logout_redirect_uris")
     private List<String> postLogoutRedirectUris = new ArrayList<>();
 
+    @JsonProperty("back_channel_logout_uri")
+    private final String backChannelLogoutUri;
+
     @JsonProperty("service_type")
     private String serviceType;
 
@@ -46,6 +49,7 @@ public class ClientRegistrationRequest {
             @JsonProperty(required = true, value = "public_key") String publicKey,
             @JsonProperty(required = true, value = "scopes") List<String> scopes,
             @JsonProperty(value = "post_logout_redirect_uris") List<String> postLogoutRedirectUris,
+            @JsonProperty(value = "back_channel_logout_uri") String backChannelLogoutUri,
             @JsonProperty(value = "service_type") String serviceType,
             @JsonProperty(required = true, value = "sector_identifier_uri")
                     String sectorIdentifierUri,
@@ -60,6 +64,7 @@ public class ClientRegistrationRequest {
         if (Objects.nonNull(postLogoutRedirectUris)) {
             this.postLogoutRedirectUris = postLogoutRedirectUris;
         }
+        this.backChannelLogoutUri = backChannelLogoutUri;
         if (Objects.isNull(serviceType)) {
             serviceType = String.valueOf(ServiceType.MANDATORY);
         }
@@ -91,6 +96,10 @@ public class ClientRegistrationRequest {
 
     public List<String> getPostLogoutRedirectUris() {
         return postLogoutRedirectUris;
+    }
+
+    public String getBackChannelLogoutUri() {
+        return backChannelLogoutUri;
     }
 
     public String getServiceType() {

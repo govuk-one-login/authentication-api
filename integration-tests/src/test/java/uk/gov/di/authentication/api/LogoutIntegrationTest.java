@@ -161,6 +161,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 singletonList("openid"),
                 "public-key",
                 singletonList(REDIRECT_URL),
+                "http://example.com",
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",

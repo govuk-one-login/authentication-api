@@ -160,6 +160,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 List.of("openid", "email"),
                 "public-key",
                 singletonList("http://localhost/post-redirect-logout"),
+                "http://example.com",
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",
