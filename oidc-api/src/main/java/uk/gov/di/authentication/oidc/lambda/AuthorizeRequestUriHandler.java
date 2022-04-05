@@ -72,34 +72,47 @@ public class AuthorizeRequestUriHandler
                     .noneMatch(s -> s.equals(jwtClaimsSet.getClaim("redirect_uri")))) {
                 throw new RuntimeException("Invalid Redirect URI in request JWT");
             }
+            if (Objects.isNull(jwtClaimsSet.getClaim("client_id"))
+                    || !jwtClaimsSet
+                            .getClaim("client_id")
+                            .toString()
+                            .equals(input.getAuthRequest().getClientID().getValue())) {
+                return new RequestUriResponsePayload(
+                        false, OAuth2Error.UNAUTHORIZED_CLIENT.toParameters());
+            }
             if (Objects.nonNull(jwtClaimsSet.getClaim("request"))
                     || Objects.nonNull(jwtClaimsSet.getClaim("request_uri"))) {
                 LOG.warn("request or request_uri claim should not be incldued in request JWT");
-                return new RequestUriResponsePayload(false, OAuth2Error.INVALID_REQUEST);
+                return new RequestUriResponsePayload(
+                        false, OAuth2Error.INVALID_REQUEST.toParameters());
             }
             if (Objects.isNull(jwtClaimsSet.getAudience())
                     || !jwtClaimsSet
                             .getAudience()
                             .contains(configurationService.getOidcApiBaseURL().orElseThrow())) {
                 LOG.warn("Invalid or missing audience");
-                return new RequestUriResponsePayload(false, OAuth2Error.ACCESS_DENIED);
+                return new RequestUriResponsePayload(
+                        false, OAuth2Error.ACCESS_DENIED.toParameters());
             }
             if (Objects.isNull(jwtClaimsSet.getIssuer())
                     || !jwtClaimsSet.getIssuer().equals(client.getClientID())) {
                 LOG.warn("Invalid or missing issuer");
-                return new RequestUriResponsePayload(false, OAuth2Error.UNAUTHORIZED_CLIENT);
+                return new RequestUriResponsePayload(
+                        false, OAuth2Error.UNAUTHORIZED_CLIENT.toParameters());
             }
             if (!ResponseType.CODE.toString().equals(jwtClaimsSet.getClaim("response_type"))) {
                 LOG.warn(
                         "Unsupported responseType included in request JWT. Expected responseType of code");
-                return new RequestUriResponsePayload(false, OAuth2Error.UNSUPPORTED_RESPONSE_TYPE);
+                return new RequestUriResponsePayload(
+                        false, OAuth2Error.UNSUPPORTED_RESPONSE_TYPE.toParameters());
             }
             if (Objects.isNull(jwtClaimsSet.getClaim("scope"))
                     || !areScopesValid(
                             Scope.parse(jwtClaimsSet.getClaim("scope").toString()).toStringList(),
                             client)) {
                 LOG.warn("Invalid scopes in request JWT");
-                return new RequestUriResponsePayload(false, OAuth2Error.INVALID_SCOPE);
+                return new RequestUriResponsePayload(
+                        false, OAuth2Error.INVALID_SCOPE.toParameters());
             }
         } catch (InterruptedException | IOException e) {
             LOG.error("Error when retrieving request JWT", e);
@@ -109,7 +122,7 @@ public class AuthorizeRequestUriHandler
             throw new RuntimeException(e);
         }
         LOG.info("Generating RequestUriResponsePayload response");
-        return new RequestUriResponsePayload(true, null);
+        return new RequestUriResponsePayload(true);
     }
 
     private SignedJWT getSignedJWT(URI requestUri)

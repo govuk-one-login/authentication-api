@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseMode;
+import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
@@ -117,12 +118,11 @@ public class AuthorizationService {
                             "Invalid Redirect in request %s",
                             authRequest.getRedirectionURI().toString()));
         }
-        if (!authRequest.getResponseType().toString().equals("code")) {
+        if (!authRequest.getResponseType().toString().equals(ResponseType.CODE.toString())) {
             LOG.warn("Unsupported responseType included in request. Expected responseType of code");
             return Optional.of(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE);
         }
-        if (!areScopesValid(authRequest.getScope().toStringList())
-                || !client.get().getScopes().containsAll(authRequest.getScope().toStringList())) {
+        if (!areScopesValid(authRequest.getScope().toStringList(), client.get())) {
             LOG.warn(
                     "Invalid scopes in authRequest. Scopes in request: {}",
                     authRequest.getScope().toStringList());
@@ -151,6 +151,10 @@ public class AuthorizationService {
                             "Request is missing state parameter"));
         }
         if (isRequestUri) {
+            if (!client.get().getRequestUris().contains(authRequest.getRequestURI().toString())) {
+                return Optional.of(
+                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Invalid request URI"));
+            }
             return invokeAuthorizeRequestUriLambda(authRequest, client.get());
         }
         List<String> authRequestVtr = authRequest.getCustomParameter(VTR_PARAM);
@@ -202,7 +206,7 @@ public class AuthorizationService {
                 return Optional.empty();
             } else {
                 LOG.warn("Received unsuccessful response from AuthorizeRequestUriHandler");
-                return Optional.of(requestUriResponsePayload.getErrorObject());
+                return Optional.of(ErrorObject.parse(requestUriResponsePayload.getErrorObject()));
             }
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
@@ -219,13 +223,13 @@ public class AuthorizationService {
                 authenticationRequest.getCustomParameter(VTR_PARAM));
     }
 
-    private boolean areScopesValid(List<String> scopes) {
+    private boolean areScopesValid(List<String> scopes, ClientRegistry clientRegistry) {
         for (String scope : scopes) {
             if (ValidScopes.getAllValidScopes().stream().noneMatch((t) -> t.equals(scope))) {
                 return false;
             }
         }
-        return true;
+        return clientRegistry.getScopes().containsAll(scopes);
     }
 
     private boolean areClaimsValid(OIDCClaimsRequest claimsRequest, ClientRegistry clientRegistry) {

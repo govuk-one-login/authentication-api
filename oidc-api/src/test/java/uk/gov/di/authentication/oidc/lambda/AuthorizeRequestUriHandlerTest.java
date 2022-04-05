@@ -81,6 +81,7 @@ class AuthorizeRequestUriHandlerTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", SCOPE)
+                        .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
         setupJwtRequest(jwtClaimsSet);
@@ -100,6 +101,7 @@ class AuthorizeRequestUriHandlerTest {
                         .claim("redirect_uri", "https://invalid-redirect-uri")
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", SCOPE)
+                        .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
         setupJwtRequest(jwtClaimsSet);
@@ -120,13 +122,37 @@ class AuthorizeRequestUriHandlerTest {
                         .claim("response_type", ResponseType.CODE_IDTOKEN.toString())
                         .claim("scope", SCOPE)
                         .issuer(CLIENT_ID.getValue())
+                        .claim("client_id", CLIENT_ID.getValue())
                         .build();
         setupJwtRequest(jwtClaimsSet);
         var event = new RequestUriPayload(generateClientRegistry(), generateAuthRequest());
         var response = handler.handleRequest(event, context);
 
         assertFalse(response.isSuccessfulRequest());
-        assertThat(response.getErrorObject(), equalTo(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE));
+        assertThat(
+                response.getErrorObject(),
+                equalTo(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE.toParameters()));
+    }
+
+    @Test
+    void shouldReturnErrorWhenClientIDIsInvalid()
+            throws IOException, InterruptedException, JOSEException {
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(AUDIENCE)
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", SCOPE)
+                        .issuer(CLIENT_ID.getValue())
+                        .claim("client_id", "invalid-client-id")
+                        .build();
+        setupJwtRequest(jwtClaimsSet);
+        var event = new RequestUriPayload(generateClientRegistry(), generateAuthRequest());
+        var response = handler.handleRequest(event, context);
+
+        assertFalse(response.isSuccessfulRequest());
+        assertThat(
+                response.getErrorObject(), equalTo(OAuth2Error.UNAUTHORIZED_CLIENT.toParameters()));
     }
 
     @Test
@@ -138,6 +164,7 @@ class AuthorizeRequestUriHandlerTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", "openid profile")
+                        .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
         setupJwtRequest(jwtClaimsSet);
@@ -145,7 +172,7 @@ class AuthorizeRequestUriHandlerTest {
         var response = handler.handleRequest(event, context);
 
         assertFalse(response.isSuccessfulRequest());
-        assertThat(response.getErrorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
+        assertThat(response.getErrorObject(), equalTo(OAuth2Error.INVALID_SCOPE.toParameters()));
     }
 
     @Test
@@ -157,6 +184,7 @@ class AuthorizeRequestUriHandlerTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", "openid email")
+                        .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
         setupJwtRequest(jwtClaimsSet);
@@ -164,7 +192,7 @@ class AuthorizeRequestUriHandlerTest {
         var response = handler.handleRequest(event, context);
 
         assertFalse(response.isSuccessfulRequest());
-        assertThat(response.getErrorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
+        assertThat(response.getErrorObject(), equalTo(OAuth2Error.INVALID_SCOPE.toParameters()));
     }
 
     @Test
@@ -176,6 +204,7 @@ class AuthorizeRequestUriHandlerTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", "openid")
+                        .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
         setupJwtRequest(jwtClaimsSet);
@@ -183,7 +212,7 @@ class AuthorizeRequestUriHandlerTest {
         var response = handler.handleRequest(event, context);
 
         assertFalse(response.isSuccessfulRequest());
-        assertThat(response.getErrorObject(), equalTo(OAuth2Error.ACCESS_DENIED));
+        assertThat(response.getErrorObject(), equalTo(OAuth2Error.ACCESS_DENIED.toParameters()));
     }
 
     @Test
@@ -195,6 +224,7 @@ class AuthorizeRequestUriHandlerTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", "openid")
+                        .claim("client_id", CLIENT_ID.getValue())
                         .issuer("invalid-client")
                         .build();
         setupJwtRequest(jwtClaimsSet);
@@ -202,7 +232,8 @@ class AuthorizeRequestUriHandlerTest {
         var response = handler.handleRequest(event, context);
 
         assertFalse(response.isSuccessfulRequest());
-        assertThat(response.getErrorObject(), equalTo(OAuth2Error.UNAUTHORIZED_CLIENT));
+        assertThat(
+                response.getErrorObject(), equalTo(OAuth2Error.UNAUTHORIZED_CLIENT.toParameters()));
     }
 
     @Test
@@ -214,6 +245,7 @@ class AuthorizeRequestUriHandlerTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", "openid")
+                        .claim("client_id", CLIENT_ID.getValue())
                         .claim("request", "some-random-request-value")
                         .issuer(CLIENT_ID.getValue())
                         .build();
@@ -222,7 +254,7 @@ class AuthorizeRequestUriHandlerTest {
         var response = handler.handleRequest(event, context);
 
         assertFalse(response.isSuccessfulRequest());
-        assertThat(response.getErrorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+        assertThat(response.getErrorObject(), equalTo(OAuth2Error.INVALID_REQUEST.toParameters()));
     }
 
     @Test
@@ -234,6 +266,7 @@ class AuthorizeRequestUriHandlerTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", "openid")
+                        .claim("client_id", CLIENT_ID.getValue())
                         .claim("request_uri", REQUEST_URI)
                         .issuer(CLIENT_ID.getValue())
                         .build();
@@ -242,7 +275,7 @@ class AuthorizeRequestUriHandlerTest {
         var response = handler.handleRequest(event, context);
 
         assertFalse(response.isSuccessfulRequest());
-        assertThat(response.getErrorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+        assertThat(response.getErrorObject(), equalTo(OAuth2Error.INVALID_REQUEST.toParameters()));
     }
 
     @Test
@@ -267,6 +300,7 @@ class AuthorizeRequestUriHandlerTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", SCOPE)
+                        .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
         setupJwtRequest(jwtClaimsSet, keyPair2);
