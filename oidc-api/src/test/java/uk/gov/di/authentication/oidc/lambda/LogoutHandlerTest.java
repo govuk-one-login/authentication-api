@@ -20,6 +20,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
+import uk.gov.di.authentication.oidc.services.BackChannelLogoutService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
@@ -69,6 +70,8 @@ class LogoutHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final TokenValidationService tokenValidationService =
             mock(TokenValidationService.class);
+    private final BackChannelLogoutService backChannelLogoutService =
+            mock(BackChannelLogoutService.class);
 
     private static final State STATE = new State();
     private static final String COOKIE = "Cookie";
@@ -109,7 +112,8 @@ class LogoutHandlerTest {
                         dynamoClientService,
                         clientSessionService,
                         tokenValidationService,
-                        auditService);
+                        auditService,
+                        backChannelLogoutService);
         when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();

@@ -11,6 +11,7 @@ import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
+import uk.gov.di.authentication.oidc.services.BackChannelLogoutService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -48,6 +49,7 @@ public class LogoutHandler
     private final ClientSessionService clientSessionService;
     private final TokenValidationService tokenValidationService;
     private final AuditService auditService;
+    private final BackChannelLogoutService backChannelLogoutService;
 
     public LogoutHandler() {
         this(ConfigurationService.getInstance());
@@ -66,6 +68,7 @@ public class LogoutHandler
                 new TokenValidationService(
                         configurationService, new KmsConnectionService(configurationService));
         this.auditService = new AuditService(configurationService);
+        this.backChannelLogoutService = new BackChannelLogoutService();
     }
 
     public LogoutHandler(
@@ -74,13 +77,15 @@ public class LogoutHandler
             DynamoClientService dynamoClientService,
             ClientSessionService clientSessionService,
             TokenValidationService tokenValidationService,
-            AuditService auditService) {
+            AuditService auditService,
+            BackChannelLogoutService backChannelLogoutService) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.dynamoClientService = dynamoClientService;
         this.clientSessionService = clientSessionService;
         this.tokenValidationService = tokenValidationService;
         this.auditService = auditService;
+        this.backChannelLogoutService = backChannelLogoutService;
     }
 
     @Override
