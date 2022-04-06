@@ -22,15 +22,16 @@ module "logout" {
   environment     = var.environment
 
   handler_environment_variables = {
-    DEFAULT_LOGOUT_URI      = "${module.dns.frontend_url}signed-out"
-    EVENTS_SNS_TOPIC_ARN    = aws_sns_topic.events.arn
-    AUDIT_SIGNING_KEY_ALIAS = local.audit_signing_key_alias_name
-    LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
-    REDIS_KEY               = local.redis_key
-    ENVIRONMENT             = var.environment
-    DYNAMO_ENDPOINT         = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    TOKEN_SIGNING_KEY_ALIAS = local.id_token_signing_key_alias_name
-    LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
+    DEFAULT_LOGOUT_URI            = "${module.dns.frontend_url}signed-out"
+    EVENTS_SNS_TOPIC_ARN          = aws_sns_topic.events.arn
+    AUDIT_SIGNING_KEY_ALIAS       = local.audit_signing_key_alias_name
+    LOCALSTACK_ENDPOINT           = var.use_localstack ? var.localstack_endpoint : null
+    REDIS_KEY                     = local.redis_key
+    ENVIRONMENT                   = var.environment
+    DYNAMO_ENDPOINT               = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    TOKEN_SIGNING_KEY_ALIAS       = local.id_token_signing_key_alias_name
+    LOCALSTACK_ENDPOINT           = var.use_localstack ? var.localstack_endpoint : null
+    BACK_CHANNEL_LOGOUT_QUEUE_ARN = aws_sqs_queue.back_channel_logout_queue.arn
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.LogoutHandler::handleRequest"
 
