@@ -19,7 +19,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.mockito.ArgumentMatcher;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
+import uk.gov.di.authentication.oidc.services.BackChannelLogoutService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
@@ -51,6 +53,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -69,6 +72,8 @@ class LogoutHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final TokenValidationService tokenValidationService =
             mock(TokenValidationService.class);
+    private final BackChannelLogoutService backChannelLogoutService =
+            mock(BackChannelLogoutService.class);
 
     private static final State STATE = new State();
     private static final String COOKIE = "Cookie";
@@ -109,7 +114,8 @@ class LogoutHandlerTest {
                         dynamoClientService,
                         clientSessionService,
                         tokenValidationService,
-                        auditService);
+                        auditService,
+                        backChannelLogoutService);
         when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
@@ -540,7 +546,7 @@ class LogoutHandlerTest {
                 new ClientSession(
                         Map.of(
                                 "client_id",
-                                List.of("a-client-id"),
+                                List.of("client-id"),
                                 "redirect_uri",
                                 List.of("http://localhost:8080"),
                                 "scope",
@@ -597,16 +603,47 @@ class LogoutHandlerTest {
     }
 
     private void setupSessions() {
-        session.getClientSessions().add("client-session-id-2");
-        session.getClientSessions().add("client-session-id-3");
+        setUpClientSession("client-session-id-2", "client-id-2");
+        setUpClientSession("client-session-id-3", "client-id-3");
         generateSessionFromCookie(session);
         setupClientSessionToken(signedIDToken);
     }
 
+    private void setUpClientSession(String clientSessionId, String clientId) {
+        session.getClientSessions().add(clientSessionId);
+        when(clientSessionService.getClientSession(clientSessionId))
+                .thenReturn(
+                        new ClientSession(
+                                Map.of("client_id", List.of(clientId)),
+                                LocalDateTime.now(),
+                                VectorOfTrust.getDefaults()));
+        when(dynamoClientService.getClient(clientId))
+                .thenReturn(Optional.of(new ClientRegistry().setClientID(clientId)));
+    }
+
     private void verifySessions() {
         verify(sessionService).deleteSessionFromRedis(SESSION_ID);
+
+        verify(backChannelLogoutService).sendLogoutMessage(argThat(withClientId("client-id")));
+        verify(backChannelLogoutService).sendLogoutMessage(argThat(withClientId("client-id-2")));
+        verify(backChannelLogoutService).sendLogoutMessage(argThat(withClientId("client-id-3")));
+
         verify(clientSessionService).deleteClientSessionFromRedis(CLIENT_SESSION_ID);
         verify(clientSessionService).deleteClientSessionFromRedis("client-session-id-2");
         verify(clientSessionService).deleteClientSessionFromRedis("client-session-id-3");
+    }
+
+    public static ArgumentMatcher<ClientRegistry> withClientId(String clientId) {
+        return new ArgumentMatcher<>() {
+            @Override
+            public boolean matches(ClientRegistry argument) {
+                return clientId.equals(argument.getClientID());
+            }
+
+            @Override
+            public String toString() {
+                return "a ClientRegistry with client_id " + clientId;
+            }
+        };
     }
 }
