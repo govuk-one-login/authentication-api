@@ -3,9 +3,11 @@ package uk.gov.di.authentication.api;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.oidc.lambda.AuthorisationHandler;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
@@ -13,6 +15,7 @@ import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.RequestURILambdaStubExtension;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.net.HttpCookie;
@@ -57,9 +60,13 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final KeyPair KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
     public static final String DUMMY_CLIENT_SESSION_ID = "456";
 
+    @RegisterExtension
+    public static final RequestURILambdaStubExtension requestURILambdaStub =
+            new RequestURILambdaStubExtension(6001);
+
     @BeforeEach
     void setup() {
-        registerClient(CLIENT_ID, "test-client", singletonList("openid"));
+        registerClient(CLIENT_ID, "test-client", singletonList("openid"), null);
         handler = new AuthorisationHandler(TEST_CONFIGURATION_SERVICE);
     }
 
@@ -155,7 +162,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldRedirectToLoginUriForAccountManagementClient() {
-        registerClient(AM_CLIENT_ID, "am-client-name", List.of("openid", "am"));
+        registerClient(AM_CLIENT_ID, "am-client-name", List.of("openid", "am"), null);
         var response =
                 makeRequest(
                         Optional.empty(),
@@ -494,6 +501,50 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
+    @Test
+    void shouldCallAuthorizeWithRequestUriAuthenticationRequest() {
+        requestURILambdaStub.init();
+        var clientID = new ClientID();
+        var queryStringParameters =
+                new HashMap<>(
+                        Map.of(
+                                "response_type",
+                                "code",
+                                "redirect_uri",
+                                RP_REDIRECT_URI,
+                                "state",
+                                "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU",
+                                "nonce",
+                                new Nonce().getValue(),
+                                "client_id",
+                                clientID.getValue(),
+                                "scope",
+                                "openid",
+                                "request_uri",
+                                "http://localhost/request-uri"));
+        registerClient(
+                clientID.getValue(),
+                "new-client-name",
+                singletonList("openid"),
+                singletonList("http://localhost/request-uri"));
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(Optional.empty()),
+                        queryStringParameters);
+        assertThat(response, hasStatus(302));
+        assertThat(
+                getLocationResponseHeader(response),
+                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        assertThat(
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
+                        .isPresent(),
+                equalTo(true));
+
+        assertEventTypesReceived(
+                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+    }
+
     private String givenAnExistingSession(CredentialTrustLevel credentialTrustLevel)
             throws Exception {
         String sessionId = redis.createSession();
@@ -542,7 +593,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD);
     }
 
-    private void registerClient(String clientId, String clientName, List<String> scopes) {
+    private void registerClient(
+            String clientId, String clientName, List<String> scopes, List<String> requestUris) {
         clientStore.registerClient(
                 clientId,
                 clientName,
@@ -555,6 +607,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",
-                true);
+                true,
+                requestUris);
     }
 }

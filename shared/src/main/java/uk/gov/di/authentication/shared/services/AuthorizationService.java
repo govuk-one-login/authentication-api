@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.shared.services;
 
+import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.lambda.AWSLambda;
 import com.amazonaws.services.lambda.AWSLambdaClientBuilder;
 import com.amazonaws.services.lambda.model.InvocationType;
@@ -38,7 +39,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static com.amazonaws.regions.Regions.EU_WEST_2;
 import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -64,7 +64,20 @@ public class AuthorizationService {
     public AuthorizationService(ConfigurationService configurationService) {
         this(
                 new DynamoClientService(configurationService),
-                AWSLambdaClientBuilder.standard().withRegion(EU_WEST_2).build(),
+                configurationService
+                        .getInvokedLambdaEndpoint()
+                        .map(
+                                t ->
+                                        AWSLambdaClientBuilder.standard()
+                                                .withEndpointConfiguration(
+                                                        new AwsClientBuilder.EndpointConfiguration(
+                                                                t,
+                                                                configurationService
+                                                                        .getAwsRegion())))
+                        .orElse(
+                                AWSLambdaClientBuilder.standard()
+                                        .withRegion(configurationService.getAwsRegion()))
+                        .build(),
                 configurationService);
     }
 
