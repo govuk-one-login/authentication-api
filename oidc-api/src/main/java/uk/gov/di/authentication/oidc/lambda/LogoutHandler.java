@@ -346,7 +346,15 @@ public class LogoutHandler
 
     private void destroySessions(Session session) {
         for (String clientSessionId : session.getClientSessions()) {
-            LOG.info("Deleting ClientSession");
+            clientSessionService
+                    .getClientSession(clientSessionId)
+                    .getAuthRequestParams()
+                    .get("client_id")
+                    .stream()
+                    .findFirst()
+                    .flatMap(dynamoClientService::getClient)
+                    .ifPresent(backChannelLogoutService::sendLogoutMessage);
+
             clientSessionService.deleteClientSessionFromRedis(clientSessionId);
         }
         LOG.info("Deleting Session");

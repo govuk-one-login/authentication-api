@@ -1,3 +1,7 @@
 package uk.gov.di.authentication.oidc.services;
 
-public class BackChannelLogoutService {}
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
+
+public class BackChannelLogoutService {
+    public void sendLogoutMessage(ClientRegistry clientRegistry) {}
+}
