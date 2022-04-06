@@ -106,10 +106,7 @@ public class AuthorizationService {
             return Optional.of(OAuth2Error.UNAUTHORIZED_CLIENT);
         }
 
-        if (!isRequestUri
-                && !client.get()
-                        .getRedirectUrls()
-                        .contains(authRequest.getRedirectionURI().toString())) {
+        if (!client.get().getRedirectUrls().contains(authRequest.getRedirectionURI().toString())) {
             LOG.warn(
                     "Invalid Redirect URI in request {}",
                     authRequest.getRedirectionURI().toString());
