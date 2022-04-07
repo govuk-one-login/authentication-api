@@ -68,7 +68,7 @@ public class LogoutHandler
                 new TokenValidationService(
                         configurationService, new KmsConnectionService(configurationService));
         this.auditService = new AuditService(configurationService);
-        this.backChannelLogoutService = new BackChannelLogoutService();
+        this.backChannelLogoutService = new BackChannelLogoutService(configurationService);
     }
 
     public LogoutHandler(

@@ -318,4 +318,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     private String getRedisKey() {
         return System.getenv("REDIS_KEY");
     }
+
+    public String getBackChannelLogoutQueueUri() {
+        return System.getenv("BACK_CHANNEL_LOGOUT_QUEUE_URI");
+    }
 }
