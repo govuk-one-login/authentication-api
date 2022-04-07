@@ -42,6 +42,7 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
                         VALID_PUBLIC_CERT,
                         singletonList("openid"),
                         singletonList("http://localhost/post-redirect-logout"),
+                        "http://example.com",
                         String.valueOf(ServiceType.MANDATORY),
                         "https://test.com",
                         "public",

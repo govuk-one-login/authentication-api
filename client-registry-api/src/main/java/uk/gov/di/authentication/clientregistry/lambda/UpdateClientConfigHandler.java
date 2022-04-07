@@ -138,6 +138,7 @@ public class UpdateClientConfigHandler
                                                 clientRegistry.getContacts(),
                                                 clientRegistry.getScopes(),
                                                 clientRegistry.getPostLogoutRedirectUrls(),
+                                                clientRegistry.getBackChannelLogoutUri(),
                                                 clientRegistry.getServiceType(),
                                                 clientRegistry.getSubjectType());
                                 LOG.info("Client updated");

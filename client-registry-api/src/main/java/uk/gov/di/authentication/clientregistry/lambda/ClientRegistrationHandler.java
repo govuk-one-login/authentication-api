@@ -119,6 +119,7 @@ public class ClientRegistrationHandler
                                         clientRegistrationRequest.getScopes(),
                                         clientRegistrationRequest.getPublicKey(),
                                         clientRegistrationRequest.getPostLogoutRedirectUris(),
+                                        clientRegistrationRequest.getBackChannelLogoutUri(),
                                         clientRegistrationRequest.getServiceType(),
                                         sanitiseUrl(
                                                 clientRegistrationRequest.getSectorIdentifierUri()),
@@ -135,6 +136,7 @@ public class ClientRegistrationHandler
                                                 clientRegistrationRequest.getScopes(),
                                                 clientRegistrationRequest
                                                         .getPostLogoutRedirectUris(),
+                                                clientRegistrationRequest.getBackChannelLogoutUri(),
                                                 clientRegistrationRequest.getServiceType(),
                                                 clientRegistrationRequest.getSubjectType());
                                 LOG.info("Generating successful Client registration response");

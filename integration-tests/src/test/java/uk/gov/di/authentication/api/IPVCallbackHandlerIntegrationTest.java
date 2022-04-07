@@ -135,6 +135,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 singletonList("openid"),
                 null,
                 singletonList("http://localhost/post-redirect-logout"),
+                "http://example.com",
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "pairwise",

@@ -38,6 +38,7 @@ class ClientConfigValidationServiceTest {
                                 VALID_PUBLIC_CERT,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
+                                "http://example.com",
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 "public"));
@@ -53,6 +54,7 @@ class ClientConfigValidationServiceTest {
                                 VALID_PUBLIC_CERT,
                                 singletonList("openid"),
                                 singletonList("invalid-logout-uri"),
+                                "http://example.com",
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 "public"));
@@ -68,6 +70,7 @@ class ClientConfigValidationServiceTest {
                                 VALID_PUBLIC_CERT,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
+                                "http://example.com",
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 "public"));
@@ -83,6 +86,7 @@ class ClientConfigValidationServiceTest {
                                 "invalid-public-cert",
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
+                                "http://example.com",
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 "public"));
@@ -98,6 +102,7 @@ class ClientConfigValidationServiceTest {
                                 VALID_PUBLIC_CERT,
                                 List.of("openid", "email", "fax"),
                                 singletonList("http://localhost/post-redirect-logout"),
+                                "http://example.com",
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 "public"));
@@ -113,6 +118,7 @@ class ClientConfigValidationServiceTest {
                                 VALID_PUBLIC_CERT,
                                 List.of("openid", "am"),
                                 singletonList("http://localhost/post-redirect-logout"),
+                                "http://example.com",
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 "public"));
@@ -130,6 +136,7 @@ class ClientConfigValidationServiceTest {
                                 VALID_PUBLIC_CERT,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
+                                "http://example.com",
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 subjectType));
@@ -221,6 +228,7 @@ class ClientConfigValidationServiceTest {
             String publicCert,
             List<String> scopes,
             List<String> postLogoutUris,
+            String backChannelLogoutUri,
             String serviceType,
             String sectorIdentifierUri,
             String subjectType) {
@@ -231,6 +239,7 @@ class ClientConfigValidationServiceTest {
                 publicCert,
                 scopes,
                 postLogoutUris,
+                backChannelLogoutUri,
                 serviceType,
                 sectorIdentifierUri,
                 subjectType,

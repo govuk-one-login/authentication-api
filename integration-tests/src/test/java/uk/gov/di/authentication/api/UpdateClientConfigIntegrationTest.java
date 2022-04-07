@@ -42,6 +42,7 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
                 singletonList("openid"),
                 VALID_PUBLIC_CERT,
                 singletonList("http://localhost/post-redirect-logout"),
+                "http://example.com",
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",

@@ -89,6 +89,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 Base64.getMimeEncoder()
                         .encodeToString(GENERATE_RSA_KEY_PAIR().getPublic().getEncoded()),
                 singletonList("http://localhost/post-redirect-logout"),
+                "http://example.com",
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",

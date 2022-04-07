@@ -13,6 +13,7 @@ public class ClientRegistry {
     private String clientName;
     private String publicKey;
     private List<String> postLogoutRedirectUrls = new ArrayList<>();
+    public String backChannelLogoutUri;
     private List<String> scopes = new ArrayList<>();
     private List<String> redirectUrls = new ArrayList<>();
     private List<String> contacts = new ArrayList<>();
@@ -93,6 +94,16 @@ public class ClientRegistry {
 
     public ClientRegistry setPostLogoutRedirectUrls(List<String> postLogoutRedirectUrls) {
         this.postLogoutRedirectUrls = postLogoutRedirectUrls;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "BackChannelLogoutUri")
+    public String getBackChannelLogoutUri() {
+        return backChannelLogoutUri;
+    }
+
+    public ClientRegistry setBackChannelLogoutUri(String backChannelLogoutUri) {
+        this.backChannelLogoutUri = backChannelLogoutUri;
         return this;
     }
 
