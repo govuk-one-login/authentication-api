@@ -27,5 +27,16 @@ public class IPVStubExtension extends HttpStubExtension {
                                 + "  \"uri\": \"http://localhost:%1$d\""
                                 + "}",
                         getHttpPort()));
+
+        register(
+                "/user-identity",
+                200,
+                "application/json",
+                "{"
+                        + "  \"sub\": \"740e5834-3a29-46b4-9a6f-16142fde533a\","
+                        + "  \"vot\": \"P2\","
+                        + "  \"vtm\": \"http://localhost/trustmark\","
+                        + "  \"https://vocab.sign-in.service.gov.uk/v1/verifiableIdentityCredential\": \"some-encoded-credential\""
+                        + "}");
     }
 }

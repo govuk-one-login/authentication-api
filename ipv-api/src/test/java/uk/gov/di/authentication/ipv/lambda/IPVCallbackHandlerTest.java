@@ -140,7 +140,7 @@ class IPVCallbackHandlerTest {
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
         when(ipvTokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
         when(ipvTokenService.sendTokenRequest(tokenRequest)).thenReturn(successfulTokenResponse);
-        when(ipvTokenService.sendIpvInfoRequest(
+        when(ipvTokenService.sendIpvUserIdentityRequest(
                         successfulTokenResponse
                                 .toSuccessResponse()
                                 .getTokens()

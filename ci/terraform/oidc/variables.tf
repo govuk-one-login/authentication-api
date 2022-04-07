@@ -231,7 +231,7 @@ variable "ipv_authorisation_client_id" {
   default = "undefined"
 }
 
-variable "ipv_token_uri" {
+variable "ipv_backend_uri" {
   type    = string
   default = "undefined"
 }
