@@ -104,7 +104,7 @@ public class AuthorizationService {
                     authRequest.getScope().toStringList());
             return Optional.of(OAuth2Error.INVALID_SCOPE);
         }
-        if (!areClaimsValid(authRequest.getOIDCClaims())) {
+        if (!areClaimsValid(authRequest.getOIDCClaims(), client.get())) {
             LOG.warn(
                     "Invalid claims in authRequest. Claims in request: {}",
                     authRequest.getOIDCClaims().toJSONString());
@@ -169,7 +169,7 @@ public class AuthorizationService {
         return true;
     }
 
-    private boolean areClaimsValid(OIDCClaimsRequest claimsRequest) {
+    private boolean areClaimsValid(OIDCClaimsRequest claimsRequest, ClientRegistry clientRegistry) {
         if (claimsRequest == null) {
             return true;
         }
@@ -182,6 +182,10 @@ public class AuthorizationService {
                 return false;
             }
         }
+        if (!clientRegistry.getClaims().containsAll(claimNames)) {
+            return false;
+        }
+
         return true;
     }
 

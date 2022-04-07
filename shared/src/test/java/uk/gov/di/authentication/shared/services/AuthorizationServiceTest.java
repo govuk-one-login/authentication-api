@@ -188,24 +188,25 @@ class AuthorizationServiceTest {
 
     @Test
     void shouldSuccessfullyValidateAuthRequestWhenValidClaimsArePresent() {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
+        var scope = new Scope(OIDCScopeValue.OPENID);
+        var clientRegistry =
+                new ClientRegistry()
+                        .setRedirectUrls(singletonList(REDIRECT_URI.toString()))
+                        .setClientID(CLIENT_ID.toString())
+                        .setScopes(scope.toStringList())
+                        .setClaims(List.of("name", "birthdate"));
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
+                .thenReturn(Optional.of(clientRegistry));
         var claimsSetRequest = new ClaimsSetRequest().add("name").add("birthdate");
         var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
-        AuthenticationRequest authRequest =
+        var authRequest =
                 generateAuthRequest(
                         REDIRECT_URI.toString(),
-                        responseType,
+                        new ResponseType(ResponseType.Value.CODE),
                         scope,
                         jsonArrayOf("Cl.Cm", "Cl"),
                         Optional.of(oidcClaimsRequest));
-        Optional<ErrorObject> errorObject = authorizationService.validateAuthRequest(authRequest);
+        var errorObject = authorizationService.validateAuthRequest(authRequest);
 
         assertThat(errorObject, equalTo(Optional.empty()));
     }

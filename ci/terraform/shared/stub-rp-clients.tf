@@ -56,6 +56,19 @@ resource "aws_dynamodb_table_item" "stub_rp_client" {
           S = "email"
         },
       ]
+    },
+    Claims = {
+      L = [
+        {
+          S = "name"
+        },
+        {
+          S = "birthdate"
+        },
+        {
+          S = "address"
+        },
+      ]
     }
     PublicKey = {
       S = replace(replace(
