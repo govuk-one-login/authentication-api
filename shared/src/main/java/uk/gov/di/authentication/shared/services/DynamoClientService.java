@@ -68,7 +68,8 @@ public class DynamoClientService implements ClientService {
             String serviceType,
             String sectorIdentifierUri,
             String subjectType,
-            boolean consentRequired) {
+            boolean consentRequired,
+            List<String> claims) {
         ClientRegistry clientRegistry =
                 new ClientRegistry()
                         .setClientID(clientID)
@@ -82,7 +83,8 @@ public class DynamoClientService implements ClientService {
                         .setServiceType(serviceType)
                         .setSectorIdentifierUri(sectorIdentifierUri)
                         .setSubjectType(subjectType)
-                        .setConsentRequired(consentRequired);
+                        .setConsentRequired(consentRequired)
+                        .setClaims(claims);
         clientRegistryMapper.save(clientRegistry);
     }
 

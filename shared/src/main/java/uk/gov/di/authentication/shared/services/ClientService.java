@@ -23,7 +23,8 @@ public interface ClientService {
             String serviceType,
             String sectorIdentifierUri,
             String subjectType,
-            boolean consentRequired);
+            boolean consentRequired,
+            List<String> claims);
 
     Optional<ClientRegistry> getClient(String clientId);
 

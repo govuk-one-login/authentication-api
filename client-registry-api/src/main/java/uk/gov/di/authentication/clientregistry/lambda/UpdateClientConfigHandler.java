@@ -140,7 +140,8 @@ public class UpdateClientConfigHandler
                                                 clientRegistry.getPostLogoutRedirectUrls(),
                                                 clientRegistry.getBackChannelLogoutUri(),
                                                 clientRegistry.getServiceType(),
-                                                clientRegistry.getSubjectType());
+                                                clientRegistry.getSubjectType(),
+                                                clientRegistry.getClaims());
                                 LOG.info("Client updated");
                                 return generateApiGatewayProxyResponse(
                                         200, clientRegistrationResponse);

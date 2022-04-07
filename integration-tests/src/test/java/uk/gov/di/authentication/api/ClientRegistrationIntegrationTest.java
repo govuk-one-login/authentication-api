@@ -3,21 +3,26 @@ package uk.gov.di.authentication.api;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler;
-import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_RECEIVED;
+import static uk.gov.di.authentication.shared.entity.ServiceType.MANDATORY;
+import static uk.gov.di.authentication.shared.entity.ServiceType.OPTIONAL;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -32,25 +37,50 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
         handler = new ClientRegistrationHandler(TEST_CONFIGURATION_SERVICE);
     }
 
-    @Test
-    void shouldCallRegisterEndpointAndReturn200() throws JsonProcessingException {
-        ClientRegistrationRequest clientRequest =
+    private static Stream<Arguments> registrationRequestParams() {
+        return Stream.of(
+                Arguments.of(emptyList(), null, emptyList(), null),
+                Arguments.of(null, null, null, null),
+                Arguments.of(
+                        singletonList("http://localhost/post-redirect-logout"),
+                        "http://back-channel.com",
+                        List.of("address"),
+                        String.valueOf(MANDATORY)),
+                Arguments.of(
+                        List.of(
+                                "http://localhost/post-redirect-logout",
+                                "http://localhost/post-redirect-logout-v2"),
+                        "http://back-channel.com",
+                        List.of("address", "birthdate", "name"),
+                        String.valueOf(OPTIONAL)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("registrationRequestParams")
+    void shouldCallRegisterEndpointAndReturn200(
+            List<String> postlogoutUris,
+            String backChannelLogoutUri,
+            List<String> claims,
+            String serviceType)
+            throws JsonProcessingException {
+        var clientRequest =
                 new ClientRegistrationRequest(
                         "The test client",
                         singletonList("http://localhost:1000/redirect"),
                         singletonList("test-client@test.com"),
                         VALID_PUBLIC_CERT,
                         singletonList("openid"),
-                        singletonList("http://localhost/post-redirect-logout"),
-                        "http://example.com",
-                        String.valueOf(ServiceType.MANDATORY),
+                        postlogoutUris,
+                        backChannelLogoutUri,
+                        serviceType,
                         "https://test.com",
                         "public",
-                        false);
+                        false,
+                        claims);
 
         var response = makeRequest(Optional.of(clientRequest), Map.of(), Map.of());
 
-        ClientRegistrationResponse clientResponse =
+        var clientResponse =
                 objectMapper.readValue(response.getBody(), ClientRegistrationResponse.class);
 
         assertThat(response, hasStatus(200));
