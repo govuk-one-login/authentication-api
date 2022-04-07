@@ -211,6 +211,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("RESET_PASSWORD_ROUTE", "");
     }
 
+    public boolean isRequestUriParamSupported() {
+        return System.getenv().getOrDefault("REQUEST_URI_PARAM_SUPPORTED", "false").equals("true");
+    }
+
     public String getSessionCookieAttributes() {
         return Optional.ofNullable(System.getenv("SESSION_COOKIE_ATTRIBUTES"))
                 .orElse("Secure; HttpOnly;");

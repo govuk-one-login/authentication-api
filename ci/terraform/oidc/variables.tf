@@ -246,6 +246,11 @@ variable "endpoint_memory_size" {
   type    = number
 }
 
+variable "request_uri_param_supported" {
+  default = false
+  type    = bool
+}
+
 variable "spot_enabled" {
   default = false
   type    = bool

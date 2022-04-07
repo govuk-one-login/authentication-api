@@ -128,6 +128,9 @@ public class AuthorizationService {
                             "Invalid Redirect in request %s",
                             authRequest.getRedirectionURI().toString()));
         }
+        if (isRequestUri && !configurationService.isRequestUriParamSupported()) {
+            return Optional.of(OAuth2Error.REQUEST_URI_NOT_SUPPORTED);
+        }
         if (!authRequest.getResponseType().toString().equals(ResponseType.CODE.toString())) {
             LOG.warn("Unsupported responseType included in request. Expected responseType of code");
             return Optional.of(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE);

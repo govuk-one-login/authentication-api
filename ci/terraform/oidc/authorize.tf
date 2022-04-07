@@ -35,6 +35,7 @@ module "authorize" {
     HEADERS_CASE_INSENSITIVE           = var.use_localstack ? "true" : "false"
     AUTHORIZE_REQUEST_LAMBDA_ARN       = aws_lambda_function.authorize_request_uri_lambda.arn
     AUTHORIZE_REQUEST_LAMBDA_QUALIFIER = aws_lambda_alias.authorize_request_uri_lambda_active.name
+    REQUEST_URI_PARAM_SUPPORTED        = var.request_uri_param_supported
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.AuthorisationHandler::handleRequest"
   rest_api_id           = aws_api_gateway_rest_api.di_authentication_api.id

@@ -462,6 +462,7 @@ class AuthorizationServiceTest {
     @Test
     void shouldSuccessfullyValidateAuthRequestWhichContainsRequestURI()
             throws JsonProcessingException {
+        when(configurationService.isRequestUriParamSupported()).thenReturn(true);
         var responsePayload = new RequestUriResponsePayload(true);
         when(invokeResult.getPayload())
                 .thenReturn(ByteBuffer.wrap(new ObjectMapper().writeValueAsBytes(responsePayload)));
@@ -488,8 +489,37 @@ class AuthorizationServiceTest {
     }
 
     @Test
+    void shouldReturnErrorIfRequestURIIsNotSupported() throws JsonProcessingException {
+        when(configurationService.isRequestUriParamSupported()).thenReturn(false);
+        var responsePayload = new RequestUriResponsePayload(true);
+        when(invokeResult.getPayload())
+                .thenReturn(ByteBuffer.wrap(new ObjectMapper().writeValueAsBytes(responsePayload)));
+        when(awsLambda.invoke(any(InvokeRequest.class))).thenReturn(invokeResult);
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(),
+                                        CLIENT_ID.toString(),
+                                        singletonList("openid"),
+                                        singletonList(REQUEST_URI.toString()))));
+        var errorObject =
+                authorizationService.validateAuthRequest(
+                        generateAuthRequest(
+                                REDIRECT_URI.toString(),
+                                new ResponseType(ResponseType.Value.CODE),
+                                new Scope(OIDCScopeValue.OPENID),
+                                REQUEST_URI,
+                                STATE,
+                                NONCE));
+
+        assertThat(errorObject, equalTo(Optional.of(OAuth2Error.REQUEST_URI_NOT_SUPPORTED)));
+    }
+
+    @Test
     void shouldReturnErrorWhenAuthorizeRequestURILambdaReturnsError()
             throws JsonProcessingException {
+        when(configurationService.isRequestUriParamSupported()).thenReturn(true);
         var responsePayload =
                 new RequestUriResponsePayload(
                         false, OAuth2Error.UNAUTHORIZED_CLIENT.toParameters());
@@ -575,6 +605,7 @@ class AuthorizationServiceTest {
             State state,
             Nonce nonce,
             ErrorObject expectedError) {
+        when(configurationService.isRequestUriParamSupported()).thenReturn(true);
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(
                         Optional.of(
