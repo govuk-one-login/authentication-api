@@ -22,6 +22,7 @@ import com.nimbusds.oauth2.sdk.id.JWTID;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
@@ -54,22 +55,23 @@ public class IPVTokenService {
                 new AuthorizationCodeGrant(
                         new AuthorizationCode(authCode),
                         configurationService.getIPVAuthorisationCallbackURI());
-        var tokenUri = configurationService.getIPVTokenURI();
+        var ipvBackendURI = configurationService.getIPVBackendURI();
+        var ipvTokenURI = ConstructUriHelper.buildURI(ipvBackendURI.toString(), "token");
         var expiryDate = LocalDateTime.now().plusMinutes(PRIVATE_KEY_JWT_EXPIRY);
         var claimsSet =
                 new JWTAuthenticationClaimsSet(
                         new ClientID(configurationService.getIPVAuthorisationClientId()),
-                        singletonList(new Audience(tokenUri)),
+                        singletonList(new Audience(ipvTokenURI)),
                         Date.from(expiryDate.atZone(ZoneId.of("UTC")).toInstant()),
                         null,
                         Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()),
                         new JWTID());
         return new TokenRequest(
-                tokenUri,
+                ipvTokenURI,
                 generatePrivateKeyJwt(claimsSet),
                 codeGrant,
                 null,
-                singletonList(configurationService.getIPVTokenURI()),
+                singletonList(ipvTokenURI),
                 Map.of(
                         "client_id",
                         singletonList(configurationService.getIPVAuthorisationClientId())));
