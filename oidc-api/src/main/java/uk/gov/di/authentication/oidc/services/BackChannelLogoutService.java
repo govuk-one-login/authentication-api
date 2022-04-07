@@ -30,7 +30,7 @@ public class BackChannelLogoutService {
         this.awsSqsClient = awsSqsClient;
     }
 
-    public void sendLogoutMessage(ClientRegistry clientRegistry) {
+    public void sendLogoutMessage(ClientRegistry clientRegistry, String emailAddress) {
 
         if (isBlank(clientRegistry.getClientID())
                 || isBlank(clientRegistry.getBackChannelLogoutUri())) {

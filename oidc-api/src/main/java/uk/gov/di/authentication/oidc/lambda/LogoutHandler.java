@@ -353,7 +353,10 @@ public class LogoutHandler
                     .stream()
                     .findFirst()
                     .flatMap(dynamoClientService::getClient)
-                    .ifPresent(backChannelLogoutService::sendLogoutMessage);
+                    .ifPresent(
+                            clientRegistry ->
+                                    backChannelLogoutService.sendLogoutMessage(
+                                            clientRegistry, null));
 
             clientSessionService.deleteClientSessionFromRedis(clientSessionId);
         }

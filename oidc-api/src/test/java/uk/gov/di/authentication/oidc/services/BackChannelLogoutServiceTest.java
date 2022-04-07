@@ -27,7 +27,8 @@ class BackChannelLogoutServiceTest {
         service.sendLogoutMessage(
                 new ClientRegistry()
                         .setClientID("client-id")
-                        .setBackChannelLogoutUri("http://localhost:8080/back-channel-logout"));
+                        .setBackChannelLogoutUri("http://localhost:8080/back-channel-logout"),
+                "");
 
         var captor = ArgumentCaptor.forClass(String.class);
 
@@ -47,7 +48,8 @@ class BackChannelLogoutServiceTest {
         var noClientId = new ClientRegistry().setBackChannelLogoutUri("http://localhost:8080/");
         var neitherField = new ClientRegistry();
 
-        Stream.of(noLogoutUri, noClientId, neitherField).forEach(service::sendLogoutMessage);
+        Stream.of(noLogoutUri, noClientId, neitherField)
+                .forEach(clientRegistry -> service.sendLogoutMessage(clientRegistry, null));
 
         verify(sqs, never()).send(anyString());
     }

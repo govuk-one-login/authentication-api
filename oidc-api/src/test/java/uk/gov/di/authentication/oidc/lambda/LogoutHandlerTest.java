@@ -624,9 +624,12 @@ class LogoutHandlerTest {
     private void verifySessions() {
         verify(sessionService).deleteSessionFromRedis(SESSION_ID);
 
-        verify(backChannelLogoutService).sendLogoutMessage(argThat(withClientId("client-id")));
-        verify(backChannelLogoutService).sendLogoutMessage(argThat(withClientId("client-id-2")));
-        verify(backChannelLogoutService).sendLogoutMessage(argThat(withClientId("client-id-3")));
+        verify(backChannelLogoutService)
+                .sendLogoutMessage(argThat(withClientId("client-id")), null);
+        verify(backChannelLogoutService)
+                .sendLogoutMessage(argThat(withClientId("client-id-2")), null);
+        verify(backChannelLogoutService)
+                .sendLogoutMessage(argThat(withClientId("client-id-3")), null);
 
         verify(clientSessionService).deleteClientSessionFromRedis(CLIENT_SESSION_ID);
         verify(clientSessionService).deleteClientSessionFromRedis("client-session-id-2");
