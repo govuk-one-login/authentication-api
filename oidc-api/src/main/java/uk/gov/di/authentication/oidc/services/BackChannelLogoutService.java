@@ -34,7 +34,7 @@ public class BackChannelLogoutService {
 
         if (isBlank(clientRegistry.getClientID())
                 || isBlank(clientRegistry.getBackChannelLogoutUri())) {
-            LOGGER.error("Client missing required fields");
+            LOGGER.warn("Client missing required fields");
             return;
         }
 
