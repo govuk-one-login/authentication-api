@@ -20,6 +20,7 @@ import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.JWTID;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
+import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
@@ -89,8 +90,27 @@ public class IPVTokenService {
         }
     }
 
-    public String sendIpvInfoRequest(AccessToken accessToken) {
-        return "";
+    public String sendIpvUserIdentityRequest(AccessToken accessToken) {
+        try {
+            var ipvBackendURI = configurationService.getIPVBackendURI();
+            var userIdentityURI =
+                    ConstructUriHelper.buildURI(ipvBackendURI.toString(), "user-identity");
+            var userInfoRequest = new UserInfoRequest(userIdentityURI, accessToken);
+            var response = userInfoRequest.toHTTPRequest().send();
+            if (response.indicatesSuccess()) {
+                var contentAsJSONObject = response.getContentAsJSONObject();
+                LOG.info(
+                        "THIS NEEDS TO REMOVED. THIS IS FOR DEBUGGING PURPOSES: {}",
+                        contentAsJSONObject.toJSONString());
+                return contentAsJSONObject.toJSONString();
+            } else {
+                LOG.error("Response from user-identity does not indicate success");
+                throw new RuntimeException();
+            }
+        } catch (IOException | ParseException e) {
+            LOG.error("Error when attempting to call IPV user-identity endpoint");
+            throw new RuntimeException();
+        }
     }
 
     private PrivateKeyJWT generatePrivateKeyJwt(JWTAuthenticationClaimsSet claimsSet) {

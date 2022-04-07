@@ -207,7 +207,7 @@ public class IPVCallbackHandler
                                         ClientSubjectHelper.getSubject(
                                                 userProfile, clientRegistry, dynamoService);
                                 var ipvInfoResponse =
-                                        ipvTokenService.sendIpvInfoRequest(
+                                        ipvTokenService.sendIpvUserIdentityRequest(
                                                 tokenResponse
                                                         .toSuccessResponse()
                                                         .getTokens()
