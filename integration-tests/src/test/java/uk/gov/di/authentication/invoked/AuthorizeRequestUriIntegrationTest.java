@@ -30,7 +30,7 @@ import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class AuthorizeRequestUriIntegrationTest extends HandlerIntegrationTest {
+class AuthorizeRequestUriIntegrationTest extends HandlerIntegrationTest {
 
     private static final String REDIRECT_URI = "https://localhost:8080";
     private static final State STATE = new State();

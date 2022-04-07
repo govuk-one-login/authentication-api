@@ -133,7 +133,7 @@ public class AuthorizeRequestUriHandler
     }
 
     private HttpResponse<String> getSignedJWTResponse(URI requestUri)
-            throws IOException, InterruptedException, ParseException {
+            throws IOException, InterruptedException {
         var request = HttpRequest.newBuilder().GET().uri(requestUri).build();
         return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
     }
@@ -154,7 +154,7 @@ public class AuthorizeRequestUriHandler
 
     private boolean areScopesValid(List<String> scopes, ClientRegistry clientRegistry) {
         for (String scope : scopes) {
-            if (ValidScopes.getAllValidScopes().stream().noneMatch((t) -> t.equals(scope))) {
+            if (ValidScopes.getAllValidScopes().stream().noneMatch(t -> t.equals(scope))) {
                 return false;
             }
         }

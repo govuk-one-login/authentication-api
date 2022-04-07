@@ -54,6 +54,7 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 sectorIdentifierUri,
                 subjectType,
                 consentRequired,
+                Collections.emptyList(),
                 requestUris);
     }
 
