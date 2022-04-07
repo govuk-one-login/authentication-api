@@ -30,6 +30,9 @@ public class UpdateClientConfigRequest {
     @JsonProperty("service_type")
     private String serviceType;
 
+    @JsonProperty("claims")
+    private List<String> claims;
+
     public UpdateClientConfigRequest() {}
 
     public String getClientId() {
@@ -62,6 +65,10 @@ public class UpdateClientConfigRequest {
 
     public String getServiceType() {
         return serviceType;
+    }
+
+    public List<String> getClaims() {
+        return claims;
     }
 
     public UpdateClientConfigRequest setClientId(String clientId) {
@@ -102,6 +109,11 @@ public class UpdateClientConfigRequest {
 
     public UpdateClientConfigRequest setServiceType(String serviceType) {
         this.serviceType = serviceType;
+        return this;
+    }
+
+    public UpdateClientConfigRequest setClaims(List<String> claims) {
+        this.claims = claims;
         return this;
     }
 }

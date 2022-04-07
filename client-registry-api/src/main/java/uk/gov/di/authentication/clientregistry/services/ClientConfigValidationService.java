@@ -5,6 +5,7 @@ import com.nimbusds.oauth2.sdk.client.RegistrationError;
 import com.nimbusds.openid.connect.sdk.SubjectType;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
+import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 
 import java.net.MalformedURLException;
@@ -12,6 +13,7 @@ import java.net.URL;
 import java.security.KeyFactory;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,6 +32,8 @@ public class ClientConfigValidationService {
             new ErrorObject("invalid_client_metadata", "Invalid Service Type");
     public static final ErrorObject INVALID_SUBJECT_TYPE =
             new ErrorObject("invalid_client_metadata", "Invalid Subject Type");
+    public static final ErrorObject INVALID_CLAIM =
+            new ErrorObject("invalid_client_metadata", "Insufficient Claim");
 
     public Optional<ErrorObject> validateClientRegistrationConfig(
             ClientRegistrationRequest registrationRequest) {
@@ -41,7 +45,9 @@ public class ClientConfigValidationService {
         if (!areUrisValid(registrationRequest.getRedirectUris())) {
             return Optional.of(RegistrationError.INVALID_REDIRECT_URI);
         }
-        if (!areUrisValid(List.of(registrationRequest.getBackChannelLogoutUri()))) {
+        if (!Optional.ofNullable(registrationRequest.getBackChannelLogoutUri())
+                .map(t -> areUrisValid(Collections.singletonList(t)))
+                .orElse(true)) {
             return Optional.of(RegistrationError.INVALID_REDIRECT_URI);
         }
         if (!isPublicKeyValid(registrationRequest.getPublicKey())) {
@@ -55,6 +61,11 @@ public class ClientConfigValidationService {
         }
         if (!isValidSubjectType(registrationRequest.getSubjectType())) {
             return Optional.of(INVALID_SUBJECT_TYPE);
+        }
+        if (!Optional.ofNullable(registrationRequest.getClaims())
+                .map(this::areClaimsValid)
+                .orElse(true)) {
+            return Optional.of(INVALID_CLAIM);
         }
         return Optional.empty();
     }
@@ -129,5 +140,14 @@ public class ClientConfigValidationService {
     private boolean isValidSubjectType(String subjectType) {
         return List.of(SubjectType.PUBLIC.toString(), SubjectType.PAIRWISE.toString())
                 .contains(subjectType);
+    }
+
+    private boolean areClaimsValid(List<String> claims) {
+        for (String claim : claims) {
+            if (ValidClaims.getAllowedClaimNames().stream().noneMatch(t -> t.equals(claim))) {
+                return false;
+            }
+        }
+        return true;
     }
 }

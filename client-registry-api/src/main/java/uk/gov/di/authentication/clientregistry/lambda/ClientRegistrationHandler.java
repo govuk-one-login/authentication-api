@@ -124,10 +124,10 @@ public class ClientRegistrationHandler
                                         sanitiseUrl(
                                                 clientRegistrationRequest.getSectorIdentifierUri()),
                                         clientRegistrationRequest.getSubjectType(),
-                                        !clientRegistrationRequest
-                                                .isIdentityVerificationRequired());
+                                        !clientRegistrationRequest.isIdentityVerificationRequired(),
+                                        clientRegistrationRequest.getClaims());
 
-                                ClientRegistrationResponse clientRegistrationResponse =
+                                var clientRegistrationResponse =
                                         new ClientRegistrationResponse(
                                                 clientRegistrationRequest.getClientName(),
                                                 clientID,
@@ -138,7 +138,8 @@ public class ClientRegistrationHandler
                                                         .getPostLogoutRedirectUris(),
                                                 clientRegistrationRequest.getBackChannelLogoutUri(),
                                                 clientRegistrationRequest.getServiceType(),
-                                                clientRegistrationRequest.getSubjectType());
+                                                clientRegistrationRequest.getSubjectType(),
+                                                clientRegistrationRequest.getClaims());
                                 LOG.info("Generating successful Client registration response");
                                 return generateApiGatewayProxyResponse(
                                         200, clientRegistrationResponse);

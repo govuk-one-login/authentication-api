@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -51,7 +52,8 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 serviceType,
                 sectorIdentifierUri,
                 subjectType,
-                consentRequired);
+                consentRequired,
+                Collections.emptyList());
     }
 
     public boolean clientExists(String clientID) {

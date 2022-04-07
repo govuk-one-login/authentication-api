@@ -24,6 +24,7 @@ public class ClientRegistry {
     private boolean consentRequired = false;
     private boolean testClient = false;
     private List<String> testClientEmailAllowlist = new ArrayList<>();
+    private List<String> claims = new ArrayList<>();
 
     @DynamoDBHashKey(attributeName = "ClientID")
     public String getClientID() {
@@ -174,6 +175,16 @@ public class ClientRegistry {
 
     public ClientRegistry setConsentRequired(boolean consentRequired) {
         this.consentRequired = consentRequired;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "Claims")
+    public List<String> getClaims() {
+        return claims;
+    }
+
+    public ClientRegistry setClaims(List<String> claims) {
+        this.claims = claims;
         return this;
     }
 }

@@ -22,6 +22,7 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import java.util.List;
 import java.util.Optional;
 
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -111,7 +112,8 @@ class ClientRegistrationHandlerTest {
                         serviceType,
                         sectorIdentifierUri,
                         subjectType,
-                        true);
+                        true,
+                        emptyList());
     }
 
     @Test
@@ -156,7 +158,8 @@ class ClientRegistrationHandlerTest {
                         serviceType,
                         sectorIdentifierUri,
                         subjectType,
-                        false);
+                        false,
+                        emptyList());
     }
 
     @Test
@@ -195,7 +198,8 @@ class ClientRegistrationHandlerTest {
                         serviceType,
                         sectorIdentifierUri,
                         subjectType,
-                        true);
+                        true,
+                        emptyList());
     }
 
     @Test
