@@ -31,7 +31,7 @@ module "logout" {
     DYNAMO_ENDPOINT               = var.use_localstack ? var.lambda_dynamo_endpoint : null
     TOKEN_SIGNING_KEY_ALIAS       = local.id_token_signing_key_alias_name
     LOCALSTACK_ENDPOINT           = var.use_localstack ? var.localstack_endpoint : null
-    BACK_CHANNEL_LOGOUT_QUEUE_ARN = aws_sqs_queue.back_channel_logout_queue.arn
+    BACK_CHANNEL_LOGOUT_QUEUE_URI = aws_sqs_queue.back_channel_logout_queue.id
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.LogoutHandler::handleRequest"
 
