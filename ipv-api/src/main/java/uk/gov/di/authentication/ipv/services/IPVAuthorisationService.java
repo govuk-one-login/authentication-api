@@ -1,16 +1,37 @@
 package uk.gov.di.authentication.ipv.services;
 
+import com.amazonaws.services.kms.model.SignRequest;
+import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.crypto.impl.ECDSA;
+import com.nimbusds.jose.util.Base64URL;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.openid.connect.sdk.Nonce;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 
+import java.nio.ByteBuffer;
+import java.text.ParseException;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 public class IPVAuthorisationService {
@@ -18,13 +39,17 @@ public class IPVAuthorisationService {
     private static final Logger LOG = LogManager.getLogger(IPVAuthorisationService.class);
     private final ConfigurationService configurationService;
     private final RedisConnectionService redisConnectionService;
+    private final KmsConnectionService kmsConnectionService;
     public static final String STATE_STORAGE_PREFIX = "state:";
+    private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
 
     public IPVAuthorisationService(
             ConfigurationService configurationService,
-            RedisConnectionService redisConnectionService) {
+            RedisConnectionService redisConnectionService,
+            KmsConnectionService kmsConnectionService) {
         this.configurationService = configurationService;
         this.redisConnectionService = redisConnectionService;
+        this.kmsConnectionService = kmsConnectionService;
     }
 
     public Optional<ErrorObject> validateResponse(Map<String, String> headers, String sessionId) {
@@ -95,5 +120,53 @@ public class IPVAuthorisationService {
                 storedState.getValue(),
                 responseState.equals(storedState.getValue()));
         return responseState.equals(storedState.getValue());
+    }
+
+    public SignedJWT constructRequestJWT(
+            State state, Nonce nonce, Scope scope, Subject subject, String claims) {
+        var jwsHeader = new JWSHeader(SIGNING_ALGORITHM);
+        var jwtID = IdGenerator.generate();
+        var expiryDate =
+                Date.from(LocalDateTime.now().plusMinutes(3).atZone(ZoneId.of("UTC")).toInstant());
+        var claimsBuilder =
+                new JWTClaimsSet.Builder()
+                        .issuer(configurationService.getIPVAuthorisationClientId())
+                        .audience(configurationService.getIPVAuthorisationURI().toString())
+                        .expirationTime(expiryDate)
+                        .subject(subject.getValue())
+                        .issueTime(
+                                Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()))
+                        .jwtID(jwtID)
+                        .claim("state", state.getValue())
+                        .claim("nonce", nonce.getValue())
+                        .claim(
+                                "redirect_uri",
+                                configurationService.getIPVAuthorisationCallbackURI().toString())
+                        .claim("client_id", configurationService.getIPVAuthorisationClientId())
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", scope.toString());
+        if (Objects.nonNull(claims)) {
+            claimsBuilder.claim("claims", claims);
+        }
+        var encodedHeader = jwsHeader.toBase64URL();
+        var encodedClaims = Base64URL.encode(claimsBuilder.build().toString());
+        var message = encodedHeader + "." + encodedClaims;
+        var signRequest = new SignRequest();
+        signRequest.setMessage(ByteBuffer.wrap(message.getBytes()));
+        signRequest.setKeyId(configurationService.getIPVTokenSigningKeyAlias());
+        signRequest.setSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256.toString());
+        try {
+            var signResult = kmsConnectionService.sign(signRequest);
+            LOG.info("Token has been signed successfully");
+            var signature =
+                    Base64URL.encode(
+                                    ECDSA.transcodeSignatureToConcat(
+                                            signResult.getSignature().array(),
+                                            ECDSA.getSignatureByteArrayLength(SIGNING_ALGORITHM)))
+                            .toString();
+            return SignedJWT.parse(message + "." + signature);
+        } catch (ParseException | JOSEException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

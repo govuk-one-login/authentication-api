@@ -11,6 +11,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.apache.logging.log4j.LogManager;
@@ -21,6 +22,7 @@ import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -30,6 +32,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -75,7 +78,9 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
         this.auditService = new AuditService(configurationService);
         this.authorisationService =
                 new IPVAuthorisationService(
-                        configurationService, new RedisConnectionService(configurationService));
+                        configurationService,
+                        new RedisConnectionService(configurationService),
+                        new KmsConnectionService(configurationService));
     }
 
     @Override
@@ -89,20 +94,34 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
             var authRequest =
                     AuthenticationRequest.parse(
                             userContext.getClientSession().getAuthRequestParams());
-
+            var pairwiseSubject =
+                    ClientSubjectHelper.getSubject(
+                            userContext.getUserProfile().orElseThrow(),
+                            userContext.getClient().orElseThrow(),
+                            authenticationService);
             var clientID = new ClientID(configurationService.getIPVAuthorisationClientId());
             var state = new State();
-            Optional<ClaimsSetRequest> claimsSetRequest = buildIpvClaimsRequest(authRequest);
+            var claimsSetRequest =
+                    buildIpvClaimsRequest(authRequest)
+                            .map(ClaimsSetRequest::toJSONString)
+                            .orElse(null);
+            var nonce = new Nonce(IdGenerator.generate());
+            var signedJWT =
+                    authorisationService.constructRequestJWT(
+                            state,
+                            nonce,
+                            authRequest.getScope(),
+                            pairwiseSubject,
+                            claimsSetRequest);
             var authRequestBuilder =
                     new AuthorizationRequest.Builder(
                                     new ResponseType(ResponseType.Value.CODE), clientID)
                             .scope(authRequest.getScope())
-                            .customParameter("nonce", IdGenerator.generate())
+                            .customParameter("nonce", nonce.getValue())
                             .state(state)
                             .redirectionURI(configurationService.getIPVAuthorisationCallbackURI())
-                            .endpointURI(configurationService.getIPVAuthorisationURI());
-            claimsSetRequest.ifPresent(
-                    t -> authRequestBuilder.customParameter("claims", t.toJSONString()));
+                            .endpointURI(configurationService.getIPVAuthorisationURI())
+                            .requestObject(signedJWT);
 
             var ipvAuthorisationRequest = authRequestBuilder.build();
             authorisationService.storeState(userContext.getSession().getSessionId(), state);
