@@ -73,11 +73,7 @@ public class VectorOfTrust {
     }
 
     public String retrieveVectorOfTrustForToken() {
-        if (Objects.isNull(levelOfConfidence)) {
-            return credentialTrustLevel.getValue();
-        } else {
-            return levelOfConfidence.getValue() + "." + credentialTrustLevel.getValue();
-        }
+        return credentialTrustLevel.getValue();
     }
 
     private static VectorOfTrust parseVtrSet(JSONArray vtrJsonArray) {

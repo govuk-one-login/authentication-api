@@ -146,18 +146,17 @@ class VectorOfTrustTest {
     }
 
     @Test
-    void shouldReturnCorrectlyFormattedVectorOfTrustForTokenWhenIdentityValuesArePresent() {
+    void shouldNotIncludeIdentityValuesInTokenWhenTheyArePresent() {
         String vectorString = "P2.Cl.Cm";
 
         VectorOfTrust vectorOfTrust =
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         Collections.singletonList(jsonArrayOf(vectorString)));
-        assertThat(vectorOfTrust.retrieveVectorOfTrustForToken(), equalTo(vectorString));
+        assertThat(vectorOfTrust.retrieveVectorOfTrustForToken(), equalTo("Cl.Cm"));
     }
 
     @Test
-    void
-            shouldReturnCorrectlyFormattedVectorOfTrustForTokenWhenOnlyCredentialTrustLevelIsPresent() {
+    void shouldReturnCorrectCredentialTrustLevelInToken() {
         String vectorString = "Cl.Cm";
         VectorOfTrust vectorOfTrust =
                 VectorOfTrust.parseFromAuthRequestAttribute(
