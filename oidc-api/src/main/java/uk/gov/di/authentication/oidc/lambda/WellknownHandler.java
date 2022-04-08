@@ -107,6 +107,7 @@ public class WellknownHandler
                                                 "https://auth-tech-docs.london.cloudapps.digital/"));
                                 providerMetadata.setEndSessionEndpointURI(
                                         buildURI(baseUrl, "/logout"));
+                                providerMetadata.setSupportsBackChannelLogout(true);
                                 providerMetadata.setCustomParameter(
                                         "trustmarks", buildURI(baseUrl, "/trustmark").toString());
                                 providerMetadata.setCustomParameter(
