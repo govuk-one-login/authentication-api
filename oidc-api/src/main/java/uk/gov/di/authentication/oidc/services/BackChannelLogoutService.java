@@ -44,7 +44,7 @@ public class BackChannelLogoutService {
 
         var message =
                 new BackChannelLogoutMessage(
-                        clientRegistry.getClientID(), clientRegistry.getBackChannelLogoutUri());
+                        clientRegistry.getClientID(), clientRegistry.getBackChannelLogoutUri(), "");
 
         try {
             awsSqsClient.send(ObjectMapperFactory.getInstance().writeValueAsString(message));
