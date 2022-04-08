@@ -25,16 +25,18 @@ public class ClientSubjectHelper {
         if ("public".equalsIgnoreCase(client.getSubjectType())) {
             return new Subject(userProfile.getPublicSubjectID());
         } else {
-            var uri =
-                    client.getSectorIdentifierUri() != null
-                            ? client.getSectorIdentifierUri()
-                            : returnHost(client);
             return new Subject(
                     calculatePairwiseIdentifier(
                             userProfile.getSubjectID(),
-                            uri,
+                            getSectorIdentifierForClient(client),
                             authenticationService.getOrGenerateSalt(userProfile)));
         }
+    }
+
+    public static String getSectorIdentifierForClient(ClientRegistry client) {
+        return client.getSectorIdentifierUri() != null
+                ? client.getSectorIdentifierUri()
+                : returnHost(client);
     }
 
     private static String returnHost(ClientRegistry clientRegistry) {

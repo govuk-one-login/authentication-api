@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
+import static uk.gov.di.authentication.shared.helpers.ClientSubjectHelper.getSectorIdentifierForClient;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
@@ -235,6 +236,7 @@ public class IPVCallbackHandler
                                                                 .toString()),
                                                 userProfile.getSubjectID(),
                                                 dynamoService.getOrGenerateSalt(userProfile),
+                                                getSectorIdentifierForClient(clientRegistry),
                                                 pairwiseSubject.getValue(),
                                                 new LogIds(session.getSessionId()));
                                 if (configurationService.isSpotEnabled()) {

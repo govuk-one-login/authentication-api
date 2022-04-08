@@ -13,6 +13,9 @@ public class SPOTRequest {
     @JsonProperty(value = "in_salt")
     private byte[] salt;
 
+    @JsonProperty(value = "in_rp_sector_id")
+    private String rpSectorId;
+
     @JsonProperty(value = "out_sub")
     private String sub;
 
@@ -20,10 +23,16 @@ public class SPOTRequest {
     private LogIds logIds;
 
     public SPOTRequest(
-            SPOTClaims spotClaims, String localAccountId, byte[] salt, String sub, LogIds logIds) {
+            SPOTClaims spotClaims,
+            String localAccountId,
+            byte[] salt,
+            String rpSectorId,
+            String sub,
+            LogIds logIds) {
         this.spotClaims = spotClaims;
         this.localAccountId = localAccountId;
         this.salt = salt;
+        this.rpSectorId = rpSectorId;
         this.sub = sub;
         this.logIds = logIds;
     }
@@ -40,6 +49,10 @@ public class SPOTRequest {
 
     public byte[] getSalt() {
         return salt;
+    }
+
+    public String getRpSectorId() {
+        return rpSectorId;
     }
 
     public String getSub() {
