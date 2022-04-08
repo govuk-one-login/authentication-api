@@ -25,7 +25,7 @@ run:
     - -euc
     - |
       if test -f "test-users-seed-data/test-users.vars"; then
-        TEST_USERS=$(cat test-users.vars)
+        TEST_USERS=$(cat test-users-seed-data/test-users.vars)
       else
         TEST_USERS="[]"
       fi
