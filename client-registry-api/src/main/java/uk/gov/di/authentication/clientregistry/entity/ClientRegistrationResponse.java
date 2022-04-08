@@ -6,53 +6,57 @@ import java.util.List;
 
 public class ClientRegistrationResponse {
 
-    @JsonProperty("client_name")
-    private final String clientName;
+    @JsonProperty(required = true, value = "client_name")
+    private String clientName;
 
-    @JsonProperty("client_id")
-    private final String clientId;
+    @JsonProperty(required = true, value = "client_id")
+    private String clientId;
 
-    @JsonProperty("redirect_uris")
-    private final List<String> redirectUris;
+    @JsonProperty(required = true, value = "redirect_uris")
+    private List<String> redirectUris;
 
-    @JsonProperty("contacts")
-    private final List<String> contacts;
+    @JsonProperty(required = true, value = "contacts")
+    private List<String> contacts;
 
-    @JsonProperty("scopes")
-    private final List<String> scopes;
+    @JsonProperty(required = true, value = "scopes")
+    private List<String> scopes;
 
-    @JsonProperty("post_logout_redirect_uris")
-    private final List<String> postLogoutRedirectUris;
+    @JsonProperty(value = "post_logout_redirect_uris")
+    private List<String> postLogoutRedirectUris;
 
-    @JsonProperty("back_channel_logout_uri")
-    private final String backChannelLogoutUri;
+    @JsonProperty(value = "back_channel_logout_uri")
+    private String backChannelLogoutUri;
 
-    @JsonProperty("subject_type")
-    private final String subjectType;
+    @JsonProperty(required = true, value = "subject_type")
+    private String subjectType;
 
-    @JsonProperty("token_endpoint_auth_method")
+    @JsonProperty(required = true, value = "token_endpoint_auth_method")
     private final String tokenAuthMethod = "private_key_jwt";
 
-    @JsonProperty("response_type")
+    @JsonProperty(required = true, value = "response_type")
     private final String responseType = "code";
 
-    @JsonProperty("service_type")
-    private final String serviceType;
+    @JsonProperty(required = true, value = "service_type")
+    private String serviceType;
 
-    @JsonProperty("claims")
-    private final List<String> claims;
+    @JsonProperty(value = "request_uris")
+    private List<String> requestUris;
+
+    @JsonProperty(value = "claims")
+    private List<String> claims;
 
     public ClientRegistrationResponse(
-            @JsonProperty(required = true, value = "client_name") String clientName,
-            @JsonProperty(required = true, value = "client_id") String clientId,
-            @JsonProperty(required = true, value = "redirect_uris") List<String> redirectUris,
-            @JsonProperty(required = true, value = "contacts") List<String> contacts,
-            @JsonProperty(required = true, value = "scopes") List<String> scopes,
-            @JsonProperty(value = "post_logout_redirect_uris") List<String> postLogoutRedirectUris,
-            @JsonProperty(value = "back_channel_logout_uri") String backChannelLogoutUri,
-            @JsonProperty(required = true, value = "service_type") String serviceType,
-            @JsonProperty(required = true, value = "subject_type") String subjectType,
-            @JsonProperty(value = "claims") List<String> claims) {
+            String clientName,
+            String clientId,
+            List<String> redirectUris,
+            List<String> contacts,
+            List<String> scopes,
+            List<String> postLogoutRedirectUris,
+            String backChannelLogoutUri,
+            String serviceType,
+            String subjectType,
+            List<String> claims,
+            List<String> requestUris) {
         this.clientName = clientName;
         this.clientId = clientId;
         this.redirectUris = redirectUris;
@@ -63,6 +67,20 @@ public class ClientRegistrationResponse {
         this.serviceType = serviceType;
         this.subjectType = subjectType;
         this.claims = claims;
+        this.requestUris = requestUris;
+    }
+
+    public ClientRegistrationResponse() {}
+
+    public ClientRegistrationResponse setPostLogoutRedirectUris(
+            List<String> postLogoutRedirectUris) {
+        this.postLogoutRedirectUris = postLogoutRedirectUris;
+        return this;
+    }
+
+    public ClientRegistrationResponse setRequestUris(List<String> requestUris) {
+        this.requestUris = requestUris;
+        return this;
     }
 
     public String getClientName() {
@@ -111,5 +129,9 @@ public class ClientRegistrationResponse {
 
     public List<String> getClaims() {
         return claims;
+    }
+
+    public List<String> getRequestUris() {
+        return requestUris;
     }
 }

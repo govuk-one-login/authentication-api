@@ -42,6 +42,9 @@ public class ClientRegistrationRequest {
     @JsonProperty("identity_verification_required")
     private boolean identityVerificationRequired;
 
+    @JsonProperty("request_uris")
+    private List<String> requestUris = new ArrayList<>();
+
     @JsonProperty("claims")
     private List<String> claims = new ArrayList<>();
 
@@ -59,7 +62,8 @@ public class ClientRegistrationRequest {
             @JsonProperty(required = true, value = "subject_type") String subjectType,
             @JsonProperty(value = "identity_verification_required")
                     boolean identityVerificationRequired,
-            @JsonProperty(value = "claims") List<String> claims) {
+            @JsonProperty(value = "claims") List<String> claims,
+            @JsonProperty(value = "request_uris") List<String> requestUris) {
         this.clientName = clientName;
         this.redirectUris = redirectUris;
         this.contacts = contacts;
@@ -76,6 +80,9 @@ public class ClientRegistrationRequest {
         this.sectorIdentifierUri = sectorIdentifierUri;
         this.subjectType = subjectType;
         this.identityVerificationRequired = identityVerificationRequired;
+        if (Objects.nonNull(requestUris)) {
+            this.requestUris = requestUris;
+        }
         if (Objects.nonNull(claims)) {
             this.claims = claims;
         }
@@ -123,6 +130,10 @@ public class ClientRegistrationRequest {
 
     public boolean isIdentityVerificationRequired() {
         return identityVerificationRequired;
+    }
+
+    public List<String> getRequestUris() {
+        return requestUris;
     }
 
     public List<String> getClaims() {

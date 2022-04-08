@@ -85,7 +85,7 @@ public class UpdateClientConfigHandler
 
                                 LOG.info("Update client config request received");
 
-                                UpdateClientConfigRequest updateClientConfigRequest =
+                                var updateClientConfigRequest =
                                         objectMapper.readValue(
                                                 input.getBody(), UpdateClientConfigRequest.class);
                                 if (!clientService.isValidClient(clientId)) {
@@ -141,7 +141,8 @@ public class UpdateClientConfigHandler
                                                 clientRegistry.getBackChannelLogoutUri(),
                                                 clientRegistry.getServiceType(),
                                                 clientRegistry.getSubjectType(),
-                                                clientRegistry.getClaims());
+                                                clientRegistry.getClaims(),
+                                                clientRegistry.getRequestUris());
                                 LOG.info("Client updated");
                                 return generateApiGatewayProxyResponse(
                                         200, clientRegistrationResponse);

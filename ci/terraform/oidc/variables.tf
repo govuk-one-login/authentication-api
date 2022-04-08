@@ -87,6 +87,11 @@ variable "use_localstack" {
   default = false
 }
 
+variable "handler_runtime" {
+  type    = string
+  default = "java11"
+}
+
 variable "terms_and_conditions" {
   type    = string
   default = "1.1"
@@ -239,6 +244,11 @@ variable "ipv_backend_uri" {
 variable "endpoint_memory_size" {
   default = 4096
   type    = number
+}
+
+variable "request_uri_param_supported" {
+  default = false
+  type    = bool
 }
 
 variable "spot_enabled" {

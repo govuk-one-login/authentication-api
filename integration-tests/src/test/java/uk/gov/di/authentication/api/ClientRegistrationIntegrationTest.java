@@ -19,6 +19,7 @@ import java.util.stream.Stream;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.shared.entity.ServiceType.MANDATORY;
@@ -39,20 +40,23 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
 
     private static Stream<Arguments> registrationRequestParams() {
         return Stream.of(
-                Arguments.of(emptyList(), null, emptyList(), null),
-                Arguments.of(null, null, null, null),
+                Arguments.of(emptyList(), null, emptyList(), null, emptyList()),
                 Arguments.of(
                         singletonList("http://localhost/post-redirect-logout"),
                         "http://back-channel.com",
                         List.of("address"),
-                        String.valueOf(MANDATORY)),
+                        String.valueOf(MANDATORY),
+                        List.of("http://localhost/request-uri")),
                 Arguments.of(
                         List.of(
                                 "http://localhost/post-redirect-logout",
                                 "http://localhost/post-redirect-logout-v2"),
                         "http://back-channel.com",
                         List.of("address", "birthdate", "name"),
-                        String.valueOf(OPTIONAL)));
+                        String.valueOf(OPTIONAL),
+                        List.of(
+                                "http://localhost/request-uri",
+                                "http://localhost/request-uri-v2")));
     }
 
     @ParameterizedTest
@@ -61,7 +65,8 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
             List<String> postlogoutUris,
             String backChannelLogoutUri,
             List<String> claims,
-            String serviceType)
+            String serviceType,
+            List<String> requestURIs)
             throws JsonProcessingException {
         var clientRequest =
                 new ClientRegistrationRequest(
@@ -76,7 +81,8 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
                         "https://test.com",
                         "public",
                         false,
-                        claims);
+                        claims,
+                        requestURIs);
 
         var response = makeRequest(Optional.of(clientRequest), Map.of(), Map.of());
 
@@ -85,6 +91,9 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
 
         assertThat(response, hasStatus(200));
         assertTrue(clientStore.clientExists(clientResponse.getClientId()));
+        assertThat(clientResponse.getClaims(), equalTo(claims));
+        assertThat(clientResponse.getBackChannelLogoutUri(), equalTo(backChannelLogoutUri));
+        assertThat(clientResponse.getRequestUris(), equalTo(requestURIs));
 
         assertEventTypesReceived(auditTopic, List.of(REGISTER_CLIENT_REQUEST_RECEIVED));
     }

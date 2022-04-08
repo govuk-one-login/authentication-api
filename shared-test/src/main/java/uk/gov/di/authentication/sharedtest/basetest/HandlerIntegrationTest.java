@@ -54,7 +54,8 @@ public abstract class HandlerIntegrationTest<Q, S> {
     protected static final SqsQueueExtension spotQueue = new SqsQueueExtension("spot-queue");
 
     @RegisterExtension
-    protected final AuditSnsTopicExtension auditTopic = new AuditSnsTopicExtension("local-events");
+    protected static final AuditSnsTopicExtension auditTopic =
+            new AuditSnsTopicExtension("local-events");
 
     @RegisterExtension
     protected static final KmsKeyExtension auditSigningKey =

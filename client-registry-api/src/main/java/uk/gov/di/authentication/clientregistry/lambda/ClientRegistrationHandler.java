@@ -107,7 +107,7 @@ public class ClientRegistrationHandler
                                             400, errorResponse.get().toJSONObject().toJSONString());
                                 }
 
-                                String clientID = clientService.generateClientID().toString();
+                                var clientID = clientService.generateClientID().toString();
 
                                 attachLogFieldToLogs(CLIENT_ID, clientID);
 
@@ -125,7 +125,8 @@ public class ClientRegistrationHandler
                                                 clientRegistrationRequest.getSectorIdentifierUri()),
                                         clientRegistrationRequest.getSubjectType(),
                                         !clientRegistrationRequest.isIdentityVerificationRequired(),
-                                        clientRegistrationRequest.getClaims());
+                                        clientRegistrationRequest.getClaims(),
+                                        clientRegistrationRequest.getRequestUris());
 
                                 var clientRegistrationResponse =
                                         new ClientRegistrationResponse(
@@ -139,7 +140,8 @@ public class ClientRegistrationHandler
                                                 clientRegistrationRequest.getBackChannelLogoutUri(),
                                                 clientRegistrationRequest.getServiceType(),
                                                 clientRegistrationRequest.getSubjectType(),
-                                                clientRegistrationRequest.getClaims());
+                                                clientRegistrationRequest.getClaims(),
+                                                clientRegistrationRequest.getRequestUris());
                                 LOG.info("Generating successful Client registration response");
                                 return generateApiGatewayProxyResponse(
                                         200, clientRegistrationResponse);

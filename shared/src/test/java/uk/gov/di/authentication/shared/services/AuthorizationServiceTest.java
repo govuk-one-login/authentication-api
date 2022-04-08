@@ -1,5 +1,10 @@
 package uk.gov.di.authentication.shared.services;
 
+import com.amazonaws.services.lambda.AWSLambda;
+import com.amazonaws.services.lambda.model.InvokeRequest;
+import com.amazonaws.services.lambda.model.InvokeResult;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
@@ -18,17 +23,24 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
+import uk.gov.di.authentication.shared.entity.RequestUriResponsePayload;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -40,6 +52,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
@@ -48,11 +61,15 @@ import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMe
 class AuthorizationServiceTest {
 
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
+    private static final URI REQUEST_URI = URI.create("http://localhost/request-uri");
     private static final ClientID CLIENT_ID = new ClientID();
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
     private AuthorizationService authorizationService;
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
+    private final AWSLambda awsLambda = mock(AWSLambda.class);
+    private final InvokeResult invokeResult = mock(InvokeResult.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -60,7 +77,8 @@ class AuthorizationServiceTest {
 
     @BeforeEach
     void setUp() {
-        authorizationService = new AuthorizationService(dynamoClientService);
+        authorizationService =
+                new AuthorizationService(dynamoClientService, awsLambda, configurationService);
     }
 
     @AfterEach
@@ -251,7 +269,8 @@ class AuthorizationServiceTest {
                                 generateClientRegistry(
                                         REDIRECT_URI.toString(),
                                         CLIENT_ID.toString(),
-                                        List.of("openid", "am"))));
+                                        List.of("openid", "am"),
+                                        null)));
         Optional<ErrorObject> errorObject =
                 authorizationService.validateAuthRequest(
                         generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
@@ -440,18 +459,182 @@ class AuthorizationServiceTest {
         assertEquals(persistentSessionId, "some-persistent-id");
     }
 
+    @Test
+    void shouldSuccessfullyValidateAuthRequestWhichContainsRequestURI()
+            throws JsonProcessingException {
+        when(configurationService.isRequestUriParamSupported()).thenReturn(true);
+        var responsePayload = new RequestUriResponsePayload(true);
+        when(invokeResult.getPayload())
+                .thenReturn(ByteBuffer.wrap(new ObjectMapper().writeValueAsBytes(responsePayload)));
+        when(awsLambda.invoke(any(InvokeRequest.class))).thenReturn(invokeResult);
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(),
+                                        CLIENT_ID.toString(),
+                                        singletonList("openid"),
+                                        singletonList(REQUEST_URI.toString()))));
+        var errorObject =
+                authorizationService.validateAuthRequest(
+                        generateAuthRequest(
+                                REDIRECT_URI.toString(),
+                                new ResponseType(ResponseType.Value.CODE),
+                                new Scope(OIDCScopeValue.OPENID),
+                                REQUEST_URI,
+                                STATE,
+                                NONCE));
+
+        assertThat(errorObject, equalTo(Optional.empty()));
+    }
+
+    @Test
+    void shouldReturnErrorIfRequestURIIsNotSupported() throws JsonProcessingException {
+        when(configurationService.isRequestUriParamSupported()).thenReturn(false);
+        var responsePayload = new RequestUriResponsePayload(true);
+        when(invokeResult.getPayload())
+                .thenReturn(ByteBuffer.wrap(new ObjectMapper().writeValueAsBytes(responsePayload)));
+        when(awsLambda.invoke(any(InvokeRequest.class))).thenReturn(invokeResult);
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(),
+                                        CLIENT_ID.toString(),
+                                        singletonList("openid"),
+                                        singletonList(REQUEST_URI.toString()))));
+        var errorObject =
+                authorizationService.validateAuthRequest(
+                        generateAuthRequest(
+                                REDIRECT_URI.toString(),
+                                new ResponseType(ResponseType.Value.CODE),
+                                new Scope(OIDCScopeValue.OPENID),
+                                REQUEST_URI,
+                                STATE,
+                                NONCE));
+
+        assertThat(errorObject, equalTo(Optional.of(OAuth2Error.REQUEST_URI_NOT_SUPPORTED)));
+    }
+
+    @Test
+    void shouldReturnErrorWhenAuthorizeRequestURILambdaReturnsError()
+            throws JsonProcessingException {
+        when(configurationService.isRequestUriParamSupported()).thenReturn(true);
+        var responsePayload =
+                new RequestUriResponsePayload(
+                        false, OAuth2Error.UNAUTHORIZED_CLIENT.toParameters());
+        when(invokeResult.getPayload())
+                .thenReturn(ByteBuffer.wrap(new ObjectMapper().writeValueAsBytes(responsePayload)));
+        when(awsLambda.invoke(any(InvokeRequest.class))).thenReturn(invokeResult);
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(),
+                                        CLIENT_ID.toString(),
+                                        singletonList("openid"),
+                                        singletonList(REQUEST_URI.toString()))));
+        var errorObject =
+                authorizationService.validateAuthRequest(
+                        generateAuthRequest(
+                                REDIRECT_URI.toString(),
+                                new ResponseType(ResponseType.Value.CODE),
+                                new Scope(OIDCScopeValue.OPENID),
+                                REQUEST_URI,
+                                STATE,
+                                NONCE));
+
+        assertThat(errorObject, equalTo(Optional.of(OAuth2Error.UNAUTHORIZED_CLIENT)));
+    }
+
+    private static Stream<Arguments> invalidAuthRequestWithRequestURI() {
+        return Stream.of(
+                Arguments.of(
+                        REDIRECT_URI.toString(),
+                        new ResponseType(ResponseType.Value.CODE),
+                        new Scope(OIDCScopeValue.OPENID),
+                        URI.create("http://localhost/invalid-request-uri"),
+                        STATE,
+                        NONCE,
+                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Invalid request URI")),
+                Arguments.of(
+                        REDIRECT_URI.toString(),
+                        new ResponseType(ResponseType.Value.CODE, ResponseType.Value.TOKEN),
+                        new Scope(OIDCScopeValue.OPENID),
+                        REQUEST_URI,
+                        STATE,
+                        NONCE,
+                        OAuth2Error.UNSUPPORTED_RESPONSE_TYPE),
+                Arguments.of(
+                        REDIRECT_URI.toString(),
+                        new ResponseType(ResponseType.Value.CODE),
+                        new Scope(OIDCScopeValue.OPENID),
+                        REQUEST_URI,
+                        null,
+                        NONCE,
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Request is missing state parameter")),
+                Arguments.of(
+                        REDIRECT_URI.toString(),
+                        new ResponseType(ResponseType.Value.CODE),
+                        new Scope(OIDCScopeValue.OPENID),
+                        REQUEST_URI,
+                        STATE,
+                        null,
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Request is missing nonce parameter")),
+                Arguments.of(
+                        REDIRECT_URI.toString(),
+                        new ResponseType(ResponseType.Value.CODE),
+                        new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL),
+                        REQUEST_URI,
+                        STATE,
+                        NONCE,
+                        OAuth2Error.INVALID_SCOPE));
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidAuthRequestWithRequestURI")
+    void shouldReturnErrorWhenValidatingRequestUriAuthRequest(
+            String redirectUri,
+            ResponseType responseType,
+            Scope scope,
+            URI requestUri,
+            State state,
+            Nonce nonce,
+            ErrorObject expectedError) {
+        when(configurationService.isRequestUriParamSupported()).thenReturn(true);
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(),
+                                        CLIENT_ID.toString(),
+                                        singletonList("openid"),
+                                        singletonList(REQUEST_URI.toString()))));
+        var errorObject =
+                authorizationService.validateAuthRequest(
+                        generateAuthRequest(
+                                redirectUri, responseType, scope, requestUri, state, nonce));
+
+        assertThat(errorObject, equalTo(Optional.of(expectedError)));
+    }
+
     private ClientRegistry generateClientRegistry(String redirectURI, String clientID) {
-        return generateClientRegistry(redirectURI, clientID, singletonList("openid"));
+        return generateClientRegistry(redirectURI, clientID, singletonList("openid"), null);
     }
 
     private ClientRegistry generateClientRegistry(
-            String redirectURI, String clientID, List<String> scopes) {
+            String redirectURI, String clientID, List<String> scopes, List<String> requestURI) {
         return new ClientRegistry()
                 .setRedirectUrls(singletonList(redirectURI))
                 .setClientID(clientID)
                 .setContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
                 .setPublicKey(null)
-                .setScopes(scopes);
+                .setScopes(scopes)
+                .setRequestUris(requestURI);
     }
 
     private AuthenticationRequest generateAuthRequest(
@@ -474,6 +657,27 @@ class AuthorizationServiceTest {
                         .customParameter("vtr", jsonArray);
         claimsRequest.ifPresent(authRequestBuilder::claims);
 
+        return authRequestBuilder.build();
+    }
+
+    private AuthenticationRequest generateAuthRequest(
+            String redirectUri,
+            ResponseType responseType,
+            Scope scope,
+            URI requestUri,
+            State state,
+            Nonce nonce) {
+        AuthenticationRequest.Builder authRequestBuilder =
+                new AuthenticationRequest.Builder(
+                                responseType, scope, CLIENT_ID, URI.create(redirectUri))
+                        .requestURI(requestUri);
+
+        if (Objects.nonNull(state)) {
+            authRequestBuilder.state(state);
+        }
+        if (Objects.nonNull(nonce)) {
+            authRequestBuilder.nonce(nonce);
+        }
         return authRequestBuilder.build();
     }
 }
