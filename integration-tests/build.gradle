@@ -34,8 +34,6 @@ test {
     jacoco {
     }
     environment "AUDIT_SIGNING_KEY_ALIAS", "alias/local-audit-payload-signing-key-alias"
-    environment "AUTHORIZE_REQUEST_LAMBDA_ARN", "arn:authorize-request:eu-west-2:6546546465"
-    environment "AUTHORIZE_REQUEST_LAMBDA_QUALIFIER", "some-lambda-qualfier"
     environment "AWS_ACCESS_KEY_ID", "mock-access-key"
     environment "AWS_REGION", "eu-west-2"
     environment "AWS_SECRET_ACCESS_KEY", "mock-secret-key "
@@ -44,7 +42,6 @@ test {
     environment "DOMAIN_NAME", "localhost"
     environment "DYNAMO_ENDPOINT", "http://localhost:8000"
     environment "ENVIRONMENT", "local"
-    environment "INVOKED_LAMBDA_ENDPOINT", "http://localhost:6001"
     environment "LOCALSTACK_ENDPOINT", "http://localhost:45678"
     environment "LOGIN_URI", "http://localhost:3000"
     environment "ROOT_RESOURCE_URL", "http://localhost"

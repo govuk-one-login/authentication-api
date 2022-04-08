@@ -5,6 +5,7 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.openid.connect.sdk.Nonce;
+import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -14,6 +15,7 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.RequestURILambdaStubExtension;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
@@ -62,12 +64,15 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @RegisterExtension
     public static final RequestURILambdaStubExtension requestURILambdaStub =
-            new RequestURILambdaStubExtension(6001);
+            new RequestURILambdaStubExtension("arn:authorize-request:eu-west-2:6546546465");
+
+    protected static final ConfigurationService configurationService =
+            new AuthorisationIntegrationTest.TestConfigurationService(requestURILambdaStub);
 
     @BeforeEach
     void setup() {
         registerClient(CLIENT_ID, "test-client", singletonList("openid"), null);
-        handler = new AuthorisationHandler(TEST_CONFIGURATION_SERVICE);
+        handler = new AuthorisationHandler(configurationService);
     }
 
     @Test
@@ -609,5 +614,36 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "public",
                 true,
                 requestUris);
+    }
+
+    protected static class TestConfigurationService extends IntegrationTestConfigurationService {
+
+        private final RequestURILambdaStubExtension requestURILambdaStub;
+
+        public TestConfigurationService(RequestURILambdaStubExtension requestURILambdaStub) {
+            super(
+                    auditTopic,
+                    notificationsQueue,
+                    auditSigningKey,
+                    tokenSigner,
+                    ipvPrivateKeyJwtSigner,
+                    spotQueue);
+            this.requestURILambdaStub = requestURILambdaStub;
+        }
+
+        @Override
+        public Optional<String> getInvokedLambdaEndpoint() {
+            return Optional.of(
+                    new URIBuilder()
+                            .setHost("localhost")
+                            .setPort(requestURILambdaStub.getHttpPort())
+                            .setScheme("http")
+                            .toString());
+        }
+
+        @Override
+        public String getAuthorizeRequestLambdaArn() {
+            return requestURILambdaStub.getArn();
+        }
     }
 }
