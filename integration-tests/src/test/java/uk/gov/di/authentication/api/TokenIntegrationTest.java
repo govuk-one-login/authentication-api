@@ -34,6 +34,7 @@ import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.oidc.lambda.TokenHandler;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
@@ -85,19 +86,19 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         handler = new TokenHandler(TEST_CONFIGURATION_SERVICE);
     }
 
-    private static Stream<Object> validVectorValues() {
+    private static Stream<Arguments> validVectorValues() {
         return Stream.of(
-                Optional.of("Cl.Cm"),
-                Optional.of("Cl"),
-                Optional.of("P2.Cl.Cm"),
-                Optional.of("P2.Cl"),
-                Optional.empty());
+                Arguments.of(Optional.of("Cl.Cm"), "Cl.Cm"),
+                Arguments.of(Optional.of("Cl"), "Cl"),
+                Arguments.of(Optional.of("P2.Cl.Cm"), "Cl.Cm"),
+                Arguments.of(Optional.of("P2.Cl"), "Cl"),
+                Arguments.of(Optional.empty(), "Cl.Cm"));
     }
 
     @ParameterizedTest
     @MethodSource("validVectorValues")
-    void shouldCallTokenResourceAndReturnAccessAndRefreshToken(Optional<String> vtr)
-            throws Exception {
+    void shouldCallTokenResourceAndReturnAccessAndRefreshToken(
+            Optional<String> vtr, String expectedVotClaim) throws Exception {
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         Scope scope =
                 new Scope(
@@ -117,16 +118,14 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .toSuccessResponse()
                         .getTokens()
                         .getBearerAccessToken());
-        if (vtr.isEmpty()) {
-            vtr = Optional.of(VectorOfTrust.getDefaults().getCredentialTrustLevel().getValue());
-        }
+
         assertThat(
                 OIDCTokenResponse.parse(jsonResponse)
                         .getOIDCTokens()
                         .getIDToken()
                         .getJWTClaimsSet()
                         .getClaim("vot"),
-                equalTo(vtr.get()));
+                equalTo(expectedVotClaim));
 
         assertNoAuditEventsReceived(auditTopic);
     }
