@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
 import uk.gov.di.authentication.ipv.lambda.IPVAuthorisationHandler;
+import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.IPVStubExtension;
@@ -26,6 +27,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
+import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED;
@@ -38,6 +40,7 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
     private static final String SESSION_ID = "some-session-id";
     private static final String CLIENT_SESSION_ID = "some-client-session-id";
     private static final String PERSISTENT_SESSION_ID = "some-persistent-session-id";
+    private static final ClientID CLIENT_ID = new ClientID("test-client");
 
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
 
@@ -57,12 +60,27 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         redis.addAuthRequestToSession(
                 CLIENT_SESSION_ID,
                 SESSION_ID,
-                withAuthenticationRequest(IPV_CLIENT_ID).toParameters(),
+                withAuthenticationRequest(CLIENT_ID.getValue()).toParameters(),
                 TEST_EMAIL_ADDRESS);
     }
 
     @Test
     void shouldReturn200WithValidIPVAuthorisationRequest() throws IOException {
+        userStore.signUp(TEST_EMAIL_ADDRESS, "password-1");
+        clientStore.registerClient(
+                CLIENT_ID.getValue(),
+                "test-client",
+                singletonList(REDIRECT_URI.toString()),
+                singletonList(TEST_EMAIL_ADDRESS),
+                singletonList("openid"),
+                "",
+                singletonList("http://localhost/post-redirect-logout"),
+                "http://example.com",
+                String.valueOf(ServiceType.MANDATORY),
+                "https://test.com",
+                "pairwise",
+                true);
+
         var response =
                 makeRequest(
                         Optional.of(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS)),
@@ -72,8 +90,7 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
         assertThat(response, hasStatus(200));
 
-        IPVAuthorisationResponse body =
-                new ObjectMapper().readValue(response.getBody(), IPVAuthorisationResponse.class);
+        var body = new ObjectMapper().readValue(response.getBody(), IPVAuthorisationResponse.class);
 
         assertThat(
                 body.getRedirectUri(),
