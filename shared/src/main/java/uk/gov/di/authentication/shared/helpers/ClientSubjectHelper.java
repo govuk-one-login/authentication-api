@@ -22,7 +22,7 @@ public class ClientSubjectHelper {
             UserProfile userProfile,
             ClientRegistry client,
             AuthenticationService authenticationService) {
-        if (client.getSubjectType().equalsIgnoreCase("public")) {
+        if ("public".equalsIgnoreCase(client.getSubjectType())) {
             return new Subject(userProfile.getPublicSubjectID());
         } else {
             var uri =

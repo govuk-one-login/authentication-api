@@ -54,6 +54,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -625,11 +626,11 @@ class LogoutHandlerTest {
         verify(sessionService).deleteSessionFromRedis(SESSION_ID);
 
         verify(backChannelLogoutService)
-                .sendLogoutMessage(argThat(withClientId("client-id")), null);
+                .sendLogoutMessage(argThat(withClientId("client-id")), eq(EMAIL));
         verify(backChannelLogoutService)
-                .sendLogoutMessage(argThat(withClientId("client-id-2")), null);
+                .sendLogoutMessage(argThat(withClientId("client-id-2")), eq(EMAIL));
         verify(backChannelLogoutService)
-                .sendLogoutMessage(argThat(withClientId("client-id-3")), null);
+                .sendLogoutMessage(argThat(withClientId("client-id-3")), eq(EMAIL));
 
         verify(clientSessionService).deleteClientSessionFromRedis(CLIENT_SESSION_ID);
         verify(clientSessionService).deleteClientSessionFromRedis("client-session-id-2");
