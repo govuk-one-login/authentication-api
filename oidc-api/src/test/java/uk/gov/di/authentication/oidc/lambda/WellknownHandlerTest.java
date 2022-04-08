@@ -50,6 +50,9 @@ class WellknownHandlerTest {
                 OIDCProviderMetadata.parse(result.getBody()).getRegistrationEndpointURI(),
                 equalTo(expectedRegistrationURI));
         assertThat(
+                OIDCProviderMetadata.parse(result.getBody()).supportsBackChannelLogout(),
+                equalTo(true));
+        assertThat(
                 OIDCProviderMetadata.parse(result.getBody())
                         .getCustomParameters()
                         .get("trustmarks"),
