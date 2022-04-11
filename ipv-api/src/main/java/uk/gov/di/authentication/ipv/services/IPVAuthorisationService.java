@@ -1,14 +1,23 @@
 package uk.gov.di.authentication.ipv.services;
 
+import com.amazonaws.services.kms.model.GetPublicKeyRequest;
+import com.amazonaws.services.kms.model.GetPublicKeyResult;
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWEAlgorithm;
+import com.nimbusds.jose.JWEHeader;
+import com.nimbusds.jose.JWEObject;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.Payload;
+import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.util.Base64URL;
+import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ErrorObject;
@@ -20,12 +29,18 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.openssl.PEMException;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 
 import java.nio.ByteBuffer;
+import java.security.PublicKey;
+import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -122,7 +137,7 @@ public class IPVAuthorisationService {
         return responseState.equals(storedState.getValue());
     }
 
-    public SignedJWT constructRequestJWT(
+    public EncryptedJWT constructRequestJWT(
             State state, Nonce nonce, Scope scope, Subject subject, String claims) {
         var jwsHeader = new JWSHeader(SIGNING_ALGORITHM);
         var jwtID = IdGenerator.generate();
@@ -164,9 +179,44 @@ public class IPVAuthorisationService {
                                             signResult.getSignature().array(),
                                             ECDSA.getSignatureByteArrayLength(SIGNING_ALGORITHM)))
                             .toString();
-            return SignedJWT.parse(message + "." + signature);
+            var signedJWT = SignedJWT.parse(message + "." + signature);
+            return encryptJWT(signedJWT);
         } catch (ParseException | JOSEException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    private EncryptedJWT encryptJWT(SignedJWT signedJWT) {
+        try {
+            var getPublicKeyRequest = new GetPublicKeyRequest();
+            getPublicKeyRequest.setKeyId(configurationService.getIPVAuthEncryptionKeyAlias());
+            var publicEncryptionKey =
+                    createPublicKey(kmsConnectionService.getPublicKey(getPublicKeyRequest));
+            var jweObject =
+                    new JWEObject(
+                            new JWEHeader.Builder(
+                                            JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM)
+                                    .contentType("JWT")
+                                    .build(),
+                            new Payload(signedJWT));
+            jweObject.encrypt(new RSAEncrypter((RSAPublicKey) publicEncryptionKey));
+
+            return EncryptedJWT.parse(jweObject.serialize());
+        } catch (JOSEException | ParseException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private PublicKey createPublicKey(GetPublicKeyResult publicKeyResult) {
+        SubjectPublicKeyInfo subjectKeyInfo =
+                SubjectPublicKeyInfo.getInstance(publicKeyResult.getPublicKey().array());
+        try {
+            return new JcaPEMKeyConverter()
+                    .setProvider(new BouncyCastleProvider())
+                    .getPublicKey(subjectKeyInfo);
+        } catch (PEMException e) {
+            LOG.error("Error getting the PublicKey using the JcaPEMKeyConverter", e);
+            throw new RuntimeException();
         }
     }
 }
