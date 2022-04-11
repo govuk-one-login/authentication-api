@@ -6,10 +6,13 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.BackChannelLogoutMessage;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 
 import static org.apache.logging.log4j.util.Strings.isBlank;
+import static uk.gov.di.authentication.shared.helpers.ClientSubjectHelper.getSubject;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
@@ -17,20 +20,24 @@ public class BackChannelLogoutService {
 
     private static final Logger LOGGER = LogManager.getLogger(BackChannelLogoutService.class);
     private final AwsSqsClient awsSqsClient;
+    private final AuthenticationService authenticationService;
 
     public BackChannelLogoutService(ConfigurationService configurationService) {
         this(
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
                         configurationService.getBackChannelLogoutQueueUri(),
-                        configurationService.getSqsEndpointUri()));
+                        configurationService.getSqsEndpointUri()),
+                new DynamoService(configurationService));
     }
 
-    public BackChannelLogoutService(AwsSqsClient awsSqsClient) {
+    public BackChannelLogoutService(
+            AwsSqsClient awsSqsClient, AuthenticationService authenticationService) {
         this.awsSqsClient = awsSqsClient;
+        this.authenticationService = authenticationService;
     }
 
-    public void sendLogoutMessage(ClientRegistry clientRegistry) {
+    public void sendLogoutMessage(ClientRegistry clientRegistry, String emailAddress) {
 
         if (isBlank(clientRegistry.getClientID())
                 || isBlank(clientRegistry.getBackChannelLogoutUri())) {
@@ -42,9 +49,15 @@ public class BackChannelLogoutService {
 
         LOGGER.info("Sending logout message");
 
+        var user = authenticationService.getUserProfileByEmail(emailAddress);
+
+        var subjectId = getSubject(user, clientRegistry, authenticationService).getValue();
+
         var message =
                 new BackChannelLogoutMessage(
-                        clientRegistry.getClientID(), clientRegistry.getBackChannelLogoutUri());
+                        clientRegistry.getClientID(),
+                        clientRegistry.getBackChannelLogoutUri(),
+                        subjectId);
 
         try {
             awsSqsClient.send(ObjectMapperFactory.getInstance().writeValueAsString(message));
