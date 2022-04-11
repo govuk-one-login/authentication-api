@@ -81,13 +81,14 @@ public class IPVCallbackHandler
     }
 
     public IPVCallbackHandler(ConfigurationService configurationService) {
+        var kmsConnectionService = new KmsConnectionService(configurationService);
         this.configurationService = configurationService;
         this.ipvAuthorisationService =
                 new IPVAuthorisationService(
-                        configurationService, new RedisConnectionService(configurationService));
-        this.ipvTokenService =
-                new IPVTokenService(
-                        configurationService, new KmsConnectionService(configurationService));
+                        configurationService,
+                        new RedisConnectionService(configurationService),
+                        kmsConnectionService);
+        this.ipvTokenService = new IPVTokenService(configurationService, kmsConnectionService);
         this.sessionService = new SessionService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
