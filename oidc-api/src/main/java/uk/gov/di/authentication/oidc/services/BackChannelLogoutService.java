@@ -49,9 +49,14 @@ public class BackChannelLogoutService {
 
         LOGGER.info("Sending logout message");
 
-        var user = authenticationService.getUserProfileByEmail(emailAddress);
+        var user = authenticationService.getUserProfileByEmailMaybe(emailAddress);
 
-        var subjectId = getSubject(user, clientRegistry, authenticationService).getValue();
+        if (user.isEmpty()) {
+            LOGGER.warn("User does not exist");
+            return;
+        }
+
+        var subjectId = getSubject(user.get(), clientRegistry, authenticationService).getValue();
 
         var message =
                 new BackChannelLogoutMessage(
