@@ -11,6 +11,7 @@ module "ipv_authorize_role" {
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
     aws_iam_policy.ipv_token_auth_kms_policy.arn,
+    aws_iam_policy.ipv_auth_encryption_kms_policy.arn,
   ]
 }
 
@@ -34,6 +35,7 @@ module "ipv-authorize" {
     IPV_AUTHORISATION_CALLBACK_URI = var.ipv_authorisation_callback_uri
     IPV_AUTHORISATION_CLIENT_ID    = var.ipv_authorisation_client_id
     IPV_TOKEN_SIGNING_KEY_ALIAS    = local.ipv_token_auth_key_alias_name
+    IPV_AUTH_ENCRYPTION_KEY_ALIAS  = local.ipv_token_auth_key_alias_name
   }
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.IPVAuthorisationHandler::handleRequest"
 
