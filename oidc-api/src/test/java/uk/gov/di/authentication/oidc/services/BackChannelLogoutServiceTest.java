@@ -10,6 +10,7 @@ import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -32,7 +33,8 @@ class BackChannelLogoutServiceTest {
             throws JsonProcessingException {
         var user = new UserProfile().setPublicSubjectID("public").setSubjectID("subject");
 
-        when(authenticationService.getUserProfileByEmail("test@test.com")).thenReturn(user);
+        when(authenticationService.getUserProfileByEmailMaybe("test@test.com"))
+                .thenReturn(Optional.of(user));
         when(authenticationService.getOrGenerateSalt(user)).thenReturn("salt".getBytes());
 
         service.sendLogoutMessage(
@@ -66,6 +68,20 @@ class BackChannelLogoutServiceTest {
 
         Stream.of(noLogoutUri, noClientId, neitherField)
                 .forEach(clientRegistry -> service.sendLogoutMessage(clientRegistry, null));
+
+        verify(sqs, never()).send(anyString());
+    }
+
+    @Test
+    void shouldNotPostMessageToSqsIfUserProfileDoesNotExist() {
+        when(authenticationService.getUserProfileByEmailMaybe("test@test.com"))
+                .thenReturn(Optional.empty());
+
+        service.sendLogoutMessage(
+                new ClientRegistry()
+                        .setClientID("client-id")
+                        .setBackChannelLogoutUri("http://localhost:8080/back-channel-logout"),
+                "test@test.com");
 
         verify(sqs, never()).send(anyString());
     }
