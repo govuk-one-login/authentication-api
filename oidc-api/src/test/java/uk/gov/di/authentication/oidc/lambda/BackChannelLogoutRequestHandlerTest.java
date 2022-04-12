@@ -22,16 +22,17 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import static java.time.Clock.fixed;
 import static java.time.ZoneId.systemDefault;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.core.Is.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.exceptions.Unchecked.unchecked;
@@ -48,6 +49,14 @@ class BackChannelLogoutRequestHandlerTest {
                     configuration, request, tokenService, fixed(fixedDate, systemDefault()));
 
     @Test
+    void shouldDoNothingIfPayloadIsInvalid() {
+        handler.handleRequest(inputEvent(null), null);
+
+        verify(tokenService, never()).generateSignedJWT(any());
+        verify(request, never()).post(any(), any());
+    }
+
+    @Test
     void shouldSendRequestToRelyingPartyEndpoint() {
         var input =
                 new BackChannelLogoutMessage(
@@ -59,7 +68,7 @@ class BackChannelLogoutRequestHandlerTest {
                 .thenReturn(Optional.of("https://base-url.account.gov.uk"));
         when(tokenService.generateSignedJWT(any(JWTClaimsSet.class))).thenReturn(value);
 
-        handler.handleRequest(inputEvent(List.of(input)), null);
+        handler.handleRequest(inputEvent(input), null);
 
         verify(request).post(URI.create("https://test.account.gov.uk"), value.toString());
     }
@@ -108,9 +117,9 @@ class BackChannelLogoutRequestHandlerTest {
         return new SignedJWT(new JWSHeader(JWSAlgorithm.ES256), new JWTClaimsSet.Builder().build());
     }
 
-    private SQSEvent inputEvent(List<BackChannelLogoutMessage> payload) {
+    private SQSEvent inputEvent(BackChannelLogoutMessage payload) {
         var messages =
-                payload.stream()
+                Optional.ofNullable(payload)
                         .map(unchecked(ObjectMapperFactory.getInstance()::writeValueAsString))
                         .map(
                                 body -> {
@@ -119,7 +128,8 @@ class BackChannelLogoutRequestHandlerTest {
 
                                     return message;
                                 })
-                        .collect(Collectors.toList());
+                        .map(List::of)
+                        .orElse(emptyList());
 
         var event = new SQSEvent();
         event.setRecords(messages);
