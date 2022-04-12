@@ -46,6 +46,26 @@ data "aws_iam_policy_document" "back_channel_logout_queue_policy_document" {
       aws_sqs_queue.back_channel_logout_queue.arn
     ]
   }
+
+  statement {
+    sid    = "ReceiveSQS"
+    effect = "Allow"
+
+    principals {
+      type        = "AWS"
+      identifiers = [module.backchannel_logout_request_role.arn]
+    }
+
+    actions = [
+      "sqs:ReceiveMessage",
+      "sqs:DeleteMessage",
+      "sqs:GetQueueAttributes",
+    ]
+
+    resources = [
+      aws_sqs_queue.back_channel_logout_queue.arn
+    ]
+  }
 }
 
 resource "aws_sqs_queue_policy" "back_channel_logout_queue_policy" {
