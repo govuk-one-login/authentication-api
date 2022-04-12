@@ -139,6 +139,17 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("IPV_AUTH_ENCRYPTION_KEY_ALIAS");
     }
 
+    public String getIPVAuthEncryptionPublicKey() {
+        var paramName = format("{0}-ipv-auth-encryption-public-key", getEnvironment());
+        try {
+            var request = new GetParameterRequest().withWithDecryption(true).withName(paramName);
+            return getSsmClient().getParameter(request).getParameter().getValue();
+        } catch (ParameterNotFoundException e) {
+            LOG.error("No parameter exists with name: {}", paramName);
+            throw new RuntimeException(e);
+        }
+    }
+
     public Optional<String> getInvokedLambdaEndpoint() {
         return Optional.ofNullable(System.getenv("INVOKED_LAMBDA_ENDPOINT"));
     }

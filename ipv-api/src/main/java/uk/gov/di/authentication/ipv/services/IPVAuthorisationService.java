@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.ipv.services;
 
 import com.amazonaws.services.kms.model.GetPublicKeyRequest;
-import com.amazonaws.services.kms.model.GetPublicKeyResult;
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -16,6 +15,8 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.impl.ECDSA;
+import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -29,17 +30,12 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.openssl.PEMException;
-import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 
 import java.nio.ByteBuffer;
-import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.time.LocalDateTime;
@@ -190,8 +186,7 @@ public class IPVAuthorisationService {
         try {
             var getPublicKeyRequest = new GetPublicKeyRequest();
             getPublicKeyRequest.setKeyId(configurationService.getIPVAuthEncryptionKeyAlias());
-            var publicEncryptionKey =
-                    createPublicKey(kmsConnectionService.getPublicKey(getPublicKeyRequest));
+            var publicEncryptionKey = getPublicKey();
             var jweObject =
                     new JWEObject(
                             new JWEHeader.Builder(
@@ -199,23 +194,24 @@ public class IPVAuthorisationService {
                                     .contentType("JWT")
                                     .build(),
                             new Payload(signedJWT));
-            jweObject.encrypt(new RSAEncrypter((RSAPublicKey) publicEncryptionKey));
+            jweObject.encrypt(new RSAEncrypter(publicEncryptionKey));
 
             return EncryptedJWT.parse(jweObject.serialize());
         } catch (JOSEException | ParseException e) {
+            LOG.error("Error when encrypting SignedJWT", e);
             throw new RuntimeException(e);
         }
     }
 
-    private PublicKey createPublicKey(GetPublicKeyResult publicKeyResult) {
-        SubjectPublicKeyInfo subjectKeyInfo =
-                SubjectPublicKeyInfo.getInstance(publicKeyResult.getPublicKey().array());
+    private RSAPublicKey getPublicKey() {
         try {
-            return new JcaPEMKeyConverter()
-                    .setProvider(new BouncyCastleProvider())
-                    .getPublicKey(subjectKeyInfo);
-        } catch (PEMException e) {
-            LOG.error("Error getting the PublicKey using the JcaPEMKeyConverter", e);
+            var ipvAuthEncryptionPublicKey = configurationService.getIPVAuthEncryptionPublicKey();
+            return new RSAKey.Builder(
+                            (RSAKey) JWK.parseFromPEMEncodedObjects(ipvAuthEncryptionPublicKey))
+                    .build()
+                    .toRSAPublicKey();
+        } catch (JOSEException e) {
+            LOG.error("Error parsing the public key to RSAPublicKey", e);
             throw new RuntimeException();
         }
     }

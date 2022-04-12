@@ -11,7 +11,7 @@ module "ipv_authorize_role" {
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
     aws_iam_policy.ipv_token_auth_kms_policy.arn,
-    aws_iam_policy.ipv_auth_encryption_kms_policy.arn,
+    aws_iam_policy.ipv_public_encryption_key_parameter_policy.arn,
   ]
 }
 
