@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.ipv.services;
 
-import com.amazonaws.services.kms.model.GetPublicKeyRequest;
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -184,8 +183,6 @@ public class IPVAuthorisationService {
 
     private EncryptedJWT encryptJWT(SignedJWT signedJWT) {
         try {
-            var getPublicKeyRequest = new GetPublicKeyRequest();
-            getPublicKeyRequest.setKeyId(configurationService.getIPVAuthEncryptionKeyAlias());
             var publicEncryptionKey = getPublicKey();
             var jweObject =
                     new JWEObject(
