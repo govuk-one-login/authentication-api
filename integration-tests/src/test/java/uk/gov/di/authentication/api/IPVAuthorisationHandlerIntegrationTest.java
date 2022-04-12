@@ -163,5 +163,10 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         public URI getIPVAuthorisationCallbackURI() {
             return REDIRECT_URI;
         }
+
+        @Override
+        public String getIPVAuthEncryptionKeyAlias() {
+            return ipvEncryptionKey.getKeyAlias();
+        }
     }
 }

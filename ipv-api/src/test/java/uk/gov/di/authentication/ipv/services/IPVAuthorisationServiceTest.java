@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.ipv.services;
 
+import com.amazonaws.services.kms.model.GetPublicKeyRequest;
+import com.amazonaws.services.kms.model.GetPublicKeyResult;
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -8,9 +10,13 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.ECDSASigner;
+import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
+import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
@@ -61,15 +67,23 @@ class IPVAuthorisationServiceTest {
     private final IPVAuthorisationService authorisationService =
             new IPVAuthorisationService(
                     configurationService, redisConnectionService, kmsConnectionService);
+    private RSAKey rsaKey;
 
     @BeforeEach
-    void setUp() throws JsonProcessingException {
+    void setUp() throws JsonProcessingException, JOSEException {
         when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
         when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + SESSION_ID))
                 .thenReturn(new ObjectMapper().writeValueAsString(STATE));
         when(configurationService.getIPVAuthorisationClientId()).thenReturn(IPV_CLIENT_ID);
         when(configurationService.getIPVAuthorisationCallbackURI()).thenReturn(IPV_CALLBACK_URI);
         when(configurationService.getIPVAuthorisationURI()).thenReturn(IPV_AUTHORISATION_URI);
+        rsaKey = generateRSAKey();
+        var getPublicKeyResult = new GetPublicKeyResult();
+        getPublicKeyResult.setKeyId(KEY_ID);
+        getPublicKeyResult.setPublicKey(
+                ByteBuffer.wrap(rsaKey.toPublicJWK().toRSAPublicKey().getEncoded()));
+        when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
+                .thenReturn(getPublicKeyResult);
     }
 
     @Test
@@ -192,8 +206,10 @@ class IPVAuthorisationServiceTest {
         var pairwise = new Subject("pairwise-identifier");
         var claims = "{\"name\":{\"essential\":true}}";
 
-        var signedJWTResponse =
+        var encryptedJWT =
                 authorisationService.constructRequestJWT(state, nonce, scope, pairwise, claims);
+
+        var signedJWTResponse = decryptJWT(encryptedJWT);
 
         assertThat(
                 signedJWTResponse.getJWTClaimsSet().getClaim("client_id"), equalTo(IPV_CLIENT_ID));
@@ -210,5 +226,14 @@ class IPVAuthorisationServiceTest {
                 equalTo(singletonList(IPV_AUTHORISATION_URI.toString())));
         assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("response_type"), equalTo("code"));
         assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("claims"), equalTo(claims));
+    }
+
+    private RSAKey generateRSAKey() throws JOSEException {
+        return new RSAKeyGenerator(2048).keyID(KEY_ID).generate();
+    }
+
+    private SignedJWT decryptJWT(EncryptedJWT encryptedJWT) throws JOSEException {
+        encryptedJWT.decrypt(new RSADecrypter(rsaKey));
+        return encryptedJWT.getPayload().toSignedJWT();
     }
 }

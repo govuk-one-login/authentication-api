@@ -5,12 +5,20 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWEAlgorithm;
+import com.nimbusds.jose.JWEHeader;
+import com.nimbusds.jose.JWEObject;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.ECDSASigner;
+import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
+import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ResponseType;
@@ -45,6 +53,7 @@ import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
@@ -135,15 +144,16 @@ public class IPVAuthorisationHandlerTest {
     }
 
     @Test
-    void shouldReturn200AndRedirectURIWithClaims() throws JsonProcessingException, JOSEException {
-        var signedJWT = createSignedJWT();
+    void shouldReturn200AndRedirectURIWithClaims()
+            throws JsonProcessingException, JOSEException, ParseException {
+        var encryptedJWT = createEncryptedJWT();
         when(authorisationService.constructRequestJWT(
                         any(State.class),
                         any(Nonce.class),
                         any(Scope.class),
                         any(Subject.class),
                         any()))
-                .thenReturn(signedJWT);
+                .thenReturn(encryptedJWT);
         usingValidSession();
         usingValidClientSession();
 
@@ -153,7 +163,8 @@ public class IPVAuthorisationHandlerTest {
         var body = new ObjectMapper().readValue(response.getBody(), IPVAuthorisationResponse.class);
         assertThat(body.getRedirectUri(), startsWith(IPV_AUTHORISATION_URI.toString()));
         assertThat(
-                splitQuery(body.getRedirectUri()).get("request"), equalTo(signedJWT.serialize()));
+                splitQuery(body.getRedirectUri()).get("request"),
+                equalTo(encryptedJWT.serialize()));
         verify(authorisationService).storeState(eq(session.getSessionId()), any(State.class));
         verify(auditService)
                 .submitAuditEvent(
@@ -247,7 +258,7 @@ public class IPVAuthorisationHandlerTest {
                 .setUpdated(UPDATED_DATE_TIME.toString());
     }
 
-    private SignedJWT createSignedJWT() throws JOSEException {
+    private EncryptedJWT createEncryptedJWT() throws JOSEException, ParseException {
         var ecSigningKey =
                 new ECKeyGenerator(Curve.P_256)
                         .keyID("key-id")
@@ -264,6 +275,15 @@ public class IPVAuthorisationHandlerTest {
         var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
         signedJWT.sign(ecdsaSigner);
-        return signedJWT;
+        var rsaEncryptionKey =
+                new RSAKeyGenerator(2048).keyID("encrytion-key-id").generate().toRSAPublicKey();
+        var jweObject =
+                new JWEObject(
+                        new JWEHeader.Builder(JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM)
+                                .contentType("JWT")
+                                .build(),
+                        new Payload(signedJWT));
+        jweObject.encrypt(new RSAEncrypter(rsaEncryptionKey));
+        return EncryptedJWT.parse(jweObject.serialize());
     }
 }

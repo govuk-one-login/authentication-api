@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.sharedtest.basetest;
 
+import com.amazonaws.services.kms.model.KeyUsageType;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -60,6 +61,10 @@ public abstract class HandlerIntegrationTest<Q, S> {
     @RegisterExtension
     protected static final KmsKeyExtension auditSigningKey =
             new KmsKeyExtension("audit-signing-key");
+
+    @RegisterExtension
+    protected static final KmsKeyExtension ipvEncryptionKey =
+            new KmsKeyExtension("ipv-encryption-key", KeyUsageType.ENCRYPT_DECRYPT);
 
     @RegisterExtension
     protected static final CloudwatchMetricsExtension cloudwatchMetrics =

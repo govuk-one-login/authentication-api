@@ -106,7 +106,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                             .map(ClaimsSetRequest::toJSONString)
                             .orElse(null);
             var nonce = new Nonce(IdGenerator.generate());
-            var signedJWT =
+            var encryptedJWT =
                     authorisationService.constructRequestJWT(
                             state,
                             nonce,
@@ -121,7 +121,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                             .state(state)
                             .redirectionURI(configurationService.getIPVAuthorisationCallbackURI())
                             .endpointURI(configurationService.getIPVAuthorisationURI())
-                            .requestObject(signedJWT);
+                            .requestObject(encryptedJWT);
 
             var ipvAuthorisationRequest = authRequestBuilder.build();
             authorisationService.storeState(userContext.getSession().getSessionId(), state);

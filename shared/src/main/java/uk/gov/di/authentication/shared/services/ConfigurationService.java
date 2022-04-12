@@ -135,6 +135,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("IPV_TOKEN_SIGNING_KEY_ALIAS");
     }
 
+    public String getIPVAuthEncryptionKeyAlias() {
+        return System.getenv("IPV_AUTH_ENCRYPTION_KEY_ALIAS");
+    }
+
     public Optional<String> getInvokedLambdaEndpoint() {
         return Optional.ofNullable(System.getenv("INVOKED_LAMBDA_ENDPOINT"));
     }

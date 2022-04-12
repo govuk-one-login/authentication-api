@@ -301,3 +301,19 @@ resource "aws_kms_alias" "ipv_token_auth_signing_key_alias" {
   name          = "alias/${var.environment}-ipv-token-auth-kms-key-alias"
   target_key_id = aws_kms_key.ipv_token_auth_signing_key.key_id
 }
+
+# IPV Authentication encryption KMS key
+
+resource "aws_kms_key" "ipv_auth_encryption_key" {
+  description              = "KMS encryption key for secure JWT authentication request"
+  deletion_window_in_days  = 30
+  key_usage                = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "RSA_2048"
+
+  tags = local.default_tags
+}
+
+resource "aws_kms_alias" "ipv_auth_encryption_key_alias" {
+  name          = "alias/${var.environment}-ipv-auth-encryption-kms-key-alias"
+  target_key_id = aws_kms_key.ipv_auth_encryption_key.key_id
+}

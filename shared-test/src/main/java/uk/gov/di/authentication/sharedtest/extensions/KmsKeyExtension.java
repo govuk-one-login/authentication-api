@@ -7,10 +7,12 @@ import com.amazonaws.services.kms.model.CreateAliasRequest;
 import com.amazonaws.services.kms.model.CreateKeyRequest;
 import com.amazonaws.services.kms.model.CustomerMasterKeySpec;
 import com.amazonaws.services.kms.model.DescribeKeyRequest;
+import com.amazonaws.services.kms.model.KeyUsageType;
 import com.amazonaws.services.kms.model.NotFoundException;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
+import static com.amazonaws.services.kms.model.KeyUsageType.ENCRYPT_DECRYPT;
 import static com.amazonaws.services.kms.model.KeyUsageType.SIGN_VERIFY;
 import static java.text.MessageFormat.format;
 
@@ -20,9 +22,15 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
     protected final String keyAliasSuffix;
 
     private String keyAlias;
+    private KeyUsageType keyUsageType;
 
     public KmsKeyExtension(String keyAliasSuffix) {
+        this(keyAliasSuffix, SIGN_VERIFY);
+    }
+
+    public KmsKeyExtension(String keyAliasSuffix, KeyUsageType keyUsageType) {
         this.keyAliasSuffix = keyAliasSuffix;
+        this.keyUsageType = keyUsageType;
     }
 
     @Override
@@ -41,7 +49,11 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
                         keyAliasSuffix);
 
         if (!keyExists(keyAlias)) {
-            createTokenSigningKey(keyAlias);
+            if (keyUsageType.equals(ENCRYPT_DECRYPT)) {
+                createEncryptionKey(keyAlias);
+            } else {
+                createTokenSigningKey(keyAlias);
+            }
         }
     }
 
@@ -52,6 +64,24 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
                 new CreateKeyRequest()
                         .withCustomerMasterKeySpec(CustomerMasterKeySpec.ECC_NIST_P256)
                         .withKeyUsage(SIGN_VERIFY);
+
+        var keyResponse = kms.createKey(keyRequest);
+
+        CreateAliasRequest aliasRequest =
+                new CreateAliasRequest()
+                        .withAliasName(keyAlias)
+                        .withTargetKeyId(keyResponse.getKeyMetadata().getKeyId());
+
+        kms.createAlias(aliasRequest);
+    }
+
+    // https://github.com/aws/aws-sdk/issues/125
+    @SuppressWarnings("deprecation")
+    protected void createEncryptionKey(String keyAlias) {
+        CreateKeyRequest keyRequest =
+                new CreateKeyRequest()
+                        .withCustomerMasterKeySpec(CustomerMasterKeySpec.RSA_2048)
+                        .withKeyUsage(ENCRYPT_DECRYPT);
 
         var keyResponse = kms.createKey(keyRequest);
 
