@@ -140,7 +140,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public String getIPVAuthEncryptionPublicKey() {
-        var paramName = format("{0}-ipv-auth-encryption-public-key", getEnvironment());
+        var paramName = format("{0}-ipv-public-encryption-key", getEnvironment());
         try {
             var request = new GetParameterRequest().withWithDecryption(true).withName(paramName);
             return getSsmClient().getParameter(request).getParameter().getValue();
