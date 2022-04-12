@@ -22,6 +22,10 @@ import uk.gov.di.authentication.sharedtest.extensions.IPVStubExtension;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -46,6 +50,11 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
     private static final String TEST_EMAIL_ADDRESS = "test@emailtest.com";
     private static final String IPV_CLIENT_ID = "ipv-client-id";
+    private final KeyPair keyPair = generateRsaKeyPair();
+    private final String publicKey =
+            "-----BEGIN PUBLIC KEY-----\n"
+                    + Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded())
+                    + "\n-----END PUBLIC KEY-----\n";
 
     @RegisterExtension public static final IPVStubExtension ipvStub = new IPVStubExtension();
 
@@ -126,6 +135,17 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                 .build();
     }
 
+    private KeyPair generateRsaKeyPair() {
+        KeyPairGenerator kpg;
+        try {
+            kpg = KeyPairGenerator.getInstance("RSA");
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+        kpg.initialize(2048);
+        return kpg.generateKeyPair();
+    }
+
     private class IPVTestConfigurationService extends IntegrationTestConfigurationService {
 
         private final IPVStubExtension ipvStubExtension;
@@ -165,8 +185,8 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         }
 
         @Override
-        public String getIPVAuthEncryptionKeyAlias() {
-            return ipvEncryptionKey.getKeyAlias();
+        public String getIPVAuthEncryptionPublicKey() {
+            return publicKey;
         }
     }
 }
