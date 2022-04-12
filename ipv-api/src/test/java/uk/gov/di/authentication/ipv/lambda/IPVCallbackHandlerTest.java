@@ -120,6 +120,7 @@ class IPVCallbackHandlerTest {
     void shouldRedirectToFrontendCallbackForSuccessfulResponse()
             throws URISyntaxException, JsonProcessingException {
         var salt = "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes();
+        var sectorId = "https://test.com";
         var clientRegistry = generateClientRegistry();
         var userProfile = generateUserProfile();
         var credential = SignedCredentialHelper.generateCredential().serialize();
@@ -167,6 +168,7 @@ class IPVCallbackHandlerTest {
                                                         OIDC_BASE_URL + "/trustmark"),
                                                 SUBJECT.getValue(),
                                                 salt,
+                                                sectorId,
                                                 expectedPairwiseSub.getValue(),
                                                 new LogIds(session.getSessionId()))));
 

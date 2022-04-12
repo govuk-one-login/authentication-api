@@ -78,6 +78,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     void shouldRedirectToLoginWhenSuccessfullyProcessedIpvResponse() throws IOException {
         var sessionId = "some-session-id";
         var clientSessionId = "some-client-session-id";
+        var sectorId = "https://test.com";
         var scope = new Scope(OIDCScopeValue.OPENID);
         var authRequestBuilder =
                 new AuthenticationRequest.Builder(
@@ -120,6 +121,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 new SPOTClaims(LevelOfConfidence.MEDIUM_LEVEL.getValue(), null),
                                 INTERNAL_SUBJECT.getValue(),
                                 salt,
+                                sectorId,
                                 calculatePairwiseIdentifier(
                                         INTERNAL_SUBJECT.getValue(), "https://test.com", salt),
                                 new LogIds(sessionId))));

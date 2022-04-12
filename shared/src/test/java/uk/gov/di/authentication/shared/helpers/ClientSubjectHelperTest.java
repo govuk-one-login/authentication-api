@@ -101,6 +101,29 @@ class ClientSubjectHelperTest {
         assertEquals(subject1, subject2);
     }
 
+    @Test
+    void shouldGetSectorIdentierWhenDefinedByClient() {
+        KeyPair keyPair = generateRsaKeyPair();
+        ClientRegistry clientRegistry1 =
+                generateClientRegistryPairwise(
+                        keyPair, "test-client-id-1", "public", "https://test.com");
+
+        String sectorId = ClientSubjectHelper.getSectorIdentifierForClient(clientRegistry1);
+
+        assertEquals(sectorId, "https://test.com");
+    }
+
+    @Test
+    void shouldGetRedirectHostWhenSectorIdentierNotDefinedByClient() {
+        KeyPair keyPair = generateRsaKeyPair();
+        ClientRegistry clientRegistry1 =
+                generateClientRegistryPairwise(keyPair, "test-client-id-1", "public", null);
+
+        String sectorId = ClientSubjectHelper.getSectorIdentifierForClient(clientRegistry1);
+
+        assertEquals(sectorId, "localhost");
+    }
+
     private KeyPair generateRsaKeyPair() {
         KeyPairGenerator kpg;
         try {
