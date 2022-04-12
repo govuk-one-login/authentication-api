@@ -374,7 +374,7 @@ public class TokenService {
         return refreshToken;
     }
 
-    private SignedJWT generateSignedJWT(JWTClaimsSet claimsSet) {
+    public SignedJWT generateSignedJWT(JWTClaimsSet claimsSet) {
 
         var signingKeyId =
                 kmsConnectionService
