@@ -8,11 +8,10 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
 public class ClientSubjectHelper {
 
@@ -34,27 +33,39 @@ public class ClientSubjectHelper {
     }
 
     public static String getSectorIdentifierForClient(ClientRegistry client) {
+        if (!hasValidClientConfig(client)) {
+            String message =
+                    String.format(
+                            "ClientConfig for client %s has invalid sector id.",
+                            client.getClientID());
+            LOG.error(message);
+            throw new RuntimeException(message);
+        }
         return client.getSectorIdentifierUri() != null
-                ? client.getSectorIdentifierUri()
-                : returnHost(client);
+                ? returnHost(client.getSectorIdentifierUri())
+                : returnHost(client.getRedirectUrls().stream().findFirst().orElseThrow());
     }
 
-    private static String returnHost(ClientRegistry clientRegistry) {
-        String redirectUri;
+    static boolean hasValidClientConfig(ClientRegistry client) {
+        if (client.getRedirectUrls().size() > 1 && client.getSectorIdentifierUri() == null) {
+            return client.getRedirectUrls().stream()
+                            .map(ClientSubjectHelper::returnHost)
+                            .collect(Collectors.toSet())
+                            .size()
+                    == 1;
+        } else {
+            return true;
+        }
+    }
+
+    static String returnHost(String uri) {
         try {
-            redirectUri = clientRegistry.getRedirectUrls().stream().findFirst().orElseThrow();
-        } catch (NoSuchElementException e) {
-            LOG.warn("Client Registry contains no redirect URLs");
+            var hostname = URI.create(uri).getHost();
+            return hostname.startsWith("www.") ? hostname.substring(4) : hostname;
+        } catch (IllegalArgumentException | NullPointerException e) {
+            LOG.error("Not a valid URI {} - Exception {}", uri, e);
             throw new RuntimeException(e);
         }
-        try {
-            var hostname = new URI(redirectUri).getHost();
-            if (hostname != null)
-                return hostname.startsWith("www.") ? hostname.substring(4) : hostname;
-        } catch (URISyntaxException e) {
-            LOG.info("Not a valid URI {} - Exception {}", redirectUri, e);
-        }
-        return redirectUri;
     }
 
     public static String calculatePairwiseIdentifier(String subjectID, String sector, byte[] salt) {
