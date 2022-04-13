@@ -57,7 +57,7 @@ class BackChannelLogoutServiceTest {
         assertThat(message.getLogoutUri(), is("http://localhost:8080/back-channel-logout"));
         assertThat(
                 message.getSubjectId(),
-                is("1b8920099adc11e966d68335276d1db274e8c79588b2b608f9182ecc3908ee07"));
+                is("b46381e6de5f4405ff162a3aa91223f0a3c32fbbce839802a88e25e670d9083b"));
     }
 
     @Test

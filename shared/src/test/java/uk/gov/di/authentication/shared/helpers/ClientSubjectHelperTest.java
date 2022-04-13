@@ -17,11 +17,15 @@ import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Base64;
+import java.util.List;
 import java.util.Set;
 
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -102,7 +106,7 @@ class ClientSubjectHelperTest {
     }
 
     @Test
-    void shouldGetSectorIdentierWhenDefinedByClient() {
+    void shouldGetHostAsSectorIdentierWhenDefinedByClient() {
         KeyPair keyPair = generateRsaKeyPair();
         ClientRegistry clientRegistry1 =
                 generateClientRegistryPairwise(
@@ -110,7 +114,7 @@ class ClientSubjectHelperTest {
 
         String sectorId = ClientSubjectHelper.getSectorIdentifierForClient(clientRegistry1);
 
-        assertEquals(sectorId, "https://test.com");
+        assertEquals("test.com", sectorId);
     }
 
     @Test
@@ -121,7 +125,125 @@ class ClientSubjectHelperTest {
 
         String sectorId = ClientSubjectHelper.getSectorIdentifierForClient(clientRegistry1);
 
-        assertEquals(sectorId, "localhost");
+        assertEquals("localhost", sectorId);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenClientConfigSectorIdInvalid() {
+        KeyPair keyPair = generateRsaKeyPair();
+        ClientRegistry clientRegistry1 =
+                generateClientRegistryPairwise(
+                        keyPair,
+                        "test-client-id-1",
+                        "public",
+                        null,
+                        List.of("https://www.test.com", "https://www.test2.com"));
+
+        assertThrows(
+                RuntimeException.class,
+                () -> ClientSubjectHelper.getSectorIdentifierForClient(clientRegistry1),
+                "Expected to throw exception");
+    }
+
+    @Test
+    void shouldReturnHostForValidSectorUri() {
+        assertEquals("test.com", ClientSubjectHelper.returnHost("https://test.com/hello"));
+    }
+
+    @Test
+    void shouldReturnHostForValidSectorUriStartingWWW() {
+        assertEquals("test.com", ClientSubjectHelper.returnHost("https://www.test.com/hello"));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenReturnHostIsNotAValidUri() {
+        var expectedException =
+                assertThrows(
+                        RuntimeException.class,
+                        () -> ClientSubjectHelper.returnHost("www.test.com/hello"),
+                        "Expected to throw exception");
+        assertEquals(NullPointerException.class, expectedException.getCause().getClass());
+    }
+
+    @Test
+    void shouldThrowExceptionWhenReturnHostIsNotAWellFormedUri() {
+        var expectedException =
+                assertThrows(
+                        RuntimeException.class,
+                        () -> ClientSubjectHelper.returnHost("https://test..com"),
+                        "Expected to throw exception");
+        assertEquals(NullPointerException.class, expectedException.getCause().getClass());
+    }
+
+    @Test
+    void shouldThrowExceptionWhenReturnHostIsNotAWellFormedUriWithoutHttps() {
+        var expectedException =
+                assertThrows(
+                        RuntimeException.class,
+                        () -> ClientSubjectHelper.returnHost("test..com"),
+                        "Expected to throw exception");
+        assertEquals(NullPointerException.class, expectedException.getCause().getClass());
+    }
+
+    @Test
+    void shouldBeValidClientWithoutSectorId() {
+        KeyPair keyPair = generateRsaKeyPair();
+        ClientRegistry clientRegistry1 =
+                generateClientRegistryPairwise(keyPair, "test-client-id-1", "public", null);
+
+        assertTrue(ClientSubjectHelper.hasValidClientConfig(clientRegistry1));
+    }
+
+    @Test
+    void shouldBeValidClientWithSectorId() {
+        KeyPair keyPair = generateRsaKeyPair();
+        ClientRegistry clientRegistry1 =
+                generateClientRegistryPairwise(
+                        keyPair, "test-client-id-1", "public", "https://test.com");
+
+        assertTrue(ClientSubjectHelper.hasValidClientConfig(clientRegistry1));
+    }
+
+    @Test
+    void shouldBeValidClientWithSectorIdAndTwoRedirectHosts() {
+        KeyPair keyPair = generateRsaKeyPair();
+        ClientRegistry clientRegistry1 =
+                generateClientRegistryPairwise(
+                        keyPair,
+                        "test-client-id-1",
+                        "public",
+                        "https://test.com",
+                        List.of("https://www.test.com", "https://www.test2.com"));
+
+        assertTrue(ClientSubjectHelper.hasValidClientConfig(clientRegistry1));
+    }
+
+    @Test
+    void shouldBeInvalidClientWithoutSectorIdAndTwoRedirectHosts() {
+        KeyPair keyPair = generateRsaKeyPair();
+        ClientRegistry clientRegistry1 =
+                generateClientRegistryPairwise(
+                        keyPair,
+                        "test-client-id-1",
+                        "public",
+                        null,
+                        List.of("https://www.test.com", "https://www.test2.com"));
+
+        assertFalse(ClientSubjectHelper.hasValidClientConfig(clientRegistry1));
+    }
+
+    @Test
+    void shouldBeValidClientWithoutSectorIdAndOneRedirectHostsWithTwoRedirectUris() {
+        KeyPair keyPair = generateRsaKeyPair();
+        ClientRegistry clientRegistry1 =
+                generateClientRegistryPairwise(
+                        keyPair,
+                        "test-client-id-1",
+                        "public",
+                        null,
+                        List.of("https://www.test.com/1", "https://www.test.com/2"));
+
+        assertTrue(ClientSubjectHelper.hasValidClientConfig(clientRegistry1));
     }
 
     private KeyPair generateRsaKeyPair() {
@@ -137,10 +259,20 @@ class ClientSubjectHelperTest {
 
     private ClientRegistry generateClientRegistryPairwise(
             KeyPair keyPair, String clientID, String subectType, String sector) {
+        return generateClientRegistryPairwise(
+                keyPair, clientID, subectType, sector, singletonList(REDIRECT_URI));
+    }
+
+    private ClientRegistry generateClientRegistryPairwise(
+            KeyPair keyPair,
+            String clientID,
+            String subectType,
+            String sector,
+            List<String> redirectUrls) {
         return new ClientRegistry()
                 .setClientID(clientID)
                 .setClientName("test-client")
-                .setRedirectUrls(singletonList(REDIRECT_URI))
+                .setRedirectUrls(redirectUrls)
                 .setScopes(SCOPES.toStringList())
                 .setContacts(singletonList(TEST_EMAIL))
                 .setPublicKey(

@@ -120,7 +120,7 @@ class IPVCallbackHandlerTest {
     void shouldRedirectToFrontendCallbackForSuccessfulResponse()
             throws URISyntaxException, JsonProcessingException {
         var salt = "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes();
-        var sectorId = "https://test.com";
+        var sectorId = "test.com";
         var clientRegistry = generateClientRegistry();
         var userProfile = generateUserProfile();
         var credential = SignedCredentialHelper.generateCredential().serialize();
