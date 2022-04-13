@@ -80,14 +80,6 @@ output "ipv_token_auth_signing_key_arn" {
   value = aws_kms_key.ipv_token_auth_signing_key.arn
 }
 
-output "ipv_auth_encryption_key_alias_name" {
-  value = aws_kms_alias.ipv_auth_encryption_key_alias.name
-}
-
-output "ipv_auth_encryption_key_arn" {
-  value = aws_kms_key.ipv_auth_encryption_key.arn
-}
-
 output "audit_signing_key_alias_name" {
   value = aws_kms_alias.audit_payload_signing_key_alias.name
 }

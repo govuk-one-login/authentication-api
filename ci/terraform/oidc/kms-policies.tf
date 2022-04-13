@@ -60,27 +60,3 @@ resource "aws_iam_policy" "ipv_token_auth_kms_policy" {
 
   policy = data.aws_iam_policy_document.ipv_token_auth_kms_policy_document.json
 }
-
-### IPV encryption key access
-
-data "aws_iam_policy_document" "ipv_auth_encryption_kms_policy_document" {
-  statement {
-    sid    = "AllowAccessToIPVKmsEncryptionKey"
-    effect = "Allow"
-
-    actions = [
-      "kms:GetPublicKey",
-    ]
-    resources = [
-      local.ipv_auth_encryption_key_arn
-    ]
-  }
-}
-
-resource "aws_iam_policy" "ipv_auth_encryption_kms_policy" {
-  name_prefix = "kms-ipv-auth-encryption-policy"
-  path        = "/${var.environment}/ipv-token/"
-  description = "IAM policy for managing IPV authentication encryption KMS key access"
-
-  policy = data.aws_iam_policy_document.ipv_auth_encryption_kms_policy_document.json
-}

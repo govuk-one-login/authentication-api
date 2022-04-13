@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.ipv.services;
 
-import com.amazonaws.services.kms.model.GetPublicKeyRequest;
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -135,6 +134,7 @@ public class IPVAuthorisationService {
 
     public EncryptedJWT constructRequestJWT(
             State state, Nonce nonce, Scope scope, Subject subject, String claims) {
+        LOG.info("Generating request JWT");
         var jwsHeader = new JWSHeader(SIGNING_ALGORITHM);
         var jwtID = IdGenerator.generate();
         var expiryDate =
@@ -167,8 +167,9 @@ public class IPVAuthorisationService {
         signRequest.setKeyId(configurationService.getIPVTokenSigningKeyAlias());
         signRequest.setSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256.toString());
         try {
+            LOG.info("Signing request JWT");
             var signResult = kmsConnectionService.sign(signRequest);
-            LOG.info("Token has been signed successfully");
+            LOG.info("Request JWT has been signed successfully");
             var signature =
                     Base64URL.encode(
                                     ECDSA.transcodeSignatureToConcat(
@@ -176,16 +177,18 @@ public class IPVAuthorisationService {
                                             ECDSA.getSignatureByteArrayLength(SIGNING_ALGORITHM)))
                             .toString();
             var signedJWT = SignedJWT.parse(message + "." + signature);
-            return encryptJWT(signedJWT);
+            var encryptedJWT = encryptJWT(signedJWT);
+            LOG.info("Encrypted request JWT has been generated");
+            return encryptedJWT;
         } catch (ParseException | JOSEException e) {
+            LOG.error("Error when generating SignedJWT", e);
             throw new RuntimeException(e);
         }
     }
 
     private EncryptedJWT encryptJWT(SignedJWT signedJWT) {
         try {
-            var getPublicKeyRequest = new GetPublicKeyRequest();
-            getPublicKeyRequest.setKeyId(configurationService.getIPVAuthEncryptionKeyAlias());
+            LOG.info("Encrypting SignedJWT");
             var publicEncryptionKey = getPublicKey();
             var jweObject =
                     new JWEObject(
@@ -195,16 +198,20 @@ public class IPVAuthorisationService {
                                     .build(),
                             new Payload(signedJWT));
             jweObject.encrypt(new RSAEncrypter(publicEncryptionKey));
-
+            LOG.info("SignedJWT has been successfully encrypted");
             return EncryptedJWT.parse(jweObject.serialize());
-        } catch (JOSEException | ParseException e) {
+        } catch (JOSEException e) {
             LOG.error("Error when encrypting SignedJWT", e);
+            throw new RuntimeException(e);
+        } catch (ParseException e) {
+            LOG.error("Error when parsing JWE object to EncryptedJWT", e);
             throw new RuntimeException(e);
         }
     }
 
     private RSAPublicKey getPublicKey() {
         try {
+            LOG.info("Getting IPV Auth Encryption Public Key");
             var ipvAuthEncryptionPublicKey = configurationService.getIPVAuthEncryptionPublicKey();
             return new RSAKey.Builder(
                             (RSAKey) JWK.parseFromPEMEncodedObjects(ipvAuthEncryptionPublicKey))
