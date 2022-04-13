@@ -67,9 +67,9 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
 
             var claims = generateClaims(payload);
 
-            var body = tokenService.generateSignedJWT(claims).toString();
+            var body = tokenService.generateSignedJWT(claims).serialize();
 
-            httpRequestService.post(URI.create(payload.getLogoutUri()), body);
+            httpRequestService.post(URI.create(payload.getLogoutUri()), "logout_token=" + body);
 
         } catch (JsonProcessingException e) {
             LOG.error("Could not parse logout request payload");

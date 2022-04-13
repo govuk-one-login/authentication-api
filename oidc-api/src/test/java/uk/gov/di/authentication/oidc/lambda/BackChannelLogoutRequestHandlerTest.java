@@ -1,8 +1,6 @@
 package uk.gov.di.authentication.oidc.lambda;
 
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.hamcrest.Description;
@@ -62,15 +60,18 @@ class BackChannelLogoutRequestHandlerTest {
                 new BackChannelLogoutMessage(
                         "client-id", "https://test.account.gov.uk", "some-subject-id");
 
-        var value = stubSignedJwt();
+        var jwt = mock(SignedJWT.class);
+
+        when(jwt.serialize()).thenReturn("serialized-payload");
 
         when(configuration.getOidcApiBaseURL())
                 .thenReturn(Optional.of("https://base-url.account.gov.uk"));
-        when(tokenService.generateSignedJWT(any(JWTClaimsSet.class))).thenReturn(value);
+        when(tokenService.generateSignedJWT(any(JWTClaimsSet.class))).thenReturn(jwt);
 
         handler.handleRequest(inputEvent(input), null);
 
-        verify(request).post(URI.create("https://test.account.gov.uk"), value.toString());
+        verify(request)
+                .post(URI.create("https://test.account.gov.uk"), "logout_token=serialized-payload");
     }
 
     @Test
@@ -111,10 +112,6 @@ class BackChannelLogoutRequestHandlerTest {
                 description.appendText("is a uuid");
             }
         };
-    }
-
-    private SignedJWT stubSignedJwt() {
-        return new SignedJWT(new JWSHeader(JWSAlgorithm.ES256), new JWTClaimsSet.Builder().build());
     }
 
     private SQSEvent inputEvent(BackChannelLogoutMessage payload) {
