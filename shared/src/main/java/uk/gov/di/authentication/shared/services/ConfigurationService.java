@@ -43,14 +43,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("ACCOUNT_MANAGEMENT_URI");
     }
 
-    public String getAuthorizeRequestLambdaArn() {
-        return System.getenv().get("AUTHORIZE_REQUEST_LAMBDA_ARN");
-    }
-
-    public String getAuthorizeRequestLambdaQualifier() {
-        return System.getenv().get("AUTHORIZE_REQUEST_LAMBDA_QUALIFIER");
-    }
-
     public long getAuthCodeExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("AUTH_CODE_EXPIRY", "300"));
     }
@@ -226,8 +218,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("RESET_PASSWORD_ROUTE", "");
     }
 
-    public boolean isRequestUriParamSupported() {
-        return System.getenv().getOrDefault("REQUEST_URI_PARAM_SUPPORTED", "false").equals("true");
+    public boolean isRequestObjectParamSupported() {
+        return System.getenv()
+                .getOrDefault("REQUEST_OBJECT_PARAM_SUPPORTED", "false")
+                .equals("true");
     }
 
     public String getSessionCookieAttributes() {

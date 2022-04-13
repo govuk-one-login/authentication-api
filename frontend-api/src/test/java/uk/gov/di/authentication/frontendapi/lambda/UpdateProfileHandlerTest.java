@@ -29,7 +29,6 @@ import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.AuthorizationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -89,7 +88,6 @@ class UpdateProfileHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
-    private final AuthorizationService authorizationService = mock(AuthorizationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
     private final ClientService clientService = mock(ClientService.class);
@@ -246,11 +244,6 @@ class UpdateProfileHandlerTest {
                         null);
         when(authenticationService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(generateUserProfileWithoutConsent()));
-        when(authorizationService.isClientRedirectUriValid(eq(clientID), eq(REDIRECT_URI)))
-                .thenReturn(true);
-        when(authorizationService.generateSuccessfulAuthResponse(
-                        any(AuthenticationRequest.class), any(AuthorizationCode.class)))
-                .thenReturn(authSuccessResponse);
 
         event.setHeaders(
                 Map.of(

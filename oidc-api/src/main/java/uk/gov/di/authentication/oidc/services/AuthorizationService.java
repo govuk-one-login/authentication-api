@@ -1,12 +1,5 @@
-package uk.gov.di.authentication.shared.services;
+package uk.gov.di.authentication.oidc.services;
 
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.lambda.AWSLambda;
-import com.amazonaws.services.lambda.AWSLambdaClientBuilder;
-import com.amazonaws.services.lambda.model.InvocationType;
-import com.amazonaws.services.lambda.model.InvokeRequest;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
@@ -23,17 +16,16 @@ import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.RequestUriPayload;
-import uk.gov.di.authentication.shared.entity.RequestUriResponsePayload;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoClientService;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -47,38 +39,14 @@ public class AuthorizationService {
 
     public static final String VTR_PARAM = "vtr";
     private final DynamoClientService dynamoClientService;
-    private final AWSLambda awsLambda;
-    private final ConfigurationService configurationService;
-
     private static final Logger LOG = LogManager.getLogger(AuthorizationService.class);
 
-    public AuthorizationService(
-            DynamoClientService dynamoClientService,
-            AWSLambda awsLambda,
-            ConfigurationService configurationService) {
+    public AuthorizationService(DynamoClientService dynamoClientService) {
         this.dynamoClientService = dynamoClientService;
-        this.awsLambda = awsLambda;
-        this.configurationService = configurationService;
     }
 
     public AuthorizationService(ConfigurationService configurationService) {
-        this(
-                new DynamoClientService(configurationService),
-                configurationService
-                        .getInvokedLambdaEndpoint()
-                        .map(
-                                t ->
-                                        AWSLambdaClientBuilder.standard()
-                                                .withEndpointConfiguration(
-                                                        new AwsClientBuilder.EndpointConfiguration(
-                                                                t,
-                                                                configurationService
-                                                                        .getAwsRegion())))
-                        .orElse(
-                                AWSLambdaClientBuilder.standard()
-                                        .withRegion(configurationService.getAwsRegion()))
-                        .build(),
-                configurationService);
+        this(new DynamoClientService(configurationService));
     }
 
     public boolean isClientRedirectUriValid(ClientID clientID, URI redirectURI)
@@ -108,7 +76,6 @@ public class AuthorizationService {
 
     public Optional<ErrorObject> validateAuthRequest(AuthenticationRequest authRequest) {
         var clientId = authRequest.getClientID().toString();
-        var isRequestUri = authRequest.getRequestURI() != null;
 
         attachLogFieldToLogs(CLIENT_ID, clientId);
 
@@ -120,15 +87,13 @@ public class AuthorizationService {
         }
 
         if (!client.get().getRedirectUrls().contains(authRequest.getRedirectionURI().toString())) {
-            LOG.warn(
-                    "Invalid Redirect URI in request {}",
-                    authRequest.getRedirectionURI().toString());
+            LOG.warn("Invalid Redirect URI in request {}", authRequest.getRedirectionURI());
             throw new RuntimeException(
                     format(
                             "Invalid Redirect in request %s",
                             authRequest.getRedirectionURI().toString()));
         }
-        if (isRequestUri && !configurationService.isRequestUriParamSupported()) {
+        if (authRequest.getRequestURI() != null) {
             return Optional.of(OAuth2Error.REQUEST_URI_NOT_SUPPORTED);
         }
         if (!authRequest.getResponseType().toString().equals(ResponseType.CODE.toString())) {
@@ -163,13 +128,6 @@ public class AuthorizationService {
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "Request is missing state parameter"));
         }
-        if (isRequestUri) {
-            if (!client.get().getRequestUris().contains(authRequest.getRequestURI().toString())) {
-                return Optional.of(
-                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Invalid request URI"));
-            }
-            return invokeAuthorizeRequestUriLambda(authRequest, client.get());
-        }
         List<String> authRequestVtr = authRequest.getCustomParameter(VTR_PARAM);
         try {
             VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
@@ -194,38 +152,6 @@ public class AuthorizationService {
                 errorObject);
     }
 
-    public Optional<ErrorObject> invokeAuthorizeRequestUriLambda(
-            AuthenticationRequest authenticationRequest, ClientRegistry clientRegistry) {
-        var lambdaArn = configurationService.getAuthorizeRequestLambdaArn();
-        try {
-            var invokeRequest =
-                    new InvokeRequest()
-                            .withFunctionName(lambdaArn)
-                            .withQualifier(
-                                    configurationService.getAuthorizeRequestLambdaQualifier())
-                            .withPayload(
-                                    new ObjectMapper()
-                                            .writeValueAsString(
-                                                    new RequestUriPayload(
-                                                            clientRegistry, authenticationRequest)))
-                            .withInvocationType(InvocationType.RequestResponse);
-            LOG.info("About to invoke the AuthorizeRequestUriHandler");
-            var invokeResult = awsLambda.invoke(invokeRequest);
-            var ans = new String(invokeResult.getPayload().array(), StandardCharsets.UTF_8);
-            var requestUriResponsePayload =
-                    new ObjectMapper().readValue(ans, RequestUriResponsePayload.class);
-            if (requestUriResponsePayload.isSuccessfulRequest()) {
-                LOG.info("Received successful response from AuthorizeRequestUriHandler");
-                return Optional.empty();
-            } else {
-                LOG.warn("Received unsuccessful response from AuthorizeRequestUriHandler");
-                return Optional.of(ErrorObject.parse(requestUriResponsePayload.getErrorObject()));
-            }
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     public AuthenticationErrorResponse generateAuthenticationErrorResponse(
             URI redirectUri, State state, ResponseMode responseMode, ErrorObject errorObject) {
         return new AuthenticationErrorResponse(redirectUri, errorObject, state, responseMode);
@@ -238,7 +164,7 @@ public class AuthorizationService {
 
     private boolean areScopesValid(List<String> scopes, ClientRegistry clientRegistry) {
         for (String scope : scopes) {
-            if (ValidScopes.getAllValidScopes().stream().noneMatch((t) -> t.equals(scope))) {
+            if (ValidScopes.getAllValidScopes().stream().noneMatch(t -> t.equals(scope))) {
                 return false;
             }
         }
@@ -258,11 +184,7 @@ public class AuthorizationService {
                 return false;
             }
         }
-        if (!clientRegistry.getClaims().containsAll(claimNames)) {
-            return false;
-        }
-
-        return true;
+        return clientRegistry.getClaims().containsAll(claimNames);
     }
 
     public String getExistingOrCreateNewPersistentSessionId(Map<String, String> headers) {

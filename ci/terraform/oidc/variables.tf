@@ -87,11 +87,6 @@ variable "use_localstack" {
   default = false
 }
 
-variable "handler_runtime" {
-  type    = string
-  default = "java11"
-}
-
 variable "terms_and_conditions" {
   type    = string
   default = "1.1"
@@ -251,7 +246,7 @@ variable "endpoint_memory_size" {
   type    = number
 }
 
-variable "request_uri_param_supported" {
+variable "request_object_param_supported" {
   default = false
   type    = bool
 }
