@@ -103,6 +103,8 @@ public class DynamoClientService implements ClientService {
         Optional.ofNullable(updateRequest.getPublicKey()).ifPresent(clientRegistry::setPublicKey);
         Optional.ofNullable(updateRequest.getServiceType())
                 .ifPresent(clientRegistry::setServiceType);
+        Optional.ofNullable(updateRequest.getSectorIdentifierUri())
+                .ifPresent(clientRegistry::setSectorIdentifierUri);
         clientRegistryMapper.save(clientRegistry);
         return clientRegistry;
     }

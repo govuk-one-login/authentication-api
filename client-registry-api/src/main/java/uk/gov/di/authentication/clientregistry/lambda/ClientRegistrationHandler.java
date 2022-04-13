@@ -141,7 +141,8 @@ public class ClientRegistrationHandler
                                                 clientRegistrationRequest.getServiceType(),
                                                 clientRegistrationRequest.getSubjectType(),
                                                 clientRegistrationRequest.getClaims(),
-                                                clientRegistrationRequest.getRequestUris());
+                                                clientRegistrationRequest.getRequestUris(),
+                                                clientRegistrationRequest.getSectorIdentifierUri());
                                 LOG.info("Generating successful Client registration response");
                                 return generateApiGatewayProxyResponse(
                                         200, clientRegistrationResponse);
