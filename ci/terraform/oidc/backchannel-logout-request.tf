@@ -30,7 +30,8 @@ resource "aws_lambda_function" "backchannel_logout_request_lambda" {
   }
   environment {
     variables = merge({
-      ENVIRONMENT = var.environment
+      ENVIRONMENT       = var.environment
+      OIDC_API_BASE_URL = local.api_base_url
     })
   }
   kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
