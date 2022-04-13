@@ -3,6 +3,10 @@ module "backchannel_logout_request_role" {
   environment = var.environment
   role_name   = "backchannel-logout-request-role"
   vpc_arn     = local.authentication_vpc_arn
+
+  policies_to_attach = [
+    aws_iam_policy.oidc_token_kms_signing_policy.arn
+  ]
 }
 
 resource "aws_lambda_function" "backchannel_logout_request_lambda" {
