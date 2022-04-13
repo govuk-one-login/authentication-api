@@ -146,6 +146,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         }
     }
 
+    public String getIPVDomain() {
+        return System.getenv("IPV_DOMAIN");
+    }
+
     public Optional<String> getInvokedLambdaEndpoint() {
         return Optional.ofNullable(System.getenv("INVOKED_LAMBDA_ENDPOINT"));
     }
