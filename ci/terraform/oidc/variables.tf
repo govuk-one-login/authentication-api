@@ -241,6 +241,11 @@ variable "ipv_backend_uri" {
   default = "undefined"
 }
 
+variable "ipv_domain" {
+  type    = string
+  default = "undefined"
+}
+
 variable "endpoint_memory_size" {
   default = 4096
   type    = number

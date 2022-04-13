@@ -32,6 +32,17 @@ public class ClientSubjectHelper {
         }
     }
 
+    public static Subject getSubjectWithSectorIdentifier(
+            UserProfile userProfile,
+            String sectorIdentifierURI,
+            AuthenticationService authenticationService) {
+        return new Subject(
+                calculatePairwiseIdentifier(
+                        userProfile.getSubjectID(),
+                        returnHost(sectorIdentifierURI),
+                        authenticationService.getOrGenerateSalt(userProfile)));
+    }
+
     public static String getSectorIdentifierForClient(ClientRegistry client) {
         if (!hasValidClientConfig(client)) {
             String message =
@@ -68,11 +79,12 @@ public class ClientSubjectHelper {
         }
     }
 
-    public static String calculatePairwiseIdentifier(String subjectID, String sector, byte[] salt) {
+    public static String calculatePairwiseIdentifier(
+            String subjectID, String sectorHost, byte[] salt) {
         try {
             var md = MessageDigest.getInstance("SHA-256");
 
-            md.update(sector.getBytes(StandardCharsets.UTF_8));
+            md.update(sectorHost.getBytes(StandardCharsets.UTF_8));
             md.update(subjectID.getBytes(StandardCharsets.UTF_8));
 
             byte[] bytes = md.digest(salt);
