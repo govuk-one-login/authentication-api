@@ -143,8 +143,8 @@ public class AuthorisationHandler
                                         "No query string parameters are present in the Authentication request",
                                         e);
                             }
-
-                            var error = authorizationService.validateAuthRequest(authRequest);
+                            Optional<ErrorObject> error =
+                                    authorizationService.validateAuthRequest(authRequest);
 
                             return error.map(
                                             e ->
