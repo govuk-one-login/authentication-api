@@ -34,6 +34,7 @@ import net.minidev.json.JSONArray;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
@@ -132,13 +133,23 @@ public class TokenHandlerTest {
                         redisConnectionService);
     }
 
-    private static Stream<String> validVectorValues() {
-        return Stream.of("Cl.Cm", "Cl", "P2.Cl.Cm", "P2.Cl");
+    private static Stream<Arguments> validVectorValues() {
+        return Stream.of(
+                Arguments.of("Cl.Cm", true, true),
+                Arguments.of("Cl", true, true),
+                Arguments.of("P2.Cl.Cm", true, false),
+                Arguments.of("P2.Cl", true, false),
+                Arguments.of("Cl.Cm", false, false),
+                Arguments.of("Cl", false, false),
+                Arguments.of("P2.Cl.Cm", false, false),
+                Arguments.of("P2.Cl", false, false));
     }
 
     @ParameterizedTest
     @MethodSource("validVectorValues")
-    public void shouldReturn200ForSuccessfulTokenRequest(String vectorValue) throws JOSEException {
+    public void shouldReturn200ForSuccessfulTokenRequest(
+            String vectorValue, boolean clientRegistryConsent, boolean expectedConsentRequired)
+            throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
         UserProfile userProfile = generateUserProfile();
         SignedJWT signedJWT =
@@ -150,7 +161,7 @@ public class TokenHandlerTest {
         OIDCTokenResponse tokenResponse =
                 new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry = generateClientRegistry(keyPair);
+        ClientRegistry clientRegistry = generateClientRegistry(keyPair, clientRegistryConsent);
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
@@ -186,7 +197,7 @@ public class TokenHandlerTest {
                         PUBLIC_SUBJECT,
                         vtr.retrieveVectorOfTrustForToken(),
                         userProfile.getClientConsent(),
-                        clientRegistry.isConsentRequired(),
+                        expectedConsentRequired,
                         null))
                 .thenReturn(tokenResponse);
 
@@ -205,7 +216,7 @@ public class TokenHandlerTest {
         OIDCTokenResponse tokenResponse =
                 new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry = generateClientRegistry(keyPair);
+        ClientRegistry clientRegistry = generateClientRegistry(keyPair, false);
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
@@ -251,7 +262,7 @@ public class TokenHandlerTest {
         OIDCTokenResponse tokenResponse =
                 new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry = generateClientRegistry(keyPair);
+        ClientRegistry clientRegistry = generateClientRegistry(keyPair, false);
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
@@ -327,7 +338,7 @@ public class TokenHandlerTest {
     public void shouldReturn400IfSignatureOfPrivateKeyJWTCantBeVerified() throws JOSEException {
         KeyPair keyPairOne = generateRsaKeyPair();
         KeyPair keyPairTwo = generateRsaKeyPair();
-        ClientRegistry clientRegistry = generateClientRegistry(keyPairTwo);
+        ClientRegistry clientRegistry = generateClientRegistry(keyPairTwo, false);
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPairOne.getPrivate());
         when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
         when(tokenService.validatePrivateKeyJWT(
@@ -348,7 +359,7 @@ public class TokenHandlerTest {
     public void shouldReturn400IfAuthCodeIsNotFound() throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry = generateClientRegistry(keyPair);
+        ClientRegistry clientRegistry = generateClientRegistry(keyPair, false);
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
@@ -372,7 +383,7 @@ public class TokenHandlerTest {
             throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry = generateClientRegistry(keyPair);
+        ClientRegistry clientRegistry = generateClientRegistry(keyPair, false);
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
@@ -438,10 +449,10 @@ public class TokenHandlerTest {
                 null);
     }
 
-    private ClientRegistry generateClientRegistry(KeyPair keyPair) {
+    private ClientRegistry generateClientRegistry(KeyPair keyPair, boolean consentRequired) {
         return new ClientRegistry()
                 .setClientID(CLIENT_ID)
-                .setConsentRequired(false)
+                .setConsentRequired(consentRequired)
                 .setClientName("test-client")
                 .setRedirectUrls(singletonList(REDIRECT_URI))
                 .setScopes(SCOPES.toStringList())
