@@ -45,6 +45,7 @@ import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 
 import java.net.URI;
@@ -293,8 +294,7 @@ public class TokenService {
                         .claim("scope", scopes)
                         .issuer(configService.getOidcApiBaseURL().get())
                         .expirationTime(expiryDate)
-                        .issueTime(
-                                Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()))
+                        .issueTime(NowHelper.now())
                         .claim("client_id", clientId)
                         .subject(publicSubject.getValue())
                         .jwtID(jwtID);
@@ -336,8 +336,7 @@ public class TokenService {
                         .claim("scope", scopes)
                         .issuer(configService.getOidcApiBaseURL().get())
                         .expirationTime(expiryDate)
-                        .issueTime(
-                                Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()))
+                        .issueTime(NowHelper.now())
                         .claim("client_id", clientId)
                         .subject(publicSubject.getValue())
                         .jwtID(UUID.randomUUID().toString())
@@ -415,8 +414,7 @@ public class TokenService {
     private boolean hasPrivateKeyJwtExpired(SignedJWT signedJWT) {
         try {
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
-            LocalDateTime localDateTime = LocalDateTime.now();
-            Date currentDateTime = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+            Date currentDateTime = NowHelper.now();
             if (DateUtils.isBefore(claimsSet.getExpirationTime(), currentDateTime, 30)) {
                 return true;
             }

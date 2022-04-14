@@ -13,6 +13,7 @@ import uk.gov.di.accountmanagement.entity.TokenAuthorizerContext;
 import uk.gov.di.accountmanagement.lambda.AuthoriseAccessTokenHandler;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
@@ -162,8 +163,7 @@ class AuthoriseAccessTokenIntegrationTest
                         .claim("scope", scopes)
                         .issuer("issuer-id")
                         .expirationTime(expiryDate)
-                        .issueTime(
-                                Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()))
+                        .issueTime(NowHelper.now())
                         .claim("client_id", clientId)
                         .subject(publicSubject)
                         .jwtID(UUID.randomUUID().toString())

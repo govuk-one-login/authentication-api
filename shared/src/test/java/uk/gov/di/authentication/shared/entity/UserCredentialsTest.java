@@ -3,6 +3,7 @@ package uk.gov.di.authentication.shared.entity;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -25,8 +26,7 @@ class UserCredentialsTest {
                             .atZone(ZoneId.of("UTC"))
                             .toInstant()
                             .minus(30, ChronoUnit.SECONDS));
-    private static final Date UPDATED_DATE_TIME =
-            Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant());
+    private static final Date UPDATED_DATE_TIME = NowHelper.now();
 
     @Test
     void shouldCreateUserCredentials() {

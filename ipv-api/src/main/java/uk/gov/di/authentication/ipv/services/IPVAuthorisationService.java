@@ -30,6 +30,7 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
@@ -150,8 +151,7 @@ public class IPVAuthorisationService {
                         .audience(configurationService.getIPVAuthorisationURI().toString())
                         .expirationTime(expiryDate)
                         .subject(subject.getValue())
-                        .issueTime(
-                                Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()))
+                        .issueTime(NowHelper.now())
                         .jwtID(jwtID)
                         .claim("state", state.getValue())
                         .claim("nonce", nonce.getValue())

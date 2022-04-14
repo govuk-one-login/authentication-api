@@ -18,6 +18,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -117,8 +118,7 @@ public class TokenGeneratorHelper {
                         .claim("scope", scopes)
                         .issuer(issuerUrl)
                         .expirationTime(expiryDate)
-                        .issueTime(
-                                Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()))
+                        .issueTime(NowHelper.now())
                         .claim("client_id", clientId)
                         .subject(subject.getValue())
                         .jwtID(UUID.randomUUID().toString());

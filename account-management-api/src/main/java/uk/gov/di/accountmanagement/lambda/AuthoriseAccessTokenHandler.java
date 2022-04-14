@@ -13,14 +13,13 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.accountmanagement.entity.AuthPolicy;
 import uk.gov.di.accountmanagement.entity.TokenAuthorizerContext;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 
@@ -95,9 +94,7 @@ public class AuthoriseAccessTokenHandler
                 SignedJWT signedAccessToken = SignedJWT.parse(accessToken.getValue());
                 JWTClaimsSet claimsSet = signedAccessToken.getJWTClaimsSet();
 
-                LocalDateTime localDateTime = LocalDateTime.now();
-                Date currentDateTime =
-                        Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+                Date currentDateTime = NowHelper.now();
                 if (DateUtils.isBefore(claimsSet.getExpirationTime(), currentDateTime, 0)) {
                     LOG.warn(
                             "Access Token expires at: {}. CurrentDateTime is: {}",

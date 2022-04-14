@@ -24,6 +24,7 @@ import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
@@ -66,7 +67,7 @@ public class IPVTokenService {
                         singletonList(new Audience(ipvTokenURI)),
                         Date.from(expiryDate.atZone(ZoneId.of("UTC")).toInstant()),
                         null,
-                        Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()),
+                        NowHelper.now(),
                         new JWTID());
         return new TokenRequest(
                 ipvTokenURI,

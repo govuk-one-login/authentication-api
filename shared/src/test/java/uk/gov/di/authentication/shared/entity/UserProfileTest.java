@@ -5,6 +5,7 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -30,8 +31,7 @@ class UserProfileTest {
                             .atZone(ZoneId.of("UTC"))
                             .toInstant()
                             .minus(30, ChronoUnit.SECONDS));
-    private static final Date UPDATED_DATE_TIME =
-            Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant());
+    private static final Date UPDATED_DATE_TIME = NowHelper.now();
     private static final String LEGACY_SUBJECT_ID = new Subject("legacy-subject-id-1").getValue();
     private static final String PUBLIC_SUBJECT_ID = new Subject("public-subject-id-2").getValue();
     private static final String SUBJECT_ID = new Subject("subject-id-3").getValue();

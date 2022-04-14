@@ -20,6 +20,7 @@ import com.nimbusds.oauth2.sdk.id.JWTID;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
@@ -96,7 +97,7 @@ class IPVTokenServiceTest {
                                         .atZone(ZoneId.of("UTC"))
                                         .toInstant()),
                         null,
-                        Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()),
+                        NowHelper.now(),
                         new JWTID());
         var ecdsaSigner = new ECDSASigner(ecSigningKey);
         var jwsHeader =
