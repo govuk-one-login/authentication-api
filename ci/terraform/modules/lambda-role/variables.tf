@@ -19,5 +19,6 @@ variable "policies_to_attach" {
 }
 
 variable "vpc_arn" {
-  type = string
+  default = ""
+  type    = string
 }

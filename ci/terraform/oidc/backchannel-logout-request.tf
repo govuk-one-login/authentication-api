@@ -2,7 +2,6 @@ module "backchannel_logout_request_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "backchannel-logout-request-role"
-  vpc_arn     = local.authentication_vpc_arn
 
   policies_to_attach = [
     aws_iam_policy.oidc_token_kms_signing_policy.arn
@@ -24,10 +23,6 @@ resource "aws_lambda_function" "backchannel_logout_request_lambda" {
 
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
-  vpc_config {
-    security_group_ids = [local.authentication_egress_security_group_id]
-    subnet_ids         = local.authentication_subnet_ids
-  }
   environment {
     variables = merge({
       ENVIRONMENT             = var.environment
