@@ -72,6 +72,7 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -126,7 +127,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .getOIDCTokens()
                         .getIDToken()
                         .getJWTClaimsSet()
-                        .getClaim("vot"),
+                        .getClaim(VOT.getValue()),
                 equalTo(expectedVotClaim));
 
         assertNoAuditEventsReceived(auditTopic);

@@ -20,9 +20,12 @@ import com.nimbusds.oauth2.sdk.token.Tokens;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import com.nimbusds.openid.connect.sdk.claims.UserInfo;
+import net.minidev.json.JSONObject;
 import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.entity.SPOTClaims;
@@ -42,7 +45,6 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.sharedtest.helper.SignedCredentialHelper;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -86,11 +88,16 @@ class IPVCallbackHandlerTest {
     private static final String REQUEST_ID = "a-request-id";
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final URI REDIRECT_URI = URI.create("test-uri");
+    private static final URI IPV_URI = URI.create("http://ipv/");
     private static final ClientID CLIENT_ID = new ClientID();
     private static final Subject PUBLIC_SUBJECT =
             new Subject("TsEVC7vg0NPAmzB33vRUFztL2c0-fecKWKcc73fuDhc");
     private static final State STATE = new State();
     private IPVCallbackHandler handler;
+    private byte[] salt = "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes();
+    private String sectorId = "test.com";
+    private ClientRegistry clientRegistry = generateClientRegistry();
+    private UserProfile userProfile = generateUserProfile();
 
     private final Session session = new Session(SESSION_ID).setEmailAddress(TEST_EMAIL_ADDRESS);
 
@@ -113,19 +120,83 @@ class IPVCallbackHandlerTest {
         when(configService.getLoginURI()).thenReturn(LOGIN_URL);
         when(configService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
         when(configService.isSpotEnabled()).thenReturn(true);
+        when(configService.getIPVBackendURI()).thenReturn(IPV_URI);
+
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
     }
 
     @Test
-    void shouldRedirectToFrontendCallbackForSuccessfulResponse()
+    void shouldNotInvokeSPOTButStillRedirectToFrontendCallbackForSuccessfulResponseAtP0()
             throws URISyntaxException, JsonProcessingException {
-        var salt = "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes();
-        var sectorId = "test.com";
-        var clientRegistry = generateClientRegistry();
-        var userProfile = generateUserProfile();
-        var credential = SignedCredentialHelper.generateCredential().serialize();
+
         usingValidSession();
         usingValidClientSession();
+
+        var response = makeHandlerRequest(getApiGatewayProxyRequestEvent("P0"));
+
+        assertThat(response, hasStatus(302));
+        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("ipv-callback").build();
+        assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
+
+        verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
+        verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
+        verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED);
+        verifyNoInteractions(awsSqsClient);
+    }
+
+    @Test
+    void shouldInvokeSPOTAndRedirectToFrontendCallbackForSuccessfulResponseAtP2()
+            throws URISyntaxException, JsonProcessingException {
+
+        usingValidSession();
+        usingValidClientSession();
+
+        var response = makeHandlerRequest(getApiGatewayProxyRequestEvent("P2"));
+
+        assertThat(response, hasStatus(302));
+        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("ipv-callback").build();
+        assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
+        var expectedPairwiseSub =
+                ClientSubjectHelper.getSubject(userProfile, clientRegistry, dynamoService);
+        verify(awsSqsClient)
+                .send(
+                        new ObjectMapper()
+                                .writeValueAsString(
+                                        new SPOTRequest(
+                                                SPOTClaims.builder()
+                                                        .withVot(
+                                                                LevelOfConfidence.MEDIUM_LEVEL
+                                                                        .getValue())
+                                                        .withVtm(OIDC_BASE_URL + "/trustmark")
+                                                        .build(),
+                                                SUBJECT.getValue(),
+                                                salt,
+                                                sectorId,
+                                                expectedPairwiseSub.getValue(),
+                                                new LogIds(session.getSessionId()))));
+
+        verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
+        verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
+        verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED);
+        verifyAuditEvent(IPVAuditableEvent.IPV_SPOT_REQUESTED);
+        verifyNoMoreInteractions(auditService);
+    }
+
+    private void verifyAuditEvent(IPVAuditableEvent auditableEvent) {
+        verify(auditService)
+                .submitAuditEvent(
+                        auditableEvent,
+                        REQUEST_ID,
+                        SESSION_ID,
+                        CLIENT_ID.getValue(),
+                        userProfile.getSubjectID(),
+                        TEST_EMAIL_ADDRESS,
+                        AuditService.UNKNOWN,
+                        userProfile.getPhoneNumber(),
+                        AuditService.UNKNOWN);
+    }
+
+    private APIGatewayProxyRequestEvent getApiGatewayProxyRequestEvent(String vot) {
         var successfulTokenResponse =
                 new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
         var tokenRequest = mock(TokenRequest.class);
@@ -141,86 +212,16 @@ class IPVCallbackHandlerTest {
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
         when(ipvTokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
         when(ipvTokenService.sendTokenRequest(tokenRequest)).thenReturn(successfulTokenResponse);
-        when(ipvTokenService.sendIpvUserIdentityRequest(
-                        successfulTokenResponse
-                                .toSuccessResponse()
-                                .getTokens()
-                                .getBearerAccessToken()))
-                .thenReturn(credential);
+
+        var userIdentityUserInfo =
+                new UserInfo(new JSONObject(Map.of("sub", "sub-val", "vot", vot)));
+        when(ipvTokenService.sendIpvUserIdentityRequest(ArgumentMatchers.any()))
+                .thenReturn(userIdentityUserInfo);
 
         var event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(responseHeaders);
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
-        var response = makeHandlerRequest(event);
-
-        assertThat(response, hasStatus(302));
-        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("ipv-callback").build();
-        assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
-        var expectedPairwiseSub =
-                ClientSubjectHelper.getSubject(userProfile, clientRegistry, dynamoService);
-        verify(awsSqsClient)
-                .send(
-                        new ObjectMapper()
-                                .writeValueAsString(
-                                        new SPOTRequest(
-                                                new SPOTClaims(
-                                                        LevelOfConfidence.MEDIUM_LEVEL.getValue(),
-                                                        OIDC_BASE_URL + "/trustmark"),
-                                                SUBJECT.getValue(),
-                                                salt,
-                                                sectorId,
-                                                expectedPairwiseSub.getValue(),
-                                                new LogIds(session.getSessionId()))));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED,
-                        REQUEST_ID,
-                        SESSION_ID,
-                        CLIENT_ID.getValue(),
-                        userProfile.getSubjectID(),
-                        TEST_EMAIL_ADDRESS,
-                        AuditService.UNKNOWN,
-                        userProfile.getPhoneNumber(),
-                        AuditService.UNKNOWN);
-
-        verify(auditService)
-                .submitAuditEvent(
-                        IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                        REQUEST_ID,
-                        SESSION_ID,
-                        CLIENT_ID.getValue(),
-                        userProfile.getSubjectID(),
-                        TEST_EMAIL_ADDRESS,
-                        AuditService.UNKNOWN,
-                        userProfile.getPhoneNumber(),
-                        AuditService.UNKNOWN);
-
-        verify(auditService)
-                .submitAuditEvent(
-                        IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED,
-                        REQUEST_ID,
-                        SESSION_ID,
-                        CLIENT_ID.getValue(),
-                        userProfile.getSubjectID(),
-                        TEST_EMAIL_ADDRESS,
-                        AuditService.UNKNOWN,
-                        userProfile.getPhoneNumber(),
-                        AuditService.UNKNOWN);
-
-        verify(auditService)
-                .submitAuditEvent(
-                        IPVAuditableEvent.IPV_SPOT_REQUESTED,
-                        REQUEST_ID,
-                        SESSION_ID,
-                        CLIENT_ID.getValue(),
-                        userProfile.getSubjectID(),
-                        TEST_EMAIL_ADDRESS,
-                        AuditService.UNKNOWN,
-                        userProfile.getPhoneNumber(),
-                        AuditService.UNKNOWN);
-
-        verifyNoMoreInteractions(auditService);
+        return event;
     }
 
     @Test
