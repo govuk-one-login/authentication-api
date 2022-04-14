@@ -20,6 +20,7 @@ import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.SPOTCredential;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.DynamoSpotService;
 import uk.gov.di.authentication.sharedtest.helper.SignedCredentialHelper;
@@ -27,8 +28,7 @@ import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.Date;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -189,8 +189,7 @@ class UserInfoServiceTest {
 
     private AccessToken createSignedAccessToken(OIDCClaimsRequest identityClaims)
             throws JOSEException {
-        var localDateTime = LocalDateTime.now().plusMinutes(3);
-        var expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        var expiryDate = NowHelper.nowPlus(3, ChronoUnit.MINUTES);
         var ecSigningKey =
                 new ECKeyGenerator(Curve.P_256)
                         .keyID(KEY_ID)

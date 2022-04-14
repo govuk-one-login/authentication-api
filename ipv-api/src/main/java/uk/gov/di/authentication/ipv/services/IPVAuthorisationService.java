@@ -30,6 +30,7 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
@@ -37,9 +38,7 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import java.nio.ByteBuffer;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.Date;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -137,16 +136,14 @@ public class IPVAuthorisationService {
         LOG.info("Generating request JWT");
         var jwsHeader = new JWSHeader(SIGNING_ALGORITHM);
         var jwtID = IdGenerator.generate();
-        var expiryDate =
-                Date.from(LocalDateTime.now().plusMinutes(3).atZone(ZoneId.of("UTC")).toInstant());
+        var expiryDate = NowHelper.nowPlus(3, ChronoUnit.MINUTES);
         var claimsBuilder =
                 new JWTClaimsSet.Builder()
                         .issuer(configurationService.getIPVAuthorisationClientId())
                         .audience(configurationService.getIPVAuthorisationURI().toString())
                         .expirationTime(expiryDate)
                         .subject(subject.getValue())
-                        .issueTime(
-                                Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()))
+                        .issueTime(NowHelper.now())
                         .jwtID(jwtID)
                         .claim("state", state.getValue())
                         .claim("nonce", nonce.getValue())

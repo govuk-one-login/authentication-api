@@ -13,11 +13,11 @@ import uk.gov.di.accountmanagement.entity.TokenAuthorizerContext;
 import uk.gov.di.accountmanagement.lambda.AuthoriseAccessTokenHandler;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
@@ -50,8 +50,7 @@ class AuthoriseAccessTokenIntegrationTest
     @BeforeEach
     void setup() {
         handler = new AuthoriseAccessTokenHandler(TEST_CONFIGURATION_SERVICE);
-        var localDateTime = LocalDateTime.now().plusMinutes(5);
-        validDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        validDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
     }
 
     @Test
@@ -73,8 +72,7 @@ class AuthoriseAccessTokenIntegrationTest
     @Test
     void shouldThrowExceptionWhenAccessTokenHasExpired() {
         var publicSubject = setUpUserProfileAndGetPublicSubjectId();
-        var localDateTime = LocalDateTime.now().minusMinutes(1);
-        var expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        var expiryDate = NowHelper.nowMinus(1, ChronoUnit.MINUTES);
         var scopes =
                 asList(
                         OIDCScopeValue.OPENID.getValue(),
@@ -161,8 +159,7 @@ class AuthoriseAccessTokenIntegrationTest
                         .claim("scope", scopes)
                         .issuer("issuer-id")
                         .expirationTime(expiryDate)
-                        .issueTime(
-                                Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()))
+                        .issueTime(NowHelper.now())
                         .claim("client_id", clientId)
                         .subject(publicSubject)
                         .jwtID(UUID.randomUUID().toString())

@@ -41,6 +41,7 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -54,8 +55,7 @@ import java.net.URLDecoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -93,10 +93,8 @@ public class IPVAuthorisationHandlerTest {
     private static final String CLIENT_ID = "test-client-id";
     private static final String IPV_CLIENT_ID = "ipv-client-id";
     private static final String PHONE_NUMBER = "01234567890";
-    private static final Date CREATED_DATE_TIME =
-            Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant().minusSeconds(30));
-    private static final Date UPDATED_DATE_TIME =
-            Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant());
+    private static final Date CREATED_DATE_TIME = NowHelper.nowMinus(30, ChronoUnit.SECONDS);
+    private static final Date UPDATED_DATE_TIME = NowHelper.now();
     private static final String LEGACY_SUBJECT_ID = new Subject("legacy-subject-id-1").getValue();
     private static final String PUBLIC_SUBJECT_ID = new Subject("public-subject-id-2").getValue();
     private static final String SUBJECT_ID = new Subject("subject-id-3").getValue();

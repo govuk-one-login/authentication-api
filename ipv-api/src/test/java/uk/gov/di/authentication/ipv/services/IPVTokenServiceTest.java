@@ -20,14 +20,13 @@ import com.nimbusds.oauth2.sdk.id.JWTID;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.Date;
+import java.time.temporal.ChronoUnit;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -89,13 +88,9 @@ class IPVTokenServiceTest {
                 new JWTAuthenticationClaimsSet(
                         new ClientID(CLIENT_ID),
                         singletonList(new Audience(buildURI(IPV_URI.toString(), "token"))),
-                        Date.from(
-                                LocalDateTime.now()
-                                        .plusMinutes(5)
-                                        .atZone(ZoneId.of("UTC"))
-                                        .toInstant()),
+                        NowHelper.nowPlus(5, ChronoUnit.MINUTES),
                         null,
-                        Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()),
+                        NowHelper.now(),
                         new JWTID());
         var ecdsaSigner = new ECDSASigner(ecSigningKey);
         var jwsHeader =

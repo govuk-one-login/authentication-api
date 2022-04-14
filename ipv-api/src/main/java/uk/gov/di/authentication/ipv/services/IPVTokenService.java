@@ -24,14 +24,13 @@ import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.Date;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 
 import static java.util.Collections.singletonList;
@@ -58,14 +57,13 @@ public class IPVTokenService {
                         configurationService.getIPVAuthorisationCallbackURI());
         var ipvBackendURI = configurationService.getIPVBackendURI();
         var ipvTokenURI = ConstructUriHelper.buildURI(ipvBackendURI.toString(), "token");
-        var expiryDate = LocalDateTime.now().plusMinutes(PRIVATE_KEY_JWT_EXPIRY);
         var claimsSet =
                 new JWTAuthenticationClaimsSet(
                         new ClientID(configurationService.getIPVAuthorisationClientId()),
                         singletonList(new Audience(ipvTokenURI)),
-                        Date.from(expiryDate.atZone(ZoneId.of("UTC")).toInstant()),
+                        NowHelper.nowPlus(PRIVATE_KEY_JWT_EXPIRY, ChronoUnit.MINUTES),
                         null,
-                        Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()),
+                        NowHelper.now(),
                         new JWTID());
         return new TokenRequest(
                 ipvTokenURI,

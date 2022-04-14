@@ -5,11 +5,11 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -23,10 +23,8 @@ class UserProfileTest {
     private static final String EMAIL = "user.one@test.com";
     private static final String PHONE_NUMBER = "01234567890";
     private static final String CLIENT_ID = "client-id";
-    private static final Date CREATED_DATE_TIME =
-            Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant().minusSeconds(30));
-    private static final Date UPDATED_DATE_TIME =
-            Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant());
+    private static final Date CREATED_DATE_TIME = NowHelper.nowMinus(30, ChronoUnit.SECONDS);
+    private static final Date UPDATED_DATE_TIME = NowHelper.now();
     private static final String LEGACY_SUBJECT_ID = new Subject("legacy-subject-id-1").getValue();
     private static final String PUBLIC_SUBJECT_ID = new Subject("public-subject-id-2").getValue();
     private static final String SUBJECT_ID = new Subject("subject-id-3").getValue();

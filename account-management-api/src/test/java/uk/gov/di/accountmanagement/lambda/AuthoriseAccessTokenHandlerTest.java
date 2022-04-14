@@ -14,14 +14,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.entity.AuthPolicy;
 import uk.gov.di.accountmanagement.entity.TokenAuthorizerContext;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
 
@@ -192,8 +192,7 @@ class AuthoriseAccessTokenHandlerTest {
     }
 
     private SignedJWT createSignedExpiredAccessToken(List<String> scopes) throws JOSEException {
-        LocalDateTime localDateTime = LocalDateTime.now().minusMinutes(2);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        Date expiryDate = NowHelper.nowMinus(2, ChronoUnit.MINUTES);
         ECKey ecJWK = new ECKeyGenerator(Curve.P_256).keyID(KEY_ID).generate();
         JWSSigner signer = new ECDSASigner(ecJWK);
         return TokenGeneratorHelper.generateSignedToken(

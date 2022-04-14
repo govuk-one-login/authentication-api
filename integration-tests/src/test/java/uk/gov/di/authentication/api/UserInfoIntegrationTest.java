@@ -17,13 +17,13 @@ import uk.gov.di.authentication.oidc.lambda.UserInfoHandler;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.authentication.sharedtest.helper.SignedCredentialHelper;
 
 import java.security.KeyPair;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
@@ -55,8 +55,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     OIDCScopeValue.OPENID.getValue(),
                     OIDCScopeValue.EMAIL.getValue(),
                     OIDCScopeValue.PHONE.getValue());
-    private static final Date EXPIRY_DATE =
-            Date.from(LocalDateTime.now().plusMinutes(10).atZone(ZoneId.of("UTC")).toInstant());
+    private static final Date EXPIRY_DATE = NowHelper.nowPlus(10, ChronoUnit.MINUTES);
 
     @BeforeEach
     void setup() {
@@ -71,8 +70,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .claim("scope", SCOPES)
                         .issuer("issuer-id")
                         .expirationTime(EXPIRY_DATE)
-                        .issueTime(
-                                Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()))
+                        .issueTime(NowHelper.now())
                         .claim("client_id", "client-id-one")
                         .subject(PUBLIC_SUBJECT.getValue())
                         .jwtID(UUID.randomUUID().toString())
@@ -138,8 +136,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .claim("scope", SCOPES)
                         .issuer("issuer-id")
                         .expirationTime(EXPIRY_DATE)
-                        .issueTime(
-                                Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()))
+                        .issueTime(NowHelper.now())
                         .claim("client_id", "client-id-one")
                         .subject(PUBLIC_SUBJECT.getValue())
                         .jwtID(UUID.randomUUID().toString())

@@ -17,11 +17,11 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 
 import java.nio.ByteBuffer;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
@@ -71,16 +71,14 @@ class TokenValidationServiceTest {
 
     @Test
     void shouldSuccessfullyValidateIDToken() {
-        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
         SignedJWT signedIdToken = createSignedIdToken(expiryDate);
         assertTrue(tokenValidationService.isTokenSignatureValid(signedIdToken.serialize()));
     }
 
     @Test
     void shouldNotFailSignatureValidationIfIdTokenHasExpired() {
-        LocalDateTime localDateTime = LocalDateTime.now().minusMinutes(2);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+        Date expiryDate = NowHelper.nowMinus(2, ChronoUnit.MINUTES);
         SignedJWT signedIdToken = createSignedIdToken(expiryDate);
         assertTrue(tokenValidationService.isTokenSignatureValid(signedIdToken.serialize()));
     }
@@ -95,8 +93,7 @@ class TokenValidationServiceTest {
 
     @Test
     void shouldSuccessfullyValidateRefreshToken() {
-        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
 
         SignedJWT signedAccessToken = createSignedRefreshTokenWithExpiry(signer, expiryDate);
         assertTrue(
@@ -106,8 +103,7 @@ class TokenValidationServiceTest {
 
     @Test
     void shouldFailToValidateRefreshTokenIfExpired() {
-        LocalDateTime localDateTime = LocalDateTime.now().minusMinutes(2);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        Date expiryDate = NowHelper.nowMinus(2, ChronoUnit.MINUTES);
 
         SignedJWT signedAccessToken = createSignedRefreshTokenWithExpiry(signer, expiryDate);
         assertFalse(

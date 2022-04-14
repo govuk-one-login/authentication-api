@@ -42,6 +42,7 @@ import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
@@ -52,6 +53,7 @@ import java.security.PrivateKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
@@ -279,8 +281,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         JWTAuthenticationClaimsSet claimsSet =
                 new JWTAuthenticationClaimsSet(
                         new ClientID(CLIENT_ID), new Audience(ROOT_RESOURCE_URL + TOKEN_ENDPOINT));
-        var expiryDate =
-                Date.from(LocalDateTime.now().plusMinutes(5).atZone(ZoneId.of("UTC")).toInstant());
+        var expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
         claimsSet.getExpirationTime().setTime(expiryDate.getTime());
         var privateKeyJWT =
                 new PrivateKeyJWT(
@@ -313,15 +314,13 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private SignedJWT generateSignedRefreshToken(Scope scope, Subject publicSubject) {
-        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(60);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        Date expiryDate = NowHelper.nowPlus(60, ChronoUnit.MINUTES);
         JWTClaimsSet claimsSet =
                 new JWTClaimsSet.Builder()
                         .claim("scope", scope.toStringList())
                         .issuer("issuer-id")
                         .expirationTime(expiryDate)
-                        .issueTime(
-                                Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant()))
+                        .issueTime(NowHelper.now())
                         .claim("client_id", CLIENT_ID)
                         .subject(publicSubject.getValue())
                         .jwtID(UUID.randomUUID().toString())
@@ -382,8 +381,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             Optional<OIDCClaimsRequest> oidcClaimsRequest)
             throws JOSEException, JsonProcessingException {
         PrivateKey privateKey = keyPair.getPrivate();
-        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(5);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        Date expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
         JWTAuthenticationClaimsSet claimsSet =
                 new JWTAuthenticationClaimsSet(
                         new ClientID(CLIENT_ID), new Audience(ROOT_RESOURCE_URL + TOKEN_ENDPOINT));

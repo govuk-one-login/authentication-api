@@ -17,14 +17,12 @@ import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
 import java.text.ParseException;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -65,8 +63,7 @@ public class AccessTokenService {
         try {
             signedJWT = SignedJWT.parse(accessToken.getValue());
 
-            var localDateTime = LocalDateTime.now();
-            var currentDateTime = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+            var currentDateTime = NowHelper.now();
             if (DateUtils.isBefore(
                     signedJWT.getJWTClaimsSet().getExpirationTime(), currentDateTime, 0)) {
                 LOG.warn(
