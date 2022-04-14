@@ -221,7 +221,8 @@ class ClientConfigValidationServiceTest {
                                 VALID_PUBLIC_CERT,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
-                                String.valueOf(MANDATORY)));
+                                String.valueOf(MANDATORY),
+                                "http://localhost/sector-id"));
         assertThat(errorResponse, equalTo(Optional.empty()));
     }
 
@@ -241,7 +242,8 @@ class ClientConfigValidationServiceTest {
                                 VALID_PUBLIC_CERT,
                                 singletonList("openid"),
                                 singletonList("invalid-logout-uri"),
-                                String.valueOf(MANDATORY)));
+                                String.valueOf(MANDATORY),
+                                null));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_POST_LOGOUT_URI)));
     }
 
@@ -254,7 +256,8 @@ class ClientConfigValidationServiceTest {
                                 VALID_PUBLIC_CERT,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
-                                String.valueOf(MANDATORY)));
+                                String.valueOf(MANDATORY),
+                                null));
         assertThat(errorResponse, equalTo(Optional.of(RegistrationError.INVALID_REDIRECT_URI)));
     }
 
@@ -267,7 +270,8 @@ class ClientConfigValidationServiceTest {
                                 "invalid-public-cert",
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
-                                String.valueOf(MANDATORY)));
+                                String.valueOf(MANDATORY),
+                                null));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_PUBLIC_KEY)));
     }
 
@@ -280,7 +284,8 @@ class ClientConfigValidationServiceTest {
                                 VALID_PUBLIC_CERT,
                                 List.of("openid", "email", "fax"),
                                 singletonList("http://localhost/post-redirect-logout"),
-                                String.valueOf(MANDATORY)));
+                                String.valueOf(MANDATORY),
+                                null));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
     }
 
@@ -316,13 +321,15 @@ class ClientConfigValidationServiceTest {
             String publicCert,
             List<String> scopes,
             List<String> postLogoutUris,
-            String serviceType) {
+            String serviceType,
+            String sectorURI) {
         UpdateClientConfigRequest configRequest = new UpdateClientConfigRequest();
         configRequest.setScopes(scopes);
         configRequest.setRedirectUris(redirectUri);
         configRequest.setPublicKey(publicCert);
         configRequest.setPostLogoutRedirectUris(postLogoutUris);
         configRequest.setServiceType(serviceType);
+        configRequest.setSectorIdentifierUri(sectorURI);
         return configRequest;
     }
 }

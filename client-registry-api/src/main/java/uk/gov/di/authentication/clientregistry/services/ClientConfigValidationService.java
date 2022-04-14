@@ -13,10 +13,10 @@ import java.net.URL;
 import java.security.KeyFactory;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import static java.util.Collections.singletonList;
 import static uk.gov.di.authentication.shared.entity.ServiceType.MANDATORY;
 import static uk.gov.di.authentication.shared.entity.ServiceType.OPTIONAL;
 
@@ -34,6 +34,8 @@ public class ClientConfigValidationService {
             new ErrorObject("invalid_client_metadata", "Invalid Subject Type");
     public static final ErrorObject INVALID_CLAIM =
             new ErrorObject("invalid_client_metadata", "Insufficient Claim");
+    public static final ErrorObject INVALID_SECTOR_IDENTIFIER_URI =
+            new ErrorObject("invalid_client_metadata", "Invalid Sector Identifier URI");
 
     public Optional<ErrorObject> validateClientRegistrationConfig(
             ClientRegistrationRequest registrationRequest) {
@@ -45,8 +47,13 @@ public class ClientConfigValidationService {
         if (!areUrisValid(registrationRequest.getRedirectUris())) {
             return Optional.of(RegistrationError.INVALID_REDIRECT_URI);
         }
+        if (!Optional.ofNullable(registrationRequest.getSectorIdentifierUri())
+                .map(t -> areUrisValid(singletonList(t)))
+                .orElse(true)) {
+            return Optional.of(INVALID_SECTOR_IDENTIFIER_URI);
+        }
         if (!Optional.ofNullable(registrationRequest.getBackChannelLogoutUri())
-                .map(t -> areUrisValid(Collections.singletonList(t)))
+                .map(t -> areUrisValid(singletonList(t)))
                 .orElse(true)) {
             return Optional.of(RegistrationError.INVALID_REDIRECT_URI);
         }
@@ -71,31 +78,36 @@ public class ClientConfigValidationService {
     }
 
     public Optional<ErrorObject> validateClientUpdateConfig(
-            UpdateClientConfigRequest registrationRequest) {
-        if (!Optional.ofNullable(registrationRequest.getPostLogoutRedirectUris())
+            UpdateClientConfigRequest updateRequest) {
+        if (!Optional.ofNullable(updateRequest.getPostLogoutRedirectUris())
                 .map(this::areUrisValid)
                 .orElse(true)) {
             return Optional.of(INVALID_POST_LOGOUT_URI);
         }
-        if (!Optional.ofNullable(registrationRequest.getRedirectUris())
+        if (!Optional.ofNullable(updateRequest.getRedirectUris())
                 .map(this::areUrisValid)
                 .orElse(true)) {
             return Optional.of(RegistrationError.INVALID_REDIRECT_URI);
         }
-        if (!Optional.ofNullable(registrationRequest.getPublicKey())
+        if (!Optional.ofNullable(updateRequest.getPublicKey())
                 .map(this::isPublicKeyValid)
                 .orElse(true)) {
             return Optional.of(INVALID_PUBLIC_KEY);
         }
-        if (!Optional.ofNullable(registrationRequest.getScopes())
+        if (!Optional.ofNullable(updateRequest.getScopes())
                 .map(this::areScopesValid)
                 .orElse(true)) {
             return Optional.of(INVALID_SCOPE);
         }
-        if (!Optional.ofNullable(registrationRequest.getServiceType())
+        if (!Optional.ofNullable(updateRequest.getServiceType())
                 .map(this::isValidServiceType)
                 .orElse(true)) {
             return Optional.of(INVALID_SERVICE_TYPE);
+        }
+        if (!Optional.ofNullable(updateRequest.getSectorIdentifierUri())
+                .map(t -> areUrisValid(singletonList(t)))
+                .orElse(true)) {
+            return Optional.of(INVALID_SECTOR_IDENTIFIER_URI);
         }
         return Optional.empty();
     }
