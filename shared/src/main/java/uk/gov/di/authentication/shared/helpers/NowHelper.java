@@ -1,22 +1,20 @@
 package uk.gov.di.authentication.shared.helpers;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.Clock;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 
 public class NowHelper {
 
     public static Date now() {
-        return Date.from(LocalDateTime.now().atZone(ZoneId.of("UTC")).toInstant());
+        return Date.from(Clock.systemUTC().instant());
     }
 
     public static Date nowPlus(long amount, ChronoUnit unit) {
-        return Date.from(
-                LocalDateTime.now().plus(amount, unit).atZone(ZoneId.of("UTC")).toInstant());
+        return Date.from(Clock.systemUTC().instant().plus(amount, unit));
     }
 
     public static Date nowMinus(long amount, ChronoUnit unit) {
-        return Date.from(
-                LocalDateTime.now().minus(amount, unit).atZone(ZoneId.of("UTC")).toInstant());
+        return Date.from(Clock.systemUTC().instant().minus(amount, unit));
     }
 }
