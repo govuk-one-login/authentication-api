@@ -39,6 +39,7 @@ import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.Map;
 import java.util.Objects;
@@ -138,7 +139,11 @@ public class IPVAuthorisationService {
         var jwsHeader = new JWSHeader(SIGNING_ALGORITHM);
         var jwtID = IdGenerator.generate();
         var expiryDate =
-                Date.from(LocalDateTime.now().plusMinutes(3).atZone(ZoneId.of("UTC")).toInstant());
+                Date.from(
+                        LocalDateTime.now()
+                                .plus(3, ChronoUnit.MINUTES)
+                                .atZone(ZoneId.of("UTC"))
+                                .toInstant());
         var claimsBuilder =
                 new JWTClaimsSet.Builder()
                         .issuer(configurationService.getIPVAuthorisationClientId())

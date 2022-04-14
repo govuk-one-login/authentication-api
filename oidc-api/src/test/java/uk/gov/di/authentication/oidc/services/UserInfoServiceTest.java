@@ -189,7 +189,7 @@ class UserInfoServiceTest {
 
     private AccessToken createSignedAccessToken(OIDCClaimsRequest identityClaims)
             throws JOSEException {
-        var localDateTime = LocalDateTime.now().plusMinutes(3);
+        var localDateTime = LocalDateTime.now().plus(3, ChronoUnit.MINUTES);
         var expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         var ecSigningKey =
                 new ECKeyGenerator(Curve.P_256)

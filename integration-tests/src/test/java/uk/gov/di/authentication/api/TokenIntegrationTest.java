@@ -52,6 +52,7 @@ import java.security.PrivateKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
@@ -280,7 +281,11 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new JWTAuthenticationClaimsSet(
                         new ClientID(CLIENT_ID), new Audience(ROOT_RESOURCE_URL + TOKEN_ENDPOINT));
         var expiryDate =
-                Date.from(LocalDateTime.now().plusMinutes(5).atZone(ZoneId.of("UTC")).toInstant());
+                Date.from(
+                        LocalDateTime.now()
+                                .plus(5, ChronoUnit.MINUTES)
+                                .atZone(ZoneId.of("UTC"))
+                                .toInstant());
         claimsSet.getExpirationTime().setTime(expiryDate.getTime());
         var privateKeyJWT =
                 new PrivateKeyJWT(
@@ -313,7 +318,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private SignedJWT generateSignedRefreshToken(Scope scope, Subject publicSubject) {
-        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(60);
+        LocalDateTime localDateTime = LocalDateTime.now().plus(60, ChronoUnit.MINUTES);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         JWTClaimsSet claimsSet =
                 new JWTClaimsSet.Builder()
@@ -382,7 +387,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             Optional<OIDCClaimsRequest> oidcClaimsRequest)
             throws JOSEException, JsonProcessingException {
         PrivateKey privateKey = keyPair.getPrivate();
-        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(5);
+        LocalDateTime localDateTime = LocalDateTime.now().plus(5, ChronoUnit.MINUTES);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         JWTAuthenticationClaimsSet claimsSet =
                 new JWTAuthenticationClaimsSet(

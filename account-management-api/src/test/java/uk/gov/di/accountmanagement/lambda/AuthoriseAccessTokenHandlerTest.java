@@ -22,6 +22,7 @@ import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
 
@@ -192,7 +193,7 @@ class AuthoriseAccessTokenHandlerTest {
     }
 
     private SignedJWT createSignedExpiredAccessToken(List<String> scopes) throws JOSEException {
-        LocalDateTime localDateTime = LocalDateTime.now().minusMinutes(2);
+        LocalDateTime localDateTime = LocalDateTime.now().minus(2, ChronoUnit.MINUTES);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         ECKey ecJWK = new ECKeyGenerator(Curve.P_256).keyID(KEY_ID).generate();
         JWSSigner signer = new ECDSASigner(ecJWK);

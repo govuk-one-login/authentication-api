@@ -4,6 +4,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
@@ -19,7 +20,7 @@ public class ResetPasswordService {
     public String buildResetPasswordLink(
             String code, String sessionID, String persistentSessionId) {
         LocalDateTime localDateTime =
-                LocalDateTime.now().plusSeconds(configurationService.getCodeExpiry());
+                LocalDateTime.now().plus(configurationService.getCodeExpiry(), ChronoUnit.SECONDS);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         return buildURI(
                         configurationService.getFrontendBaseUrl(),

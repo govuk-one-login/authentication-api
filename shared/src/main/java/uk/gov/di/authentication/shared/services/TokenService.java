@@ -56,6 +56,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
@@ -251,7 +252,7 @@ public class TokenService {
         LOG.info("Generating IdToken");
         URI trustMarkUri = buildURI(configService.getOidcApiBaseURL().get(), "/trustmark");
         LocalDateTime localDateTime =
-                LocalDateTime.now().plusSeconds(configService.getIDTokenExpiry());
+                LocalDateTime.now().plus(configService.getIDTokenExpiry(), ChronoUnit.SECONDS);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         IDTokenClaimsSet idTokenClaims =
                 new IDTokenClaimsSet(
@@ -281,7 +282,7 @@ public class TokenService {
 
         LOG.info("Generating AccessToken");
         LocalDateTime localDateTime =
-                LocalDateTime.now().plusSeconds(configService.getAccessTokenExpiry());
+                LocalDateTime.now().plus(configService.getAccessTokenExpiry(), ChronoUnit.SECONDS);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         var jwtID = UUID.randomUUID().toString();
 
@@ -328,7 +329,7 @@ public class TokenService {
             String clientId, Subject internalSubject, List<String> scopes, Subject publicSubject) {
         LOG.info("Generating RefreshToken");
         LocalDateTime localDateTime =
-                LocalDateTime.now().plusSeconds(configService.getSessionExpiry());
+                LocalDateTime.now().plus(configService.getSessionExpiry(), ChronoUnit.SECONDS);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         JWTClaimsSet claimsSet =
                 new JWTClaimsSet.Builder()

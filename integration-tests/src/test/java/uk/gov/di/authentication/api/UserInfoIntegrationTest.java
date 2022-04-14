@@ -24,6 +24,7 @@ import uk.gov.di.authentication.sharedtest.helper.SignedCredentialHelper;
 import java.security.KeyPair;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
@@ -56,7 +57,11 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     OIDCScopeValue.EMAIL.getValue(),
                     OIDCScopeValue.PHONE.getValue());
     private static final Date EXPIRY_DATE =
-            Date.from(LocalDateTime.now().plusMinutes(10).atZone(ZoneId.of("UTC")).toInstant());
+            Date.from(
+                    LocalDateTime.now()
+                            .plus(10, ChronoUnit.MINUTES)
+                            .atZone(ZoneId.of("UTC"))
+                            .toInstant());
 
     @BeforeEach
     void setup() {

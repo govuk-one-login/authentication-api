@@ -33,6 +33,7 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -310,9 +311,9 @@ class AccessTokenServiceTest {
 
     private AccessToken createSignedAccessToken(OIDCClaimsRequest identityClaims, boolean expired) {
         try {
-            var localDateTime = LocalDateTime.now().plusMinutes(3);
+            var localDateTime = LocalDateTime.now().plus(3, ChronoUnit.MINUTES);
             if (expired) {
-                localDateTime = LocalDateTime.now().minusMinutes(2);
+                localDateTime = LocalDateTime.now().minus(2, ChronoUnit.MINUTES);
             }
             var expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
             var ecSigningKey =

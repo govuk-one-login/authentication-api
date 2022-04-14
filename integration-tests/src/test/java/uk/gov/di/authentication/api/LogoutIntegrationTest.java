@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -135,7 +136,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private SignedJWT setupClientAndSession(String sessionId, String clientSessionId)
             throws ParseException, IOException {
         Nonce nonce = new Nonce();
-        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(10);
+        LocalDateTime localDateTime = LocalDateTime.now().plus(10, ChronoUnit.MINUTES);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         IDTokenClaimsSet idTokenClaims =
                 new IDTokenClaimsSet(

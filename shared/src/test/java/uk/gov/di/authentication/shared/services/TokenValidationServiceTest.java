@@ -22,6 +22,7 @@ import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 import java.nio.ByteBuffer;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
@@ -71,7 +72,7 @@ class TokenValidationServiceTest {
 
     @Test
     void shouldSuccessfullyValidateIDToken() {
-        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
+        LocalDateTime localDateTime = LocalDateTime.now().plus(2, ChronoUnit.MINUTES);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         SignedJWT signedIdToken = createSignedIdToken(expiryDate);
         assertTrue(tokenValidationService.isTokenSignatureValid(signedIdToken.serialize()));
@@ -79,7 +80,7 @@ class TokenValidationServiceTest {
 
     @Test
     void shouldNotFailSignatureValidationIfIdTokenHasExpired() {
-        LocalDateTime localDateTime = LocalDateTime.now().minusMinutes(2);
+        LocalDateTime localDateTime = LocalDateTime.now().minus(2, ChronoUnit.MINUTES);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
         SignedJWT signedIdToken = createSignedIdToken(expiryDate);
         assertTrue(tokenValidationService.isTokenSignatureValid(signedIdToken.serialize()));
@@ -95,7 +96,7 @@ class TokenValidationServiceTest {
 
     @Test
     void shouldSuccessfullyValidateRefreshToken() {
-        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
+        LocalDateTime localDateTime = LocalDateTime.now().plus(2, ChronoUnit.MINUTES);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
 
         SignedJWT signedAccessToken = createSignedRefreshTokenWithExpiry(signer, expiryDate);
@@ -106,7 +107,7 @@ class TokenValidationServiceTest {
 
     @Test
     void shouldFailToValidateRefreshTokenIfExpired() {
-        LocalDateTime localDateTime = LocalDateTime.now().minusMinutes(2);
+        LocalDateTime localDateTime = LocalDateTime.now().minus(2, ChronoUnit.MINUTES);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
 
         SignedJWT signedAccessToken = createSignedRefreshTokenWithExpiry(signer, expiryDate);

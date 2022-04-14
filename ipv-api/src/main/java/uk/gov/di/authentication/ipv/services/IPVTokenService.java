@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.Map;
 
@@ -58,7 +59,7 @@ public class IPVTokenService {
                         configurationService.getIPVAuthorisationCallbackURI());
         var ipvBackendURI = configurationService.getIPVBackendURI();
         var ipvTokenURI = ConstructUriHelper.buildURI(ipvBackendURI.toString(), "token");
-        var expiryDate = LocalDateTime.now().plusMinutes(PRIVATE_KEY_JWT_EXPIRY);
+        var expiryDate = LocalDateTime.now().plus(PRIVATE_KEY_JWT_EXPIRY, ChronoUnit.MINUTES);
         var claimsSet =
                 new JWTAuthenticationClaimsSet(
                         new ClientID(configurationService.getIPVAuthorisationClientId()),

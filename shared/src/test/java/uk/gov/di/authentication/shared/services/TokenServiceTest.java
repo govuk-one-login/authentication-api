@@ -266,7 +266,7 @@ public class TokenServiceTest {
     void shouldSuccessfullyValidatePrivateKeyJWT() throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
         String publicKey = Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded());
-        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(5);
+        LocalDateTime localDateTime = LocalDateTime.now().plus(5, ChronoUnit.MINUTES);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         String requestParams = generateSerialisedPrivateKeyJWT(keyPair, expiryDate.getTime());
         assertThat(
@@ -278,7 +278,7 @@ public class TokenServiceTest {
     void shouldFailToValidatePrivateKeyJWTIfExpired() throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
         String publicKey = Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded());
-        LocalDateTime localDateTime = LocalDateTime.now().minusMinutes(2);
+        LocalDateTime localDateTime = LocalDateTime.now().minus(2, ChronoUnit.MINUTES);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         String requestParams = generateSerialisedPrivateKeyJWT(keyPair, expiryDate.getTime());
         assertThat(
@@ -290,7 +290,7 @@ public class TokenServiceTest {
     void shouldFailToValidatePrivateKeyJWTIfInvalidClientId() throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
         String publicKey = Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded());
-        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(5);
+        LocalDateTime localDateTime = LocalDateTime.now().plus(5, ChronoUnit.MINUTES);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         String requestParams = generateSerialisedPrivateKeyJWT(keyPair, expiryDate.getTime());
         assertThat(
@@ -305,7 +305,7 @@ public class TokenServiceTest {
         KeyPair keyPairTwo = generateRsaKeyPair();
         String publicKey =
                 Base64.getMimeEncoder().encodeToString(keyPairTwo.getPublic().getEncoded());
-        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(5);
+        LocalDateTime localDateTime = LocalDateTime.now().plus(5, ChronoUnit.MINUTES);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         String requestParams = generateSerialisedPrivateKeyJWT(keyPair, expiryDate.getTime());
         assertThat(
@@ -482,7 +482,7 @@ public class TokenServiceTest {
     }
 
     private SignedJWT createSignedIdToken(ECKey ecSigningKey) {
-        LocalDateTime localDateTime = LocalDateTime.now().plusMinutes(2);
+        LocalDateTime localDateTime = LocalDateTime.now().plus(2, ChronoUnit.MINUTES);
         Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         return TokenGeneratorHelper.generateIDToken(
                 CLIENT_ID, PUBLIC_SUBJECT, BASE_URL, ecSigningKey, expiryDate);

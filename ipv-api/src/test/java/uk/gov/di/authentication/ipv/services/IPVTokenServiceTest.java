@@ -27,6 +27,7 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 
 import static java.util.Collections.singletonList;
@@ -91,7 +92,7 @@ class IPVTokenServiceTest {
                         singletonList(new Audience(buildURI(IPV_URI.toString(), "token"))),
                         Date.from(
                                 LocalDateTime.now()
-                                        .plusMinutes(5)
+                                        .plus(5, ChronoUnit.MINUTES)
                                         .atZone(ZoneId.of("UTC"))
                                         .toInstant()),
                         null,

@@ -18,6 +18,7 @@ import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
@@ -50,7 +51,7 @@ class AuthoriseAccessTokenIntegrationTest
     @BeforeEach
     void setup() {
         handler = new AuthoriseAccessTokenHandler(TEST_CONFIGURATION_SERVICE);
-        var localDateTime = LocalDateTime.now().plusMinutes(5);
+        var localDateTime = LocalDateTime.now().plus(5, ChronoUnit.MINUTES);
         validDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
     }
 
@@ -73,7 +74,7 @@ class AuthoriseAccessTokenIntegrationTest
     @Test
     void shouldThrowExceptionWhenAccessTokenHasExpired() {
         var publicSubject = setUpUserProfileAndGetPublicSubjectId();
-        var localDateTime = LocalDateTime.now().minusMinutes(1);
+        var localDateTime = LocalDateTime.now().minus(1, ChronoUnit.MINUTES);
         var expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         var scopes =
                 asList(
