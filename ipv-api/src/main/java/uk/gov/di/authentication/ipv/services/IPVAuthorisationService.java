@@ -38,10 +38,7 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import java.nio.ByteBuffer;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
-import java.util.Date;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -139,12 +136,7 @@ public class IPVAuthorisationService {
         LOG.info("Generating request JWT");
         var jwsHeader = new JWSHeader(SIGNING_ALGORITHM);
         var jwtID = IdGenerator.generate();
-        var expiryDate =
-                Date.from(
-                        LocalDateTime.now()
-                                .plus(3, ChronoUnit.MINUTES)
-                                .atZone(ZoneId.of("UTC"))
-                                .toInstant());
+        var expiryDate = NowHelper.nowPlus(3, ChronoUnit.MINUTES);
         var claimsBuilder =
                 new JWTClaimsSet.Builder()
                         .issuer(configurationService.getIPVAuthorisationClientId())

@@ -17,12 +17,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.lambda.LogoutHandler;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.io.IOException;
 import java.net.URI;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
@@ -136,8 +135,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private SignedJWT setupClientAndSession(String sessionId, String clientSessionId)
             throws ParseException, IOException {
         Nonce nonce = new Nonce();
-        LocalDateTime localDateTime = LocalDateTime.now().plus(10, ChronoUnit.MINUTES);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        Date expiryDate = NowHelper.nowPlus(10, ChronoUnit.MINUTES);
         IDTokenClaimsSet idTokenClaims =
                 new IDTokenClaimsSet(
                         new Issuer(BASE_URL),

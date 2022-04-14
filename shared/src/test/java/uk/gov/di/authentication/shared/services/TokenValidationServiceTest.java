@@ -17,6 +17,7 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 
 import java.nio.ByteBuffer;
@@ -72,16 +73,19 @@ class TokenValidationServiceTest {
 
     @Test
     void shouldSuccessfullyValidateIDToken() {
-        LocalDateTime localDateTime = LocalDateTime.now().plus(2, ChronoUnit.MINUTES);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
         SignedJWT signedIdToken = createSignedIdToken(expiryDate);
         assertTrue(tokenValidationService.isTokenSignatureValid(signedIdToken.serialize()));
     }
 
     @Test
     void shouldNotFailSignatureValidationIfIdTokenHasExpired() {
-        LocalDateTime localDateTime = LocalDateTime.now().minus(2, ChronoUnit.MINUTES);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+        Date expiryDate =
+                Date.from(
+                        LocalDateTime.now()
+                                .minus(2, ChronoUnit.MINUTES)
+                                .atZone(ZoneId.systemDefault())
+                                .toInstant());
         SignedJWT signedIdToken = createSignedIdToken(expiryDate);
         assertTrue(tokenValidationService.isTokenSignatureValid(signedIdToken.serialize()));
     }
@@ -96,8 +100,7 @@ class TokenValidationServiceTest {
 
     @Test
     void shouldSuccessfullyValidateRefreshToken() {
-        LocalDateTime localDateTime = LocalDateTime.now().plus(2, ChronoUnit.MINUTES);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
 
         SignedJWT signedAccessToken = createSignedRefreshTokenWithExpiry(signer, expiryDate);
         assertTrue(

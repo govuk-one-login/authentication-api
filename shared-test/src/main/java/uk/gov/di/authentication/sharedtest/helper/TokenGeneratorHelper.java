@@ -20,8 +20,6 @@ import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
@@ -37,8 +35,7 @@ public class TokenGeneratorHelper {
 
     public static SignedJWT generateIDToken(
             String clientId, Subject subject, String issuerUrl, JWK signingKey) {
-        LocalDateTime localDateTime = LocalDateTime.now().plus(2, ChronoUnit.MINUTES);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
         return generateIDToken(clientId, subject, issuerUrl, signingKey, expiryDate);
     }
 
@@ -83,8 +80,7 @@ public class TokenGeneratorHelper {
             Subject subject,
             String keyId) {
 
-        LocalDateTime localDateTime = LocalDateTime.now().plus(2, ChronoUnit.MINUTES);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
 
         return generateSignedToken(
                 clientId, issuerUrl, scopes, signer, subject, keyId, expiryDate, null);

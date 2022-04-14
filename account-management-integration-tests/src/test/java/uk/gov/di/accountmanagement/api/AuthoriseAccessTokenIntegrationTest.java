@@ -52,8 +52,7 @@ class AuthoriseAccessTokenIntegrationTest
     @BeforeEach
     void setup() {
         handler = new AuthoriseAccessTokenHandler(TEST_CONFIGURATION_SERVICE);
-        var localDateTime = LocalDateTime.now().plus(5, ChronoUnit.MINUTES);
-        validDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        validDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
     }
 
     @Test

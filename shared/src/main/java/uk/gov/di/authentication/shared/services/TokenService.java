@@ -55,8 +55,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Collections;
@@ -252,9 +250,7 @@ public class TokenService {
 
         LOG.info("Generating IdToken");
         URI trustMarkUri = buildURI(configService.getOidcApiBaseURL().get(), "/trustmark");
-        LocalDateTime localDateTime =
-                LocalDateTime.now().plus(configService.getIDTokenExpiry(), ChronoUnit.SECONDS);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        Date expiryDate = NowHelper.nowPlus(configService.getIDTokenExpiry(), ChronoUnit.SECONDS);
         IDTokenClaimsSet idTokenClaims =
                 new IDTokenClaimsSet(
                         new Issuer(configService.getOidcApiBaseURL().get()),
@@ -282,9 +278,8 @@ public class TokenService {
             OIDCClaimsRequest claimsRequest) {
 
         LOG.info("Generating AccessToken");
-        LocalDateTime localDateTime =
-                LocalDateTime.now().plus(configService.getAccessTokenExpiry(), ChronoUnit.SECONDS);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        Date expiryDate =
+                NowHelper.nowPlus(configService.getAccessTokenExpiry(), ChronoUnit.SECONDS);
         var jwtID = UUID.randomUUID().toString();
 
         LOG.info("AccessToken being created with JWTID: {}", jwtID);
@@ -328,9 +323,7 @@ public class TokenService {
     private RefreshToken generateAndStoreRefreshToken(
             String clientId, Subject internalSubject, List<String> scopes, Subject publicSubject) {
         LOG.info("Generating RefreshToken");
-        LocalDateTime localDateTime =
-                LocalDateTime.now().plus(configService.getSessionExpiry(), ChronoUnit.SECONDS);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        Date expiryDate = NowHelper.nowPlus(configService.getSessionExpiry(), ChronoUnit.SECONDS);
         JWTClaimsSet claimsSet =
                 new JWTClaimsSet.Builder()
                         .claim("scope", scopes)

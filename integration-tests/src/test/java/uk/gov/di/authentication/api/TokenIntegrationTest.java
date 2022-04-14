@@ -281,12 +281,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         JWTAuthenticationClaimsSet claimsSet =
                 new JWTAuthenticationClaimsSet(
                         new ClientID(CLIENT_ID), new Audience(ROOT_RESOURCE_URL + TOKEN_ENDPOINT));
-        var expiryDate =
-                Date.from(
-                        LocalDateTime.now()
-                                .plus(5, ChronoUnit.MINUTES)
-                                .atZone(ZoneId.of("UTC"))
-                                .toInstant());
+        var expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
         claimsSet.getExpirationTime().setTime(expiryDate.getTime());
         var privateKeyJWT =
                 new PrivateKeyJWT(
@@ -319,8 +314,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private SignedJWT generateSignedRefreshToken(Scope scope, Subject publicSubject) {
-        LocalDateTime localDateTime = LocalDateTime.now().plus(60, ChronoUnit.MINUTES);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        Date expiryDate = NowHelper.nowPlus(60, ChronoUnit.MINUTES);
         JWTClaimsSet claimsSet =
                 new JWTClaimsSet.Builder()
                         .claim("scope", scope.toStringList())
@@ -387,8 +381,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             Optional<OIDCClaimsRequest> oidcClaimsRequest)
             throws JOSEException, JsonProcessingException {
         PrivateKey privateKey = keyPair.getPrivate();
-        LocalDateTime localDateTime = LocalDateTime.now().plus(5, ChronoUnit.MINUTES);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        Date expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
         JWTAuthenticationClaimsSet claimsSet =
                 new JWTAuthenticationClaimsSet(
                         new ClientID(CLIENT_ID), new Audience(ROOT_RESOURCE_URL + TOKEN_ENDPOINT));

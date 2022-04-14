@@ -44,6 +44,7 @@ import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -55,6 +56,7 @@ import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
@@ -266,8 +268,7 @@ public class TokenServiceTest {
     void shouldSuccessfullyValidatePrivateKeyJWT() throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
         String publicKey = Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded());
-        LocalDateTime localDateTime = LocalDateTime.now().plus(5, ChronoUnit.MINUTES);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        Date expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
         String requestParams = generateSerialisedPrivateKeyJWT(keyPair, expiryDate.getTime());
         assertThat(
                 tokenService.validatePrivateKeyJWT(requestParams, publicKey, TOKEN_URI, CLIENT_ID),
@@ -278,8 +279,12 @@ public class TokenServiceTest {
     void shouldFailToValidatePrivateKeyJWTIfExpired() throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
         String publicKey = Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded());
-        LocalDateTime localDateTime = LocalDateTime.now().minus(2, ChronoUnit.MINUTES);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        Date expiryDate =
+                Date.from(
+                        LocalDateTime.now()
+                                .minus(2, ChronoUnit.MINUTES)
+                                .atZone(ZoneId.of("UTC"))
+                                .toInstant());
         String requestParams = generateSerialisedPrivateKeyJWT(keyPair, expiryDate.getTime());
         assertThat(
                 tokenService.validatePrivateKeyJWT(requestParams, publicKey, TOKEN_URI, CLIENT_ID),
@@ -290,8 +295,7 @@ public class TokenServiceTest {
     void shouldFailToValidatePrivateKeyJWTIfInvalidClientId() throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
         String publicKey = Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded());
-        LocalDateTime localDateTime = LocalDateTime.now().plus(5, ChronoUnit.MINUTES);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        Date expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
         String requestParams = generateSerialisedPrivateKeyJWT(keyPair, expiryDate.getTime());
         assertThat(
                 tokenService.validatePrivateKeyJWT(
@@ -305,8 +309,7 @@ public class TokenServiceTest {
         KeyPair keyPairTwo = generateRsaKeyPair();
         String publicKey =
                 Base64.getMimeEncoder().encodeToString(keyPairTwo.getPublic().getEncoded());
-        LocalDateTime localDateTime = LocalDateTime.now().plus(5, ChronoUnit.MINUTES);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        Date expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
         String requestParams = generateSerialisedPrivateKeyJWT(keyPair, expiryDate.getTime());
         assertThat(
                 tokenService.validatePrivateKeyJWT(requestParams, publicKey, TOKEN_URI, CLIENT_ID),
@@ -482,8 +485,7 @@ public class TokenServiceTest {
     }
 
     private SignedJWT createSignedIdToken(ECKey ecSigningKey) {
-        LocalDateTime localDateTime = LocalDateTime.now().plus(2, ChronoUnit.MINUTES);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
         return TokenGeneratorHelper.generateIDToken(
                 CLIENT_ID, PUBLIC_SUBJECT, BASE_URL, ecSigningKey, expiryDate);
     }

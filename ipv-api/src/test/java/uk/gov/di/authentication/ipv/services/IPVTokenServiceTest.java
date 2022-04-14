@@ -26,10 +26,7 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
-import java.util.Date;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -91,11 +88,7 @@ class IPVTokenServiceTest {
                 new JWTAuthenticationClaimsSet(
                         new ClientID(CLIENT_ID),
                         singletonList(new Audience(buildURI(IPV_URI.toString(), "token"))),
-                        Date.from(
-                                LocalDateTime.now()
-                                        .plus(5, ChronoUnit.MINUTES)
-                                        .atZone(ZoneId.of("UTC"))
-                                        .toInstant()),
+                        NowHelper.nowPlus(5, ChronoUnit.MINUTES),
                         null,
                         NowHelper.now(),
                         new JWTID());
