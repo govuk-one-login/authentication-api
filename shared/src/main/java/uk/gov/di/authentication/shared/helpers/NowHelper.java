@@ -14,4 +14,9 @@ public class NowHelper {
         return Date.from(
                 LocalDateTime.now().plus(amount, unit).atZone(ZoneId.of("UTC")).toInstant());
     }
+
+    public static Date nowMinus(long amount, ChronoUnit unit) {
+        return Date.from(
+                LocalDateTime.now().minus(amount, unit).atZone(ZoneId.of("UTC")).toInstant());
+    }
 }

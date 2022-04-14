@@ -279,12 +279,7 @@ public class TokenServiceTest {
     void shouldFailToValidatePrivateKeyJWTIfExpired() throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
         String publicKey = Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded());
-        Date expiryDate =
-                Date.from(
-                        LocalDateTime.now()
-                                .minus(2, ChronoUnit.MINUTES)
-                                .atZone(ZoneId.of("UTC"))
-                                .toInstant());
+        Date expiryDate = NowHelper.nowMinus(2, ChronoUnit.MINUTES);
         String requestParams = generateSerialisedPrivateKeyJWT(keyPair, expiryDate.getTime());
         assertThat(
                 tokenService.validatePrivateKeyJWT(requestParams, publicKey, TOKEN_URI, CLIENT_ID),

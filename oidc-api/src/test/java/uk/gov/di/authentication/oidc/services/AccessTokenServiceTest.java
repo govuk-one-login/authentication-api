@@ -25,16 +25,14 @@ import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -311,11 +309,12 @@ class AccessTokenServiceTest {
 
     private AccessToken createSignedAccessToken(OIDCClaimsRequest identityClaims, boolean expired) {
         try {
-            var localDateTime = LocalDateTime.now().plus(3, ChronoUnit.MINUTES);
-            if (expired) {
-                localDateTime = LocalDateTime.now().minus(2, ChronoUnit.MINUTES);
-            }
-            var expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+
+            var expiryDate =
+                    expired
+                            ? NowHelper.nowMinus(2, ChronoUnit.MINUTES)
+                            : NowHelper.nowPlus(3, ChronoUnit.MINUTES);
+
             var ecSigningKey =
                     new ECKeyGenerator(Curve.P_256)
                             .keyID(KEY_ID)

@@ -17,8 +17,6 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Date;
@@ -74,8 +72,7 @@ class AuthoriseAccessTokenIntegrationTest
     @Test
     void shouldThrowExceptionWhenAccessTokenHasExpired() {
         var publicSubject = setUpUserProfileAndGetPublicSubjectId();
-        var localDateTime = LocalDateTime.now().minus(1, ChronoUnit.MINUTES);
-        var expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        var expiryDate = NowHelper.nowMinus(1, ChronoUnit.MINUTES);
         var scopes =
                 asList(
                         OIDCScopeValue.OPENID.getValue(),

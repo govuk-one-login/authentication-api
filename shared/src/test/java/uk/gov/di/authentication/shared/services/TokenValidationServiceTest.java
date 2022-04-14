@@ -21,8 +21,6 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 
 import java.nio.ByteBuffer;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Date;
@@ -80,12 +78,7 @@ class TokenValidationServiceTest {
 
     @Test
     void shouldNotFailSignatureValidationIfIdTokenHasExpired() {
-        Date expiryDate =
-                Date.from(
-                        LocalDateTime.now()
-                                .minus(2, ChronoUnit.MINUTES)
-                                .atZone(ZoneId.systemDefault())
-                                .toInstant());
+        Date expiryDate = NowHelper.nowMinus(2, ChronoUnit.MINUTES);
         SignedJWT signedIdToken = createSignedIdToken(expiryDate);
         assertTrue(tokenValidationService.isTokenSignatureValid(signedIdToken.serialize()));
     }
@@ -110,8 +103,7 @@ class TokenValidationServiceTest {
 
     @Test
     void shouldFailToValidateRefreshTokenIfExpired() {
-        LocalDateTime localDateTime = LocalDateTime.now().minus(2, ChronoUnit.MINUTES);
-        Date expiryDate = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+        Date expiryDate = NowHelper.nowMinus(2, ChronoUnit.MINUTES);
 
         SignedJWT signedAccessToken = createSignedRefreshTokenWithExpiry(signer, expiryDate);
         assertFalse(

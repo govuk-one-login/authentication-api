@@ -5,8 +5,6 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.Map;
@@ -20,12 +18,7 @@ class UserCredentialsTest {
     private static final String PASSWORD = "password123";
     private static final String MIGRATED_PASSWORD = "oldpassword";
     private static final String SUBJECT_ID = new Subject("subject-id-3").getValue();
-    private static final Date CREATED_DATE_TIME =
-            Date.from(
-                    LocalDateTime.now()
-                            .atZone(ZoneId.of("UTC"))
-                            .toInstant()
-                            .minus(30, ChronoUnit.SECONDS));
+    private static final Date CREATED_DATE_TIME = NowHelper.nowMinus(30, ChronoUnit.SECONDS);
     private static final Date UPDATED_DATE_TIME = NowHelper.now();
 
     @Test
