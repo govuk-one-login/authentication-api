@@ -7,8 +7,10 @@ import java.util.Collections;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
@@ -162,5 +164,23 @@ class VectorOfTrustTest {
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         Collections.singletonList(jsonArrayOf(vectorString)));
         assertThat(vectorOfTrust.retrieveVectorOfTrustForToken(), equalTo(vectorString));
+    }
+
+    @Test
+    void shouldReturnTrueWhenIdentityLevelOfConfidenceIsPresent() {
+        String vectorString = "P2.Cl.Cm";
+        VectorOfTrust vectorOfTrust =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        Collections.singletonList(jsonArrayOf(vectorString)));
+        assertTrue(vectorOfTrust.containsLevelOfConfidence());
+    }
+
+    @Test
+    void shouldReturnFalseWhenIdentityLevelOfConfidenceIsNotPresent() {
+        String vectorString = "Cl.Cm";
+        VectorOfTrust vectorOfTrust =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        Collections.singletonList(jsonArrayOf(vectorString)));
+        assertFalse(vectorOfTrust.containsLevelOfConfidence());
     }
 }

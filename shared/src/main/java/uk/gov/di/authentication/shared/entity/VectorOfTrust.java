@@ -47,6 +47,10 @@ public class VectorOfTrust {
         return levelOfConfidence;
     }
 
+    public boolean containsLevelOfConfidence() {
+        return levelOfConfidence != null;
+    }
+
     public static VectorOfTrust parseFromAuthRequestAttribute(List<String> vtr) {
         if (Objects.isNull(vtr) || vtr.isEmpty()) {
             LOG.info(

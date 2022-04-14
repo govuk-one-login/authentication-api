@@ -253,6 +253,12 @@ public class TokenHandler
                                     && Objects.nonNull(authRequest.getOIDCClaims())) {
                                 claimsRequest = authRequest.getOIDCClaims();
                             }
+                            var isConsentRequired =
+                                    client.isConsentRequired()
+                                            && !clientSession
+                                                    .getEffectiveVectorOfTrust()
+                                                    .containsLevelOfConfidence();
+
                             var tokenResponse =
                                     tokenService.generateTokenResponse(
                                             clientID,
@@ -262,7 +268,7 @@ public class TokenHandler
                                             publicSubject,
                                             vot,
                                             userProfile.getClientConsent(),
-                                            client.isConsentRequired(),
+                                            isConsentRequired,
                                             claimsRequest);
 
                             clientSessionService.saveClientSession(
