@@ -107,11 +107,11 @@ resource "aws_cloudwatch_log_group" "fraud_realtime_logging_lambda_log_group" {
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "fraud_realtime_logging_log_subscription" {
-  count           = var.logging_endpoint_enabled ? 1 : 0
+  count           = length(var.logging_endpoint_arns)
   name            = "${aws_lambda_function.fraud_realtime_logging_lambda.function_name}-log-subscription"
   log_group_name  = aws_cloudwatch_log_group.fraud_realtime_logging_lambda_log_group[0].name
   filter_pattern  = ""
-  destination_arn = var.logging_endpoint_arn
+  destination_arn = var.logging_endpoint_arns[count.index]
 }
 
 resource "aws_lambda_alias" "fraud_realtime_logging_lambda_active" {

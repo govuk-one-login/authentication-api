@@ -195,11 +195,11 @@ resource "aws_cloudwatch_log_group" "lambda_log_group" {
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "log_subscription" {
-  count           = var.logging_endpoint_enabled ? 1 : 0
+  count           = length(var.logging_endpoint_arns)
   name            = "${aws_lambda_function.audit_processor_lambda.function_name}-log-subscription"
   log_group_name  = aws_cloudwatch_log_group.lambda_log_group[0].name
   filter_pattern  = ""
-  destination_arn = var.logging_endpoint_arn
+  destination_arn = var.logging_endpoint_arns[count.index]
 }
 
 resource "aws_lambda_alias" "active_processor" {

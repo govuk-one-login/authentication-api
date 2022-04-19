@@ -58,11 +58,11 @@ resource "aws_cloudwatch_log_group" "spot_response_lambda_log_group" {
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "spot_response_lambda_log_subscription" {
-  count           = var.logging_endpoint_enabled && var.ipv_api_enabled ? 1 : 0
+  count           = var.ipv_api_enabled ? length(var.logging_endpoint_arns) : 0
   name            = "${aws_lambda_function.spot_response_lambda[0].function_name}-log-subscription"
   log_group_name  = aws_cloudwatch_log_group.spot_response_lambda_log_group[0].name
   filter_pattern  = ""
-  destination_arn = var.logging_endpoint_arn
+  destination_arn = var.logging_endpoint_arns[count.index]
 }
 
 resource "aws_lambda_alias" "spot_response_lambda_active" {

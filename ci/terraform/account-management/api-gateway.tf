@@ -67,11 +67,11 @@ EOF
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "authorizer_log_subscription" {
-  count           = var.logging_endpoint_enabled ? 1 : 0
+  count           = length(var.logging_endpoint_arns)
   name            = "authorizer-log-subscription"
   log_group_name  = aws_cloudwatch_log_group.lambda_log_group[0].name
   filter_pattern  = ""
-  destination_arn = var.logging_endpoint_arn
+  destination_arn = var.logging_endpoint_arns[count.index]
 }
 
 resource "aws_iam_role" "invocation_role" {
@@ -158,11 +158,11 @@ resource "aws_cloudwatch_log_group" "account_management_stage_execution_logs" {
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "account_management_execution_log_subscription" {
-  count           = var.logging_endpoint_enabled ? 1 : 0
+  count           = length(var.logging_endpoint_arns)
   name            = "${var.environment}-oidc-api-execution-log-subscription"
   log_group_name  = aws_cloudwatch_log_group.account_management_stage_execution_logs[0].name
   filter_pattern  = ""
-  destination_arn = var.logging_endpoint_arn
+  destination_arn = var.logging_endpoint_arns[count.index]
 }
 
 resource "aws_cloudwatch_log_group" "account_management_access_logs" {
@@ -174,11 +174,11 @@ resource "aws_cloudwatch_log_group" "account_management_access_logs" {
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "account_management_access_log_subscription" {
-  count           = var.logging_endpoint_enabled ? 1 : 0
+  count           = length(var.logging_endpoint_arns)
   name            = "${var.environment}-account-management_-api-access-logs-subscription"
   log_group_name  = aws_cloudwatch_log_group.account_management_access_logs[0].name
   filter_pattern  = ""
-  destination_arn = var.logging_endpoint_arn
+  destination_arn = var.logging_endpoint_arns[count.index]
 }
 
 resource "aws_cloudwatch_log_group" "account_management_waf_logs" {
@@ -190,11 +190,11 @@ resource "aws_cloudwatch_log_group" "account_management_waf_logs" {
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "account_management_waf_log_subscription" {
-  count           = var.logging_endpoint_enabled ? 1 : 0
+  count           = length(var.logging_endpoint_arns)
   name            = "${var.environment}-account-management-api-waf-logs-subscription"
   log_group_name  = aws_cloudwatch_log_group.account_management_waf_logs[0].name
   filter_pattern  = ""
-  destination_arn = var.logging_endpoint_arn
+  destination_arn = var.logging_endpoint_arns[count.index]
 }
 
 resource "aws_api_gateway_stage" "stage" {
