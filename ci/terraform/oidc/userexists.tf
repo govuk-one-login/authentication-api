@@ -52,8 +52,7 @@ module "userexists" {
   ]
   subnet_id                              = local.authentication_subnet_ids
   lambda_role_arn                        = module.frontend_api_user_exists_role.arn
-  logging_endpoint_enabled               = var.logging_endpoint_enabled
-  logging_endpoint_arn                   = var.logging_endpoint_arn
+  logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
