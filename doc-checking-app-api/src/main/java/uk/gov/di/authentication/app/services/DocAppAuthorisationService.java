@@ -23,7 +23,6 @@ import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.Nonce;
@@ -40,7 +39,6 @@ import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 public class DocAppAuthorisationService {
@@ -131,8 +129,7 @@ public class DocAppAuthorisationService {
         return responseState.equals(storedState.getValue());
     }
 
-    public EncryptedJWT constructRequestJWT(
-            State state, Nonce nonce, Scope scope, Subject subject, String claims) {
+    public EncryptedJWT constructRequestJWT(State state, Subject subject) {
         LOG.info("Generating request JWT");
         var jwsHeader = new JWSHeader(SIGNING_ALGORITHM);
         var jwtID = IdGenerator.generate();
@@ -144,18 +141,15 @@ public class DocAppAuthorisationService {
                         .expirationTime(expiryDate)
                         .subject(subject.getValue())
                         .issueTime(NowHelper.now())
+                        .notBeforeTime(NowHelper.now())
                         .jwtID(jwtID)
                         .claim("state", state.getValue())
-                        .claim("nonce", nonce.getValue())
+                        .claim("nonce", new Nonce(IdGenerator.generate()).getValue())
                         .claim(
                                 "redirect_uri",
                                 configurationService.getDocAppAuthorisationCallbackURI().toString())
                         .claim("client_id", configurationService.getDocAppAuthorisationClientId())
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", scope.toString());
-        if (Objects.nonNull(claims)) {
-            claimsBuilder.claim("claims", claims);
-        }
+                        .claim("response_type", ResponseType.CODE.toString());
         var encodedHeader = jwsHeader.toBase64URL();
         var encodedClaims = Base64URL.encode(claimsBuilder.build().toString());
         var message = encodedHeader + "." + encodedClaims;

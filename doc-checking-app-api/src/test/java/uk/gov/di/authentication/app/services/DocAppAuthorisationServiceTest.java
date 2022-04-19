@@ -18,11 +18,8 @@ import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
-import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.Nonce;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -206,13 +203,9 @@ class DocAppAuthorisationServiceTest {
         signResult.setSigningAlgorithm(JWSAlgorithm.ES256.getName());
         when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(signResult);
         var state = new State();
-        var nonce = new Nonce();
-        var scope = new Scope(OIDCScopeValue.OPENID);
         var pairwise = new Subject("pairwise-identifier");
-        var claims = "{\"name\":{\"essential\":true}}";
 
-        var encryptedJWT =
-                authorisationService.constructRequestJWT(state, nonce, scope, pairwise, claims);
+        var encryptedJWT = authorisationService.constructRequestJWT(state, pairwise);
 
         var signedJWTResponse = decryptJWT(encryptedJWT);
 
@@ -221,17 +214,12 @@ class DocAppAuthorisationServiceTest {
                 equalTo(DOC_APP_CLIENT_ID));
         assertThat(
                 signedJWTResponse.getJWTClaimsSet().getClaim("state"), equalTo(state.getValue()));
-        assertThat(
-                signedJWTResponse.getJWTClaimsSet().getClaim("nonce"), equalTo(nonce.getValue()));
         assertThat(signedJWTResponse.getJWTClaimsSet().getSubject(), equalTo(pairwise.getValue()));
-        assertThat(
-                signedJWTResponse.getJWTClaimsSet().getClaim("scope"), equalTo(scope.toString()));
         assertThat(signedJWTResponse.getJWTClaimsSet().getIssuer(), equalTo(DOC_APP_CLIENT_ID));
         assertThat(
                 signedJWTResponse.getJWTClaimsSet().getAudience(),
                 equalTo(singletonList(DOC_APP_AUTHORISATION_URI.toString())));
         assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("response_type"), equalTo("code"));
-        assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("claims"), equalTo(claims));
     }
 
     private SignedJWT decryptJWT(EncryptedJWT encryptedJWT) throws JOSEException {
