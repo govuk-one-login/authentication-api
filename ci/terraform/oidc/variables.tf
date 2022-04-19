@@ -271,3 +271,8 @@ variable "ipv_auth_public_encryption_key" {
   type    = string
   default = "undefined"
 }
+
+variable "doc_app_auth_public_encryption_key" {
+  type    = string
+  default = "undefined"
+}
