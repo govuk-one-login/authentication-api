@@ -66,6 +66,12 @@ variable "logging_endpoint_arn" {
   description = "Amazon Resource Name (ARN) for the endpoint to ship logs to"
 }
 
+variable "logging_endpoint_arns" {
+  type        = list(string)
+  default     = []
+  description = "Amazon Resource Name (ARN) for the CSLS endpoints to ship logs to"
+}
+
 variable "aws_region" {
   default = "eu-west-2"
 }
