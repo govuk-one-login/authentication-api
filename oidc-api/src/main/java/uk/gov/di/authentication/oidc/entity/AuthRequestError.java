@@ -2,13 +2,15 @@ package uk.gov.di.authentication.oidc.entity;
 
 import com.nimbusds.oauth2.sdk.ErrorObject;
 
-public class RequestObjectError {
+import java.net.URI;
+
+public class AuthRequestError {
 
     private ErrorObject errorObject;
 
-    private String redirectURI;
+    private URI redirectURI;
 
-    public RequestObjectError(ErrorObject errorObject, String redirectURI) {
+    public AuthRequestError(ErrorObject errorObject, URI redirectURI) {
         this.errorObject = errorObject;
         this.redirectURI = redirectURI;
     }
@@ -17,7 +19,7 @@ public class RequestObjectError {
         return errorObject;
     }
 
-    public String getRedirectURI() {
+    public URI getRedirectURI() {
         return redirectURI;
     }
 }

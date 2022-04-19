@@ -16,7 +16,9 @@ import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
+import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.services.AuthorizationService;
+import uk.gov.di.authentication.oidc.services.RequestObjectService;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -56,6 +58,7 @@ public class AuthorisationHandler
     private final ConfigurationService configurationService;
     private final ClientSessionService clientSessionService;
     private final AuthorizationService authorizationService;
+    private final RequestObjectService requestObjectService;
     private final AuditService auditService;
 
     public AuthorisationHandler(
@@ -63,12 +66,14 @@ public class AuthorisationHandler
             SessionService sessionService,
             ClientSessionService clientSessionService,
             AuthorizationService authorizationService,
-            AuditService auditService) {
+            AuditService auditService,
+            RequestObjectService requestObjectService) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
         this.authorizationService = authorizationService;
         this.auditService = auditService;
+        this.requestObjectService = requestObjectService;
     }
 
     public AuthorisationHandler(ConfigurationService configurationService) {
@@ -77,6 +82,7 @@ public class AuthorisationHandler
         this.clientSessionService = new ClientSessionService(configurationService);
         this.authorizationService = new AuthorizationService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.requestObjectService = new RequestObjectService(configurationService);
     }
 
     public AuthorisationHandler() {
@@ -143,16 +149,24 @@ public class AuthorisationHandler
                                         "No query string parameters are present in the Authentication request",
                                         e);
                             }
-                            Optional<ErrorObject> error =
-                                    authorizationService.validateAuthRequest(authRequest);
+                            Optional<AuthRequestError> authRequestError;
+                            if (authRequest.getRequestObject() != null
+                                    && configurationService.isRequestObjectParamSupported()) {
+                                authRequestError =
+                                        requestObjectService.validateRequestObject(authRequest);
+                            } else {
+                                authRequestError =
+                                        authorizationService.validateAuthRequest(authRequest);
+                            }
 
-                            return error.map(
+                            return authRequestError
+                                    .map(
                                             e ->
                                                     generateErrorResponse(
-                                                            authRequest.getRedirectionURI(),
+                                                            e.getRedirectURI(),
                                                             authRequest.getState(),
                                                             authRequest.getResponseMode(),
-                                                            e,
+                                                            e.getErrorObject(),
                                                             context,
                                                             ipAddress,
                                                             persistentSessionId))

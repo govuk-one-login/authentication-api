@@ -1,9 +1,17 @@
 package uk.gov.di.authentication.api;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.crypto.RSASSASigner;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.lambda.AuthorisationHandler;
@@ -63,25 +71,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        registerClient(CLIENT_ID, "test-client", singletonList("openid"), null);
+        registerClient(CLIENT_ID, "test-client", singletonList("openid"));
         handler = new AuthorisationHandler(configurationService);
-    }
-
-    @Test
-    void shouldReturnUnmetAuthenticationRequirementsErrorToRPWhenUsingInvalidClient() {
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(INVALID_CLIENT_ID, null, "openid", null));
-
-        assertThat(response, hasStatus(302));
-        String redirectUri = getLocationResponseHeader(response);
-        assertThat(redirectUri, containsString(OAuth2Error.UNAUTHORIZED_CLIENT.getCode()));
-        assertThat(redirectUri, startsWith(RP_REDIRECT_URI));
-
-        assertEventTypesReceived(
-                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
     }
 
     @Test
@@ -159,7 +150,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldRedirectToLoginUriForAccountManagementClient() {
-        registerClient(AM_CLIENT_ID, "am-client-name", List.of("openid", "am"), null);
+        registerClient(AM_CLIENT_ID, "am-client-name", List.of("openid", "am"));
         var response =
                 makeRequest(
                         Optional.empty(),
@@ -498,6 +489,38 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
+    @Test
+    void shouldCallAuthorizeWithRequestObject() throws JOSEException {
+        var signedJWT = createSignedJWT();
+        var queryStringParameters =
+                new HashMap<>(
+                        Map.of(
+                                "response_type",
+                                "code",
+                                "client_id",
+                                CLIENT_ID,
+                                "scope",
+                                "openid",
+                                "request",
+                                signedJWT.serialize()));
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(Optional.empty()),
+                        queryStringParameters);
+        assertThat(response, hasStatus(302));
+        assertThat(
+                getLocationResponseHeader(response),
+                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        assertThat(
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
+                        .isPresent(),
+                equalTo(true));
+
+        assertEventTypesReceived(
+                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+    }
+
     private String givenAnExistingSession(CredentialTrustLevel credentialTrustLevel)
             throws Exception {
         String sessionId = redis.createSession();
@@ -546,8 +569,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD);
     }
 
-    private void registerClient(
-            String clientId, String clientName, List<String> scopes, List<String> requestUris) {
+    private void registerClient(String clientId, String clientName, List<String> scopes) {
         clientStore.registerClient(
                 clientId,
                 clientName,
@@ -560,8 +582,24 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",
-                true,
-                requestUris);
+                true);
+    }
+
+    private SignedJWT createSignedJWT() throws JOSEException {
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience("http://localhost")
+                        .claim("redirect_uri", RP_REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", new Scope(OIDCScopeValue.OPENID).toString())
+                        .claim("client_id", CLIENT_ID)
+                        .issuer(CLIENT_ID)
+                        .build();
+        var jwsHeader = new JWSHeader(JWSAlgorithm.RS256);
+        var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
+        var signer = new RSASSASigner(KEY_PAIR.getPrivate());
+        signedJWT.sign(signer);
+        return signedJWT;
     }
 
     protected static class TestConfigurationService extends IntegrationTestConfigurationService {

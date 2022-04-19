@@ -134,7 +134,7 @@ class RequestObjectServiceTest {
         assertThat(
                 requestObjectError.get().getErrorObject(),
                 equalTo(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE));
-        assertThat(requestObjectError.get().getRedirectURI(), equalTo(REDIRECT_URI));
+        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
     @Test
@@ -155,7 +155,7 @@ class RequestObjectServiceTest {
         assertThat(
                 requestObjectError.get().getErrorObject(),
                 equalTo(OAuth2Error.UNAUTHORIZED_CLIENT));
-        assertThat(requestObjectError.get().getRedirectURI(), equalTo(REDIRECT_URI));
+        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
     @Test
@@ -174,7 +174,7 @@ class RequestObjectServiceTest {
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().getErrorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
-        assertThat(requestObjectError.get().getRedirectURI(), equalTo(REDIRECT_URI));
+        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
     @Test
@@ -193,7 +193,7 @@ class RequestObjectServiceTest {
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().getErrorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
-        assertThat(requestObjectError.get().getRedirectURI(), equalTo(REDIRECT_URI));
+        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
     @Test
@@ -213,7 +213,7 @@ class RequestObjectServiceTest {
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().getErrorObject(), equalTo(OAuth2Error.ACCESS_DENIED));
-        assertThat(requestObjectError.get().getRedirectURI(), equalTo(REDIRECT_URI));
+        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
     @Test
@@ -234,7 +234,7 @@ class RequestObjectServiceTest {
         assertThat(
                 requestObjectError.get().getErrorObject(),
                 equalTo(OAuth2Error.UNAUTHORIZED_CLIENT));
-        assertThat(requestObjectError.get().getRedirectURI(), equalTo(REDIRECT_URI));
+        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
     @Test
@@ -255,7 +255,7 @@ class RequestObjectServiceTest {
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().getErrorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
-        assertThat(requestObjectError.get().getRedirectURI(), equalTo(REDIRECT_URI));
+        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
     @Test
@@ -275,7 +275,7 @@ class RequestObjectServiceTest {
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().getErrorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
-        assertThat(requestObjectError.get().getRedirectURI(), equalTo(REDIRECT_URI));
+        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
     @Test

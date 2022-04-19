@@ -5,12 +5,15 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent.ProxyRequestContext;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent.RequestIdentity;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCError;
@@ -25,7 +28,9 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InOrder;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
+import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.services.AuthorizationService;
+import uk.gov.di.authentication.oidc.services.RequestObjectService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
@@ -74,6 +79,7 @@ class AuthorisationHandlerTest {
     private final AuthorizationService authorizationService = mock(AuthorizationService.class);
     private final UserContext userContext = mock(UserContext.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final RequestObjectService requestObjectService = mock(RequestObjectService.class);
     private final InOrder inOrder = inOrder(auditService);
     private static final String EXPECTED_SESSION_COOKIE_STRING =
             "gs=a-session-id.client-session-id; Max-Age=3600; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
@@ -115,7 +121,8 @@ class AuthorisationHandlerTest {
                         sessionService,
                         clientSessionService,
                         authorizationService,
-                        auditService);
+                        auditService,
+                        requestObjectService);
         session = new Session("a-session-id");
         when(sessionService.createSession()).thenReturn(session);
     }
@@ -335,7 +342,11 @@ class AuthorisationHandlerTest {
     @Test
     void shouldReturn400WhenAuthorisationRequestContainsInvalidScope() {
         when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
-                .thenReturn(Optional.of(OAuth2Error.INVALID_SCOPE));
+                .thenReturn(
+                        Optional.of(
+                                new AuthRequestError(
+                                        OAuth2Error.INVALID_SCOPE,
+                                        URI.create("http://localhost:8080"))));
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
                 Map.of(
@@ -410,6 +421,107 @@ class AuthorisationHandlerTest {
                         pair(
                                 "description",
                                 "Invalid request: Invalid prompt parameter: Unknown prompt type: unrecognised"));
+    }
+
+    private static Stream<ErrorObject> expectedErrorObjects() {
+        return Stream.of(
+                OAuth2Error.UNSUPPORTED_RESPONSE_TYPE,
+                OAuth2Error.INVALID_SCOPE,
+                OAuth2Error.UNAUTHORIZED_CLIENT,
+                OAuth2Error.INVALID_REQUEST);
+    }
+
+    @ParameterizedTest
+    @MethodSource("expectedErrorObjects")
+    void shouldReturnErrorWhenRequestObjectIsInvalid(ErrorObject errorObject) {
+        when(configService.isRequestObjectParamSupported()).thenReturn(true);
+        when(requestObjectService.validateRequestObject(any(AuthenticationRequest.class)))
+                .thenReturn(
+                        Optional.of(
+                                new AuthRequestError(
+                                        errorObject, URI.create("http://localhost:8080"))));
+        var event = new APIGatewayProxyRequestEvent();
+        event.setQueryStringParameters(
+                Map.of(
+                        "client_id", "test-id",
+                        "redirect_uri", "http://localhost:8080",
+                        "scope", "openid",
+                        "response_type", "code",
+                        "request", new PlainJWT(new JWTClaimsSet.Builder().build()).serialize()));
+        event.setRequestContext(
+                new ProxyRequestContext()
+                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
+        var response = makeHandlerRequest(event);
+
+        var expectedURI =
+                new AuthenticationErrorResponse(
+                                URI.create("http://localhost:8080"), errorObject, null, null)
+                        .toURI()
+                        .toString();
+        assertThat(response, hasStatus(302));
+        assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTHORISATION_REQUEST_ERROR,
+                        AWS_REQUEST_ID,
+                        "",
+                        "",
+                        "",
+                        "",
+                        "123.123.123.123",
+                        "",
+                        PERSISTENT_SESSION_ID,
+                        pair("description", errorObject.getDescription()));
+    }
+
+    @Test
+    void shouldRedirectToLoginWhenRequestObjectIsValid() {
+        when(configService.isRequestObjectParamSupported()).thenReturn(true);
+        when(requestObjectService.validateRequestObject(any(AuthenticationRequest.class)))
+                .thenReturn(Optional.empty());
+        when(clientSessionService.generateClientSession(any(ClientSession.class)))
+                .thenReturn(CLIENT_SESSION_ID);
+        var event = new APIGatewayProxyRequestEvent();
+        event.setQueryStringParameters(
+                Map.of(
+                        "client_id", "test-id",
+                        "redirect_uri", "http://localhost:8080",
+                        "scope", "openid",
+                        "response_type", "code",
+                        "request", new PlainJWT(new JWTClaimsSet.Builder().build()).serialize()));
+        event.setRequestContext(
+                new ProxyRequestContext()
+                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
+        var response = makeHandlerRequest(event);
+
+        assertThat(response, hasStatus(302));
+        var uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+
+        assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
+        assertTrue(
+                response.getMultiValueHeaders()
+                        .get(ResponseHeaders.SET_COOKIE)
+                        .contains(EXPECTED_SESSION_COOKIE_STRING));
+        assertTrue(
+                response.getMultiValueHeaders()
+                        .get(ResponseHeaders.SET_COOKIE)
+                        .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
+        verify(sessionService).save(session);
+
+        inOrder.verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTHORISATION_INITIATED,
+                        context.getAwsRequestId(),
+                        session.getSessionId(),
+                        CLIENT_ID.getValue(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID);
     }
 
     private static Stream<Arguments> invalidPromptValues() {

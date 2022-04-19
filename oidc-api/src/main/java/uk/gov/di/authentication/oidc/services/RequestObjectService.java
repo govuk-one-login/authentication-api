@@ -10,12 +10,13 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.authentication.oidc.entity.RequestObjectError;
+import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 
+import java.net.URI;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
@@ -28,7 +29,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
@@ -45,7 +45,11 @@ public class RequestObjectService {
         this.configurationService = configurationService;
     }
 
-    public Optional<RequestObjectError> validateRequestObject(AuthenticationRequest authRequest) {
+    public RequestObjectService(ConfigurationService configurationService) {
+        this(new DynamoClientService(configurationService), configurationService);
+    }
+
+    public Optional<AuthRequestError> validateRequestObject(AuthenticationRequest authRequest) {
         var clientId = authRequest.getClientID().toString();
 
         attachLogFieldToLogs(CLIENT_ID, clientId);
@@ -54,7 +58,7 @@ public class RequestObjectService {
         try {
 
             if (Objects.isNull(client)) {
-                var errorMsg = format("No client found with ClientID: %s", clientId);
+                var errorMsg = "No Client found with given ClientID";
                 LOG.warn(errorMsg);
                 throw new RuntimeException(errorMsg);
             }
@@ -70,18 +74,18 @@ public class RequestObjectService {
                     .noneMatch(s -> s.equals(jwtClaimsSet.getClaim("redirect_uri")))) {
                 throw new RuntimeException("Invalid Redirect URI in request JWT");
             }
-            var redirectURI = (String) jwtClaimsSet.getClaim("redirect_uri");
+            var redirectURI = URI.create((String) jwtClaimsSet.getClaim("redirect_uri"));
             if (!authRequest.getResponseType().toString().equals(ResponseType.CODE.toString())) {
                 LOG.warn(
                         "Unsupported responseType included in request. Expected responseType of code");
                 return Optional.of(
-                        new RequestObjectError(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, redirectURI));
+                        new AuthRequestError(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, redirectURI));
             }
             if (requestContainsInvalidScopes(authRequest.getScope().toStringList(), client)) {
                 LOG.warn(
                         "Invalid scopes in authRequest. Scopes in request: {}",
                         authRequest.getScope().toStringList());
-                return Optional.of(new RequestObjectError(OAuth2Error.INVALID_SCOPE, redirectURI));
+                return Optional.of(new AuthRequestError(OAuth2Error.INVALID_SCOPE, redirectURI));
             }
             if (Objects.isNull(jwtClaimsSet.getClaim("client_id"))
                     || !jwtClaimsSet
@@ -89,39 +93,38 @@ public class RequestObjectService {
                             .toString()
                             .equals(authRequest.getClientID().getValue())) {
                 return Optional.of(
-                        new RequestObjectError(OAuth2Error.UNAUTHORIZED_CLIENT, redirectURI));
+                        new AuthRequestError(OAuth2Error.UNAUTHORIZED_CLIENT, redirectURI));
             }
             if (Objects.nonNull(jwtClaimsSet.getClaim("request"))
                     || Objects.nonNull(jwtClaimsSet.getClaim("request_uri"))) {
                 LOG.warn("request or request_uri claim should not be incldued in request JWT");
-                return Optional.of(
-                        new RequestObjectError(OAuth2Error.INVALID_REQUEST, redirectURI));
+                return Optional.of(new AuthRequestError(OAuth2Error.INVALID_REQUEST, redirectURI));
             }
             if (Objects.isNull(jwtClaimsSet.getAudience())
                     || !jwtClaimsSet
                             .getAudience()
                             .contains(configurationService.getOidcApiBaseURL().orElseThrow())) {
                 LOG.warn("Invalid or missing audience");
-                return Optional.of(new RequestObjectError(OAuth2Error.ACCESS_DENIED, redirectURI));
+                return Optional.of(new AuthRequestError(OAuth2Error.ACCESS_DENIED, redirectURI));
             }
             if (Objects.isNull(jwtClaimsSet.getIssuer())
                     || !jwtClaimsSet.getIssuer().equals(client.getClientID())) {
                 LOG.warn("Invalid or missing issuer");
                 return Optional.of(
-                        new RequestObjectError(OAuth2Error.UNAUTHORIZED_CLIENT, redirectURI));
+                        new AuthRequestError(OAuth2Error.UNAUTHORIZED_CLIENT, redirectURI));
             }
             if (!ResponseType.CODE.toString().equals(jwtClaimsSet.getClaim("response_type"))) {
                 LOG.warn(
                         "Unsupported responseType included in request JWT. Expected responseType of code");
                 return Optional.of(
-                        new RequestObjectError(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, redirectURI));
+                        new AuthRequestError(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, redirectURI));
             }
             if (Objects.isNull(jwtClaimsSet.getClaim("scope"))
                     || requestContainsInvalidScopes(
                             Scope.parse(jwtClaimsSet.getClaim("scope").toString()).toStringList(),
                             client)) {
                 LOG.warn("Invalid scopes in request JWT");
-                return Optional.of(new RequestObjectError(OAuth2Error.INVALID_SCOPE, redirectURI));
+                return Optional.of(new AuthRequestError(OAuth2Error.INVALID_SCOPE, redirectURI));
             }
         } catch (ParseException e) {
             throw new RuntimeException(e);
