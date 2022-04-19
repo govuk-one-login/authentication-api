@@ -51,6 +51,7 @@ run:
         -var "notify_api_key=${NOTIFY_API_KEY}" \
         -var "environment=${DEPLOY_ENVIRONMENT}" \
         -var 'logging_endpoint_arn=arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod' \
+        -var 'logging_endpoint_arns=["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod"]' \
         -var "dns_state_bucket=${DNS_STATE_BUCKET}" \
         -var "dns_state_key=${DNS_STATE_KEY}" \
         -var "dns_state_role=${DNS_DEPLOYER_ROLE_ARN}" \
