@@ -23,11 +23,10 @@ import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMException;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import java.security.PublicKey;
 import java.security.interfaces.ECPublicKey;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 
@@ -64,8 +63,7 @@ public class TokenValidationService {
     private boolean hasTokenExpired(String tokenValue) {
         try {
             JWTClaimsSet claimsSet = SignedJWT.parse(tokenValue).getJWTClaimsSet();
-            LocalDateTime localDateTime = LocalDateTime.now();
-            Date currentDateTime = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+            Date currentDateTime = NowHelper.now();
             if (DateUtils.isBefore(claimsSet.getExpirationTime(), currentDateTime, 0)) {
                 return true;
             }

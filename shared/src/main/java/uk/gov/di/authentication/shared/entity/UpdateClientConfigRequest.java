@@ -30,9 +30,6 @@ public class UpdateClientConfigRequest {
     @JsonProperty("service_type")
     private String serviceType;
 
-    @JsonProperty("request_uris")
-    private List<String> requestUris;
-
     @JsonProperty("claims")
     private List<String> claims;
 
@@ -71,10 +68,6 @@ public class UpdateClientConfigRequest {
 
     public String getServiceType() {
         return serviceType;
-    }
-
-    public List<String> getRequestUris() {
-        return requestUris;
     }
 
     public List<String> getClaims() {
@@ -123,11 +116,6 @@ public class UpdateClientConfigRequest {
 
     public UpdateClientConfigRequest setServiceType(String serviceType) {
         this.serviceType = serviceType;
-        return this;
-    }
-
-    public UpdateClientConfigRequest setRequestUris(List<String> requestUris) {
-        this.requestUris = requestUris;
         return this;
     }
 
