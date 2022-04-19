@@ -611,7 +611,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     auditSigningKey,
                     tokenSigner,
                     ipvPrivateKeyJwtSigner,
-                    spotQueue);
+                    spotQueue,
+                    docAppPrivateKeyJwtSigner);
         }
     }
 }

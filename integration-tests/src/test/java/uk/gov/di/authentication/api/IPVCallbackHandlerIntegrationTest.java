@@ -174,7 +174,8 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                     auditSigningKey,
                     tokenSigningKey,
                     ipvPrivateKeyJwtSigner,
-                    spotQueue);
+                    spotQueue,
+                    docAppPrivateKeyJwtSigner);
             this.ipvStubExtension = ipvStub;
         }
 

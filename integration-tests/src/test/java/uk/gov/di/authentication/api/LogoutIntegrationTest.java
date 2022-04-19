@@ -147,10 +147,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         SignedJWT signedJWT = tokenSigner.signJwt(idTokenClaims.toJWTClaimsSet());
         redis.createSession(sessionId);
         redis.addAuthRequestToSession(
-                clientSessionId,
-                sessionId,
-                generateAuthRequest(nonce).toParameters(),
-                "joe.bloggs@digital.cabinet-office.gov.uk");
+                clientSessionId, sessionId, generateAuthRequest(nonce).toParameters());
         redis.addIDTokenToSession(clientSessionId, signedJWT.serialize());
         clientStore.registerClient(
                 "client-id",

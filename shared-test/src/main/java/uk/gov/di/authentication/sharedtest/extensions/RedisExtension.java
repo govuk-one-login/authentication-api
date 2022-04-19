@@ -67,10 +67,7 @@ public class RedisExtension
     }
 
     public void addAuthRequestToSession(
-            String clientSessionId,
-            String sessionId,
-            Map<String, List<String>> authRequest,
-            String email)
+            String clientSessionId, String sessionId, Map<String, List<String>> authRequest)
             throws JsonProcessingException {
         Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
         session.addClientSession(clientSessionId);

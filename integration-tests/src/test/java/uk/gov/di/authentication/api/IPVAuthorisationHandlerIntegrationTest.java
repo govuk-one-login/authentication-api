@@ -70,8 +70,7 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         redis.addAuthRequestToSession(
                 CLIENT_SESSION_ID,
                 SESSION_ID,
-                withAuthenticationRequest(CLIENT_ID.getValue()).toParameters(),
-                TEST_EMAIL_ADDRESS);
+                withAuthenticationRequest(CLIENT_ID.getValue()).toParameters());
     }
 
     @Test
@@ -158,7 +157,8 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     auditSigningKey,
                     tokenSigner,
                     ipvPrivateKeyJwtSigner,
-                    spotQueue);
+                    spotQueue,
+                    docAppPrivateKeyJwtSigner);
             this.ipvStubExtension = ipvStub;
         }
 
