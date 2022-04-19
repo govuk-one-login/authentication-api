@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.oidc.services;
 
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
@@ -138,7 +140,7 @@ class AuthorizationServiceTest {
                         scope,
                         jsonArrayOf("P2.Cl.Cm", "P2.Cl"),
                         Optional.empty());
-        Optional<ErrorObject> errorObject = authorizationService.validateAuthRequest(authRequest);
+        var errorObject = authorizationService.validateAuthRequest(authRequest);
 
         assertThat(errorObject, equalTo(Optional.empty()));
     }
@@ -160,10 +162,12 @@ class AuthorizationServiceTest {
                         scope,
                         jsonArrayOf("Cm.Cl.P1", "P1.Cl"),
                         Optional.empty());
-        Optional<ErrorObject> errorObject = authorizationService.validateAuthRequest(authRequest);
+        var errorObject = authorizationService.validateAuthRequest(authRequest);
+
+        assertTrue(errorObject.isPresent());
 
         assertThat(
-                errorObject.get(),
+                errorObject.get().getErrorObject(),
                 equalTo(
                         new ErrorObject(
                                 OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid")));
@@ -179,11 +183,11 @@ class AuthorizationServiceTest {
                         Optional.of(
                                 generateClientRegistry(
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
-        Optional<ErrorObject> errorObject =
+        var errorObject =
                 authorizationService.validateAuthRequest(
                         generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
 
-        assertThat(errorObject, equalTo(Optional.empty()));
+        assertTrue(errorObject.isEmpty());
     }
 
     @Test
@@ -208,7 +212,7 @@ class AuthorizationServiceTest {
                         Optional.of(oidcClaimsRequest));
         var errorObject = authorizationService.validateAuthRequest(authRequest);
 
-        assertThat(errorObject, equalTo(Optional.empty()));
+        assertTrue(errorObject.isEmpty());
     }
 
     @Test
@@ -230,15 +234,15 @@ class AuthorizationServiceTest {
                         scope,
                         jsonArrayOf("Cl.Cm", "Cl"),
                         Optional.of(oidcClaimsRequest));
-        Optional<ErrorObject> errorObject = authorizationService.validateAuthRequest(authRequest);
+        var errorObject = authorizationService.validateAuthRequest(authRequest);
 
+        assertTrue(errorObject.isPresent());
         assertThat(
-                errorObject,
+                errorObject.get().getErrorObject(),
                 equalTo(
-                        Optional.of(
-                                new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE,
-                                        "Request contains invalid claims"))));
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Request contains invalid claims")));
     }
 
     @Test
@@ -252,11 +256,11 @@ class AuthorizationServiceTest {
                                         REDIRECT_URI.toString(),
                                         CLIENT_ID.toString(),
                                         List.of("openid", "am"))));
-        Optional<ErrorObject> errorObject =
+        var errorObject =
                 authorizationService.validateAuthRequest(
                         generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
 
-        assertThat(errorObject, equalTo(Optional.empty()));
+        assertTrue(errorObject.isEmpty());
     }
 
     @Test
@@ -268,11 +272,12 @@ class AuthorizationServiceTest {
                         Optional.of(
                                 generateClientRegistry(
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
-        Optional<ErrorObject> errorObject =
+        var errorObject =
                 authorizationService.validateAuthRequest(
                         generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
 
-        assertThat(errorObject, equalTo(Optional.of(OAuth2Error.INVALID_SCOPE)));
+        assertTrue(errorObject.isPresent());
+        assertThat(errorObject.get().getErrorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
     }
 
     @Test
@@ -281,11 +286,17 @@ class AuthorizationServiceTest {
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         when(dynamoClientService.getClient(CLIENT_ID.toString())).thenReturn(Optional.empty());
-        Optional<ErrorObject> errorObject =
-                authorizationService.validateAuthRequest(
-                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
 
-        assertThat(errorObject, equalTo(Optional.of(OAuth2Error.UNAUTHORIZED_CLIENT)));
+        var runtimeException =
+                assertThrows(
+                        RuntimeException.class,
+                        () ->
+                                authorizationService.validateAuthRequest(
+                                        generateAuthRequest(
+                                                REDIRECT_URI.toString(), responseType, scope)),
+                        "Expected to throw exception");
+
+        assertThat(runtimeException.getMessage(), equalTo("No Client found with given ClientID"));
     }
 
     @Test
@@ -299,11 +310,13 @@ class AuthorizationServiceTest {
                         Optional.of(
                                 generateClientRegistry(
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
-        Optional<ErrorObject> errorObject =
+        var errorObject =
                 authorizationService.validateAuthRequest(
                         generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
 
-        assertThat(errorObject, equalTo(Optional.of(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE)));
+        assertTrue(errorObject.isPresent());
+        assertThat(
+                errorObject.get().getErrorObject(), equalTo(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE));
     }
 
     @Test
@@ -317,11 +330,12 @@ class AuthorizationServiceTest {
                         Optional.of(
                                 generateClientRegistry(
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
-        Optional<ErrorObject> errorObject =
+        var errorObject =
                 authorizationService.validateAuthRequest(
                         generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
 
-        assertThat(errorObject, equalTo(Optional.of(OAuth2Error.INVALID_SCOPE)));
+        assertTrue(errorObject.isPresent());
+        assertThat(errorObject.get().getErrorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
     }
 
     @Test
@@ -339,15 +353,15 @@ class AuthorizationServiceTest {
                                 responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
                         .nonce(new Nonce())
                         .build();
-        Optional<ErrorObject> errorObject = authorizationService.validateAuthRequest(authRequest);
+        var errorObject = authorizationService.validateAuthRequest(authRequest);
 
+        assertTrue(errorObject.isPresent());
         assertThat(
-                errorObject,
+                errorObject.get().getErrorObject(),
                 equalTo(
-                        Optional.of(
-                                new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE,
-                                        "Request is missing state parameter"))));
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Request is missing state parameter")));
     }
 
     @Test
@@ -365,15 +379,15 @@ class AuthorizationServiceTest {
                                 responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
                         .state(new State())
                         .build();
-        Optional<ErrorObject> errorObject = authorizationService.validateAuthRequest(authRequest);
+        var errorObject = authorizationService.validateAuthRequest(authRequest);
 
+        assertTrue(errorObject.isPresent());
         assertThat(
-                errorObject,
+                errorObject.get().getErrorObject(),
                 equalTo(
-                        Optional.of(
-                                new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE,
-                                        "Request is missing nonce parameter"))));
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Request is missing nonce parameter")));
     }
 
     @Test
@@ -392,15 +406,14 @@ class AuthorizationServiceTest {
                         .nonce(new Nonce())
                         .customParameter("vtr", jsonArrayOf("Cm"))
                         .build();
-        Optional<ErrorObject> errorObject = authorizationService.validateAuthRequest(authRequest);
+        var errorObject = authorizationService.validateAuthRequest(authRequest);
 
+        assertTrue(errorObject.isPresent());
         assertThat(
-                errorObject,
+                errorObject.get().getErrorObject(),
                 equalTo(
-                        Optional.of(
-                                new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE,
-                                        "Request vtr not valid"))));
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid")));
     }
 
     @Test
@@ -415,7 +428,7 @@ class AuthorizationServiceTest {
                                 generateClientRegistry(
                                         "http://localhost/wrong-redirect", CLIENT_ID.toString())));
 
-        RuntimeException exception =
+        var exception =
                 assertThrows(
                         RuntimeException.class,
                         () ->
@@ -456,9 +469,36 @@ class AuthorizationServiceTest {
                         .requestURI(URI.create("https://localhost/redirect-uri"))
                         .build();
 
+        var authRequestError = authorizationService.validateAuthRequest(authenticationRequest);
+
+        assertTrue(authRequestError.isPresent());
         assertThat(
-                authorizationService.validateAuthRequest(authenticationRequest),
-                equalTo(Optional.of(OAuth2Error.REQUEST_URI_NOT_SUPPORTED)));
+                authRequestError.get().getErrorObject(),
+                equalTo(OAuth2Error.REQUEST_URI_NOT_SUPPORTED));
+    }
+
+    @Test
+    void shouldReturnErrorWhenRequestObjectIsPresent() {
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
+        var authenticationRequest =
+                new AuthenticationRequest.Builder(
+                                new ResponseType(ResponseType.Value.CODE),
+                                new Scope(OIDCScopeValue.OPENID),
+                                CLIENT_ID,
+                                REDIRECT_URI)
+                        .requestObject(new PlainJWT(new JWTClaimsSet.Builder().build()))
+                        .build();
+
+        var authRequestError = authorizationService.validateAuthRequest(authenticationRequest);
+
+        assertTrue(authRequestError.isPresent());
+        assertThat(
+                authRequestError.get().getErrorObject(),
+                equalTo(OAuth2Error.REQUEST_NOT_SUPPORTED));
     }
 
     private ClientRegistry generateClientRegistry(String redirectURI, String clientID) {

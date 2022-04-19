@@ -15,6 +15,7 @@ import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
@@ -74,7 +75,7 @@ public class AuthorizationService {
                 authRequest.getResponseMode());
     }
 
-    public Optional<ErrorObject> validateAuthRequest(AuthenticationRequest authRequest) {
+    public Optional<AuthRequestError> validateAuthRequest(AuthenticationRequest authRequest) {
         var clientId = authRequest.getClientID().toString();
 
         attachLogFieldToLogs(CLIENT_ID, clientId);
@@ -82,8 +83,9 @@ public class AuthorizationService {
         Optional<ClientRegistry> client = dynamoClientService.getClient(clientId);
 
         if (client.isEmpty()) {
-            LOG.warn("Invalid client");
-            return Optional.of(OAuth2Error.UNAUTHORIZED_CLIENT);
+            var errorMsg = "No Client found with given ClientID";
+            LOG.warn(errorMsg);
+            throw new RuntimeException(errorMsg);
         }
 
         if (!client.get().getRedirectUrls().contains(authRequest.getRedirectionURI().toString())) {
@@ -93,40 +95,54 @@ public class AuthorizationService {
                             "Invalid Redirect in request %s",
                             authRequest.getRedirectionURI().toString()));
         }
+        var redirectURI = authRequest.getRedirectionURI();
         if (authRequest.getRequestURI() != null) {
-            return Optional.of(OAuth2Error.REQUEST_URI_NOT_SUPPORTED);
+            return Optional.of(
+                    new AuthRequestError(OAuth2Error.REQUEST_URI_NOT_SUPPORTED, redirectURI));
+        }
+        if (authRequest.getRequestObject() != null) {
+            return Optional.of(
+                    new AuthRequestError(OAuth2Error.REQUEST_NOT_SUPPORTED, redirectURI));
         }
         if (!authRequest.getResponseType().toString().equals(ResponseType.CODE.toString())) {
             LOG.warn("Unsupported responseType included in request. Expected responseType of code");
-            return Optional.of(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE);
+            return Optional.of(
+                    new AuthRequestError(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, redirectURI));
         }
         if (!areScopesValid(authRequest.getScope().toStringList(), client.get())) {
             LOG.warn(
                     "Invalid scopes in authRequest. Scopes in request: {}",
                     authRequest.getScope().toStringList());
-            return Optional.of(OAuth2Error.INVALID_SCOPE);
+            return Optional.of(new AuthRequestError(OAuth2Error.INVALID_SCOPE, redirectURI));
         }
         if (!areClaimsValid(authRequest.getOIDCClaims(), client.get())) {
             LOG.warn(
                     "Invalid claims in authRequest. Claims in request: {}",
                     authRequest.getOIDCClaims().toJSONString());
             return Optional.of(
-                    new ErrorObject(
-                            OAuth2Error.INVALID_REQUEST_CODE, "Request contains invalid claims"));
+                    new AuthRequestError(
+                            new ErrorObject(
+                                    OAuth2Error.INVALID_REQUEST_CODE,
+                                    "Request contains invalid claims"),
+                            redirectURI));
         }
         if (authRequest.getNonce() == null) {
             LOG.warn("Nonce is missing from authRequest");
             return Optional.of(
-                    new ErrorObject(
-                            OAuth2Error.INVALID_REQUEST_CODE,
-                            "Request is missing nonce parameter"));
+                    new AuthRequestError(
+                            new ErrorObject(
+                                    OAuth2Error.INVALID_REQUEST_CODE,
+                                    "Request is missing nonce parameter"),
+                            redirectURI));
         }
         if (authRequest.getState() == null) {
             LOG.warn("State is missing from authRequest");
             return Optional.of(
-                    new ErrorObject(
-                            OAuth2Error.INVALID_REQUEST_CODE,
-                            "Request is missing state parameter"));
+                    new AuthRequestError(
+                            new ErrorObject(
+                                    OAuth2Error.INVALID_REQUEST_CODE,
+                                    "Request is missing state parameter"),
+                            redirectURI));
         }
         List<String> authRequestVtr = authRequest.getCustomParameter(VTR_PARAM);
         try {
@@ -137,7 +153,10 @@ public class AuthorizationService {
                     authRequestVtr,
                     e);
             return Optional.of(
-                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
+                    new AuthRequestError(
+                            new ErrorObject(
+                                    OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"),
+                            redirectURI));
         }
         return Optional.empty();
     }
