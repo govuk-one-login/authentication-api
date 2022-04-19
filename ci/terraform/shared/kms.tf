@@ -317,3 +317,19 @@ resource "aws_kms_alias" "ipv_auth_encryption_key_alias" {
   name          = "alias/${var.environment}-ipv-auth-encryption-kms-key-alias"
   target_key_id = aws_kms_key.ipv_auth_encryption_key.key_id
 }
+
+# Doc Checking App Authentication Signing KMS key
+
+resource "aws_kms_key" "doc_app_auth_signing_key" {
+  description              = "KMS signing key for authentication to the Doc Checking App"
+  deletion_window_in_days  = 30
+  key_usage                = "SIGN_VERIFY"
+  customer_master_key_spec = "ECC_NIST_P256"
+
+  tags = local.default_tags
+}
+
+resource "aws_kms_alias" "doc_app_auth_signing_key_alias" {
+  name          = "alias/${var.environment}-doc-app-auth-kms-key-alias"
+  target_key_id = aws_kms_key.doc_app_auth_signing_key.key_id
+}
