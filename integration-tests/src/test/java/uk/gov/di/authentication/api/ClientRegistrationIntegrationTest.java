@@ -45,18 +45,14 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
                         singletonList("http://localhost/post-redirect-logout"),
                         "http://back-channel.com",
                         List.of("address"),
-                        String.valueOf(MANDATORY),
-                        List.of("http://localhost/request-uri")),
+                        String.valueOf(MANDATORY)),
                 Arguments.of(
                         List.of(
                                 "http://localhost/post-redirect-logout",
                                 "http://localhost/post-redirect-logout-v2"),
                         "http://back-channel.com",
                         List.of("address", "birthdate", "name"),
-                        String.valueOf(OPTIONAL),
-                        List.of(
-                                "http://localhost/request-uri",
-                                "http://localhost/request-uri-v2")));
+                        String.valueOf(OPTIONAL)));
     }
 
     @ParameterizedTest
@@ -65,8 +61,7 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
             List<String> postlogoutUris,
             String backChannelLogoutUri,
             List<String> claims,
-            String serviceType,
-            List<String> requestURIs)
+            String serviceType)
             throws JsonProcessingException {
         var clientRequest =
                 new ClientRegistrationRequest(
@@ -81,8 +76,7 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
                         "https://test.com",
                         "public",
                         false,
-                        claims,
-                        requestURIs);
+                        claims);
 
         var response = makeRequest(Optional.of(clientRequest), Map.of(), Map.of());
 
@@ -93,7 +87,6 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
         assertTrue(clientStore.clientExists(clientResponse.getClientId()));
         assertThat(clientResponse.getClaims(), equalTo(claims));
         assertThat(clientResponse.getBackChannelLogoutUri(), equalTo(backChannelLogoutUri));
-        assertThat(clientResponse.getRequestUris(), equalTo(requestURIs));
 
         assertEventTypesReceived(auditTopic, List.of(REGISTER_CLIENT_REQUEST_RECEIVED));
     }

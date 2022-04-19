@@ -39,7 +39,6 @@ import static org.mockito.Mockito.when;
 
 class RequestObjectServiceTest {
 
-    private static final URI REQUEST_URI = URI.create("https://localhost/request_uri");
     private static final String REDIRECT_URI = "https://localhost:8080";
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
@@ -267,7 +266,7 @@ class RequestObjectServiceTest {
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", "openid")
                         .claim("client_id", CLIENT_ID.getValue())
-                        .claim("request_uri", REQUEST_URI)
+                        .claim("request_uri", URI.create("https://localhost/request_uri"))
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet));
@@ -320,7 +319,6 @@ class RequestObjectServiceTest {
                 .setClientName("test-client")
                 .setScopes(List.of("openid"))
                 .setRedirectUrls(singletonList(REDIRECT_URI))
-                .setRequestUris(singletonList(REQUEST_URI.toString()))
                 .setSectorIdentifierUri("https://test.com")
                 .setSubjectType("pairwise");
     }

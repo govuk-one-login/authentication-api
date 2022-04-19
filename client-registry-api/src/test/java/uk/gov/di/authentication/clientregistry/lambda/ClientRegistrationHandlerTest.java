@@ -113,7 +113,6 @@ class ClientRegistrationHandlerTest {
                         sectorIdentifierUri,
                         subjectType,
                         true,
-                        emptyList(),
                         emptyList());
     }
 
@@ -160,7 +159,6 @@ class ClientRegistrationHandlerTest {
                         sectorIdentifierUri,
                         subjectType,
                         false,
-                        emptyList(),
                         emptyList());
     }
 
@@ -199,7 +197,6 @@ class ClientRegistrationHandlerTest {
                         sectorIdentifierUri,
                         subjectType,
                         true,
-                        emptyList(),
                         emptyList());
     }
 

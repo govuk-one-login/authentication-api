@@ -39,9 +39,6 @@ public class ClientRegistrationResponse {
     @JsonProperty(required = true, value = "service_type")
     private String serviceType;
 
-    @JsonProperty(value = "request_uris")
-    private List<String> requestUris;
-
     @JsonProperty(value = "claims")
     private List<String> claims;
 
@@ -59,7 +56,6 @@ public class ClientRegistrationResponse {
             String serviceType,
             String subjectType,
             List<String> claims,
-            List<String> requestUris,
             String sectorIdentifierUri) {
         this.clientName = clientName;
         this.clientId = clientId;
@@ -71,7 +67,6 @@ public class ClientRegistrationResponse {
         this.serviceType = serviceType;
         this.subjectType = subjectType;
         this.claims = claims;
-        this.requestUris = requestUris;
         this.sectorIdentifierUri = sectorIdentifierUri;
     }
 
@@ -80,11 +75,6 @@ public class ClientRegistrationResponse {
     public ClientRegistrationResponse setPostLogoutRedirectUris(
             List<String> postLogoutRedirectUris) {
         this.postLogoutRedirectUris = postLogoutRedirectUris;
-        return this;
-    }
-
-    public ClientRegistrationResponse setRequestUris(List<String> requestUris) {
-        this.requestUris = requestUris;
         return this;
     }
 
@@ -134,10 +124,6 @@ public class ClientRegistrationResponse {
 
     public List<String> getClaims() {
         return claims;
-    }
-
-    public List<String> getRequestUris() {
-        return requestUris;
     }
 
     public String getSectorIdentifierUri() {
