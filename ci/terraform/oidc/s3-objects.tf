@@ -50,3 +50,12 @@ resource "aws_s3_bucket_object" "ipv_api_release_zip" {
   source                 = var.ipv_api_lambda_zip_file
   source_hash            = filemd5(var.ipv_api_lambda_zip_file)
 }
+
+resource "aws_s3_bucket_object" "doc_checking_app_api_release_zip" {
+  bucket = aws_s3_bucket.source_bucket.bucket
+  key    = "doc-checking-app-api-release.zip"
+
+  server_side_encryption = "AES256"
+  source                 = var.doc_checking_app_api_lambda_zip_file
+  source_hash            = filemd5(var.doc_checking_app_api_lambda_zip_file)
+}

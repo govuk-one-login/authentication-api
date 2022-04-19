@@ -22,6 +22,12 @@ variable "ipv_api_lambda_zip_file" {
   type        = string
 }
 
+variable "doc_checking_app_api_lambda_zip_file" {
+  default     = "../../../doc-checking-app-api/build/distributions/doc-checking-app-api.zip"
+  description = "Location of the doc checking app API Lambda ZIP file"
+  type        = string
+}
+
 variable "lambda_warmer_zip_file" {
   default     = "../../../lambda-warmer/build/distributions/lambda-warmer.zip"
   description = "Location of the Lambda Warmer ZIP file"
@@ -275,4 +281,24 @@ variable "ipv_auth_public_encryption_key" {
 variable "doc_app_auth_public_encryption_key" {
   type    = string
   default = "undefined"
+}
+
+variable "doc_app_authorisation_uri" {
+  type    = string
+  default = "undefined"
+}
+
+variable "doc_app_authorisation_callback_uri" {
+  type    = string
+  default = "undefined"
+}
+
+variable "doc_app_authorisation_client_id" {
+  type    = string
+  default = "undefined"
+}
+
+variable "doc_app_api_enabled" {
+  type    = bool
+  default = false
 }
