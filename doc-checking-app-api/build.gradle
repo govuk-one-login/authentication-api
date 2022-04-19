@@ -1,0 +1,49 @@
+plugins {
+    id "java"
+    id "jacoco"
+}
+
+group "uk.gov.di.authentication.ipvapi"
+version "unspecified"
+
+dependencies {
+    compileOnly configurations.lambda
+
+    implementation configurations.jackson,
+            configurations.nimbus,
+            project(":shared")
+    runtimeOnly configurations.logging_runtime
+
+    testImplementation configurations.tests,
+            configurations.lambda_tests,
+            project(":shared-test"),
+            configurations.lambda,
+            configurations.sqs,
+            configurations.dynamodb
+
+    testRuntimeOnly configurations.test_runtime
+}
+
+test {
+    useJUnitPlatform()
+}
+
+task buildZip(type: Zip) {
+    from compileJava
+    from processResources
+    into("lib") {
+        from configurations.runtimeClasspath
+    }
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled true
+    }
+    dependsOn "test"
+}

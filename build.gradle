@@ -286,6 +286,7 @@ task oidcTerraform (type: Terraform) {
     dependsOn ":frontend-api:buildZip"
     dependsOn ":oidc-api:buildZip"
     dependsOn ":ipv-api:buildZip"
+    dependsOn ":doc-checking-app-api:buildZip"
     dependsOn "sharedTerraform"
 }
 
