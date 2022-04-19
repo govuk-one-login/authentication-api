@@ -63,8 +63,7 @@ public class TokenValidationService {
     private boolean hasTokenExpired(String tokenValue) {
         try {
             JWTClaimsSet claimsSet = SignedJWT.parse(tokenValue).getJWTClaimsSet();
-            LocalDateTime localDateTime = LocalDateTime.now();
-            Date currentDateTime = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
+            Date currentDateTime = NowHelper.now();
             if (DateUtils.isBefore(claimsSet.getExpirationTime(), currentDateTime, 0)) {
                 return true;
             }
