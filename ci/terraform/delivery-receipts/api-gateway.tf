@@ -33,11 +33,11 @@ resource "aws_cloudwatch_log_group" "delivery_receipts_api_stage_execution_logs"
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "delivery_receipts_api_execution_log_subscription" {
-  count           = var.logging_endpoint_enabled ? 1 : 0
+  count           = length(var.logging_endpoint_arns)
   name            = "${var.environment}-delivery-receipts-api-execution-log-subscription"
   log_group_name  = aws_cloudwatch_log_group.delivery_receipts_api_stage_execution_logs[0].name
   filter_pattern  = ""
-  destination_arn = var.logging_endpoint_arn
+  destination_arn = var.logging_endpoint_arns[count.index]
 }
 
 resource "aws_cloudwatch_log_group" "delivery_receipts_stage_access_logs" {
@@ -49,11 +49,11 @@ resource "aws_cloudwatch_log_group" "delivery_receipts_stage_access_logs" {
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "delivery_receipts_api_access_log_subscription" {
-  count           = var.logging_endpoint_enabled ? 1 : 0
+  count           = length(var.logging_endpoint_arns)
   name            = "${var.environment}-delivery-receipts-api-access-logs-subscription"
   log_group_name  = aws_cloudwatch_log_group.delivery_receipts_stage_access_logs[0].name
   filter_pattern  = ""
-  destination_arn = var.logging_endpoint_arn
+  destination_arn = var.logging_endpoint_arns[count.index]
 }
 
 resource "aws_api_gateway_stage" "endpoint_delivery_receipts_stage" {

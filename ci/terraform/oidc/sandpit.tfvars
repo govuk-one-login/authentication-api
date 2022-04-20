@@ -13,5 +13,6 @@ ipv_authorisation_callback_uri      = ""
 ipv_authorisation_uri               = ""
 ipv_authorisation_client_id         = ""
 logging_endpoint_enabled            = false
+logging_endpoint_arns               = []
 
 enable_api_gateway_execution_request_tracing = true

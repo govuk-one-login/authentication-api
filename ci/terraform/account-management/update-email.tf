@@ -53,8 +53,7 @@ module "update_email" {
   lambda_role_arn                        = module.account_management_api_update_email_role.arn
   use_localstack                         = var.use_localstack
   default_tags                           = local.default_tags
-  logging_endpoint_enabled               = var.logging_endpoint_enabled
-  logging_endpoint_arn                   = var.logging_endpoint_arn
+  logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
