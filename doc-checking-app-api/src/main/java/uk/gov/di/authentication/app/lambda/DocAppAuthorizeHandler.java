@@ -26,6 +26,7 @@ import java.util.Objects;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class DocAppAuthorizeHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -66,44 +67,64 @@ public class DocAppAuthorizeHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        try {
-            LOG.info("DocAppAuthorizeHandler received request");
+        return isWarming(input)
+                .orElseGet(
+                        () -> {
+                            try {
+                                LOG.info("DocAppAuthorizeHandler received request");
 
-            var session =
-                    sessionService.getSessionFromRequestHeaders(input.getHeaders()).orElse(null);
-            var clientSession =
-                    clientSessionService
-                            .getClientSessionFromRequestHeaders(input.getHeaders())
-                            .orElse(null);
-            if (Objects.isNull(session)) {
-                LOG.warn("Session cannot be found");
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-            }
-            if (Objects.isNull(clientSession)) {
-                LOG.warn("ClientSession cannot be found");
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1018);
-            }
-            attachSessionIdToLogs(session);
-            var clientID = new ClientID(configurationService.getDocAppAuthorisationClientId());
-            var state = new State();
-            var encryptedJWT = authorisationService.constructRequestJWT(state, new Subject());
-            var authRequestBuilder =
-                    new AuthorizationRequest.Builder(
-                                    new ResponseType(ResponseType.Value.CODE), clientID)
-                            .endpointURI(configurationService.getDocAppAuthorisationURI())
-                            .requestObject(encryptedJWT);
+                                var session =
+                                        sessionService
+                                                .getSessionFromRequestHeaders(input.getHeaders())
+                                                .orElse(null);
+                                var clientSession =
+                                        clientSessionService
+                                                .getClientSessionFromRequestHeaders(
+                                                        input.getHeaders())
+                                                .orElse(null);
+                                if (Objects.isNull(session)) {
+                                    LOG.warn("Session cannot be found");
+                                    return generateApiGatewayProxyErrorResponse(
+                                            400, ErrorResponse.ERROR_1000);
+                                }
+                                if (Objects.isNull(clientSession)) {
+                                    LOG.warn("ClientSession cannot be found");
+                                    return generateApiGatewayProxyErrorResponse(
+                                            400, ErrorResponse.ERROR_1018);
+                                }
+                                attachSessionIdToLogs(session);
+                                var clientID =
+                                        new ClientID(
+                                                configurationService
+                                                        .getDocAppAuthorisationClientId());
+                                var state = new State();
+                                var encryptedJWT =
+                                        authorisationService.constructRequestJWT(
+                                                state, new Subject());
+                                var authRequestBuilder =
+                                        new AuthorizationRequest.Builder(
+                                                        new ResponseType(ResponseType.Value.CODE),
+                                                        clientID)
+                                                .endpointURI(
+                                                        configurationService
+                                                                .getDocAppAuthorisationURI())
+                                                .requestObject(encryptedJWT);
 
-            var authorisationRequest = authRequestBuilder.build();
-            authorisationService.storeState(session.getSessionId(), state);
-            LOG.info(
-                    "DocAppAuthorizeHandler successfully processed request, redirect URI {}",
-                    authorisationRequest.toURI().toString());
+                                var authorisationRequest = authRequestBuilder.build();
+                                authorisationService.storeState(session.getSessionId(), state);
+                                LOG.info(
+                                        "DocAppAuthorizeHandler successfully processed request, redirect URI {}",
+                                        authorisationRequest.toURI().toString());
 
-            return generateApiGatewayProxyResponse(
-                    200, new DocAppAuthorisationResponse(authorisationRequest.toURI().toString()));
+                                return generateApiGatewayProxyResponse(
+                                        200,
+                                        new DocAppAuthorisationResponse(
+                                                authorisationRequest.toURI().toString()));
 
-        } catch (JsonProcessingException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
-        }
+                            } catch (JsonProcessingException e) {
+                                return generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.ERROR_1001);
+                            }
+                        });
     }
 }
