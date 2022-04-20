@@ -95,6 +95,7 @@ class DocAppAuthorizeHandlerTest {
                 .thenReturn(DOC_APP_CALLBACK_URI);
         when(configurationService.getDocAppAuthorisationURI())
                 .thenReturn(DOC_APP_AUTHORISATION_URI);
+        when(clientSession.getDocAppSubjectId()).thenReturn(new Subject());
     }
 
     @Test

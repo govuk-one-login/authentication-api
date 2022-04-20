@@ -5,6 +5,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -59,6 +60,7 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
 
     @Test
     void shouldReturn200WithValidDocAppAuthRequest() throws IOException {
+        redis.addDocAppSubjectIdToClientSession(new Subject(), CLIENT_SESSION_ID);
         var response =
                 makeRequest(
                         Optional.empty(),
