@@ -24,6 +24,7 @@ inputs:
   - name: frontend-api-release
   - name: client-registry-api-release
   - name: ipv-api-release
+  - name: doc-checking-app-api-release
   - name: lambda-warmer-release
   - name: shared-terraform-outputs
 outputs:
@@ -46,6 +47,7 @@ run:
         -var "frontend_api_lambda_zip_file=$(ls -1 ../../../../frontend-api-release/*.zip)" \
         -var "client_registry_api_lambda_zip_file=$(ls -1 ../../../../client-registry-api-release/*.zip)" \
         -var "ipv_api_lambda_zip_file=$(ls -1 ../../../../ipv-api-release/*.zip)" \
+        -var "doc_checking_app_api_lambda_zip_file=$(ls -1 ../../../../doc-checking-app-api-release/*.zip)" \
         -var "lambda_warmer_zip_file=$(ls -1 ../../../../lambda-warmer-release/*.zip)" \
         -var "deployer_role_arn=${DEPLOYER_ROLE_ARN}" \
         -var "notify_api_key=${NOTIFY_API_KEY}" \
