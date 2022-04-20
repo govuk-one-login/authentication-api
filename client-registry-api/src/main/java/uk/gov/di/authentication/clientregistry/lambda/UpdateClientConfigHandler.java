@@ -142,7 +142,8 @@ public class UpdateClientConfigHandler
                                                 clientRegistry.getServiceType(),
                                                 clientRegistry.getSubjectType(),
                                                 clientRegistry.getClaims(),
-                                                clientRegistry.getSectorIdentifierUri());
+                                                clientRegistry.getSectorIdentifierUri(),
+                                                clientRegistry.getClientType());
                                 LOG.info("Client updated");
                                 return generateApiGatewayProxyResponse(
                                         200, clientRegistrationResponse);

@@ -8,6 +8,7 @@ import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import com.amazonaws.services.dynamodbv2.model.Projection;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 
 import java.util.Collections;
@@ -53,7 +54,8 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 sectorIdentifierUri,
                 subjectType,
                 consentRequired,
-                Collections.emptyList());
+                Collections.emptyList(),
+                ClientType.WEB.getValue());
     }
 
     public boolean clientExists(String clientID) {

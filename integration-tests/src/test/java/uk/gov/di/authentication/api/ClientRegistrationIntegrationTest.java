@@ -9,6 +9,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler;
+import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.util.List;
@@ -76,7 +77,8 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
                         "https://test.com",
                         "public",
                         false,
-                        claims);
+                        claims,
+                        ClientType.WEB.getValue());
 
         var response = makeRequest(Optional.of(clientRequest), Map.of(), Map.of());
 
@@ -87,6 +89,7 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
         assertTrue(clientStore.clientExists(clientResponse.getClientId()));
         assertThat(clientResponse.getClaims(), equalTo(claims));
         assertThat(clientResponse.getBackChannelLogoutUri(), equalTo(backChannelLogoutUri));
+        assertThat(clientResponse.getClientType(), equalTo(ClientType.WEB.getValue()));
 
         assertEventTypesReceived(auditTopic, List.of(REGISTER_CLIENT_REQUEST_RECEIVED));
     }

@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.clientregistry.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 
 import java.util.ArrayList;
@@ -45,6 +46,9 @@ public class ClientRegistrationRequest {
     @JsonProperty("claims")
     private List<String> claims = new ArrayList<>();
 
+    @JsonProperty("client_type")
+    private String clientType;
+
     public ClientRegistrationRequest(
             @JsonProperty(required = true, value = "client_name") String clientName,
             @JsonProperty(required = true, value = "redirect_uris") List<String> redirectUris,
@@ -59,7 +63,8 @@ public class ClientRegistrationRequest {
             @JsonProperty(required = true, value = "subject_type") String subjectType,
             @JsonProperty(value = "identity_verification_required")
                     boolean identityVerificationRequired,
-            @JsonProperty(value = "claims") List<String> claims) {
+            @JsonProperty(value = "claims") List<String> claims,
+            @JsonProperty(value = "client_type") String clientType) {
         this.clientName = clientName;
         this.redirectUris = redirectUris;
         this.contacts = contacts;
@@ -79,6 +84,10 @@ public class ClientRegistrationRequest {
         if (Objects.nonNull(claims)) {
             this.claims = claims;
         }
+        if (Objects.isNull(clientType)) {
+            clientType = ClientType.WEB.getValue();
+        }
+        this.clientType = clientType;
     }
 
     public String getClientName() {
@@ -127,5 +136,9 @@ public class ClientRegistrationRequest {
 
     public List<String> getClaims() {
         return claims;
+    }
+
+    public String getClientType() {
+        return clientType;
     }
 }

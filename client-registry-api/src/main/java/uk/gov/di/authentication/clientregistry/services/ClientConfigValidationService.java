@@ -4,6 +4,7 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.client.RegistrationError;
 import com.nimbusds.openid.connect.sdk.SubjectType;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
+import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
@@ -12,6 +13,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.KeyFactory;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
@@ -36,6 +38,8 @@ public class ClientConfigValidationService {
             new ErrorObject("invalid_client_metadata", "Insufficient Claim");
     public static final ErrorObject INVALID_SECTOR_IDENTIFIER_URI =
             new ErrorObject("invalid_client_metadata", "Invalid Sector Identifier URI");
+    public static final ErrorObject INVALID_CLIENT_TYPE =
+            new ErrorObject("invalid_client_metadata", "Invalid Client Type");
 
     public Optional<ErrorObject> validateClientRegistrationConfig(
             ClientRegistrationRequest registrationRequest) {
@@ -74,6 +78,10 @@ public class ClientConfigValidationService {
                 .orElse(true)) {
             return Optional.of(INVALID_CLAIM);
         }
+        if (Arrays.stream(ClientType.values())
+                .noneMatch(t -> t.getValue().equals(registrationRequest.getClientType()))) {
+            return Optional.of(INVALID_CLIENT_TYPE);
+        }
         return Optional.empty();
     }
 
@@ -108,6 +116,11 @@ public class ClientConfigValidationService {
                 .map(t -> areUrisValid(singletonList(t)))
                 .orElse(true)) {
             return Optional.of(INVALID_SECTOR_IDENTIFIER_URI);
+        }
+        if (!Optional.ofNullable(updateRequest.getClientType())
+                .map(c -> Arrays.stream(ClientType.values()).anyMatch(t -> t.getValue().equals(c)))
+                .orElse(true)) {
+            return Optional.of(INVALID_CLIENT_TYPE);
         }
         return Optional.empty();
     }

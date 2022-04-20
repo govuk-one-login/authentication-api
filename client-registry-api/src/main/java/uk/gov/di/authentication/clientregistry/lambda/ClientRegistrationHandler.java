@@ -6,7 +6,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.logging.log4j.LogManager;
@@ -19,8 +18,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
-
-import java.util.Optional;
 
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_ERROR;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_RECEIVED;
@@ -81,10 +78,10 @@ public class ClientRegistrationHandler
 
                             try {
                                 LOG.info("Client registration request received");
-                                ClientRegistrationRequest clientRegistrationRequest =
+                                var clientRegistrationRequest =
                                         objectMapper.readValue(
                                                 input.getBody(), ClientRegistrationRequest.class);
-                                Optional<ErrorObject> errorResponse =
+                                var errorResponse =
                                         validationService.validateClientRegistrationConfig(
                                                 clientRegistrationRequest);
                                 if (errorResponse.isPresent()) {
@@ -125,7 +122,8 @@ public class ClientRegistrationHandler
                                                 clientRegistrationRequest.getSectorIdentifierUri()),
                                         clientRegistrationRequest.getSubjectType(),
                                         !clientRegistrationRequest.isIdentityVerificationRequired(),
-                                        clientRegistrationRequest.getClaims());
+                                        clientRegistrationRequest.getClaims(),
+                                        clientRegistrationRequest.getClientType());
 
                                 var clientRegistrationResponse =
                                         new ClientRegistrationResponse(
@@ -140,7 +138,8 @@ public class ClientRegistrationHandler
                                                 clientRegistrationRequest.getServiceType(),
                                                 clientRegistrationRequest.getSubjectType(),
                                                 clientRegistrationRequest.getClaims(),
-                                                clientRegistrationRequest.getSectorIdentifierUri());
+                                                clientRegistrationRequest.getSectorIdentifierUri(),
+                                                clientRegistrationRequest.getClientType());
                                 LOG.info("Generating successful Client registration response");
                                 return generateApiGatewayProxyResponse(
                                         200, clientRegistrationResponse);

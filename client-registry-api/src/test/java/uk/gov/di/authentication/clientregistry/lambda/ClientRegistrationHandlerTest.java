@@ -11,9 +11,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
+import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -21,7 +24,9 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -44,6 +49,12 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 class ClientRegistrationHandlerTest {
 
+    public static final String CLIENT_NAME = "test-client";
+    private static final String SECTOR_IDENTIFIER = "https://test.com";
+    private static final String SUBJECT_TYPE = "pairwise";
+    private static final List<String> REDIRECT_URIS = List.of("http://localhost:8080/redirect-uri");
+    private static final List<String> CONTACTS = List.of("joe.bloggs@test.com");
+    private static final String SERVICE_TYPE = String.valueOf(MANDATORY);
     private final String clientId = IdGenerator.generate();
     private final Context context = mock(Context.class);
     private final ClientService clientService = mock(ClientService.class);
@@ -71,15 +82,7 @@ class ClientRegistrationHandlerTest {
     }
 
     @Test
-    public void shouldReturn200IfClientRegistrationRequestIsSuccessful()
-            throws JsonProcessingException {
-
-        String sectorIdentifierUri = "https://test.com";
-        String subjectType = "pairwise";
-        String clientName = "test-client";
-        List<String> redirectUris = List.of("http://localhost:8080/redirect-uri");
-        List<String> contacts = List.of("joe.bloggs@test.com");
-        String serviceType = String.valueOf(MANDATORY);
+    void shouldReturn200IfClientRegistrationRequestIsSuccessful() throws JsonProcessingException {
         when(configValidationService.validateClientRegistrationConfig(
                         any(ClientRegistrationRequest.class)))
                 .thenReturn(Optional.empty());
@@ -97,35 +100,29 @@ class ClientRegistrationHandlerTest {
         assertThat(clientRegistrationResponseResult.getClientId(), equalTo(clientId));
         assertThat(
                 clientRegistrationResponseResult.getTokenAuthMethod(), equalTo("private_key_jwt"));
-        assertThat(clientRegistrationResponseResult.getSubjectType(), equalTo(subjectType));
+        assertThat(clientRegistrationResponseResult.getSubjectType(), equalTo(SUBJECT_TYPE));
         assertThat(clientRegistrationResponseResult.getScopes(), equalTo(singletonList("openid")));
         verify(clientService)
                 .addClient(
                         clientId,
-                        clientName,
-                        redirectUris,
-                        contacts,
+                        CLIENT_NAME,
+                        REDIRECT_URIS,
+                        CONTACTS,
                         singletonList("openid"),
                         "some-public-key",
                         singletonList("http://localhost:8080/post-logout-redirect-uri"),
                         "http://localhost:8080/back-channel-logout-uri",
-                        serviceType,
-                        sectorIdentifierUri,
-                        subjectType,
+                        SERVICE_TYPE,
+                        SECTOR_IDENTIFIER,
+                        SUBJECT_TYPE,
                         true,
-                        emptyList());
+                        emptyList(),
+                        ClientType.WEB.getValue());
     }
 
     @Test
-    public void shouldSetConsentRequiredToFalseWhenIdentityVerificationIsRequired()
+    void shouldSetConsentRequiredToFalseWhenIdentityVerificationIsRequired()
             throws JsonProcessingException {
-
-        String sectorIdentifierUri = "https://test.com";
-        String subjectType = "pairwise";
-        String clientName = "test-client";
-        List<String> redirectUris = List.of("http://localhost:8080/redirect-uri");
-        List<String> contacts = List.of("joe.bloggs@test.com");
-        String serviceType = String.valueOf(MANDATORY);
         when(configValidationService.validateClientRegistrationConfig(
                         any(ClientRegistrationRequest.class)))
                 .thenReturn(Optional.empty());
@@ -143,34 +140,28 @@ class ClientRegistrationHandlerTest {
         assertThat(clientRegistrationResponseResult.getClientId(), equalTo(clientId));
         assertThat(
                 clientRegistrationResponseResult.getTokenAuthMethod(), equalTo("private_key_jwt"));
-        assertThat(clientRegistrationResponseResult.getSubjectType(), equalTo(subjectType));
+        assertThat(clientRegistrationResponseResult.getSubjectType(), equalTo(SUBJECT_TYPE));
         assertThat(clientRegistrationResponseResult.getScopes(), equalTo(singletonList("openid")));
         verify(clientService)
                 .addClient(
                         clientId,
-                        clientName,
-                        redirectUris,
-                        contacts,
+                        CLIENT_NAME,
+                        REDIRECT_URIS,
+                        CONTACTS,
                         singletonList("openid"),
                         "some-public-key",
                         singletonList("http://localhost:8080/post-logout-redirect-uri"),
                         "http://localhost:8080/back-channel-logout-uri",
-                        serviceType,
-                        sectorIdentifierUri,
-                        subjectType,
+                        SERVICE_TYPE,
+                        SECTOR_IDENTIFIER,
+                        SUBJECT_TYPE,
                         false,
-                        emptyList());
+                        emptyList(),
+                        ClientType.WEB.getValue());
     }
 
     @Test
-    public void shouldAllowBackChannelLogoutUriToBeAbsent() throws JsonProcessingException {
-
-        String sectorIdentifierUri = "https://test.com";
-        String subjectType = "pairwise";
-        String clientName = "test-client";
-        List<String> redirectUris = List.of("http://localhost:8080/redirect-uri");
-        List<String> contacts = List.of("joe.bloggs@test.com");
-        String serviceType = String.valueOf(MANDATORY);
+    void shouldAllowBackChannelLogoutUriToBeAbsent() {
         when(configValidationService.validateClientRegistrationConfig(
                         any(ClientRegistrationRequest.class)))
                 .thenReturn(Optional.empty());
@@ -186,22 +177,23 @@ class ClientRegistrationHandlerTest {
         verify(clientService)
                 .addClient(
                         clientId,
-                        clientName,
-                        redirectUris,
-                        contacts,
+                        CLIENT_NAME,
+                        REDIRECT_URIS,
+                        CONTACTS,
                         singletonList("openid"),
                         "some-public-key",
                         singletonList("http://localhost:8080/post-logout-redirect-uri"),
                         null,
-                        serviceType,
-                        sectorIdentifierUri,
-                        subjectType,
+                        SERVICE_TYPE,
+                        SECTOR_IDENTIFIER,
+                        SUBJECT_TYPE,
                         true,
-                        emptyList());
+                        emptyList(),
+                        ClientType.WEB.getValue());
     }
 
     @Test
-    public void shouldReturn400IfAnyRequestParametersAreMissing() {
+    void shouldReturn400IfAnyRequestParametersAreMissing() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
                 "{\"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"] }");
@@ -216,7 +208,7 @@ class ClientRegistrationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400ResponseIfRequestFailsValidation() {
+    void shouldReturn400ResponseIfRequestFailsValidation() {
         when(configValidationService.validateClientRegistrationConfig(
                         any(ClientRegistrationRequest.class)))
                 .thenReturn(Optional.of(INVALID_PUBLIC_KEY));
@@ -234,7 +226,7 @@ class ClientRegistrationHandlerTest {
     }
 
     @Test
-    public void shouldReturn400ResponseIfRequestHasPrivateScope() {
+    void shouldReturn400ResponseIfRequestHasPrivateScope() {
         when(configValidationService.validateClientRegistrationConfig(
                         any(ClientRegistrationRequest.class)))
                 .thenReturn(Optional.of(INVALID_SCOPE));
@@ -249,6 +241,43 @@ class ClientRegistrationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         REGISTER_CLIENT_REQUEST_ERROR, "request-id", "", "", "", "", "", "", "");
+    }
+
+    private static Stream<String> clientTypes() {
+        return Stream.of(ClientType.WEB.getValue(), ClientType.APP.getValue());
+    }
+
+    @ParameterizedTest
+    @MethodSource("clientTypes")
+    void shouldReturnExpectedClientTypeInResponse(String clientType)
+            throws JsonProcessingException {
+        when(configValidationService.validateClientRegistrationConfig(
+                        any(ClientRegistrationRequest.class)))
+                .thenReturn(Optional.empty());
+        when(clientService.generateClientID()).thenReturn(new ClientID(clientId));
+
+        var event = new APIGatewayProxyRequestEvent();
+        event.setBody(
+                format(
+                        "{ \"client_name\": \"%s\", "
+                                + "\"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], "
+                                + "\"contacts\": [\"joe.bloggs@test.com\"], "
+                                + "\"scopes\": [\"openid\"],  "
+                                + "\"public_key\": \"some-public-key\", "
+                                + "\"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], "
+                                + "\"back_channel_logout_uri\": \"http://localhost:8080/back-channel-logout\", "
+                                + "\"service_type\": \"%s\", "
+                                + "\"sector_identifier_uri\": \"%s\", "
+                                + "\"subject_type\": \"%s\", "
+                                + "\"client_type\": \"%s\" }",
+                        CLIENT_NAME, MANDATORY, SECTOR_IDENTIFIER, SUBJECT_TYPE, clientType));
+        var result = makeHandlerRequest(event);
+
+        assertThat(result, hasStatus(200));
+        var clientRegistrationResponseResult =
+                objectMapper.readValue(result.getBody(), ClientRegistrationResponse.class);
+
+        assertThat(clientRegistrationResponseResult.getClientType(), equalTo(clientType));
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {

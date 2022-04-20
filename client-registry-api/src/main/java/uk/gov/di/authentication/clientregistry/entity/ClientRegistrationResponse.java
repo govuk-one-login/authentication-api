@@ -45,6 +45,9 @@ public class ClientRegistrationResponse {
     @JsonProperty("sector_identifier_uri")
     private String sectorIdentifierUri;
 
+    @JsonProperty("client_type")
+    private String clientType;
+
     public ClientRegistrationResponse(
             String clientName,
             String clientId,
@@ -56,7 +59,8 @@ public class ClientRegistrationResponse {
             String serviceType,
             String subjectType,
             List<String> claims,
-            String sectorIdentifierUri) {
+            String sectorIdentifierUri,
+            String clientType) {
         this.clientName = clientName;
         this.clientId = clientId;
         this.redirectUris = redirectUris;
@@ -68,6 +72,7 @@ public class ClientRegistrationResponse {
         this.subjectType = subjectType;
         this.claims = claims;
         this.sectorIdentifierUri = sectorIdentifierUri;
+        this.clientType = clientType;
     }
 
     public ClientRegistrationResponse() {}
@@ -128,5 +133,9 @@ public class ClientRegistrationResponse {
 
     public String getSectorIdentifierUri() {
         return sectorIdentifierUri;
+    }
+
+    public String getClientType() {
+        return clientType;
     }
 }

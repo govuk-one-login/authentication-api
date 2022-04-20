@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -96,6 +97,7 @@ class UpdateClientConfigHandlerTest {
         assertThat(clientRegistrationResponse.getTokenAuthMethod(), equalTo("private_key_jwt"));
         assertThat(clientRegistrationResponse.getScopes(), equalTo(SCOPES));
         assertThat(clientRegistrationResponse.getServiceType(), equalTo(SERVICE_TYPE));
+        assertThat(clientRegistrationResponse.getClientType(), equalTo(ClientType.WEB.getValue()));
     }
 
     @Test
@@ -219,6 +221,7 @@ class UpdateClientConfigHandlerTest {
         clientRegistry.setContacts(singletonList("contant-name"));
         clientRegistry.setPostLogoutRedirectUrls(singletonList("localhost/logout"));
         clientRegistry.setServiceType(SERVICE_TYPE);
+        clientRegistry.setClientType(ClientType.WEB.getValue());
         return clientRegistry;
     }
 
