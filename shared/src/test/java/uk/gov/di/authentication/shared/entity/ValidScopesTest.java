@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.shared.entity;
 
-import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.Test;
 
@@ -10,15 +9,16 @@ import java.util.Set;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class ValidScopesTest {
 
     @Test
     void shouldReturnCorrectClaimsForOpenidScope() {
         assertThat(ValidScopes.getClaimsForListOfScopes(List.of("openid")), contains("sub"));
-        assertEquals(ValidScopes.getClaimsForListOfScopes(List.of("openid")).size(), 1);
+        assertThat(ValidScopes.getClaimsForListOfScopes(List.of("openid")).size(), equalTo(1));
     }
 
     @Test
@@ -26,12 +26,13 @@ class ValidScopesTest {
         assertThat(
                 ValidScopes.getClaimsForListOfScopes(List.of("email")),
                 containsInAnyOrder("email", "email_verified"));
-        assertEquals(ValidScopes.getClaimsForListOfScopes(List.of("email")).size(), 2);
+        assertThat(ValidScopes.getClaimsForListOfScopes(List.of("email")).size(), equalTo(2));
     }
 
     @Test
     void shouldNotReturnAnyClaimsForOfflineAccessScope() {
-        assertEquals(ValidScopes.getClaimsForListOfScopes(List.of("offline_access")).size(), 0);
+        assertThat(
+                ValidScopes.getClaimsForListOfScopes(List.of("offline_access")).size(), equalTo(0));
     }
 
     @Test
@@ -39,7 +40,7 @@ class ValidScopesTest {
         assertThat(
                 ValidScopes.getClaimsForListOfScopes(List.of("phone")),
                 containsInAnyOrder("phone_number", "phone_number_verified"));
-        assertEquals(ValidScopes.getClaimsForListOfScopes(List.of("phone")).size(), 2);
+        assertThat(ValidScopes.getClaimsForListOfScopes(List.of("phone")).size(), equalTo(2));
     }
 
     @Test
@@ -47,7 +48,27 @@ class ValidScopesTest {
         assertThat(
                 ValidScopes.getClaimsForListOfScopes(List.of("am")),
                 containsInAnyOrder("read", "write"));
-        assertEquals(ValidScopes.getClaimsForListOfScopes(List.of("am")).size(), 2);
+
+        assertThat(ValidScopes.getClaimsForListOfScopes(List.of("am")).size(), equalTo(2));
+    }
+
+    @Test
+    void shouldReturnCorrectClaimsForDocCheckingAppScope() {
+        assertThat(
+                ValidScopes.getClaimsForListOfScopes(List.of("doc-checking-app")),
+                containsInAnyOrder("read"));
+        assertThat(
+                ValidScopes.getClaimsForListOfScopes(List.of("doc-checking-app")).size(),
+                equalTo(1));
+    }
+
+    @Test
+    void shouldReturnCorrectClaimsForGovUkAccountScope() {
+        assertThat(
+                ValidScopes.getClaimsForListOfScopes(List.of("govuk-account")),
+                containsInAnyOrder("read"));
+        assertThat(
+                ValidScopes.getClaimsForListOfScopes(List.of("govuk-account")).size(), equalTo(1));
     }
 
     @Test
@@ -55,7 +76,8 @@ class ValidScopesTest {
         assertThat(
                 ValidScopes.getClaimsForListOfScopes(List.of("openid", "am")),
                 containsInAnyOrder("sub", "read", "write"));
-        assertEquals(ValidScopes.getClaimsForListOfScopes(List.of("openid", "am")).size(), 3);
+        assertThat(
+                ValidScopes.getClaimsForListOfScopes(List.of("openid", "am")).size(), equalTo(3));
     }
 
     @Test
@@ -71,28 +93,36 @@ class ValidScopesTest {
                         "phone_number_verified",
                         "read",
                         "write"));
-        assertEquals(
+
+        assertThat(
                 ValidScopes.getClaimsForListOfScopes(
                                 List.of("openid", "email", "phone", "am", "offline_access"))
                         .size(),
-                7);
+                equalTo(7));
     }
 
     @Test
     void shouldReturnAllValidScopesInCorrectOrder() {
         assertThat(
                 ValidScopes.getAllValidScopes(),
-                contains("openid", "email", "phone", "offline_access", "am", "govuk-account"));
+                contains(
+                        "openid",
+                        "email",
+                        "phone",
+                        "offline_access",
+                        "am",
+                        "govuk-account",
+                        "doc-checking-app"));
     }
 
     @Test
     void shouldReturnCorrectNumberOfValidScopes() {
-        assertEquals(ValidScopes.getAllValidScopes().size(), 6);
+        assertThat(ValidScopes.getAllValidScopes().size(), equalTo(7));
     }
 
     @Test
     void shouldNotReturnPrivateScopesWhenPublicRequested() {
-        assertEquals(ValidScopes.getPublicValidScopes().size(), 4);
+        assertThat(ValidScopes.getPublicValidScopes().size(), equalTo(4));
         assertThat(
                 ValidScopes.getPublicValidScopes(),
                 contains("openid", "email", "phone", "offline_access"));
@@ -101,13 +131,15 @@ class ValidScopesTest {
 
     @Test
     void shouldReturnOIDCScopesForWellKnown() {
-        Scope scope = ValidScopes.getScopesForWellKnownHandler();
-        assertEquals(scope.toStringList(), List.of("openid", "email", "phone", "offline_access"));
+        var scope = ValidScopes.getScopesForWellKnownHandler();
+        assertThat(
+                scope.toStringList(),
+                equalTo(List.of("openid", "email", "phone", "offline_access")));
     }
 
     @Test
     void shouldReturnScopesForListOfValidClaims() {
-        Set<String> claims =
+        var claims =
                 Set.of(
                         "sub",
                         "email",
@@ -117,15 +149,15 @@ class ValidScopesTest {
                         "read",
                         "write");
 
-        assertEquals(ValidScopes.getScopesForListOfClaims(claims).size(), 5);
+        assertThat(ValidScopes.getScopesForListOfClaims(claims).size(), equalTo(6));
     }
 
     @Test
     void shouldNotReturnEmailScopesWhenAllEmailsClaimsAreNotGiven() {
-        Set<String> claims =
+        var claims =
                 Set.of("sub", "email", "phone_number", "phone_number_verified", "read", "write");
 
-        assertEquals(ValidScopes.getScopesForListOfClaims(claims).size(), 4);
+        assertThat(ValidScopes.getScopesForListOfClaims(claims).size(), equalTo(5));
         assertFalse(
                 ValidScopes.getScopesForListOfClaims(claims)
                         .contains(OIDCScopeValue.EMAIL.getValue()));
