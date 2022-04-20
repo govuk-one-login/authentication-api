@@ -9,7 +9,6 @@ import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.app.entity.DocAppAuthorisationResponse;
@@ -100,7 +99,7 @@ public class DocAppAuthorizeHandler
                                 var state = new State();
                                 var encryptedJWT =
                                         authorisationService.constructRequestJWT(
-                                                state, new Subject());
+                                                state, clientSession.getDocAppSubjectId());
                                 var authRequestBuilder =
                                         new AuthorizationRequest.Builder(
                                                         new ResponseType(ResponseType.Value.CODE),

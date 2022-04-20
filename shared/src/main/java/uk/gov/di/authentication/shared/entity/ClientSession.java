@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.shared.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.nimbusds.oauth2.sdk.id.Subject;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,6 +20,9 @@ public class ClientSession {
 
     @JsonProperty("effective_vector_of_trust")
     private VectorOfTrust effectiveVectorOfTrust;
+
+    @JsonProperty("doc_app_subject_id")
+    private Subject docAppSubjectId;
 
     public ClientSession(
             @JsonProperty(required = true, value = "auth_request_params")
@@ -54,6 +58,15 @@ public class ClientSession {
 
     public ClientSession setEffectiveVectorOfTrust(VectorOfTrust effectiveVectorOfTrust) {
         this.effectiveVectorOfTrust = effectiveVectorOfTrust;
+        return this;
+    }
+
+    public Subject getDocAppSubjectId() {
+        return docAppSubjectId;
+    }
+
+    public ClientSession setDocAppSubjectId(Subject docAppSubjectId) {
+        this.docAppSubjectId = docAppSubjectId;
         return this;
     }
 }
