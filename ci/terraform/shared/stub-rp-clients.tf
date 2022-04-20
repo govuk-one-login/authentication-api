@@ -88,6 +88,9 @@ resource "aws_dynamodb_table_item" "stub_rp_client" {
     ConsentRequired = {
       N = "1"
     }
+    ClientType = {
+      S = "web"
+    }
     TestClient = {
       N = var.stub_rp_clients[count.index].test_client
     }
