@@ -60,3 +60,28 @@ resource "aws_iam_policy" "ipv_token_auth_kms_policy" {
 
   policy = data.aws_iam_policy_document.ipv_token_auth_kms_policy_document.json
 }
+
+### Doc App signing key access
+
+data "aws_iam_policy_document" "doc_app_auth_kms_policy_document" {
+  statement {
+    sid    = "AllowAccessToKmsSigningKey"
+    effect = "Allow"
+
+    actions = [
+      "kms:Sign",
+      "kms:GetPublicKey",
+    ]
+    resources = [
+      local.doc_app_auth_signing_key_arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "doc_app_auth_kms_policy" {
+  name_prefix = "kms-doc-app-auth-policy"
+  path        = "/${var.environment}/doc-app/"
+  description = "IAM policy for managing Doc app authentication KMS key access"
+
+  policy = data.aws_iam_policy_document.doc_app_auth_kms_policy_document.json
+}
