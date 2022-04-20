@@ -50,7 +50,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         redis.createSession(sessionId);
         redis.addAuthRequestToSession(
-                clientSessionId, sessionId, generateAuthRequest().toParameters(), EMAIL);
+                clientSessionId, sessionId, generateAuthRequest().toParameters());
         setUpDynamo(keyPair);
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);

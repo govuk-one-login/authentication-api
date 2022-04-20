@@ -71,6 +71,41 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return URI.create(System.getenv("DEFAULT_LOGOUT_URI"));
     }
 
+    public URI getDocAppAuthorisationURI() {
+        return URI.create(System.getenv().getOrDefault("DOC_APP_AUTHORISATION_URI", ""));
+    }
+
+    public URI getDocAppBackendURI() {
+        return URI.create(System.getenv().getOrDefault("DOC_APP_BACKEND_URI", ""));
+    }
+
+    public URI getDocAppAuthorisationCallbackURI() {
+        return URI.create(System.getenv().getOrDefault("DOC_APP_AUTHORISATION_CALLBACK_URI", ""));
+    }
+
+    public String getDocAppAuthorisationClientId() {
+        return System.getenv().getOrDefault("DOC_APP_AUTHORISATION_CLIENT_ID", "");
+    }
+
+    public String getDocAppTokenSigningKeyAlias() {
+        return System.getenv("DOC_APP_TOKEN_SIGNING_KEY_ALIAS");
+    }
+
+    public String getDocAppAuthEncryptionPublicKey() {
+        var paramName = format("{0}-doc-app-public-encryption-key", getEnvironment());
+        try {
+            var request = new GetParameterRequest().withWithDecryption(true).withName(paramName);
+            return getSsmClient().getParameter(request).getParameter().getValue();
+        } catch (ParameterNotFoundException e) {
+            LOG.error("No parameter exists with name: {}", paramName);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public String getDocAppDomain() {
+        return System.getenv("DOC_APP_DOMAIN");
+    }
+
     public String getDomainName() {
         return System.getenv("DOMAIN_NAME");
     }
@@ -140,10 +175,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public String getIPVDomain() {
         return System.getenv("IPV_DOMAIN");
-    }
-
-    public Optional<String> getInvokedLambdaEndpoint() {
-        return Optional.ofNullable(System.getenv("INVOKED_LAMBDA_ENDPOINT"));
     }
 
     public URI getLoginURI() {
