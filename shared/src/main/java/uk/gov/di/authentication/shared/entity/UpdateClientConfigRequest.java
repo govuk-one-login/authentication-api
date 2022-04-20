@@ -36,6 +36,9 @@ public class UpdateClientConfigRequest {
     @JsonProperty("sector_identifier_uri")
     private String sectorIdentifierUri;
 
+    @JsonProperty("client_type")
+    private String clientType;
+
     public UpdateClientConfigRequest() {}
 
     public String getClientId() {
@@ -76,6 +79,10 @@ public class UpdateClientConfigRequest {
 
     public String getSectorIdentifierUri() {
         return sectorIdentifierUri;
+    }
+
+    public String getClientType() {
+        return clientType;
     }
 
     public UpdateClientConfigRequest setClientId(String clientId) {
@@ -121,6 +128,11 @@ public class UpdateClientConfigRequest {
 
     public UpdateClientConfigRequest setClaims(List<String> claims) {
         this.claims = claims;
+        return this;
+    }
+
+    public UpdateClientConfigRequest setClientType(String clientType) {
+        this.clientType = clientType;
         return this;
     }
 

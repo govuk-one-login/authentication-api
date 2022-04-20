@@ -7,6 +7,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
+import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 
 import java.util.List;
@@ -18,6 +19,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_CLAIM;
+import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_CLIENT_TYPE;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_POST_LOGOUT_URI;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_SCOPE;
@@ -34,20 +36,22 @@ class ClientConfigValidationServiceTest {
 
     private static Stream<Arguments> registrationRequestParams() {
         return Stream.of(
-                Arguments.of(emptyList(), null, emptyList(), null),
-                Arguments.of(null, null, null, null, null),
+                Arguments.of(emptyList(), null, emptyList(), null, null),
+                Arguments.of(null, null, null, null, null, null),
                 Arguments.of(
                         singletonList("http://localhost/post-redirect-logout"),
                         "http://back-channel.com",
                         List.of("address"),
-                        String.valueOf(MANDATORY)),
+                        String.valueOf(MANDATORY),
+                        ClientType.WEB.getValue()),
                 Arguments.of(
                         List.of(
                                 "http://localhost/post-redirect-logout",
                                 "http://localhost/post-redirect-logout-v2"),
                         "http://back-channel.com",
                         List.of("address", "birthdate", "name"),
-                        String.valueOf(OPTIONAL)));
+                        String.valueOf(OPTIONAL),
+                        ClientType.APP.getValue()));
     }
 
     @ParameterizedTest
@@ -56,7 +60,8 @@ class ClientConfigValidationServiceTest {
             List<String> postlogoutUris,
             String backChannelLogoutUri,
             List<String> claims,
-            String serviceType) {
+            String serviceType,
+            String clientType) {
         Optional<ErrorObject> errorResponse =
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
@@ -68,7 +73,8 @@ class ClientConfigValidationServiceTest {
                                 serviceType,
                                 "http://test.com",
                                 "public",
-                                claims));
+                                claims,
+                                clientType));
         assertThat(errorResponse, equalTo(Optional.empty()));
     }
 
@@ -85,7 +91,8 @@ class ClientConfigValidationServiceTest {
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 "public",
-                                emptyList()));
+                                emptyList(),
+                                ClientType.WEB.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_POST_LOGOUT_URI)));
     }
 
@@ -102,7 +109,8 @@ class ClientConfigValidationServiceTest {
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 "public",
-                                emptyList()));
+                                emptyList(),
+                                ClientType.WEB.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(RegistrationError.INVALID_REDIRECT_URI)));
     }
 
@@ -119,7 +127,8 @@ class ClientConfigValidationServiceTest {
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 "public",
-                                emptyList()));
+                                emptyList(),
+                                ClientType.WEB.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_PUBLIC_KEY)));
     }
 
@@ -136,7 +145,8 @@ class ClientConfigValidationServiceTest {
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 "public",
-                                emptyList()));
+                                emptyList(),
+                                ClientType.WEB.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
     }
 
@@ -153,7 +163,8 @@ class ClientConfigValidationServiceTest {
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 "public",
-                                emptyList()));
+                                emptyList(),
+                                ClientType.WEB.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
     }
 
@@ -170,8 +181,27 @@ class ClientConfigValidationServiceTest {
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 "public",
-                                List.of("name", "email")));
+                                List.of("name", "email"),
+                                ClientType.WEB.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_CLAIM)));
+    }
+
+    @Test
+    void shouldReturnErrorForInvalidClientTypeInRegistrationRequest() {
+        Optional<ErrorObject> errorResponse =
+                validationService.validateClientRegistrationConfig(
+                        generateClientRegRequest(
+                                singletonList("http://localhost:1000/redirect"),
+                                VALID_PUBLIC_CERT,
+                                singletonList("openid"),
+                                singletonList("http://localhost/post-redirect-logout"),
+                                "http://example.com",
+                                String.valueOf(MANDATORY),
+                                "http://test.com",
+                                "public",
+                                emptyList(),
+                                "Mobile"));
+        assertThat(errorResponse, equalTo(Optional.of(INVALID_CLIENT_TYPE)));
     }
 
     @ParameterizedTest
@@ -189,7 +219,8 @@ class ClientConfigValidationServiceTest {
                                 String.valueOf(MANDATORY),
                                 "http://test.com",
                                 subjectType,
-                                emptyList()));
+                                emptyList(),
+                                ClientType.WEB.getValue()));
         assertThat(errorResponse, equalTo(expectedResult));
     }
 
@@ -211,7 +242,8 @@ class ClientConfigValidationServiceTest {
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),
-                                "http://localhost/sector-id"));
+                                "http://localhost/sector-id",
+                                ClientType.WEB.getValue()));
         assertThat(errorResponse, equalTo(Optional.empty()));
     }
 
@@ -232,7 +264,8 @@ class ClientConfigValidationServiceTest {
                                 singletonList("openid"),
                                 singletonList("invalid-logout-uri"),
                                 String.valueOf(MANDATORY),
-                                null));
+                                null,
+                                ClientType.WEB.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_POST_LOGOUT_URI)));
     }
 
@@ -246,7 +279,8 @@ class ClientConfigValidationServiceTest {
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),
-                                null));
+                                null,
+                                ClientType.WEB.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(RegistrationError.INVALID_REDIRECT_URI)));
     }
 
@@ -260,7 +294,8 @@ class ClientConfigValidationServiceTest {
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),
-                                null));
+                                null,
+                                ClientType.WEB.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_PUBLIC_KEY)));
     }
 
@@ -274,8 +309,24 @@ class ClientConfigValidationServiceTest {
                                 List.of("openid", "email", "fax"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),
-                                null));
+                                null,
+                                ClientType.WEB.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
+    }
+
+    @Test
+    void shouldReturnErrorForInvalidClientTypeInUpdateRequest() {
+        var errorResponse =
+                validationService.validateClientUpdateConfig(
+                        generateClientUpdateRequest(
+                                singletonList("http://localhost:1000/redirect"),
+                                VALID_PUBLIC_CERT,
+                                List.of("openid", "email"),
+                                singletonList("http://localhost/post-redirect-logout"),
+                                String.valueOf(MANDATORY),
+                                null,
+                                "rubbish-client-type"));
+        assertThat(errorResponse, equalTo(Optional.of(INVALID_CLIENT_TYPE)));
     }
 
     private ClientRegistrationRequest generateClientRegRequest(
@@ -287,7 +338,8 @@ class ClientConfigValidationServiceTest {
             String serviceType,
             String sectorIdentifierUri,
             String subjectType,
-            List<String> claims) {
+            List<String> claims,
+            String clientType) {
         return new ClientRegistrationRequest(
                 "The test client",
                 redirectUri,
@@ -300,7 +352,8 @@ class ClientConfigValidationServiceTest {
                 sectorIdentifierUri,
                 subjectType,
                 false,
-                claims);
+                claims,
+                clientType);
     }
 
     private UpdateClientConfigRequest generateClientUpdateRequest(
@@ -309,7 +362,8 @@ class ClientConfigValidationServiceTest {
             List<String> scopes,
             List<String> postLogoutUris,
             String serviceType,
-            String sectorURI) {
+            String sectorURI,
+            String clientType) {
         UpdateClientConfigRequest configRequest = new UpdateClientConfigRequest();
         configRequest.setScopes(scopes);
         configRequest.setRedirectUris(redirectUri);
@@ -317,6 +371,7 @@ class ClientConfigValidationServiceTest {
         configRequest.setPostLogoutRedirectUris(postLogoutUris);
         configRequest.setServiceType(serviceType);
         configRequest.setSectorIdentifierUri(sectorURI);
+        configRequest.setClientType(clientType);
         return configRequest;
     }
 }

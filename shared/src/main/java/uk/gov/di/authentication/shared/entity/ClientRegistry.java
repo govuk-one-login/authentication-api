@@ -26,6 +26,7 @@ public class ClientRegistry {
     private List<String> requestUris = new ArrayList<>();
     private List<String> testClientEmailAllowlist = new ArrayList<>();
     private List<String> claims = new ArrayList<>();
+    private String clientType;
 
     @DynamoDBHashKey(attributeName = "ClientID")
     public String getClientID() {
@@ -196,6 +197,16 @@ public class ClientRegistry {
 
     public ClientRegistry setClaims(List<String> claims) {
         this.claims = claims;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "ClientType")
+    public String getClientType() {
+        return clientType;
+    }
+
+    public ClientRegistry setClientType(String clientType) {
+        this.clientType = clientType;
         return this;
     }
 }
