@@ -117,11 +117,6 @@ variable "provision_dynamo" {
   default = false
 }
 
-variable "doc_app_api_enabled" {
-  type    = bool
-  default = false
-}
-
 variable "ipv_api_enabled" {
   default = false
 }
