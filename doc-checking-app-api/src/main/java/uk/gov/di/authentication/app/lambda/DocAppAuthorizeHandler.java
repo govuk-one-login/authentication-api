@@ -11,9 +11,13 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.app.entity.DocAppAuthorisationResponse;
 import uk.gov.di.authentication.app.services.DocAppAuthorisationService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
@@ -36,6 +40,7 @@ public class DocAppAuthorizeHandler
     private final ClientSessionService clientSessionService;
     private final DocAppAuthorisationService authorisationService;
     private final ConfigurationService configurationService;
+    private final AuditService auditService;
 
     public DocAppAuthorizeHandler() {
         this(ConfigurationService.getInstance());
@@ -50,17 +55,20 @@ public class DocAppAuthorizeHandler
                         configurationService,
                         new RedisConnectionService(configurationService),
                         new KmsConnectionService(configurationService));
+        this.auditService = new AuditService(configurationService);
     }
 
     public DocAppAuthorizeHandler(
             SessionService sessionService,
             ClientSessionService clientSessionService,
             DocAppAuthorisationService authorisationService,
-            ConfigurationService configurationService) {
+            ConfigurationService configurationService,
+            AuditService auditService) {
         this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
         this.authorisationService = authorisationService;
         this.configurationService = configurationService;
+        this.auditService = auditService;
     }
 
     @Override
@@ -111,6 +119,17 @@ public class DocAppAuthorizeHandler
 
                                 var authorisationRequest = authRequestBuilder.build();
                                 authorisationService.storeState(session.getSessionId(), state);
+                                auditService.submitAuditEvent(
+                                        DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
+                                        context.getAwsRequestId(),
+                                        session.getSessionId(),
+                                        AuditService.UNKNOWN,
+                                        clientSession.getDocAppSubjectId().toString(),
+                                        AuditService.UNKNOWN,
+                                        IpAddressHelper.extractIpAddress(input),
+                                        AuditService.UNKNOWN,
+                                        PersistentIdHelper.extractPersistentIdFromHeaders(
+                                                input.getHeaders()));
                                 LOG.info(
                                         "DocAppAuthorizeHandler successfully processed request, redirect URI {}",
                                         authorisationRequest.toURI().toString());

@@ -26,12 +26,14 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.app.entity.DocAppAuthorisationResponse;
 import uk.gov.di.authentication.app.services.DocAppAuthorisationService;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -70,6 +72,7 @@ class DocAppAuthorizeHandlerTest {
     private static final String CLIENT_SESSION_ID = "client-session-v1";
     private static final String SESSION_ID = "a-session-id";
     private static final String PERSISTENT_SESSION_ID = "a-persistent-session-id";
+    private static final Subject DOC_APP_SUBJECT_ID = new Subject();
 
     private final Context context = mock(Context.class);
     private final SessionService sessionService = mock(SessionService.class);
@@ -78,6 +81,7 @@ class DocAppAuthorizeHandlerTest {
     private final DocAppAuthorisationService authorisationService =
             mock(DocAppAuthorisationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final AuditService auditService = mock(AuditService.class);
 
     private DocAppAuthorizeHandler handler;
     private final Session session = new Session(SESSION_ID);
@@ -89,13 +93,14 @@ class DocAppAuthorizeHandlerTest {
                         sessionService,
                         clientSessionService,
                         authorisationService,
-                        configurationService);
+                        configurationService,
+                        auditService);
         when(configurationService.getDocAppAuthorisationClientId()).thenReturn(DOC_APP_CLIENT_ID);
         when(configurationService.getDocAppAuthorisationCallbackURI())
                 .thenReturn(DOC_APP_CALLBACK_URI);
         when(configurationService.getDocAppAuthorisationURI())
                 .thenReturn(DOC_APP_AUTHORISATION_URI);
-        when(clientSession.getDocAppSubjectId()).thenReturn(new Subject());
+        when(clientSession.getDocAppSubjectId()).thenReturn(DOC_APP_SUBJECT_ID);
     }
 
     @Test
@@ -117,6 +122,17 @@ class DocAppAuthorizeHandlerTest {
                 splitQuery(body.getRedirectUri()).get("request"),
                 equalTo(encryptedJWT.serialize()));
         verify(authorisationService).storeState(eq(session.getSessionId()), any(State.class));
+        verify(auditService)
+                .submitAuditEvent(
+                        DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
+                        context.getAwsRequestId(),
+                        SESSION_ID,
+                        AuditService.UNKNOWN,
+                        DOC_APP_SUBJECT_ID.getValue(),
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID);
     }
 
     @Test
@@ -127,6 +143,7 @@ class DocAppAuthorizeHandlerTest {
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1000));
         verifyNoInteractions(authorisationService);
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -138,6 +155,7 @@ class DocAppAuthorizeHandlerTest {
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1018));
         verifyNoInteractions(authorisationService);
+        verifyNoInteractions(auditService);
     }
 
     private void usingValidSession() {
