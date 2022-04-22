@@ -212,7 +212,7 @@ resource "aws_cloudwatch_log_group" "sqs_lambda_log_group" {
 resource "aws_cloudwatch_log_subscription_filter" "sqs_lambda_log_subscription" {
   count = length(var.logging_endpoint_arns)
 
-  name            = "${aws_lambda_function.email_sqs_lambda.function_name}-log-subscription"
+  name            = "${aws_lambda_function.email_sqs_lambda.function_name}-log-subscription-${count.index}"
   log_group_name  = aws_cloudwatch_log_group.sqs_lambda_log_group[0].name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
