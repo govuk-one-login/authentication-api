@@ -1,3 +1,4 @@
+doc_app_api_enabled                = true
 ipv_api_enabled                    = true
 ipv_authorisation_client_id        = "authOrchestrator"
 ipv_authorisation_uri              = "https://staging-di-ipv-core-front.london.cloudapps.digital/oauth2/authorize"

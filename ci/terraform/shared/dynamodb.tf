@@ -168,7 +168,6 @@ resource "aws_dynamodb_table" "spot_credential_table" {
 }
 
 resource "aws_dynamodb_table" "doc_app_credential_table" {
-  count        = var.doc_app_api_enabled ? 1 : 0
   name         = "${var.environment}-doc-app-credential"
   billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
   hash_key     = "SubjectID"
