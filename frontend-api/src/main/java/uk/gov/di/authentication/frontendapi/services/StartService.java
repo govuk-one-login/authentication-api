@@ -7,6 +7,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.shared.conditions.ConsentHelper;
+import uk.gov.di.authentication.shared.conditions.DocAppUserHelper;
 import uk.gov.di.authentication.shared.conditions.IdentityHelper;
 import uk.gov.di.authentication.shared.conditions.UpliftHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -20,7 +21,6 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.frontendapi.entity.RequestParameters.COOKIE_CONSENT;
@@ -91,23 +91,26 @@ public class StartService {
 
     public UserStartInfo buildUserStartInfo(
             UserContext userContext, String cookieConsent, String gaTrackingId) {
-        var consentRequired = ConsentHelper.userHasNotGivenConsent(userContext);
         var uplift = false;
-        if (Objects.nonNull(userContext.getSession().getCurrentCredentialStrength())) {
+        var identityRequired = false;
+        var consentRequired = false;
+        var docCheckingAppUser = DocAppUserHelper.isDocCheckingAppUser(userContext);
+        if (Boolean.FALSE.equals(docCheckingAppUser)) {
+            consentRequired = ConsentHelper.userHasNotGivenConsent(userContext);
             uplift = UpliftHelper.upliftRequired(userContext);
+            identityRequired =
+                    IdentityHelper.identityRequired(
+                            userContext.getClientSession().getAuthRequestParams());
         }
-        var identityRequired =
-                IdentityHelper.identityRequired(
-                        userContext.getClientSession().getAuthRequestParams());
-
         LOG.info(
-                "Found UserStartInfo for Authenticated: {} ConsentRequired: {} UpliftRequired: {} IdentityRequired: {}. CookieConsent: {}. GATrackingId: {}",
+                "Found UserStartInfo for Authenticated: {} ConsentRequired: {} UpliftRequired: {} IdentityRequired: {}. CookieConsent: {}. GATrackingId: {}. DocCheckingAppUser: {}",
                 userContext.getSession().isAuthenticated(),
                 consentRequired,
                 uplift,
                 identityRequired,
                 cookieConsent,
-                gaTrackingId);
+                gaTrackingId,
+                docCheckingAppUser);
 
         return new UserStartInfo(
                 consentRequired,
@@ -115,7 +118,8 @@ public class StartService {
                 identityRequired,
                 userContext.getSession().isAuthenticated(),
                 cookieConsent,
-                gaTrackingId);
+                gaTrackingId,
+                docCheckingAppUser);
     }
 
     public String getGATrackingId(Map<String, List<String>> authRequestParameters) {

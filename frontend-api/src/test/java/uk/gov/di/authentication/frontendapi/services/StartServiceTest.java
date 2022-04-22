@@ -1,5 +1,11 @@
 package uk.gov.di.authentication.frontendapi.services;
 
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.crypto.RSASSASigner;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -15,6 +21,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
@@ -24,7 +31,10 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -37,8 +47,6 @@ import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArr
 
 class StartServiceTest {
 
-    private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
-    private final DynamoService dynamoService = mock(DynamoService.class);
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private static final String EMAIL = "joe.bloggs@example.com";
     private static final ClientID CLIENT_ID = new ClientID("client-id");
@@ -46,6 +54,12 @@ class StartServiceTest {
     private static final Session SESSION = new Session("a-session-id").setEmailAddress(EMAIL);
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
+    private static final String AUDIENCE = "oidc-audience";
+    private static final String DOC_APP_SCOPE = "openid doc-checking-app";
+    private static final State STATE = new State();
+
+    private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
+    private final DynamoService dynamoService = mock(DynamoService.class);
     private StartService startService;
 
     @BeforeEach
@@ -89,8 +103,11 @@ class StartServiceTest {
             boolean clientConsentRequired,
             boolean isConsentRequired,
             String cookieConsent,
-            String gaTrackingId) {
-        var userContext = buildUserContext(vtr, clientConsentRequired, true);
+            String gaTrackingId,
+            boolean isDocCheckingAppUser,
+            ClientType clientType,
+            SignedJWT signedJWT) {
+        var userContext = buildUserContext(vtr, clientConsentRequired, true, clientType, signedJWT);
         var userStartInfo =
                 startService.buildUserStartInfo(userContext, cookieConsent, gaTrackingId);
 
@@ -99,12 +116,15 @@ class StartServiceTest {
         assertThat(userStartInfo.isConsentRequired(), equalTo(isConsentRequired));
         assertThat(userStartInfo.getCookieConsent(), equalTo(cookieConsent));
         assertThat(userStartInfo.getGaCrossDomainTrackingId(), equalTo(gaTrackingId));
+        assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(isDocCheckingAppUser));
     }
 
     @ParameterizedTest
     @MethodSource("clientStartInfo")
     void shouldCreateClientStartInfo(boolean cookieConsentShared) throws ParseException {
-        var userContext = buildUserContext(jsonArrayOf("Cl.Cm"), false, cookieConsentShared);
+        var userContext =
+                buildUserContext(
+                        jsonArrayOf("Cl.Cm"), false, cookieConsentShared, ClientType.WEB, null);
 
         var clientStartInfo = startService.buildClientStartInfo(userContext);
 
@@ -189,7 +209,8 @@ class StartServiceTest {
                 Arguments.of("some-value", true, null));
     }
 
-    private static Stream<Arguments> userStartInfo() {
+    private static Stream<Arguments> userStartInfo()
+            throws NoSuchAlgorithmException, JOSEException {
         return Stream.of(
                 Arguments.of(
                         jsonArrayOf("Cl.Cm"),
@@ -198,6 +219,9 @@ class StartServiceTest {
                         false,
                         false,
                         "some-cookie-consent",
+                        null,
+                        false,
+                        ClientType.WEB,
                         null),
                 Arguments.of(
                         jsonArrayOf("P2.Cl.Cm"),
@@ -206,7 +230,21 @@ class StartServiceTest {
                         true,
                         true,
                         null,
-                        "some-ga-tracking-id"));
+                        "some-ga-tracking-id",
+                        false,
+                        ClientType.WEB,
+                        null),
+                Arguments.of(
+                        jsonArrayOf("P2.Cl.Cm"),
+                        false,
+                        false,
+                        false,
+                        false,
+                        null,
+                        "some-ga-tracking-id",
+                        true,
+                        ClientType.APP,
+                        generateSignedJWT()));
     }
 
     private static Stream<Boolean> clientStartInfo() {
@@ -225,8 +263,12 @@ class StartServiceTest {
     }
 
     private UserContext buildUserContext(
-            String vtrValue, boolean consentRequired, boolean cookieConsentShared) {
-        var authRequest =
+            String vtrValue,
+            boolean consentRequired,
+            boolean cookieConsentShared,
+            ClientType clientType,
+            SignedJWT requestObject) {
+        var authRequestBuilder =
                 new AuthenticationRequest.Builder(
                                 new ResponseType(ResponseType.Value.CODE),
                                 SCOPES,
@@ -234,11 +276,14 @@ class StartServiceTest {
                                 REDIRECT_URI)
                         .state(new State())
                         .nonce(new Nonce())
-                        .customParameter("vtr", vtrValue)
-                        .build();
+                        .customParameter("vtr", vtrValue);
+
+        if (Objects.nonNull(requestObject)) {
+            authRequestBuilder.requestObject(requestObject);
+        }
         var clientSession =
                 new ClientSession(
-                        authRequest.toParameters(),
+                        authRequestBuilder.build().toParameters(),
                         LocalDateTime.now(),
                         VectorOfTrust.getDefaults());
         var clientRegistry =
@@ -246,10 +291,30 @@ class StartServiceTest {
                         .setClientID(CLIENT_ID.getValue())
                         .setClientName(CLIENT_NAME)
                         .setConsentRequired(consentRequired)
-                        .setCookieConsentShared(cookieConsentShared);
+                        .setCookieConsentShared(cookieConsentShared)
+                        .setClientType(clientType.getValue());
         return UserContext.builder(SESSION)
                 .withClientSession(clientSession)
                 .withClient(clientRegistry)
                 .build();
+    }
+
+    private static SignedJWT generateSignedJWT() throws NoSuchAlgorithmException, JOSEException {
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(AUDIENCE)
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", DOC_APP_SCOPE)
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("state", STATE)
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var keyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
+        var jwsHeader = new JWSHeader(JWSAlgorithm.RS256);
+        var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
+        var signer = new RSASSASigner(keyPair.getPrivate());
+        signedJWT.sign(signer);
+        return signedJWT;
     }
 }

@@ -258,6 +258,7 @@ class StartHandlerTest {
     }
 
     private UserStartInfo getUserStartInfo(String cookieConsent, String gaCrossDomainTrackingId) {
-        return new UserStartInfo(true, false, false, true, cookieConsent, gaCrossDomainTrackingId);
+        return new UserStartInfo(
+                true, false, false, true, cookieConsent, gaCrossDomainTrackingId, false);
     }
 }

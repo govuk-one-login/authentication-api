@@ -22,19 +22,24 @@ public class UserStartInfo {
     @JsonProperty("gaCrossDomainTrackingId")
     private String gaCrossDomainTrackingId;
 
+    @JsonProperty("docCheckingAppUser")
+    private boolean docCheckingAppUser;
+
     public UserStartInfo(
             @JsonProperty(required = true, value = "consentRequired") boolean consentRequired,
             @JsonProperty(required = true, value = "upliftRequired") boolean upliftRequired,
             @JsonProperty(required = true, value = "identityRequired") boolean identityRequired,
             @JsonProperty(required = true, value = "authenticated") boolean authenticated,
             @JsonProperty(value = "cookieConsent") String cookieConsent,
-            @JsonProperty(value = "gaCrossDomainTrackingId") String gaCrossDomainTrackingId) {
+            @JsonProperty(value = "gaCrossDomainTrackingId") String gaCrossDomainTrackingId,
+            @JsonProperty(value = "docCheckingAppUser") boolean docCheckingAppUser) {
         this.consentRequired = consentRequired;
         this.upliftRequired = upliftRequired;
         this.identityRequired = identityRequired;
         this.authenticated = authenticated;
         this.cookieConsent = cookieConsent;
         this.gaCrossDomainTrackingId = gaCrossDomainTrackingId;
+        this.docCheckingAppUser = docCheckingAppUser;
     }
 
     public boolean isConsentRequired() {
@@ -59,5 +64,9 @@ public class UserStartInfo {
 
     public String getGaCrossDomainTrackingId() {
         return gaCrossDomainTrackingId;
+    }
+
+    public boolean isDocCheckingAppUser() {
+        return docCheckingAppUser;
     }
 }
