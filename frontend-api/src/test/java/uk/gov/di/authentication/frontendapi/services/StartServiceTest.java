@@ -6,6 +6,7 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -22,6 +23,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ClientType;
+import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
@@ -55,7 +57,8 @@ class StartServiceTest {
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
     private static final String AUDIENCE = "oidc-audience";
-    private static final String DOC_APP_SCOPE = "openid doc-checking-app";
+    private static final Scope DOC_APP_SCOPES =
+            new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
     private static final State STATE = new State();
 
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
@@ -121,17 +124,24 @@ class StartServiceTest {
 
     @ParameterizedTest
     @MethodSource("clientStartInfo")
-    void shouldCreateClientStartInfo(boolean cookieConsentShared) throws ParseException {
+    void shouldCreateClientStartInfo(
+            boolean cookieConsentShared, ClientType clientType, SignedJWT signedJWT)
+            throws ParseException {
         var userContext =
                 buildUserContext(
-                        jsonArrayOf("Cl.Cm"), false, cookieConsentShared, ClientType.WEB, null);
+                        jsonArrayOf("Cl.Cm"), false, cookieConsentShared, clientType, signedJWT);
 
         var clientStartInfo = startService.buildClientStartInfo(userContext);
 
         assertThat(clientStartInfo.getCookieConsentShared(), equalTo(cookieConsentShared));
         assertThat(clientStartInfo.getClientName(), equalTo(CLIENT_NAME));
-        assertThat(clientStartInfo.getScopes(), equalTo(SCOPES.toStringList()));
         assertThat(clientStartInfo.getRedirectUri(), equalTo(REDIRECT_URI));
+
+        var expectedScopes = SCOPES;
+        if (Objects.nonNull(signedJWT)) {
+            expectedScopes = DOC_APP_SCOPES;
+        }
+        assertThat(clientStartInfo.getScopes(), equalTo(expectedScopes.toStringList()));
     }
 
     @Test
@@ -247,8 +257,12 @@ class StartServiceTest {
                         generateSignedJWT()));
     }
 
-    private static Stream<Boolean> clientStartInfo() {
-        return Stream.of(false, true);
+    private static Stream<Arguments> clientStartInfo()
+            throws NoSuchAlgorithmException, JOSEException {
+        return Stream.of(
+                Arguments.of(false, ClientType.WEB, null),
+                Arguments.of(true, ClientType.WEB, null),
+                Arguments.of(true, ClientType.APP, generateSignedJWT()));
     }
 
     private ClientRegistry generateClientRegistry(
@@ -268,22 +282,28 @@ class StartServiceTest {
             boolean cookieConsentShared,
             ClientType clientType,
             SignedJWT requestObject) {
-        var authRequestBuilder =
-                new AuthenticationRequest.Builder(
-                                new ResponseType(ResponseType.Value.CODE),
-                                SCOPES,
-                                CLIENT_ID,
-                                REDIRECT_URI)
-                        .state(new State())
-                        .nonce(new Nonce())
-                        .customParameter("vtr", vtrValue);
-
+        AuthorizationRequest authRequest;
         if (Objects.nonNull(requestObject)) {
-            authRequestBuilder.requestObject(requestObject);
+            authRequest =
+                    new AuthorizationRequest.Builder(
+                                    new ResponseType(ResponseType.Value.CODE), CLIENT_ID)
+                            .requestObject(requestObject)
+                            .build();
+        } else {
+            authRequest =
+                    new AuthenticationRequest.Builder(
+                                    new ResponseType(ResponseType.Value.CODE),
+                                    SCOPES,
+                                    CLIENT_ID,
+                                    REDIRECT_URI)
+                            .state(new State())
+                            .nonce(new Nonce())
+                            .customParameter("vtr", vtrValue)
+                            .build();
         }
         var clientSession =
                 new ClientSession(
-                        authRequestBuilder.build().toParameters(),
+                        authRequest.toParameters(),
                         LocalDateTime.now(),
                         VectorOfTrust.getDefaults());
         var clientRegistry =
@@ -303,9 +323,9 @@ class StartServiceTest {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(AUDIENCE)
-                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("redirect_uri", REDIRECT_URI.toString())
                         .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", DOC_APP_SCOPE)
+                        .claim("scope", DOC_APP_SCOPES.toString())
                         .claim("client_id", CLIENT_ID.getValue())
                         .claim("state", STATE)
                         .issuer(CLIENT_ID.getValue())

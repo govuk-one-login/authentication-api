@@ -41,6 +41,36 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
             String sectorIdentifierUri,
             String subjectType,
             boolean consentRequired) {
+        registerClient(
+                clientID,
+                clientName,
+                redirectUris,
+                contacts,
+                scopes,
+                publicKey,
+                postLogoutRedirectUris,
+                backChannelLogoutUri,
+                serviceType,
+                sectorIdentifierUri,
+                subjectType,
+                consentRequired,
+                ClientType.WEB);
+    }
+
+    public void registerClient(
+            String clientID,
+            String clientName,
+            List<String> redirectUris,
+            List<String> contacts,
+            List<String> scopes,
+            String publicKey,
+            List<String> postLogoutRedirectUris,
+            String backChannelLogoutUri,
+            String serviceType,
+            String sectorIdentifierUri,
+            String subjectType,
+            boolean consentRequired,
+            ClientType clientType) {
         dynamoClientService.addClient(
                 clientID,
                 clientName,
@@ -55,7 +85,7 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 subjectType,
                 consentRequired,
                 Collections.emptyList(),
-                ClientType.WEB.getValue());
+                clientType.getValue());
     }
 
     public boolean clientExists(String clientID) {
