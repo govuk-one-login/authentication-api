@@ -28,7 +28,7 @@ ext {
         aws_lambda_events_version: "3.11.0",
         nimbusds_oauth_version: "9.34",
         nimbusds_jwt_version: "9.21",
-        protobuf_version: "3.19.4",
+        protobuf_version: "3.20.0",
         junit: "5.8.2",
         jackson_version: "2.13.2",
         glassfish_version: "3.0.4",
