@@ -163,6 +163,10 @@ resource "aws_cloudwatch_log_subscription_filter" "oidc_api_execution_log_subscr
   log_group_name  = aws_cloudwatch_log_group.oidc_stage_execution_logs[0].name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
+
+  lifecycle {
+    create_before_destroy = false
+  }
 }
 
 resource "aws_cloudwatch_log_group" "oidc_stage_access_logs" {
@@ -179,6 +183,10 @@ resource "aws_cloudwatch_log_subscription_filter" "oidc_access_log_subscription"
   log_group_name  = aws_cloudwatch_log_group.oidc_stage_access_logs[0].name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
+
+  lifecycle {
+    create_before_destroy = false
+  }
 }
 
 resource "aws_cloudwatch_log_group" "oidc_waf_logs" {
@@ -195,6 +203,10 @@ resource "aws_cloudwatch_log_subscription_filter" "oidc_waf_log_subscription" {
   log_group_name  = aws_cloudwatch_log_group.oidc_waf_logs[0].name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
+
+  lifecycle {
+    create_before_destroy = false
+  }
 }
 
 resource "aws_api_gateway_stage" "endpoint_stage" {

@@ -52,6 +52,10 @@ resource "aws_cloudwatch_log_subscription_filter" "log_subscription" {
   log_group_name  = aws_cloudwatch_log_group.lambda_log_group[0].name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
+
+  lifecycle {
+    create_before_destroy = false
+  }
 }
 
 resource "aws_lambda_alias" "endpoint_lambda" {

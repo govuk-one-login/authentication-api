@@ -63,6 +63,10 @@ resource "aws_cloudwatch_log_subscription_filter" "spot_response_lambda_log_subs
   log_group_name  = aws_cloudwatch_log_group.spot_response_lambda_log_group[0].name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
+
+  lifecycle {
+    create_before_destroy = false
+  }
 }
 
 resource "aws_lambda_alias" "spot_response_lambda_active" {

@@ -72,6 +72,10 @@ resource "aws_cloudwatch_log_subscription_filter" "authorizer_log_subscription" 
   log_group_name  = aws_cloudwatch_log_group.lambda_log_group[0].name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
+
+  lifecycle {
+    create_before_destroy = false
+  }
 }
 
 resource "aws_iam_role" "invocation_role" {
@@ -163,6 +167,10 @@ resource "aws_cloudwatch_log_subscription_filter" "account_management_execution_
   log_group_name  = aws_cloudwatch_log_group.account_management_stage_execution_logs[0].name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
+
+  lifecycle {
+    create_before_destroy = false
+  }
 }
 
 resource "aws_cloudwatch_log_group" "account_management_access_logs" {
@@ -179,6 +187,10 @@ resource "aws_cloudwatch_log_subscription_filter" "account_management_access_log
   log_group_name  = aws_cloudwatch_log_group.account_management_access_logs[0].name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
+
+  lifecycle {
+    create_before_destroy = false
+  }
 }
 
 resource "aws_cloudwatch_log_group" "account_management_waf_logs" {
@@ -195,6 +207,10 @@ resource "aws_cloudwatch_log_subscription_filter" "account_management_waf_log_su
   log_group_name  = aws_cloudwatch_log_group.account_management_waf_logs[0].name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
+
+  lifecycle {
+    create_before_destroy = false
+  }
 }
 
 resource "aws_api_gateway_stage" "stage" {
