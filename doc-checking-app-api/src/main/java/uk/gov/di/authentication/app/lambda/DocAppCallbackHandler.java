@@ -11,7 +11,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.app.services.DocAppAuthorisationService;
-import uk.gov.di.authentication.app.services.DocAppTokenService;
+import uk.gov.di.authentication.app.services.DocAppCriService;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
@@ -37,7 +37,7 @@ public class DocAppCallbackHandler
     private static final Logger LOG = LogManager.getLogger(DocAppCallbackHandler.class);
     private final ConfigurationService configurationService;
     private final DocAppAuthorisationService authorisationService;
-    private final DocAppTokenService tokenService;
+    private final DocAppCriService tokenService;
     private final SessionService sessionService;
     private final ClientSessionService clientSessionService;
     private final DynamoClientService dynamoClientService;
@@ -53,7 +53,7 @@ public class DocAppCallbackHandler
     public DocAppCallbackHandler(
             ConfigurationService configurationService,
             DocAppAuthorisationService responseService,
-            DocAppTokenService tokenService,
+            DocAppCriService tokenService,
             SessionService sessionService,
             ClientSessionService clientSessionService,
             DynamoClientService dynamoClientService,
@@ -77,7 +77,7 @@ public class DocAppCallbackHandler
                         configurationService,
                         new RedisConnectionService(configurationService),
                         kmsConnectionService);
-        this.tokenService = new DocAppTokenService(configurationService, kmsConnectionService);
+        this.tokenService = new DocAppCriService(configurationService, kmsConnectionService);
         this.sessionService = new SessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);

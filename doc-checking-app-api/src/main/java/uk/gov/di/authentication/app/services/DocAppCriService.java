@@ -37,15 +37,15 @@ import java.util.Map;
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.util.Collections.singletonList;
 
-public class DocAppTokenService {
+public class DocAppCriService {
 
     private final ConfigurationService configurationService;
     private final KmsConnectionService kmsService;
     private static final JWSAlgorithm TOKEN_ALGORITHM = JWSAlgorithm.ES256;
     private static final Long PRIVATE_KEY_JWT_EXPIRY = 5L;
-    private static final Logger LOG = LogManager.getLogger(DocAppTokenService.class);
+    private static final Logger LOG = LogManager.getLogger(DocAppCriService.class);
 
-    public DocAppTokenService(
+    public DocAppCriService(
             ConfigurationService configurationService, KmsConnectionService kmsService) {
         this.configurationService = configurationService;
         this.kmsService = kmsService;

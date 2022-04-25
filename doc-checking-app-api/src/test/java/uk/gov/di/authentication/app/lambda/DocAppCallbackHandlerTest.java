@@ -24,7 +24,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.app.services.DocAppAuthorisationService;
-import uk.gov.di.authentication.app.services.DocAppTokenService;
+import uk.gov.di.authentication.app.services.DocAppCriService;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -63,7 +63,7 @@ class DocAppCallbackHandlerTest {
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final DocAppAuthorisationService responseService =
             mock(DocAppAuthorisationService.class);
-    private final DocAppTokenService tokenService = mock(DocAppTokenService.class);
+    private final DocAppCriService tokenService = mock(DocAppCriService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);

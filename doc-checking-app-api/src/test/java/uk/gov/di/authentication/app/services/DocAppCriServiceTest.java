@@ -36,7 +36,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.sharedtest.exceptions.Unchecked.unchecked;
 
-class DocAppTokenServiceTest {
+class DocAppCriServiceTest {
 
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final KmsConnectionService kmsService = mock(KmsConnectionService.class);
@@ -45,11 +45,11 @@ class DocAppTokenServiceTest {
     private static final ClientID CLIENT_ID = new ClientID("some-client-id");
     private static final String KEY_ID = "14342354354353";
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
-    private DocAppTokenService tokenService;
+    private DocAppCriService tokenService;
 
     @BeforeEach
     void setUp() {
-        tokenService = new DocAppTokenService(configService, kmsService);
+        tokenService = new DocAppCriService(configService, kmsService);
         when(configService.getDocAppBackendURI()).thenReturn(CRI_URI);
         when(configService.getDocAppAuthorisationClientId()).thenReturn(CLIENT_ID.getValue());
         when(configService.getAccessTokenExpiry()).thenReturn(300L);
