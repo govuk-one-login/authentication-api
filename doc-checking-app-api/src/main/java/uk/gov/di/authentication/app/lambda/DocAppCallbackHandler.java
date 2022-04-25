@@ -12,16 +12,15 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.app.services.DocAppAuthorisationService;
 import uk.gov.di.authentication.app.services.DocAppTokenService;
+import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
-import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -40,11 +39,10 @@ public class DocAppCallbackHandler
     private final DocAppAuthorisationService authorisationService;
     private final DocAppTokenService tokenService;
     private final SessionService sessionService;
-    private final DynamoService dynamoService;
     private final ClientSessionService clientSessionService;
     private final DynamoClientService dynamoClientService;
     private final AuditService auditService;
-    private final AwsSqsClient sqsClient;
+    private final DynamoDocAppService dynamoDocAppService;
     protected final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
     private static final String REDIRECT_PATH = "doc-checking-app-callback";
 
@@ -57,20 +55,18 @@ public class DocAppCallbackHandler
             DocAppAuthorisationService responseService,
             DocAppTokenService tokenService,
             SessionService sessionService,
-            DynamoService dynamoService,
             ClientSessionService clientSessionService,
             DynamoClientService dynamoClientService,
             AuditService auditService,
-            AwsSqsClient sqsClient) {
+            DynamoDocAppService dynamoDocAppService) {
         this.configurationService = configurationService;
         this.authorisationService = responseService;
         this.tokenService = tokenService;
         this.sessionService = sessionService;
-        this.dynamoService = dynamoService;
         this.clientSessionService = clientSessionService;
         this.dynamoClientService = dynamoClientService;
         this.auditService = auditService;
-        this.sqsClient = sqsClient;
+        this.dynamoDocAppService = dynamoDocAppService;
     }
 
     public DocAppCallbackHandler(ConfigurationService configurationService) {
@@ -83,15 +79,10 @@ public class DocAppCallbackHandler
                         kmsConnectionService);
         this.tokenService = new DocAppTokenService(configurationService, kmsConnectionService);
         this.sessionService = new SessionService(configurationService);
-        this.dynamoService = new DynamoService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.auditService = new AuditService(configurationService);
-        this.sqsClient =
-                new AwsSqsClient(
-                        configurationService.getAwsRegion(),
-                        configurationService.getSpotQueueUri(),
-                        configurationService.getSqsEndpointUri());
+        this.dynamoDocAppService = new DynamoDocAppService(configurationService);
     }
 
     @Override
@@ -143,15 +134,6 @@ public class DocAppCallbackHandler
                                     throw new RuntimeException(
                                             "Error in Doc App AuthorisationResponse");
                                 }
-                                var userProfile =
-                                        dynamoService
-                                                .getUserProfileFromEmail(session.getEmailAddress())
-                                                .orElse(null);
-                                if (Objects.isNull(userProfile)) {
-                                    LOG.error("Email from session does not have a user profile");
-                                    throw new RuntimeException(
-                                            "Email from session does not have a user profile");
-                                }
 
                                 auditService.submitAuditEvent(
                                         DocAppAuditableEvent
@@ -159,10 +141,10 @@ public class DocAppCallbackHandler
                                         context.getAwsRequestId(),
                                         session.getSessionId(),
                                         clientId,
-                                        userProfile.getSubjectID(),
-                                        userProfile.getEmail(),
+                                        clientSession.getDocAppSubjectId().getValue(),
                                         AuditService.UNKNOWN,
-                                        userProfile.getPhoneNumber(),
+                                        AuditService.UNKNOWN,
+                                        AuditService.UNKNOWN,
                                         AuditService.UNKNOWN);
 
                                 var tokenRequest =
@@ -176,10 +158,10 @@ public class DocAppCallbackHandler
                                             context.getAwsRequestId(),
                                             session.getSessionId(),
                                             clientId,
-                                            userProfile.getSubjectID(),
-                                            userProfile.getEmail(),
+                                            clientSession.getDocAppSubjectId().getValue(),
                                             AuditService.UNKNOWN,
-                                            userProfile.getPhoneNumber(),
+                                            AuditService.UNKNOWN,
+                                            AuditService.UNKNOWN,
                                             AuditService.UNKNOWN);
                                 } else {
                                     LOG.error(
@@ -191,14 +173,31 @@ public class DocAppCallbackHandler
                                             context.getAwsRequestId(),
                                             session.getSessionId(),
                                             clientId,
-                                            userProfile.getSubjectID(),
-                                            userProfile.getEmail(),
+                                            clientSession.getDocAppSubjectId().getValue(),
                                             AuditService.UNKNOWN,
-                                            userProfile.getPhoneNumber(),
+                                            AuditService.UNKNOWN,
+                                            AuditService.UNKNOWN,
                                             AuditService.UNKNOWN);
                                     throw new RuntimeException(
                                             "Doc App TokenResponse was not successful");
                                 }
+
+                                var credential = tokenService.sendCriDataRequest(
+                                        tokenResponse.toSuccessResponse().getTokens().getAccessToken());
+                                auditService.submitAuditEvent(
+                                        DocAppAuditableEvent
+                                                .DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
+                                        context.getAwsRequestId(),
+                                        session.getSessionId(),
+                                        clientId,
+                                        clientSession.getDocAppSubjectId().getValue(),
+                                        AuditService.UNKNOWN,
+                                        AuditService.UNKNOWN,
+                                        AuditService.UNKNOWN,
+                                        AuditService.UNKNOWN);
+                                dynamoDocAppService.addDocAppCredential(
+                                        clientSession.getDocAppSubjectId().getValue(),
+                                        credential);
 
                                 var redirectURI =
                                         ConstructUriHelper.buildURI(

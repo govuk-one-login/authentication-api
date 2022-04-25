@@ -25,22 +25,18 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.app.services.DocAppAuthorisationService;
 import uk.gov.di.authentication.app.services.DocAppTokenService;
+import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
-import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -69,11 +65,11 @@ class DocAppCallbackHandlerTest {
             mock(DocAppAuthorisationService.class);
     private final DocAppTokenService tokenService = mock(DocAppTokenService.class);
     private final SessionService sessionService = mock(SessionService.class);
-    private final DynamoService dynamoService = mock(DynamoService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final AuditService auditService = mock(AuditService.class);
-    private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
+    private final DynamoDocAppService dynamoDocAppService = mock(DynamoDocAppService.class);
+
     private static final URI LOGIN_URL = URI.create("https://example.com");
     private static final String OIDC_BASE_URL = "https://base-url.com";
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
@@ -84,7 +80,7 @@ class DocAppCallbackHandlerTest {
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final URI REDIRECT_URI = URI.create("test-uri");
     private static final ClientID CLIENT_ID = new ClientID();
-    private static final Subject PUBLIC_SUBJECT = new Subject();
+    private static final Subject PAIRWISE_SUBJECT_ID = new Subject();
     private static final State STATE = new State();
 
     private final Session session = new Session(SESSION_ID).setEmailAddress(TEST_EMAIL_ADDRESS);
@@ -100,11 +96,10 @@ class DocAppCallbackHandlerTest {
                         responseService,
                         tokenService,
                         sessionService,
-                        dynamoService,
                         clientSessionService,
                         dynamoClientService,
                         auditService,
-                        awsSqsClient);
+                        dynamoDocAppService);
         when(configService.getLoginURI()).thenReturn(LOGIN_URL);
         when(configService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
         when(configService.isSpotEnabled()).thenReturn(true);
@@ -114,9 +109,7 @@ class DocAppCallbackHandlerTest {
     @Test
     void shouldRedirectToFrontendCallbackForSuccessfulResponse()
             throws URISyntaxException, JsonProcessingException {
-        var salt = generateSalt();
         var clientRegistry = generateClientRegistry();
-        var userProfile = generateUserProfile();
         usingValidSession();
         usingValidClientSession();
         var successfulTokenResponse =
@@ -129,11 +122,10 @@ class DocAppCallbackHandlerTest {
                 .thenReturn(Optional.of(clientRegistry));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.empty());
-        when(dynamoService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(userProfile));
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
         when(tokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
         when(tokenService.sendTokenRequest(tokenRequest)).thenReturn(successfulTokenResponse);
+        when(tokenService.sendCriDataRequest(successfulTokenResponse.getTokens().getAccessToken()))
+                .thenReturn("a-verifiable-credential");
 
         var event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(responseHeaders);
@@ -144,8 +136,6 @@ class DocAppCallbackHandlerTest {
         var expectedRedirectURI =
                 new URIBuilder(LOGIN_URL).setPath("doc-checking-app-callback").build();
         assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
-        var expectedPairwiseSub =
-                ClientSubjectHelper.getSubject(userProfile, clientRegistry, dynamoService);
 
         verify(auditService)
                 .submitAuditEvent(
@@ -153,10 +143,10 @@ class DocAppCallbackHandlerTest {
                         REQUEST_ID,
                         SESSION_ID,
                         CLIENT_ID.getValue(),
-                        userProfile.getSubjectID(),
-                        TEST_EMAIL_ADDRESS,
+                        PAIRWISE_SUBJECT_ID.getValue(),
                         AuditService.UNKNOWN,
-                        userProfile.getPhoneNumber(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
                         AuditService.UNKNOWN);
 
         verify(auditService)
@@ -165,13 +155,27 @@ class DocAppCallbackHandlerTest {
                         REQUEST_ID,
                         SESSION_ID,
                         CLIENT_ID.getValue(),
-                        userProfile.getSubjectID(),
-                        TEST_EMAIL_ADDRESS,
+                        PAIRWISE_SUBJECT_ID.getValue(),
                         AuditService.UNKNOWN,
-                        userProfile.getPhoneNumber(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        DocAppAuditableEvent.DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
+                        REQUEST_ID,
+                        SESSION_ID,
+                        CLIENT_ID.getValue(),
+                        PAIRWISE_SUBJECT_ID.getValue(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
                         AuditService.UNKNOWN);
 
         verifyNoMoreInteractions(auditService);
+
+        verify(dynamoDocAppService).addDocAppCredential(PAIRWISE_SUBJECT_ID.getValue(), "a-verifiable-credential");
     }
 
     @Test
@@ -186,37 +190,6 @@ class DocAppCallbackHandlerTest {
                         "Expected to throw exception");
 
         assertThat(expectedException.getMessage(), containsString("Session not found"));
-
-        verifyNoInteractions(auditService);
-    }
-
-    @Test
-    void shouldThrowWhenUserProfileNotFound() {
-        usingValidSession();
-        usingValidClientSession();
-        Map<String, String> responseHeaders = new HashMap<>();
-        responseHeaders.put("code", AUTH_CODE.getValue());
-        responseHeaders.put("state", STATE.getValue());
-        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistry()));
-        when(responseService.validateResponse(responseHeaders, SESSION_ID))
-                .thenReturn(Optional.empty());
-        when(dynamoService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.empty());
-
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setQueryStringParameters(responseHeaders);
-        event.setHeaders(Map.of(COOKIE, buildCookieString()));
-
-        RuntimeException expectedException =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> handler.handleRequest(event, context),
-                        "Expected to throw exception");
-
-        assertThat(
-                expectedException.getMessage(),
-                equalTo("Email from session does not have a user profile"));
 
         verifyNoInteractions(auditService);
     }
@@ -283,9 +256,7 @@ class DocAppCallbackHandlerTest {
 
     @Test
     void shouldThrowWhenTokenResponseIsNotSuccessful() {
-        var salt = generateSalt();
         var clientRegistry = generateClientRegistry();
-        var userProfile = generateUserProfile();
         usingValidSession();
         usingValidClientSession();
         var unsuccessfulTokenResponse = new TokenErrorResponse(new ErrorObject("Error object"));
@@ -297,9 +268,6 @@ class DocAppCallbackHandlerTest {
                 .thenReturn(Optional.of(clientRegistry));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.empty());
-        when(dynamoService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(userProfile));
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
         when(tokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
         when(tokenService.sendTokenRequest(tokenRequest)).thenReturn(unsuccessfulTokenResponse);
 
@@ -323,10 +291,10 @@ class DocAppCallbackHandlerTest {
                         REQUEST_ID,
                         SESSION_ID,
                         CLIENT_ID.getValue(),
-                        userProfile.getSubjectID(),
-                        TEST_EMAIL_ADDRESS,
+                        PAIRWISE_SUBJECT_ID.getValue(),
                         AuditService.UNKNOWN,
-                        userProfile.getPhoneNumber(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
                         AuditService.UNKNOWN);
 
         verify(auditService)
@@ -335,10 +303,10 @@ class DocAppCallbackHandlerTest {
                         REQUEST_ID,
                         SESSION_ID,
                         CLIENT_ID.getValue(),
-                        userProfile.getSubjectID(),
-                        TEST_EMAIL_ADDRESS,
+                        PAIRWISE_SUBJECT_ID.getValue(),
                         AuditService.UNKNOWN,
-                        userProfile.getPhoneNumber(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
                         AuditService.UNKNOWN);
 
         verifyNoMoreInteractions(auditService);
@@ -360,16 +328,7 @@ class DocAppCallbackHandlerTest {
 
     private void usingValidClientSession() {
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID)).thenReturn(clientSession);
-    }
-
-    private UserProfile generateUserProfile() {
-        return new UserProfile()
-                .setEmail(TEST_EMAIL_ADDRESS)
-                .setEmailVerified(true)
-                .setPhoneNumber("012345678902")
-                .setPhoneNumberVerified(true)
-                .setPublicSubjectID(PUBLIC_SUBJECT.getValue())
-                .setSubjectID(SUBJECT.getValue());
+        clientSession.setDocAppSubjectId(PAIRWISE_SUBJECT_ID);
     }
 
     private ClientRegistry generateClientRegistry() {
@@ -380,12 +339,6 @@ class DocAppCallbackHandlerTest {
                 .setRedirectUrls(singletonList(REDIRECT_URI.toString()))
                 .setSectorIdentifierUri("https://test.com")
                 .setSubjectType("pairwise");
-    }
-
-    private byte[] generateSalt() {
-        byte[] salt = new byte[32];
-        new SecureRandom().nextBytes(salt);
-        return salt;
     }
 
     public static AuthenticationRequest generateAuthRequest() {

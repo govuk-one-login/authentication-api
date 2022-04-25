@@ -23,6 +23,7 @@ import com.nimbusds.oauth2.sdk.id.JWTID;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.app.exception.UnsuccesfulCredentialResponseException;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -99,12 +100,12 @@ public class DocAppTokenService {
             var response = request.send();
             if (!response.indicatesSuccess()) {
                 LOG.error("Error {} when attempting to call CRI data endpoint: {}", response.getStatusCode(), response.getContent());
-                throw new RuntimeException();
+                throw new UnsuccesfulCredentialResponseException("Error response received from CRI");
             }
             return response.getContent();
         } catch (IOException e) {
             LOG.error("Error when attempting to call CRI data endpoint", e);
-            throw new RuntimeException();
+            throw new UnsuccesfulCredentialResponseException("Error when attempting to call CRI data endpoint", e);
         }
     }
 
