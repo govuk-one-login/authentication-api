@@ -182,8 +182,12 @@ public class DocAppCallbackHandler
                                             "Doc App TokenResponse was not successful");
                                 }
 
-                                var credential = tokenService.sendCriDataRequest(
-                                        tokenResponse.toSuccessResponse().getTokens().getAccessToken());
+                                var credential =
+                                        tokenService.sendCriDataRequest(
+                                                tokenResponse
+                                                        .toSuccessResponse()
+                                                        .getTokens()
+                                                        .getAccessToken());
                                 auditService.submitAuditEvent(
                                         DocAppAuditableEvent
                                                 .DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
@@ -196,8 +200,7 @@ public class DocAppCallbackHandler
                                         AuditService.UNKNOWN,
                                         AuditService.UNKNOWN);
                                 dynamoDocAppService.addDocAppCredential(
-                                        clientSession.getDocAppSubjectId().getValue(),
-                                        credential);
+                                        clientSession.getDocAppSubjectId().getValue(), credential);
 
                                 var redirectURI =
                                         ConstructUriHelper.buildURI(

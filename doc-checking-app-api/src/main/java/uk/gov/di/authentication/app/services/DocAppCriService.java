@@ -6,8 +6,12 @@ import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jose.crypto.impl.ECDSA;
+import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.util.Base64URL;
+import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.AuthorizationCodeGrant;
@@ -17,6 +21,7 @@ import com.nimbusds.oauth2.sdk.TokenResponse;
 import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
+import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.JWTID;
@@ -24,7 +29,6 @@ import com.nimbusds.oauth2.sdk.token.AccessToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.app.exception.UnsuccesfulCredentialResponseException;
-import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
@@ -36,6 +40,7 @@ import java.util.Map;
 
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.util.Collections.singletonList;
+import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 
 public class DocAppCriService {
 
@@ -57,7 +62,7 @@ public class DocAppCriService {
                         new AuthorizationCode(authCode),
                         configurationService.getDocAppAuthorisationCallbackURI());
         var backendURI = configurationService.getDocAppBackendURI();
-        var tokenURI = ConstructUriHelper.buildURI(backendURI.toString(), "token");
+        var tokenURI = buildURI(backendURI.toString(), "token");
         var claimsSet =
                 new JWTAuthenticationClaimsSet(
                         new ClientID(configurationService.getDocAppAuthorisationClientId()),
@@ -92,20 +97,55 @@ public class DocAppCriService {
     public String sendCriDataRequest(AccessToken accessToken) {
         try {
             var criDataURI =
-                    ConstructUriHelper.buildURI(configurationService.getDocAppBackendURI().toString(), configurationService.getDocAppCriDataEndpoint());
+                    buildURI(
+                            configurationService.getDocAppBackendURI().toString(),
+                            configurationService.getDocAppCriDataEndpoint());
 
             var request = new HTTPRequest(GET, criDataURI);
             request.setAuthorization(accessToken.toAuthorizationHeader());
 
             var response = request.send();
             if (!response.indicatesSuccess()) {
-                LOG.error("Error {} when attempting to call CRI data endpoint: {}", response.getStatusCode(), response.getContent());
-                throw new UnsuccesfulCredentialResponseException("Error response received from CRI");
+                LOG.error(
+                        "Error {} when attempting to call CRI data endpoint: {}",
+                        response.getStatusCode(),
+                        response.getContent());
+                throw new UnsuccesfulCredentialResponseException(
+                        "Error response received from CRI");
+            }
+
+            if (!isValidResponse(response)) {
+                LOG.error("Invalid CRI response signature");
+                throw new UnsuccesfulCredentialResponseException("Invalid CRI response signature");
             }
             return response.getContent();
         } catch (IOException e) {
             LOG.error("Error when attempting to call CRI data endpoint", e);
-            throw new UnsuccesfulCredentialResponseException("Error when attempting to call CRI data endpoint", e);
+            throw new UnsuccesfulCredentialResponseException(
+                    "Error when attempting to call CRI data endpoint", e);
+        }
+    }
+
+    private boolean isValidResponse(HTTPResponse response) {
+        try {
+            JWT jwt = response.getContentAsJWT();
+            if (jwt instanceof SignedJWT) {
+                var signed = (SignedJWT) jwt;
+                var signingPublicKey =
+                        ECKey.parse(configurationService.getDocAppCredentialSigningPublicKey());
+                JWSVerifier verifier = new ECDSAVerifier(signingPublicKey);
+
+                return signed.verify(verifier);
+            }
+            throw new UnsuccesfulCredentialResponseException("CRI response is not signed");
+        } catch (ParseException e) {
+            throw new UnsuccesfulCredentialResponseException("Error parsing CRI response", e);
+        } catch (JOSEException e) {
+            throw new UnsuccesfulCredentialResponseException(
+                    "Error verifying CRI response signature", e);
+        } catch (java.text.ParseException e) {
+            throw new UnsuccesfulCredentialResponseException(
+                    "Error parsing signing public key from config", e);
         }
     }
 

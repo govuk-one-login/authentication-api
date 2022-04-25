@@ -211,6 +211,14 @@ public class RedisExtension
         }
     }
 
+    public void createClientSession(String clientSessionId, ClientSession clientSession)
+            throws JsonProcessingException {
+        redis.saveWithExpiry(
+                CLIENT_SESSION_PREFIX.concat(clientSessionId),
+                objectMapper.writeValueAsString(clientSession),
+                300);
+    }
+
     @Override
     public void afterAll(ExtensionContext context) throws Exception {
         redis.close();

@@ -175,7 +175,8 @@ class DocAppCallbackHandlerTest {
 
         verifyNoMoreInteractions(auditService);
 
-        verify(dynamoDocAppService).addDocAppCredential(PAIRWISE_SUBJECT_ID.getValue(), "a-verifiable-credential");
+        verify(dynamoDocAppService)
+                .addDocAppCredential(PAIRWISE_SUBJECT_ID.getValue(), "a-verifiable-credential");
     }
 
     @Test
