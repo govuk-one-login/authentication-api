@@ -302,3 +302,8 @@ variable "doc_app_api_enabled" {
   type    = bool
   default = false
 }
+
+variable "doc_app_domain" {
+  type    = string
+  default = "undefined"
+}

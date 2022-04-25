@@ -202,6 +202,15 @@ public class RedisExtension
                 300);
     }
 
+    public ClientSession getClientSession(String clientSessionId) {
+        try {
+            var result = redis.getValue(CLIENT_SESSION_PREFIX.concat(clientSessionId));
+            return objectMapper.readValue(result, ClientSession.class);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     @Override
     public void afterAll(ExtensionContext context) throws Exception {
         redis.close();

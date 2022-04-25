@@ -38,6 +38,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.START_INFO_FOUND;
@@ -112,12 +113,10 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    void shouldReturn200WhenUserIsADocCheckignAppUser() throws IOException, JOSEException {
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+    void shouldReturn200WhenUserIsADocCheckingAppUser() throws IOException, JOSEException {
+        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         var sessionId = redis.createSession();
-        var scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        scope.add(CustomScopeValue.DOC_CHECKING_APP);
+        var scope = new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
         var authRequest =
                 new AuthorizationRequest.Builder(ResponseType.CODE, new ClientID(CLIENT_ID))
                         .requestObject(createSignedJWT(keyPair))
@@ -149,6 +148,10 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertFalse(startResponse.getClient().getCookieConsentShared());
         assertThat(startResponse.getClient().getScopes(), equalTo(scope.toStringList()));
         assertThat(startResponse.getClient().getRedirectUri(), equalTo(REDIRECT_URI));
+
+        var clientSession = redis.getClientSession(CLIENT_SESSION_ID);
+
+        assertNotNull(clientSession.getDocAppSubjectId());
 
         assertEventTypesReceived(auditTopic, List.of(START_INFO_FOUND));
     }
