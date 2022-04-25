@@ -6,6 +6,8 @@ import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
 import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import uk.gov.di.authentication.app.services.DynamoDocAppService;
+import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
 import static com.amazonaws.services.dynamodbv2.model.KeyType.HASH;
 import static com.amazonaws.services.dynamodbv2.model.ScalarAttributeType.S;
@@ -16,9 +18,21 @@ public class DocumentAppCredentialStoreExtension extends DynamoExtension
     public static final String CREDENTIAL_REGISTRY_TABLE = "local-doc-app-credential";
     public static final String SUBJECT_ID_FIELD = "SubjectID";
 
+    private DynamoDocAppService dynamoDocAppService;
+
     @Override
     public void beforeAll(ExtensionContext context) throws Exception {
         super.beforeAll(context);
+
+        var configuration =
+                new DynamoTestConfiguration(REGION, ENVIRONMENT, DYNAMO_ENDPOINT) {
+                    @Override
+                    public long getAccessTokenExpiry() {
+                        return 180;
+                    }
+                };
+
+        dynamoDocAppService = new DynamoDocAppService(configuration);
     }
 
     @Override
@@ -29,11 +43,11 @@ public class DocumentAppCredentialStoreExtension extends DynamoExtension
     @Override
     protected void createTables() {
         if (!tableExists(CREDENTIAL_REGISTRY_TABLE)) {
-            createClientRegistryTable(CREDENTIAL_REGISTRY_TABLE);
+            createCredentialRegistryTable(CREDENTIAL_REGISTRY_TABLE);
         }
     }
 
-    private void createClientRegistryTable(String tableName) {
+    private void createCredentialRegistryTable(String tableName) {
         CreateTableRequest request =
                 new CreateTableRequest()
                         .withTableName(tableName)
@@ -41,5 +55,9 @@ public class DocumentAppCredentialStoreExtension extends DynamoExtension
                         .withBillingMode(BillingMode.PAY_PER_REQUEST)
                         .withAttributeDefinitions(new AttributeDefinition(SUBJECT_ID_FIELD, S));
         dynamoDB.createTable(request);
+    }
+
+    public void addCredential(String subjectId, String credential) {
+        dynamoDocAppService.addDocAppCredential(subjectId, credential);
     }
 }

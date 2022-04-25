@@ -11,6 +11,7 @@ import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
@@ -54,6 +55,7 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 import uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper;
+import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 
 import java.net.URI;
@@ -83,6 +85,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.oidc.helper.RequestObjectTestHelper.generateSignedJWT;
+import static uk.gov.di.authentication.shared.entity.CustomScopeValue.DOC_CHECKING_APP;
 import static uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper.generateIDToken;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -94,7 +98,12 @@ public class TokenHandlerTest {
     private static final String REDIRECT_URI = "http://localhost/redirect";
     private static final Subject INTERNAL_SUBJECT = new Subject();
     private static final Subject PUBLIC_SUBJECT = new Subject();
+    private static final Subject DOC_APP_USER_PUBLIC_SUBJECT = new Subject();
+    private static final String AUDIENCE = "oidc-audience";
+    private static final State STATE = new State();
     private static final String CLIENT_ID = "test-id";
+    private static final ClientID DOC_APP_CLIENT_ID = new ClientID("doc-app-test-id");
+    private static final URI DOC_APP_REDIRECT_URI = URI.create("http://localhost/redirect");
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
     private static final String BASE_URI = "http://localhost";
@@ -201,10 +210,12 @@ public class TokenHandlerTest {
                         vtr.retrieveVectorOfTrustForToken(),
                         userProfile.getClientConsent(),
                         expectedConsentRequired,
-                        null))
+                        null,
+                        false))
                 .thenReturn(tokenResponse);
 
-        APIGatewayProxyResponseEvent result = generateApiGatewayRequest(privateKeyJWT, authCode);
+        APIGatewayProxyResponseEvent result =
+                generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID);
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
@@ -314,7 +325,8 @@ public class TokenHandlerTest {
         KeyPair keyPair = generateRsaKeyPair();
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
         APIGatewayProxyResponseEvent result =
-                generateApiGatewayRequest(privateKeyJWT, new AuthorizationCode().toString());
+                generateApiGatewayRequest(
+                        privateKeyJWT, new AuthorizationCode().toString(), CLIENT_ID);
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasBody(OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString()));
@@ -350,7 +362,8 @@ public class TokenHandlerTest {
                 .thenReturn(Optional.of(OAuth2Error.INVALID_CLIENT));
 
         APIGatewayProxyResponseEvent result =
-                generateApiGatewayRequest(privateKeyJWT, new AuthorizationCode().toString());
+                generateApiGatewayRequest(
+                        privateKeyJWT, new AuthorizationCode().toString(), CLIENT_ID);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString()));
@@ -374,7 +387,8 @@ public class TokenHandlerTest {
         when(authorisationCodeService.getExchangeDataForCode(authCode))
                 .thenReturn(Optional.empty());
 
-        APIGatewayProxyResponseEvent result = generateApiGatewayRequest(privateKeyJWT, authCode);
+        APIGatewayProxyResponseEvent result =
+                generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID);
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
     }
@@ -385,7 +399,6 @@ public class TokenHandlerTest {
         KeyPair keyPair = generateRsaKeyPair();
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
         ClientRegistry clientRegistry = generateClientRegistry(keyPair, false);
-
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
         when(tokenService.validatePrivateKeyJWT(
@@ -408,9 +421,70 @@ public class TokenHandlerTest {
                                                         mock(VectorOfTrust.class)))));
 
         APIGatewayProxyResponseEvent result =
-                generateApiGatewayRequest(privateKeyJWT, authCode, "http://invalid-redirect-uri");
+                generateApiGatewayRequest(
+                        privateKeyJWT, authCode, "http://invalid-redirect-uri", CLIENT_ID);
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
+    }
+
+    @Test
+    void shouldReturn200ForSuccessfulDocAppJourneyTokenRequest() throws JOSEException {
+        KeyPair keyPair = generateRsaKeyPair();
+        UserProfile userProfile = generateUserProfile();
+        SignedJWT signedJWT =
+                generateIDToken(
+                        DOC_APP_CLIENT_ID.getValue(),
+                        PUBLIC_SUBJECT,
+                        "issuer-url",
+                        new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate());
+        OIDCTokenResponse tokenResponse =
+                new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
+        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
+        ClientRegistry clientRegistry = generateClientRegistry(keyPair, false);
+
+        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
+        when(clientService.getClient(DOC_APP_CLIENT_ID.getValue()))
+                .thenReturn(Optional.of(clientRegistry));
+        when(tokenService.validatePrivateKeyJWT(
+                        anyString(),
+                        eq(clientRegistry.getPublicKey()),
+                        eq(BASE_URI),
+                        eq(DOC_APP_CLIENT_ID.getValue())))
+                .thenReturn(Optional.empty());
+        String authCode = new AuthorizationCode().toString();
+        AuthenticationRequest authenticationRequest = generateRequestObjectAuthRequest();
+        VectorOfTrust vtr =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        authenticationRequest.getCustomParameter("vtr"));
+        ClientSession clientSession =
+                new ClientSession(authenticationRequest.toParameters(), LocalDateTime.now(), vtr);
+        clientSession.setDocAppSubjectId(DOC_APP_USER_PUBLIC_SUBJECT);
+        when(authorisationCodeService.getExchangeDataForCode(authCode))
+                .thenReturn(
+                        Optional.of(
+                                new AuthCodeExchangeData()
+                                        .setEmail(TEST_EMAIL)
+                                        .setClientSessionId(CLIENT_SESSION_ID)
+                                        .setClientSession(clientSession)));
+        when(dynamoService.getUserProfileByEmail(TEST_EMAIL)).thenReturn(userProfile);
+        when(tokenService.generateTokenResponse(
+                        DOC_APP_CLIENT_ID.getValue(),
+                        DOC_APP_USER_PUBLIC_SUBJECT,
+                        new Scope(DOC_CHECKING_APP),
+                        Map.of(),
+                        DOC_APP_USER_PUBLIC_SUBJECT,
+                        vtr.retrieveVectorOfTrustForToken(),
+                        null,
+                        false,
+                        null,
+                        true))
+                .thenReturn(tokenResponse);
+
+        APIGatewayProxyResponseEvent result =
+                generateApiGatewayRequest(privateKeyJWT, authCode, DOC_APP_CLIENT_ID.getValue());
+        assertThat(result, hasStatus(200));
+        assertTrue(result.getBody().contains(refreshToken.getValue()));
+        assertTrue(result.getBody().contains(accessToken.getValue()));
     }
 
     private UserProfile generateUserProfile() {
@@ -465,11 +539,14 @@ public class TokenHandlerTest {
     }
 
     private APIGatewayProxyResponseEvent generateApiGatewayRequest(
-            PrivateKeyJWT privateKeyJWT, String authorisationCode, String redirectUri) {
+            PrivateKeyJWT privateKeyJWT,
+            String authorisationCode,
+            String redirectUri,
+            String clientId) {
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
                 "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
-        customParams.put("client_id", Collections.singletonList(CLIENT_ID));
+        customParams.put("client_id", Collections.singletonList(clientId));
         customParams.put("code", Collections.singletonList(authorisationCode));
         customParams.put("redirect_uri", Collections.singletonList(redirectUri));
         Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
@@ -496,8 +573,8 @@ public class TokenHandlerTest {
     }
 
     private APIGatewayProxyResponseEvent generateApiGatewayRequest(
-            PrivateKeyJWT privateKeyJWT, String authorisationCode) {
-        return generateApiGatewayRequest(privateKeyJWT, authorisationCode, REDIRECT_URI);
+            PrivateKeyJWT privateKeyJWT, String authorisationCode, String clientId) {
+        return generateApiGatewayRequest(privateKeyJWT, authorisationCode, REDIRECT_URI, clientId);
     }
 
     private AuthenticationRequest generateAuthRequest() {
@@ -530,5 +607,31 @@ public class TokenHandlerTest {
         }
         kpg.initialize(2048);
         return kpg.generateKeyPair();
+    }
+
+    private static AuthenticationRequest generateRequestObjectAuthRequest() throws JOSEException {
+        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(AUDIENCE)
+                        .claim("redirect_uri", REDIRECT_URI.toString())
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", DOC_CHECKING_APP.toString())
+                        .claim("client_id", DOC_APP_CLIENT_ID.getValue())
+                        .claim("state", STATE.getValue())
+                        .issuer(CLIENT_ID)
+                        .build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        return generateAuthRequest(signedJWT);
+    }
+
+    private static AuthenticationRequest generateAuthRequest(SignedJWT signedJWT) {
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        AuthenticationRequest.Builder builder =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE, scope, DOC_APP_CLIENT_ID, DOC_APP_REDIRECT_URI)
+                        .requestObject(signedJWT);
+        return builder.build();
     }
 }

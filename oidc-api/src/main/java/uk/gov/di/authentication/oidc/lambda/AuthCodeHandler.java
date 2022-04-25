@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
@@ -30,11 +31,13 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
-import java.net.URISyntaxException;
+import java.net.URI;
 import java.util.Map;
 import java.util.Objects;
 
 import static java.util.Objects.isNull;
+import static uk.gov.di.authentication.shared.conditions.DocAppUserHelper.getRequestObjectClaim;
+import static uk.gov.di.authentication.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.Session.AccountState.EXISTING;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -154,10 +157,27 @@ public class AuthCodeHandler
                                         new AuthCodeResponse(errorResponse.toURI().toString()));
                             }
 
+                            URI redirectUri = authenticationRequest.getRedirectionURI();
+                            State state = authenticationRequest.getState();
                             try {
+                                boolean docCheckingUser =
+                                        isDocCheckingAppUserWithSubjectId(clientSession);
+                                if (docCheckingUser) {
+                                    redirectUri =
+                                            URI.create(
+                                                    getRequestObjectClaim(
+                                                            authenticationRequest,
+                                                            "redirect_uri",
+                                                            String.class));
+                                    state =
+                                            new State(
+                                                    getRequestObjectClaim(
+                                                            authenticationRequest,
+                                                            "state",
+                                                            String.class));
+                                }
                                 if (!authorizationService.isClientRedirectUriValid(
-                                        authenticationRequest.getClientID(),
-                                        authenticationRequest.getRedirectionURI())) {
+                                        authenticationRequest.getClientID(), redirectUri)) {
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1016);
                                 }
@@ -181,7 +201,10 @@ public class AuthCodeHandler
 
                                 AuthenticationSuccessResponse authenticationResponse =
                                         authorizationService.generateSuccessfulAuthResponse(
-                                                authenticationRequest, authCode);
+                                                authenticationRequest,
+                                                authCode,
+                                                redirectUri,
+                                                state);
 
                                 LOG.info("Successfully processed request");
 
@@ -195,8 +218,13 @@ public class AuthCodeHandler
                                                 "Client",
                                                 authenticationRequest.getClientID().getValue()));
 
+                                if (!docCheckingUser) {
+                                    LOG.info(
+                                            "isDocCheckingAppUserWithSubjectId => authenticated = false");
+                                }
                                 sessionService.save(
-                                        session.setAuthenticated(true).setNewAccount(EXISTING));
+                                        session.setAuthenticated(!docCheckingUser)
+                                                .setNewAccount(EXISTING));
 
                                 auditService.submitAuditEvent(
                                         OidcAuditableEvent.AUTH_CODE_ISSUED,
@@ -215,12 +243,12 @@ public class AuthCodeHandler
                             } catch (ClientNotFoundException e) {
                                 AuthenticationErrorResponse errorResponse =
                                         authorizationService.generateAuthenticationErrorResponse(
-                                                authenticationRequest, OAuth2Error.INVALID_CLIENT);
+                                                authenticationRequest,
+                                                OAuth2Error.INVALID_CLIENT,
+                                                redirectUri,
+                                                state);
                                 return generateResponse(
                                         new AuthCodeResponse(errorResponse.toURI().toString()));
-                            } catch (URISyntaxException e) {
-                                return generateApiGatewayProxyErrorResponse(
-                                        400, ErrorResponse.ERROR_1016);
                             }
                         });
     }

@@ -159,7 +159,8 @@ public class TokenServiceTest {
                                         claimsForListOfScopes,
                                         LocalDateTime.now(ZoneId.of("UTC")).toString())),
                         false,
-                        null);
+                        null,
+                        false);
 
         assertSuccessfullTokenResponse(tokenResponse);
 
@@ -203,7 +204,8 @@ public class TokenServiceTest {
                                         claimsForListOfScopes,
                                         LocalDateTime.now(ZoneId.of("UTC")).toString())),
                         false,
-                        oidcClaimsRequest);
+                        oidcClaimsRequest,
+                        false);
 
         assertSuccessfullTokenResponse(tokenResponse);
 
@@ -256,7 +258,8 @@ public class TokenServiceTest {
                                         claimsForListOfScopes,
                                         LocalDateTime.now(ZoneId.of("UTC")).toString())),
                         false,
-                        null);
+                        null,
+                        false);
 
         assertSuccessfullTokenResponse(tokenResponse);
 

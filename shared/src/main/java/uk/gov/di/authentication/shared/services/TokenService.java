@@ -105,7 +105,8 @@ public class TokenService {
             String vot,
             List<ClientConsent> clientConsents,
             boolean isConsentRequired,
-            OIDCClaimsRequest claimsRequest) {
+            OIDCClaimsRequest claimsRequest,
+            boolean isDocAppJourney) {
         List<String> scopesForToken;
         if (isConsentRequired) {
             scopesForToken = calculateScopesForToken(clientConsents, clientID, authRequestScopes);
@@ -135,7 +136,8 @@ public class TokenService {
                                         publicSubject,
                                         additionalTokenClaims,
                                         accessTokenHash,
-                                        vot));
+                                        vot,
+                                        isDocAppJourney));
         if (scopesForToken.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
             RefreshToken refreshToken =
                     segmentedFunctionCall(
@@ -273,7 +275,8 @@ public class TokenService {
             Subject publicSubject,
             Map<String, Object> additionalTokenClaims,
             AccessTokenHash accessTokenHash,
-            String vot) {
+            String vot,
+            boolean isDocAppJourney) {
 
         LOG.info("Generating IdToken");
         URI trustMarkUri = buildURI(configService.getOidcApiBaseURL().get(), "/trustmark");
@@ -284,10 +287,12 @@ public class TokenService {
                         publicSubject,
                         List.of(new Audience(clientId)),
                         expiryDate,
-                        new Date());
+                        NowHelper.now());
         idTokenClaims.setAccessTokenHash(accessTokenHash);
         idTokenClaims.putAll(additionalTokenClaims);
-        idTokenClaims.setClaim("vot", vot);
+        if (!isDocAppJourney) {
+            idTokenClaims.setClaim("vot", vot);
+        }
         idTokenClaims.setClaim("vtm", trustMarkUri.toString());
         try {
             return generateSignedJWT(idTokenClaims.toJWTClaimsSet(), Optional.empty());

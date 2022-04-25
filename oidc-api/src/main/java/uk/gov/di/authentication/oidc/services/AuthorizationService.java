@@ -12,7 +12,6 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
-import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
@@ -26,7 +25,6 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -60,17 +58,17 @@ public class AuthorizationService {
     }
 
     public AuthenticationSuccessResponse generateSuccessfulAuthResponse(
-            AuthenticationRequest authRequest, AuthorizationCode authorizationCode)
-            throws URISyntaxException {
-
-        URIBuilder redirectUri = new URIBuilder(authRequest.getRedirectionURI());
+            AuthenticationRequest authRequest,
+            AuthorizationCode authorizationCode,
+            URI redirectUri,
+            State state) {
 
         return new AuthenticationSuccessResponse(
-                redirectUri.build(),
+                redirectUri,
                 authorizationCode,
                 null,
                 null,
-                authRequest.getState(),
+                state,
                 null,
                 authRequest.getResponseMode());
     }
@@ -162,13 +160,13 @@ public class AuthorizationService {
     }
 
     public AuthenticationErrorResponse generateAuthenticationErrorResponse(
-            AuthenticationRequest authRequest, ErrorObject errorObject) {
+            AuthenticationRequest authRequest,
+            ErrorObject errorObject,
+            URI redirectUri,
+            State state) {
 
         return generateAuthenticationErrorResponse(
-                authRequest.getRedirectionURI(),
-                authRequest.getState(),
-                authRequest.getResponseMode(),
-                errorObject);
+                redirectUri, state, authRequest.getResponseMode(), errorObject);
     }
 
     public AuthenticationErrorResponse generateAuthenticationErrorResponse(

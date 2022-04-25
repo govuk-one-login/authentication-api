@@ -3,6 +3,7 @@ package uk.gov.di.authentication.api;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
@@ -14,6 +15,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.lambda.UserInfoHandler;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
+import uk.gov.di.authentication.shared.entity.ClientType;
+import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -46,9 +49,15 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String FORMATTED_PHONE_NUMBER = "+441234567890";
     private static final String TEST_PASSWORD = "password-1";
     private static final String CLIENT_ID = "client-id-one";
+    private static final String APP_CLIENT_ID = "app-client-id-one";
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
     private static final Subject PUBLIC_SUBJECT = new Subject();
     private static final Subject INTERNAL_SUBJECT = new Subject();
+    private static final Scope DOC_APP_SCOPES =
+            new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
+    private static final Subject DOC_APP_PUBLIC_SUBJECT = new Subject();
+    private static final String DOC_APP_CREDENTIAL = "doc-app-credential-11223344";
+
     private static final List<String> SCOPES =
             List.of(
                     OIDCScopeValue.OPENID.getValue(),
@@ -178,6 +187,50 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertNoAuditEventsReceived(auditTopic);
     }
 
+    @Test
+    void shouldCallUserInfoWithAccessTokenAndReturn200ForDocAppUser()
+            throws JsonProcessingException, ParseException {
+
+        documentAppCredentialStore.addCredential(
+                DOC_APP_PUBLIC_SUBJECT.getValue(), DOC_APP_CREDENTIAL);
+
+        var claimsSet =
+                new JWTClaimsSet.Builder()
+                        .claim("scope", DOC_APP_SCOPES.toStringList())
+                        .issuer("issuer-id")
+                        .expirationTime(EXPIRY_DATE)
+                        .issueTime(NowHelper.now())
+                        .claim("client_id", "app-client-id-one")
+                        .subject(DOC_APP_PUBLIC_SUBJECT.getValue())
+                        .jwtID(UUID.randomUUID().toString())
+                        .build();
+        var signedJWT = tokenSigner.signJwt(claimsSet);
+        var accessToken = new BearerAccessToken(signedJWT.serialize());
+        var accessTokenStore =
+                new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
+        var accessTokenStoreString = objectMapper.writeValueAsString(accessTokenStore);
+        redis.addToRedis(
+                ACCESS_TOKEN_PREFIX + APP_CLIENT_ID + "." + DOC_APP_PUBLIC_SUBJECT,
+                accessTokenStoreString,
+                300L);
+        setUpDynamo(null);
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        Map.of("Authorization", accessToken.toAuthorizationHeader()),
+                        Map.of());
+
+        assertThat(response, hasStatus(200));
+
+        var userInfoResponse = UserInfo.parse(response.getBody());
+        assertThat(userInfoResponse.getClaim("doc-app-credential"), equalTo(DOC_APP_CREDENTIAL));
+        assertThat(userInfoResponse.getSubject(), equalTo(DOC_APP_PUBLIC_SUBJECT));
+        assertThat(userInfoResponse.toJWTClaimsSet().getClaims().size(), equalTo(2));
+
+        assertNoAuditEventsReceived(auditTopic);
+    }
+
     private void setUpDynamo(String serializedCredential) {
         if (Objects.nonNull(serializedCredential)) {
             spotStore.addCredential(PUBLIC_SUBJECT.getValue(), serializedCredential);
@@ -199,6 +252,20 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "https://test.com",
                 "public",
                 true);
+        clientStore.registerClient(
+                APP_CLIENT_ID,
+                "app-test-client",
+                singletonList("redirect-url"),
+                singletonList(TEST_EMAIL_ADDRESS),
+                List.of("openid", "doc-checking-app"),
+                Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
+                singletonList("http://localhost/post-redirect-logout"),
+                "http://example.com",
+                String.valueOf(ServiceType.MANDATORY),
+                "https://test.com",
+                "public",
+                false,
+                ClientType.APP);
     }
 
     private class UserInfoConfigurationService extends IntegrationTestConfigurationService {

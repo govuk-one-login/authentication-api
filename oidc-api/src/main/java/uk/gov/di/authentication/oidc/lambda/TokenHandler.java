@@ -11,6 +11,7 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
@@ -44,6 +45,8 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static java.lang.String.format;
+import static uk.gov.di.authentication.shared.conditions.DocAppUserHelper.getRequestObjectClaim;
+import static uk.gov.di.authentication.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -241,12 +244,7 @@ public class TokenHandler
                                         400,
                                         OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
                             }
-                            UserProfile userProfile =
-                                    dynamoService.getUserProfileByEmail(
-                                            authCodeExchangeData.getEmail());
-                            Subject publicSubject =
-                                    ClientSubjectHelper.getSubject(
-                                            userProfile, client, dynamoService);
+
                             Map<String, Object> additionalTokenClaims = new HashMap<>();
                             if (authRequest.getNonce() != null) {
                                 additionalTokenClaims.put("nonce", authRequest.getNonce());
@@ -269,22 +267,52 @@ public class TokenHandler
                                             && !clientSession
                                                     .getEffectiveVectorOfTrust()
                                                     .containsLevelOfConfidence();
-
                             final OIDCClaimsRequest finalClaimsRequest = claimsRequest;
-                            var tokenResponse =
-                                    segmentedFunctionCall(
-                                            "generateTokenResponse",
-                                            () ->
-                                                    tokenService.generateTokenResponse(
-                                                            clientID,
-                                                            new Subject(userProfile.getSubjectID()),
-                                                            authRequest.getScope(),
-                                                            additionalTokenClaims,
-                                                            publicSubject,
-                                                            vot,
-                                                            userProfile.getClientConsent(),
-                                                            isConsentRequired,
-                                                            finalClaimsRequest));
+                            OIDCTokenResponse tokenResponse;
+                            if (isDocCheckingAppUserWithSubjectId(clientSession)) {
+                                Scope scope =
+                                        new Scope(
+                                                getRequestObjectClaim(
+                                                        authRequest, "scope", String.class));
+                                tokenResponse =
+                                        segmentedFunctionCall(
+                                                "generateTokenResponse",
+                                                () ->
+                                                        tokenService.generateTokenResponse(
+                                                                clientID,
+                                                                clientSession.getDocAppSubjectId(),
+                                                                scope,
+                                                                additionalTokenClaims,
+                                                                clientSession.getDocAppSubjectId(),
+                                                                vot,
+                                                                null,
+                                                                false,
+                                                                finalClaimsRequest,
+                                                                true));
+                            } else {
+                                UserProfile userProfile =
+                                        dynamoService.getUserProfileByEmail(
+                                                authCodeExchangeData.getEmail());
+                                Subject publicSubject =
+                                        ClientSubjectHelper.getSubject(
+                                                userProfile, client, dynamoService);
+                                tokenResponse =
+                                        segmentedFunctionCall(
+                                                "generateTokenResponse",
+                                                () ->
+                                                        tokenService.generateTokenResponse(
+                                                                clientID,
+                                                                new Subject(
+                                                                        userProfile.getSubjectID()),
+                                                                authRequest.getScope(),
+                                                                additionalTokenClaims,
+                                                                publicSubject,
+                                                                vot,
+                                                                userProfile.getClientConsent(),
+                                                                isConsentRequired,
+                                                                finalClaimsRequest,
+                                                                false));
+                            }
 
                             clientSessionService.saveClientSession(
                                     authCodeExchangeData.getClientSessionId(),
