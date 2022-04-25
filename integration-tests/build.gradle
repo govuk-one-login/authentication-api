@@ -41,6 +41,7 @@ test {
     environment "OIDC_API_BASE_URL", "http://localhost"
     environment "DEFAULT_LOGOUT_URI", "http://localhost:3000/signed-out"
     environment "DOMAIN_NAME", "localhost"
+    environment "DOC_APP_DOMAIN", "https://doc-app"
     environment "DYNAMO_ENDPOINT", "http://localhost:8000"
     environment "ENVIRONMENT", "local"
     environment "LOCALSTACK_ENDPOINT", "http://localhost:45678"

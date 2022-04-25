@@ -20,8 +20,8 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 
-import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Arrays;
@@ -38,14 +38,10 @@ import static uk.gov.di.authentication.shared.dynamodb.DynamoDBSchemaHelper.Tabl
 
 public class DynamoService implements AuthenticationService {
 
-    private static final int SALT_BYTES = 32;
-
     private final DynamoDBMapper userCredentialsMapper;
     private final DynamoDBMapper userProfileMapper;
     private final AmazonDynamoDB dynamoDB;
     private final DynamoDBSchemaHelper dynamoDBSchemaHelper;
-
-    private final SecureRandom secureRandom = new SecureRandom();
 
     public DynamoService(ConfigurationService configurationService) {
         this(
@@ -284,7 +280,7 @@ public class DynamoService implements AuthenticationService {
     @Override
     public byte[] getOrGenerateSalt(UserProfile userProfile) {
         if (userProfile.getSalt() == null || userProfile.getSalt().array().length == 0) {
-            byte[] salt = generateNewSalt();
+            byte[] salt = SaltHelper.generateNewSalt();
             userProfile.setSalt(salt);
             userProfileMapper.save(
                     getUserProfileFromSubject(userProfile.getSubjectID())
@@ -378,11 +374,5 @@ public class DynamoService implements AuthenticationService {
 
     private void warmUp(String tableName) {
         dynamoDB.describeTable(tableName);
-    }
-
-    private byte[] generateNewSalt() {
-        byte[] salt = new byte[SALT_BYTES];
-        secureRandom.nextBytes(salt);
-        return salt;
     }
 }

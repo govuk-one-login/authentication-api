@@ -1,12 +1,14 @@
 package uk.gov.di.authentication.frontendapi.services;
 
 import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.shared.conditions.ConsentHelper;
+import uk.gov.di.authentication.shared.conditions.DocAppUserHelper;
 import uk.gov.di.authentication.shared.conditions.IdentityHelper;
 import uk.gov.di.authentication.shared.conditions.UpliftHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -17,6 +19,7 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -63,15 +66,25 @@ public class StartService {
     }
 
     public ClientStartInfo buildClientStartInfo(UserContext userContext) throws ParseException {
-        AuthenticationRequest authenticationRequest;
+        List<String> scopes;
+        URI redirectURI;
         try {
-            authenticationRequest =
+            var authenticationRequest =
                     AuthenticationRequest.parse(
                             userContext.getClientSession().getAuthRequestParams());
+            if (Objects.nonNull(authenticationRequest.getRequestObject())) {
+                var claimSet = authenticationRequest.getRequestObject().getJWTClaimsSet();
+                scopes = Scope.parse((String) claimSet.getClaim("scope")).toStringList();
+                redirectURI = URI.create((String) claimSet.getClaim("redirect_uri"));
+            } else {
+                scopes = authenticationRequest.getScope().toStringList();
+                redirectURI = authenticationRequest.getRedirectionURI();
+            }
         } catch (ParseException e) {
             throw new ParseException("Unable to parse authentication request");
+        } catch (java.text.ParseException e) {
+            throw new RuntimeException("Unable to parse claims in request object");
         }
-        var scopes = authenticationRequest.getScope().toStringList();
         var clientRegistry = userContext.getClient().orElseThrow();
         var clientInfo =
                 new ClientStartInfo(
@@ -79,7 +92,7 @@ public class StartService {
                         scopes,
                         clientRegistry.getServiceType(),
                         clientRegistry.isCookieConsentShared(),
-                        authenticationRequest.getRedirectionURI());
+                        redirectURI);
         LOG.info(
                 "Found ClientStartInfo for ClientName: {} Scopes: {} ServiceType: {}",
                 clientRegistry.getClientName(),
@@ -91,23 +104,26 @@ public class StartService {
 
     public UserStartInfo buildUserStartInfo(
             UserContext userContext, String cookieConsent, String gaTrackingId) {
-        var consentRequired = ConsentHelper.userHasNotGivenConsent(userContext);
         var uplift = false;
-        if (Objects.nonNull(userContext.getSession().getCurrentCredentialStrength())) {
+        var identityRequired = false;
+        var consentRequired = false;
+        var docCheckingAppUser = DocAppUserHelper.isDocCheckingAppUser(userContext);
+        if (Boolean.FALSE.equals(docCheckingAppUser)) {
+            consentRequired = ConsentHelper.userHasNotGivenConsent(userContext);
             uplift = UpliftHelper.upliftRequired(userContext);
+            identityRequired =
+                    IdentityHelper.identityRequired(
+                            userContext.getClientSession().getAuthRequestParams());
         }
-        var identityRequired =
-                IdentityHelper.identityRequired(
-                        userContext.getClientSession().getAuthRequestParams());
-
         LOG.info(
-                "Found UserStartInfo for Authenticated: {} ConsentRequired: {} UpliftRequired: {} IdentityRequired: {}. CookieConsent: {}. GATrackingId: {}",
+                "Found UserStartInfo for Authenticated: {} ConsentRequired: {} UpliftRequired: {} IdentityRequired: {}. CookieConsent: {}. GATrackingId: {}. DocCheckingAppUser: {}",
                 userContext.getSession().isAuthenticated(),
                 consentRequired,
                 uplift,
                 identityRequired,
                 cookieConsent,
-                gaTrackingId);
+                gaTrackingId,
+                docCheckingAppUser);
 
         return new UserStartInfo(
                 consentRequired,
@@ -115,7 +131,8 @@ public class StartService {
                 identityRequired,
                 userContext.getSession().isAuthenticated(),
                 cookieConsent,
-                gaTrackingId);
+                gaTrackingId,
+                docCheckingAppUser);
     }
 
     public String getGATrackingId(Map<String, List<String>> authRequestParameters) {

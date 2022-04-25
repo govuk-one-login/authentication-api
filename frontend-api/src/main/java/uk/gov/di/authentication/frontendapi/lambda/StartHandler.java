@@ -6,14 +6,18 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -23,9 +27,11 @@ import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.NoSuchElementException;
 
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class StartHandler
@@ -36,16 +42,19 @@ public class StartHandler
     private final SessionService sessionService;
     private final AuditService auditService;
     private final StartService startService;
+    private final ConfigurationService configurationService;
 
     public StartHandler(
             ClientSessionService clientSessionService,
             SessionService sessionService,
             AuditService auditService,
-            StartService startService) {
+            StartService startService,
+            ConfigurationService configurationService) {
         this.clientSessionService = clientSessionService;
         this.sessionService = sessionService;
         this.auditService = auditService;
         this.startService = startService;
+        this.configurationService = configurationService;
     }
 
     public StartHandler(ConfigurationService configurationService) {
@@ -56,6 +65,7 @@ public class StartHandler
                 new StartService(
                         new DynamoClientService(configurationService),
                         new DynamoService(configurationService));
+        this.configurationService = configurationService;
     }
 
     public StartHandler() {
@@ -108,6 +118,25 @@ public class StartHandler
                                 var userStartInfo =
                                         startService.buildUserStartInfo(
                                                 userContext, cookieConsent, gaTrackingId);
+                                if (userStartInfo.isDocCheckingAppUser()) {
+                                    var docAppSubjectId =
+                                            ClientSubjectHelper.calculatePairwiseIdentifier(
+                                                    new Subject().getValue(),
+                                                    configurationService.getDocAppDomain(),
+                                                    SaltHelper.generateNewSalt());
+                                    var clientSessionId =
+                                            getHeaderValueFromHeaders(
+                                                    input.getHeaders(),
+                                                    CLIENT_SESSION_ID_HEADER,
+                                                    configurationService
+                                                            .getHeadersCaseInsensitive());
+                                    clientSessionService.saveClientSession(
+                                            clientSessionId,
+                                            clientSession
+                                                    .get()
+                                                    .setDocAppSubjectId(
+                                                            new Subject(docAppSubjectId)));
+                                }
 
                                 var startResponse =
                                         new StartResponse(userStartInfo, clientStartInfo);
@@ -118,7 +147,10 @@ public class StartHandler
                                         session.get().getSessionId(),
                                         userContext.getClient().get().getClientID(),
                                         AuditService.UNKNOWN,
-                                        AuditService.UNKNOWN,
+                                        userContext
+                                                .getUserProfile()
+                                                .map(UserProfile::getEmail)
+                                                .orElse(AuditService.UNKNOWN),
                                         IpAddressHelper.extractIpAddress(input),
                                         PersistentIdHelper.extractPersistentIdFromHeaders(
                                                 input.getHeaders()),
