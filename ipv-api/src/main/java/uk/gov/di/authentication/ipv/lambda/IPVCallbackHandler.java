@@ -7,7 +7,10 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.UserInfoRequest;
+import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
@@ -18,6 +21,7 @@ import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
@@ -36,6 +40,8 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
+import static uk.gov.di.authentication.shared.entity.IdentityClaims.VOT;
+import static uk.gov.di.authentication.shared.entity.IdentityClaims.VTM;
 import static uk.gov.di.authentication.shared.helpers.ClientSubjectHelper.getSectorIdentifierForClient;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
@@ -208,12 +214,23 @@ public class IPVCallbackHandler
                                 var pairwiseSubject =
                                         ClientSubjectHelper.getSubject(
                                                 userProfile, clientRegistry, dynamoService);
-                                var ipvInfoResponse =
+                                var userIdentityUserInfo =
                                         ipvTokenService.sendIpvUserIdentityRequest(
-                                                tokenResponse
-                                                        .toSuccessResponse()
-                                                        .getTokens()
-                                                        .getBearerAccessToken());
+                                                new UserInfoRequest(
+                                                        ConstructUriHelper.buildURI(
+                                                                configurationService
+                                                                        .getIPVBackendURI()
+                                                                        .toString(),
+                                                                "user-identity"),
+                                                        tokenResponse
+                                                                .toSuccessResponse()
+                                                                .getTokens()
+                                                                .getBearerAccessToken()));
+                                if (Objects.isNull(userIdentityUserInfo)) {
+                                    LOG.error("IPV UserIdentityRequest failed.");
+                                    throw new RuntimeException("IPV UserIdentityRequest failed.");
+                                }
+
                                 auditService.submitAuditEvent(
                                         IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED,
                                         context.getAwsRequestId(),
@@ -224,35 +241,30 @@ public class IPVCallbackHandler
                                         AuditService.UNKNOWN,
                                         userProfile.getPhoneNumber(),
                                         AuditService.UNKNOWN);
-                                var spotRequest =
-                                        new SPOTRequest(
-                                                new SPOTClaims(
-                                                        LevelOfConfidence.MEDIUM_LEVEL.getValue(),
-                                                        buildURI(
-                                                                        configurationService
-                                                                                .getOidcApiBaseURL()
-                                                                                .orElseThrow(),
-                                                                        "/trustmark")
-                                                                .toString()),
-                                                userProfile.getSubjectID(),
-                                                dynamoService.getOrGenerateSalt(userProfile),
-                                                getSectorIdentifierForClient(clientRegistry),
-                                                pairwiseSubject.getValue(),
-                                                new LogIds(session.getSessionId()));
+
                                 if (configurationService.isSpotEnabled()) {
-                                    sqsClient.send(objectMapper.writeValueAsString(spotRequest));
-                                    LOG.info("SPOT request placed on queue");
+                                    if (isUserIdentityGoingToSpot(userIdentityUserInfo)) {
+                                        queueSPOTRequest(
+                                                session.getSessionId(),
+                                                getSectorIdentifierForClient(clientRegistry),
+                                                userProfile,
+                                                pairwiseSubject,
+                                                userIdentityUserInfo);
+
+                                        auditService.submitAuditEvent(
+                                                IPVAuditableEvent.IPV_SPOT_REQUESTED,
+                                                context.getAwsRequestId(),
+                                                session.getSessionId(),
+                                                clientId,
+                                                userProfile.getSubjectID(),
+                                                userProfile.getEmail(),
+                                                AuditService.UNKNOWN,
+                                                userProfile.getPhoneNumber(),
+                                                AuditService.UNKNOWN);
+                                    } else {
+                                        LOG.info("SPOT will not be invoked.");
+                                    }
                                 }
-                                auditService.submitAuditEvent(
-                                        IPVAuditableEvent.IPV_SPOT_REQUESTED,
-                                        context.getAwsRequestId(),
-                                        session.getSessionId(),
-                                        clientId,
-                                        userProfile.getSubjectID(),
-                                        userProfile.getEmail(),
-                                        AuditService.UNKNOWN,
-                                        userProfile.getPhoneNumber(),
-                                        AuditService.UNKNOWN);
                                 var redirectURI =
                                         ConstructUriHelper.buildURI(
                                                 configurationService.getLoginURI().toString(),
@@ -275,5 +287,53 @@ public class IPVCallbackHandler
                                 throw new RuntimeException(e);
                             }
                         });
+    }
+
+    private boolean isUserIdentityGoingToSpot(UserInfo userIdentityUserInfo) {
+        if (!LevelOfConfidence.MEDIUM_LEVEL
+                .getValue()
+                .equals(userIdentityUserInfo.getClaim(VOT.getValue()))) {
+            LOG.info("IPV missing vot or vot not P2.");
+            return false;
+        }
+        var trustmark =
+                buildURI(configurationService.getOidcApiBaseURL().orElseThrow(), "/trustmark")
+                        .toString();
+
+        if (!trustmark.equals(userIdentityUserInfo.getClaim(VTM.getValue()))) {
+            LOG.info("IPV trustmark is invalid.");
+        }
+        return true;
+    }
+
+    private void queueSPOTRequest(
+            String sessionId,
+            String sectorIdentifier,
+            UserProfile userProfile,
+            Subject pairwiseSubject,
+            UserInfo userIdentityUserInfo)
+            throws JsonProcessingException {
+
+        var spotClaimsBuilder =
+                SPOTClaims.builder()
+                        .withClaims(userIdentityUserInfo.toJSONObject())
+                        .withVtm(
+                                buildURI(
+                                                configurationService
+                                                        .getOidcApiBaseURL()
+                                                        .orElseThrow(),
+                                                "/trustmark")
+                                        .toString());
+
+        var spotRequest =
+                new SPOTRequest(
+                        spotClaimsBuilder.build(),
+                        userProfile.getSubjectID(),
+                        dynamoService.getOrGenerateSalt(userProfile),
+                        sectorIdentifier,
+                        pairwiseSubject.getValue(),
+                        new LogIds(sessionId));
+        sqsClient.send(objectMapper.writeValueAsString(spotRequest));
+        LOG.info("SPOT request placed on queue");
     }
 }

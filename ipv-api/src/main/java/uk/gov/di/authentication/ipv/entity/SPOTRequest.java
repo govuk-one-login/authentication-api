@@ -2,10 +2,12 @@ package uk.gov.di.authentication.ipv.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Map;
+
 public class SPOTRequest {
 
     @JsonProperty(value = "in_claims")
-    private SPOTClaims spotClaims;
+    private Map<String, Object> spotClaims;
 
     @JsonProperty(value = "in_local_account_id")
     private String localAccountId;
@@ -23,7 +25,7 @@ public class SPOTRequest {
     private LogIds logIds;
 
     public SPOTRequest(
-            SPOTClaims spotClaims,
+            Map<String, Object> spotClaims,
             String localAccountId,
             byte[] salt,
             String rpSectorId,
@@ -39,7 +41,7 @@ public class SPOTRequest {
 
     public SPOTRequest() {}
 
-    public SPOTClaims getSpotClaims() {
+    public Map<String, Object> getSpotClaims() {
         return spotClaims;
     }
 

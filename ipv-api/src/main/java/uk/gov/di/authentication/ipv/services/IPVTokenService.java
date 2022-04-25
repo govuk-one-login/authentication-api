@@ -19,8 +19,9 @@ import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.JWTID;
-import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
+import com.nimbusds.openid.connect.sdk.UserInfoResponse;
+import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
@@ -40,7 +41,6 @@ public class IPVTokenService {
     private final ConfigurationService configurationService;
     private final KmsConnectionService kmsService;
     private static final JWSAlgorithm TOKEN_ALGORITHM = JWSAlgorithm.ES256;
-    public static final String IPV_ACCESS_TOKEN_PREFIX = "IPV_ACCESS_TOKEN:";
     private static final Long PRIVATE_KEY_JWT_EXPIRY = 5L;
     private static final Logger LOG = LogManager.getLogger(IPVTokenService.class);
 
@@ -88,22 +88,19 @@ public class IPVTokenService {
         }
     }
 
-    public String sendIpvUserIdentityRequest(AccessToken accessToken) {
+    public UserInfo sendIpvUserIdentityRequest(UserInfoRequest userInfoRequest) {
         try {
-            var ipvBackendURI = configurationService.getIPVBackendURI();
-            var userIdentityURI =
-                    ConstructUriHelper.buildURI(ipvBackendURI.toString(), "user-identity");
-            var userInfoRequest = new UserInfoRequest(userIdentityURI, accessToken);
-            var response = userInfoRequest.toHTTPRequest().send();
-            if (response.indicatesSuccess()) {
-                var contentAsJSONObject = response.getContentAsJSONObject();
+            var userIdentityResponse =
+                    UserInfoResponse.parse(userInfoRequest.toHTTPRequest().send());
+            if (!userIdentityResponse.indicatesSuccess()) {
+                LOG.error("Response from user-identity does not indicate success");
+                throw new RuntimeException(userIdentityResponse.toErrorResponse().toString());
+            } else {
+                var userIdentityUserInfo = userIdentityResponse.toSuccessResponse().getUserInfo();
                 LOG.info(
                         "THIS NEEDS TO REMOVED. THIS IS FOR DEBUGGING PURPOSES: {}",
-                        contentAsJSONObject.toJSONString());
-                return contentAsJSONObject.toJSONString();
-            } else {
-                LOG.error("Response from user-identity does not indicate success");
-                throw new RuntimeException();
+                        userIdentityUserInfo);
+                return userIdentityUserInfo;
             }
         } catch (IOException | ParseException e) {
             LOG.error("Error when attempting to call IPV user-identity endpoint");

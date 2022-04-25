@@ -14,7 +14,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.ipv.entity.LogIds;
-import uk.gov.di.authentication.ipv.entity.SPOTClaims;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
@@ -44,6 +43,8 @@ import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_AUTHORIS
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SPOT_REQUESTED;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED;
+import static uk.gov.di.authentication.shared.entity.IdentityClaims.VOT;
+import static uk.gov.di.authentication.shared.entity.IdentityClaims.VTM;
 import static uk.gov.di.authentication.shared.helpers.ClientSubjectHelper.calculatePairwiseIdentifier;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -118,7 +119,11 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 spotQueue,
                 List.of(
                         new SPOTRequest(
-                                new SPOTClaims(LevelOfConfidence.MEDIUM_LEVEL.getValue(), null),
+                                Map.of(
+                                        VOT.getValue(),
+                                        LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                                        VTM.getValue(),
+                                        "/trustmark"),
                                 INTERNAL_SUBJECT.getValue(),
                                 salt,
                                 sectorId,
