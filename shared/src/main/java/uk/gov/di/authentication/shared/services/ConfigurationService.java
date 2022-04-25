@@ -91,6 +91,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("DOC_APP_TOKEN_SIGNING_KEY_ALIAS");
     }
 
+    public String getDocAppCriDataEndpoint() {
+        return System.getenv("DOC_APP_CRI_DATA_ENDPOINT");
+    }
+
     public String getDocAppAuthEncryptionPublicKey() {
         var paramName = format("{0}-doc-app-public-encryption-key", getEnvironment());
         try {

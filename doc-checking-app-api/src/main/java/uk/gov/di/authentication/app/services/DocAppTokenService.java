@@ -16,9 +16,11 @@ import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.TokenResponse;
 import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
+import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.JWTID;
+import com.nimbusds.oauth2.sdk.token.AccessToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
@@ -31,6 +33,7 @@ import java.nio.ByteBuffer;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 
+import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.util.Collections.singletonList;
 
 public class DocAppTokenService {
@@ -82,6 +85,26 @@ public class DocAppTokenService {
         } catch (ParseException e) {
             LOG.error("Error whilst parsing TokenResponse", e);
             throw new RuntimeException(e);
+        }
+    }
+
+    public String sendCriDataRequest(AccessToken accessToken) {
+        try {
+            var criDataURI =
+                    ConstructUriHelper.buildURI(configurationService.getDocAppBackendURI().toString(), configurationService.getDocAppCriDataEndpoint());
+
+            var request = new HTTPRequest(GET, criDataURI);
+            request.setAuthorization(accessToken.toAuthorizationHeader());
+
+            var response = request.send();
+            if (!response.indicatesSuccess()) {
+                LOG.error("Error {} when attempting to call CRI data endpoint: {}", response.getStatusCode(), response.getContent());
+                throw new RuntimeException();
+            }
+            return response.getContent();
+        } catch (IOException e) {
+            LOG.error("Error when attempting to call CRI data endpoint", e);
+            throw new RuntimeException();
         }
     }
 
