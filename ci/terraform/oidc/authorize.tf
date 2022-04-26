@@ -22,17 +22,17 @@ module "authorize" {
   environment     = var.environment
 
   handler_environment_variables = {
-    DOMAIN_NAME                    = module.dns.service_domain_name
-    EVENTS_SNS_TOPIC_ARN           = aws_sns_topic.events.arn
-    AUDIT_SIGNING_KEY_ALIAS        = local.audit_signing_key_alias_name
-    LOGIN_URI                      = module.dns.frontend_url
-    LOCALSTACK_ENDPOINT            = var.use_localstack ? var.localstack_endpoint : null
-    REDIS_KEY                      = local.redis_key
-    ENVIRONMENT                    = var.environment
-    DYNAMO_ENDPOINT                = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    TERMS_CONDITIONS_VERSION       = var.terms_and_conditions
-    HEADERS_CASE_INSENSITIVE       = var.use_localstack ? "true" : "false"
-    REQUEST_OBJECT_PARAM_SUPPORTED = var.request_object_param_supported
+    DOMAIN_NAME              = module.dns.service_domain_name
+    DOC_APP_API_ENABLED      = var.doc_app_api_enabled
+    EVENTS_SNS_TOPIC_ARN     = aws_sns_topic.events.arn
+    AUDIT_SIGNING_KEY_ALIAS  = local.audit_signing_key_alias_name
+    LOGIN_URI                = module.dns.frontend_url
+    LOCALSTACK_ENDPOINT      = var.use_localstack ? var.localstack_endpoint : null
+    REDIS_KEY                = local.redis_key
+    ENVIRONMENT              = var.environment
+    DYNAMO_ENDPOINT          = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    TERMS_CONDITIONS_VERSION = var.terms_and_conditions
+    HEADERS_CASE_INSENSITIVE = var.use_localstack ? "true" : "false"
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.AuthorisationHandler::handleRequest"
   rest_api_id           = aws_api_gateway_rest_api.di_authentication_api.id

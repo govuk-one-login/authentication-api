@@ -434,7 +434,7 @@ class AuthorisationHandlerTest {
     @ParameterizedTest
     @MethodSource("expectedErrorObjects")
     void shouldReturnErrorWhenRequestObjectIsInvalid(ErrorObject errorObject) {
-        when(configService.isRequestObjectParamSupported()).thenReturn(true);
+        when(configService.isDocAppApiEnabled()).thenReturn(true);
         when(requestObjectService.validateRequestObject(any(AuthenticationRequest.class)))
                 .thenReturn(
                         Optional.of(
@@ -478,7 +478,7 @@ class AuthorisationHandlerTest {
 
     @Test
     void shouldRedirectToLoginWhenRequestObjectIsValid() {
-        when(configService.isRequestObjectParamSupported()).thenReturn(true);
+        when(configService.isDocAppApiEnabled()).thenReturn(true);
         when(requestObjectService.validateRequestObject(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         when(clientSessionService.generateClientSession(any(ClientSession.class)))
