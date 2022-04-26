@@ -10,6 +10,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
+import uk.gov.di.authentication.app.exception.UnsuccesfulCredentialResponseException;
 import uk.gov.di.authentication.app.services.DocAppAuthorisationService;
 import uk.gov.di.authentication.app.services.DocAppCriService;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
@@ -182,36 +183,53 @@ public class DocAppCallbackHandler
                                             "Doc App TokenResponse was not successful");
                                 }
 
-                                var credential =
-                                        tokenService.sendCriDataRequest(
-                                                tokenResponse
-                                                        .toSuccessResponse()
-                                                        .getTokens()
-                                                        .getAccessToken());
-                                auditService.submitAuditEvent(
-                                        DocAppAuditableEvent
-                                                .DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
-                                        context.getAwsRequestId(),
-                                        session.getSessionId(),
-                                        clientId,
-                                        clientSession.getDocAppSubjectId().getValue(),
-                                        AuditService.UNKNOWN,
-                                        AuditService.UNKNOWN,
-                                        AuditService.UNKNOWN,
-                                        AuditService.UNKNOWN);
-                                dynamoDocAppService.addDocAppCredential(
-                                        clientSession.getDocAppSubjectId().getValue(), credential);
+                                try {
+                                    var credential =
+                                            tokenService.sendCriDataRequest(
+                                                    tokenResponse
+                                                            .toSuccessResponse()
+                                                            .getTokens()
+                                                            .getAccessToken());
+                                    auditService.submitAuditEvent(
+                                            DocAppAuditableEvent
+                                                    .DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
+                                            context.getAwsRequestId(),
+                                            session.getSessionId(),
+                                            clientId,
+                                            clientSession.getDocAppSubjectId().getValue(),
+                                            AuditService.UNKNOWN,
+                                            AuditService.UNKNOWN,
+                                            AuditService.UNKNOWN,
+                                            AuditService.UNKNOWN);
+                                    dynamoDocAppService.addDocAppCredential(
+                                            clientSession.getDocAppSubjectId().getValue(),
+                                            credential);
 
-                                var redirectURI =
-                                        ConstructUriHelper.buildURI(
-                                                configurationService.getLoginURI().toString(),
-                                                REDIRECT_PATH);
-                                return new APIGatewayProxyResponseEvent()
-                                        .withStatusCode(302)
-                                        .withHeaders(
-                                                Map.of(
-                                                        ResponseHeaders.LOCATION,
-                                                        redirectURI.toString()));
+                                    var redirectURI =
+                                            ConstructUriHelper.buildURI(
+                                                    configurationService.getLoginURI().toString(),
+                                                    REDIRECT_PATH);
+                                    return new APIGatewayProxyResponseEvent()
+                                            .withStatusCode(302)
+                                            .withHeaders(
+                                                    Map.of(
+                                                            ResponseHeaders.LOCATION,
+                                                            redirectURI.toString()));
+
+                                } catch (UnsuccesfulCredentialResponseException e) {
+                                    auditService.submitAuditEvent(
+                                            DocAppAuditableEvent
+                                                    .DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
+                                            context.getAwsRequestId(),
+                                            session.getSessionId(),
+                                            clientId,
+                                            clientSession.getDocAppSubjectId().getValue(),
+                                            AuditService.UNKNOWN,
+                                            AuditService.UNKNOWN,
+                                            AuditService.UNKNOWN,
+                                            AuditService.UNKNOWN);
+                                    throw e;
+                                }
                             } catch (NoSuchElementException e) {
                                 LOG.error("Session not found");
                                 throw new RuntimeException("Session not found", e);
