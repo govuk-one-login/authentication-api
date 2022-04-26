@@ -9,6 +9,7 @@ import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.entity.BackChannelLogoutMessage;
 import uk.gov.di.authentication.oidc.services.HttpRequestService;
+import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.TokenService;
@@ -45,7 +46,10 @@ class BackChannelLogoutRequestHandlerTest {
 
     private final BackChannelLogoutRequestHandler handler =
             new BackChannelLogoutRequestHandler(
-                    configuration, request, tokenService, fixed(fixedDate, systemDefault()));
+                    configuration,
+                    request,
+                    tokenService,
+                    new NowClock(fixed(fixedDate, systemDefault())));
 
     @Test
     void shouldDoNothingIfPayloadIsInvalid() {

@@ -10,13 +10,13 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.BackChannelLogoutMessage;
 import uk.gov.di.authentication.oidc.services.HttpRequestService;
+import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.TokenService;
 
 import java.net.URI;
-import java.sql.Date;
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
@@ -31,20 +31,20 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
     private final ConfigurationService instance;
     private final HttpRequestService httpRequestService;
     private final TokenService tokenService;
-    private final Clock clock;
+    private final NowClock clock;
 
     public BackChannelLogoutRequestHandler() {
         this.instance = ConfigurationService.getInstance();
         this.httpRequestService = new HttpRequestService();
         this.tokenService = new TokenService(instance, null, new KmsConnectionService(instance));
-        this.clock = Clock.systemUTC();
+        this.clock = new NowClock(Clock.systemUTC());
     }
 
     public BackChannelLogoutRequestHandler(
             ConfigurationService configurationService,
             HttpRequestService httpRequestService,
             TokenService tokenService,
-            Clock clock) {
+            NowClock clock) {
         this.instance = configurationService;
         this.httpRequestService = httpRequestService;
         this.tokenService = tokenService;
@@ -84,9 +84,9 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
                 .jwtID(UUID.randomUUID().toString())
                 .audience(inputEvent.getClientId())
                 .subject(inputEvent.getSubjectId())
-                .expirationTime(Date.from(clock.instant().plus(2, ChronoUnit.MINUTES)))
+                .expirationTime(clock.nowPlus(2, ChronoUnit.MINUTES))
                 .issuer(instance.getOidcApiBaseURL().orElseThrow())
-                .issueTime(Date.from(clock.instant()))
+                .issueTime(clock.now())
                 .claim(
                         "events",
                         Map.of("http://schemas.openid.net/event/backchannel-logout", emptyMap()))
