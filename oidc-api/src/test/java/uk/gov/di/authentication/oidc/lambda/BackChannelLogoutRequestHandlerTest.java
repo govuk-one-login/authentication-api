@@ -9,6 +9,7 @@ import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.entity.BackChannelLogoutMessage;
 import uk.gov.di.authentication.oidc.services.HttpRequestService;
+import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.TokenService;
@@ -29,6 +30,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.core.Is.is;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -44,13 +46,16 @@ class BackChannelLogoutRequestHandlerTest {
 
     private final BackChannelLogoutRequestHandler handler =
             new BackChannelLogoutRequestHandler(
-                    configuration, request, tokenService, fixed(fixedDate, systemDefault()));
+                    configuration,
+                    request,
+                    tokenService,
+                    new NowClock(fixed(fixedDate, systemDefault())));
 
     @Test
     void shouldDoNothingIfPayloadIsInvalid() {
         handler.handleRequest(inputEvent(null), null);
 
-        verify(tokenService, never()).generateSignedJWT(any());
+        verify(tokenService, never()).generateSignedJWT(any(), eq(Optional.of("logout+jwt")));
         verify(request, never()).post(any(), any());
     }
 
@@ -66,7 +71,8 @@ class BackChannelLogoutRequestHandlerTest {
 
         when(configuration.getOidcApiBaseURL())
                 .thenReturn(Optional.of("https://base-url.account.gov.uk"));
-        when(tokenService.generateSignedJWT(any(JWTClaimsSet.class))).thenReturn(jwt);
+        when(tokenService.generateSignedJWT(any(JWTClaimsSet.class), eq(Optional.of("logout+jwt"))))
+                .thenReturn(jwt);
 
         handler.handleRequest(inputEvent(input), null);
 
@@ -88,6 +94,7 @@ class BackChannelLogoutRequestHandlerTest {
         assertThat(jwt.getAudience(), is(List.of("client-id")));
         assertThat(jwt.getIssuer(), is("https://base-url.account.gov.uk"));
         assertThat(jwt.getDateClaim("iat"), is(Date.from(fixedDate)));
+        assertThat(jwt.getExpirationTime(), is(Date.from(fixedDate.plusSeconds(2 * 60))));
         assertThat(jwt.getJWTID(), isUuid());
 
         assertThat(

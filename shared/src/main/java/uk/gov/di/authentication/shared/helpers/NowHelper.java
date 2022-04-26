@@ -6,15 +6,37 @@ import java.util.Date;
 
 public class NowHelper {
 
+    private static final NowClock clock = new NowClock(Clock.systemUTC());
+
     public static Date now() {
-        return Date.from(Clock.systemUTC().instant());
+        return clock.now();
     }
 
     public static Date nowPlus(long amount, ChronoUnit unit) {
-        return Date.from(Clock.systemUTC().instant().plus(amount, unit));
+        return clock.nowPlus(amount, unit);
     }
 
     public static Date nowMinus(long amount, ChronoUnit unit) {
-        return Date.from(Clock.systemUTC().instant().minus(amount, unit));
+        return clock.nowMinus(amount, unit);
+    }
+
+    public static class NowClock {
+        private final Clock clock;
+
+        public NowClock(Clock clock) {
+            this.clock = clock;
+        }
+
+        public Date now() {
+            return Date.from(clock.instant());
+        }
+
+        public Date nowPlus(long amount, ChronoUnit unit) {
+            return Date.from(clock.instant().plus(amount, unit));
+        }
+
+        public Date nowMinus(long amount, ChronoUnit unit) {
+            return Date.from(clock.instant().minus(amount, unit));
+        }
     }
 }

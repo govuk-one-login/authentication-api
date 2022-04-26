@@ -7,6 +7,7 @@ import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.impl.ECDSA;
@@ -263,7 +264,7 @@ public class TokenService {
         idTokenClaims.setClaim("vot", vot);
         idTokenClaims.setClaim("vtm", trustMarkUri.toString());
         try {
-            return generateSignedJWT(idTokenClaims.toJWTClaimsSet());
+            return generateSignedJWT(idTokenClaims.toJWTClaimsSet(), Optional.empty());
         } catch (com.nimbusds.oauth2.sdk.ParseException e) {
             LOG.error("Error when trying to parse IDTokenClaims to JWTClaimSet", e);
             throw new RuntimeException(e);
@@ -302,7 +303,7 @@ public class TokenService {
                             .collect(Collectors.toList()));
         }
 
-        SignedJWT signedJWT = generateSignedJWT(claimSetBuilder.build());
+        SignedJWT signedJWT = generateSignedJWT(claimSetBuilder.build(), Optional.empty());
         AccessToken accessToken = new BearerAccessToken(signedJWT.serialize());
 
         try {
@@ -334,7 +335,7 @@ public class TokenService {
                         .subject(publicSubject.getValue())
                         .jwtID(UUID.randomUUID().toString())
                         .build();
-        SignedJWT signedJWT = generateSignedJWT(claimsSet);
+        SignedJWT signedJWT = generateSignedJWT(claimsSet, Optional.empty());
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
         String redisKey = REFRESH_TOKEN_PREFIX + clientId + "." + publicSubject.getValue();
         Optional<String> existingRefreshTokenStore =
@@ -367,7 +368,7 @@ public class TokenService {
         return refreshToken;
     }
 
-    public SignedJWT generateSignedJWT(JWTClaimsSet claimsSet) {
+    public SignedJWT generateSignedJWT(JWTClaimsSet claimsSet, Optional<String> type) {
 
         var signingKeyId =
                 kmsConnectionService
@@ -377,11 +378,12 @@ public class TokenService {
                         .getKeyId();
 
         try {
-            JWSHeader jwsHeader =
-                    new JWSHeader.Builder(TOKEN_ALGORITHM)
-                            .keyID(hashSha256String(signingKeyId))
-                            .build();
-            Base64URL encodedHeader = jwsHeader.toBase64URL();
+            var jwsHeader =
+                    new JWSHeader.Builder(TOKEN_ALGORITHM).keyID(hashSha256String(signingKeyId));
+
+            type.map(JOSEObjectType::new).ifPresent(jwsHeader::type);
+
+            Base64URL encodedHeader = jwsHeader.build().toBase64URL();
             Base64URL encodedClaims = Base64URL.encode(claimsSet.toString());
             String message = encodedHeader + "." + encodedClaims;
             ByteBuffer messageToSign = ByteBuffer.wrap(message.getBytes());
