@@ -2,13 +2,18 @@ stub_rp_clients = [
   {
     client_name = "di-auth-stub-relying-party-build"
     callback_urls = [
-      "http://localhost:8081/oidc/authorization-code/callback",
       "https://di-auth-stub-relying-party-build.london.cloudapps.digital/oidc/authorization-code/callback",
     ]
     logout_urls = [
       "https://di-auth-stub-relying-party-build.london.cloudapps.digital/signed-out",
     ]
     test_client = "0"
+    client_type = "web"
+    scopes = [
+      "openid",
+      "email",
+      "phone",
+    ]
   },
   {
     client_name = "di-auth-stub-relying-party-build-s2"
@@ -19,5 +24,11 @@ stub_rp_clients = [
       "https://di-auth-stub-relying-party-build-s2.london.cloudapps.digital/signed-out",
     ]
     test_client = "1"
+    client_type = "web"
+    scopes = [
+      "openid",
+      "email",
+      "phone",
+    ]
   },
 ]
