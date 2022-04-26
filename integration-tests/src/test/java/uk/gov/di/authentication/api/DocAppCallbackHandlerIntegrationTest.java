@@ -35,6 +35,7 @@ import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.interfaces.ECPublicKey;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -60,7 +61,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
             privateKey = new ECKeyGenerator(Curve.P_256).keyID("my-key-id").generate();
             publicKey = privateKey.toPublicJWK();
         } catch (JOSEException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
     }
 
@@ -213,8 +214,12 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         }
 
         @Override
-        public String getDocAppCredentialSigningPublicKey() {
-            return signingPublicKey.toString();
+        public ECPublicKey getDocAppCredentialSigningPublicKey() {
+            try {
+                return publicKey.toECPublicKey();
+            } catch (JOSEException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 }

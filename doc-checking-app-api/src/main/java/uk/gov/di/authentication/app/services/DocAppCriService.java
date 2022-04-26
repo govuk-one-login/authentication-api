@@ -9,7 +9,6 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jose.crypto.impl.ECDSA;
-import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.SignedJWT;
@@ -131,8 +130,7 @@ public class DocAppCriService {
             JWT jwt = response.getContentAsJWT();
             if (jwt instanceof SignedJWT) {
                 var signed = (SignedJWT) jwt;
-                var signingPublicKey =
-                        ECKey.parse(configurationService.getDocAppCredentialSigningPublicKey());
+                var signingPublicKey = configurationService.getDocAppCredentialSigningPublicKey();
                 JWSVerifier verifier = new ECDSAVerifier(signingPublicKey);
 
                 return signed.verify(verifier);
@@ -143,9 +141,6 @@ public class DocAppCriService {
         } catch (JOSEException e) {
             throw new UnsuccesfulCredentialResponseException(
                     "Error verifying CRI response signature", e);
-        } catch (java.text.ParseException e) {
-            throw new UnsuccesfulCredentialResponseException(
-                    "Error parsing signing public key from config", e);
         }
     }
 

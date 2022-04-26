@@ -12,6 +12,7 @@ dependencies {
 
     implementation configurations.jackson,
             configurations.nimbus,
+            configurations.bouncycastle,
             project(":shared")
     runtimeOnly configurations.logging_runtime
 
