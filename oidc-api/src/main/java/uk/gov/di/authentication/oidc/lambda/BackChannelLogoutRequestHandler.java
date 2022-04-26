@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.services.TokenService;
 import java.net.URI;
 import java.sql.Date;
 import java.time.Clock;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -83,6 +84,7 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
                 .jwtID(UUID.randomUUID().toString())
                 .audience(inputEvent.getClientId())
                 .subject(inputEvent.getSubjectId())
+                .expirationTime(Date.from(clock.instant().plus(2, ChronoUnit.MINUTES)))
                 .issuer(instance.getOidcApiBaseURL().orElseThrow())
                 .issueTime(Date.from(clock.instant()))
                 .claim(
