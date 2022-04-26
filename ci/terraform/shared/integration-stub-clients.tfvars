@@ -8,5 +8,11 @@ stub_rp_clients = [
       "https://di-auth-stub-relying-party-integration.london.cloudapps.digital/signed-out",
     ]
     test_client = "0"
+    client_type = "web"
+    scopes = [
+      "openid",
+      "email",
+      "phone",
+    ]
   },
 ]

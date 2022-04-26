@@ -45,17 +45,9 @@ resource "aws_dynamodb_table_item" "stub_rp_client" {
       }]
     }
     Scopes = {
-      L = [
-        {
-          S = "openid"
-        },
-        {
-          S = "phone"
-        },
-        {
-          S = "email"
-        },
-      ]
+      L = [for scope in var.stub_rp_clients[count.index].scopes : {
+        S = scope
+      }]
     },
     Claims = {
       L = [
@@ -89,7 +81,7 @@ resource "aws_dynamodb_table_item" "stub_rp_client" {
       N = "1"
     }
     ClientType = {
-      S = "web"
+      S = var.stub_rp_clients[count.index].client_type
     }
     TestClient = {
       N = var.stub_rp_clients[count.index].test_client
