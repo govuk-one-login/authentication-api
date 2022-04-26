@@ -152,6 +152,7 @@ public class AuthorisationHandler
                             Optional<AuthRequestError> authRequestError;
                             if (authRequest.getRequestObject() != null
                                     && configurationService.isDocAppApiEnabled()) {
+                                LOG.info("RequestObject auth request received");
                                 authRequestError =
                                         requestObjectService.validateRequestObject(authRequest);
                             } else {

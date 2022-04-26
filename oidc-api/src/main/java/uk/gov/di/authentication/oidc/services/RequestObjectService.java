@@ -136,6 +136,7 @@ public class RequestObjectService {
         } catch (ParseException e) {
             throw new RuntimeException(e);
         }
+        LOG.info("RequestObject has passed initial validation");
         return Optional.empty();
     }
 
