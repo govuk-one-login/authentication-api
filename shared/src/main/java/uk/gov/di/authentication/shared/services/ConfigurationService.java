@@ -91,8 +91,23 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("DOC_APP_TOKEN_SIGNING_KEY_ALIAS");
     }
 
+    public String getDocAppCriDataEndpoint() {
+        return System.getenv("DOC_APP_CRI_DATA_ENDPOINT");
+    }
+
     public String getDocAppAuthEncryptionPublicKey() {
         var paramName = format("{0}-doc-app-public-encryption-key", getEnvironment());
+        try {
+            var request = new GetParameterRequest().withWithDecryption(true).withName(paramName);
+            return getSsmClient().getParameter(request).getParameter().getValue();
+        } catch (ParameterNotFoundException e) {
+            LOG.error("No parameter exists with name: {}", paramName);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public String getDocAppCredentialSigningPublicKey() {
+        var paramName = format("{0}-doc-app-public-signing-key", getEnvironment());
         try {
             var request = new GetParameterRequest().withWithDecryption(true).withName(paramName);
             return getSsmClient().getParameter(request).getParameter().getValue();

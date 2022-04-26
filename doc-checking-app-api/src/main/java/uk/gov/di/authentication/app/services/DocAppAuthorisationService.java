@@ -47,7 +47,7 @@ public class DocAppAuthorisationService {
     private final ConfigurationService configurationService;
     private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
-    public static final String STATE_STORAGE_PREFIX = "doc-app-state:";
+    public static final String STATE_STORAGE_PREFIX = "state:";
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
 
     public DocAppAuthorisationService(
