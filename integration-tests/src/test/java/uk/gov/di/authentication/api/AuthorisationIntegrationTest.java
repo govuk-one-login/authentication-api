@@ -588,7 +588,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private SignedJWT createSignedJWT() throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
-                        .audience("http://localhost")
+                        .audience("http://localhost/authorize")
                         .claim("redirect_uri", RP_REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", new Scope(OIDCScopeValue.OPENID).toString())
