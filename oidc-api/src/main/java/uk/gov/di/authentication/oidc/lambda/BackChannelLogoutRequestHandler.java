@@ -19,6 +19,7 @@ import java.net.URI;
 import java.sql.Date;
 import java.time.Clock;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static java.util.Collections.emptyMap;
@@ -67,7 +68,8 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
 
             var claims = generateClaims(payload);
 
-            var body = tokenService.generateSignedJWT(claims).serialize();
+            var body =
+                    tokenService.generateSignedJWT(claims, Optional.of("logout+jwt")).serialize();
 
             httpRequestService.post(URI.create(payload.getLogoutUri()), "logout_token=" + body);
 

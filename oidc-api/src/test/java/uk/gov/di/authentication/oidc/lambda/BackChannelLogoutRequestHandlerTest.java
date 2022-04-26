@@ -50,7 +50,7 @@ class BackChannelLogoutRequestHandlerTest {
     void shouldDoNothingIfPayloadIsInvalid() {
         handler.handleRequest(inputEvent(null), null);
 
-        verify(tokenService, never()).generateSignedJWT(any());
+        verify(tokenService, never()).generateSignedJWT(any(), Optional.empty());
         verify(request, never()).post(any(), any());
     }
 
@@ -66,7 +66,8 @@ class BackChannelLogoutRequestHandlerTest {
 
         when(configuration.getOidcApiBaseURL())
                 .thenReturn(Optional.of("https://base-url.account.gov.uk"));
-        when(tokenService.generateSignedJWT(any(JWTClaimsSet.class))).thenReturn(jwt);
+        when(tokenService.generateSignedJWT(any(JWTClaimsSet.class), Optional.empty()))
+                .thenReturn(jwt);
 
         handler.handleRequest(inputEvent(input), null);
 
