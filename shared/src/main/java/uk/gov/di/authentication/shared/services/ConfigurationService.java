@@ -75,6 +75,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return URI.create(System.getenv().getOrDefault("DOC_APP_AUTHORISATION_URI", ""));
     }
 
+    public boolean isDocAppApiEnabled() {
+        return System.getenv().getOrDefault("DOC_APP_API_ENABLED", "false").equals("true");
+    }
+
     public URI getDocAppBackendURI() {
         return URI.create(System.getenv().getOrDefault("DOC_APP_BACKEND_URI", ""));
     }
@@ -262,12 +266,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public String getResetPasswordRoute() {
         return System.getenv().getOrDefault("RESET_PASSWORD_ROUTE", "");
-    }
-
-    public boolean isRequestObjectParamSupported() {
-        return System.getenv()
-                .getOrDefault("REQUEST_OBJECT_PARAM_SUPPORTED", "false")
-                .equals("true");
     }
 
     public String getSessionCookieAttributes() {

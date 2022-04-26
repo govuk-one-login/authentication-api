@@ -151,7 +151,7 @@ public class AuthorisationHandler
                             }
                             Optional<AuthRequestError> authRequestError;
                             if (authRequest.getRequestObject() != null
-                                    && configurationService.isRequestObjectParamSupported()) {
+                                    && configurationService.isDocAppApiEnabled()) {
                                 authRequestError =
                                         requestObjectService.validateRequestObject(authRequest);
                             } else {
