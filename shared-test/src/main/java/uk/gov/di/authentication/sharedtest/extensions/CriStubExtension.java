@@ -14,7 +14,6 @@ import static java.lang.String.format;
 
 public class CriStubExtension extends HttpStubExtension {
 
-    private final ECKey signingKey;
     private final String credential =
             "{"
                     + "  \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\","
@@ -35,17 +34,15 @@ public class CriStubExtension extends HttpStubExtension {
                     + "  }"
                     + "}";
 
-    public CriStubExtension(int port, ECKey signingKey) {
+    public CriStubExtension(int port) {
         super(port);
-        this.signingKey = signingKey;
     }
 
-    public CriStubExtension(ECKey signingKey) {
+    public CriStubExtension() {
         super();
-        this.signingKey = signingKey;
     }
 
-    public void init() throws JOSEException {
+    public void init(ECKey signingKey) throws JOSEException {
         register(
                 "/token",
                 200,
@@ -59,10 +56,10 @@ public class CriStubExtension extends HttpStubExtension {
                                 + "}",
                         getHttpPort()));
 
-        register("/protected-resource", 200, "application/jwt", signedResponse());
+        register("/protected-resource", 200, "application/jwt", signedResponse(signingKey));
     }
 
-    private String signedResponse() throws JOSEException {
+    private String signedResponse(ECKey signingKey) throws JOSEException {
         JWSSigner signer = new ECDSASigner(signingKey);
         JWSObject jwsObject =
                 new JWSObject(

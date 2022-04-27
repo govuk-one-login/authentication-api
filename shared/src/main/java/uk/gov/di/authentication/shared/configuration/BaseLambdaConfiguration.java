@@ -9,7 +9,7 @@ public interface BaseLambdaConfiguration {
     }
 
     default String getEnvironment() {
-        return System.getenv("ENVIRONMENT");
+        return System.getenv().getOrDefault("ENVIRONMENT", "test");
     }
 
     default Optional<String> getLocalstackEndpointUri() {

@@ -8,10 +8,19 @@ import com.amazonaws.services.simplesystemsmanagement.model.GetParametersRequest
 import com.amazonaws.services.simplesystemsmanagement.model.ParameterNotFoundException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.util.io.pem.PemReader;
 import uk.gov.di.authentication.shared.configuration.AuditPublisherConfiguration;
 import uk.gov.di.authentication.shared.configuration.BaseLambdaConfiguration;
 
+import java.io.IOException;
+import java.io.StringReader;
 import java.net.URI;
+import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
+import java.security.interfaces.ECPublicKey;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -33,6 +42,14 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     private AWSSimpleSystemsManagement ssmClient;
     private Map<String, String> ssmRedisParameters;
     private Optional<String> passwordPepper;
+
+    private ECPublicKey docAppCredentialSigningPublicKey;
+
+    public ConfigurationService() {}
+
+    ConfigurationService(AWSSimpleSystemsManagement ssmClient) {
+        this.ssmClient = ssmClient;
+    }
 
     // Please keep the method names in alphabetical order so we can find stuff more easily.
     public long getAccessTokenExpiry() {
@@ -110,15 +127,24 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         }
     }
 
-    public String getDocAppCredentialSigningPublicKey() {
-        var paramName = format("{0}-doc-app-public-signing-key", getEnvironment());
-        try {
-            var request = new GetParameterRequest().withWithDecryption(true).withName(paramName);
-            return getSsmClient().getParameter(request).getParameter().getValue();
-        } catch (ParameterNotFoundException e) {
-            LOG.error("No parameter exists with name: {}", paramName);
-            throw new RuntimeException(e);
+    public ECPublicKey getDocAppCredentialSigningPublicKey() {
+        if (docAppCredentialSigningPublicKey == null) {
+            var paramName = format("{0}-doc-app-public-signing-key", getEnvironment());
+            try {
+                var request =
+                        new GetParameterRequest().withWithDecryption(true).withName(paramName);
+                docAppCredentialSigningPublicKey =
+                        createECPublicKeyFromPEM(
+                                getSsmClient().getParameter(request).getParameter().getValue());
+            } catch (ParameterNotFoundException e) {
+                LOG.error("No parameter exists with name: {}", paramName);
+                throw new RuntimeException(e);
+            } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
+                LOG.error("Error creating public key from parameter: {}", paramName);
+                throw new RuntimeException(e);
+            }
         }
+        return docAppCredentialSigningPublicKey;
     }
 
     public String getDocAppDomain() {
@@ -386,6 +412,18 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     private String getRedisKey() {
         return System.getenv("REDIS_KEY");
+    }
+
+    private ECPublicKey createECPublicKeyFromPEM(String pem)
+            throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
+        try (var configReader = new StringReader(pem)) {
+            PemReader reader = new PemReader(configReader);
+            var keySpec = new X509EncodedKeySpec(reader.readPemObject().getContent());
+
+            return (ECPublicKey)
+                    KeyFactory.getInstance("EC", new BouncyCastleProvider())
+                            .generatePublic(keySpec);
+        }
     }
 
     public String getBackChannelLogoutQueueUri() {

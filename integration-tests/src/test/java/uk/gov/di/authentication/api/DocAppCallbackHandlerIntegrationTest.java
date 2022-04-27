@@ -17,6 +17,7 @@ import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.authentication.app.exception.UnsuccesfulCredentialResponseException;
 import uk.gov.di.authentication.app.lambda.DocAppCallbackHandler;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ClientType;
@@ -35,6 +36,7 @@ import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.interfaces.ECPublicKey;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -44,14 +46,20 @@ import java.util.Optional;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_AUTHORISATION_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED;
+import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
+    public static final String SESSION_ID = "some-session-id";
+    public static final String CLIENT_SESSION_ID = "some-client-session-id";
+    public static final Scope SCOPE = new Scope(OIDCScopeValue.OPENID);
+    public static final State STATE = new State();
     private static ECKey privateKey;
     private static ECKey publicKey;
 
@@ -60,12 +68,11 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
             privateKey = new ECKeyGenerator(Curve.P_256).keyID("my-key-id").generate();
             publicKey = privateKey.toPublicJWK();
         } catch (JOSEException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
     }
 
-    @RegisterExtension
-    public static final CriStubExtension criStub = new CriStubExtension(privateKey);
+    @RegisterExtension public static final CriStubExtension criStub = new CriStubExtension();
 
     @RegisterExtension
     protected static final DocumentAppCredentialStoreExtension credentialExtension =
@@ -88,7 +95,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
     @BeforeEach
     void setup() throws JOSEException {
-        criStub.init();
+        criStub.init(privateKey);
         handler = new DocAppCallbackHandler(configurationService);
         clientStore.registerClient(
                 CLIENT_ID,
@@ -108,34 +115,14 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
     @Test
     void shouldRedirectToLoginWhenSuccessfullyProcessedIpvResponse() throws IOException {
-        var sessionId = "some-session-id";
-        var clientSessionId = "some-client-session-id";
-        var scope = new Scope(OIDCScopeValue.OPENID);
-        var state = new State();
-        var authRequestBuilder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                scope,
-                                new ClientID(CLIENT_ID),
-                                URI.create(REDIRECT_URI))
-                        .state(state)
-                        .nonce(new Nonce());
-        redis.createSession(sessionId);
-        var clientSession =
-                new ClientSession(
-                        authRequestBuilder.build().toParameters(),
-                        LocalDateTime.now(),
-                        VectorOfTrust.getDefaults());
-        clientSession.setDocAppSubjectId(new Subject());
-        redis.createClientSession(clientSessionId, clientSession);
-        redis.addStateToRedis(state, sessionId);
+        setupSession();
 
         var response =
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(
-                                Optional.of(buildSessionCookie(sessionId, clientSessionId))),
-                        constructQueryStringParameters(state));
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters(STATE));
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -148,6 +135,98 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                         DOC_APP_AUTHORISATION_RESPONSE_RECEIVED,
                         DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED));
+    }
+
+    @Test
+    void shouldThrowIfInvalidResponseReceivedFromCriProtectedEndpoint() throws IOException {
+        setupSession();
+
+        criStub.register("/protected-resource", 200, "application/jwt", "invalid-response");
+
+        assertThrows(
+                UnsuccesfulCredentialResponseException.class,
+                () ->
+                        makeRequest(
+                                Optional.empty(),
+                                constructHeaders(
+                                        Optional.of(
+                                                buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                                constructQueryStringParameters(STATE)));
+        assertEventTypesReceived(
+                auditTopic,
+                List.of(
+                        DOC_APP_AUTHORISATION_RESPONSE_RECEIVED,
+                        DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                        DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED));
+    }
+
+    @Test
+    void shouldThrowIfErrorReceivedFromCriProtectedEndpoint() throws IOException {
+        setupSession();
+
+        criStub.register("/protected-resource", 400, "application/jwt", "error");
+
+        assertThrows(
+                UnsuccesfulCredentialResponseException.class,
+                () ->
+                        makeRequest(
+                                Optional.empty(),
+                                constructHeaders(
+                                        Optional.of(
+                                                buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                                constructQueryStringParameters(STATE)));
+
+        assertEventTypesReceived(
+                auditTopic,
+                List.of(
+                        DOC_APP_AUTHORISATION_RESPONSE_RECEIVED,
+                        DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                        DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED));
+    }
+
+    @Test
+    void shouldThrowIfErrorBadlySignedCriResponseReceived() throws IOException, JOSEException {
+        setupSession();
+        var badPrivateKey = new ECKeyGenerator(Curve.P_256).keyID("bad-key-id").generate();
+
+        criStub.init(badPrivateKey);
+
+        assertThrows(
+                UnsuccesfulCredentialResponseException.class,
+                () ->
+                        makeRequest(
+                                Optional.empty(),
+                                constructHeaders(
+                                        Optional.of(
+                                                buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                                constructQueryStringParameters(STATE)));
+
+        assertEventTypesReceived(
+                auditTopic,
+                List.of(
+                        DOC_APP_AUTHORISATION_RESPONSE_RECEIVED,
+                        DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                        DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED));
+    }
+
+    private void setupSession() throws IOException {
+        var authRequestBuilder =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                SCOPE,
+                                new ClientID(CLIENT_ID),
+                                URI.create(REDIRECT_URI))
+                        .state(STATE)
+                        .nonce(new Nonce());
+        redis.createSession(SESSION_ID);
+        var clientSession =
+                new ClientSession(
+                        authRequestBuilder.build().toParameters(),
+                        LocalDateTime.now(),
+                        VectorOfTrust.getDefaults());
+        clientSession.setDocAppSubjectId(new Subject());
+        redis.createClientSession(CLIENT_SESSION_ID, clientSession);
+        redis.addStateToRedis(STATE, SESSION_ID);
     }
 
     private Map<String, String> constructQueryStringParameters(State state) {
@@ -213,8 +292,12 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         }
 
         @Override
-        public String getDocAppCredentialSigningPublicKey() {
-            return signingPublicKey.toString();
+        public ECPublicKey getDocAppCredentialSigningPublicKey() {
+            try {
+                return publicKey.toECPublicKey();
+            } catch (JOSEException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 }
