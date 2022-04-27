@@ -17,18 +17,12 @@ public class DynamoSpotService {
     private final AmazonDynamoDB dynamoDB;
 
     public DynamoSpotService(ConfigurationService configurationService) {
-        this(
-                configurationService.getAwsRegion(),
-                configurationService.getEnvironment(),
-                configurationService.getDynamoEndpointUri(),
-                configurationService.getAccessTokenExpiry());
-    }
-
-    public DynamoSpotService(
-            String region, String environment, Optional<String> dynamoEndpoint, long timeToExist) {
-        this.timeToExist = timeToExist;
+        String region = configurationService.getAwsRegion();
+        String environment = configurationService.getEnvironment();
+        this.timeToExist = configurationService.getAccessTokenExpiry();
         dynamoDB =
-                dynamoEndpoint
+                configurationService
+                        .getDynamoEndpointUri()
                         .map(
                                 t ->
                                         AmazonDynamoDBClientBuilder.standard()

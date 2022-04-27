@@ -44,15 +44,10 @@ public class DynamoService implements AuthenticationService {
     private final DynamoDBSchemaHelper dynamoDBSchemaHelper;
 
     public DynamoService(ConfigurationService configurationService) {
-        this(
-                configurationService.getAwsRegion(),
-                configurationService.getEnvironment(),
-                configurationService.getDynamoEndpointUri());
-    }
-
-    public DynamoService(String region, String environment, Optional<String> dynamoEndpoint) {
+        String region = configurationService.getAwsRegion();
         dynamoDB =
-                dynamoEndpoint
+                configurationService
+                        .getDynamoEndpointUri()
                         .map(
                                 t ->
                                         AmazonDynamoDBClientBuilder.standard()
@@ -62,7 +57,8 @@ public class DynamoService implements AuthenticationService {
                         .orElse(AmazonDynamoDBClientBuilder.standard().withRegion(region))
                         .build();
 
-        this.dynamoDBSchemaHelper = new DynamoDBSchemaHelper(dynamoDB, environment);
+        this.dynamoDBSchemaHelper =
+                new DynamoDBSchemaHelper(dynamoDB, configurationService.getEnvironment());
         this.userCredentialsMapper =
                 dynamoDBSchemaHelper.buildConfiguredDynamoDBMapper(USER_CREDENTIALS_TABLE);
         this.userProfileMapper =

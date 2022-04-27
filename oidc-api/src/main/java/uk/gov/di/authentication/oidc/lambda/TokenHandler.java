@@ -94,11 +94,7 @@ public class TokenHandler
         this.configurationService = configurationService;
         this.redisConnectionService = new RedisConnectionService(configurationService);
 
-        this.clientService =
-                new DynamoClientService(
-                        configurationService.getAwsRegion(),
-                        configurationService.getEnvironment(),
-                        configurationService.getDynamoEndpointUri());
+        this.clientService = new DynamoClientService(configurationService);
         this.tokenService =
                 new TokenService(configurationService, this.redisConnectionService, kms);
         this.dynamoService = new DynamoService(configurationService);

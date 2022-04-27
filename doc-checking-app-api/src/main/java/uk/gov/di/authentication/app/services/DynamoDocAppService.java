@@ -18,18 +18,12 @@ public class DynamoDocAppService {
     private final AmazonDynamoDB dynamoDB;
 
     public DynamoDocAppService(ConfigurationService configurationService) {
-        this(
-                configurationService.getAwsRegion(),
-                configurationService.getEnvironment(),
-                configurationService.getDynamoEndpointUri(),
-                configurationService.getAccessTokenExpiry());
-    }
-
-    public DynamoDocAppService(
-            String region, String environment, Optional<String> dynamoEndpoint, long timeToExist) {
-        this.timeToExist = timeToExist;
+        String region = configurationService.getAwsRegion();
+        String environment = configurationService.getEnvironment();
+        this.timeToExist = configurationService.getAccessTokenExpiry();
         dynamoDB =
-                dynamoEndpoint
+                configurationService
+                        .getDynamoEndpointUri()
                         .map(
                                 t ->
                                         AmazonDynamoDBClientBuilder.standard()

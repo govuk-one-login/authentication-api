@@ -63,16 +63,8 @@ public abstract class BaseFrontendHandler<T>
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
-        this.clientService =
-                new DynamoClientService(
-                        configurationService.getAwsRegion(),
-                        configurationService.getEnvironment(),
-                        configurationService.getDynamoEndpointUri());
-        this.authenticationService =
-                new DynamoService(
-                        configurationService.getAwsRegion(),
-                        configurationService.getEnvironment(),
-                        configurationService.getDynamoEndpointUri());
+        this.clientService = new DynamoClientService(configurationService);
+        this.authenticationService = new DynamoService(configurationService);
     }
 
     @Override

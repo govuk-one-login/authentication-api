@@ -52,11 +52,7 @@ public class UpdateClientConfigHandler
     }
 
     public UpdateClientConfigHandler(ConfigurationService configurationService) {
-        this.clientService =
-                new DynamoClientService(
-                        configurationService.getAwsRegion(),
-                        configurationService.getEnvironment(),
-                        configurationService.getDynamoEndpointUri());
+        this.clientService = new DynamoClientService(configurationService);
         this.validationService = new ClientConfigValidationService();
         this.auditService = new AuditService(configurationService);
     }
