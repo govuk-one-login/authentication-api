@@ -107,7 +107,8 @@ public class TokenHandler
                         configurationService,
                         redisConnectionService,
                         ObjectMapperFactory.getInstance());
-        this.clientSessionService = new ClientSessionService(configurationService);
+        this.clientSessionService =
+                new ClientSessionService(configurationService, redisConnectionService);
         this.tokenValidationService = new TokenValidationService(configurationService, kms);
     }
 
