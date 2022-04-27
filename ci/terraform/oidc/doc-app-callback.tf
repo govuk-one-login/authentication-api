@@ -10,7 +10,7 @@ module "doc_app_callback_role" {
     aws_iam_policy.redis_parameter_policy.arn,
     aws_iam_policy.doc_app_auth_kms_policy.arn,
     aws_iam_policy.doc_app_public_signing_key_parameter_policy.arn,
-    aws_iam_policy.dynamo_doc_app_write_access_policy,
+    aws_iam_policy.dynamo_doc_app_write_access_policy.arn,
   ]
 }
 
