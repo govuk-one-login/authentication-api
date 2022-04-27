@@ -302,3 +302,21 @@ variable "doc_app_domain" {
   type    = string
   default = "undefined"
 }
+
+variable "doc_app_backend_uri" {
+  type        = string
+  default     = ""
+  description = "The base URL of the Doc App CRI API (to be used with the token endpoint and protected resource)"
+}
+
+variable "doc_app_cri_data_endpoint" {
+  type        = string
+  default     = ""
+  description = "The endpoint path to the protected resource on the Doc App CRI (this is appended to the doc_app_backend_uri variable)"
+}
+
+variable "doc_app_cri_public_signing_key" {
+  type        = string
+  default     = "undefined"
+  description = "The PEM encoded public key used to sign VCs from the Doc App CRI"
+}

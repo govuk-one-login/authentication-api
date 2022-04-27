@@ -14,6 +14,10 @@ data "aws_dynamodb_table" "spot_credential_table" {
   name = "${var.environment}-spot-credential"
 }
 
+data "aws_dynamodb_table" "doc_app_cri_credential_table" {
+  name = "${var.environment}-doc-app-credential"
+}
+
 data "aws_iam_policy_document" "dynamo_user_write_policy_document" {
   statement {
     sid    = "AllowAccessToDynamoTables"
@@ -136,6 +140,39 @@ data "aws_iam_policy_document" "dynamo_spot_read_access_policy_document" {
   }
 }
 
+data "aws_iam_policy_document" "dynamo_doc_app_write_access_policy_document" {
+  statement {
+    sid    = "AllowAccessToDynamoTables"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:UpdateItem",
+      "dynamodb:PutItem",
+    ]
+    resources = [
+      data.aws_dynamodb_table.doc_app_cri_credential_table.arn,
+    ]
+  }
+}
+
+data "aws_iam_policy_document" "dynamo_doc_app_read_access_policy_document" {
+  statement {
+    sid    = "AllowAccessToDynamoTables"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:BatchGetItem",
+      "dynamodb:DescribeTable",
+      "dynamodb:Get*",
+      "dynamodb:Query",
+      "dynamodb:Scan",
+    ]
+    resources = [
+      data.aws_dynamodb_table.doc_app_cri_credential_table.arn,
+    ]
+  }
+}
+
 resource "aws_iam_policy" "dynamo_client_registry_write_access_policy" {
   name_prefix = "dynamo-client-registry-write-policy"
   path        = "/${var.environment}/oidc-default/"
@@ -190,4 +227,20 @@ resource "aws_iam_policy" "dynamo_spot_delete_access_policy" {
   description = "IAM policy for managing delete permissions to the Dynamo SPOT credential table"
 
   policy = data.aws_iam_policy_document.dynamo_spot_delete_access_policy_document.json
+}
+
+resource "aws_iam_policy" "dynamo_doc_app_write_access_policy" {
+  name_prefix = "dynamo-access-policy"
+  path        = "/${var.environment}/oidc-default/"
+  description = "IAM policy for managing write permissions to the Dynamo Doc App CRI credential table"
+
+  policy = data.aws_iam_policy_document.dynamo_doc_app_write_access_policy_document.json
+}
+
+resource "aws_iam_policy" "dynamo_doc_app_read_access_policy" {
+  name_prefix = "dynamo-access-policy"
+  path        = "/${var.environment}/oidc-default/"
+  description = "IAM policy for managing read permissions to the Dynamo Doc App CRI credential table"
+
+  policy = data.aws_iam_policy_document.dynamo_doc_app_read_access_policy_document.json
 }
