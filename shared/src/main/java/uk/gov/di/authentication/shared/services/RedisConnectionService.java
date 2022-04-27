@@ -5,6 +5,7 @@ import io.lettuce.core.RedisURI;
 import io.lettuce.core.TransactionResult;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
+import io.lettuce.core.api.sync.RedisServerCommands;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 
@@ -14,18 +15,24 @@ import static io.lettuce.core.support.ConnectionPoolSupport.createGenericObjectP
 
 public class RedisConnectionService implements AutoCloseable {
 
+    public static final String REDIS_CONNECTION_ERROR = "Error getting Redis connection";
     private final RedisClient client;
 
     private final GenericObjectPool<StatefulRedisConnection<String, String>> pool;
 
     public RedisConnectionService(
-            String host, int port, boolean useSsl, Optional<String> password) {
+            String host, int port, boolean useSsl, Optional<String> password, boolean warmup) {
         RedisURI.Builder builder = RedisURI.builder().withHost(host).withPort(port).withSsl(useSsl);
         password.ifPresent(s -> builder.withPassword(s.toCharArray()));
         RedisURI redisURI = builder.build();
         this.client = RedisClient.create(redisURI);
         this.pool = createGenericObjectPool(client::connect, new GenericObjectPoolConfig<>());
-        warmUp();
+        if (warmup) warmUp();
+    }
+
+    public RedisConnectionService(
+            String host, int port, boolean useSsl, Optional<String> password) {
+        this(host, port, useSsl, password, true);
     }
 
     public RedisConnectionService(ConfigurationService configurationService) {
@@ -36,62 +43,59 @@ public class RedisConnectionService implements AutoCloseable {
                 configurationService.getRedisPassword());
     }
 
-    public void saveWithExpiry(String key, String value, long expiry) {
+    @FunctionalInterface
+    private interface RedisFunction<T> {
+        T getResult(RedisCommands<String, String> commands);
+    }
+
+    private <T> T executeCommand(RedisFunction<T> callable) {
         try (StatefulRedisConnection<String, String> connection = pool.borrowObject()) {
-            connection.sync().setex(key, expiry, value);
+            return callable.getResult(connection.sync());
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new RedisConnectionException(REDIS_CONNECTION_ERROR, e);
         }
     }
 
-    public boolean keyExists(String key) {
-        try (StatefulRedisConnection<String, String> connection = pool.borrowObject()) {
-            return (connection.sync().exists(key) == 1);
-        } catch (Exception e) {
-            return false;
-        }
+    public void saveWithExpiry(final String key, final String value, final long expiry) {
+        executeCommand(commands -> commands.setex(key, expiry, value));
     }
 
-    public String getValue(String key) {
-        try (StatefulRedisConnection<String, String> connection = pool.borrowObject()) {
-            return connection.sync().get(key);
-        } catch (Exception e) {
-            return null;
-        }
+    public boolean keyExists(final String key) {
+        return executeCommand(commands -> commands.exists(key) == 1);
     }
 
-    public long deleteValue(String key) {
-        try (StatefulRedisConnection<String, String> connection = pool.borrowObject()) {
-            return connection.sync().del(key);
-        } catch (Exception e) {
-            return 0;
-        }
+    public String getValue(final String key) {
+        return executeCommand(commands -> commands.get(key));
     }
 
-    public String popValue(String key) {
-        try (StatefulRedisConnection<String, String> connection = pool.borrowObject()) {
-            RedisCommands<String, String> commands = connection.sync();
-            commands.multi();
-            commands.get(key);
-            commands.del(key);
-            TransactionResult result = commands.exec();
-            return result.get(0);
-        } catch (Exception e) {
-            return null;
-        }
+    public long deleteValue(final String key) {
+        return executeCommand(commands -> commands.del(key));
+    }
+
+    public String popValue(final String key) {
+        return executeCommand(
+                commands -> {
+                    commands.multi();
+                    commands.get(key);
+                    commands.del(key);
+                    TransactionResult result = commands.exec();
+                    return result.get(0);
+                });
     }
 
     private void warmUp() {
-        try (StatefulRedisConnection<String, String> connection = pool.borrowObject()) {
-            connection.sync().clientGetname();
-        } catch (Exception e) {
-
-        }
+        executeCommand(RedisServerCommands::clientGetname);
     }
 
     @Override
     public void close() {
         pool.close();
         client.shutdown();
+    }
+
+    public static class RedisConnectionException extends RuntimeException {
+        public RedisConnectionException(String message, Throwable cause) {
+            super(message, cause);
+        }
     }
 }
