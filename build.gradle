@@ -32,6 +32,7 @@ ext {
         junit: "5.8.2",
         jackson_version: "2.13.2",
         glassfish_version: "3.0.4",
+        xray: "2.11.1"
     ]
 
     terraformEnvironment = project.properties["terraformEnvironment"] ?: "localstack"
@@ -75,6 +76,7 @@ subprojects {
         ssm
         tests
         test_runtime
+        xray
     }
 
     configurations.all {
@@ -140,6 +142,12 @@ subprojects {
                 configurations.hamcrest
 
         test_runtime "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
+
+        xray platform("com.amazonaws:aws-xray-recorder-sdk-bom:${dependencyVersions.xray}"),
+                "com.amazonaws:aws-xray-recorder-sdk-core:${dependencyVersions.xray}",
+                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-core:${dependencyVersions.xray}",
+                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2:${dependencyVersions.xray}",
+                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2-instrumentor:${dependencyVersions.xray}"
     }
 }
 
