@@ -41,6 +41,7 @@ public class DynamoClientService implements ClientService {
 
         DynamoDBMapperConfig clientRegistryConfig =
                 new DynamoDBMapperConfig.Builder()
+                        .withConsistentReads(DynamoDBMapperConfig.ConsistentReads.CONSISTENT)
                         .withTableNameOverride(
                                 DynamoDBMapperConfig.TableNameOverride.withTableNameReplacement(
                                         tableName))
