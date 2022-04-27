@@ -184,7 +184,6 @@ resource "aws_lambda_function" "email_sqs_lambda" {
       CONTACT_US_LINK_ROUTE = var.contact_us_link_route
       NOTIFY_API_KEY        = var.notify_api_key
       NOTIFY_URL            = var.notify_url
-      JAVA_TOOL_OPTIONS     = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
     })
   }
   kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
