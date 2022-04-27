@@ -1,14 +1,14 @@
 package uk.gov.di.authentication.app.services;
 
-import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
 import uk.gov.di.authentication.app.entity.DocAppCredential;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Optional;
+
+import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoClient;
+import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.tableConfig;
 
 public class DynamoDocAppService {
 
@@ -18,29 +18,12 @@ public class DynamoDocAppService {
     private final AmazonDynamoDB dynamoDB;
 
     public DynamoDocAppService(ConfigurationService configurationService) {
-        String region = configurationService.getAwsRegion();
-        String environment = configurationService.getEnvironment();
+        var tableName = configurationService.getEnvironment() + "-" + DOC_APP_CREDENTIAL_TABLE;
+
         this.timeToExist = configurationService.getAccessTokenExpiry();
-        dynamoDB =
-                configurationService
-                        .getDynamoEndpointUri()
-                        .map(
-                                t ->
-                                        AmazonDynamoDBClientBuilder.standard()
-                                                .withEndpointConfiguration(
-                                                        new AwsClientBuilder.EndpointConfiguration(
-                                                                t, region)))
-                        .orElse(AmazonDynamoDBClientBuilder.standard().withRegion(region))
-                        .build();
-        DynamoDBMapperConfig docAppConfig =
-                new DynamoDBMapperConfig.Builder()
-                        .withTableNameOverride(
-                                DynamoDBMapperConfig.TableNameOverride.withTableNameReplacement(
-                                        environment + "-" + DOC_APP_CREDENTIAL_TABLE))
-                        .withConsistentReads(DynamoDBMapperConfig.ConsistentReads.CONSISTENT)
-                        .build();
-        this.docAppCredentialMapper = new DynamoDBMapper(dynamoDB, docAppConfig);
-        warmUp(environment + "-" + DOC_APP_CREDENTIAL_TABLE);
+        this.dynamoDB = createDynamoClient(configurationService);
+        this.docAppCredentialMapper = new DynamoDBMapper(dynamoDB, tableConfig(tableName));
+        warmUp(tableName);
     }
 
     public void addDocAppCredential(String subjectID, String credential) {

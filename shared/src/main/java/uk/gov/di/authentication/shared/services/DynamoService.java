@@ -1,8 +1,6 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
 import com.amazonaws.services.dynamodbv2.datamodeling.QueryResultPage;
@@ -12,6 +10,7 @@ import com.amazonaws.services.dynamodbv2.model.Put;
 import com.amazonaws.services.dynamodbv2.model.TransactWriteItem;
 import com.amazonaws.services.dynamodbv2.model.TransactWriteItemsRequest;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper;
 import uk.gov.di.authentication.shared.dynamodb.DynamoDBSchemaHelper;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
@@ -44,19 +43,7 @@ public class DynamoService implements AuthenticationService {
     private final DynamoDBSchemaHelper dynamoDBSchemaHelper;
 
     public DynamoService(ConfigurationService configurationService) {
-        String region = configurationService.getAwsRegion();
-        dynamoDB =
-                configurationService
-                        .getDynamoEndpointUri()
-                        .map(
-                                t ->
-                                        AmazonDynamoDBClientBuilder.standard()
-                                                .withEndpointConfiguration(
-                                                        new AwsClientBuilder.EndpointConfiguration(
-                                                                t, region)))
-                        .orElse(AmazonDynamoDBClientBuilder.standard().withRegion(region))
-                        .build();
-
+        this.dynamoDB = DynamoClientHelper.createDynamoClient(configurationService);
         this.dynamoDBSchemaHelper =
                 new DynamoDBSchemaHelper(dynamoDB, configurationService.getEnvironment());
         this.userCredentialsMapper =

@@ -1,10 +1,7 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
@@ -13,6 +10,9 @@ import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import java.util.List;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoClient;
+import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.tableConfig;
+
 public class DynamoClientService implements ClientService {
 
     private static final String CLIENT_REGISTRY_TABLE = "client-registry";
@@ -20,29 +20,9 @@ public class DynamoClientService implements ClientService {
     private final AmazonDynamoDB dynamoDB;
 
     public DynamoClientService(ConfigurationService configurationService) {
-        String region = configurationService.getAwsRegion();
         String tableName = configurationService.getEnvironment() + "-" + CLIENT_REGISTRY_TABLE;
-        dynamoDB =
-                configurationService
-                        .getDynamoEndpointUri()
-                        .map(
-                                t ->
-                                        AmazonDynamoDBClientBuilder.standard()
-                                                .withEndpointConfiguration(
-                                                        new AwsClientBuilder.EndpointConfiguration(
-                                                                t, region)))
-                        .orElse(AmazonDynamoDBClientBuilder.standard().withRegion(region))
-                        .build();
-
-        DynamoDBMapperConfig clientRegistryConfig =
-                new DynamoDBMapperConfig.Builder()
-                        .withConsistentReads(DynamoDBMapperConfig.ConsistentReads.CONSISTENT)
-                        .withTableNameOverride(
-                                DynamoDBMapperConfig.TableNameOverride.withTableNameReplacement(
-                                        tableName))
-                        .build();
-
-        this.clientRegistryMapper = new DynamoDBMapper(dynamoDB, clientRegistryConfig);
+        this.dynamoDB = createDynamoClient(configurationService);
+        this.clientRegistryMapper = new DynamoDBMapper(dynamoDB, tableConfig(tableName));
         warmUp(tableName);
     }
 
