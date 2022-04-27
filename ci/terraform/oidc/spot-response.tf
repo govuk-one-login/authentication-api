@@ -14,7 +14,7 @@ resource "aws_lambda_function" "spot_response_lambda" {
 
   function_name = "${var.environment}-spot-response-lambda"
   role          = module.ipv_spot_response_role.arn
-  handler       = "uk.gov.di.authentication.ipv-api.lambda.SPOTResponseHandler::handleRequest"
+  handler       = "uk.gov.di.authentication.ipv.lambda.SPOTResponseHandler::handleRequest"
   timeout       = 30
   memory_size   = 512
   runtime       = "java11"

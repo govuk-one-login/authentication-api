@@ -3,12 +3,13 @@ plugins {
     id "jacoco"
 }
 
-group "uk.gov.di.authentication.ipvapi"
+group "uk.gov.di.authentication.doccheckingapp"
 version "unspecified"
 
 dependencies {
     compileOnly configurations.lambda,
-            configurations.dynamodb
+            configurations.dynamodb,
+            configurations.sns
 
     implementation configurations.jackson,
             configurations.nimbus,
