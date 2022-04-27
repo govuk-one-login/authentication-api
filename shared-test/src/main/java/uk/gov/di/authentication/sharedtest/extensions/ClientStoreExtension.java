@@ -10,10 +10,10 @@ import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
+import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 import static com.amazonaws.services.dynamodbv2.model.KeyType.HASH;
 import static com.amazonaws.services.dynamodbv2.model.ProjectionType.ALL;
@@ -96,7 +96,8 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
     public void beforeAll(ExtensionContext context) throws Exception {
         super.beforeAll(context);
         dynamoClientService =
-                new DynamoClientService(REGION, ENVIRONMENT, Optional.of(DYNAMO_ENDPOINT));
+                new DynamoClientService(
+                        new DynamoTestConfiguration(REGION, ENVIRONMENT, DYNAMO_ENDPOINT));
     }
 
     @Override
