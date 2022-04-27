@@ -46,12 +46,13 @@ class RequestObjectServiceTest {
     private static final String SCOPE = "openid";
     private static final State STATE = new State();
     private static final ClientID CLIENT_ID = new ClientID("test-id");
-    private static final String AUDIENCE = "oidc-audience";
+    private static final String OIDC_BASE_URI = "https://localhost";
+    private static final String AUDIENCE = "https://localhost/authorize";
     private RequestObjectService service;
 
     @BeforeEach
     void setup() {
-        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(AUDIENCE));
+        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URI));
         keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         service = new RequestObjectService(dynamoClientService, configurationService);
         ClientRegistry clientRegistry = generateClientRegistry();

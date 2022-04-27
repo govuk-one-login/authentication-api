@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
@@ -103,7 +104,13 @@ public class RequestObjectService {
             if (Objects.isNull(jwtClaimsSet.getAudience())
                     || !jwtClaimsSet
                             .getAudience()
-                            .contains(configurationService.getOidcApiBaseURL().orElseThrow())) {
+                            .contains(
+                                    buildURI(
+                                                    configurationService
+                                                            .getOidcApiBaseURL()
+                                                            .orElseThrow(),
+                                                    "/authorize")
+                                            .toString())) {
                 LOG.warn("Invalid or missing audience");
                 return Optional.of(new AuthRequestError(OAuth2Error.ACCESS_DENIED, redirectURI));
             }
@@ -129,6 +136,7 @@ public class RequestObjectService {
         } catch (ParseException e) {
             throw new RuntimeException(e);
         }
+        LOG.info("RequestObject has passed initial validation");
         return Optional.empty();
     }
 
