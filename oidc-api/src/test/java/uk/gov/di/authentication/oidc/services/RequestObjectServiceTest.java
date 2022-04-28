@@ -68,6 +68,7 @@ class RequestObjectServiceTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", SCOPE)
+                        .claim("state", new State())
                         .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
@@ -296,6 +297,29 @@ class RequestObjectServiceTest {
                 RuntimeException.class,
                 () -> service.validateRequestObject(authRequest),
                 "Expected to throw exception");
+    }
+
+    @Test
+    void shouldReturnErrorIfStateIsMissingFromRequestObject() throws JOSEException {
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(AUDIENCE)
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", SCOPE)
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet);
+
+        var requestObjectError = service.validateRequestObject(generateAuthRequest(signedJWT));
+
+        assertTrue(requestObjectError.isPresent());
+        assertThat(requestObjectError.get().getErrorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+        assertThat(
+                requestObjectError.get().getErrorObject().getDescription(),
+                equalTo("Request is missing state parameter"));
+        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
     private SignedJWT generateSignedJWT(JWTClaimsSet jwtClaimsSet) throws JOSEException {

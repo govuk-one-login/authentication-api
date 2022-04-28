@@ -10,6 +10,7 @@ import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
@@ -593,6 +594,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", new Scope(OIDCScopeValue.OPENID).toString())
                         .claim("client_id", CLIENT_ID)
+                        .claim("state", new State())
                         .issuer(CLIENT_ID)
                         .build();
         var jwsHeader = new JWSHeader(JWSAlgorithm.RS256);

@@ -4,6 +4,7 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -132,6 +133,15 @@ public class RequestObjectService {
                             client)) {
                 LOG.warn("Invalid scopes in request JWT");
                 return Optional.of(new AuthRequestError(OAuth2Error.INVALID_SCOPE, redirectURI));
+            }
+            if (Objects.isNull(jwtClaimsSet.getClaim("state"))) {
+                LOG.warn("State is missing from authRequest");
+                return Optional.of(
+                        new AuthRequestError(
+                                new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Request is missing state parameter"),
+                                redirectURI));
             }
         } catch (ParseException e) {
             throw new RuntimeException(e);
