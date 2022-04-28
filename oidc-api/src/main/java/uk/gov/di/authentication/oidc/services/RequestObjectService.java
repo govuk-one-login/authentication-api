@@ -14,6 +14,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientType;
+import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
@@ -89,7 +90,8 @@ public class RequestObjectService {
                 return Optional.of(
                         new AuthRequestError(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, redirectURI));
             }
-            if (requestContainsInvalidScopes(authRequest.getScope().toStringList(), client)) {
+            if (requestContainsInvalidScopes(
+                    authRequest.getScope().toStringList(), client, false)) {
                 LOG.warn(
                         "Invalid scopes in authRequest. Scopes in request: {}",
                         authRequest.getScope().toStringList());
@@ -136,7 +138,8 @@ public class RequestObjectService {
             if (Objects.isNull(jwtClaimsSet.getClaim("scope"))
                     || requestContainsInvalidScopes(
                             Scope.parse(jwtClaimsSet.getClaim("scope").toString()).toStringList(),
-                            client)) {
+                            client,
+                            true)) {
                 LOG.warn("Invalid scopes in request JWT");
                 return Optional.of(new AuthRequestError(OAuth2Error.INVALID_SCOPE, redirectURI));
             }
@@ -157,7 +160,10 @@ public class RequestObjectService {
     }
 
     private boolean requestContainsInvalidScopes(
-            List<String> scopes, ClientRegistry clientRegistry) {
+            List<String> scopes, ClientRegistry clientRegistry, boolean requestObject) {
+        if (requestObject && !scopes.contains(CustomScopeValue.DOC_CHECKING_APP.getValue())) {
+            return true;
+        }
         for (String scope : scopes) {
             if (ValidScopes.getAllValidScopes().stream().noneMatch(t -> t.equals(scope))) {
                 return true;

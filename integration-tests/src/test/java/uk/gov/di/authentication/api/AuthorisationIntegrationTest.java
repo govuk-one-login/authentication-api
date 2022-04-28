@@ -19,6 +19,7 @@ import uk.gov.di.authentication.oidc.lambda.AuthorisationHandler;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
@@ -492,7 +493,11 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldCallAuthorizeWithRequestObject() throws JOSEException {
-        registerClient(CLIENT_ID, "test-client", singletonList("openid"), ClientType.APP);
+        registerClient(
+                CLIENT_ID,
+                "test-client",
+                List.of(OPENID.getValue(), CustomScopeValue.DOC_CHECKING_APP.getValue()),
+                ClientType.APP);
         var signedJWT = createSignedJWT();
         var queryStringParameters =
                 new HashMap<>(
@@ -595,7 +600,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .audience("http://localhost/authorize")
                         .claim("redirect_uri", RP_REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", new Scope(OIDCScopeValue.OPENID).toString())
+                        .claim(
+                                "scope",
+                                new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP)
+                                        .toString())
                         .claim("client_id", CLIENT_ID)
                         .claim("state", new State())
                         .issuer(CLIENT_ID)

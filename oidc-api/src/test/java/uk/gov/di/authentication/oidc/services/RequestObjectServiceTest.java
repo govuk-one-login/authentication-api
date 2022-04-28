@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientType;
+import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
@@ -27,7 +28,6 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
-import java.util.List;
 import java.util.Optional;
 
 import static java.util.Collections.singletonList;
@@ -44,7 +44,7 @@ class RequestObjectServiceTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private KeyPair keyPair;
-    private static final String SCOPE = "openid";
+    private static final String SCOPE = "openid doc-checking-app";
     private static final State STATE = new State();
     private static final ClientID CLIENT_ID = new ClientID("test-id");
     private static final String OIDC_BASE_URI = "https://localhost";
@@ -56,7 +56,12 @@ class RequestObjectServiceTest {
         when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URI));
         keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         service = new RequestObjectService(dynamoClientService, configurationService);
-        var clientRegistry = generateClientRegistry(ClientType.APP.getValue());
+        var clientRegistry =
+                generateClientRegistry(
+                        ClientType.APP.getValue(),
+                        new Scope(
+                                OIDCScopeValue.OPENID.getValue(),
+                                CustomScopeValue.DOC_CHECKING_APP.getValue()));
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(clientRegistry));
     }
@@ -120,7 +125,12 @@ class RequestObjectServiceTest {
 
     @Test
     void shouldReturnErrorWhenClientTypeIsNotApp() throws JOSEException {
-        var clientRegistry = generateClientRegistry(ClientType.WEB.getValue());
+        var clientRegistry =
+                generateClientRegistry(
+                        ClientType.WEB.getValue(),
+                        new Scope(
+                                OIDCScopeValue.OPENID.getValue(),
+                                CustomScopeValue.DOC_CHECKING_APP.getValue()));
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(clientRegistry));
         var jwtClaimsSet =
@@ -199,6 +209,76 @@ class RequestObjectServiceTest {
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet));
         var requestObjectError = service.validateRequestObject(authRequest);
+
+        assertTrue(requestObjectError.isPresent());
+        assertThat(requestObjectError.get().getErrorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
+        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
+    }
+
+    @Test
+    void shouldReturnErrorWhenRequestObjectDoesNotContainDocAppScope() throws JOSEException {
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(AUDIENCE)
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", "openid")
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet));
+        var requestObjectError = service.validateRequestObject(authRequest);
+
+        assertTrue(requestObjectError.isPresent());
+        assertThat(requestObjectError.get().getErrorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
+        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
+    }
+
+    @Test
+    void shouldReturnErrorWhenClientHasNotRegisteredDocAppScope() throws JOSEException {
+        var clientRegistry =
+                generateClientRegistry(
+                        ClientType.APP.getValue(), new Scope(OIDCScopeValue.OPENID.getValue()));
+        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                .thenReturn(Optional.of(clientRegistry));
+
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(AUDIENCE)
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", SCOPE)
+                        .claim("state", new State())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet);
+
+        var requestObjectError = service.validateRequestObject(generateAuthRequest(signedJWT));
+
+        assertTrue(requestObjectError.isPresent());
+        assertThat(requestObjectError.get().getErrorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
+        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
+    }
+
+    @Test
+    void shouldReturnErrorWhenAuthRequestContainsInvalidScope() throws JOSEException {
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(AUDIENCE)
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", SCOPE)
+                        .claim("state", new State())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet);
+
+        var requestObjectError =
+                service.validateRequestObject(
+                        generateAuthRequest(
+                                signedJWT, new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL)));
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().getErrorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
@@ -362,14 +442,14 @@ class RequestObjectServiceTest {
         return signedJWT;
     }
 
-    private ClientRegistry generateClientRegistry(String clientType) {
+    private ClientRegistry generateClientRegistry(String clientType, Scope scope) {
         return new ClientRegistry()
                 .setClientID(CLIENT_ID.getValue())
                 .setPublicKey(
                         Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()))
                 .setConsentRequired(false)
                 .setClientName("test-client")
-                .setScopes(List.of("openid"))
+                .setScopes(scope.toStringList())
                 .setRedirectUrls(singletonList(REDIRECT_URI))
                 .setSectorIdentifierUri("https://test.com")
                 .setSubjectType("pairwise")
@@ -377,8 +457,10 @@ class RequestObjectServiceTest {
     }
 
     private AuthenticationRequest generateAuthRequest(SignedJWT signedJWT) {
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
+        return generateAuthRequest(signedJWT, new Scope(OIDCScopeValue.OPENID));
+    }
+
+    private AuthenticationRequest generateAuthRequest(SignedJWT signedJWT, Scope scope) {
         AuthenticationRequest.Builder builder =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE, scope, CLIENT_ID, URI.create(REDIRECT_URI))
