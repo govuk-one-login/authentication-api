@@ -18,21 +18,14 @@ dependencies {
             configurations.lambda,
             "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${dependencyVersions.jackson_version}",
             "com.google.protobuf:protobuf-java:${dependencyVersions.protobuf_version}",
-            project(":client-registry-api"),
-            project(":frontend-api"),
-            project(":ipv-api"),
-            project(":doc-checking-app-api"),
-            project(":shared"),
             project(":shared-test")
 
-    implementation(project(":oidc-api")) {
-        exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-bom"
-        exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-core"
-        exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-aws-sdk-core"
-        exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-aws-sdk-instrumentor"
-        exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-aws-sdk-v2"
-        exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-aws-sdk-v2-instrumentor"
-    }
+    implementation project(":shared"), noXray
+    implementation project(":oidc-api"), noXray
+    implementation project(":frontend-api"), noXray
+    implementation project(":client-registry-api"), noXray
+    implementation project(":ipv-api"), noXray
+    implementation project(":doc-checking-app-api"), noXray
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
 }

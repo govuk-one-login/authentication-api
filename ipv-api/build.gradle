@@ -14,8 +14,10 @@ dependencies {
             configurations.dynamodb
 
     implementation configurations.jackson,
-            configurations.nimbus,
-            project(":shared")
+            configurations.nimbus
+
+    implementation project(":shared"), noXray
+
     runtimeOnly configurations.logging_runtime
 
     testImplementation configurations.tests,

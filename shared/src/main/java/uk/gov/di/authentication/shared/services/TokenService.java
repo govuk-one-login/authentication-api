@@ -70,6 +70,7 @@ import java.util.stream.Collectors;
 
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class TokenService {
 
@@ -109,17 +110,39 @@ public class TokenService {
             scopesForToken = authRequestScopes.toStringList();
         }
         AccessToken accessToken =
-                generateAndStoreAccessToken(
-                        clientID, internalSubject, scopesForToken, publicSubject, claimsRequest);
+                segmentedFunctionCall(
+                        "generateAndStoreAccessToken",
+                        () ->
+                                generateAndStoreAccessToken(
+                                        clientID,
+                                        internalSubject,
+                                        scopesForToken,
+                                        publicSubject,
+                                        claimsRequest));
         AccessTokenHash accessTokenHash =
-                AccessTokenHash.compute(accessToken, TOKEN_ALGORITHM, null);
+                segmentedFunctionCall(
+                        "AccessTokenHash.compute",
+                        () -> AccessTokenHash.compute(accessToken, TOKEN_ALGORITHM, null));
         SignedJWT idToken =
-                generateIDToken(
-                        clientID, publicSubject, additionalTokenClaims, accessTokenHash, vot);
+                segmentedFunctionCall(
+                        "generateIDToken",
+                        () ->
+                                generateIDToken(
+                                        clientID,
+                                        publicSubject,
+                                        additionalTokenClaims,
+                                        accessTokenHash,
+                                        vot));
         if (scopesForToken.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
             RefreshToken refreshToken =
-                    generateAndStoreRefreshToken(
-                            clientID, internalSubject, scopesForToken, publicSubject);
+                    segmentedFunctionCall(
+                            "generateAndStoreRefreshToken",
+                            () ->
+                                    generateAndStoreRefreshToken(
+                                            clientID,
+                                            internalSubject,
+                                            scopesForToken,
+                                            publicSubject));
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, refreshToken));
         } else {
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, null));

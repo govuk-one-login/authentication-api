@@ -13,8 +13,10 @@ dependencies {
             configurations.lambda,
             configurations.lettuce,
             project(":delivery-receipts-api"),
-            project(":shared"),
             project(":shared-test")
+
+    implementation project(":shared"), noXray
+
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
 }
 

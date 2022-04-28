@@ -13,8 +13,10 @@ dependencies {
 
     implementation configurations.jackson,
             configurations.nimbus,
-            configurations.bouncycastle,
-            project(":shared")
+            configurations.bouncycastle
+
+    implementation project(":shared"), noXray
+
     runtimeOnly configurations.logging_runtime
 
     testImplementation configurations.tests,

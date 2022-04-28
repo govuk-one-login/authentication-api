@@ -16,8 +16,9 @@ dependencies {
 
     implementation configurations.nimbus,
             configurations.govuk_notify,
-            configurations.jackson,
-            project(":shared")
+            configurations.jackson
+
+    implementation project(":shared"), noXray
 
     runtimeOnly configurations.logging_runtime
 
