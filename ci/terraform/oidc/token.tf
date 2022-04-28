@@ -61,7 +61,7 @@ module "token" {
     TOKEN_SIGNING_KEY_ALIAS  = local.id_token_signing_key_alias_name
     LOCALSTACK_ENDPOINT      = var.use_localstack ? var.localstack_endpoint : null
     HEADERS_CASE_INSENSITIVE = var.use_localstack ? "true" : "false"
-
+    TRACING_ENABLED          = "true"
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.TokenHandler::handleRequest"
 
