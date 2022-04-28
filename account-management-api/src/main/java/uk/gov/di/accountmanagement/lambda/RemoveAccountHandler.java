@@ -53,11 +53,7 @@ public class RemoveAccountHandler
     }
 
     public RemoveAccountHandler(ConfigurationService configurationService) {
-        this.authenticationService =
-                new DynamoService(
-                        configurationService.getAwsRegion(),
-                        configurationService.getEnvironment(),
-                        configurationService.getDynamoEndpointUri());
+        this.authenticationService = new DynamoService(configurationService);
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),

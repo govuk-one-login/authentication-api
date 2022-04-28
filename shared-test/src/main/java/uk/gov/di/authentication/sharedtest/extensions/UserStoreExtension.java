@@ -13,6 +13,7 @@ import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -101,7 +102,9 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
     @Override
     public void beforeAll(ExtensionContext context) throws Exception {
         super.beforeAll(context);
-        dynamoService = new DynamoService(REGION, ENVIRONMENT, Optional.of(DYNAMO_ENDPOINT));
+        dynamoService =
+                new DynamoService(
+                        new DynamoTestConfiguration(REGION, ENVIRONMENT, DYNAMO_ENDPOINT));
     }
 
     @Override

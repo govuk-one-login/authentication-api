@@ -53,11 +53,7 @@ public class AuthoriseAccessTokenHandler
                 new TokenValidationService(
                         configurationService, new KmsConnectionService(configurationService));
         dynamoService = new DynamoService(configurationService);
-        clientService =
-                new DynamoClientService(
-                        configurationService.getAwsRegion(),
-                        configurationService.getEnvironment(),
-                        configurationService.getDynamoEndpointUri());
+        clientService = new DynamoClientService(configurationService);
     }
 
     public AuthoriseAccessTokenHandler(ConfigurationService configurationService) {
@@ -66,11 +62,7 @@ public class AuthoriseAccessTokenHandler
                 new TokenValidationService(
                         configurationService, new KmsConnectionService(configurationService));
         dynamoService = new DynamoService(configurationService);
-        clientService =
-                new DynamoClientService(
-                        configurationService.getAwsRegion(),
-                        configurationService.getEnvironment(),
-                        configurationService.getDynamoEndpointUri());
+        clientService = new DynamoClientService(configurationService);
     }
 
     @Override

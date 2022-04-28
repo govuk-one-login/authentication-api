@@ -8,6 +8,7 @@ import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import uk.gov.di.authentication.shared.entity.SPOTCredential;
 import uk.gov.di.authentication.shared.services.DynamoSpotService;
+import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
 import java.util.Optional;
 
@@ -24,8 +25,16 @@ public class SPOTStoreExtension extends DynamoExtension implements AfterEachCall
     @Override
     public void beforeAll(ExtensionContext context) throws Exception {
         super.beforeAll(context);
-        dynamoService =
-                new DynamoSpotService(REGION, ENVIRONMENT, Optional.of(DYNAMO_ENDPOINT), 300);
+
+        var configuration =
+                new DynamoTestConfiguration(REGION, ENVIRONMENT, DYNAMO_ENDPOINT) {
+                    @Override
+                    public long getAccessTokenExpiry() {
+                        return 300;
+                    }
+                };
+
+        dynamoService = new DynamoSpotService(configuration);
     }
 
     @Override

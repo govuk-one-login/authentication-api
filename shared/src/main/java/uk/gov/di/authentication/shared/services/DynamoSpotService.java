@@ -1,13 +1,13 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
+import uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper;
 import uk.gov.di.authentication.shared.entity.SPOTCredential;
 
 import java.util.Optional;
+
+import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.tableConfig;
 
 public class DynamoSpotService {
 
@@ -17,35 +17,13 @@ public class DynamoSpotService {
     private final AmazonDynamoDB dynamoDB;
 
     public DynamoSpotService(ConfigurationService configurationService) {
-        this(
-                configurationService.getAwsRegion(),
-                configurationService.getEnvironment(),
-                configurationService.getDynamoEndpointUri(),
-                configurationService.getAccessTokenExpiry());
-    }
+        var tableName = configurationService.getEnvironment() + "-" + SPOT_CREDENTIAL_TABLE;
 
-    public DynamoSpotService(
-            String region, String environment, Optional<String> dynamoEndpoint, long timeToExist) {
-        this.timeToExist = timeToExist;
-        dynamoDB =
-                dynamoEndpoint
-                        .map(
-                                t ->
-                                        AmazonDynamoDBClientBuilder.standard()
-                                                .withEndpointConfiguration(
-                                                        new AwsClientBuilder.EndpointConfiguration(
-                                                                t, region)))
-                        .orElse(AmazonDynamoDBClientBuilder.standard().withRegion(region))
-                        .build();
-        DynamoDBMapperConfig spotResponseConfig =
-                new DynamoDBMapperConfig.Builder()
-                        .withTableNameOverride(
-                                DynamoDBMapperConfig.TableNameOverride.withTableNameReplacement(
-                                        environment + "-" + SPOT_CREDENTIAL_TABLE))
-                        .withConsistentReads(DynamoDBMapperConfig.ConsistentReads.CONSISTENT)
-                        .build();
-        this.spotCredentialMapper = new DynamoDBMapper(dynamoDB, spotResponseConfig);
-        warmUp(environment + "-" + SPOT_CREDENTIAL_TABLE);
+        this.timeToExist = configurationService.getAccessTokenExpiry();
+        this.dynamoDB = DynamoClientHelper.createDynamoClient(configurationService);
+        this.spotCredentialMapper = new DynamoDBMapper(dynamoDB, tableConfig(tableName));
+
+        warmUp(tableName);
     }
 
     public void addSpotResponse(String subjectID, String serializedCredential) {

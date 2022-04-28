@@ -58,11 +58,7 @@ public class LogoutHandler
     public LogoutHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService);
-        this.dynamoClientService =
-                new DynamoClientService(
-                        configurationService.getAwsRegion(),
-                        configurationService.getEnvironment(),
-                        configurationService.getDynamoEndpointUri());
+        this.dynamoClientService = new DynamoClientService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.tokenValidationService =
                 new TokenValidationService(

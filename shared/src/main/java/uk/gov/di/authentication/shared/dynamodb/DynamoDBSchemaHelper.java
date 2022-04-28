@@ -2,12 +2,13 @@ package uk.gov.di.authentication.shared.dynamodb;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.Delete;
 import com.amazonaws.services.dynamodbv2.model.Put;
 
 import java.util.Map;
+
+import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.tableConfig;
 
 public class DynamoDBSchemaHelper {
 
@@ -45,14 +46,7 @@ public class DynamoDBSchemaHelper {
     }
 
     public DynamoDBMapper buildConfiguredDynamoDBMapper(Table table) {
-        return new DynamoDBMapper(
-                dynamoDB,
-                new DynamoDBMapperConfig.Builder()
-                        .withConsistentReads(DynamoDBMapperConfig.ConsistentReads.CONSISTENT)
-                        .withTableNameOverride(
-                                DynamoDBMapperConfig.TableNameOverride.withTableNameReplacement(
-                                        getFullyQualifiedTableName(table)))
-                        .build());
+        return new DynamoDBMapper(dynamoDB, tableConfig(getFullyQualifiedTableName(table)));
     }
 
     public Delete buildDelete(Table table, AttributeValue attributeValue) {
