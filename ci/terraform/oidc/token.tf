@@ -1,3 +1,7 @@
+data "aws_iam_policy" "xray" {
+  name = "${var.environment}-standard-lambda-xray"
+}
+
 module "oidc_token_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
@@ -10,7 +14,8 @@ module "oidc_token_role" {
     aws_iam_policy.dynamo_user_read_access_policy.arn,
     aws_iam_policy.dynamo_user_write_access_policy.arn,
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
-    aws_iam_policy.redis_parameter_policy.arn
+    aws_iam_policy.redis_parameter_policy.arn,
+    data.aws_iam_policy.xray.arn,
   ]
 }
 
