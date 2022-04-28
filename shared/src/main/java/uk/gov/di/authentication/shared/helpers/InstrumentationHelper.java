@@ -2,7 +2,6 @@ package uk.gov.di.authentication.shared.helpers;
 
 import com.amazonaws.xray.AWSXRay;
 
-import java.util.Optional;
 import java.util.concurrent.Callable;
 
 public class InstrumentationHelper {
@@ -11,11 +10,14 @@ public class InstrumentationHelper {
 
     public static <T> T segmentedFunctionCall(String segmentName, Callable<T> callable) {
         if (tracingEnabled) {
-            var segment = Optional.of(AWSXRay.beginSubsegment(segmentName));
+            var segment = AWSXRay.beginSubsegment(segmentName);
             try {
                 return callable.call();
+            } catch (RuntimeException e) {
+                segment.addException(e);
+                throw e;
             } catch (Exception e) {
-                segment.ifPresent(s -> s.addException(e));
+                segment.addException(e);
                 throw new RuntimeException(e);
             } finally {
                 AWSXRay.endSegment();
@@ -23,6 +25,8 @@ public class InstrumentationHelper {
         } else {
             try {
                 return callable.call();
+            } catch (RuntimeException e) {
+                throw e;
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
