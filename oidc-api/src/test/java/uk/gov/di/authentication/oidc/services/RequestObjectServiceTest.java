@@ -17,6 +17,7 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
@@ -55,7 +56,7 @@ class RequestObjectServiceTest {
         when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URI));
         keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         service = new RequestObjectService(dynamoClientService, configurationService);
-        ClientRegistry clientRegistry = generateClientRegistry();
+        var clientRegistry = generateClientRegistry(ClientType.APP.getValue());
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(clientRegistry));
     }
@@ -115,6 +116,32 @@ class RequestObjectServiceTest {
                 RuntimeException.class,
                 () -> service.validateRequestObject(generateAuthRequest(signedJWT)),
                 "Expected to throw exception");
+    }
+
+    @Test
+    void shouldReturnErrorWhenClientTypeIsNotApp() throws JOSEException {
+        var clientRegistry = generateClientRegistry(ClientType.WEB.getValue());
+        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                .thenReturn(Optional.of(clientRegistry));
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(AUDIENCE)
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", SCOPE)
+                        .claim("state", new State())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet);
+
+        var requestObjectError = service.validateRequestObject(generateAuthRequest(signedJWT));
+
+        assertTrue(requestObjectError.isPresent());
+        assertThat(
+                requestObjectError.get().getErrorObject(),
+                equalTo(OAuth2Error.UNAUTHORIZED_CLIENT));
+        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
     @Test
@@ -335,7 +362,7 @@ class RequestObjectServiceTest {
         return signedJWT;
     }
 
-    private ClientRegistry generateClientRegistry() {
+    private ClientRegistry generateClientRegistry(String clientType) {
         return new ClientRegistry()
                 .setClientID(CLIENT_ID.getValue())
                 .setPublicKey(
@@ -345,7 +372,8 @@ class RequestObjectServiceTest {
                 .setScopes(List.of("openid"))
                 .setRedirectUrls(singletonList(REDIRECT_URI))
                 .setSectorIdentifierUri("https://test.com")
-                .setSubjectType("pairwise");
+                .setSubjectType("pairwise")
+                .setClientType(clientType);
     }
 
     private AuthenticationRequest generateAuthRequest(SignedJWT signedJWT) {

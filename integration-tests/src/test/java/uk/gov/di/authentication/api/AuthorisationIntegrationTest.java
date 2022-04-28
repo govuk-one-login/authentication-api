@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.lambda.AuthorisationHandler;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
+import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ServiceType;
@@ -61,7 +62,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String CLIENT_ID = "test-client";
     private static final String RP_REDIRECT_URI = "https://rp-uri/redirect";
     private static final String AM_CLIENT_ID = "am-test-client";
-    private static final String INVALID_CLIENT_ID = "invalid-test-client";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_PASSWORD = "password";
     private static final KeyPair KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
@@ -72,7 +72,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        registerClient(CLIENT_ID, "test-client", singletonList("openid"));
+        registerClient(CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB);
         handler = new AuthorisationHandler(configurationService);
     }
 
@@ -151,7 +151,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldRedirectToLoginUriForAccountManagementClient() {
-        registerClient(AM_CLIENT_ID, "am-client-name", List.of("openid", "am"));
+        registerClient(AM_CLIENT_ID, "am-client-name", List.of("openid", "am"), ClientType.WEB);
         var response =
                 makeRequest(
                         Optional.empty(),
@@ -492,6 +492,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldCallAuthorizeWithRequestObject() throws JOSEException {
+        registerClient(CLIENT_ID, "test-client", singletonList("openid"), ClientType.APP);
         var signedJWT = createSignedJWT();
         var queryStringParameters =
                 new HashMap<>(
@@ -570,7 +571,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD);
     }
 
-    private void registerClient(String clientId, String clientName, List<String> scopes) {
+    private void registerClient(
+            String clientId, String clientName, List<String> scopes, ClientType clientType) {
         clientStore.registerClient(
                 clientId,
                 clientName,
@@ -583,7 +585,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",
-                true);
+                true,
+                clientType);
     }
 
     private SignedJWT createSignedJWT() throws JOSEException {

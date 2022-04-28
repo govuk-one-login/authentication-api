@@ -13,6 +13,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
@@ -77,6 +78,11 @@ public class RequestObjectService {
                 throw new RuntimeException("Invalid Redirect URI in request JWT");
             }
             var redirectURI = URI.create((String) jwtClaimsSet.getClaim("redirect_uri"));
+            if (Boolean.FALSE.equals(client.getClientType().equals(ClientType.APP.getValue()))) {
+                LOG.warn("ClientType of client is not 'app'");
+                return Optional.of(
+                        new AuthRequestError(OAuth2Error.UNAUTHORIZED_CLIENT, redirectURI));
+            }
             if (!authRequest.getResponseType().toString().equals(ResponseType.CODE.toString())) {
                 LOG.warn(
                         "Unsupported responseType included in request. Expected responseType of code");
