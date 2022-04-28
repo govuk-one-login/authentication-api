@@ -10,13 +10,16 @@ import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.lambda.AuthorisationHandler;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
+import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
@@ -60,7 +63,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String CLIENT_ID = "test-client";
     private static final String RP_REDIRECT_URI = "https://rp-uri/redirect";
     private static final String AM_CLIENT_ID = "am-test-client";
-    private static final String INVALID_CLIENT_ID = "invalid-test-client";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_PASSWORD = "password";
     private static final KeyPair KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
@@ -71,7 +73,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        registerClient(CLIENT_ID, "test-client", singletonList("openid"));
+        registerClient(CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB);
         handler = new AuthorisationHandler(configurationService);
     }
 
@@ -150,7 +152,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldRedirectToLoginUriForAccountManagementClient() {
-        registerClient(AM_CLIENT_ID, "am-client-name", List.of("openid", "am"));
+        registerClient(AM_CLIENT_ID, "am-client-name", List.of("openid", "am"), ClientType.WEB);
         var response =
                 makeRequest(
                         Optional.empty(),
@@ -491,6 +493,11 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldCallAuthorizeWithRequestObject() throws JOSEException {
+        registerClient(
+                CLIENT_ID,
+                "test-client",
+                List.of(OPENID.getValue(), CustomScopeValue.DOC_CHECKING_APP.getValue()),
+                ClientType.APP);
         var signedJWT = createSignedJWT();
         var queryStringParameters =
                 new HashMap<>(
@@ -569,7 +576,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD);
     }
 
-    private void registerClient(String clientId, String clientName, List<String> scopes) {
+    private void registerClient(
+            String clientId, String clientName, List<String> scopes, ClientType clientType) {
         clientStore.registerClient(
                 clientId,
                 clientName,
@@ -582,7 +590,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",
-                true);
+                true,
+                clientType);
     }
 
     private SignedJWT createSignedJWT() throws JOSEException {
@@ -591,8 +600,12 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .audience("http://localhost/authorize")
                         .claim("redirect_uri", RP_REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", new Scope(OIDCScopeValue.OPENID).toString())
+                        .claim(
+                                "scope",
+                                new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP)
+                                        .toString())
                         .claim("client_id", CLIENT_ID)
+                        .claim("state", new State())
                         .issuer(CLIENT_ID)
                         .build();
         var jwsHeader = new JWSHeader(JWSAlgorithm.RS256);
