@@ -29,6 +29,7 @@ dependencies {
         exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-bom"
         exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-core"
         exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-aws-sdk-core"
+        exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-aws-sdk-instrumentor"
         exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-aws-sdk-v2"
         exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-aws-sdk-v2-instrumentor"
     }
