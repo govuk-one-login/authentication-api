@@ -20,11 +20,18 @@ dependencies {
             "com.google.protobuf:protobuf-java:${dependencyVersions.protobuf_version}",
             project(":client-registry-api"),
             project(":frontend-api"),
-            project(":oidc-api"),
             project(":ipv-api"),
             project(":doc-checking-app-api"),
             project(":shared"),
             project(":shared-test")
+
+    implementation(project(":oidc-api")) {
+        exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-bom"
+        exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-core"
+        exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-aws-sdk-core"
+        exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-aws-sdk-v2"
+        exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-aws-sdk-v2-instrumentor"
+    }
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
 }
