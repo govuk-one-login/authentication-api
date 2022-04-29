@@ -11,8 +11,9 @@ dependencies {
             configurations.lambda,
             configurations.jackson,
             configurations.libphonenumber,
-            configurations.cloudwatch,
-            project(":shared")
+            configurations.cloudwatch
+
+    implementation project(":shared"), noXray
 
     runtimeOnly configurations.logging_runtime
 

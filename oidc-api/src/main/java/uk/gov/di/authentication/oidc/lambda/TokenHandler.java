@@ -46,6 +46,7 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -161,11 +162,14 @@ public class TokenHandler
                                                     });
                             String tokenUrl = buildURI(baseUrl, TOKEN_PATH).toString();
                             Optional<ErrorObject> invalidPrivateKeyJwtError =
-                                    tokenService.validatePrivateKeyJWT(
-                                            input.getBody(),
-                                            client.getPublicKey(),
-                                            tokenUrl,
-                                            clientID);
+                                    segmentedFunctionCall(
+                                            "validatePrivateKeyJWT",
+                                            () ->
+                                                    tokenService.validatePrivateKeyJWT(
+                                                            input.getBody(),
+                                                            client.getPublicKey(),
+                                                            tokenUrl,
+                                                            clientID));
                             if (invalidPrivateKeyJwtError.isPresent()) {
                                 LOG.warn(
                                         "Private Key JWT is not valid for Client ID: {}", clientID);
@@ -189,9 +193,13 @@ public class TokenHandler
                             AuthCodeExchangeData authCodeExchangeData;
                             try {
                                 authCodeExchangeData =
-                                        authorisationCodeService
-                                                .getExchangeDataForCode(requestBody.get("code"))
-                                                .orElseThrow();
+                                        segmentedFunctionCall(
+                                                "authorisationCodeService",
+                                                () ->
+                                                        authorisationCodeService
+                                                                .getExchangeDataForCode(
+                                                                        requestBody.get("code"))
+                                                                .orElseThrow());
                             } catch (NoSuchElementException e) {
                                 LOG.warn("Could not retrieve client session ID from code", e);
                                 return generateApiGatewayProxyResponse(
@@ -256,17 +264,21 @@ public class TokenHandler
                                                     .getEffectiveVectorOfTrust()
                                                     .containsLevelOfConfidence();
 
+                            final OIDCClaimsRequest finalClaimsRequest = claimsRequest;
                             var tokenResponse =
-                                    tokenService.generateTokenResponse(
-                                            clientID,
-                                            new Subject(userProfile.getSubjectID()),
-                                            authRequest.getScope(),
-                                            additionalTokenClaims,
-                                            publicSubject,
-                                            vot,
-                                            userProfile.getClientConsent(),
-                                            isConsentRequired,
-                                            claimsRequest);
+                                    segmentedFunctionCall(
+                                            "generateTokenResponse",
+                                            () ->
+                                                    tokenService.generateTokenResponse(
+                                                            clientID,
+                                                            new Subject(userProfile.getSubjectID()),
+                                                            authRequest.getScope(),
+                                                            additionalTokenClaims,
+                                                            publicSubject,
+                                                            vot,
+                                                            userProfile.getClientConsent(),
+                                                            isConsentRequired,
+                                                            finalClaimsRequest));
 
                             clientSessionService.saveClientSession(
                                     authCodeExchangeData.getClientSessionId(),

@@ -14,8 +14,9 @@ dependencies {
             configurations.dynamodb
 
     implementation configurations.nimbus,
-            'commons-validator:commons-validator:1.7',
-            project(":shared")
+            'commons-validator:commons-validator:1.7'
+
+    implementation project(":shared"), noXray
 
     runtimeOnly configurations.logging_runtime
 

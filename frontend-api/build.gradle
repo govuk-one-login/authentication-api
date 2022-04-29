@@ -19,8 +19,9 @@ dependencies {
             configurations.jackson,
             configurations.nimbus,
             configurations.cloudwatch,
-            configurations.bouncycastle,
-            project(":shared")
+            configurations.bouncycastle
+
+    implementation project(":shared"), noXray
 
     runtimeOnly configurations.logging_runtime
 

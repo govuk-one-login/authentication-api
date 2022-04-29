@@ -19,8 +19,9 @@ dependencies {
             "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${dependencyVersions.jackson_version}",
             "com.google.protobuf:protobuf-java:${dependencyVersions.protobuf_version}",
             project(":account-management-api"),
-            project(":shared"),
             project(":shared-test")
+    implementation project(":shared"), noXray
+
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
 }
 

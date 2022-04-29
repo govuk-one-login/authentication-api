@@ -19,10 +19,11 @@ dependencies {
             configurations.s3,
             configurations.dynamodb
 
-    implementation project(":shared"),
-            "com.google.protobuf:protobuf-java:${dependencyVersions.protobuf_version}",
+    implementation "com.google.protobuf:protobuf-java:${dependencyVersions.protobuf_version}",
             "com.google.protobuf:protobuf-java-util:${dependencyVersions.protobuf_version}",
             "com.google.code.gson:gson:2.9.0"
+
+    implementation project(":shared"), noXray
 
     runtimeOnly configurations.logging_runtime
 

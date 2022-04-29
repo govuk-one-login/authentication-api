@@ -18,7 +18,6 @@ dependencies {
             configurations.nimbus,
             configurations.bouncycastle,
             configurations.cloudwatch,
-            configurations.xray,
             project(":shared"),
             project(":client-registry-api")
 
