@@ -10,17 +10,17 @@ public class InstrumentationHelper {
 
     public static <T> T segmentedFunctionCall(String segmentName, Callable<T> callable) {
         if (tracingEnabled) {
-            var segment = AWSXRay.beginSubsegment(segmentName);
+            var subSegment = AWSXRay.beginSubsegment(segmentName);
             try {
                 return callable.call();
             } catch (RuntimeException e) {
-                segment.addException(e);
+                subSegment.addException(e);
                 throw e;
             } catch (Exception e) {
-                segment.addException(e);
+                subSegment.addException(e);
                 throw new RuntimeException(e);
             } finally {
-                AWSXRay.endSegment();
+                AWSXRay.endSubsegment(subSegment);
             }
         } else {
             try {
