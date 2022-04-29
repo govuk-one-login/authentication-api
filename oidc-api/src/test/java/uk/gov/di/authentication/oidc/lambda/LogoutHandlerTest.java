@@ -163,6 +163,42 @@ class LogoutHandlerTest {
     }
 
     @Test
+    public void shouldNotThrowWhenTryingToDeleteClientSessionWhichHasExpired() {
+        when(dynamoClientService.getClient("client-id"))
+                .thenReturn(Optional.of(createClientRegistry()));
+        when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
+                .thenReturn(true);
+        var event =
+                generateRequestEvent(
+                        Map.of(
+                                "id_token_hint", signedIDToken.serialize(),
+                                "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString(),
+                                "state", STATE.toString()));
+        setupSessions();
+        session.getClientSessions().add("expired-client-session-id");
+
+        var response = handler.handleRequest(event, context);
+
+        verifySessions();
+        assertThat(response, hasStatus(302));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                equalTo(CLIENT_LOGOUT_URI + "?state=" + STATE));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.LOG_OUT_SUCCESS,
+                        "aws-session-id",
+                        SESSION_ID,
+                        "client-id",
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID);
+    }
+
+    @Test
     public void
             shouldDeleteSessionAndRedirectToDefaultLogoutUriForValidLogoutRequestWithHintOnly() {
         when(dynamoClientService.getClient("client-id"))
@@ -559,7 +595,8 @@ class LogoutHandlerTest {
                         LocalDateTime.now(),
                         mock(VectorOfTrust.class));
         clientSession.setIdTokenHint(idToken.serialize());
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID)).thenReturn(clientSession);
+        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(clientSession));
     }
 
     private Session generateSession() {
@@ -614,10 +651,11 @@ class LogoutHandlerTest {
         session.getClientSessions().add(clientSessionId);
         when(clientSessionService.getClientSession(clientSessionId))
                 .thenReturn(
-                        new ClientSession(
-                                Map.of("client_id", List.of(clientId)),
-                                LocalDateTime.now(),
-                                VectorOfTrust.getDefaults()));
+                        Optional.of(
+                                new ClientSession(
+                                        Map.of("client_id", List.of(clientId)),
+                                        LocalDateTime.now(),
+                                        VectorOfTrust.getDefaults())));
         when(dynamoClientService.getClient(clientId))
                 .thenReturn(Optional.of(new ClientRegistry().setClientID(clientId)));
     }

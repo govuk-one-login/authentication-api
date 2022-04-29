@@ -63,15 +63,22 @@ public class ClientSessionService {
         return id;
     }
 
-    public ClientSession getClientSession(String clientSessionId) {
+    public Optional<ClientSession> getClientSession(String clientSessionId) {
         attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
 
         try {
-            String result =
-                    redisConnectionService.getValue(CLIENT_SESSION_PREFIX.concat(clientSessionId));
-            return objectMapper.readValue(result, ClientSession.class);
-        } catch (JsonProcessingException | IllegalArgumentException e) {
-            LOG.error("Error getting client session from Redis");
+            if (redisConnectionService.keyExists(CLIENT_SESSION_PREFIX.concat(clientSessionId))) {
+                return Optional.of(
+                        objectMapper.readValue(
+                                redisConnectionService.getValue(
+                                        CLIENT_SESSION_PREFIX.concat(clientSessionId)),
+                                ClientSession.class));
+            } else {
+                LOG.warn("Client session with given key is not present in redis");
+                return Optional.empty();
+            }
+        } catch (JsonProcessingException e) {
+            LOG.error("Unable to deserialize client session from redis");
             throw new RuntimeException(e);
         }
     }
@@ -111,7 +118,7 @@ public class ClientSessionService {
             return Optional.empty();
         }
         try {
-            return Optional.of(getClientSession(clientSessionId));
+            return getClientSession(clientSessionId);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

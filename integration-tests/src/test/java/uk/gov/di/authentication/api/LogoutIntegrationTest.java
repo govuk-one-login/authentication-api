@@ -81,6 +81,35 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
+    void shouldRedirectToSpecifiedClientLogoutUriAndNotThrowIfClientSessionHasExpired()
+            throws IOException, ParseException {
+        var signedJWT = setupClientAndSession(SESSION_ID, CLIENT_SESSION_ID);
+        redis.addClientSessionIdToSession("expired-client-session-id", SESSION_ID);
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        Map.of(
+                                "id_token_hint",
+                                signedJWT.serialize(),
+                                "post_logout_redirect_uri",
+                                REDIRECT_URL,
+                                "state",
+                                STATE));
+
+        assertThat(response, isRedirect());
+        assertThat(
+                response,
+                isRedirectTo(
+                        allOf(
+                                baseUri(URI.create(REDIRECT_URL)),
+                                redirectQueryParameters(hasEntry("state", STATE)))));
+
+        assertEventTypesReceived(auditTopic, List.of(LOG_OUT_SUCCESS));
+    }
+
+    @Test
     void shouldReturn302AndRedirectToDefaultLogoutUriWhenNoRedirectSpecified()
             throws IOException, ParseException {
         var signedJWT = setupClientAndSession(SESSION_ID, CLIENT_SESSION_ID);

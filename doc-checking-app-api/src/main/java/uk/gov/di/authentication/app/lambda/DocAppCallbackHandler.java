@@ -104,8 +104,10 @@ public class DocAppCallbackHandler
                                                         sessionCookiesIds.getSessionId())
                                                 .orElseThrow();
                                 var clientSession =
-                                        clientSessionService.getClientSession(
-                                                sessionCookiesIds.getClientSessionId());
+                                        clientSessionService
+                                                .getClientSession(
+                                                        sessionCookiesIds.getClientSessionId())
+                                                .orElse(null);
                                 if (Objects.isNull(clientSession)) {
                                     LOG.error("ClientSession not found");
                                     throw new RuntimeException();

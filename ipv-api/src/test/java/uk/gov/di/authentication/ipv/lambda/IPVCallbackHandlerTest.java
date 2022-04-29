@@ -408,7 +408,8 @@ class IPVCallbackHandlerTest {
     }
 
     private void usingValidClientSession() {
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID)).thenReturn(clientSession);
+        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(clientSession));
     }
 
     private UserProfile generateUserProfile() {
