@@ -328,7 +328,8 @@ class DocAppCallbackHandlerTest {
     }
 
     private void usingValidClientSession() {
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID)).thenReturn(clientSession);
+        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(clientSession));
         clientSession.setDocAppSubjectId(PAIRWISE_SUBJECT_ID);
     }
 

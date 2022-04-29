@@ -80,6 +80,14 @@ public class RedisExtension
         redis.saveWithExpiry("state:" + sessionId, objectMapper.writeValueAsString(state), 3600);
     }
 
+    public void addClientSessionIdToSession(String clientSessionId, String sessionId)
+            throws JsonProcessingException {
+        Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
+        session.addClientSession(clientSessionId);
+        redis.saveWithExpiry(
+                session.getSessionId(), objectMapper.writeValueAsString(session), 3600);
+    }
+
     public void addAuthRequestToSession(
             String clientSessionId, String sessionId, Map<String, List<String>> authRequest)
             throws JsonProcessingException {

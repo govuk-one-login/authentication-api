@@ -22,7 +22,6 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
@@ -56,6 +55,7 @@ class ClientSessionServiceTest {
     void shouldRetrieveClientSessionUsingRequestHeaders() throws JsonProcessingException {
         when(redis.getValue("client-session-" + clientSessionId))
                 .thenReturn(generateSerialisedClientSession());
+        when(redis.keyExists("client-session-" + clientSessionId)).thenReturn(true);
 
         Optional<ClientSession> clientSessionInRedis =
                 clientSessionService.getClientSessionFromRequestHeaders(
@@ -112,24 +112,10 @@ class ClientSessionServiceTest {
     }
 
     @Test
-    void shouldNotRetrieveClientSessionAndThrowExceptionIfNotPresentInRedis() {
-        RuntimeException exception =
-                assertThrows(
-                        RuntimeException.class,
-                        () ->
-                                clientSessionService.getClientSessionFromRequestHeaders(
-                                        Map.of(
-                                                "Session-Id",
-                                                sessionId,
-                                                "Client-Session-Id",
-                                                clientSessionId)),
-                        "Expected to throw exception");
+    void shouldReturnOptionalEmptyIfClientSessionIsNotPresentInRedis() {
+        when(redis.keyExists(clientSessionId)).thenReturn(false);
 
-        assertTrue(
-                exception
-                        .getMessage()
-                        .contains(
-                                "java.lang.IllegalArgumentException: argument \"content\" is null"));
+        assertTrue(clientSessionService.getClientSession(clientSessionId).isEmpty());
     }
 
     private String generateSerialisedClientSession() throws JsonProcessingException {

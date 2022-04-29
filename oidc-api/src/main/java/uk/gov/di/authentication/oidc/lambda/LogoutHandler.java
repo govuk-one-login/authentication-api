@@ -30,7 +30,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.ParseException;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
@@ -153,6 +152,7 @@ public class LogoutHandler
         Optional<String> audience = Optional.empty();
 
         if (idTokenHint.isPresent()) {
+            LOG.info("ID token hint is present");
             if (!doesIDTokenExistInSession(idTokenHint.get(), session)) {
                 LOG.warn("ID token does not exist");
                 return generateErrorLogoutResponse(
@@ -344,16 +344,16 @@ public class LogoutHandler
         for (String clientSessionId : session.getClientSessions()) {
             clientSessionService
                     .getClientSession(clientSessionId)
-                    .getAuthRequestParams()
-                    .get("client_id")
-                    .stream()
-                    .findFirst()
-                    .flatMap(dynamoClientService::getClient)
+                    .flatMap(
+                            t ->
+                                    t.getAuthRequestParams().get("client_id").stream()
+                                            .findFirst()
+                                            .flatMap(dynamoClientService::getClient))
                     .ifPresent(
                             clientRegistry ->
                                     backChannelLogoutService.sendLogoutMessage(
                                             clientRegistry, session.getEmailAddress()));
-
+            LOG.info("Deleting Client Session");
             clientSessionService.deleteClientSessionFromRedis(clientSessionId);
         }
         LOG.info("Deleting Session");
@@ -363,7 +363,7 @@ public class LogoutHandler
     private boolean doesIDTokenExistInSession(String idTokenHint, Session session) {
         return session.getClientSessions().stream()
                 .map(clientSessionService::getClientSession)
-                .filter(Objects::nonNull)
+                .flatMap(Optional::stream)
                 .anyMatch(cs -> idTokenHint.equals(cs.getIdTokenHint()));
     }
 }
