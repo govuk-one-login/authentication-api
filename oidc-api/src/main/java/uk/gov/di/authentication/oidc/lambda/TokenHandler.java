@@ -185,10 +185,14 @@ public class TokenHandler
                                     .get("grant_type")
                                     .equals(GrantType.REFRESH_TOKEN.getValue())) {
                                 LOG.info("Processing refresh token request");
-                                return processRefreshTokenRequest(
-                                        requestBody,
-                                        client.getScopes(),
-                                        new RefreshToken(requestBody.get("refresh_token")));
+                                return segmentedFunctionCall(
+                                        "processRefreshTokenRequest",
+                                        () ->
+                                                processRefreshTokenRequest(
+                                                        requestBody,
+                                                        client.getScopes(),
+                                                        new RefreshToken(
+                                                                requestBody.get("refresh_token"))));
                             }
                             AuthCodeExchangeData authCodeExchangeData;
                             try {
