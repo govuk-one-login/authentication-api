@@ -53,6 +53,24 @@ public class SpotQueueAssertionHelper {
                                 .getLogIds()
                                 .getSessionId()));
 
+        assertThat(
+                expectedSpotRequest.getLogIds().getClientId(),
+                equalTo(
+                        actualRequests.stream()
+                                .findFirst()
+                                .orElseThrow()
+                                .getLogIds()
+                                .getClientId()));
+
+        assertThat(
+                expectedSpotRequest.getLogIds().getPersistentSessionId(),
+                equalTo(
+                        actualRequests.stream()
+                                .findFirst()
+                                .orElseThrow()
+                                .getLogIds()
+                                .getPersistentSessionId()));
+
         expectedRequests.forEach(
                 spotRequest ->
                         assertThat(

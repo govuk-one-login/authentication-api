@@ -26,6 +26,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -124,6 +125,9 @@ public class IPVCallbackHandler
                                                 .readSessionFromRedis(
                                                         sessionCookiesIds.getSessionId())
                                                 .orElseThrow();
+                                var persistentId =
+                                        PersistentIdHelper.extractPersistentIdFromCookieHeader(
+                                                input.getHeaders());
                                 var clientSession =
                                         clientSessionService
                                                 .getClientSession(
@@ -177,7 +181,7 @@ public class IPVCallbackHandler
                                         userProfile.getEmail(),
                                         AuditService.UNKNOWN,
                                         userProfile.getPhoneNumber(),
-                                        AuditService.UNKNOWN);
+                                        persistentId);
 
                                 var tokenRequest =
                                         ipvTokenService.constructTokenRequest(
@@ -194,7 +198,7 @@ public class IPVCallbackHandler
                                             userProfile.getEmail(),
                                             AuditService.UNKNOWN,
                                             userProfile.getPhoneNumber(),
-                                            AuditService.UNKNOWN);
+                                            persistentId);
                                 } else {
                                     LOG.error(
                                             "IPV TokenResponse was not successful: {}",
@@ -209,7 +213,7 @@ public class IPVCallbackHandler
                                             userProfile.getEmail(),
                                             AuditService.UNKNOWN,
                                             userProfile.getPhoneNumber(),
-                                            AuditService.UNKNOWN);
+                                            persistentId);
                                     throw new RuntimeException(
                                             "IPV TokenResponse was not successful");
                                 }
@@ -232,7 +236,6 @@ public class IPVCallbackHandler
                                     LOG.error("IPV UserIdentityRequest failed.");
                                     throw new RuntimeException("IPV UserIdentityRequest failed.");
                                 }
-
                                 auditService.submitAuditEvent(
                                         IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED,
                                         context.getAwsRequestId(),
@@ -242,12 +245,18 @@ public class IPVCallbackHandler
                                         userProfile.getEmail(),
                                         AuditService.UNKNOWN,
                                         userProfile.getPhoneNumber(),
-                                        AuditService.UNKNOWN);
+                                        persistentId);
 
                                 if (configurationService.isSpotEnabled()) {
                                     if (isUserIdentityGoingToSpot(userIdentityUserInfo)) {
+                                        var logIds =
+                                                new LogIds(
+                                                        session.getSessionId(),
+                                                        persistentId,
+                                                        context.getAwsRequestId(),
+                                                        clientId);
                                         queueSPOTRequest(
-                                                session.getSessionId(),
+                                                logIds,
                                                 getSectorIdentifierForClient(clientRegistry),
                                                 userProfile,
                                                 pairwiseSubject,
@@ -262,7 +271,7 @@ public class IPVCallbackHandler
                                                 userProfile.getEmail(),
                                                 AuditService.UNKNOWN,
                                                 userProfile.getPhoneNumber(),
-                                                AuditService.UNKNOWN);
+                                                persistentId);
                                     } else {
                                         LOG.info("SPOT will not be invoked.");
                                     }
@@ -309,7 +318,7 @@ public class IPVCallbackHandler
     }
 
     private void queueSPOTRequest(
-            String sessionId,
+            LogIds logIds,
             String sectorIdentifier,
             UserProfile userProfile,
             Subject pairwiseSubject,
@@ -334,7 +343,7 @@ public class IPVCallbackHandler
                         dynamoService.getOrGenerateSalt(userProfile),
                         sectorIdentifier,
                         pairwiseSubject.getValue(),
-                        new LogIds(sessionId));
+                        logIds);
         sqsClient.send(objectMapper.writeValueAsString(spotRequest));
         LOG.info("SPOT request placed on queue");
     }
