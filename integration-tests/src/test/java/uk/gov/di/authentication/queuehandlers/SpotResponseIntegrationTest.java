@@ -41,7 +41,7 @@ public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent
                                         "https://vocab.sign-in.service.gov.uk/v1/verifiableIdentityJWT",
                                         signedCredential),
                                 pairwiseIdentifier.getValue(),
-                                SPOTStatus.OK)),
+                                SPOTStatus.ACCEPTED)),
                 mock(Context.class));
 
         assertTrue(spotStore.getSpotCredential(pairwiseIdentifier.getValue()).isPresent());
