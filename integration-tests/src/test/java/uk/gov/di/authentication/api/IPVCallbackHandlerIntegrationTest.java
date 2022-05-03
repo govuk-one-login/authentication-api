@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
@@ -79,6 +80,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     void shouldRedirectToLoginWhenSuccessfullyProcessedIpvResponse() throws IOException {
         var sessionId = "some-session-id";
         var clientSessionId = "some-client-session-id";
+        var persistentSessionId = "persistent-id-value";
         var sectorId = "test.com";
         var scope = new Scope(OIDCScopeValue.OPENID);
         var authRequestBuilder =
@@ -93,14 +95,17 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         redis.createClientSession(clientSessionId, authRequestBuilder.build().toParameters());
         redis.addStateToRedis(state, sessionId);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
-        var publicSubject = setUpDynamo();
+        setUpDynamo();
         var salt = addSalt();
 
         var response =
                 makeRequest(
                         Optional.empty(),
-                        constructHeaders(
-                                Optional.of(buildSessionCookie(sessionId, clientSessionId))),
+                        Map.of(
+                                "Cookie",
+                                format(
+                                        "gs=%s.%s;di-persistent-session-id=%s",
+                                        sessionId, clientSessionId, persistentSessionId)),
                         constructQueryStringParameters(state));
 
         assertThat(response, hasStatus(302));
@@ -129,7 +134,8 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 sectorId,
                                 calculatePairwiseIdentifier(
                                         INTERNAL_SUBJECT.getValue(), "test.com", salt),
-                                new LogIds(sessionId))));
+                                new LogIds(
+                                        sessionId, persistentSessionId, "request-i", CLIENT_ID))));
     }
 
     private String setUpDynamo() {

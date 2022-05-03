@@ -86,6 +86,7 @@ class IPVCallbackHandlerTest {
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final String REQUEST_ID = "a-request-id";
+    private static final String PERSISTENT_SESSION_ID = "a-persistent-id";
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final URI REDIRECT_URI = URI.create("test-uri");
     private static final URI IPV_URI = URI.create("http://ipv/");
@@ -94,10 +95,10 @@ class IPVCallbackHandlerTest {
             new Subject("TsEVC7vg0NPAmzB33vRUFztL2c0-fecKWKcc73fuDhc");
     private static final State STATE = new State();
     private IPVCallbackHandler handler;
-    private byte[] salt = "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes();
-    private String sectorId = "test.com";
-    private ClientRegistry clientRegistry = generateClientRegistry();
-    private UserProfile userProfile = generateUserProfile();
+    private final byte[] salt = "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes();
+    private final String sectorId = "test.com";
+    private final ClientRegistry clientRegistry = generateClientRegistry();
+    private final UserProfile userProfile = generateUserProfile();
 
     private final Session session = new Session(SESSION_ID).setEmailAddress(TEST_EMAIL_ADDRESS);
 
@@ -127,7 +128,7 @@ class IPVCallbackHandlerTest {
 
     @Test
     void shouldNotInvokeSPOTButStillRedirectToFrontendCallbackForSuccessfulResponseAtP0()
-            throws URISyntaxException, JsonProcessingException {
+            throws URISyntaxException {
 
         usingValidSession();
         usingValidClientSession();
@@ -173,7 +174,11 @@ class IPVCallbackHandlerTest {
                                                 salt,
                                                 sectorId,
                                                 expectedPairwiseSub.getValue(),
-                                                new LogIds(session.getSessionId()))));
+                                                new LogIds(
+                                                        session.getSessionId(),
+                                                        PERSISTENT_SESSION_ID,
+                                                        REQUEST_ID,
+                                                        CLIENT_ID.getValue()))));
 
         verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
         verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
@@ -193,7 +198,7 @@ class IPVCallbackHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         AuditService.UNKNOWN,
                         userProfile.getPhoneNumber(),
-                        AuditService.UNKNOWN);
+                        PERSISTENT_SESSION_ID);
     }
 
     private APIGatewayProxyRequestEvent getApiGatewayProxyRequestEvent(String vot) {
@@ -376,7 +381,7 @@ class IPVCallbackHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         AuditService.UNKNOWN,
                         userProfile.getPhoneNumber(),
-                        AuditService.UNKNOWN);
+                        PERSISTENT_SESSION_ID);
 
         verify(auditService)
                 .submitAuditEvent(
@@ -388,7 +393,7 @@ class IPVCallbackHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         AuditService.UNKNOWN,
                         userProfile.getPhoneNumber(),
-                        AuditService.UNKNOWN);
+                        PERSISTENT_SESSION_ID);
 
         verifyNoMoreInteractions(auditService);
     }
@@ -399,8 +404,13 @@ class IPVCallbackHandlerTest {
 
     private static String buildCookieString() {
         return format(
-                "%s=%s.%s; Max-Age=%d; %s",
-                "gs", SESSION_ID, CLIENT_SESSION_ID, 3600, "Secure; HttpOnly;");
+                "%s=%s.%s; Max-Age=%d; %s di-persistent-session-id=%s; Max-Age=34190000; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                "gs",
+                SESSION_ID,
+                CLIENT_SESSION_ID,
+                3600,
+                "Secure; HttpOnly;",
+                PERSISTENT_SESSION_ID);
     }
 
     private void usingValidSession() {
