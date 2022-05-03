@@ -31,6 +31,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
@@ -51,6 +52,7 @@ public class IPVAuthorisationService {
     private final KmsConnectionService kmsConnectionService;
     public static final String STATE_STORAGE_PREFIX = "state:";
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
+    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
 
     public IPVAuthorisationService(
             ConfigurationService configurationService,
@@ -100,7 +102,7 @@ public class IPVAuthorisationService {
         try {
             redisConnectionService.saveWithExpiry(
                     STATE_STORAGE_PREFIX + sessionId,
-                    new ObjectMapper().writeValueAsString(state),
+                    objectMapper.writeValueAsString(state),
                     configurationService.getSessionExpiry());
         } catch (JsonProcessingException e) {
             LOG.error("Unable to save state to Redis");
@@ -118,7 +120,7 @@ public class IPVAuthorisationService {
         }
         State storedState;
         try {
-            storedState = new ObjectMapper().readValue(value.get(), State.class);
+            storedState = objectMapper.readValue(value.get(), State.class);
         } catch (JsonProcessingException e) {
             LOG.info("Error when deserializing state from redis");
             return false;

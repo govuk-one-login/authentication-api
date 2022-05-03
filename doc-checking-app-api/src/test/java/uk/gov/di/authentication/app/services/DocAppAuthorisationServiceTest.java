@@ -22,6 +22,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
@@ -60,6 +61,8 @@ class DocAppAuthorisationServiceTest {
             URI.create("http://localhost/oidc/doc-app/callback");
     private static final URI DOC_APP_AUTHORISATION_URI =
             URI.create("http://localhost/doc-app/authorize");
+    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
@@ -73,7 +76,7 @@ class DocAppAuthorisationServiceTest {
     void setUp() throws JsonProcessingException {
         when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
         when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + SESSION_ID))
-                .thenReturn(new ObjectMapper().writeValueAsString(STATE));
+                .thenReturn(objectMapper.writeValueAsString(STATE));
         when(configurationService.getDocAppAuthorisationClientId()).thenReturn(DOC_APP_CLIENT_ID);
         when(configurationService.getDocAppAuthorisationCallbackURI())
                 .thenReturn(DOC_APP_CALLBACK_URI);
@@ -158,7 +161,7 @@ class DocAppAuthorisationServiceTest {
             throws JsonProcessingException {
         State differentState = new State();
         when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + SESSION_ID))
-                .thenReturn(new ObjectMapper().writeValueAsString(STATE));
+                .thenReturn(objectMapper.writeValueAsString(STATE));
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("state", differentState.getValue());
         responseHeaders.put("code", AUTH_CODE.getValue());
@@ -180,7 +183,7 @@ class DocAppAuthorisationServiceTest {
         verify(redisConnectionService)
                 .saveWithExpiry(
                         STATE_STORAGE_PREFIX + sessionId,
-                        new ObjectMapper().writeValueAsString(STATE),
+                        objectMapper.writeValueAsString(STATE),
                         SESSION_EXPIRY);
     }
 

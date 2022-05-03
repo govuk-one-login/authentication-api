@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.api;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -62,7 +61,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(200));
 
         AuthCodeResponse authCodeResponse =
-                new ObjectMapper().readValue(response.getBody(), AuthCodeResponse.class);
+                objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
 
         assertThat(
                 authCodeResponse.getLocation(),

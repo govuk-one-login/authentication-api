@@ -67,6 +67,8 @@ public class TokenHandler
     private final ClientSessionService clientSessionService;
     private final TokenValidationService tokenValidationService;
     private final RedisConnectionService redisConnectionService;
+    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+
     private static final String TOKEN_PATH = "token";
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
 
@@ -333,7 +335,7 @@ public class TokenHandler
                 Optional.ofNullable(redisConnectionService.getValue(redisKey));
         RefreshTokenStore tokenStore;
         try {
-            tokenStore = new ObjectMapper().readValue(refreshToken.get(), RefreshTokenStore.class);
+            tokenStore = objectMapper.readValue(refreshToken.get(), RefreshTokenStore.class);
         } catch (JsonProcessingException | NoSuchElementException | IllegalArgumentException e) {
             LOG.warn("Refresh token not found with given key");
             return generateApiGatewayProxyResponse(
@@ -355,10 +357,8 @@ public class TokenHandler
             try {
                 redisConnectionService.saveWithExpiry(
                         redisKey,
-                        new ObjectMapper()
-                                .writeValueAsString(
-                                        tokenStore.removeRefreshToken(
-                                                currentRefreshToken.getValue())),
+                        objectMapper.writeValueAsString(
+                                tokenStore.removeRefreshToken(currentRefreshToken.getValue())),
                         configurationService.getSessionExpiry());
             } catch (JsonProcessingException e) {
                 LOG.error("Unable to serialize refresh token store when updating");

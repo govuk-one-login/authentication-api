@@ -15,6 +15,7 @@ import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationSe
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
@@ -50,6 +51,8 @@ class UpdateClientConfigHandlerTest {
     private static final String CLIENT_NAME = "client-name-one";
     private static final List<String> SCOPES = singletonList("openid");
     private static final String SERVICE_TYPE = String.valueOf(MANDATORY);
+    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+
     private final Context context = mock(Context.class);
     private final ClientService clientService = mock(ClientService.class);
     private final ClientConfigValidationService clientValidationService =
@@ -90,7 +93,7 @@ class UpdateClientConfigHandlerTest {
 
         assertThat(result, hasStatus(200));
         ClientRegistrationResponse clientRegistrationResponse =
-                new ObjectMapper().readValue(result.getBody(), ClientRegistrationResponse.class);
+                objectMapper.readValue(result.getBody(), ClientRegistrationResponse.class);
         assertThat(clientRegistrationResponse.getClientId(), equalTo(CLIENT_ID));
         assertThat(clientRegistrationResponse.getClientName(), equalTo(CLIENT_NAME));
         assertThat(clientRegistrationResponse.getSubjectType(), equalTo("Public"));

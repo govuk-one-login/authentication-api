@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.api;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -99,7 +98,7 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
         assertThat(response, hasStatus(200));
 
-        var body = new ObjectMapper().readValue(response.getBody(), IPVAuthorisationResponse.class);
+        var body = objectMapper.readValue(response.getBody(), IPVAuthorisationResponse.class);
 
         assertThat(
                 body.getRedirectUri(),

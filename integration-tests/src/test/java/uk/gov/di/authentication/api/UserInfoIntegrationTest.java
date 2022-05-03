@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.api;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.id.Subject;
@@ -79,7 +78,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var accessToken = new BearerAccessToken(signedJWT.serialize());
         var accessTokenStore =
                 new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
-        var accessTokenStoreString = new ObjectMapper().writeValueAsString(accessTokenStore);
+        var accessTokenStoreString = objectMapper.writeValueAsString(accessTokenStore);
         redis.addToRedis(
                 ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT,
                 accessTokenStoreString,
@@ -155,7 +154,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
         redis.addToRedis(
                 ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT,
-                new ObjectMapper().writeValueAsString(accessTokenStore),
+                objectMapper.writeValueAsString(accessTokenStore),
                 300L);
         var signedCredential = SignedCredentialHelper.generateCredential();
         setUpDynamo(signedCredential.serialize());

@@ -11,6 +11,7 @@ import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.deliveryreceiptsapi.entity.NotifyDeliveryReceipt;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -28,6 +29,8 @@ public class NotifyCallbackHandler
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private final ConfigurationService configurationService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+
     private static final Logger LOG = LogManager.getLogger(NotifyCallbackHandler.class);
 
     public NotifyCallbackHandler(
@@ -53,8 +56,7 @@ public class NotifyCallbackHandler
         validateBearerToken(input.getHeaders());
         NotifyDeliveryReceipt deliveryReceipt;
         try {
-            deliveryReceipt =
-                    new ObjectMapper().readValue(input.getBody(), NotifyDeliveryReceipt.class);
+            deliveryReceipt = objectMapper.readValue(input.getBody(), NotifyDeliveryReceipt.class);
             if (deliveryReceipt.getNotificationType().equals("sms")) {
                 var countryCode = getCountryCodeFromNumber(deliveryReceipt.getTo());
                 var deliveryStatus = getDeliveryStatus(deliveryReceipt.getStatus());

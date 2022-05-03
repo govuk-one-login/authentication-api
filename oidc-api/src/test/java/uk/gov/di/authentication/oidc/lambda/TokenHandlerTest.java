@@ -44,6 +44,7 @@ import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -101,6 +102,8 @@ public class TokenHandlerTest {
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final Nonce NONCE = new Nonce();
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
+    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+
     private final BearerAccessToken accessToken = new BearerAccessToken();
     private final RefreshToken refreshToken = new RefreshToken();
     private final Context context = mock(Context.class);
@@ -235,7 +238,7 @@ public class TokenHandlerTest {
                 new RefreshTokenStore(
                         singletonList(refreshToken.getValue()), INTERNAL_SUBJECT.getValue());
         String redisKey = REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT.getValue();
-        String tokenStoreString = new ObjectMapper().writeValueAsString(tokenStore);
+        String tokenStoreString = ObjectMapperFactory.getInstance().writeValueAsString(tokenStore);
         when(redisConnectionService.getValue(redisKey)).thenReturn(tokenStoreString);
         when(tokenService.generateRefreshTokenResponse(
                         eq(CLIENT_ID),
@@ -282,7 +285,7 @@ public class TokenHandlerTest {
                         List.of(refreshToken.getValue(), refreshToken2.getValue()),
                         INTERNAL_SUBJECT.getValue());
         String redisKey = REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT.getValue();
-        String tokenStoreString = new ObjectMapper().writeValueAsString(tokenStore);
+        String tokenStoreString = objectMapper.writeValueAsString(tokenStore);
         when(redisConnectionService.getValue(redisKey)).thenReturn(tokenStoreString);
         when(tokenService.generateRefreshTokenResponse(
                         eq(CLIENT_ID),
@@ -298,11 +301,9 @@ public class TokenHandlerTest {
         assertTrue(result.getBody().contains(accessToken.getValue()));
 
         String updatedTokenstore =
-                new ObjectMapper()
-                        .writeValueAsString(
-                                new RefreshTokenStore(
-                                        List.of(refreshToken2.getValue()),
-                                        INTERNAL_SUBJECT.getValue()));
+                objectMapper.writeValueAsString(
+                        new RefreshTokenStore(
+                                List.of(refreshToken2.getValue()), INTERNAL_SUBJECT.getValue()));
         verify(redisConnectionService, times(1)).saveWithExpiry(redisKey, updatedTokenstore, 1234L);
     }
 

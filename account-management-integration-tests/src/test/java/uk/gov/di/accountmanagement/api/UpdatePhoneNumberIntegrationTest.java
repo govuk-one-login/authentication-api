@@ -1,6 +1,5 @@
 package uk.gov.di.accountmanagement.api;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.http.HttpStatus;
@@ -110,8 +109,7 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of("principalId", publicSubjectID));
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
-        assertThat(
-                response, hasBody(new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1020)));
+        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1020)));
 
         assertNoNotificationsReceived(notificationsQueue);
 

@@ -27,6 +27,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -72,6 +73,7 @@ class SignUpHandlerTest {
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final URI REDIRECT_URI = URI.create("test-uri");
+    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
 
     private SignUpHandler handler;
 
@@ -144,7 +146,7 @@ class SignUpHandlerTest {
         assertThat(result, hasStatus(200));
 
         SignUpResponse signUpResponse =
-                new ObjectMapper().readValue(result.getBody(), SignUpResponse.class);
+                objectMapper.readValue(result.getBody(), SignUpResponse.class);
 
         assertThat(signUpResponse.isConsentRequired(), equalTo(consentRequired));
         verify(authenticationService)

@@ -26,6 +26,7 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
@@ -67,6 +68,8 @@ class AccessTokenServiceTest {
     private static final String BASE_URL = "https://example.com";
     private static final String KEY_ID = "14342354354353";
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
+    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+
     private final ClaimsSetRequest claimsSetRequest =
             new ClaimsSetRequest().add(ValidClaims.ADDRESS).add(ValidClaims.BIRTHDATE);
     private final OIDCClaimsRequest oidcValidClaimsRequest =
@@ -112,11 +115,9 @@ class AccessTokenServiceTest {
                 .thenReturn(Optional.of(generateClientRegistry(SCOPES)));
         when(redisConnectionService.getValue(ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + SUBJECT))
                 .thenReturn(
-                        new ObjectMapper()
-                                .writeValueAsString(
-                                        new AccessTokenStore(
-                                                accessToken.getValue(),
-                                                INTERNAL_SUBJECT.getValue())));
+                        objectMapper.writeValueAsString(
+                                new AccessTokenStore(
+                                        accessToken.getValue(), INTERNAL_SUBJECT.getValue())));
 
         var accessTokenInfo =
                 validationService.parse(accessToken.toAuthorizationHeader(), identityEndpoint);
@@ -215,11 +216,9 @@ class AccessTokenServiceTest {
                 .thenReturn(Optional.of(generateClientRegistry(SCOPES)));
         when(redisConnectionService.getValue(ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + SUBJECT))
                 .thenReturn(
-                        new ObjectMapper()
-                                .writeValueAsString(
-                                        new AccessTokenStore(
-                                                accessToken.getValue(),
-                                                INTERNAL_SUBJECT.getValue())));
+                        objectMapper.writeValueAsString(
+                                new AccessTokenStore(
+                                        accessToken.getValue(), INTERNAL_SUBJECT.getValue())));
 
         var accessTokenException =
                 assertThrows(
@@ -267,11 +266,10 @@ class AccessTokenServiceTest {
                 .thenReturn(Optional.of(generateClientRegistry(SCOPES)));
         when(redisConnectionService.getValue(ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + SUBJECT))
                 .thenReturn(
-                        new ObjectMapper()
-                                .writeValueAsString(
-                                        new AccessTokenStore(
-                                                createSignedAccessToken(null, false).getValue(),
-                                                INTERNAL_SUBJECT.getValue())));
+                        objectMapper.writeValueAsString(
+                                new AccessTokenStore(
+                                        createSignedAccessToken(null, false).getValue(),
+                                        INTERNAL_SUBJECT.getValue())));
 
         var accessTokenException =
                 assertThrows(

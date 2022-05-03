@@ -18,6 +18,7 @@ import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse
 import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
@@ -61,7 +62,7 @@ class ClientRegistrationHandlerTest {
     private final ClientConfigValidationService configValidationService =
             mock(ClientConfigValidationService.class);
     private final AuditService auditService = mock(AuditService.class);
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
     private ClientRegistrationHandler handler;
 
     @BeforeEach

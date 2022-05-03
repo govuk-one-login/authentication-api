@@ -29,11 +29,11 @@ public class ApiGatewayResponseHelper {
     private static final String X_FRAME_OPTIONS_HEADER_VALUE = "DENY";
 
     private static final Logger LOG = LogManager.getLogger(ApiGatewayResponseHelper.class);
+    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
 
     public static <T> APIGatewayProxyResponseEvent generateApiGatewayProxyResponse(
             int statusCode, T body) throws JsonProcessingException {
-        return generateApiGatewayProxyResponse(
-                statusCode, new ObjectMapper().writeValueAsString(body));
+        return generateApiGatewayProxyResponse(statusCode, objectMapper.writeValueAsString(body));
     }
 
     public static <T> APIGatewayProxyResponseEvent generateApiGatewayProxyErrorResponse(
@@ -47,7 +47,7 @@ public class ApiGatewayResponseHelper {
 
         try {
             return generateApiGatewayProxyResponse(
-                    statusCode, new ObjectMapper().writeValueAsString(errorResponse));
+                    statusCode, objectMapper.writeValueAsString(errorResponse));
         } catch (JsonProcessingException e) {
             LOG.warn("Unable to generateApiGatewayProxyErrorResponse: " + e);
             return generateApiGatewayProxyResponse(500, "Internal server error");

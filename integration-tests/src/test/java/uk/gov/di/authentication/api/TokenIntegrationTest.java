@@ -2,7 +2,6 @@ package uk.gov.di.authentication.api;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -276,7 +275,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new RefreshTokenStore(List.of(refreshToken.getValue()), internalSubject.getValue());
         redis.addToRedis(
                 REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + publicSubject.getValue(),
-                new ObjectMapper().writeValueAsString(tokenStore),
+                objectMapper.writeValueAsString(tokenStore),
                 900L);
         PrivateKey privateKey = keyPair.getPrivate();
         JWTAuthenticationClaimsSet claimsSet =

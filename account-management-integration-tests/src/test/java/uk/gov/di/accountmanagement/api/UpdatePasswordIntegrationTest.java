@@ -1,6 +1,5 @@
 package uk.gov.di.accountmanagement.api;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
@@ -74,8 +73,7 @@ public class UpdatePasswordIntegrationTest extends ApiGatewayHandlerIntegrationT
                         Map.of("principalId", publicSubjectID));
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
-        assertThat(
-                response, hasBody(new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1024)));
+        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1024)));
 
         assertNoNotificationsReceived(notificationsQueue);
 

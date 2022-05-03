@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -58,6 +59,8 @@ class ResetPasswordHandlerTest {
     private static final String SUBJECT = "some-subject";
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String PERSISTENT_ID = "some-persistent-id-value";
+    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+
     private ResetPasswordHandler handler;
     private final Session session = new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
 
@@ -94,7 +97,7 @@ class ResetPasswordHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
-        verify(sqsClient, times(1)).send(new ObjectMapper().writeValueAsString(notifyRequest));
+        verify(sqsClient, times(1)).send(objectMapper.writeValueAsString(notifyRequest));
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
         verify(codeStorageService, times(1)).deleteSubjectWithPasswordResetCode(CODE);
 
@@ -129,7 +132,7 @@ class ResetPasswordHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
-        verify(sqsClient, times(1)).send(new ObjectMapper().writeValueAsString(notifyRequest));
+        verify(sqsClient, times(1)).send(objectMapper.writeValueAsString(notifyRequest));
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
 
         verify(auditService)
@@ -164,7 +167,7 @@ class ResetPasswordHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
-        verify(sqsClient, times(1)).send(new ObjectMapper().writeValueAsString(notifyRequest));
+        verify(sqsClient, times(1)).send(objectMapper.writeValueAsString(notifyRequest));
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
         verify(codeStorageService, times(1)).deleteSubjectWithPasswordResetCode(CODE);
 
@@ -226,7 +229,7 @@ class ResetPasswordHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1024));
-        verify(sqsClient, never()).send(new ObjectMapper().writeValueAsString(notifyRequest));
+        verify(sqsClient, never()).send(objectMapper.writeValueAsString(notifyRequest));
         verify(authenticationService, never()).updatePassword(EMAIL, NEW_PASSWORD);
         verify(codeStorageService, never()).deleteSubjectWithPasswordResetCode(CODE);
         verifyNoInteractions(auditService);

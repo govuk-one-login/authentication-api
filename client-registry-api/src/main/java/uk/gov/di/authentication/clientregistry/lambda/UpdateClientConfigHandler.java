@@ -15,6 +15,7 @@ import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationSe
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -35,7 +36,7 @@ public class UpdateClientConfigHandler
     private final ClientService clientService;
     private final ClientConfigValidationService validationService;
     private final AuditService auditService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
     private static final Logger LOG = LogManager.getLogger(UpdateClientConfigHandler.class);
 
     public UpdateClientConfigHandler(
