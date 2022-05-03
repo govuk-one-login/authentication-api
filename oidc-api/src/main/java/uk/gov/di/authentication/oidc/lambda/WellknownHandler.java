@@ -104,7 +104,7 @@ public class WellknownHandler
                                                 JWSAlgorithm.HS512));
                                 providerMetadata.setServiceDocsURI(
                                         new URI(
-                                                "https://auth-tech-docs.london.cloudapps.digital/"));
+                                                "https://docs.sign-in.service.gov.uk/"));
                                 providerMetadata.setEndSessionEndpointURI(
                                         buildURI(baseUrl, "/logout"));
                                 providerMetadata.setSupportsBackChannelLogout(true);
