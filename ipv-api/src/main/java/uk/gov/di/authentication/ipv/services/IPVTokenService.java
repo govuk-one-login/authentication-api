@@ -103,7 +103,7 @@ public class IPVTokenService {
                 return userIdentityUserInfo;
             }
         } catch (IOException | ParseException e) {
-            LOG.error("Error when attempting to call IPV user-identity endpoint");
+            LOG.error("Error when attempting to call IPV user-identity endpoint", e);
             throw new RuntimeException();
         }
     }
