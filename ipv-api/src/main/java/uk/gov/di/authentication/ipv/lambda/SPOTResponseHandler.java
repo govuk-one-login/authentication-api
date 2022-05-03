@@ -11,6 +11,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.SPOTResponse;
 import uk.gov.di.authentication.ipv.entity.SPOTStatus;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoSpotService;
@@ -19,7 +20,7 @@ import java.util.NoSuchElementException;
 
 public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
     private final DynamoSpotService dynamoSpotService;
     private final AuditService auditService;
 

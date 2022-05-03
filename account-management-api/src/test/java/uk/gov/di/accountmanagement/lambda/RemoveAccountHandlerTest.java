@@ -12,6 +12,7 @@ import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -34,6 +35,8 @@ class RemoveAccountHandlerTest {
 
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final Subject SUBJECT = new Subject();
+    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+
     private RemoveAccountHandler handler;
     private final Context context = mock(Context.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
@@ -67,7 +70,7 @@ class RemoveAccountHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         verify(authenticationService).removeAccount(eq(EMAIL));
         NotifyRequest notifyRequest = new NotifyRequest(EMAIL, DELETE_ACCOUNT);
-        verify(sqsClient).send(new ObjectMapper().writeValueAsString(notifyRequest));
+        verify(sqsClient).send(objectMapper.writeValueAsString(notifyRequest));
 
         verify(auditService)
                 .submitAuditEvent(

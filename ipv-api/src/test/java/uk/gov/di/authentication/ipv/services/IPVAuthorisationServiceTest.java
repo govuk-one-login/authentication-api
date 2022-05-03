@@ -25,6 +25,7 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
@@ -61,6 +62,8 @@ class IPVAuthorisationServiceTest {
     private static final String IPV_CLIENT_ID = "ipv-client-id";
     private static final URI IPV_CALLBACK_URI = URI.create("http://localhost/oidc/ipv/callback");
     private static final URI IPV_AUTHORISATION_URI = URI.create("http://localhost/ipv/authorize");
+    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
@@ -74,7 +77,7 @@ class IPVAuthorisationServiceTest {
     void setUp() throws JsonProcessingException {
         when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
         when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + SESSION_ID))
-                .thenReturn(new ObjectMapper().writeValueAsString(STATE));
+                .thenReturn(objectMapper.writeValueAsString(STATE));
         when(configurationService.getIPVAuthorisationClientId()).thenReturn(IPV_CLIENT_ID);
         when(configurationService.getIPVAuthorisationCallbackURI()).thenReturn(IPV_CALLBACK_URI);
         when(configurationService.getIPVAuthorisationURI()).thenReturn(IPV_AUTHORISATION_URI);
@@ -157,7 +160,7 @@ class IPVAuthorisationServiceTest {
             throws JsonProcessingException {
         State differentState = new State();
         when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + SESSION_ID))
-                .thenReturn(new ObjectMapper().writeValueAsString(STATE));
+                .thenReturn(objectMapper.writeValueAsString(STATE));
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("state", differentState.getValue());
         responseHeaders.put("code", AUTH_CODE.getValue());
@@ -179,7 +182,7 @@ class IPVAuthorisationServiceTest {
         verify(redisConnectionService)
                 .saveWithExpiry(
                         STATE_STORAGE_PREFIX + sessionId,
-                        new ObjectMapper().writeValueAsString(STATE),
+                        objectMapper.writeValueAsString(STATE),
                         SESSION_EXPIRY);
     }
 

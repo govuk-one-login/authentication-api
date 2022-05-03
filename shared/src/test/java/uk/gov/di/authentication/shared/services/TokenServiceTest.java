@@ -45,6 +45,7 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -110,6 +111,8 @@ public class TokenServiceTest {
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
 
+    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+
     @RegisterExtension
     public final CaptureLoggingExtension logging = new CaptureLoggingExtension(TokenService.class);
 
@@ -168,9 +171,7 @@ public class TokenServiceTest {
                         INTERNAL_SUBJECT.getValue());
         verify(redisConnectionService)
                 .saveWithExpiry(
-                        refreshTokenKey,
-                        new ObjectMapper().writeValueAsString(refreshTokenStore),
-                        300L);
+                        refreshTokenKey, objectMapper.writeValueAsString(refreshTokenStore), 300L);
     }
 
     @Test
@@ -227,9 +228,7 @@ public class TokenServiceTest {
                         INTERNAL_SUBJECT.getValue());
         verify(redisConnectionService)
                 .saveWithExpiry(
-                        refreshTokenKey,
-                        new ObjectMapper().writeValueAsString(refreshTokenStore),
-                        300L);
+                        refreshTokenKey, objectMapper.writeValueAsString(refreshTokenStore), 300L);
     }
 
     @Test
@@ -530,9 +529,7 @@ public class TokenServiceTest {
                         INTERNAL_SUBJECT.getValue());
         verify(redisConnectionService)
                 .saveWithExpiry(
-                        accessTokenKey,
-                        new ObjectMapper().writeValueAsString(accessTokenStore),
-                        300L);
+                        accessTokenKey, objectMapper.writeValueAsString(accessTokenStore), 300L);
 
         var header = (JWSHeader) tokenResponse.getOIDCTokens().getIDToken().getHeader();
 

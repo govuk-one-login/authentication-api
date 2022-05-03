@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
@@ -37,6 +38,7 @@ public class AccessTokenService {
     private final RedisConnectionService redisConnectionService;
     private final DynamoClientService clientService;
     private final TokenValidationService tokenValidationService;
+    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
     private static final String INVALID_ACCESS_TOKEN = "Invalid Access Token";
 
@@ -141,8 +143,7 @@ public class AccessTokenService {
         String result =
                 redisConnectionService.getValue(ACCESS_TOKEN_PREFIX + clientId + "." + subjectId);
         try {
-            return Optional.ofNullable(
-                    new ObjectMapper().readValue(result, AccessTokenStore.class));
+            return Optional.ofNullable(objectMapper.readValue(result, AccessTokenStore.class));
         } catch (JsonProcessingException | IllegalArgumentException e) {
             LOG.error("Error getting AccessToken from Redis", e);
             return Optional.empty();

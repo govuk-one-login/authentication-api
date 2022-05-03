@@ -30,6 +30,7 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -74,6 +75,8 @@ class LoginHandlerTest {
             new UserCredentials().setEmail(EMAIL).setPassword(PASSWORD);
     private static final String PHONE_NUMBER = "01234567890";
     private static final ClientID CLIENT_ID = new ClientID();
+    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+
     private LoginHandler handler;
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -148,8 +151,7 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(200));
 
-        LoginResponse response =
-                new ObjectMapper().readValue(result.getBody(), LoginResponse.class);
+        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
         assertThat(
                 response.getRedactedPhoneNumber(),
                 equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
@@ -195,8 +197,7 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(200));
 
-        LoginResponse response =
-                new ObjectMapper().readValue(result.getBody(), LoginResponse.class);
+        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
         assertThat(
                 response.getRedactedPhoneNumber(),
                 equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
@@ -240,8 +241,7 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(200));
 
-        LoginResponse response =
-                new ObjectMapper().readValue(result.getBody(), LoginResponse.class);
+        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
         assertThat(
                 response.getRedactedPhoneNumber(),
@@ -268,8 +268,7 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(200));
 
-        LoginResponse response =
-                new ObjectMapper().readValue(result.getBody(), LoginResponse.class);
+        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
         assertThat(
                 response.getRedactedPhoneNumber(),
                 equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
@@ -352,8 +351,7 @@ class LoginHandlerTest {
 
         assertThat(result2, hasStatus(200));
 
-        LoginResponse response =
-                new ObjectMapper().readValue(result2.getBody(), LoginResponse.class);
+        LoginResponse response = objectMapper.readValue(result2.getBody(), LoginResponse.class);
     }
 
     @Test

@@ -32,6 +32,7 @@ import uk.gov.di.authentication.app.services.DocAppAuthorisationService;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -73,6 +74,7 @@ class DocAppAuthorizeHandlerTest {
     private static final String SESSION_ID = "a-session-id";
     private static final String PERSISTENT_SESSION_ID = "a-persistent-session-id";
     private static final Subject DOC_APP_SUBJECT_ID = new Subject();
+    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
 
     private final Context context = mock(Context.class);
     private final SessionService sessionService = mock(SessionService.class);
@@ -115,8 +117,7 @@ class DocAppAuthorizeHandlerTest {
         var response = makeHandlerRequest();
 
         assertThat(response, hasStatus(200));
-        var body =
-                new ObjectMapper().readValue(response.getBody(), DocAppAuthorisationResponse.class);
+        var body = objectMapper.readValue(response.getBody(), DocAppAuthorisationResponse.class);
         assertThat(body.getRedirectUri(), startsWith(DOC_APP_AUTHORISATION_URI.toString()));
         assertThat(
                 splitQuery(body.getRedirectUri()).get("request"),

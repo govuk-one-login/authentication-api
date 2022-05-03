@@ -47,6 +47,7 @@ import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 
 import java.net.URI;
@@ -83,6 +84,8 @@ public class TokenService {
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
     private static final List<String> ALLOWED_GRANTS =
             List.of(GrantType.AUTHORIZATION_CODE.getValue(), GrantType.REFRESH_TOKEN.getValue());
+
+    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
 
     public TokenService(
             ConfigurationService configService,
@@ -332,10 +335,9 @@ public class TokenService {
         try {
             redisConnectionService.saveWithExpiry(
                     ACCESS_TOKEN_PREFIX + clientId + "." + publicSubject.getValue(),
-                    new ObjectMapper()
-                            .writeValueAsString(
-                                    new AccessTokenStore(
-                                            accessToken.getValue(), internalSubject.getValue())),
+                    objectMapper.writeValueAsString(
+                            new AccessTokenStore(
+                                    accessToken.getValue(), internalSubject.getValue())),
                     configService.getAccessTokenExpiry());
         } catch (JsonProcessingException e) {
             LOG.error("Unable to save access token to Redis");
@@ -387,18 +389,14 @@ public class TokenService {
         try {
             if (existingRefreshTokenStore.isPresent()) {
                 RefreshTokenStore refreshTokenStore =
-                        new ObjectMapper()
-                                .readValue(
-                                        existingRefreshTokenStore.get(), RefreshTokenStore.class);
-                return new ObjectMapper()
-                        .writeValueAsString(
-                                refreshTokenStore.addRefreshToken(refreshToken.getValue()));
+                        objectMapper.readValue(
+                                existingRefreshTokenStore.get(), RefreshTokenStore.class);
+                return objectMapper.writeValueAsString(
+                        refreshTokenStore.addRefreshToken(refreshToken.getValue()));
             } else {
-                return new ObjectMapper()
-                        .writeValueAsString(
-                                new RefreshTokenStore(
-                                        List.of(refreshToken.getValue()),
-                                        internalSubject.getValue()));
+                return objectMapper.writeValueAsString(
+                        new RefreshTokenStore(
+                                List.of(refreshToken.getValue()), internalSubject.getValue()));
             }
 
         } catch (JsonProcessingException e) {

@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -46,6 +47,7 @@ class UpdatePasswordHandlerTest {
     private static final String NEW_PASSWORD = "password2";
     private static final String CURRENT_PASSWORD = "password1";
     private static final Subject SUBJECT = new Subject();
+    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
 
     @BeforeEach
     public void setUp() {
@@ -80,7 +82,7 @@ class UpdatePasswordHandlerTest {
         verify(dynamoService).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
         NotifyRequest notifyRequest =
                 new NotifyRequest(EXISTING_EMAIL_ADDRESS, NotificationType.PASSWORD_UPDATED);
-        verify(sqsClient).send(new ObjectMapper().writeValueAsString(notifyRequest));
+        verify(sqsClient).send(objectMapper.writeValueAsString(notifyRequest));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -143,7 +145,7 @@ class UpdatePasswordHandlerTest {
         verify(dynamoService, never()).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
         NotifyRequest notifyRequest =
                 new NotifyRequest(EXISTING_EMAIL_ADDRESS, NotificationType.PASSWORD_UPDATED);
-        verify(sqsClient, never()).send(new ObjectMapper().writeValueAsString(notifyRequest));
+        verify(sqsClient, never()).send(objectMapper.writeValueAsString(notifyRequest));
 
         verify(auditService, never())
                 .submitAuditEvent(

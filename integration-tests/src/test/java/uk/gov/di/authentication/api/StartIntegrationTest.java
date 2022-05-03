@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.api;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -53,8 +52,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     public static final String TEST_CLIENT_NAME = "test-client-name";
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setup() {

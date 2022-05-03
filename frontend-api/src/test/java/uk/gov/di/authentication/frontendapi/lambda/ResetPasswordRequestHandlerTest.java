@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -66,6 +67,8 @@ class ResetPasswordRequestHandlerTest {
             "https://localhost:8080/frontend?reset-password?code=123456.54353464565";
     private static final long CODE_EXPIRY_TIME = 900;
     private static final long BLOCKED_EMAIL_DURATION = 799;
+    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
     private final SessionService sessionService = mock(SessionService.class);
@@ -126,7 +129,6 @@ class ResetPasswordRequestHandlerTest {
                 .thenReturn(TEST_RESET_PASSWORD_LINK);
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, RESET_PASSWORD, TEST_RESET_PASSWORD_LINK);
-        ObjectMapper objectMapper = new ObjectMapper();
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         usingValidSession();
@@ -169,7 +171,6 @@ class ResetPasswordRequestHandlerTest {
         NotifyRequest notifyRequest =
                 new NotifyRequest(
                         TEST_EMAIL_ADDRESS, RESET_PASSWORD_WITH_CODE, TEST_SIX_DIGIT_CODE);
-        ObjectMapper objectMapper = new ObjectMapper();
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         usingValidSession();
@@ -239,7 +240,6 @@ class ResetPasswordRequestHandlerTest {
                 .thenReturn(TEST_RESET_PASSWORD_LINK);
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, RESET_PASSWORD, TEST_RESET_PASSWORD_LINK);
-        ObjectMapper objectMapper = new ObjectMapper();
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
         Mockito.doThrow(SdkClientException.class).when(awsSqsClient).send(eq(serialisedRequest));
 

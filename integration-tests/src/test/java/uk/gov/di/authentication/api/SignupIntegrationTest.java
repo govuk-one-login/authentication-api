@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.api;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -99,7 +98,7 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(200));
         SignUpResponse signUpResponse =
-                new ObjectMapper().readValue(response.getBody(), SignUpResponse.class);
+                objectMapper.readValue(response.getBody(), SignUpResponse.class);
         assertThat(signUpResponse.isConsentRequired(), equalTo(consentRequired));
 
         assertTrue(userStore.userExists("joe.bloggs+5@digital.cabinet-office.gov.uk"));

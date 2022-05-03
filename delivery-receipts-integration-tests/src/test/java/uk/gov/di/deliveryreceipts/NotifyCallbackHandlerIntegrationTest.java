@@ -12,6 +12,7 @@ import uk.gov.di.authentication.deliveryreceiptsapi.entity.DeliveryMetricStatus;
 import uk.gov.di.authentication.deliveryreceiptsapi.entity.NotifyDeliveryReceipt;
 import uk.gov.di.authentication.deliveryreceiptsapi.lambda.NotifyCallbackHandler;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.extensions.CloudwatchMetricsExtension;
 import uk.gov.di.authentication.sharedtest.extensions.ParameterStoreExtension;
@@ -28,6 +29,8 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 public class NotifyCallbackHandlerIntegrationTest {
 
     private static final String BEARER_TOKEN = "notify-test-@bearer-token";
+    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+
     private final Context context = mock(Context.class);
     private NotifyCallbackHandler handler;
 
@@ -76,7 +79,7 @@ public class NotifyCallbackHandlerIntegrationTest {
                                 .withRequestId(UUID.randomUUID().toString()));
 
         try {
-            request.withBody(new ObjectMapper().writeValueAsString(body));
+            request.withBody(objectMapper.writeValueAsString(body));
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Could not serialise test body", e);
         }

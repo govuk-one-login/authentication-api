@@ -34,6 +34,7 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
@@ -81,6 +82,8 @@ class AuthCodeHandlerTest {
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private static final ClientID CLIENT_ID = new ClientID();
+    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+
     private final AuthorizationService authorizationService = mock(AuthorizationService.class);
     private final AuthorisationCodeService authorisationCodeService =
             mock(AuthorisationCodeService.class);
@@ -176,7 +179,7 @@ class AuthCodeHandlerTest {
 
         assertThat(response, hasStatus(200));
         AuthCodeResponse authCodeResponse =
-                new ObjectMapper().readValue(response.getBody(), AuthCodeResponse.class);
+                objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
         assertThat(authCodeResponse.getLocation(), equalTo(authSuccessResponse.toURI().toString()));
         assertThat(session.getCurrentCredentialStrength(), equalTo(finalLevel));
         verify(sessionService).save(session.setAuthenticated(true));
@@ -246,7 +249,7 @@ class AuthCodeHandlerTest {
 
         assertThat(response, hasStatus(200));
         AuthCodeResponse authCodeResponse =
-                new ObjectMapper().readValue(response.getBody(), AuthCodeResponse.class);
+                objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
         assertThat(
                 authCodeResponse.getLocation(),
                 equalTo(
@@ -274,7 +277,7 @@ class AuthCodeHandlerTest {
 
         assertThat(response, hasStatus(200));
         AuthCodeResponse authCodeResponse =
-                new ObjectMapper().readValue(response.getBody(), AuthCodeResponse.class);
+                objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
         assertThat(
                 authCodeResponse.getLocation(),
                 equalTo(

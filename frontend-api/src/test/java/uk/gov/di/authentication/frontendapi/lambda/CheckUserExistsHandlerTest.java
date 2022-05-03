@@ -14,6 +14,7 @@ import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -55,7 +56,7 @@ class CheckUserExistsHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
 
     private CheckUserExistsHandler handler;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
 
     private final Session session = new Session(IdGenerator.generate());
 

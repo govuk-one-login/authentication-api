@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.api;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -105,7 +104,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(200));
 
         LoginResponse loginResponse =
-                new ObjectMapper().readValue(response.getBody(), LoginResponse.class);
+                objectMapper.readValue(response.getBody(), LoginResponse.class);
 
         assertThat(loginResponse.isMfaRequired(), equalTo(level != LOW_LEVEL));
         assertThat(

@@ -25,6 +25,7 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -95,7 +96,7 @@ class SendNotificationHandlerTest {
                                     "jb2@digital.cabinet-office.gov.uk"));
 
     private final Context context = mock(Context.class);
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
 
     private final Session session =
             new Session(IdGenerator.generate()).setEmailAddress(TEST_EMAIL_ADDRESS);
@@ -173,7 +174,6 @@ class SendNotificationHandlerTest {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_SIX_DIGIT_CODE);
-        ObjectMapper objectMapper = new ObjectMapper();
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         usingValidSession();

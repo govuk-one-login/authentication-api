@@ -14,6 +14,7 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -48,6 +49,8 @@ class UpdatePhoneNumberHandlerTest {
     private static final String INVALID_PHONE_NUMBER = "12345";
     private static final String OTP = "123456";
     private static final Subject SUBJECT = new Subject();
+    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+
     private final AuditService auditService = mock(AuditService.class);
 
     @BeforeEach
@@ -86,7 +89,7 @@ class UpdatePhoneNumberHandlerTest {
         assertThat(result, hasStatus(204));
         verify(dynamoService).updatePhoneNumber(EMAIL_ADDRESS, NEW_PHONE_NUMBER);
         NotifyRequest notifyRequest = new NotifyRequest(EMAIL_ADDRESS, PHONE_NUMBER_UPDATED);
-        verify(sqsClient).send(new ObjectMapper().writeValueAsString(notifyRequest));
+        verify(sqsClient).send(objectMapper.writeValueAsString(notifyRequest));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -140,8 +143,8 @@ class UpdatePhoneNumberHandlerTest {
         assertThat(result, hasStatus(400));
         verify(dynamoService, times(0)).updatePhoneNumber(EMAIL_ADDRESS, INVALID_PHONE_NUMBER);
         NotifyRequest notifyRequest = new NotifyRequest(INVALID_PHONE_NUMBER, PHONE_NUMBER_UPDATED);
-        verify(sqsClient, times(0)).send(new ObjectMapper().writeValueAsString(notifyRequest));
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1020);
+        verify(sqsClient, times(0)).send(objectMapper.writeValueAsString(notifyRequest));
+        String expectedResponse = objectMapper.writeValueAsString(ErrorResponse.ERROR_1020);
         assertThat(result, hasBody(expectedResponse));
         verifyNoInteractions(auditService);
     }

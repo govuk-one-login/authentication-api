@@ -1,7 +1,6 @@
 package uk.gov.di.accountmanagement.api;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
@@ -73,8 +72,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         Collections.emptyMap());
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
-        assertThat(
-                response, hasBody(new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1009)));
+        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1009)));
 
         NotificationAssertionHelper.assertNoNotificationsReceived(notificationsQueue);
 
@@ -137,8 +135,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         Collections.emptyMap());
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
-        assertThat(
-                response, hasBody(new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1012)));
+        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1012)));
 
         NotificationAssertionHelper.assertNoNotificationsReceived(notificationsQueue);
 

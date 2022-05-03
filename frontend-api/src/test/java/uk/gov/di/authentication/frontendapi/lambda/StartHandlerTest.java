@@ -28,6 +28,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -66,6 +67,7 @@ class StartHandlerTest {
     public static final String SESSION_ID = "some-session-id";
     public static final String PERSISTENT_ID = "some-persistent-id-value";
     public static final URI REDIRECT_URL = URI.create("https://localhost/redirect");
+    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
 
     private StartHandler handler;
     private final Context context = mock(Context.class);
@@ -130,8 +132,7 @@ class StartHandlerTest {
 
         assertThat(result, hasStatus(200));
 
-        StartResponse response =
-                new ObjectMapper().readValue(result.getBody(), StartResponse.class);
+        StartResponse response = objectMapper.readValue(result.getBody(), StartResponse.class);
 
         assertThat(
                 response.getClient().getClientName(),
@@ -199,7 +200,7 @@ class StartHandlerTest {
 
         assertThat(result, hasStatus(200));
 
-        var response = new ObjectMapper().readValue(result.getBody(), StartResponse.class);
+        var response = objectMapper.readValue(result.getBody(), StartResponse.class);
 
         assertThat(response.getClient().getClientName(), equalTo(TEST_CLIENT_NAME));
         assertThat(response.getClient().getScopes(), equalTo(scope.toStringList()));
@@ -238,7 +239,7 @@ class StartHandlerTest {
 
         assertThat(result, hasStatus(400));
 
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1018);
+        String expectedResponse = objectMapper.writeValueAsString(ErrorResponse.ERROR_1018);
         assertThat(result, hasBody(expectedResponse));
 
         verifyNoInteractions(auditService);
@@ -258,7 +259,7 @@ class StartHandlerTest {
 
         assertThat(result, hasStatus(400));
 
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1000);
+        String expectedResponse = objectMapper.writeValueAsString(ErrorResponse.ERROR_1000);
         assertThat(result, hasBody(expectedResponse));
 
         verifyNoInteractions(auditService);
@@ -284,7 +285,7 @@ class StartHandlerTest {
 
         assertThat(result, hasStatus(400));
 
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1038);
+        String expectedResponse = objectMapper.writeValueAsString(ErrorResponse.ERROR_1038);
         assertThat(result, hasBody(expectedResponse));
 
         verifyNoInteractions(auditService);

@@ -12,6 +12,7 @@ import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.AuthenticateRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -31,7 +32,7 @@ public class AuthenticateHandler
     private static final Logger LOG = LogManager.getLogger(AuthenticateHandler.class);
 
     private final AuthenticationService authenticationService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
     private final AuditService auditService;
 
     public AuthenticateHandler(

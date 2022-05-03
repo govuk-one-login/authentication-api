@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.service.notify.NotificationClient;
@@ -33,7 +34,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     private static final Logger LOG = LogManager.getLogger(NotificationHandler.class);
 
     private final NotificationService notificationService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
     private final AmazonS3 s3Client;
     private final ConfigurationService configurationService;
 

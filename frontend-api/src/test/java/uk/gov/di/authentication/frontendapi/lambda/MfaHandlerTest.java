@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -80,7 +81,7 @@ public class MfaHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
     private final Session session = new Session("a-session-id").setEmailAddress(TEST_EMAIL_ADDRESS);
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
@@ -139,7 +140,7 @@ public class MfaHandlerTest {
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        verify(sqsClient).send(new ObjectMapper().writeValueAsString(notifyRequest));
+        verify(sqsClient).send(objectMapper.writeValueAsString(notifyRequest));
         verify(codeStorageService).saveOtpCode(TEST_EMAIL_ADDRESS, CODE, CODE_EXPIRY_TIME, MFA_SMS);
         assertThat(result, hasStatus(204));
 
@@ -171,7 +172,7 @@ public class MfaHandlerTest {
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        verify(sqsClient).send(new ObjectMapper().writeValueAsString(notifyRequest));
+        verify(sqsClient).send(objectMapper.writeValueAsString(notifyRequest));
         verify(codeStorageService).saveOtpCode(TEST_EMAIL_ADDRESS, CODE, CODE_EXPIRY_TIME, MFA_SMS);
         assertThat(result, hasStatus(204));
 

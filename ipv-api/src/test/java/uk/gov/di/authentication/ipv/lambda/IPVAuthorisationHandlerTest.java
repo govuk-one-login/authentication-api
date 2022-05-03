@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWEAlgorithm;
@@ -42,6 +41,7 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -160,7 +160,9 @@ public class IPVAuthorisationHandlerTest {
         var response = makeHandlerRequest();
 
         assertThat(response, hasStatus(200));
-        var body = new ObjectMapper().readValue(response.getBody(), IPVAuthorisationResponse.class);
+        var body =
+                ObjectMapperFactory.getInstance()
+                        .readValue(response.getBody(), IPVAuthorisationResponse.class);
         assertThat(body.getRedirectUri(), startsWith(IPV_AUTHORISATION_URI.toString()));
         assertThat(
                 splitQuery(body.getRedirectUri()).get("request"),

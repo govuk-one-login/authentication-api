@@ -15,6 +15,7 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -48,6 +49,8 @@ class UpdateEmailHandlerTest {
     private static final String INVALID_EMAIL_ADDRESS = "igital.cabinet-office.gov.uk";
     private static final String OTP = "123456";
     private static final Subject SUBJECT = new Subject();
+    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+
     private final AuditService auditService = mock(AuditService.class);
 
     @BeforeEach
@@ -82,7 +85,7 @@ class UpdateEmailHandlerTest {
         assertThat(result, hasStatus(204));
         verify(dynamoService).updateEmail(EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS);
         NotifyRequest notifyRequest = new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED);
-        verify(sqsClient).send(new ObjectMapper().writeValueAsString(notifyRequest));
+        verify(sqsClient).send(objectMapper.writeValueAsString(notifyRequest));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -119,8 +122,8 @@ class UpdateEmailHandlerTest {
         assertThat(result, hasStatus(400));
         verify(dynamoService, never()).updateEmail(EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS);
         NotifyRequest notifyRequest = new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED);
-        verify(sqsClient, never()).send(new ObjectMapper().writeValueAsString(notifyRequest));
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1009);
+        verify(sqsClient, never()).send(objectMapper.writeValueAsString(notifyRequest));
+        String expectedResponse = objectMapper.writeValueAsString(ErrorResponse.ERROR_1009);
         assertThat(result, hasBody(expectedResponse));
     }
 
@@ -161,8 +164,8 @@ class UpdateEmailHandlerTest {
         assertThat(result, hasStatus(400));
         verify(dynamoService, never()).updateEmail(EXISTING_EMAIL_ADDRESS, INVALID_EMAIL_ADDRESS);
         NotifyRequest notifyRequest = new NotifyRequest(INVALID_EMAIL_ADDRESS, EMAIL_UPDATED);
-        verify(sqsClient, never()).send(new ObjectMapper().writeValueAsString(notifyRequest));
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1020);
+        verify(sqsClient, never()).send(objectMapper.writeValueAsString(notifyRequest));
+        String expectedResponse = objectMapper.writeValueAsString(ErrorResponse.ERROR_1020);
         assertThat(result, hasBody(expectedResponse));
     }
 
@@ -187,8 +190,8 @@ class UpdateEmailHandlerTest {
         assertThat(result, hasStatus(400));
         verify(dynamoService, never()).updateEmail(EXISTING_EMAIL_ADDRESS, INVALID_EMAIL_ADDRESS);
         NotifyRequest notifyRequest = new NotifyRequest(INVALID_EMAIL_ADDRESS, EMAIL_UPDATED);
-        verify(sqsClient, never()).send(new ObjectMapper().writeValueAsString(notifyRequest));
-        String expectedResponse = new ObjectMapper().writeValueAsString(ErrorResponse.ERROR_1004);
+        verify(sqsClient, never()).send(objectMapper.writeValueAsString(notifyRequest));
+        String expectedResponse = objectMapper.writeValueAsString(ErrorResponse.ERROR_1004);
         assertThat(result, hasBody(expectedResponse));
     }
 
