@@ -20,7 +20,7 @@ public class InstrumentationHelper {
                 subSegment.addException(e);
                 throw new RuntimeException(e);
             } finally {
-                AWSXRay.endSubsegment(subSegment);
+                AWSXRay.endSubsegment();
             }
         } else {
             try {
