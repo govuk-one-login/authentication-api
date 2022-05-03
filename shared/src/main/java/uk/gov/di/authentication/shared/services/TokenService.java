@@ -362,33 +362,49 @@ public class TokenService {
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
         String redisKey = REFRESH_TOKEN_PREFIX + clientId + "." + publicSubject.getValue();
         Optional<String> existingRefreshTokenStore =
-                Optional.ofNullable(redisConnectionService.getValue(redisKey));
+                Optional.ofNullable(
+                        segmentedFunctionCall(
+                                "getExistingRefreshTokenStore",
+                                () -> redisConnectionService.getValue(redisKey)));
+
+        String serializedTokenStore =
+                segmentedFunctionCall(
+                        "updateTokenStore",
+                        () ->
+                                updateTokenStore(
+                                        internalSubject, refreshToken, existingRefreshTokenStore));
+
+        redisConnectionService.saveWithExpiry(
+                redisKey, serializedTokenStore, configService.getSessionExpiry());
+
+        return refreshToken;
+    }
+
+    private String updateTokenStore(
+            Subject internalSubject,
+            RefreshToken refreshToken,
+            Optional<String> existingRefreshTokenStore) {
         try {
-            String serializedTokenStore;
             if (existingRefreshTokenStore.isPresent()) {
                 RefreshTokenStore refreshTokenStore =
                         new ObjectMapper()
                                 .readValue(
                                         existingRefreshTokenStore.get(), RefreshTokenStore.class);
-                serializedTokenStore =
-                        new ObjectMapper()
-                                .writeValueAsString(
-                                        refreshTokenStore.addRefreshToken(refreshToken.getValue()));
+                return new ObjectMapper()
+                        .writeValueAsString(
+                                refreshTokenStore.addRefreshToken(refreshToken.getValue()));
             } else {
-                serializedTokenStore =
-                        new ObjectMapper()
-                                .writeValueAsString(
-                                        new RefreshTokenStore(
-                                                List.of(refreshToken.getValue()),
-                                                internalSubject.getValue()));
+                return new ObjectMapper()
+                        .writeValueAsString(
+                                new RefreshTokenStore(
+                                        List.of(refreshToken.getValue()),
+                                        internalSubject.getValue()));
             }
-            redisConnectionService.saveWithExpiry(
-                    redisKey, serializedTokenStore, configService.getSessionExpiry());
+
         } catch (JsonProcessingException e) {
             LOG.error("Unable to create new TokenStore with RefreshToken");
             throw new RuntimeException(e);
         }
-        return refreshToken;
     }
 
     public SignedJWT generateSignedJWT(JWTClaimsSet claimsSet, Optional<String> type) {
