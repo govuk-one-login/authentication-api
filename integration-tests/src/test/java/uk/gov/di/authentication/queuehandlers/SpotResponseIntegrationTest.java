@@ -13,6 +13,7 @@ import uk.gov.di.authentication.ipv.lambda.SPOTResponseHandler;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -22,6 +23,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.SPOT_SUCCESSFUL_RESPONSE_RECEIVED;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 
 public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent, Object> {
 
@@ -52,6 +55,8 @@ public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent
                         .get()
                         .getSerializedCredential(),
                 equalTo(signedCredential));
+
+        assertEventTypesReceived(auditTopic, List.of(SPOT_SUCCESSFUL_RESPONSE_RECEIVED));
     }
 
     private <T> SQSEvent createSqsEvent(T... request) {

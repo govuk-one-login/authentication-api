@@ -43,7 +43,7 @@ class SPOTResponseHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        IPVAuditableEvent.SPOT_RESPONSE_RECEIVED,
+                        IPVAuditableEvent.SPOT_SUCCESSFUL_RESPONSE_RECEIVED,
                         REQUEST_ID,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -62,7 +62,7 @@ class SPOTResponseHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        IPVAuditableEvent.SPOT_RESPONSE_RECEIVED,
+                        IPVAuditableEvent.SPOT_UNSUCCESSFUL_RESPONSE_RECEIVED,
                         REQUEST_ID,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -85,7 +85,7 @@ class SPOTResponseHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        IPVAuditableEvent.SPOT_RESPONSE_RECEIVED,
+                        IPVAuditableEvent.SPOT_UNSUCCESSFUL_RESPONSE_RECEIVED,
                         REQUEST_ID,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -107,7 +107,7 @@ class SPOTResponseHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        IPVAuditableEvent.SPOT_RESPONSE_RECEIVED,
+                        IPVAuditableEvent.SPOT_SUCCESSFUL_RESPONSE_RECEIVED,
                         REQUEST_ID,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,

@@ -42,27 +42,18 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
 
     @Override
     public Object handleRequest(SQSEvent event, Context context) {
-        auditService.submitAuditEvent(
-                IPVAuditableEvent.SPOT_RESPONSE_RECEIVED,
-                context.getAwsRequestId(),
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN);
-
         for (SQSMessage msg : event.getRecords()) {
             try {
                 var spotResponse = objectMapper.readValue(msg.getBody(), SPOTResponse.class);
                 if (spotResponse.getStatus() != SPOTStatus.ACCEPTED) {
+                    submitAuditEvent(
+                            IPVAuditableEvent.SPOT_UNSUCCESSFUL_RESPONSE_RECEIVED, context);
                     LOG.warn(
                             "SPOTResponse Status is not Accepted. Actual Status: {}",
                             spotResponse.getStatus());
                     return null;
                 }
-
+                submitAuditEvent(IPVAuditableEvent.SPOT_SUCCESSFUL_RESPONSE_RECEIVED, context);
                 dynamoSpotService.addSpotResponse(
                         spotResponse.getSub(),
                         spotResponse.getClaims().values().stream()
@@ -70,6 +61,7 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
                                 .findFirst()
                                 .orElseThrow());
             } catch (JsonProcessingException e) {
+                submitAuditEvent(IPVAuditableEvent.SPOT_UNSUCCESSFUL_RESPONSE_RECEIVED, context);
                 LOG.error("Unable to deserialize SPOT response from SQS queue");
                 return null;
             } catch (NoSuchElementException e) {
@@ -78,5 +70,18 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
             }
         }
         return null;
+    }
+
+    private void submitAuditEvent(IPVAuditableEvent auditableEvent, Context context) {
+        auditService.submitAuditEvent(
+                auditableEvent,
+                context.getAwsRequestId(),
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN);
     }
 }
