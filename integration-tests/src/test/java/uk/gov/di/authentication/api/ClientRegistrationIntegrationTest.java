@@ -9,6 +9,7 @@ import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler;
 import uk.gov.di.authentication.shared.entity.ClientType;
+import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.util.List;
@@ -43,14 +44,17 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
                 Arguments.of(
                         singletonList("http://localhost/post-redirect-logout"),
                         "http://back-channel.com",
-                        List.of("address"),
+                        List.of(ValidClaims.ADDRESS),
                         String.valueOf(MANDATORY)),
                 Arguments.of(
                         List.of(
                                 "http://localhost/post-redirect-logout",
                                 "http://localhost/post-redirect-logout-v2"),
                         "http://back-channel.com",
-                        List.of("address", "birthdate", "name"),
+                        List.of(
+                                ValidClaims.CORE_IDENTITY_JWT,
+                                ValidClaims.PASSPORT,
+                                ValidClaims.ADDRESS),
                         String.valueOf(OPTIONAL)));
     }
 

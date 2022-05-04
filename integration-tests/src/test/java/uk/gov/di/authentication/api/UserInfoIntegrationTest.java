@@ -136,7 +136,10 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var configurationService = new UserInfoIntegrationTest.UserInfoConfigurationService();
         handler = new UserInfoHandler(configurationService);
         var claimsSetRequest =
-                new ClaimsSetRequest().add(ValidClaims.NAME).add(ValidClaims.BIRTHDATE);
+                new ClaimsSetRequest()
+                        .add(ValidClaims.CORE_IDENTITY_JWT)
+                        .add(ValidClaims.ADDRESS)
+                        .add(ValidClaims.PASSPORT);
         var oidcValidClaimsRequest =
                 new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
         var claimsSet =

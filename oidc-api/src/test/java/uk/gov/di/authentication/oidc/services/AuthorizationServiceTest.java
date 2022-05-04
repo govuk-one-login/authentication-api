@@ -22,13 +22,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
+import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -108,7 +108,7 @@ class AuthorizationServiceTest {
     }
 
     @Test
-    void shouldGenerateSuccessfulAuthResponse() throws URISyntaxException {
+    void shouldGenerateSuccessfulAuthResponse() {
         AuthorizationCode authCode = new AuthorizationCode();
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
@@ -199,10 +199,11 @@ class AuthorizationServiceTest {
                         .setRedirectUrls(singletonList(REDIRECT_URI.toString()))
                         .setClientID(CLIENT_ID.toString())
                         .setScopes(scope.toStringList())
-                        .setClaims(List.of("name", "birthdate"));
+                        .setClaims(List.of(ValidClaims.ADDRESS, ValidClaims.CORE_IDENTITY_JWT));
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(Optional.of(clientRegistry));
-        var claimsSetRequest = new ClaimsSetRequest().add("name").add("birthdate");
+        var claimsSetRequest =
+                new ClaimsSetRequest().add(ValidClaims.ADDRESS).add(ValidClaims.CORE_IDENTITY_JWT);
         var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
         var authRequest =
                 generateAuthRequest(
