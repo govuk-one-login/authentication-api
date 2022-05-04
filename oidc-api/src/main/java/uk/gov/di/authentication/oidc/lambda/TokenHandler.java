@@ -22,6 +22,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.LegacyRefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -339,10 +340,12 @@ public class TokenHandler
         }
         Subject publicSubject;
         List<String> scopes;
+        String jti;
         try {
             SignedJWT signedJwt = SignedJWT.parse(currentRefreshToken.getValue());
             publicSubject = new Subject(signedJwt.getJWTClaimsSet().getSubject());
             scopes = (List<String>) signedJwt.getJWTClaimsSet().getClaim("scope");
+            jti = signedJwt.getJWTClaimsSet().getJWTID();
         } catch (java.text.ParseException e) {
             LOG.warn("Unable to parse RefreshToken");
             return generateApiGatewayProxyResponse(
@@ -358,9 +361,12 @@ public class TokenHandler
                     400, OAuth2Error.INVALID_SCOPE.toJSONObject().toJSONString());
         }
         String clientId = requestBody.get("client_id");
-        String redisKey = REFRESH_TOKEN_PREFIX + clientId + "." + publicSubject.getValue();
+
+        segmentedFunctionCall(
+                "migrateRefreshTokens", () -> migrateRefreshTokens(clientId, publicSubject));
+        String redisKey = REFRESH_TOKEN_PREFIX + jti;
         Optional<String> refreshToken =
-                Optional.ofNullable(redisConnectionService.getValue(redisKey));
+                Optional.ofNullable(redisConnectionService.popValue(redisKey));
         RefreshTokenStore tokenStore;
         try {
             tokenStore = objectMapper.readValue(refreshToken.get(), RefreshTokenStore.class);
@@ -372,29 +378,13 @@ public class TokenHandler
                             .toJSONObject()
                             .toJSONString());
         }
-        if (!tokenStore.getRefreshTokens().contains(currentRefreshToken.getValue())) {
+        if (!tokenStore.getRefreshToken().equals(currentRefreshToken.getValue())) {
             LOG.warn("Refresh token store does not contain Refresh token in request");
             return generateApiGatewayProxyResponse(
                     400,
                     new ErrorObject(OAuth2Error.INVALID_GRANT_CODE, "Invalid Refresh token")
                             .toJSONObject()
                             .toJSONString());
-        }
-        if (tokenStore.getRefreshTokens().size() > 1) {
-            LOG.info("Removing Refresh Token from refresh token store");
-            try {
-                redisConnectionService.saveWithExpiry(
-                        redisKey,
-                        objectMapper.writeValueAsString(
-                                tokenStore.removeRefreshToken(currentRefreshToken.getValue())),
-                        configurationService.getSessionExpiry());
-            } catch (JsonProcessingException e) {
-                LOG.error("Unable to serialize refresh token store when updating");
-                throw new RuntimeException(e);
-            }
-        } else {
-            LOG.info("Deleting refresh token store as no other refresh tokens exist");
-            redisConnectionService.deleteValue(redisKey);
         }
 
         OIDCTokenResponse tokenResponse =
@@ -405,5 +395,47 @@ public class TokenHandler
                         publicSubject);
         LOG.info("Generating successful RefreshToken response");
         return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
+    }
+
+    private boolean migrateRefreshTokens(String clientId, Subject publicSubject) {
+        var existingRefreshTokens =
+                Optional.ofNullable(
+                        redisConnectionService.popValue(
+                                REFRESH_TOKEN_PREFIX + clientId + "." + publicSubject.getValue()));
+
+        if (existingRefreshTokens.isEmpty()) {
+            return false;
+        }
+
+        LegacyRefreshTokenStore legacyRefreshTokenStore;
+        try {
+            legacyRefreshTokenStore =
+                    objectMapper.readValue(
+                            existingRefreshTokens.get(), LegacyRefreshTokenStore.class);
+        } catch (JsonProcessingException e) {
+            LOG.warn("Could not parse legacy refresh token store");
+            return false;
+        }
+
+        legacyRefreshTokenStore
+                .getRefreshTokens()
+                .forEach(
+                        s -> {
+                            try {
+                                var parsedToken = SignedJWT.parse(s);
+                                redisConnectionService.saveWithExpiry(
+                                        REFRESH_TOKEN_PREFIX
+                                                + parsedToken.getJWTClaimsSet().getJWTID(),
+                                        objectMapper.writeValueAsString(
+                                                new RefreshTokenStore(
+                                                        s,
+                                                        legacyRefreshTokenStore
+                                                                .getInternalSubjectId())),
+                                        configurationService.getSessionExpiry());
+                            } catch (java.text.ParseException | JsonProcessingException e) {
+                                LOG.warn("Failed to migrate existing refresh token");
+                            }
+                        });
+        return true;
     }
 }
