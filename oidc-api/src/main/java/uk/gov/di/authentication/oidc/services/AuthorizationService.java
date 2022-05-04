@@ -197,7 +197,7 @@ public class AuthorizationService {
                         .map(ClaimsSetRequest.Entry::getClaimName)
                         .collect(Collectors.toList());
         for (String claim : claimNames) {
-            if (ValidClaims.getAllowedClaimNames().stream().noneMatch(t -> t.equals(claim))) {
+            if (ValidClaims.getAllValidClaims().stream().noneMatch(t -> t.equals(claim))) {
                 return false;
             }
         }

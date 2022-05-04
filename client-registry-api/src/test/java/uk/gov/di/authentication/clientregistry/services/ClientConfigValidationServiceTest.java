@@ -42,7 +42,7 @@ class ClientConfigValidationServiceTest {
                 Arguments.of(
                         singletonList("http://localhost/post-redirect-logout"),
                         "http://back-channel.com",
-                        List.of(ValidClaims.ADDRESS),
+                        List.of(ValidClaims.ADDRESS.getValue()),
                         String.valueOf(MANDATORY),
                         ClientType.WEB.getValue()),
                 Arguments.of(
@@ -51,9 +51,9 @@ class ClientConfigValidationServiceTest {
                                 "http://localhost/post-redirect-logout-v2"),
                         "http://back-channel.com",
                         List.of(
-                                ValidClaims.CORE_IDENTITY_JWT,
-                                ValidClaims.ADDRESS,
-                                ValidClaims.PASSPORT),
+                                ValidClaims.CORE_IDENTITY_JWT.getValue(),
+                                ValidClaims.ADDRESS.getValue(),
+                                ValidClaims.PASSPORT.getValue()),
                         String.valueOf(OPTIONAL),
                         ClientType.APP.getValue()));
     }

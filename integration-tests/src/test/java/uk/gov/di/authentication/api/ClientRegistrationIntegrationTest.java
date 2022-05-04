@@ -44,7 +44,7 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
                 Arguments.of(
                         singletonList("http://localhost/post-redirect-logout"),
                         "http://back-channel.com",
-                        List.of(ValidClaims.ADDRESS),
+                        List.of(ValidClaims.ADDRESS.getValue()),
                         String.valueOf(MANDATORY)),
                 Arguments.of(
                         List.of(
@@ -52,9 +52,9 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
                                 "http://localhost/post-redirect-logout-v2"),
                         "http://back-channel.com",
                         List.of(
-                                ValidClaims.CORE_IDENTITY_JWT,
-                                ValidClaims.PASSPORT,
-                                ValidClaims.ADDRESS),
+                                ValidClaims.CORE_IDENTITY_JWT.getValue(),
+                                ValidClaims.PASSPORT.getValue(),
+                                ValidClaims.ADDRESS.getValue()),
                         String.valueOf(OPTIONAL)));
     }
 

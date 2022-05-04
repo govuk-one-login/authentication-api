@@ -199,11 +199,16 @@ class AuthorizationServiceTest {
                         .setRedirectUrls(singletonList(REDIRECT_URI.toString()))
                         .setClientID(CLIENT_ID.toString())
                         .setScopes(scope.toStringList())
-                        .setClaims(List.of(ValidClaims.ADDRESS, ValidClaims.CORE_IDENTITY_JWT));
+                        .setClaims(
+                                List.of(
+                                        ValidClaims.ADDRESS.getValue(),
+                                        ValidClaims.CORE_IDENTITY_JWT.getValue()));
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(Optional.of(clientRegistry));
         var claimsSetRequest =
-                new ClaimsSetRequest().add(ValidClaims.ADDRESS).add(ValidClaims.CORE_IDENTITY_JWT);
+                new ClaimsSetRequest()
+                        .add(ValidClaims.ADDRESS.getValue())
+                        .add(ValidClaims.CORE_IDENTITY_JWT.getValue());
         var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
         var authRequest =
                 generateAuthRequest(

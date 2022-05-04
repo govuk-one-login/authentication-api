@@ -28,13 +28,13 @@ class ValidClaimsTest {
 
     @Test
     void shouldReturnCorrectNumberOfClaimsSupported() {
-        assertThat(ValidClaims.getAllowedClaimNames().size(), equalTo(3));
+        assertThat(ValidClaims.getAllValidClaims().size(), equalTo(3));
     }
 
     @ParameterizedTest
     @MethodSource("supportedClaims")
     void shouldReturnNamesOfSupportedClaims(String supportedClaim) {
-        assertTrue(ValidClaims.getAllowedClaimNames().contains(supportedClaim));
+        assertTrue(ValidClaims.getAllValidClaims().contains(supportedClaim));
     }
 
     @ParameterizedTest
