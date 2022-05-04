@@ -22,7 +22,6 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.entity.LegacyRefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -367,8 +366,6 @@ public class TokenHandler
         }
         String clientId = requestBody.get("client_id");
 
-        segmentedFunctionCall(
-                "migrateRefreshTokens", () -> migrateRefreshTokens(clientId, publicSubject));
         String redisKey = REFRESH_TOKEN_PREFIX + jti;
         Optional<String> refreshToken =
                 Optional.ofNullable(redisConnectionService.popValue(redisKey));
@@ -400,47 +397,5 @@ public class TokenHandler
                         publicSubject);
         LOG.info("Generating successful RefreshToken response");
         return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
-    }
-
-    private boolean migrateRefreshTokens(String clientId, Subject publicSubject) {
-        var existingRefreshTokens =
-                Optional.ofNullable(
-                        redisConnectionService.popValue(
-                                REFRESH_TOKEN_PREFIX + clientId + "." + publicSubject.getValue()));
-
-        if (existingRefreshTokens.isEmpty()) {
-            return false;
-        }
-
-        LegacyRefreshTokenStore legacyRefreshTokenStore;
-        try {
-            legacyRefreshTokenStore =
-                    objectMapper.readValue(
-                            existingRefreshTokens.get(), LegacyRefreshTokenStore.class);
-        } catch (JsonProcessingException e) {
-            LOG.warn("Could not parse legacy refresh token store");
-            return false;
-        }
-
-        legacyRefreshTokenStore
-                .getRefreshTokens()
-                .forEach(
-                        s -> {
-                            try {
-                                var parsedToken = SignedJWT.parse(s);
-                                redisConnectionService.saveWithExpiry(
-                                        REFRESH_TOKEN_PREFIX
-                                                + parsedToken.getJWTClaimsSet().getJWTID(),
-                                        objectMapper.writeValueAsString(
-                                                new RefreshTokenStore(
-                                                        s,
-                                                        legacyRefreshTokenStore
-                                                                .getInternalSubjectId())),
-                                        configurationService.getSessionExpiry());
-                            } catch (java.text.ParseException | JsonProcessingException e) {
-                                LOG.warn("Failed to migrate existing refresh token");
-                            }
-                        });
-        return true;
     }
 }
