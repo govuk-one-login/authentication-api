@@ -378,7 +378,7 @@ public class TokenService {
                     objectMapper.writeValueAsString(store),
                     configService.getSessionExpiry());
         } catch (JsonProcessingException e) {
-            new RuntimeException("Error serializing refresh token store", e);
+            throw new RuntimeException("Error serializing refresh token store", e);
         }
 
         return refreshToken;
