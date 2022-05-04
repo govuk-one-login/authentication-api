@@ -67,7 +67,7 @@ public class DocAppCriService {
                         new ClientID(configurationService.getDocAppAuthorisationClientId()),
                         singletonList(new Audience(tokenURI)),
                         NowHelper.nowPlus(PRIVATE_KEY_JWT_EXPIRY, ChronoUnit.MINUTES),
-                        null,
+                        NowHelper.now(),
                         NowHelper.now(),
                         new JWTID());
         return new TokenRequest(
