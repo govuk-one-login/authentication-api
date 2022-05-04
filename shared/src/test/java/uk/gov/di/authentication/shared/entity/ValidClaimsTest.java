@@ -8,22 +8,44 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ValidClaimsTest {
 
-    static Stream<String> suppportedClaims() {
-        return Stream.of("name", "birthdate", "address", "passport-number");
+    static Stream<String> supportedClaims() {
+        return Stream.of(
+                "https://vocab.account.gov.uk/v1/address",
+                "https://vocab.account.gov.uk/v1/passport",
+                "https://vocab.account.gov.uk/v1/coreIdentityJWT");
+    }
+
+    static Stream<String> unsupportedClaims() {
+        return Stream.of(
+                "https://vocab.account.gov.uk/v1/name",
+                "https://vocab.account.gov.uk/v1/birthdate");
     }
 
     @Test
     void shouldReturnCorrectNumberOfClaimsSupported() {
-        assertThat(ValidClaims.getAllowedClaimNames().size(), equalTo(4));
+        assertThat(ValidClaims.getAllValidClaims().size(), equalTo(3));
     }
 
     @ParameterizedTest
-    @MethodSource("suppportedClaims")
+    @MethodSource("supportedClaims")
     void shouldReturnNamesOfSupportedClaims(String supportedClaim) {
-        assertTrue(ValidClaims.getAllowedClaimNames().contains(supportedClaim));
+        assertTrue(ValidClaims.getAllValidClaims().contains(supportedClaim));
+    }
+
+    @ParameterizedTest
+    @MethodSource("supportedClaims")
+    void shouldReturnTrueForSupportedClaims(String claimName) {
+        assertTrue(ValidClaims.isValidClaim(claimName));
+    }
+
+    @ParameterizedTest
+    @MethodSource("unsupportedClaims")
+    void shouldReturnFalseForUnsupportedClaims(String claimName) {
+        assertFalse(ValidClaims.isValidClaim(claimName));
     }
 }

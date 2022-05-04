@@ -1,31 +1,33 @@
 package uk.gov.di.authentication.shared.entity;
 
-import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
-
-import java.util.Collection;
+import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class ValidClaims {
+public enum ValidClaims {
+    ADDRESS("https://vocab.account.gov.uk/v1/address"),
+    PASSPORT("https://vocab.account.gov.uk/v1/passport"),
+    CORE_IDENTITY_JWT("https://vocab.account.gov.uk/v1/coreIdentityJWT");
 
-    public static final String NAME = "name";
-    public static final String ADDRESS = "address";
-    public static final String PASSPORT_NUMBER = "passport-number";
-    public static final String BIRTHDATE = "birthdate";
+    private final String value;
 
-    protected static final Collection<ClaimsSetRequest.Entry> allowedClaims =
-            new ClaimsSetRequest()
-                    .add(NAME)
-                    .add(BIRTHDATE)
-                    .add(ADDRESS)
-                    .add(PASSPORT_NUMBER)
-                    .getEntries();
+    ValidClaims(String value) {
+        this.value = value;
+    }
 
-    private ValidClaims() {}
+    public String getValue() {
+        return value;
+    }
 
-    public static Set<String> getAllowedClaimNames() {
-        return allowedClaims.stream()
-                .map(ClaimsSetRequest.Entry::getClaimName)
+    public static Set<String> getAllValidClaims() {
+        return Arrays.stream(ValidClaims.values())
+                .map(ValidClaims::getValue)
                 .collect(Collectors.toSet());
+    }
+
+    public static boolean isValidClaim(String claim) {
+        return Arrays.stream(ValidClaims.values())
+                .map(ValidClaims::getValue)
+                .anyMatch(t -> t.equals(claim));
     }
 }

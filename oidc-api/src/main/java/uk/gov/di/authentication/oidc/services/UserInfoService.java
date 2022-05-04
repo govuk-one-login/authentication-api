@@ -67,7 +67,7 @@ public class UserInfoService {
         }
         var address =
                 accessTokenInfo.getIdentityClaims().stream()
-                        .filter(t -> t.equals(ValidClaims.ADDRESS))
+                        .filter(t -> t.equals(ValidClaims.ADDRESS.getValue()))
                         .findFirst()
                         .orElse(null);
         if (Objects.nonNull(address) && Objects.nonNull(spotCredential.get().getAddress())) {
@@ -75,7 +75,7 @@ public class UserInfoService {
         }
         var passportNumber =
                 accessTokenInfo.getIdentityClaims().stream()
-                        .filter(t -> t.equals(ValidClaims.PASSPORT_NUMBER))
+                        .filter(t -> t.equals(ValidClaims.PASSPORT.getValue()))
                         .findFirst()
                         .orElse(null);
         if (Objects.nonNull(passportNumber)

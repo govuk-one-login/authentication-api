@@ -71,7 +71,10 @@ class AccessTokenServiceTest {
     private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
 
     private final ClaimsSetRequest claimsSetRequest =
-            new ClaimsSetRequest().add(ValidClaims.ADDRESS).add(ValidClaims.BIRTHDATE);
+            new ClaimsSetRequest()
+                    .add(ValidClaims.ADDRESS.getValue())
+                    .add(ValidClaims.PASSPORT.getValue())
+                    .add(ValidClaims.CORE_IDENTITY_JWT.getValue());
     private final OIDCClaimsRequest oidcValidClaimsRequest =
             new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
     private AccessToken accessToken = createSignedAccessToken(null, false);
@@ -207,7 +210,8 @@ class AccessTokenServiceTest {
 
     @Test
     void shouldThrowExceptionWhenIdentityClaimsAreInvalid() throws JsonProcessingException {
-        var claimsSetRequest = new ClaimsSetRequest().add("email").add(ValidClaims.BIRTHDATE);
+        var claimsSetRequest =
+                new ClaimsSetRequest().add("email").add(ValidClaims.ADDRESS.getValue());
         var invalidClaimsRequest =
                 new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
         accessToken = createSignedAccessToken(invalidClaimsRequest, false);

@@ -9,6 +9,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
+import uk.gov.di.authentication.shared.entity.ValidClaims;
 
 import java.util.List;
 import java.util.Optional;
@@ -41,7 +42,7 @@ class ClientConfigValidationServiceTest {
                 Arguments.of(
                         singletonList("http://localhost/post-redirect-logout"),
                         "http://back-channel.com",
-                        List.of("address"),
+                        List.of(ValidClaims.ADDRESS.getValue()),
                         String.valueOf(MANDATORY),
                         ClientType.WEB.getValue()),
                 Arguments.of(
@@ -49,7 +50,10 @@ class ClientConfigValidationServiceTest {
                                 "http://localhost/post-redirect-logout",
                                 "http://localhost/post-redirect-logout-v2"),
                         "http://back-channel.com",
-                        List.of("address", "birthdate", "name"),
+                        List.of(
+                                ValidClaims.CORE_IDENTITY_JWT.getValue(),
+                                ValidClaims.ADDRESS.getValue(),
+                                ValidClaims.PASSPORT.getValue()),
                         String.valueOf(OPTIONAL),
                         ClientType.APP.getValue()));
     }

@@ -169,7 +169,7 @@ public class ClientConfigValidationService {
 
     private boolean areClaimsValid(List<String> claims) {
         for (String claim : claims) {
-            if (ValidClaims.getAllowedClaimNames().stream().noneMatch(t -> t.equals(claim))) {
+            if (ValidClaims.getAllValidClaims().stream().noneMatch(t -> t.equals(claim))) {
                 return false;
             }
         }

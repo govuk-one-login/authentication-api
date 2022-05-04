@@ -65,7 +65,9 @@ class UserInfoServiceTest {
     private static final String BASE_URL = "http://example.com";
     private static final String KEY_ID = "14342354354353";
     private final ClaimsSetRequest claimsSetRequest =
-            new ClaimsSetRequest().add(ValidClaims.ADDRESS).add(ValidClaims.PASSPORT_NUMBER);
+            new ClaimsSetRequest()
+                    .add(ValidClaims.ADDRESS.getValue())
+                    .add(ValidClaims.PASSPORT.getValue());
     private final OIDCClaimsRequest oidcValidClaimsRequest =
             new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
     private final String serializedCredential =

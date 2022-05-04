@@ -169,7 +169,7 @@ public class AccessTokenService {
                 JSONArrayUtils.parse(claimsSet.getClaim("claims").toString()).stream()
                         .map(Objects::toString)
                         .collect(Collectors.toList());
-        if (!ValidClaims.getAllowedClaimNames().containsAll(identityClaims)) {
+        if (!ValidClaims.getAllValidClaims().containsAll(identityClaims)) {
             LOG.warn("Invalid set of Identity claims present in access token: {}", identityClaims);
             throw new AccessTokenException("Invalid Identity claims", OAuth2Error.INVALID_REQUEST);
         }
