@@ -148,3 +148,8 @@ variable "common_state_bucket" {
 variable "di_tools_signing_profile_version_arn" {
   description = "The AWS Signer profile version to use from the `di-tools-prod` account"
 }
+
+variable "tools_account_id" {
+  description = "AWS Account for the corresponding tools account to this environment"
+  type        = string
+}
