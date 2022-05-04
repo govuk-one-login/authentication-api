@@ -379,30 +379,6 @@ public class TokenService {
         return refreshToken;
     }
 
-    //    private String updateTokenStore(
-    //            Subject internalSubject,
-    //            RefreshToken refreshToken,
-    //            Optional<String> existingRefreshTokenStore) {
-    //        try {
-    //            if (existingRefreshTokenStore.isPresent()) {
-    //                RefreshTokenStore refreshTokenStore =
-    //                        objectMapper.readValue(
-    //                                existingRefreshTokenStore.get(), RefreshTokenStore.class);
-    //                return objectMapper.writeValueAsString(
-    //                        refreshTokenStore);
-    //            } else {
-    //                return objectMapper.writeValueAsString(
-    //                        new RefreshTokenStore(
-    //                                List.of(refreshToken.getValue()),
-    // internalSubject.getValue()));
-    //            }
-    //
-    //        } catch (JsonProcessingException e) {
-    //            LOG.error("Unable to create new TokenStore with RefreshToken");
-    //            throw new RuntimeException(e);
-    //        }
-    //    }
-
     public SignedJWT generateSignedJWT(JWTClaimsSet claimsSet, Optional<String> type) {
 
         var signingKeyId =
