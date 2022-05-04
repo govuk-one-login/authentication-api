@@ -117,7 +117,8 @@ class AuthorizationServiceTest {
                 generateAuthRequest(REDIRECT_URI.toString(), responseType, scope);
 
         AuthenticationSuccessResponse authSuccessResponse =
-                authorizationService.generateSuccessfulAuthResponse(authRequest, authCode);
+                authorizationService.generateSuccessfulAuthResponse(
+                        authRequest, authCode, REDIRECT_URI, STATE);
         assertThat(authSuccessResponse.getState(), equalTo(STATE));
         assertThat(authSuccessResponse.getAuthorizationCode(), equalTo(authCode));
         assertThat(authSuccessResponse.getRedirectionURI(), equalTo(REDIRECT_URI));

@@ -15,6 +15,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.SPOTCredential;
@@ -47,6 +48,8 @@ class UserInfoServiceTest {
     private UserInfoService userInfoService;
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final DynamoSpotService spotService = mock(DynamoSpotService.class);
+    private final DynamoDocAppService dynamoDocAppService = mock(DynamoDocAppService.class);
+
     private static final Subject INTERNAL_SUBJECT = new Subject("internal-subject");
     private static final Subject SUBJECT = new Subject("some-subject");
     private static final String ADDRESS_CLAIM = "some-address";
@@ -88,7 +91,8 @@ class UserInfoServiceTest {
 
     @BeforeEach
     void setUp() {
-        userInfoService = new UserInfoService(authenticationService, spotService);
+        userInfoService =
+                new UserInfoService(authenticationService, spotService, dynamoDocAppService);
     }
 
     @Test

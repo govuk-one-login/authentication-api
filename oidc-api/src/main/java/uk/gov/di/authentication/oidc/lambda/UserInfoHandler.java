@@ -8,6 +8,7 @@ import com.nimbusds.openid.connect.sdk.UserInfoErrorResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.services.AccessTokenService;
 import uk.gov.di.authentication.oidc.services.UserInfoService;
@@ -53,7 +54,8 @@ public class UserInfoHandler
         this.userInfoService =
                 new UserInfoService(
                         new DynamoService(configurationService),
-                        new DynamoSpotService(configurationService));
+                        new DynamoSpotService(configurationService),
+                        new DynamoDocAppService(configurationService));
         this.accessTokenService =
                 new AccessTokenService(
                         new RedisConnectionService(configurationService),

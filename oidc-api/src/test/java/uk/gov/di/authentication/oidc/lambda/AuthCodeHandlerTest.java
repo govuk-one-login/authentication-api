@@ -5,6 +5,9 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseMode;
@@ -12,6 +15,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
@@ -29,6 +33,7 @@ import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
 import uk.gov.di.authentication.oidc.services.AuthorizationService;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
@@ -42,6 +47,7 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -67,6 +73,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.oidc.helper.RequestObjectTestHelper.generateSignedJWT;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.Session.AccountState.NEW;
@@ -82,6 +89,8 @@ class AuthCodeHandlerTest {
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private static final ClientID CLIENT_ID = new ClientID();
+    private static final String AUDIENCE = "oidc-audience";
+    private static final State STATE = new State();
     private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
 
     private final AuthorizationService authorizationService = mock(AuthorizationService.class);
@@ -139,11 +148,14 @@ class AuthCodeHandlerTest {
 
     private static Stream<Arguments> upliftTestParameters() {
         return Stream.of(
-                arguments(null, LOW_LEVEL, LOW_LEVEL),
-                arguments(LOW_LEVEL, LOW_LEVEL, LOW_LEVEL),
-                arguments(MEDIUM_LEVEL, MEDIUM_LEVEL, MEDIUM_LEVEL),
-                arguments(LOW_LEVEL, MEDIUM_LEVEL, MEDIUM_LEVEL),
-                arguments(MEDIUM_LEVEL, LOW_LEVEL, MEDIUM_LEVEL));
+                arguments(null, LOW_LEVEL, LOW_LEVEL, false),
+                arguments(LOW_LEVEL, LOW_LEVEL, LOW_LEVEL, false),
+                arguments(MEDIUM_LEVEL, MEDIUM_LEVEL, MEDIUM_LEVEL, false),
+                arguments(LOW_LEVEL, MEDIUM_LEVEL, MEDIUM_LEVEL, false),
+                arguments(MEDIUM_LEVEL, LOW_LEVEL, MEDIUM_LEVEL, false),
+                arguments(LOW_LEVEL, LOW_LEVEL, LOW_LEVEL, true),
+                arguments(MEDIUM_LEVEL, MEDIUM_LEVEL, MEDIUM_LEVEL, true),
+                arguments(LOW_LEVEL, MEDIUM_LEVEL, MEDIUM_LEVEL, true));
     }
 
     @ParameterizedTest
@@ -151,10 +163,13 @@ class AuthCodeHandlerTest {
     void shouldGenerateSuccessfulAuthResponseAndUpliftAsNecessary(
             CredentialTrustLevel initialLevel,
             CredentialTrustLevel requestedLevel,
-            CredentialTrustLevel finalLevel)
-            throws ClientNotFoundException, URISyntaxException, JsonProcessingException {
+            CredentialTrustLevel finalLevel,
+            boolean docAppJourney)
+            throws ClientNotFoundException, URISyntaxException, JsonProcessingException,
+                    JOSEException {
         AuthorizationCode authorizationCode = new AuthorizationCode();
-        AuthenticationRequest authRequest = generateValidSessionAndAuthRequest(requestedLevel);
+        AuthenticationRequest authRequest =
+                generateValidSessionAndAuthRequest(requestedLevel, docAppJourney);
         session.setCurrentCredentialStrength(initialLevel).setNewAccount(NEW);
         AuthenticationSuccessResponse authSuccessResponse =
                 new AuthenticationSuccessResponse(
@@ -172,7 +187,10 @@ class AuthCodeHandlerTest {
                         CLIENT_SESSION_ID, EMAIL, clientSession))
                 .thenReturn(authorizationCode);
         when(authorizationService.generateSuccessfulAuthResponse(
-                        any(AuthenticationRequest.class), any(AuthorizationCode.class)))
+                        any(AuthenticationRequest.class),
+                        any(AuthorizationCode.class),
+                        any(URI.class),
+                        any(State.class)))
                 .thenReturn(authSuccessResponse);
 
         APIGatewayProxyResponseEvent response = generateApiRequest();
@@ -182,7 +200,9 @@ class AuthCodeHandlerTest {
                 objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
         assertThat(authCodeResponse.getLocation(), equalTo(authSuccessResponse.toURI().toString()));
         assertThat(session.getCurrentCredentialStrength(), equalTo(finalLevel));
-        verify(sessionService).save(session.setAuthenticated(true));
+        assertThat(session.isAuthenticated(), not(equalTo(docAppJourney)));
+
+        verify(sessionService).save(session);
 
         verify(auditService)
                 .submitAuditEvent(
@@ -219,8 +239,9 @@ class AuthCodeHandlerTest {
     }
 
     @Test
-    void shouldGenerateErrorResponseWhenRedirectUriIsInvalid() throws ClientNotFoundException {
-        generateValidSessionAndAuthRequest(MEDIUM_LEVEL);
+    void shouldGenerateErrorResponseWhenRedirectUriIsInvalid()
+            throws ClientNotFoundException, JOSEException {
+        generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
         when(authorizationService.isClientRedirectUriValid(eq(CLIENT_ID), eq(REDIRECT_URI)))
                 .thenReturn(false);
         APIGatewayProxyResponseEvent response = generateApiRequest();
@@ -233,14 +254,17 @@ class AuthCodeHandlerTest {
 
     @Test
     void shouldGenerateErrorResponseWhenClientIsNotFound()
-            throws ClientNotFoundException, JsonProcessingException {
+            throws ClientNotFoundException, JsonProcessingException, JOSEException {
         AuthenticationErrorResponse authenticationErrorResponse =
                 new AuthenticationErrorResponse(
                         REDIRECT_URI, OAuth2Error.INVALID_CLIENT, null, null);
         when(authorizationService.generateAuthenticationErrorResponse(
-                        any(AuthenticationRequest.class), eq(OAuth2Error.INVALID_CLIENT)))
+                        any(AuthenticationRequest.class),
+                        eq(OAuth2Error.INVALID_CLIENT),
+                        any(URI.class),
+                        any(State.class)))
                 .thenReturn(authenticationErrorResponse);
-        generateValidSessionAndAuthRequest(MEDIUM_LEVEL);
+        generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
         doThrow(ClientNotFoundException.class)
                 .when(authorizationService)
                 .isClientRedirectUriValid(eq(CLIENT_ID), eq(REDIRECT_URI));
@@ -272,7 +296,7 @@ class AuthCodeHandlerTest {
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put("redirect_uri", singletonList("http://localhost/redirect"));
         customParams.put("client_id", singletonList(new ClientID().toString()));
-        generateValidSession(customParams, MEDIUM_LEVEL);
+        generateValidSession(customParams, MEDIUM_LEVEL, false);
         APIGatewayProxyResponseEvent response = generateApiRequest();
 
         assertThat(response, hasStatus(200));
@@ -319,29 +343,40 @@ class AuthCodeHandlerTest {
     }
 
     private AuthenticationRequest generateValidSessionAndAuthRequest(
-            CredentialTrustLevel requestedLevel) {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        Nonce nonce = new Nonce();
-        scope.add(OIDCScopeValue.OPENID);
-        AuthenticationRequest authRequest =
-                new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
-                        .state(new State())
-                        .nonce(nonce)
-                        .build();
-        generateValidSession(authRequest.toParameters(), requestedLevel);
+            CredentialTrustLevel requestedLevel, boolean docAppJourney) throws JOSEException {
+        AuthenticationRequest authRequest;
+        if (docAppJourney) {
+            authRequest = generateRequestObjectAuthRequest();
+        } else {
+            ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+            Scope scope = new Scope();
+            Nonce nonce = new Nonce();
+            scope.add(OIDCScopeValue.OPENID);
+
+            authRequest =
+                    new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
+                            .state(new State())
+                            .nonce(nonce)
+                            .build();
+        }
+        generateValidSession(authRequest.toParameters(), requestedLevel, docAppJourney);
         return authRequest;
     }
 
     private void generateValidSession(
-            Map<String, List<String>> authRequest, CredentialTrustLevel requestedLevel) {
+            Map<String, List<String>> authRequestParams,
+            CredentialTrustLevel requestedLevel,
+            boolean docAppJourney) {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
         when(vectorOfTrust.getCredentialTrustLevel()).thenReturn(requestedLevel);
         when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vectorOfTrust);
-        when(clientSession.getAuthRequestParams()).thenReturn(authRequest);
+        when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
+        if (docAppJourney) {
+            when(clientSession.getDocAppSubjectId()).thenReturn(new Subject("docAppSubjectId"));
+        }
     }
 
     private APIGatewayProxyResponseEvent generateApiRequest() {
@@ -357,5 +392,30 @@ class AuthCodeHandlerTest {
                         PERSISTENT_SESSION_ID));
 
         return handler.handleRequest(event, context);
+    }
+
+    private static AuthenticationRequest generateRequestObjectAuthRequest() throws JOSEException {
+        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(AUDIENCE)
+                        .claim("redirect_uri", REDIRECT_URI.toString())
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", CustomScopeValue.DOC_CHECKING_APP.toString())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("state", STATE.getValue())
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        return generateAuthRequest(signedJWT);
+    }
+
+    private static AuthenticationRequest generateAuthRequest(SignedJWT signedJWT) {
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        AuthenticationRequest.Builder builder =
+                new AuthenticationRequest.Builder(ResponseType.CODE, scope, CLIENT_ID, REDIRECT_URI)
+                        .requestObject(signedJWT);
+        return builder.build();
     }
 }

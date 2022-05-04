@@ -19,7 +19,8 @@ dependencies {
             configurations.bouncycastle,
             configurations.cloudwatch,
             project(":shared"),
-            project(":client-registry-api")
+            project(":client-registry-api"),
+            project(":doc-checking-app-api")
 
     testImplementation configurations.tests,
             configurations.lambda_tests,
