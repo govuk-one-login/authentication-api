@@ -53,8 +53,10 @@ data "aws_iam_policy_document" "dynamo_user_read_policy_document" {
     resources = [
       data.aws_dynamodb_table.user_credentials_table.arn,
       data.aws_dynamodb_table.user_profile_table.arn,
+      data.aws_dynamodb_table.doc_app_cri_credential_table.arn,
       "${data.aws_dynamodb_table.user_profile_table.arn}/index/*",
       "${data.aws_dynamodb_table.user_credentials_table.arn}/index/*",
+      "${data.aws_dynamodb_table.doc_app_cri_credential_table.arn}/index/*",
     ]
   }
 }
