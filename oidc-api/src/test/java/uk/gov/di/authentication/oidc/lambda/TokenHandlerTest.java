@@ -41,7 +41,6 @@ import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.entity.LegacyRefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
@@ -84,7 +83,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.helper.RequestObjectTestHelper.generateSignedJWT;
 import static uk.gov.di.authentication.shared.entity.CustomScopeValue.DOC_CHECKING_APP;
@@ -266,77 +264,6 @@ public class TokenHandlerTest {
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
-    }
-
-    @Test
-    public void shouldReturn200ForSuccessfulRefreshTokenRequestWithLegacyTokenStore()
-            throws JOSEException, JsonProcessingException, ParseException {
-        SignedJWT signedRefreshToken = createSignedRefreshToken();
-        SignedJWT anotherSignedRefreshToken = createSignedRefreshToken();
-        KeyPair keyPair = generateRsaKeyPair();
-        RefreshToken refreshToken = new RefreshToken(signedRefreshToken.serialize());
-        RefreshToken anotherRefreshToken = new RefreshToken(anotherSignedRefreshToken.serialize());
-
-        OIDCTokenResponse tokenResponse =
-                new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
-        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry = generateClientRegistry(keyPair, false);
-
-        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
-        when(tokenService.validatePrivateKeyJWT(
-                        anyString(),
-                        eq(clientRegistry.getPublicKey()),
-                        eq(BASE_URI),
-                        eq(CLIENT_ID)))
-                .thenReturn(Optional.empty());
-        when(tokenValidationService.validateRefreshTokenSignatureAndExpiry(refreshToken))
-                .thenReturn(true);
-        when(tokenValidationService.validateRefreshTokenScopes(
-                        SCOPES.toStringList(), SCOPES.toStringList()))
-                .thenReturn(true);
-        LegacyRefreshTokenStore legacyTokenStore =
-                new LegacyRefreshTokenStore(
-                        List.of(refreshToken.getValue(), anotherRefreshToken.getValue()),
-                        INTERNAL_SUBJECT.getValue());
-        String legacyTokenStoreString = objectMapper.writeValueAsString(legacyTokenStore);
-        RefreshTokenStore tokenStore =
-                new RefreshTokenStore(refreshToken.getValue(), INTERNAL_SUBJECT.getValue());
-        String tokenStoreString = objectMapper.writeValueAsString(tokenStore);
-        when(redisConnectionService.popValue(
-                        REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT.getValue()))
-                .thenReturn(legacyTokenStoreString);
-
-        when(redisConnectionService.popValue(
-                        REFRESH_TOKEN_PREFIX + signedRefreshToken.getJWTClaimsSet().getJWTID()))
-                .thenReturn(tokenStoreString);
-        when(tokenService.generateRefreshTokenResponse(
-                        eq(CLIENT_ID),
-                        eq(INTERNAL_SUBJECT),
-                        eq(SCOPES.toStringList()),
-                        eq(PUBLIC_SUBJECT)))
-                .thenReturn(tokenResponse);
-
-        APIGatewayProxyResponseEvent result =
-                generateApiGatewayRefreshRequest(privateKeyJWT, refreshToken.getValue());
-        assertThat(result, hasStatus(200));
-        assertTrue(result.getBody().contains(refreshToken.getValue()));
-        assertTrue(result.getBody().contains(accessToken.getValue()));
-
-        verify(redisConnectionService)
-                .saveWithExpiry(
-                        REFRESH_TOKEN_PREFIX + signedRefreshToken.getJWTClaimsSet().getJWTID(),
-                        tokenStoreString,
-                        1234L);
-        verify(redisConnectionService)
-                .saveWithExpiry(
-                        REFRESH_TOKEN_PREFIX
-                                + anotherSignedRefreshToken.getJWTClaimsSet().getJWTID(),
-                        objectMapper.writeValueAsString(
-                                new RefreshTokenStore(
-                                        anotherRefreshToken.getValue(),
-                                        INTERNAL_SUBJECT.getValue())),
-                        1234L);
     }
 
     @Test
