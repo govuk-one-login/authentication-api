@@ -26,6 +26,7 @@ import uk.gov.di.authentication.shared.entity.LegacyRefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.InstrumentationHelper;
 import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -144,6 +145,10 @@ public class TokenHandler
                             Map<String, String> requestBody = parseRequestBody(input.getBody());
                             String clientID = requestBody.get("client_id");
                             attachLogFieldToLogs(CLIENT_ID, clientID);
+                            InstrumentationHelper.addAnnotation("client", clientID);
+                            InstrumentationHelper.addAnnotation(
+                                    "grant_type", requestBody.get("grant_type"));
+
                             ClientRegistry client;
                             try {
                                 client = clientService.getClient(clientID).orElseThrow();

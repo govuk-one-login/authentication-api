@@ -32,4 +32,10 @@ public class InstrumentationHelper {
             }
         }
     }
+
+    public static void addAnnotation(String key, String value) {
+        if (tracingEnabled) {
+            AWSXRay.getCurrentSegment().putAnnotation(key, value);
+        }
+    }
 }
