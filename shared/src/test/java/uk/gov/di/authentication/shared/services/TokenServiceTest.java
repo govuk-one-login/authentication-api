@@ -39,6 +39,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
@@ -71,11 +72,13 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.startsWith;
 import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -162,16 +165,23 @@ public class TokenServiceTest {
                         null);
 
         assertSuccessfullTokenResponse(tokenResponse);
-
         assertNotNull(tokenResponse.getOIDCTokens().getRefreshToken());
-        String refreshTokenKey = REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT;
         RefreshTokenStore refreshTokenStore =
                 new RefreshTokenStore(
-                        List.of(tokenResponse.getOIDCTokens().getRefreshToken().getValue()),
+                        tokenResponse.getOIDCTokens().getRefreshToken().getValue(),
                         INTERNAL_SUBJECT.getValue());
+        ArgumentCaptor<String> redisKey = ArgumentCaptor.forClass(String.class);
         verify(redisConnectionService)
                 .saveWithExpiry(
-                        refreshTokenKey, objectMapper.writeValueAsString(refreshTokenStore), 300L);
+                        redisKey.capture(),
+                        eq(objectMapper.writeValueAsString(refreshTokenStore)),
+                        eq(300L));
+
+        var refreshToken =
+                SignedJWT.parse(tokenResponse.getOIDCTokens().getRefreshToken().getValue());
+        var jti = refreshToken.getJWTClaimsSet().getJWTID();
+        assertThat(redisKey.getValue(), startsWith(REFRESH_TOKEN_PREFIX));
+        assertThat(redisKey.getValue().split(":")[1], equalTo(jti));
     }
 
     @Test
@@ -221,14 +231,24 @@ public class TokenServiceTest {
 
         assertTrue(jsonarray.contains("nickname"));
         assertTrue(jsonarray.contains("birthdate"));
-        String refreshTokenKey = REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT;
+
         RefreshTokenStore refreshTokenStore =
                 new RefreshTokenStore(
-                        List.of(tokenResponse.getOIDCTokens().getRefreshToken().getValue()),
+                        tokenResponse.getOIDCTokens().getRefreshToken().getValue(),
                         INTERNAL_SUBJECT.getValue());
+
+        ArgumentCaptor<String> redisKey = ArgumentCaptor.forClass(String.class);
         verify(redisConnectionService)
                 .saveWithExpiry(
-                        refreshTokenKey, objectMapper.writeValueAsString(refreshTokenStore), 300L);
+                        redisKey.capture(),
+                        eq(objectMapper.writeValueAsString(refreshTokenStore)),
+                        eq(300L));
+
+        var refreshToken =
+                SignedJWT.parse(tokenResponse.getOIDCTokens().getRefreshToken().getValue());
+        var jti = refreshToken.getJWTClaimsSet().getJWTID();
+        assertThat(redisKey.getValue(), startsWith(REFRESH_TOKEN_PREFIX));
+        assertThat(redisKey.getValue().split(":")[1], equalTo(jti));
     }
 
     @Test

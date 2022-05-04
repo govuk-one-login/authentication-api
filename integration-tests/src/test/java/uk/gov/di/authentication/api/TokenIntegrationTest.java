@@ -41,6 +41,7 @@ import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper;
@@ -61,7 +62,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
@@ -272,9 +272,9 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         SignedJWT signedJWT = generateSignedRefreshToken(scope, publicSubject);
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
         RefreshTokenStore tokenStore =
-                new RefreshTokenStore(List.of(refreshToken.getValue()), internalSubject.getValue());
+                new RefreshTokenStore(refreshToken.getValue(), internalSubject.getValue());
         redis.addToRedis(
-                REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + publicSubject.getValue(),
+                REFRESH_TOKEN_PREFIX + signedJWT.getJWTClaimsSet().getJWTID(),
                 objectMapper.writeValueAsString(tokenStore),
                 900L);
         PrivateKey privateKey = keyPair.getPrivate();
@@ -323,7 +323,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .issueTime(NowHelper.now())
                         .claim("client_id", CLIENT_ID)
                         .subject(publicSubject.getValue())
-                        .jwtID(UUID.randomUUID().toString())
+                        .jwtID(IdGenerator.generate())
                         .build();
         return tokenSigner.signJwt(claimsSet);
     }

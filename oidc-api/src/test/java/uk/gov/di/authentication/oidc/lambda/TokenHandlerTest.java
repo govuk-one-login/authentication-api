@@ -79,6 +79,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -235,11 +236,10 @@ public class TokenHandlerTest {
                         SCOPES.toStringList(), SCOPES.toStringList()))
                 .thenReturn(true);
         RefreshTokenStore tokenStore =
-                new RefreshTokenStore(
-                        singletonList(refreshToken.getValue()), INTERNAL_SUBJECT.getValue());
-        String redisKey = REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT.getValue();
+                new RefreshTokenStore(refreshToken.getValue(), INTERNAL_SUBJECT.getValue());
         String tokenStoreString = ObjectMapperFactory.getInstance().writeValueAsString(tokenStore);
-        when(redisConnectionService.getValue(redisKey)).thenReturn(tokenStoreString);
+        when(redisConnectionService.getValue(startsWith(REFRESH_TOKEN_PREFIX)))
+                .thenReturn(tokenStoreString);
         when(tokenService.generateRefreshTokenResponse(
                         eq(CLIENT_ID),
                         eq(INTERNAL_SUBJECT),
@@ -252,59 +252,7 @@ public class TokenHandlerTest {
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
-        verify(redisConnectionService, times(1)).deleteValue(redisKey);
-    }
-
-    @Test
-    public void shouldReturn200ForRefreshTokenRequestWhenMultipleRefreshTokensAreStored()
-            throws JOSEException, JsonProcessingException {
-        SignedJWT signedRefreshToken = createSignedRefreshToken();
-        KeyPair keyPair = generateRsaKeyPair();
-        RefreshToken refreshToken = new RefreshToken(signedRefreshToken.serialize());
-        RefreshToken refreshToken2 = new RefreshToken();
-        OIDCTokenResponse tokenResponse =
-                new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
-        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry = generateClientRegistry(keyPair, false);
-
-        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
-        when(tokenService.validatePrivateKeyJWT(
-                        anyString(),
-                        eq(clientRegistry.getPublicKey()),
-                        eq(BASE_URI),
-                        eq(CLIENT_ID)))
-                .thenReturn(Optional.empty());
-        when(tokenValidationService.validateRefreshTokenSignatureAndExpiry(refreshToken))
-                .thenReturn(true);
-        when(tokenValidationService.validateRefreshTokenScopes(
-                        SCOPES.toStringList(), SCOPES.toStringList()))
-                .thenReturn(true);
-        RefreshTokenStore tokenStore =
-                new RefreshTokenStore(
-                        List.of(refreshToken.getValue(), refreshToken2.getValue()),
-                        INTERNAL_SUBJECT.getValue());
-        String redisKey = REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT.getValue();
-        String tokenStoreString = objectMapper.writeValueAsString(tokenStore);
-        when(redisConnectionService.getValue(redisKey)).thenReturn(tokenStoreString);
-        when(tokenService.generateRefreshTokenResponse(
-                        eq(CLIENT_ID),
-                        eq(INTERNAL_SUBJECT),
-                        eq(SCOPES.toStringList()),
-                        eq(PUBLIC_SUBJECT)))
-                .thenReturn(tokenResponse);
-
-        APIGatewayProxyResponseEvent result =
-                generateApiGatewayRefreshRequest(privateKeyJWT, refreshToken.getValue());
-        assertThat(result, hasStatus(200));
-        assertTrue(result.getBody().contains(refreshToken.getValue()));
-        assertTrue(result.getBody().contains(accessToken.getValue()));
-
-        String updatedTokenstore =
-                objectMapper.writeValueAsString(
-                        new RefreshTokenStore(
-                                List.of(refreshToken2.getValue()), INTERNAL_SUBJECT.getValue()));
-        verify(redisConnectionService, times(1)).saveWithExpiry(redisKey, updatedTokenstore, 1234L);
+        verify(redisConnectionService, times(1)).deleteValue(startsWith(REFRESH_TOKEN_PREFIX));
     }
 
     @Test

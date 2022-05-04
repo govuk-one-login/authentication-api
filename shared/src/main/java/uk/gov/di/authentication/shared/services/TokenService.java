@@ -46,6 +46,7 @@ import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
@@ -350,6 +351,7 @@ public class TokenService {
             String clientId, Subject internalSubject, List<String> scopes, Subject publicSubject) {
         LOG.info("Generating RefreshToken");
         Date expiryDate = NowHelper.nowPlus(configService.getSessionExpiry(), ChronoUnit.SECONDS);
+        var jwtId = IdGenerator.generate();
         JWTClaimsSet claimsSet =
                 new JWTClaimsSet.Builder()
                         .claim("scope", scopes)
@@ -358,52 +360,48 @@ public class TokenService {
                         .issueTime(NowHelper.now())
                         .claim("client_id", clientId)
                         .subject(publicSubject.getValue())
-                        .jwtID(UUID.randomUUID().toString())
+                        .jwtID(jwtId)
                         .build();
         SignedJWT signedJWT = generateSignedJWT(claimsSet, Optional.empty());
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
-        String redisKey = REFRESH_TOKEN_PREFIX + clientId + "." + publicSubject.getValue();
-        Optional<String> existingRefreshTokenStore =
-                Optional.ofNullable(
-                        segmentedFunctionCall(
-                                "getExistingRefreshTokenStore",
-                                () -> redisConnectionService.getValue(redisKey)));
 
-        String serializedTokenStore =
-                segmentedFunctionCall(
-                        "updateTokenStore",
-                        () ->
-                                updateTokenStore(
-                                        internalSubject, refreshToken, existingRefreshTokenStore));
-
-        redisConnectionService.saveWithExpiry(
-                redisKey, serializedTokenStore, configService.getSessionExpiry());
+        String redisKey = REFRESH_TOKEN_PREFIX + jwtId;
+        var store = new RefreshTokenStore(refreshToken.getValue(), internalSubject.toString());
+        try {
+            redisConnectionService.saveWithExpiry(
+                    redisKey,
+                    objectMapper.writeValueAsString(store),
+                    configService.getSessionExpiry());
+        } catch (JsonProcessingException e) {
+            new RuntimeException("Error serializing refresh token store", e);
+        }
 
         return refreshToken;
     }
 
-    private String updateTokenStore(
-            Subject internalSubject,
-            RefreshToken refreshToken,
-            Optional<String> existingRefreshTokenStore) {
-        try {
-            if (existingRefreshTokenStore.isPresent()) {
-                RefreshTokenStore refreshTokenStore =
-                        objectMapper.readValue(
-                                existingRefreshTokenStore.get(), RefreshTokenStore.class);
-                return objectMapper.writeValueAsString(
-                        refreshTokenStore.addRefreshToken(refreshToken.getValue()));
-            } else {
-                return objectMapper.writeValueAsString(
-                        new RefreshTokenStore(
-                                List.of(refreshToken.getValue()), internalSubject.getValue()));
-            }
-
-        } catch (JsonProcessingException e) {
-            LOG.error("Unable to create new TokenStore with RefreshToken");
-            throw new RuntimeException(e);
-        }
-    }
+    //    private String updateTokenStore(
+    //            Subject internalSubject,
+    //            RefreshToken refreshToken,
+    //            Optional<String> existingRefreshTokenStore) {
+    //        try {
+    //            if (existingRefreshTokenStore.isPresent()) {
+    //                RefreshTokenStore refreshTokenStore =
+    //                        objectMapper.readValue(
+    //                                existingRefreshTokenStore.get(), RefreshTokenStore.class);
+    //                return objectMapper.writeValueAsString(
+    //                        refreshTokenStore);
+    //            } else {
+    //                return objectMapper.writeValueAsString(
+    //                        new RefreshTokenStore(
+    //                                List.of(refreshToken.getValue()),
+    // internalSubject.getValue()));
+    //            }
+    //
+    //        } catch (JsonProcessingException e) {
+    //            LOG.error("Unable to create new TokenStore with RefreshToken");
+    //            throw new RuntimeException(e);
+    //        }
+    //    }
 
     public SignedJWT generateSignedJWT(JWTClaimsSet claimsSet, Optional<String> type) {
 

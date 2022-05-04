@@ -311,10 +311,12 @@ public class TokenHandler
         }
         Subject publicSubject;
         List<String> scopes;
+        String jti;
         try {
             SignedJWT signedJwt = SignedJWT.parse(currentRefreshToken.getValue());
             publicSubject = new Subject(signedJwt.getJWTClaimsSet().getSubject());
             scopes = (List<String>) signedJwt.getJWTClaimsSet().getClaim("scope");
+            jti = signedJwt.getJWTClaimsSet().getJWTID();
         } catch (java.text.ParseException e) {
             LOG.warn("Unable to parse RefreshToken");
             return generateApiGatewayProxyResponse(
@@ -330,7 +332,7 @@ public class TokenHandler
                     400, OAuth2Error.INVALID_SCOPE.toJSONObject().toJSONString());
         }
         String clientId = requestBody.get("client_id");
-        String redisKey = REFRESH_TOKEN_PREFIX + clientId + "." + publicSubject.getValue();
+        String redisKey = REFRESH_TOKEN_PREFIX + jti;
         Optional<String> refreshToken =
                 Optional.ofNullable(redisConnectionService.getValue(redisKey));
         RefreshTokenStore tokenStore;
@@ -344,7 +346,7 @@ public class TokenHandler
                             .toJSONObject()
                             .toJSONString());
         }
-        if (!tokenStore.getRefreshTokens().contains(currentRefreshToken.getValue())) {
+        if (!tokenStore.getRefreshToken().equals(currentRefreshToken.getValue())) {
             LOG.warn("Refresh token store does not contain Refresh token in request");
             return generateApiGatewayProxyResponse(
                     400,
@@ -352,22 +354,8 @@ public class TokenHandler
                             .toJSONObject()
                             .toJSONString());
         }
-        if (tokenStore.getRefreshTokens().size() > 1) {
-            LOG.info("Removing Refresh Token from refresh token store");
-            try {
-                redisConnectionService.saveWithExpiry(
-                        redisKey,
-                        objectMapper.writeValueAsString(
-                                tokenStore.removeRefreshToken(currentRefreshToken.getValue())),
-                        configurationService.getSessionExpiry());
-            } catch (JsonProcessingException e) {
-                LOG.error("Unable to serialize refresh token store when updating");
-                throw new RuntimeException(e);
-            }
-        } else {
-            LOG.info("Deleting refresh token store as no other refresh tokens exist");
-            redisConnectionService.deleteValue(redisKey);
-        }
+        LOG.info("Deleting used refresh token");
+        redisConnectionService.deleteValue(redisKey);
 
         OIDCTokenResponse tokenResponse =
                 tokenService.generateRefreshTokenResponse(
