@@ -23,7 +23,7 @@ dependencies {
             "com.google.protobuf:protobuf-java-util:${dependencyVersions.protobuf_version}",
             "com.google.code.gson:gson:2.9.0"
 
-    implementation project(":shared"), noXray
+    implementation project(":shared")
 
     runtimeOnly configurations.logging_runtime
 

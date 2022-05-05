@@ -16,7 +16,7 @@ dependencies {
     implementation configurations.jackson,
             configurations.nimbus
 
-    implementation project(":shared"), noXray
+    implementation project(":shared")
 
     runtimeOnly configurations.logging_runtime
 

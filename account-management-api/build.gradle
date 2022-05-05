@@ -18,7 +18,7 @@ dependencies {
             configurations.govuk_notify,
             configurations.jackson
 
-    implementation project(":shared"), noXray
+    implementation project(":shared")
 
     runtimeOnly configurations.logging_runtime
 

@@ -21,7 +21,7 @@ dependencies {
             configurations.cloudwatch,
             configurations.bouncycastle
 
-    implementation project(":shared"), noXray
+    implementation project(":shared")
 
     runtimeOnly configurations.logging_runtime
 
