@@ -52,13 +52,13 @@ resource "aws_dynamodb_table_item" "stub_rp_client" {
     Claims = {
       L = [
         {
-          S = "name"
+          S = "https://vocab.account.gov.uk/v1/coreIdentityJWT"
         },
         {
-          S = "birthdate"
+          S = "https://vocab.account.gov.uk/v1/passport"
         },
         {
-          S = "address"
+          S = "https://vocab.account.gov.uk/v1/address"
         },
       ]
     }
