@@ -33,6 +33,25 @@ public class InstrumentationHelper {
         }
     }
 
+    public static void segmentedFunctionCall(String segmentName, Runnable runnable) {
+        if (tracingEnabled) {
+            var subSegment = AWSXRay.beginSubsegment(segmentName);
+            try {
+                runnable.run();
+            } catch (RuntimeException e) {
+                subSegment.addException(e);
+                throw e;
+            } catch (Exception e) {
+                subSegment.addException(e);
+                throw new RuntimeException(e);
+            } finally {
+                AWSXRay.endSubsegment();
+            }
+        } else {
+            runnable.run();
+        }
+    }
+
     public static void addAnnotation(String key, String value) {
         if (tracingEnabled) {
             AWSXRay.getCurrentSegment().putAnnotation(key, value);
