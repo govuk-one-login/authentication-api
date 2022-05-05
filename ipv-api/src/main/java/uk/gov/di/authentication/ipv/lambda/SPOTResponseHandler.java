@@ -64,7 +64,7 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
                     return null;
                 }
 
-                dynamoIdentityService.addIdentityCredential(
+                dynamoIdentityService.addCoreIdentityJWT(
                         spotResponse.getSub(),
                         spotResponse.getClaims().values().stream()
                                 .map(Object::toString)
