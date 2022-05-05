@@ -15,7 +15,7 @@ dependencies {
             configurations.nimbus,
             configurations.bouncycastle
 
-    implementation project(":shared"), noXray
+    implementation project(":shared")
 
     runtimeOnly configurations.logging_runtime
 

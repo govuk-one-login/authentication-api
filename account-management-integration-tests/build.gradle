@@ -17,10 +17,11 @@ dependencies {
             configurations.lettuce,
             configurations.libphonenumber,
             "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${dependencyVersions.jackson_version}",
-            "com.google.protobuf:protobuf-java:${dependencyVersions.protobuf_version}",
-            project(":account-management-api"),
-            project(":shared-test")
-    implementation project(":shared"), noXray
+            "com.google.protobuf:protobuf-java:${dependencyVersions.protobuf_version}"
+    testImplementation project(":shared"), noXray
+    testImplementation project(":account-management-api"), noXray
+    testImplementation project(":shared-test"), noXray
+
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
 }

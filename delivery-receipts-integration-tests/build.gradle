@@ -11,11 +11,11 @@ dependencies {
             configurations.glassfish,
             configurations.tests,
             configurations.lambda,
-            configurations.lettuce,
-            project(":delivery-receipts-api"),
-            project(":shared-test")
+            configurations.lettuce
 
     implementation project(":shared"), noXray
+    testImplementation project(":delivery-receipts-api"), noXray
+    testImplementation project(":shared-test"), noXray
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
 }

@@ -17,10 +17,10 @@ dependencies {
             configurations.lettuce,
             configurations.lambda,
             "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${dependencyVersions.jackson_version}",
-            "com.google.protobuf:protobuf-java:${dependencyVersions.protobuf_version}",
-            project(":shared-test")
+            "com.google.protobuf:protobuf-java:${dependencyVersions.protobuf_version}"
 
     implementation project(":shared"), noXray
+    implementation project(":shared-test"), noXray
     implementation project(":oidc-api"), noXray
     implementation project(":frontend-api"), noXray
     implementation project(":client-registry-api"), noXray

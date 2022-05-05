@@ -13,7 +13,7 @@ dependencies {
             configurations.libphonenumber,
             configurations.cloudwatch
 
-    implementation project(":shared"), noXray
+    implementation project(":shared")
 
     runtimeOnly configurations.logging_runtime
 
