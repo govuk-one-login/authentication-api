@@ -11,21 +11,21 @@ import uk.gov.di.authentication.oidc.exceptions.UserInfoException;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.DynamoSpotService;
+import uk.gov.di.authentication.shared.services.DynamoIdentityService;
 
 import java.util.Objects;
 
 public class UserInfoService {
 
     private final AuthenticationService authenticationService;
-    private final DynamoSpotService spotService;
+    private final DynamoIdentityService spotService;
     private final DynamoDocAppService dynamoDocAppService;
 
     private static final Logger LOG = LogManager.getLogger(UserInfoService.class);
 
     public UserInfoService(
             AuthenticationService authenticationService,
-            DynamoSpotService spotService,
+            DynamoIdentityService spotService,
             DynamoDocAppService dynamoDocAppService) {
         this.authenticationService = authenticationService;
         this.spotService = spotService;
@@ -61,7 +61,7 @@ public class UserInfoService {
 
     private UserInfo populateIdentityInfo(AccessTokenInfo accessTokenInfo, UserInfo userInfo) {
         LOG.info("Populating IdentityInfo");
-        var spotCredential = spotService.getSpotCredential(accessTokenInfo.getPublicSubject());
+        var spotCredential = spotService.getIdentityCredentials(accessTokenInfo.getPublicSubject());
         if (spotCredential.isEmpty() || Objects.isNull(accessTokenInfo.getIdentityClaims())) {
             return userInfo;
         }

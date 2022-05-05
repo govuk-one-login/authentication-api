@@ -6,8 +6,8 @@ import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
 import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import uk.gov.di.authentication.shared.entity.SPOTCredential;
-import uk.gov.di.authentication.shared.services.DynamoSpotService;
+import uk.gov.di.authentication.shared.entity.IdentityCredentials;
+import uk.gov.di.authentication.shared.services.DynamoIdentityService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
 import java.util.Optional;
@@ -15,12 +15,12 @@ import java.util.Optional;
 import static com.amazonaws.services.dynamodbv2.model.KeyType.HASH;
 import static com.amazonaws.services.dynamodbv2.model.ScalarAttributeType.S;
 
-public class SPOTStoreExtension extends DynamoExtension implements AfterEachCallback {
+public class IdentityStoreExtension extends DynamoExtension implements AfterEachCallback {
 
     public static final String SUBJECT_ID_FIELD = "SubjectID";
-    public static final String SPOT_TABLE = "local-spot-credential";
+    public static final String IDENTITY_CREDENTIALS_TABLE = "local-identity-credentials";
 
-    private DynamoSpotService dynamoService;
+    private DynamoIdentityService dynamoService;
 
     @Override
     public void beforeAll(ExtensionContext context) throws Exception {
@@ -34,27 +34,27 @@ public class SPOTStoreExtension extends DynamoExtension implements AfterEachCall
                     }
                 };
 
-        dynamoService = new DynamoSpotService(configuration);
+        dynamoService = new DynamoIdentityService(configuration);
     }
 
     @Override
     public void afterEach(ExtensionContext context) throws Exception {
-        clearDynamoTable(dynamoDB, SPOT_TABLE, SUBJECT_ID_FIELD);
+        clearDynamoTable(dynamoDB, IDENTITY_CREDENTIALS_TABLE, SUBJECT_ID_FIELD);
     }
 
     @Override
     protected void createTables() {
-        if (!tableExists(SPOT_TABLE)) {
-            createUserProfileTable(SPOT_TABLE);
+        if (!tableExists(IDENTITY_CREDENTIALS_TABLE)) {
+            createUserProfileTable(IDENTITY_CREDENTIALS_TABLE);
         }
     }
 
     public void addCredential(String subjectID, String serializedCredential) {
-        dynamoService.addSpotResponse(subjectID, serializedCredential);
+        dynamoService.addIdentityCredential(subjectID, serializedCredential);
     }
 
-    public Optional<SPOTCredential> getSpotCredential(String subjectID) {
-        return dynamoService.getSpotCredential(subjectID);
+    public Optional<IdentityCredentials> getIdentityCredentials(String subjectID) {
+        return dynamoService.getIdentityCredentials(subjectID);
     }
 
     private void createUserProfileTable(String tableName) {

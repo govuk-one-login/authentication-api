@@ -236,7 +236,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private void setUpDynamo(String serializedCredential) {
         if (Objects.nonNull(serializedCredential)) {
-            spotStore.addCredential(PUBLIC_SUBJECT.getValue(), serializedCredential);
+            identityStore.addCredential(PUBLIC_SUBJECT.getValue(), serializedCredential);
         }
         userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD, INTERNAL_SUBJECT);
         userStore.addPhoneNumber(TEST_EMAIL_ADDRESS, TEST_PHONE_NUMBER);

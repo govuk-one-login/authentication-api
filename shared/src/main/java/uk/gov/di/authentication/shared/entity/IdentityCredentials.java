@@ -3,7 +3,7 @@ package uk.gov.di.authentication.shared.entity;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 
-public class SPOTCredential {
+public class IdentityCredentials {
 
     private String subjectID;
     private String serializedCredential;
@@ -11,14 +11,14 @@ public class SPOTCredential {
     private String passportNumber;
     private long timeToExist;
 
-    public SPOTCredential() {}
+    public IdentityCredentials() {}
 
     @DynamoDBHashKey(attributeName = "SubjectID")
     public String getSubjectID() {
         return subjectID;
     }
 
-    public SPOTCredential setSubjectID(String subjectID) {
+    public IdentityCredentials setSubjectID(String subjectID) {
         this.subjectID = subjectID;
         return this;
     }
@@ -28,7 +28,7 @@ public class SPOTCredential {
         return serializedCredential;
     }
 
-    public SPOTCredential setSerializedCredential(String serializedCredential) {
+    public IdentityCredentials setSerializedCredential(String serializedCredential) {
         this.serializedCredential = serializedCredential;
         return this;
     }
@@ -38,7 +38,7 @@ public class SPOTCredential {
         return timeToExist;
     }
 
-    public SPOTCredential setTimeToExist(long timeToExist) {
+    public IdentityCredentials setTimeToExist(long timeToExist) {
         this.timeToExist = timeToExist;
         return this;
     }
@@ -48,7 +48,7 @@ public class SPOTCredential {
         return address;
     }
 
-    public SPOTCredential setAddress(String address) {
+    public IdentityCredentials setAddress(String address) {
         this.address = address;
         return this;
     }
@@ -58,7 +58,7 @@ public class SPOTCredential {
         return passportNumber;
     }
 
-    public SPOTCredential setPassportNumber(String passportNumber) {
+    public IdentityCredentials setPassportNumber(String passportNumber) {
         this.passportNumber = passportNumber;
         return this;
     }
