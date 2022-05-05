@@ -25,6 +25,7 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.InstrumentationHelper;
 import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -49,7 +50,9 @@ import static uk.gov.di.authentication.shared.conditions.DocAppUserHelper.getReq
 import static uk.gov.di.authentication.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.endSegment;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.startSegment;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -121,6 +124,16 @@ public class TokenHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        startSegment("handleRequest");
+        try {
+            return tokenRequestHandler(input, context);
+        } finally {
+            endSegment();
+        }
+    }
+
+    private APIGatewayProxyResponseEvent tokenRequestHandler(
+            APIGatewayProxyRequestEvent input, Context context) {
         return isWarming(input)
                 .orElseGet(
                         () -> {
@@ -143,6 +156,9 @@ public class TokenHandler
                             Map<String, String> requestBody = parseRequestBody(input.getBody());
                             String clientID = requestBody.get("client_id");
                             attachLogFieldToLogs(CLIENT_ID, clientID);
+                            InstrumentationHelper.addAnnotation("client", clientID);
+                            InstrumentationHelper.addAnnotation(
+                                    "grant_type", requestBody.get("grant_type"));
 
                             ClientRegistry client;
                             try {
@@ -160,7 +176,8 @@ public class TokenHandler
                                                     () -> {
                                                         LOG.error(
                                                                 "Application was not configured with baseURL");
-                                                        // TODO - We need to come up with a strategy
+                                                        // TODO - We need to come up with a
+                                                        // strategy
                                                         // to handle uncaught
                                                         // exceptions
                                                         return new RuntimeException(
