@@ -10,10 +10,6 @@ data "aws_dynamodb_table" "client_registry_table" {
   name = "${var.environment}-client-registry"
 }
 
-data "aws_dynamodb_table" "spot_credential_table" {
-  name = "${var.environment}-spot-credential"
-}
-
 data "aws_dynamodb_table" "identity_credentials_table" {
   name = "${var.environment}-identity-credentials"
 }

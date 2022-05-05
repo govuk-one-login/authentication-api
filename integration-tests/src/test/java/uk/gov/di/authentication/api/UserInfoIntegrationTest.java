@@ -184,7 +184,9 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(userInfoResponse.getPhoneNumber(), equalTo(FORMATTED_PHONE_NUMBER));
         assertThat(userInfoResponse.getPhoneNumberVerified(), equalTo(true));
         assertThat(userInfoResponse.getSubject(), equalTo(PUBLIC_SUBJECT));
-        assertThat(userInfoResponse.getClaim("identity"), equalTo(signedCredential.serialize()));
+        assertThat(
+                userInfoResponse.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()),
+                equalTo(signedCredential.serialize()));
         assertThat(userInfoResponse.toJWTClaimsSet().getClaims().size(), equalTo(6));
 
         assertNoAuditEventsReceived(auditTopic);
@@ -234,9 +236,9 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertNoAuditEventsReceived(auditTopic);
     }
 
-    private void setUpDynamo(String serializedCredential) {
-        if (Objects.nonNull(serializedCredential)) {
-            identityStore.addCredential(PUBLIC_SUBJECT.getValue(), serializedCredential);
+    private void setUpDynamo(String coreIdentityJWT) {
+        if (Objects.nonNull(coreIdentityJWT)) {
+            identityStore.addCoreIdentityJWT(PUBLIC_SUBJECT.getValue(), coreIdentityJWT);
         }
         userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD, INTERNAL_SUBJECT);
         userStore.addPhoneNumber(TEST_EMAIL_ADDRESS, TEST_PHONE_NUMBER);

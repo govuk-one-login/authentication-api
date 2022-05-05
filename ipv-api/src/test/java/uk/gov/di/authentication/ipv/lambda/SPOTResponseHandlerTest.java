@@ -39,7 +39,7 @@ class SPOTResponseHandlerTest {
         handler.handleRequest(generateSQSEvent(json), context);
 
         verify(dynamoIdentityService)
-                .addIdentityCredential("some-pairwise-identifier", "random-searalized-credential");
+                .addCoreIdentityJWT("some-pairwise-identifier", "random-searalized-credential");
 
         verify(auditService)
                 .submitAuditEvent(

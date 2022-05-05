@@ -26,11 +26,11 @@ public class DynamoIdentityService {
         warmUp(tableName);
     }
 
-    public void addIdentityCredential(String subjectID, String serializedCredential) {
+    public void addCoreIdentityJWT(String subjectID, String coreIdentityJWT) {
         var identityCredentials =
                 new IdentityCredentials()
                         .setSubjectID(subjectID)
-                        .setSerializedCredential(serializedCredential)
+                        .setCoreIdentityJWT(coreIdentityJWT)
                         .setTimeToExist(timeToExist);
 
         identityCredentialsMapper.save(identityCredentials);

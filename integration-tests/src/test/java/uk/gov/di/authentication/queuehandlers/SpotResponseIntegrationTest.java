@@ -50,7 +50,7 @@ public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent
                 identityStore
                         .getIdentityCredentials(pairwiseIdentifier.getValue())
                         .get()
-                        .getSerializedCredential(),
+                        .getCoreIdentityJWT(),
                 equalTo(signedCredential));
     }
 

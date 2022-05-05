@@ -18,17 +18,17 @@ import java.util.Objects;
 public class UserInfoService {
 
     private final AuthenticationService authenticationService;
-    private final DynamoIdentityService spotService;
+    private final DynamoIdentityService identityService;
     private final DynamoDocAppService dynamoDocAppService;
 
     private static final Logger LOG = LogManager.getLogger(UserInfoService.class);
 
     public UserInfoService(
             AuthenticationService authenticationService,
-            DynamoIdentityService spotService,
+            DynamoIdentityService identityService,
             DynamoDocAppService dynamoDocAppService) {
         this.authenticationService = authenticationService;
-        this.spotService = spotService;
+        this.identityService = identityService;
         this.dynamoDocAppService = dynamoDocAppService;
     }
 
@@ -52,38 +52,33 @@ public class UserInfoService {
         if (accessTokenInfo.getScopes().contains(CustomScopeValue.GOVUK_ACCOUNT.getValue())) {
             userInfo.setClaim("legacy_subject_id", userProfile.getLegacySubjectID());
         }
-        if (identityEnabled) {
+        if (identityEnabled && Objects.nonNull(accessTokenInfo.getIdentityClaims())) {
             return populateIdentityInfo(accessTokenInfo, userInfo);
         } else {
+            LOG.info("No identity claims present");
             return userInfo;
         }
     }
 
     private UserInfo populateIdentityInfo(AccessTokenInfo accessTokenInfo, UserInfo userInfo) {
         LOG.info("Populating IdentityInfo");
-        var spotCredential = spotService.getIdentityCredentials(accessTokenInfo.getPublicSubject());
-        if (spotCredential.isEmpty() || Objects.isNull(accessTokenInfo.getIdentityClaims())) {
+        var identityCredentials =
+                identityService
+                        .getIdentityCredentials(accessTokenInfo.getPublicSubject())
+                        .orElse(null);
+        if (Objects.isNull(identityCredentials)) {
+            LOG.info("No identity credentials present");
             return userInfo;
         }
-        var address =
+        var coreIdentityClaimIsPresent =
                 accessTokenInfo.getIdentityClaims().stream()
-                        .filter(t -> t.equals(ValidClaims.ADDRESS.getValue()))
-                        .findFirst()
-                        .orElse(null);
-        if (Objects.nonNull(address) && Objects.nonNull(spotCredential.get().getAddress())) {
-            userInfo.setClaim("address", spotCredential.get().getAddress());
-        }
-        var passportNumber =
-                accessTokenInfo.getIdentityClaims().stream()
-                        .filter(t -> t.equals(ValidClaims.PASSPORT.getValue()))
-                        .findFirst()
-                        .orElse(null);
-        if (Objects.nonNull(passportNumber)
-                && Objects.nonNull(spotCredential.get().getPassportNumber())) {
-            userInfo.setClaim("passport-number", spotCredential.get().getPassportNumber());
-        }
-        if (Objects.nonNull(spotCredential.get().getSerializedCredential())) {
-            userInfo.setClaim("identity", spotCredential.get().getSerializedCredential());
+                        .anyMatch(t -> t.equals(ValidClaims.CORE_IDENTITY_JWT.getValue()));
+        if (Objects.nonNull(identityCredentials.getCoreIdentityJWT())
+                && coreIdentityClaimIsPresent) {
+            LOG.info("Setting coreIdentityJWT claim in userinfo response");
+            userInfo.setClaim(
+                    ValidClaims.CORE_IDENTITY_JWT.getValue(),
+                    identityCredentials.getCoreIdentityJWT());
         }
         return userInfo;
     }

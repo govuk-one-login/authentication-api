@@ -49,8 +49,8 @@ public class IdentityStoreExtension extends DynamoExtension implements AfterEach
         }
     }
 
-    public void addCredential(String subjectID, String serializedCredential) {
-        dynamoService.addIdentityCredential(subjectID, serializedCredential);
+    public void addCoreIdentityJWT(String subjectID, String coreIdentityJWT) {
+        dynamoService.addCoreIdentityJWT(subjectID, coreIdentityJWT);
     }
 
     public Optional<IdentityCredentials> getIdentityCredentials(String subjectID) {

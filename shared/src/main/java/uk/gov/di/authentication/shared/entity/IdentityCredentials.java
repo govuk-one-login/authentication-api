@@ -6,9 +6,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 public class IdentityCredentials {
 
     private String subjectID;
-    private String serializedCredential;
-    private String address;
-    private String passportNumber;
+    private String coreIdentityJWT;
     private long timeToExist;
 
     public IdentityCredentials() {}
@@ -23,13 +21,13 @@ public class IdentityCredentials {
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "SerializedCredential")
-    public String getSerializedCredential() {
-        return serializedCredential;
+    @DynamoDBAttribute(attributeName = "CoreIdentityJWT")
+    public String getCoreIdentityJWT() {
+        return coreIdentityJWT;
     }
 
-    public IdentityCredentials setSerializedCredential(String serializedCredential) {
-        this.serializedCredential = serializedCredential;
+    public IdentityCredentials setCoreIdentityJWT(String coreIdentityJWT) {
+        this.coreIdentityJWT = coreIdentityJWT;
         return this;
     }
 
@@ -40,26 +38,6 @@ public class IdentityCredentials {
 
     public IdentityCredentials setTimeToExist(long timeToExist) {
         this.timeToExist = timeToExist;
-        return this;
-    }
-
-    @DynamoDBAttribute(attributeName = "Address")
-    public String getAddress() {
-        return address;
-    }
-
-    public IdentityCredentials setAddress(String address) {
-        this.address = address;
-        return this;
-    }
-
-    @DynamoDBAttribute(attributeName = "PassportNumber")
-    public String getPassportNumber() {
-        return passportNumber;
-    }
-
-    public IdentityCredentials setPassportNumber(String passportNumber) {
-        this.passportNumber = passportNumber;
         return this;
     }
 }

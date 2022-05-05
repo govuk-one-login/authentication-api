@@ -52,8 +52,6 @@ class UserInfoServiceTest {
 
     private static final Subject INTERNAL_SUBJECT = new Subject("internal-subject");
     private static final Subject SUBJECT = new Subject("some-subject");
-    private static final String ADDRESS_CLAIM = "some-address";
-    private static final String PASSPORT_NUMBER_CLAIM = "123456789";
     private static final List<String> SCOPES =
             List.of(
                     OIDCScopeValue.OPENID.getValue(),
@@ -62,22 +60,17 @@ class UserInfoServiceTest {
     private static final String CLIENT_ID = "client-id";
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String PHONE_NUMBER = "01234567891";
-    private static final String BASE_URL = "http://example.com";
+    private static final String BASE_URL = "https://example.com";
     private static final String KEY_ID = "14342354354353";
     private final ClaimsSetRequest claimsSetRequest =
-            new ClaimsSetRequest()
-                    .add(ValidClaims.ADDRESS.getValue())
-                    .add(ValidClaims.PASSPORT.getValue());
+            new ClaimsSetRequest().add(ValidClaims.CORE_IDENTITY_JWT.getValue());
     private final OIDCClaimsRequest oidcValidClaimsRequest =
             new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
-    private final String serializedCredential =
-            SignedCredentialHelper.generateCredential().serialize();
+    private final String coreIdentityJWT = SignedCredentialHelper.generateCredential().serialize();
     private final IdentityCredentials identityCredentials =
             new IdentityCredentials()
                     .setSubjectID(SUBJECT.getValue())
-                    .setSerializedCredential(serializedCredential)
-                    .setAddress(ADDRESS_CLAIM)
-                    .setPassportNumber(PASSPORT_NUMBER_CLAIM);
+                    .setCoreIdentityJWT(coreIdentityJWT);
     private AccessToken accessToken;
 
     @RegisterExtension
@@ -113,9 +106,9 @@ class UserInfoServiceTest {
         assertThat(userInfo.getEmailVerified(), equalTo(true));
         assertThat(userInfo.getPhoneNumber(), equalTo(PHONE_NUMBER));
         assertThat(userInfo.getPhoneNumberVerified(), equalTo(true));
-        assertNull(userInfo.getClaim("address"));
-        assertNull(userInfo.getClaim("passport-number"));
-        assertNull(userInfo.getClaim("identity"));
+        assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
     }
 
     @Test
@@ -136,9 +129,9 @@ class UserInfoServiceTest {
         assertThat(userInfo.getEmailVerified(), equalTo(true));
         assertNull(userInfo.getPhoneNumber());
         assertNull(userInfo.getPhoneNumberVerified());
-        assertNull(userInfo.getClaim("address"));
-        assertNull(userInfo.getClaim("passport-number"));
-        assertNull(userInfo.getClaim("identity"));
+        assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
     }
 
     @Test
@@ -158,9 +151,9 @@ class UserInfoServiceTest {
         assertThat(userInfo.getEmailVerified(), equalTo(true));
         assertThat(userInfo.getPhoneNumber(), equalTo(PHONE_NUMBER));
         assertThat(userInfo.getPhoneNumberVerified(), equalTo(true));
-        assertNull(userInfo.getClaim("address"));
-        assertNull(userInfo.getClaim("passport-number"));
-        assertNull(userInfo.getClaim("identity"));
+        assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
     }
 
     @Test
@@ -188,9 +181,9 @@ class UserInfoServiceTest {
         assertThat(userInfo.getEmailVerified(), equalTo(true));
         assertThat(userInfo.getPhoneNumber(), equalTo(PHONE_NUMBER));
         assertThat(userInfo.getPhoneNumberVerified(), equalTo(true));
-        assertThat(userInfo.getClaim("address"), equalTo(ADDRESS_CLAIM));
-        assertThat(userInfo.getClaim("passport-number"), equalTo(PASSPORT_NUMBER_CLAIM));
-        assertThat(userInfo.getClaim("identity"), equalTo(serializedCredential));
+        assertThat(
+                userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()),
+                equalTo(coreIdentityJWT));
     }
 
     private AccessToken createSignedAccessToken(OIDCClaimsRequest identityClaims)
