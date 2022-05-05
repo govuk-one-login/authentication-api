@@ -33,6 +33,18 @@ public class InstrumentationHelper {
         }
     }
 
+    public static void startSegment(String name) {
+        if (tracingEnabled) {
+            AWSXRay.beginSegment(name);
+        }
+    }
+
+    public static void endSegment() {
+        if (tracingEnabled) {
+            AWSXRay.endSegment();
+        }
+    }
+
     public static void addAnnotation(String key, String value) {
         if (tracingEnabled) {
             AWSXRay.getCurrentSegment().putAnnotation(key, value);
