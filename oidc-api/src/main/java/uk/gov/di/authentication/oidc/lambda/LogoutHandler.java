@@ -32,6 +32,7 @@ import java.text.ParseException;
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
@@ -192,7 +193,7 @@ public class LogoutHandler
                         Optional.of(session.getSessionId()));
             }
         }
-        destroySessions(session);
+        segmentedFunctionCall("destroySessions", () -> destroySessions(session));
         if (audience.isPresent()) {
             return validateClientIDAgainstClientRegistry(
                     postLogoutRedirectUri,

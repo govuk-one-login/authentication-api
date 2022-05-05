@@ -11,6 +11,7 @@ module "oidc_logout_role" {
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
+    data.aws_iam_policy.xray.arn,
   ]
 }
 
@@ -33,6 +34,7 @@ module "logout" {
     TOKEN_SIGNING_KEY_ALIAS       = local.id_token_signing_key_alias_name
     LOCALSTACK_ENDPOINT           = var.use_localstack ? var.localstack_endpoint : null
     BACK_CHANNEL_LOGOUT_QUEUE_URI = aws_sqs_queue.back_channel_logout_queue.id
+    TRACING_ENABLED               = "true"
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.LogoutHandler::handleRequest"
 
