@@ -44,11 +44,11 @@ public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent
                                 SPOTStatus.ACCEPTED)),
                 mock(Context.class));
 
-        assertTrue(spotStore.getSpotCredential(pairwiseIdentifier.getValue()).isPresent());
+        assertTrue(identityStore.getIdentityCredentials(pairwiseIdentifier.getValue()).isPresent());
 
         assertThat(
-                spotStore
-                        .getSpotCredential(pairwiseIdentifier.getValue())
+                identityStore
+                        .getIdentityCredentials(pairwiseIdentifier.getValue())
                         .get()
                         .getSerializedCredential(),
                 equalTo(signedCredential));

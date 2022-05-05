@@ -14,14 +14,14 @@ import uk.gov.di.authentication.ipv.entity.SPOTStatus;
 import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoSpotService;
+import uk.gov.di.authentication.shared.services.DynamoIdentityService;
 
 import java.util.NoSuchElementException;
 
 public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
 
     private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
-    private final DynamoSpotService dynamoSpotService;
+    private final DynamoIdentityService dynamoIdentityService;
     private final AuditService auditService;
 
     private static final Logger LOG = LogManager.getLogger(SPOTResponseHandler.class);
@@ -31,12 +31,13 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
     }
 
     public SPOTResponseHandler(ConfigurationService configurationService) {
-        this.dynamoSpotService = new DynamoSpotService(configurationService);
+        this.dynamoIdentityService = new DynamoIdentityService(configurationService);
         this.auditService = new AuditService(configurationService);
     }
 
-    public SPOTResponseHandler(DynamoSpotService dynamoSpotService, AuditService auditService) {
-        this.dynamoSpotService = dynamoSpotService;
+    public SPOTResponseHandler(
+            DynamoIdentityService dynamoIdentityService, AuditService auditService) {
+        this.dynamoIdentityService = dynamoIdentityService;
         this.auditService = auditService;
     }
 
@@ -63,7 +64,7 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
                     return null;
                 }
 
-                dynamoSpotService.addSpotResponse(
+                dynamoIdentityService.addIdentityCredential(
                         spotResponse.getSub(),
                         spotResponse.getClaims().values().stream()
                                 .map(Object::toString)

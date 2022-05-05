@@ -18,12 +18,12 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
-import uk.gov.di.authentication.shared.entity.SPOTCredential;
+import uk.gov.di.authentication.shared.entity.IdentityCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.DynamoSpotService;
+import uk.gov.di.authentication.shared.services.DynamoIdentityService;
 import uk.gov.di.authentication.sharedtest.helper.SignedCredentialHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
@@ -47,7 +47,7 @@ class UserInfoServiceTest {
 
     private UserInfoService userInfoService;
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
-    private final DynamoSpotService spotService = mock(DynamoSpotService.class);
+    private final DynamoIdentityService spotService = mock(DynamoIdentityService.class);
     private final DynamoDocAppService dynamoDocAppService = mock(DynamoDocAppService.class);
 
     private static final Subject INTERNAL_SUBJECT = new Subject("internal-subject");
@@ -72,8 +72,8 @@ class UserInfoServiceTest {
             new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
     private final String serializedCredential =
             SignedCredentialHelper.generateCredential().serialize();
-    private final SPOTCredential spotCredential =
-            new SPOTCredential()
+    private final IdentityCredentials identityCredentials =
+            new IdentityCredentials()
                     .setSubjectID(SUBJECT.getValue())
                     .setSerializedCredential(serializedCredential)
                     .setAddress(ADDRESS_CLAIM)
@@ -169,8 +169,8 @@ class UserInfoServiceTest {
         accessToken = createSignedAccessToken(oidcValidClaimsRequest);
         when(authenticationService.getUserProfileFromSubject(INTERNAL_SUBJECT.getValue()))
                 .thenReturn(generateUserprofile());
-        when(spotService.getSpotCredential(SUBJECT.getValue()))
-                .thenReturn(Optional.of(spotCredential));
+        when(spotService.getIdentityCredentials(SUBJECT.getValue()))
+                .thenReturn(Optional.of(identityCredentials));
 
         var accessTokenStore =
                 new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());

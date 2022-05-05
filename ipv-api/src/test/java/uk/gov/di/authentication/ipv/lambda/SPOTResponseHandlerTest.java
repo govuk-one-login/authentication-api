@@ -6,7 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.DynamoSpotService;
+import uk.gov.di.authentication.shared.services.DynamoIdentityService;
 
 import static java.util.Collections.singletonList;
 import static org.mockito.Mockito.mock;
@@ -20,12 +20,12 @@ class SPOTResponseHandlerTest {
 
     private SPOTResponseHandler handler;
     private final Context context = mock(Context.class);
-    private final DynamoSpotService dynamoSpotService = mock(DynamoSpotService.class);
+    private final DynamoIdentityService dynamoIdentityService = mock(DynamoIdentityService.class);
     private final AuditService auditService = mock(AuditService.class);
 
     @BeforeEach
     void setup() {
-        handler = new SPOTResponseHandler(dynamoSpotService, auditService);
+        handler = new SPOTResponseHandler(dynamoIdentityService, auditService);
 
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
     }
@@ -38,8 +38,8 @@ class SPOTResponseHandlerTest {
 
         handler.handleRequest(generateSQSEvent(json), context);
 
-        verify(dynamoSpotService)
-                .addSpotResponse("some-pairwise-identifier", "random-searalized-credential");
+        verify(dynamoIdentityService)
+                .addIdentityCredential("some-pairwise-identifier", "random-searalized-credential");
 
         verify(auditService)
                 .submitAuditEvent(
@@ -58,7 +58,7 @@ class SPOTResponseHandlerTest {
     void shouldNotWriteToDynamoWhenLambdaReceivedInvalidSPOTResponse() {
         handler.handleRequest(generateSQSEvent("invalid-payload"), context);
 
-        verifyNoInteractions(dynamoSpotService);
+        verifyNoInteractions(dynamoIdentityService);
 
         verify(auditService)
                 .submitAuditEvent(
@@ -81,7 +81,7 @@ class SPOTResponseHandlerTest {
 
         handler.handleRequest(generateSQSEvent(json), context);
 
-        verifyNoInteractions(dynamoSpotService);
+        verifyNoInteractions(dynamoIdentityService);
 
         verify(auditService)
                 .submitAuditEvent(
@@ -103,7 +103,7 @@ class SPOTResponseHandlerTest {
 
         handler.handleRequest(generateSQSEvent(json), context);
 
-        verifyNoInteractions(dynamoSpotService);
+        verifyNoInteractions(dynamoIdentityService);
 
         verify(auditService)
                 .submitAuditEvent(

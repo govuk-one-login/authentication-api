@@ -15,8 +15,8 @@ import uk.gov.di.authentication.oidc.services.UserInfoService;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
+import uk.gov.di.authentication.shared.services.DynamoIdentityService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.DynamoSpotService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
@@ -54,7 +54,7 @@ public class UserInfoHandler
         this.userInfoService =
                 new UserInfoService(
                         new DynamoService(configurationService),
-                        new DynamoSpotService(configurationService),
+                        new DynamoIdentityService(configurationService),
                         new DynamoDocAppService(configurationService));
         this.accessTokenService =
                 new AccessTokenService(

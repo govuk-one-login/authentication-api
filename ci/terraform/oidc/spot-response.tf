@@ -5,7 +5,7 @@ module "ipv_spot_response_role" {
   vpc_arn     = local.authentication_vpc_arn
 
   policies_to_attach = [
-    aws_iam_policy.dynamo_spot_write_access_policy.arn,
+    aws_iam_policy.dynamo_identity_credentials_write_access_policy.arn,
   ]
 }
 
