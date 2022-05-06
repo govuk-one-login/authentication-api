@@ -42,6 +42,8 @@ import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSI
 import static uk.gov.di.authentication.shared.entity.Session.AccountState.EXISTING;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.addAnnotation;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
@@ -94,6 +96,12 @@ public class AuthCodeHandler
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
+            APIGatewayProxyRequestEvent input, Context context) {
+        return segmentedFunctionCall(
+                "authCodeRequestHandler", () -> authCodeRequestHandler(input, context));
+    }
+
+    public APIGatewayProxyResponseEvent authCodeRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
         return isWarming(input)
                 .orElseGet(
@@ -156,6 +164,10 @@ public class AuthCodeHandler
                                 return generateResponse(
                                         new AuthCodeResponse(errorResponse.toURI().toString()));
                             }
+                            addAnnotation(
+                                    "client_id",
+                                    String.valueOf(
+                                            clientSession.getAuthRequestParams().get("client_id")));
 
                             URI redirectUri = authenticationRequest.getRedirectionURI();
                             State state = authenticationRequest.getState();

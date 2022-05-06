@@ -49,6 +49,7 @@ import static uk.gov.di.authentication.shared.conditions.DocAppUserHelper.getReq
 import static uk.gov.di.authentication.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.addAnnotation;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
@@ -121,6 +122,12 @@ public class TokenHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        return segmentedFunctionCall(
+                "tokenRequestHandler", () -> tokenRequestHandler(input, context));
+    }
+
+    public APIGatewayProxyResponseEvent tokenRequestHandler(
+            APIGatewayProxyRequestEvent input, Context context) {
         return isWarming(input)
                 .orElseGet(
                         () -> {
@@ -143,6 +150,8 @@ public class TokenHandler
                             Map<String, String> requestBody = parseRequestBody(input.getBody());
                             String clientID = requestBody.get("client_id");
                             attachLogFieldToLogs(CLIENT_ID, clientID);
+                            addAnnotation("client_id", clientID);
+                            addAnnotation("grant_type", requestBody.get("grant_type"));
 
                             ClientRegistry client;
                             try {

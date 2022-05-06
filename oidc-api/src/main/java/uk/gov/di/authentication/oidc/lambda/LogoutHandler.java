@@ -87,6 +87,12 @@ public class LogoutHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        return segmentedFunctionCall(
+                "logoutRequestHandler", () -> logoutRequestHandler(input, context));
+    }
+
+    public APIGatewayProxyResponseEvent logoutRequestHandler(
+            APIGatewayProxyRequestEvent input, Context context) {
         return isWarming(input)
                 .orElseGet(
                         () -> {
