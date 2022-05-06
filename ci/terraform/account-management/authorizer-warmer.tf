@@ -62,6 +62,7 @@ resource "aws_lambda_function" "warmer_function" {
       LAMBDA_QUALIFIER       = aws_lambda_alias.authorizer_alias.name
       LAMBDA_TYPE            = "AUTHORIZER"
       LAMBDA_MIN_CONCURRENCY = var.lambda_min_concurrency
+      JAVA_TOOL_OPTIONS      = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
     }
   }
   kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
