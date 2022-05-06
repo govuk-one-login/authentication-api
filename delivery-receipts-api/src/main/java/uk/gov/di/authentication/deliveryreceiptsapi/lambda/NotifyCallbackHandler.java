@@ -22,6 +22,7 @@ import static uk.gov.di.authentication.deliveryreceiptsapi.entity.DeliveryMetric
 import static uk.gov.di.authentication.deliveryreceiptsapi.entity.DeliveryMetricStatus.SMS_FAILURE;
 import static uk.gov.di.authentication.deliveryreceiptsapi.entity.DeliveryMetricStatus.SMS_UNDETERMINED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class NotifyCallbackHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -51,6 +52,11 @@ public class NotifyCallbackHandler
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
+            APIGatewayProxyRequestEvent input, Context context) {
+        return segmentedFunctionCall("delivery-receipts-api::" + getClass().getSimpleName(), () -> notifyCallbackRequestHandler(input, context));
+    }
+
+    public APIGatewayProxyResponseEvent notifyCallbackRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
         LOG.info("Received request");
         validateBearerToken(input.getHeaders());
