@@ -60,28 +60,28 @@ public class RedisConnectionService implements AutoCloseable {
 
     public void saveWithExpiry(final String key, final String value, final long expiry) {
         segmentedFunctionCall(
-                "Redis: saveWithExpiry()",
+                "Redis: saveWithExpiry",
                 () -> executeCommand(commands -> commands.setex(key, expiry, value)));
     }
 
     public boolean keyExists(final String key) {
         return segmentedFunctionCall(
-                "Redis: keyExists()", () -> executeCommand(commands -> commands.exists(key) == 1));
+                "Redis: keyExists", () -> executeCommand(commands -> commands.exists(key) == 1));
     }
 
     public String getValue(final String key) {
         return segmentedFunctionCall(
-                "Redis: getValue()", () -> executeCommand(commands -> commands.get(key)));
+                "Redis: getValue", () -> executeCommand(commands -> commands.get(key)));
     }
 
     public long deleteValue(final String key) {
         return segmentedFunctionCall(
-                "Redis: deleteValue()", () -> executeCommand(commands -> commands.del(key)));
+                "Redis: deleteValue", () -> executeCommand(commands -> commands.del(key)));
     }
 
     public String popValue(final String key) {
         return segmentedFunctionCall(
-                "Redis: popValue()",
+                "Redis: popValue",
                 () ->
                         executeCommand(
                                 commands -> {
@@ -95,7 +95,7 @@ public class RedisConnectionService implements AutoCloseable {
 
     private void warmUp() {
         segmentedFunctionCall(
-                "Redis: warmUp()", () -> executeCommand(RedisServerCommands::clientGetname));
+                "Redis: warmUp", () -> executeCommand(RedisServerCommands::clientGetname));
     }
 
     @Override
