@@ -3,7 +3,7 @@ package uk.gov.di.authentication.shared.services;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
 import software.amazon.awssdk.services.cloudwatch.model.Dimension;
 import software.amazon.awssdk.services.cloudwatch.model.MetricDatum;
 import software.amazon.awssdk.services.cloudwatch.model.PutMetricDataRequest;
@@ -17,21 +17,22 @@ public class CloudwatchMetricsService {
 
     private static final Logger LOG = LogManager.getLogger(CloudwatchMetricsService.class);
 
-    private final CloudWatchClient cloudwatch;
+    private final CloudWatchAsyncClient cloudwatch;
 
     public CloudwatchMetricsService(ConfigurationService configurationService) {
-        var client =
-                CloudWatchClient.builder().region(Region.of(configurationService.getAwsRegion()));
+        var clientBuilder =
+                CloudWatchAsyncClient.builder()
+                        .region(Region.of(configurationService.getAwsRegion()));
 
         configurationService
                 .getLocalstackEndpointUri()
                 .map(URI::create)
-                .ifPresent(client::endpointOverride);
+                .ifPresent(clientBuilder::endpointOverride);
 
-        this.cloudwatch = client.build();
+        this.cloudwatch = clientBuilder.build();
     }
 
-    public CloudwatchMetricsService(CloudWatchClient cloudwatch) {
+    public CloudwatchMetricsService(CloudWatchAsyncClient cloudwatch) {
         this.cloudwatch = cloudwatch;
     }
 

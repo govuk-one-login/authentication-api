@@ -20,7 +20,9 @@ import uk.gov.di.authentication.sharedtest.extensions.ParameterStoreExtension;
 import java.util.Date;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.mockito.Mockito.mock;
@@ -64,9 +66,13 @@ public class NotifyCallbackHandlerIntegrationTest {
                                 1),
                         Map.of("Authorization", "Bearer " + BEARER_TOKEN));
 
-        assertThat(
-                cloudwatchMetrics.getLastValue(DeliveryMetricStatus.SMS_DELIVERED.toString()),
-                is(1.0));
+        await().atMost(5, TimeUnit.SECONDS)
+                .untilAsserted(
+                        () ->
+                                assertThat(
+                                        cloudwatchMetrics.getLastValue(
+                                                DeliveryMetricStatus.SMS_DELIVERED.toString()),
+                                        is(1.0)));
         assertThat(response, hasStatus(204));
     }
 

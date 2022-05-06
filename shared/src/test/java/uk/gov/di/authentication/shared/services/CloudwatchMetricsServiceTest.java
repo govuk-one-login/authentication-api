@@ -3,7 +3,7 @@ package uk.gov.di.authentication.shared.services;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.ArgumentMatcher;
-import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
 import software.amazon.awssdk.services.cloudwatch.model.MetricDatum;
 import software.amazon.awssdk.services.cloudwatch.model.PutMetricDataRequest;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
@@ -29,7 +29,7 @@ class CloudwatchMetricsServiceTest {
 
     @Test
     void shouldPublishMetricValueWithDimensions() {
-        var cloudwatch = mock(CloudWatchClient.class);
+        var cloudwatch = mock(CloudWatchAsyncClient.class);
 
         var metrics = new CloudwatchMetricsService(cloudwatch);
 
@@ -41,7 +41,7 @@ class CloudwatchMetricsServiceTest {
 
     @Test
     void shouldIncrementCounter() {
-        var cloudwatch = mock(CloudWatchClient.class);
+        var cloudwatch = mock(CloudWatchAsyncClient.class);
 
         var metrics = new CloudwatchMetricsService(cloudwatch);
 
@@ -53,7 +53,7 @@ class CloudwatchMetricsServiceTest {
 
     @Test
     void shouldLogErrorAndContinueIfProblemPublishingMetric() {
-        var cloudwatch = mock(CloudWatchClient.class);
+        var cloudwatch = mock(CloudWatchAsyncClient.class);
 
         var metrics = new CloudwatchMetricsService(cloudwatch);
 
