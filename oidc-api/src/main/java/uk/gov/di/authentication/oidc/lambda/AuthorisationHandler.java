@@ -93,7 +93,9 @@ public class AuthorisationHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall("oidc-api::" + getClass().getSimpleName(), () -> authoriseRequestHandler(input, context));
+        return segmentedFunctionCall(
+                "oidc-api::" + getClass().getSimpleName(),
+                () -> authoriseRequestHandler(input, context));
     }
 
     public APIGatewayProxyResponseEvent authoriseRequestHandler(

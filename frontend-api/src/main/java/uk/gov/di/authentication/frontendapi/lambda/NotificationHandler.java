@@ -67,10 +67,11 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                 AmazonS3Client.builder().withRegion(configurationService.getAwsRegion()).build();
     }
 
-
     @Override
     public Void handleRequest(SQSEvent event, Context context) {
-        return segmentedFunctionCall("frontend-api::" + getClass().getSimpleName(), () -> notifcationRequestHandler(event, context));
+        return segmentedFunctionCall(
+                "frontend-api::" + getClass().getSimpleName(),
+                () -> notifcationRequestHandler(event, context));
     }
 
     public Void notifcationRequestHandler(SQSEvent event, Context context) {

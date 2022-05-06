@@ -53,7 +53,9 @@ public class NotifyCallbackHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall("delivery-receipts-api::" + getClass().getSimpleName(), () -> notifyCallbackRequestHandler(input, context));
+        return segmentedFunctionCall(
+                "delivery-receipts-api::" + getClass().getSimpleName(),
+                () -> notifyCallbackRequestHandler(input, context));
     }
 
     public APIGatewayProxyResponseEvent notifyCallbackRequestHandler(

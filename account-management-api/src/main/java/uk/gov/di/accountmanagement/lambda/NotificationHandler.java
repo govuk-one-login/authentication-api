@@ -56,7 +56,9 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
     @Override
     public Void handleRequest(SQSEvent event, Context context) {
-        return segmentedFunctionCall("account-management-api::" + getClass().getSimpleName(), () -> notificationRequestHandler(event, context));
+        return segmentedFunctionCall(
+                "account-management-api::" + getClass().getSimpleName(),
+                () -> notificationRequestHandler(event, context));
     }
 
     public Void notificationRequestHandler(SQSEvent event, Context context) {

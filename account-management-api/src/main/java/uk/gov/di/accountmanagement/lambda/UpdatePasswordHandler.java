@@ -69,7 +69,9 @@ public class UpdatePasswordHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall("account-management-api::" + getClass().getSimpleName(), () -> updatePasswordRequestHandler(input, context));
+        return segmentedFunctionCall(
+                "account-management-api::" + getClass().getSimpleName(),
+                () -> updatePasswordRequestHandler(input, context));
     }
 
     public APIGatewayProxyResponseEvent updatePasswordRequestHandler(

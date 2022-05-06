@@ -90,7 +90,9 @@ public class DocAppCallbackHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall("doc-app-api::" + getClass().getSimpleName(), () -> docAppCallbackRequestHandler(input, context));
+        return segmentedFunctionCall(
+                "doc-app-api::" + getClass().getSimpleName(),
+                () -> docAppCallbackRequestHandler(input, context));
     }
 
     public APIGatewayProxyResponseEvent docAppCallbackRequestHandler(

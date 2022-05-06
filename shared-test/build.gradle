@@ -27,6 +27,7 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    environment "TRACING_ENABLED", "false"
 }
 
 java {

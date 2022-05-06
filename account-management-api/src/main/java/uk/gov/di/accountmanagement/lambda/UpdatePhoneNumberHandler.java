@@ -76,7 +76,9 @@ public class UpdatePhoneNumberHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall("account-management-api::" + getClass().getSimpleName(), () -> updatePhoneNumberRequestHandler(input, context));
+        return segmentedFunctionCall(
+                "account-management-api::" + getClass().getSimpleName(),
+                () -> updatePhoneNumberRequestHandler(input, context));
     }
 
     public APIGatewayProxyResponseEvent updatePhoneNumberRequestHandler(

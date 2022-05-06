@@ -54,10 +54,12 @@ public class AuthenticateHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall("account-management-api::" + getClass().getSimpleName(), () -> authenticateRequestHandler(input, context));
+        return segmentedFunctionCall(
+                "account-management-api::" + getClass().getSimpleName(),
+                () -> authenticateRequestHandler(input, context));
     }
 
-    public APIGatewayProxyResponseEvent authenticateRequestHandler (
+    public APIGatewayProxyResponseEvent authenticateRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
         return isWarming(input)
                 .orElseGet(

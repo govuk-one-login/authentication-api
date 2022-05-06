@@ -32,6 +32,7 @@ test {
     environment "ENVIRONMENT", "local"
     environment "HEADERS_CASE_INSENSITIVE", "true"
     environment "LOCALSTACK_ENDPOINT", "http://localhost:45678"
+    environment "TRACING_ENABLED", "false"
 
     testLogging {
         showStandardStreams = false

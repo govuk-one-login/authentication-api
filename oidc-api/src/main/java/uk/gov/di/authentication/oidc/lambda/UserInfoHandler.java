@@ -69,7 +69,9 @@ public class UserInfoHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall("oidc-api::" + getClass().getSimpleName(), () -> userInfoRequestHandler(input, context));
+        return segmentedFunctionCall(
+                "oidc-api::" + getClass().getSimpleName(),
+                () -> userInfoRequestHandler(input, context));
     }
 
     public APIGatewayProxyResponseEvent userInfoRequestHandler(

@@ -48,26 +48,36 @@ public class StorageSQSAuditHandler implements RequestHandler<SQSEvent, Object> 
 
     @Override
     public Object handleRequest(SQSEvent input, Context context) {
-        segmentedFunctionCall("audit-processors::" + getClass().getSimpleName(), () -> {
-            LOG.info("Processing {} events from queue", input.getRecords().size());
-            var auditMessages =
-                    input.getRecords().stream()
-                            .peek(record -> LOG.info("Processing record {}", record.getMessageId()))
-                            .map(SQSMessage::getBody)
-                            .map(this::readAsJson)
-                            .map(Base64.getDecoder()::decode)
-                            .peek(payload -> LOG.info("Extracted payload: length {}", payload.length))
-                            .map(AuditEventHelper::parseToSignedAuditEvent)
-                            .filter(this::validateSignature)
-                            .map(AuditEventHelper::extractPayload)
-                            .filter(Optional::isPresent)
-                            .map(Optional::get)
-                            .collect(Collectors.toList());
+        segmentedFunctionCall(
+                "audit-processors::" + getClass().getSimpleName(),
+                () -> {
+                    LOG.info("Processing {} events from queue", input.getRecords().size());
+                    var auditMessages =
+                            input.getRecords().stream()
+                                    .peek(
+                                            record ->
+                                                    LOG.info(
+                                                            "Processing record {}",
+                                                            record.getMessageId()))
+                                    .map(SQSMessage::getBody)
+                                    .map(this::readAsJson)
+                                    .map(Base64.getDecoder()::decode)
+                                    .peek(
+                                            payload ->
+                                                    LOG.info(
+                                                            "Extracted payload: length {}",
+                                                            payload.length))
+                                    .map(AuditEventHelper::parseToSignedAuditEvent)
+                                    .filter(this::validateSignature)
+                                    .map(AuditEventHelper::extractPayload)
+                                    .filter(Optional::isPresent)
+                                    .map(Optional::get)
+                                    .collect(Collectors.toList());
 
-            LOG.info("Consuming {} audit messages", auditMessages.size());
+                    LOG.info("Consuming {} audit messages", auditMessages.size());
 
-            this.handleAuditEvent(auditMessages);
-        });
+                    this.handleAuditEvent(auditMessages);
+                });
         return null;
     }
 

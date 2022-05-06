@@ -78,7 +78,9 @@ public class UpdateEmailHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall("account-management-api::" + getClass().getSimpleName(), () -> updateEmailRequestHandler(input, context));
+        return segmentedFunctionCall(
+                "account-management-api::" + getClass().getSimpleName(),
+                () -> updateEmailRequestHandler(input, context));
     }
 
     public APIGatewayProxyResponseEvent updateEmailRequestHandler(

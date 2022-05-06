@@ -54,7 +54,9 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
 
     @Override
     public Object handleRequest(SQSEvent event, Context context) {
-        return segmentedFunctionCall("oidc-api::" + getClass().getSimpleName(), () -> backChannelLogoutRequestHandler(event, context));
+        return segmentedFunctionCall(
+                "oidc-api::" + getClass().getSimpleName(),
+                () -> backChannelLogoutRequestHandler(event, context));
     }
 
     public Object backChannelLogoutRequestHandler(SQSEvent event, Context context) {

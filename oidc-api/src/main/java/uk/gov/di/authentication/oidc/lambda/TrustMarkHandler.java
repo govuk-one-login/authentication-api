@@ -37,7 +37,9 @@ public class TrustMarkHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall("oidc-api::" + getClass().getSimpleName(), () -> trustmarkRequestHandler(input, context));
+        return segmentedFunctionCall(
+                "oidc-api::" + getClass().getSimpleName(),
+                () -> trustmarkRequestHandler(input, context));
     }
 
     public APIGatewayProxyResponseEvent trustmarkRequestHandler(

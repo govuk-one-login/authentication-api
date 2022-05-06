@@ -71,7 +71,9 @@ public class RemoveAccountHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall("account-management-api::" + getClass().getSimpleName(), () -> removeAccountRequestHandler(input, context));
+        return segmentedFunctionCall(
+                "account-management-api::" + getClass().getSimpleName(),
+                () -> removeAccountRequestHandler(input, context));
     }
 
     public APIGatewayProxyResponseEvent removeAccountRequestHandler(

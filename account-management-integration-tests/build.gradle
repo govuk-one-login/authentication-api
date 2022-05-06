@@ -42,6 +42,7 @@ test {
     environment "LOCALSTACK_ENDPOINT", "http://localhost:45678"
     environment "REDIS_KEY", "account-management"
     environment "SQS_ENDPOINT", "http://localhost:45678"
+    environment "TRACING_ENABLED", "false"
 
     testLogging {
         showStandardStreams = false

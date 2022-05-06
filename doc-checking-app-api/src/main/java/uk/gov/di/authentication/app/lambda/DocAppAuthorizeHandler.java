@@ -75,7 +75,9 @@ public class DocAppAuthorizeHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall("doc-app-api::" + getClass().getSimpleName(), () -> docAppAuthoriseRequestHandler(input, context));
+        return segmentedFunctionCall(
+                "doc-app-api::" + getClass().getSimpleName(),
+                () -> docAppAuthoriseRequestHandler(input, context));
     }
 
     public APIGatewayProxyResponseEvent docAppAuthoriseRequestHandler(

@@ -60,7 +60,9 @@ public class WellknownHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall("oidc-api::" + getClass().getSimpleName(), () -> wellknownRequestHandler(input, context));
+        return segmentedFunctionCall(
+                "oidc-api::" + getClass().getSimpleName(),
+                () -> wellknownRequestHandler(input, context));
     }
 
     public APIGatewayProxyResponseEvent wellknownRequestHandler(

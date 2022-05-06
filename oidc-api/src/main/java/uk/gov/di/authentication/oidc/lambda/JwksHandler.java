@@ -43,7 +43,9 @@ public class JwksHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall("oidc-api::" + getClass().getSimpleName(), () -> jwksRequestHandler(input, context));
+        return segmentedFunctionCall(
+                "oidc-api::" + getClass().getSimpleName(),
+                () -> jwksRequestHandler(input, context));
     }
 
     public APIGatewayProxyResponseEvent jwksRequestHandler(

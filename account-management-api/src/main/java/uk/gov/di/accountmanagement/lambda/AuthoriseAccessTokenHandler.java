@@ -67,9 +67,10 @@ public class AuthoriseAccessTokenHandler
     }
 
     @Override
-    public AuthPolicy handleRequest(
-            TokenAuthorizerContext input, Context context) {
-        return segmentedFunctionCall("account-management-api::" + getClass().getSimpleName(), () -> authoriseAccessTokenHandler(input, context));
+    public AuthPolicy handleRequest(TokenAuthorizerContext input, Context context) {
+        return segmentedFunctionCall(
+                "account-management-api::" + getClass().getSimpleName(),
+                () -> authoriseAccessTokenHandler(input, context));
     }
 
     public AuthPolicy authoriseAccessTokenHandler(TokenAuthorizerContext input, Context context) {

@@ -88,7 +88,9 @@ public class SendOtpNotificationHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall("account-management-api::" + getClass().getSimpleName(), () -> sendOtpRequestHandler(input, context));
+        return segmentedFunctionCall(
+                "account-management-api::" + getClass().getSimpleName(),
+                () -> sendOtpRequestHandler(input, context));
     }
 
     public APIGatewayProxyResponseEvent sendOtpRequestHandler(

@@ -57,6 +57,7 @@ test {
     environment "DOC_APP_API_ENABLED", "true"
     environment "IDENTITY_ENABLED", "false"
     environment "SPOT_ENABLED", "true"
+    environment "TRACING_ENABLED", "false"
 
     doLast {
         tasks.getByName("jacocoTestReport").sourceDirectories.from(
