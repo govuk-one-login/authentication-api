@@ -16,6 +16,8 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import java.util.Base64;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+
 public abstract class BaseAuditHandler implements RequestHandler<SNSEvent, Object> {
 
     protected final Logger LOG = LogManager.getLogger(getClass());
@@ -34,17 +36,19 @@ public abstract class BaseAuditHandler implements RequestHandler<SNSEvent, Objec
 
     @Override
     public Object handleRequest(SNSEvent input, Context context) {
-        input.getRecords().stream()
-                .map(SNSRecord::getSNS)
-                .map(SNS::getMessage)
-                .map(Base64.getDecoder()::decode)
-                .map(AuditEventHelper::parseToSignedAuditEvent)
-                .filter(this::validateSignature)
-                .map(AuditEventHelper::extractPayload)
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .peek(event -> LOG.info("Consuming audit message with id: {}", event.getEventId()))
-                .forEach(this::handleAuditEvent);
+        segmentedFunctionCall("audit-processors::" + getClass().getSimpleName(), () -> {
+            input.getRecords().stream()
+                    .map(SNSRecord::getSNS)
+                    .map(SNS::getMessage)
+                    .map(Base64.getDecoder()::decode)
+                    .map(AuditEventHelper::parseToSignedAuditEvent)
+                    .filter(this::validateSignature)
+                    .map(AuditEventHelper::extractPayload)
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .peek(event -> LOG.info("Consuming audit message with id: {}", event.getEventId()))
+                    .forEach(this::handleAuditEvent);
+        });
 
         return null;
     }
