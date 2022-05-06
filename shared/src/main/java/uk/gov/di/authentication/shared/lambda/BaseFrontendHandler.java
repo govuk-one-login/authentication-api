@@ -27,6 +27,7 @@ import java.util.Locale;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
@@ -70,7 +71,8 @@ public abstract class BaseFrontendHandler<T>
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return isWarming(input).orElseGet(() -> validateAndHandleRequest(input, context));
+        return segmentedFunctionCall("frontend-api::" + getClass().getSimpleName(), () ->
+                isWarming(input).orElseGet(() -> validateAndHandleRequest(input, context)));
     }
 
     public void onRequestReceived(Context context) {}
