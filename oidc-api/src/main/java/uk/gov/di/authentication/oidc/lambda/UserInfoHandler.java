@@ -24,6 +24,7 @@ import uk.gov.di.authentication.shared.services.TokenValidationService;
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.MISSING_TOKEN;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.AUTHORIZATION_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
@@ -67,6 +68,11 @@ public class UserInfoHandler
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
+            APIGatewayProxyRequestEvent input, Context context) {
+        return segmentedFunctionCall("oidc-api::" + getClass().getSimpleName(), () -> userInfoRequestHandler(input, context));
+    }
+
+    public APIGatewayProxyResponseEvent userInfoRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
         return isWarming(input)
                 .orElseGet(

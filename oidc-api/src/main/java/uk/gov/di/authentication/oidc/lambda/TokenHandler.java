@@ -123,7 +123,7 @@ public class TokenHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         return segmentedFunctionCall(
-                "tokenRequestHandler", () -> tokenRequestHandler(input, context));
+                "oidc-api::" + getClass().getSimpleName(), () -> tokenRequestHandler(input, context));
     }
 
     public APIGatewayProxyResponseEvent tokenRequestHandler(

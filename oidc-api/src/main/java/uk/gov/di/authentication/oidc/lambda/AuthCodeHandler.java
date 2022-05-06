@@ -98,7 +98,7 @@ public class AuthCodeHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         return segmentedFunctionCall(
-                "authCodeRequestHandler", () -> authCodeRequestHandler(input, context));
+                "oidc-api::" + getClass().getSimpleName(), () -> authCodeRequestHandler(input, context));
     }
 
     public APIGatewayProxyResponseEvent authCodeRequestHandler(

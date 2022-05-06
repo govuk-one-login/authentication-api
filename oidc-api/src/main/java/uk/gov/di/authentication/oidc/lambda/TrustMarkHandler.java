@@ -17,6 +17,7 @@ import java.util.Arrays;
 import java.util.NoSuchElementException;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class TrustMarkHandler
@@ -33,7 +34,13 @@ public class TrustMarkHandler
         this.configurationService = ConfigurationService.getInstance();
     }
 
+    @Override
     public APIGatewayProxyResponseEvent handleRequest(
+            APIGatewayProxyRequestEvent input, Context context) {
+        return segmentedFunctionCall("oidc-api::" + getClass().getSimpleName(), () -> trustmarkRequestHandler(input, context));
+    }
+
+    public APIGatewayProxyResponseEvent trustmarkRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
         return isWarming(input)
                 .orElseGet(

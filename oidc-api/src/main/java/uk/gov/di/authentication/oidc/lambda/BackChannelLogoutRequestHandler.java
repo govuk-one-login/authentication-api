@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static java.util.Collections.emptyMap;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent, Object> {
 
@@ -53,6 +54,10 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
 
     @Override
     public Object handleRequest(SQSEvent event, Context context) {
+        return segmentedFunctionCall("oidc-api::" + getClass().getSimpleName(), () -> backChannelLogoutRequestHandler(event, context));
+    }
+
+    public Object backChannelLogoutRequestHandler(SQSEvent event, Context context) {
 
         event.getRecords().forEach(this::sendLogoutMessage);
 
