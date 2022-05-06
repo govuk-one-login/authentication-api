@@ -49,8 +49,15 @@ public class CloudwatchMetricsExtension extends BaseAwsResourceExtension
                         .endTime(Instant.now())
                         .build();
 
-        var results = cloudWatch.getMetricData(request).metricDataResults().get(0).values();
+        var response = cloudWatch.getMetricData(request);
+        if (response.metricDataResults().size() == 0) {
+            return 0.0;
+        }
 
+        var results = response.metricDataResults().get(0).values();
+        if (results.size() == 0) {
+            return 0.0;
+        }
         return results.get(results.size() - 1);
     }
 }
