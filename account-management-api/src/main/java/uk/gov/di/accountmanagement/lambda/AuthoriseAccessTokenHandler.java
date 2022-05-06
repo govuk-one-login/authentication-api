@@ -24,6 +24,7 @@ import java.util.Date;
 import java.util.List;
 
 import static java.lang.Thread.sleep;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.WARMUP_HEADER;
 
 public class AuthoriseAccessTokenHandler
@@ -66,7 +67,12 @@ public class AuthoriseAccessTokenHandler
     }
 
     @Override
-    public AuthPolicy handleRequest(TokenAuthorizerContext input, Context context) {
+    public AuthPolicy handleRequest(
+            TokenAuthorizerContext input, Context context) {
+        return segmentedFunctionCall("account-management-api::" + getClass().getSimpleName(), () -> authoriseAccessTokenHandler(input, context));
+    }
+
+    public AuthPolicy authoriseAccessTokenHandler(TokenAuthorizerContext input, Context context) {
         if (input.getType().equals(WARMUP_HEADER)) {
             LOG.info("Warmup Request Received");
             try {
