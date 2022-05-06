@@ -147,6 +147,8 @@ resource "aws_api_gateway_stage" "endpoint_frontend_stage" {
   rest_api_id   = aws_api_gateway_rest_api.di_authentication_frontend_api.id
   stage_name    = var.environment
 
+  xray_tracing_enabled = true
+
   dynamic "access_log_settings" {
     for_each = var.use_localstack ? [] : aws_cloudwatch_log_group.frontend_stage_access_logs
     iterator = log_group

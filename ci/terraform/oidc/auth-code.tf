@@ -11,7 +11,6 @@ module "oidc_auth_code_role" {
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
     aws_iam_policy.cloudwatch_metrics_putdata_policy.arn,
-    data.aws_iam_policy.xray.arn,
   ]
 }
 
@@ -30,7 +29,6 @@ module "auth-code" {
     ENVIRONMENT              = var.environment
     DYNAMO_ENDPOINT          = var.use_localstack ? var.lambda_dynamo_endpoint : null
     HEADERS_CASE_INSENSITIVE = var.use_localstack ? "true" : "false"
-    TRACING_ENABLED          = "true"
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.AuthCodeHandler::handleRequest"
 
