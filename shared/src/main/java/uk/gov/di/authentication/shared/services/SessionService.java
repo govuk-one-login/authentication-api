@@ -13,6 +13,7 @@ import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.InputSanitiser.sanitiseBase64;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
 
@@ -112,8 +113,12 @@ public class SessionService {
         try {
             if (redisConnectionService.keyExists(sessionId)) {
                 return Optional.of(
-                        OBJECT_MAPPER.readValue(
-                                redisConnectionService.getValue(sessionId), Session.class));
+                        segmentedFunctionCall(
+                                "Deserialise session",
+                                () ->
+                                        OBJECT_MAPPER.readValue(
+                                                redisConnectionService.getValue(sessionId),
+                                                Session.class)));
             } else {
                 return Optional.empty();
             }
