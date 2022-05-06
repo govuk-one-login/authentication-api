@@ -102,13 +102,30 @@ public class LogoutHandler
                                                 input.getQueryStringParameters().get("state"));
                             }
                             Optional<Session> sessionFromSessionCookie =
-                                    sessionService.getSessionFromSessionCookie(input.getHeaders());
+                                    segmentedFunctionCall(
+                                            "getSessionFromSessionCookie",
+                                            () ->
+                                                    sessionService.getSessionFromSessionCookie(
+                                                            input.getHeaders()));
                             if (sessionFromSessionCookie.isPresent()) {
-                                return processLogoutRequest(
-                                        sessionFromSessionCookie.get(), input, state, context);
+                                return segmentedFunctionCall(
+                                        "processLogoutRequest",
+                                        () ->
+                                                processLogoutRequest(
+                                                        sessionFromSessionCookie.get(),
+                                                        input,
+                                                        state,
+                                                        context));
                             } else {
-                                return generateDefaultLogoutResponse(
-                                        state, input, context, Optional.empty(), Optional.empty());
+                                return segmentedFunctionCall(
+                                        "generateDefaultLogoutResponse",
+                                        () ->
+                                                generateDefaultLogoutResponse(
+                                                        state,
+                                                        input,
+                                                        context,
+                                                        Optional.empty(),
+                                                        Optional.empty()));
                             }
                         });
     }
@@ -166,7 +183,11 @@ public class LogoutHandler
                         Optional.empty(),
                         Optional.of(session.getSessionId()));
             }
-            if (!tokenValidationService.isTokenSignatureValid(idTokenHint.get())) {
+            boolean isTokenSignatureValid =
+                    segmentedFunctionCall(
+                            "isTokenSignatureValid",
+                            () -> tokenValidationService.isTokenSignatureValid(idTokenHint.get()));
+            if (!isTokenSignatureValid) {
                 LOG.warn("Unable to validate ID token signature");
                 return generateErrorLogoutResponse(
                         Optional.empty(),
@@ -195,13 +216,17 @@ public class LogoutHandler
         }
         segmentedFunctionCall("destroySessions", () -> destroySessions(session));
         if (audience.isPresent()) {
-            return validateClientIDAgainstClientRegistry(
-                    postLogoutRedirectUri,
-                    audience.get(),
-                    state,
-                    input,
-                    context,
-                    Optional.of(session.getSessionId()));
+            final String finalAudience = audience.get();
+            return segmentedFunctionCall(
+                    "validateClientIDAgainstClientRegistry",
+                    () ->
+                            validateClientIDAgainstClientRegistry(
+                                    postLogoutRedirectUri,
+                                    finalAudience,
+                                    state,
+                                    input,
+                                    context,
+                                    Optional.of(session.getSessionId())));
         } else {
             return generateDefaultLogoutResponse(
                     state, input, context, audience, Optional.of(session.getSessionId()));
