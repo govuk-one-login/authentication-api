@@ -164,7 +164,7 @@ public class LogoutHandler
         Map<String, String> queryStringParameters = input.getQueryStringParameters();
         if (queryStringParameters == null || queryStringParameters.isEmpty()) {
             LOG.info("Deleting session and returning default logout as no input parameters");
-            destroySessions(session);
+            segmentedFunctionCall("destroySessions", () -> destroySessions(session));
             return generateDefaultLogoutResponse(
                     state, input, context, Optional.empty(), Optional.of(session.getSessionId()));
         }

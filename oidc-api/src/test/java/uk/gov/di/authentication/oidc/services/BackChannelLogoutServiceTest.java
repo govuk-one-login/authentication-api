@@ -6,7 +6,6 @@ import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.oidc.entity.BackChannelLogoutMessage;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 
@@ -45,13 +44,11 @@ class BackChannelLogoutServiceTest {
                         .setBackChannelLogoutUri("http://localhost:8080/back-channel-logout"),
                 "test@test.com");
 
-        var captor = ArgumentCaptor.forClass(String.class);
+        var captor = ArgumentCaptor.forClass(BackChannelLogoutMessage.class);
 
-        verify(sqs).send(captor.capture());
+        verify(sqs).sendAsync(captor.capture());
 
-        var message =
-                ObjectMapperFactory.getInstance()
-                        .readValue(captor.getValue(), BackChannelLogoutMessage.class);
+        var message = captor.getValue();
 
         assertThat(message.getClientId(), is("client-id"));
         assertThat(message.getLogoutUri(), is("http://localhost:8080/back-channel-logout"));

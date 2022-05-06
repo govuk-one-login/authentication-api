@@ -1,5 +1,8 @@
 package uk.gov.di.authentication.shared.services;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.exception.SdkClientException;
@@ -7,11 +10,15 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.SqsClientBuilder;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
+import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 
 import java.net.URI;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 public class AwsSqsClient {
+
+    private static Logger LOG = LogManager.getLogger(AwsSqsClient.class);
 
     private final SqsClient client;
     private final String queueUrl;
@@ -35,5 +42,16 @@ public class AwsSqsClient {
                 SendMessageRequest.builder().queueUrl(queueUrl).messageBody(event).build();
 
         client.sendMessage(messageRequest);
+    }
+
+    public <T> void sendAsync(final T message) throws SdkClientException {
+        CompletableFuture.runAsync(
+                () -> {
+                    try {
+                        send(ObjectMapperFactory.getInstance().writeValueAsString(message));
+                    } catch (JsonProcessingException e) {
+                        LOG.error("Unable to serialise SQS message: " + message);
+                    }
+                });
     }
 }
