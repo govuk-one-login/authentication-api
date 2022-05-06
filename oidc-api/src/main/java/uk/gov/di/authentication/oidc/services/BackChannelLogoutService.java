@@ -1,11 +1,9 @@
 package uk.gov.di.authentication.oidc.services;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.BackChannelLogoutMessage;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -64,10 +62,6 @@ public class BackChannelLogoutService {
                         clientRegistry.getBackChannelLogoutUri(),
                         subjectId);
 
-        try {
-            awsSqsClient.send(ObjectMapperFactory.getInstance().writeValueAsString(message));
-        } catch (JsonProcessingException e) {
-            LOGGER.error("Unable to serialise back channel logout message: " + message);
-        }
+        awsSqsClient.sendAsync(message);
     }
 }
