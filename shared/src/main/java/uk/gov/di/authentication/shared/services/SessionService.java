@@ -22,6 +22,8 @@ public class SessionService {
     private static final Logger LOG = LogManager.getLogger(SessionService.class);
 
     private static final ObjectMapper OBJECT_MAPPER = ObjectMapperFactory.getInstance();
+    private static final SerializationService SERIALIZATION_SERVICE =
+            SerializationService.getInstance();
 
     private final ConfigurationService configurationService;
     private final RedisConnectionService redisConnectionService;
@@ -116,7 +118,7 @@ public class SessionService {
                         segmentedFunctionCall(
                                 "Deserialise session",
                                 () ->
-                                        OBJECT_MAPPER.readValue(
+                                        SERIALIZATION_SERVICE.deserialize(
                                                 redisConnectionService.getValue(sessionId),
                                                 Session.class)));
             } else {

@@ -2,6 +2,7 @@ package uk.gov.di.authentication.shared.entity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,30 +16,39 @@ public class Session {
     }
 
     @JsonProperty("session_id")
+    @Expose
     private String sessionId;
 
     @JsonProperty("client_sessions")
+    @Expose
     private List<String> clientSessions;
 
     @JsonProperty("email_address")
+    @Expose
     private String emailAddress;
 
     @JsonProperty("retry_count")
+    @Expose
     private int retryCount;
 
     @JsonProperty("password_reset_count")
+    @Expose
     private int passwordResetCount;
 
     @JsonProperty("code_request_count")
+    @Expose
     private int codeRequestCount;
 
     @JsonProperty("current_credential_strength")
+    @Expose
     private CredentialTrustLevel currentCredentialStrength;
 
     @JsonProperty("is_new_account")
+    @Expose
     private AccountState isNewAccount;
 
     @JsonProperty("authenticated")
+    @Expose
     private boolean authenticated;
 
     public Session(String sessionId) {
