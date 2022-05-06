@@ -11,8 +11,6 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
-import java.util.Arrays;
-
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
@@ -42,7 +40,6 @@ public class JwksHandler
     }
 
     @Override
-    @SuppressWarnings("deprecation") // Only until we remove the alias-based key id
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         return isWarming(input)
@@ -51,14 +48,12 @@ public class JwksHandler
                             try {
                                 LOG.info("JWKs request received");
 
-                                var signingKeys =
-                                        Arrays.asList(
-                                                tokenValidationService.getPublicJwkWithOpaqueId(),
-                                                tokenValidationService.getPublicJwkWithAlias());
+                                var jwks =
+                                        new JWKSet(
+                                                tokenValidationService.getPublicJwkWithOpaqueId());
 
                                 LOG.info("Generating JWKs successful response");
-                                return generateApiGatewayProxyResponse(
-                                        200, new JWKSet(signingKeys).toString(true));
+                                return generateApiGatewayProxyResponse(200, jwks.toString(true));
                             } catch (Exception e) {
                                 LOG.error("Error in JWKs lambda", e);
                                 return generateApiGatewayProxyResponse(

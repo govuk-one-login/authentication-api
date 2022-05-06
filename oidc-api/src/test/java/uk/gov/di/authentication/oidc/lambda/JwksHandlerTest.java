@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
-import java.util.List;
 import java.util.UUID;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -21,7 +20,6 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-@SuppressWarnings("deprecation")
 class JwksHandlerTest {
 
     private final Context context = mock(Context.class);
@@ -41,14 +39,10 @@ class JwksHandlerTest {
                 new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
         when(tokenValidationService.getPublicJwkWithOpaqueId()).thenReturn(opaqueSigningKey);
 
-        JWK aliasSigningKey =
-                new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
-        when(tokenValidationService.getPublicJwkWithAlias()).thenReturn(aliasSigningKey);
-
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        JWKSet expectedJWKSet = new JWKSet(List.of(opaqueSigningKey, aliasSigningKey));
+        JWKSet expectedJWKSet = new JWKSet(opaqueSigningKey);
 
         assertThat(result, hasStatus(200));
         assertThat(result, hasBody(expectedJWKSet.toString(true)));
@@ -57,7 +51,6 @@ class JwksHandlerTest {
     @Test
     public void shouldReturn500WhenSigningKeyIsNotPresent() {
         when(tokenValidationService.getPublicJwkWithOpaqueId()).thenReturn(null);
-        when(tokenValidationService.getPublicJwkWithAlias()).thenReturn(null);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
