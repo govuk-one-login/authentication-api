@@ -61,7 +61,11 @@ public class JwksHandler
                                                 tokenValidationService.getPublicJwkWithOpaqueId());
 
                                 LOG.info("Generating JWKs successful response");
-                                return generateApiGatewayProxyResponse(200, jwks.toString(true));
+
+                                return generateApiGatewayProxyResponse(
+                                        200,
+                                        segmentedFunctionCall(
+                                                "serialiseJWKSet", () -> jwks.toString(true)));
                             } catch (Exception e) {
                                 LOG.error("Error in JWKs lambda", e);
                                 return generateApiGatewayProxyResponse(
