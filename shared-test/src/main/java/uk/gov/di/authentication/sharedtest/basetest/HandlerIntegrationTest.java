@@ -230,5 +230,10 @@ public abstract class HandlerIntegrationTest<Q, S> {
         public String getSpotQueueUri() {
             return spotQueue.getQueueUrl();
         }
+
+        @Override
+        public Optional<String> getIPVCapacity() {
+            return Optional.of("1");
+        }
     }
 }
