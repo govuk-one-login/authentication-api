@@ -1,3 +1,5 @@
+doc_app_api_enabled = true
+
 blocked_email_duration = 30
 
 logging_endpoint_arns = [
