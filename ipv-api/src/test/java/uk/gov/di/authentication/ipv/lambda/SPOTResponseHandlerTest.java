@@ -33,7 +33,7 @@ class SPOTResponseHandlerTest {
     @Test
     void shouldWriteToDynamoForSuccesssfulSPOTResponse() {
         String json =
-                "{\"sub\":\"some-pairwise-identifier\",\"status\":\"Accepted\","
+                "{\"sub\":\"some-pairwise-identifier\",\"status\":\"ACCEPTED\","
                         + "\"claims\":{\"http://something/v1/verifiableIdentityJWT\":\"random-searalized-credential\"}}";
 
         handler.handleRequest(generateSQSEvent(json), context);
@@ -76,7 +76,7 @@ class SPOTResponseHandlerTest {
     @Test
     void shouldNotWriteToDynamoWhenSPOTResponseStatusIsNotOK() {
         String json =
-                "{\"sub\":\"some-pairwise-identifier\",\"status\":\"Rejected\","
+                "{\"sub\":\"some-pairwise-identifier\",\"status\":\"REJECTED\","
                         + "\"claims\":{\"http://something/v1/verifiableIdentityJWT\":\"random-searalized-credential\"}}";
 
         handler.handleRequest(generateSQSEvent(json), context);
@@ -99,7 +99,7 @@ class SPOTResponseHandlerTest {
     @Test
     void shouldNotWriteToDynamoWhenStatusIsOKButNoCredentialIsPresent() {
         String json =
-                "{\"sub\":\"some-pairwise-identifier\",\"status\":\"Accepted\"," + "\"claims\":{}}";
+                "{\"sub\":\"some-pairwise-identifier\",\"status\":\"ACCEPTED\"," + "\"claims\":{}}";
 
         handler.handleRequest(generateSQSEvent(json), context);
 
