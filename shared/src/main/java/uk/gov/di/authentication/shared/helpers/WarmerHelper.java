@@ -10,6 +10,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import java.util.Optional;
 
 import static java.lang.Thread.sleep;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.addAnnotation;
 
 public class WarmerHelper {
     private static final ConfigurationService configurationService =
@@ -23,6 +24,8 @@ public class WarmerHelper {
         ThreadContext.clearMap();
 
         if (input.getHeaders() != null && input.getHeaders().containsKey(WARMUP_HEADER)) {
+            addAnnotation("warmup_request", true);
+
             try {
                 LOG.info("Warmup Request Received {}", input.getHeaders().get(WARMUP_HEADER));
                 sleep(configurationService.getWarmupDelayMillis());
