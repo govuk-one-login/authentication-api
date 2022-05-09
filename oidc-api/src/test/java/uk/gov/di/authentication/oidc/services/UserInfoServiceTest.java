@@ -21,7 +21,9 @@ import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.IdentityCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.DynamoIdentityService;
 import uk.gov.di.authentication.sharedtest.helper.SignedCredentialHelper;
@@ -62,6 +64,7 @@ class UserInfoServiceTest {
     private static final String PHONE_NUMBER = "01234567891";
     private static final String BASE_URL = "https://example.com";
     private static final String KEY_ID = "14342354354353";
+    private static final String IPV_DOMAIN = "https://ipv-domain";
     private final ClaimsSetRequest claimsSetRequest =
             new ClaimsSetRequest().add(ValidClaims.CORE_IDENTITY_JWT.getValue());
     private final OIDCClaimsRequest oidcValidClaimsRequest =
@@ -101,7 +104,7 @@ class UserInfoServiceTest {
         var accessTokenInfo =
                 new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), SCOPES, null);
 
-        var userInfo = userInfoService.populateUserInfo(accessTokenInfo, false);
+        var userInfo = userInfoService.populateUserInfo(accessTokenInfo, false, IPV_DOMAIN);
         assertThat(userInfo.getEmailAddress(), equalTo(EMAIL));
         assertThat(userInfo.getEmailVerified(), equalTo(true));
         assertThat(userInfo.getPhoneNumber(), equalTo(PHONE_NUMBER));
@@ -124,7 +127,7 @@ class UserInfoServiceTest {
         var accessTokenInfo =
                 new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), scopes, null);
 
-        var userInfo = userInfoService.populateUserInfo(accessTokenInfo, false);
+        var userInfo = userInfoService.populateUserInfo(accessTokenInfo, false, IPV_DOMAIN);
         assertThat(userInfo.getEmailAddress(), equalTo(EMAIL));
         assertThat(userInfo.getEmailVerified(), equalTo(true));
         assertNull(userInfo.getPhoneNumber());
@@ -146,7 +149,7 @@ class UserInfoServiceTest {
         var accessTokenInfo =
                 new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), SCOPES, null);
 
-        var userInfo = userInfoService.populateUserInfo(accessTokenInfo, true);
+        var userInfo = userInfoService.populateUserInfo(accessTokenInfo, true, IPV_DOMAIN);
         assertThat(userInfo.getEmailAddress(), equalTo(EMAIL));
         assertThat(userInfo.getEmailVerified(), equalTo(true));
         assertThat(userInfo.getPhoneNumber(), equalTo(PHONE_NUMBER));
@@ -159,10 +162,16 @@ class UserInfoServiceTest {
     @Test
     void shouldPopulateIdentityClaimsWhenClaimsArePresentAndIdentityIsEnabled()
             throws JOSEException {
+        var userProfile = generateUserprofile();
+        var ipvSubject =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), "ipv-domain", userProfile.getSalt().array());
         accessToken = createSignedAccessToken(oidcValidClaimsRequest);
         when(authenticationService.getUserProfileFromSubject(INTERNAL_SUBJECT.getValue()))
-                .thenReturn(generateUserprofile());
-        when(spotService.getIdentityCredentials(SUBJECT.getValue()))
+                .thenReturn(userProfile);
+        when(authenticationService.getOrGenerateSalt(userProfile))
+                .thenReturn(userProfile.getSalt().array());
+        when(spotService.getIdentityCredentials(ipvSubject))
                 .thenReturn(Optional.of(identityCredentials));
 
         var accessTokenStore =
@@ -176,7 +185,7 @@ class UserInfoServiceTest {
                                 .map(ClaimsSetRequest.Entry::getClaimName)
                                 .collect(Collectors.toList()));
 
-        var userInfo = userInfoService.populateUserInfo(accessTokenInfo, true);
+        var userInfo = userInfoService.populateUserInfo(accessTokenInfo, true, IPV_DOMAIN);
         assertThat(userInfo.getEmailAddress(), equalTo(EMAIL));
         assertThat(userInfo.getEmailVerified(), equalTo(true));
         assertThat(userInfo.getPhoneNumber(), equalTo(PHONE_NUMBER));
@@ -214,6 +223,7 @@ class UserInfoServiceTest {
                 .setEmailVerified(true)
                 .setPhoneNumber(PHONE_NUMBER)
                 .setPhoneNumberVerified(true)
+                .setSalt(SaltHelper.generateNewSalt())
                 .setSubjectID(SUBJECT.toString())
                 .setCreated(LocalDateTime.now().toString())
                 .setUpdated(LocalDateTime.now().toString());

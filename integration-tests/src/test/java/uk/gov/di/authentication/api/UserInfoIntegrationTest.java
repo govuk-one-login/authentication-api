@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
@@ -49,6 +50,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String FORMATTED_PHONE_NUMBER = "+441234567890";
     private static final String TEST_PASSWORD = "password-1";
     private static final String CLIENT_ID = "client-id-one";
+    private static final String IPV_DOMAIN = "https://ipv-domain";
     private static final String APP_CLIENT_ID = "app-client-id-one";
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
     private static final Subject PUBLIC_SUBJECT = new Subject();
@@ -237,10 +239,14 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private void setUpDynamo(String coreIdentityJWT) {
-        if (Objects.nonNull(coreIdentityJWT)) {
-            identityStore.addCoreIdentityJWT(PUBLIC_SUBJECT.getValue(), coreIdentityJWT);
-        }
         userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD, INTERNAL_SUBJECT);
+        var salt = userStore.addSalt(TEST_EMAIL_ADDRESS);
+        if (Objects.nonNull(coreIdentityJWT)) {
+            var pairwiseIdentifier =
+                    ClientSubjectHelper.calculatePairwiseIdentifier(
+                            INTERNAL_SUBJECT.getValue(), "ipv-domain", salt);
+            identityStore.addCoreIdentityJWT(pairwiseIdentifier, coreIdentityJWT);
+        }
         userStore.addPhoneNumber(TEST_EMAIL_ADDRESS, TEST_PHONE_NUMBER);
         userStore.setPhoneNumberVerified(TEST_EMAIL_ADDRESS, true);
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
@@ -289,6 +295,11 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         @Override
         public boolean isIdentityEnabled() {
             return true;
+        }
+
+        @Override
+        public String getIPVDomain() {
+            return IPV_DOMAIN;
         }
     }
 }
