@@ -31,6 +31,7 @@ import java.util.Date;
 import java.util.List;
 
 import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class TokenValidationService {
 
@@ -99,12 +100,18 @@ public class TokenValidationService {
     }
 
     public JWK getPublicJwkWithOpaqueId() {
-        try {
-            return JWK.parse(createJwk().build().toString());
-        } catch (java.text.ParseException e) {
-            LOG.error("Error parsing the ECKey to JWK", e);
-            throw new RuntimeException(e);
-        }
+        var jwk = segmentedFunctionCall("createJwk", this::createJwk);
+
+        return segmentedFunctionCall(
+                "parseJwk",
+                () -> {
+                    try {
+                        return JWK.parse(jwk.build().toString());
+                    } catch (java.text.ParseException e) {
+                        LOG.error("Error parsing the ECKey to JWK", e);
+                        throw new RuntimeException(e);
+                    }
+                });
     }
 
     @Deprecated
