@@ -79,6 +79,11 @@ public class ClientSubjectHelper {
         }
     }
 
+    public static String calculatePairwiseIdentifier(String subjectID, URI uri, byte[] salt) {
+        var host = returnHost(uri.toString());
+        return calculatePairwiseIdentifier(subjectID, host, salt);
+    }
+
     public static String calculatePairwiseIdentifier(
             String subjectID, String sectorHost, byte[] salt) {
         try {

@@ -171,7 +171,7 @@ class StartHandlerTest {
     @Test
     void shouldReturn200WhenDocCheckingAppUserIsPresent()
             throws JsonProcessingException, ParseException {
-        when(configurationService.getDocAppDomain()).thenReturn("https://doc-app");
+        when(configurationService.getDocAppDomain()).thenReturn(URI.create("https://doc-app"));
         var userStartInfo = new UserStartInfo(false, false, false, false, null, null, true);
         when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
         var scope = new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
