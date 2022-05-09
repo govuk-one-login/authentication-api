@@ -69,6 +69,8 @@ resource "aws_api_gateway_stage" "endpoint_delivery_receipts_stage" {
   rest_api_id   = aws_api_gateway_rest_api.di_authentication_delivery_receipts_api.id
   stage_name    = var.environment
 
+  xray_tracing_enabled = true
+
   dynamic "access_log_settings" {
     for_each = var.use_localstack ? [] : aws_cloudwatch_log_group.delivery_receipts_stage_access_logs
     iterator = log_group

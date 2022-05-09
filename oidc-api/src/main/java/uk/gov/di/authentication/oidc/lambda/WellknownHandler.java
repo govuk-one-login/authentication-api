@@ -25,6 +25,7 @@ import java.util.NoSuchElementException;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class WellknownHandler
@@ -58,6 +59,13 @@ public class WellknownHandler
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
+            APIGatewayProxyRequestEvent input, Context context) {
+        return segmentedFunctionCall(
+                "oidc-api::" + getClass().getSimpleName(),
+                () -> wellknownRequestHandler(input, context));
+    }
+
+    public APIGatewayProxyResponseEvent wellknownRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
         return isWarming(input)
                 .orElseGet(

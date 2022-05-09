@@ -34,6 +34,7 @@ import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -86,6 +87,13 @@ public class SendOtpNotificationHandler
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
+            APIGatewayProxyRequestEvent input, Context context) {
+        return segmentedFunctionCall(
+                "account-management-api::" + getClass().getSimpleName(),
+                () -> sendOtpRequestHandler(input, context));
+    }
+
+    public APIGatewayProxyResponseEvent sendOtpRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
         return isWarming(input)
                 .orElseGet(

@@ -31,6 +31,7 @@ import java.util.Map;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
@@ -67,6 +68,13 @@ public class UpdatePasswordHandler
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
+            APIGatewayProxyRequestEvent input, Context context) {
+        return segmentedFunctionCall(
+                "account-management-api::" + getClass().getSimpleName(),
+                () -> updatePasswordRequestHandler(input, context));
+    }
+
+    public APIGatewayProxyResponseEvent updatePasswordRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
         return isWarming(input)
                 .orElseGet(

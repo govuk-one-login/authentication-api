@@ -88,7 +88,8 @@ public class LogoutHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         return segmentedFunctionCall(
-                "logoutRequestHandler", () -> logoutRequestHandler(input, context));
+                "oidc-api::" + getClass().getSimpleName(),
+                () -> logoutRequestHandler(input, context));
     }
 
     public APIGatewayProxyResponseEvent logoutRequestHandler(

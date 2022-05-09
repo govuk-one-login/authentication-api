@@ -28,6 +28,7 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASS
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
@@ -68,6 +69,12 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
     @Override
     public Void handleRequest(SQSEvent event, Context context) {
+        return segmentedFunctionCall(
+                "frontend-api::" + getClass().getSimpleName(),
+                () -> notifcationRequestHandler(event, context));
+    }
+
+    public Void notifcationRequestHandler(SQSEvent event, Context context) {
 
         Map<String, Object> notifyPersonalisation = new HashMap<>();
 

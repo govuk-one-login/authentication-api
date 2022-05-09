@@ -12,7 +12,7 @@ public class InstrumentationHelper {
     private static final Logger LOG = LogManager.getLogger(InstrumentationHelper.class);
 
     private static final boolean tracingEnabled =
-            Boolean.parseBoolean(System.getenv().getOrDefault("TRACING_ENABLED", "false"));
+            Boolean.parseBoolean(System.getenv().getOrDefault("TRACING_ENABLED", "true"));
 
     public static <T> T segmentedFunctionCall(String segmentName, Callable<T> callable) {
         if (tracingEnabled) {

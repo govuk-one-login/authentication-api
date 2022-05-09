@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class DocAppCallbackHandler
@@ -89,7 +90,13 @@ public class DocAppCallbackHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        return segmentedFunctionCall(
+                "doc-app-api::" + getClass().getSimpleName(),
+                () -> docAppCallbackRequestHandler(input, context));
+    }
 
+    public APIGatewayProxyResponseEvent docAppCallbackRequestHandler(
+            APIGatewayProxyRequestEvent input, Context context) {
         return isWarming(input)
                 .orElseGet(
                         () -> {

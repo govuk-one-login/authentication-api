@@ -12,6 +12,7 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class JwksHandler
@@ -41,6 +42,13 @@ public class JwksHandler
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
+            APIGatewayProxyRequestEvent input, Context context) {
+        return segmentedFunctionCall(
+                "oidc-api::" + getClass().getSimpleName(),
+                () -> jwksRequestHandler(input, context));
+    }
+
+    public APIGatewayProxyResponseEvent jwksRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
         return isWarming(input)
                 .orElseGet(

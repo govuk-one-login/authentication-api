@@ -102,3 +102,36 @@ resource "aws_iam_role_policy_attachment" "networking_policy" {
     aws_iam_policy.networking_policy[0]
   ]
 }
+
+data "aws_iam_policy_document" "endpoint_xray_policy" {
+  version = "2012-10-17"
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "xray:*"
+    ]
+
+    resources = [
+      "*",
+    ]
+  }
+}
+
+resource "aws_iam_policy" "endpoint_xray_policy" {
+  name_prefix = "xray"
+  path        = "/${var.environment}/${var.role_name}/"
+  description = "IAM policy for xray with a lambda"
+
+  policy = data.aws_iam_policy_document.endpoint_xray_policy.json
+}
+
+resource "aws_iam_role_policy_attachment" "endpoint_xray_policy_attachment" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = aws_iam_policy.endpoint_xray_policy.arn
+
+  depends_on = [
+    aws_iam_role.lambda_role,
+    aws_iam_policy.endpoint_xray_policy
+  ]
+}

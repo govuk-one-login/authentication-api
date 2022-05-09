@@ -218,6 +218,8 @@ resource "aws_api_gateway_stage" "stage" {
   rest_api_id   = aws_api_gateway_rest_api.di_account_management_api.id
   stage_name    = var.environment
 
+  xray_tracing_enabled = true
+
   dynamic "access_log_settings" {
     for_each = var.use_localstack ? [] : aws_cloudwatch_log_group.account_management_access_logs
     iterator = log_group
