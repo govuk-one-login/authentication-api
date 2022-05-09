@@ -38,14 +38,19 @@ public class AuthorizationService {
 
     public static final String VTR_PARAM = "vtr";
     private final DynamoClientService dynamoClientService;
+    private final IPVCapacityService ipvCapacityService;
     private static final Logger LOG = LogManager.getLogger(AuthorizationService.class);
 
-    public AuthorizationService(DynamoClientService dynamoClientService) {
+    public AuthorizationService(
+            DynamoClientService dynamoClientService, IPVCapacityService ipvCapacityService) {
         this.dynamoClientService = dynamoClientService;
+        this.ipvCapacityService = ipvCapacityService;
     }
 
     public AuthorizationService(ConfigurationService configurationService) {
-        this(new DynamoClientService(configurationService));
+        this(
+                new DynamoClientService(configurationService),
+                new IPVCapacityService(configurationService));
     }
 
     public boolean isClientRedirectUriValid(ClientID clientID, URI redirectURI)
@@ -144,7 +149,12 @@ public class AuthorizationService {
         }
         List<String> authRequestVtr = authRequest.getCustomParameter(VTR_PARAM);
         try {
-            VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
+            var vectorOfTrust = VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
+            if (vectorOfTrust.containsLevelOfConfidence()
+                    && !ipvCapacityService.isIPVCapacityAvailable()) {
+                return Optional.of(
+                        new AuthRequestError(OAuth2Error.TEMPORARILY_UNAVAILABLE, redirectURI));
+            }
         } catch (IllegalArgumentException e) {
             LOG.warn(
                     "vtr in AuthRequest is not valid. vtr in request: {}. IllegalArgumentException: {}",

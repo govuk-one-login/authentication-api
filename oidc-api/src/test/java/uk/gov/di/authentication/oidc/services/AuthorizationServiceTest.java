@@ -55,6 +55,7 @@ class AuthorizationServiceTest {
     private static final Nonce NONCE = new Nonce();
     private AuthorizationService authorizationService;
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
+    private final IPVCapacityService ipvCapacityService = mock(IPVCapacityService.class);
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -62,7 +63,7 @@ class AuthorizationServiceTest {
 
     @BeforeEach
     void setUp() {
-        authorizationService = new AuthorizationService(dynamoClientService);
+        authorizationService = new AuthorizationService(dynamoClientService, ipvCapacityService);
     }
 
     @AfterEach
@@ -126,6 +127,7 @@ class AuthorizationServiceTest {
 
     @Test
     void shouldSuccessfullyValidateAuthRequestWhenIdentityValuesAreIncludedInVtrAttribute() {
+        when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
@@ -421,6 +423,29 @@ class AuthorizationServiceTest {
                 equalTo(
                         new ErrorObject(
                                 OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid")));
+    }
+
+    @Test
+    void shouldReturnErrorWhenIdentityIsRequiredButNoIPVCapacityIsAvailable() {
+        when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(false);
+        var responseType = new ResponseType(ResponseType.Value.CODE);
+        var scope = new Scope(OIDCScopeValue.OPENID);
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
+        var authRequest =
+                new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
+                        .state(new State())
+                        .nonce(new Nonce())
+                        .customParameter("vtr", jsonArrayOf("P2.Cl.Cm"))
+                        .build();
+        var errorObject = authorizationService.validateAuthRequest(authRequest);
+
+        assertTrue(errorObject.isPresent());
+        assertThat(
+                errorObject.get().getErrorObject(), equalTo(OAuth2Error.TEMPORARILY_UNAVAILABLE));
     }
 
     @Test
