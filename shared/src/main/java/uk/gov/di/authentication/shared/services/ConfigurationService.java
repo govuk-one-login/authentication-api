@@ -147,8 +147,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return docAppCredentialSigningPublicKey;
     }
 
-    public String getDocAppDomain() {
-        return System.getenv("DOC_APP_DOMAIN");
+    public URI getDocAppDomain() {
+        return URI.create(System.getenv("DOC_APP_DOMAIN"));
     }
 
     public String getDomainName() {

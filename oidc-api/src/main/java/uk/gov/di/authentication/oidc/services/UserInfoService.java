@@ -10,6 +10,7 @@ import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.exceptions.UserInfoException;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.DynamoIdentityService;
 
@@ -32,7 +33,8 @@ public class UserInfoService {
         this.dynamoDocAppService = dynamoDocAppService;
     }
 
-    public UserInfo populateUserInfo(AccessTokenInfo accessTokenInfo, boolean identityEnabled) {
+    public UserInfo populateUserInfo(
+            AccessTokenInfo accessTokenInfo, boolean identityEnabled, String ipvDomain) {
         LOG.info("Populating UserInfo");
         var userInfo = new UserInfo(new Subject(accessTokenInfo.getPublicSubject()));
         if (accessTokenInfo.getScopes().contains(CustomScopeValue.DOC_CHECKING_APP.getValue())) {
@@ -53,19 +55,21 @@ public class UserInfoService {
             userInfo.setClaim("legacy_subject_id", userProfile.getLegacySubjectID());
         }
         if (identityEnabled && Objects.nonNull(accessTokenInfo.getIdentityClaims())) {
-            return populateIdentityInfo(accessTokenInfo, userInfo);
+            var pairwiseIPVSubject =
+                    ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                            userProfile, ipvDomain, authenticationService);
+            return populateIdentityInfo(accessTokenInfo, userInfo, pairwiseIPVSubject);
         } else {
             LOG.info("No identity claims present");
             return userInfo;
         }
     }
 
-    private UserInfo populateIdentityInfo(AccessTokenInfo accessTokenInfo, UserInfo userInfo) {
+    private UserInfo populateIdentityInfo(
+            AccessTokenInfo accessTokenInfo, UserInfo userInfo, Subject pairwiseIpvSubject) {
         LOG.info("Populating IdentityInfo");
         var identityCredentials =
-                identityService
-                        .getIdentityCredentials(accessTokenInfo.getPublicSubject())
-                        .orElse(null);
+                identityService.getIdentityCredentials(pairwiseIpvSubject.getValue()).orElse(null);
         if (Objects.isNull(identityCredentials)) {
             LOG.info("No identity credentials present");
             return userInfo;
