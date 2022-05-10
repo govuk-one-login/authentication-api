@@ -106,6 +106,38 @@ class ClientSubjectHelperTest {
     }
 
     @Test
+    void shouldReturnSubjectIDAsURIWhenClientTypeIsPairwise() {
+        stubAuthenticationService();
+        var keyPair = generateRsaKeyPair();
+        var userProfile = generateUserProfile();
+
+        var clientRegistry1 =
+                generateClientRegistryPairwise(
+                        keyPair, "test-client-id-1", "pairwise", "https://test.com");
+
+        var subject =
+                ClientSubjectHelper.getSubject(userProfile, clientRegistry1, authenticationService);
+
+        assertTrue(subject.getValue().startsWith("urn:uuid:"));
+    }
+
+    @Test
+    void shouldNotReturnSubjectIDAsURIWhenClientTypeIsPublic() {
+        stubAuthenticationService();
+        var keyPair = generateRsaKeyPair();
+        var userProfile = generateUserProfile();
+
+        var clientRegistry1 =
+                generateClientRegistryPairwise(
+                        keyPair, "test-client-id-1", "public", "https://test.com");
+
+        var subject =
+                ClientSubjectHelper.getSubject(userProfile, clientRegistry1, authenticationService);
+
+        assertFalse(subject.getValue().startsWith("urn:uuid:"));
+    }
+
+    @Test
     void shouldGetHostAsSectorIdentierWhenDefinedByClient() {
         KeyPair keyPair = generateRsaKeyPair();
         ClientRegistry clientRegistry1 =
@@ -258,15 +290,15 @@ class ClientSubjectHelperTest {
     }
 
     private ClientRegistry generateClientRegistryPairwise(
-            KeyPair keyPair, String clientID, String subectType, String sector) {
+            KeyPair keyPair, String clientID, String subjectType, String sector) {
         return generateClientRegistryPairwise(
-                keyPair, clientID, subectType, sector, singletonList(REDIRECT_URI));
+                keyPair, clientID, subjectType, sector, singletonList(REDIRECT_URI));
     }
 
     private ClientRegistry generateClientRegistryPairwise(
             KeyPair keyPair,
             String clientID,
-            String subectType,
+            String subjectType,
             String sector,
             List<String> redirectUrls) {
         return new ClientRegistry()
@@ -278,7 +310,7 @@ class ClientSubjectHelperTest {
                 .setPublicKey(
                         Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()))
                 .setSectorIdentifierUri(sector)
-                .setSubjectType(subectType);
+                .setSubjectType(subjectType);
     }
 
     private UserProfile generateUserProfile() {
