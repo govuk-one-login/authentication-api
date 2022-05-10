@@ -1,4 +1,5 @@
 ipv_api_enabled                = true
+ipv_capacity_allowed           = true
 ipv_authorisation_client_id    = "authOrchestrator"
 ipv_authorisation_uri          = "https://integration-di-ipv-core-front.london.cloudapps.digital/oauth2/authorize"
 ipv_authorisation_callback_uri = "https://oidc.integration.account.gov.uk/ipv-callback"
