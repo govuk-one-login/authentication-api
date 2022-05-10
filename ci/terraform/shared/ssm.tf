@@ -182,30 +182,3 @@ resource "aws_iam_role_policy_attachment" "lambda_iam_role_pepper_parameters" {
   policy_arn = aws_iam_policy.pepper_parameter_policy.arn
   role       = aws_iam_role.lambda_iam_role.name
 }
-
-data "aws_iam_policy_document" "ipv_capacity_parameter_policy_document" {
-  statement {
-    sid    = "AllowGetParameters"
-    effect = "Allow"
-
-    actions = [
-      "ssm:GetParameter",
-      "ssm:GetParameters",
-    ]
-
-    resources = [
-      aws_ssm_parameter.ipv-capacity.arn
-    ]
-  }
-}
-
-resource "aws_iam_policy" "ipv_capacity_parameter_policy" {
-  policy      = data.aws_iam_policy_document.ipv_capacity_parameter_policy_document.json
-  path        = "/${var.environment}/lambda-parameters/"
-  name_prefix = "ipv-capacity-parameter-store-policy"
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_iam_role_ipv_capacity_parameters" {
-  policy_arn = aws_iam_policy.ipv_capacity_parameter_policy.arn
-  role       = aws_iam_role.lambda_iam_role.name
-}
