@@ -304,7 +304,7 @@ public class TokenHandler
                                 UserProfile userProfile =
                                         dynamoService.getUserProfileByEmail(
                                                 authCodeExchangeData.getEmail());
-                                Subject publicSubject =
+                                Subject subject =
                                         ClientSubjectHelper.getSubject(
                                                 userProfile, client, dynamoService);
                                 tokenResponse =
@@ -317,7 +317,7 @@ public class TokenHandler
                                                                         userProfile.getSubjectID()),
                                                                 authRequest.getScope(),
                                                                 additionalTokenClaims,
-                                                                publicSubject,
+                                                                subject,
                                                                 vot,
                                                                 userProfile.getClientConsent(),
                                                                 isConsentRequired,
@@ -348,12 +348,12 @@ public class TokenHandler
             return generateApiGatewayProxyResponse(
                     400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
         }
-        Subject publicSubject;
+        Subject subject;
         List<String> scopes;
         String jti;
         try {
             SignedJWT signedJwt = SignedJWT.parse(currentRefreshToken.getValue());
-            publicSubject = new Subject(signedJwt.getJWTClaimsSet().getSubject());
+            subject = new Subject(signedJwt.getJWTClaimsSet().getSubject());
             scopes = (List<String>) signedJwt.getJWTClaimsSet().getClaim("scope");
             jti = signedJwt.getJWTClaimsSet().getJWTID();
         } catch (java.text.ParseException e) {
@@ -397,10 +397,7 @@ public class TokenHandler
 
         OIDCTokenResponse tokenResponse =
                 tokenService.generateRefreshTokenResponse(
-                        clientId,
-                        new Subject(tokenStore.getInternalSubjectId()),
-                        scopes,
-                        publicSubject);
+                        clientId, new Subject(tokenStore.getInternalSubjectId()), scopes, subject);
         LOG.info("Generating successful RefreshToken response");
         return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
     }

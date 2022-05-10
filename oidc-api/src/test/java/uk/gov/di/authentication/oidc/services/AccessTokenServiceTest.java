@@ -130,7 +130,7 @@ class AccessTokenServiceTest {
         assertThat(
                 accessTokenInfo.getAccessTokenStore().getInternalSubjectId(),
                 equalTo(INTERNAL_SUBJECT.getValue()));
-        assertThat(accessTokenInfo.getPublicSubject(), equalTo(SUBJECT.getValue()));
+        assertThat(accessTokenInfo.getSubject(), equalTo(SUBJECT.getValue()));
         assertThat(accessTokenInfo.getScopes(), equalTo(SCOPES));
         assertThat(accessTokenInfo.getIdentityClaims(), equalTo(expectedIdentityClaims));
     }

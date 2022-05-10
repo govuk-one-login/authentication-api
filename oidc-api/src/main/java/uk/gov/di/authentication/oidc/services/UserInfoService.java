@@ -34,7 +34,7 @@ public class UserInfoService {
 
     public UserInfo populateUserInfo(AccessTokenInfo accessTokenInfo, boolean identityEnabled) {
         LOG.info("Populating UserInfo");
-        var userInfo = new UserInfo(new Subject(accessTokenInfo.getPublicSubject()));
+        var userInfo = new UserInfo(new Subject(accessTokenInfo.getSubject()));
         if (accessTokenInfo.getScopes().contains(CustomScopeValue.DOC_CHECKING_APP.getValue())) {
             return populateDocAppUserInfo(accessTokenInfo, userInfo);
         }
@@ -63,9 +63,7 @@ public class UserInfoService {
     private UserInfo populateIdentityInfo(AccessTokenInfo accessTokenInfo, UserInfo userInfo) {
         LOG.info("Populating IdentityInfo");
         var identityCredentials =
-                identityService
-                        .getIdentityCredentials(accessTokenInfo.getPublicSubject())
-                        .orElse(null);
+                identityService.getIdentityCredentials(accessTokenInfo.getSubject()).orElse(null);
         if (Objects.isNull(identityCredentials)) {
             LOG.info("No identity credentials present");
             return userInfo;
@@ -85,7 +83,7 @@ public class UserInfoService {
 
     private UserInfo populateDocAppUserInfo(AccessTokenInfo accessTokenInfo, UserInfo userInfo) {
         return dynamoDocAppService
-                .getDocAppCredential(accessTokenInfo.getPublicSubject())
+                .getDocAppCredential(accessTokenInfo.getSubject())
                 .map(
                         docAppCredential -> {
                             userInfo.setClaim(
