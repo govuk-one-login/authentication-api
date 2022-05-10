@@ -31,7 +31,6 @@ module "userinfo" {
     DYNAMO_ENDPOINT         = var.use_localstack ? var.lambda_dynamo_endpoint : null
     TOKEN_SIGNING_KEY_ALIAS = local.id_token_signing_key_alias_name
     IDENTITY_ENABLED        = var.ipv_api_enabled
-    IPV_DOMAIN              = var.ipv_domain
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.UserInfoHandler::handleRequest"
 

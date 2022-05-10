@@ -34,7 +34,6 @@ public class UserInfoHandlerTest {
 
     private static final String EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String PHONE_NUMBER = "01234567890";
-    private static final String IPV_DOMAIN = "https://ipv-domain";
     private static final Subject SUBJECT = new Subject();
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -48,7 +47,6 @@ public class UserInfoHandlerTest {
     @BeforeEach
     void setUp() {
         handler = new UserInfoHandler(configurationService, userInfoService, accessTokenService);
-        when(configurationService.getIPVDomain()).thenReturn(IPV_DOMAIN);
     }
 
     @Test
@@ -62,8 +60,7 @@ public class UserInfoHandlerTest {
         userInfo.setEmailAddress(EMAIL_ADDRESS);
         when(accessTokenService.parse(accessToken.toAuthorizationHeader(), false))
                 .thenReturn(accessTokenInfo);
-        when(userInfoService.populateUserInfo(accessTokenInfo, false, IPV_DOMAIN))
-                .thenReturn(userInfo);
+        when(userInfoService.populateUserInfo(accessTokenInfo, false)).thenReturn(userInfo);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Authorization", accessToken.toAuthorizationHeader()));
