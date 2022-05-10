@@ -228,6 +228,10 @@ variable "ipv_api_enabled" {
   default = false
 }
 
+variable "ipv_capacity_allowed" {
+  default = false
+}
+
 variable "ipv_authorisation_uri" {
   type    = string
   default = "undefined"

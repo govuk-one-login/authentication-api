@@ -20,16 +20,37 @@ resource "aws_iam_policy" "pepper_parameter_policy" {
   name_prefix = "pepper-parameter-store-policy"
 }
 
+## IPV capacity parameter
 
-data "aws_iam_policy" "ipv_capacity_parameter_policy" {
-  arn = local.ipv_capacity_ssm_parameter_policy
+resource "aws_ssm_parameter" "ipv-capacity" {
+  name  = "${var.environment}-ipv-capacity"
+  type  = "String"
+  value = var.ipv_capacity_allowed ? "1" : "0"
+}
+
+data "aws_iam_policy_document" "ipv_capacity_parameter_policy_document" {
+  statement {
+    sid    = "AllowGetParameters"
+    effect = "Allow"
+
+    actions = [
+      "ssm:GetParameter",
+      "ssm:GetParameters",
+    ]
+
+    resources = [
+      aws_ssm_parameter.ipv-capacity.arn
+    ]
+  }
 }
 
 resource "aws_iam_policy" "ipv_capacity_parameter_policy" {
-  policy      = data.aws_iam_policy.ipv_capacity_parameter_policy.policy
+  policy      = data.aws_iam_policy_document.ipv_capacity_parameter_policy_document.json
   path        = "/${var.environment}/lambda-parameters/"
   name_prefix = "ipv-capacity-parameter-store-policy"
 }
+
+## IPV public encryption key parameter
 
 resource "aws_ssm_parameter" "ipv_public_encryption_key" {
   name  = "${var.environment}-ipv-public-encryption-key"
@@ -59,6 +80,8 @@ resource "aws_iam_policy" "ipv_public_encryption_key_parameter_policy" {
   name_prefix = "ipv-public-encryption-key-parameter-store-policy"
 }
 
+## Doc app public encryption key parameter
+
 resource "aws_ssm_parameter" "doc_app_public_encryption_key" {
   name  = "${var.environment}-doc-app-public-encryption-key"
   type  = "String"
@@ -86,6 +109,8 @@ resource "aws_iam_policy" "doc_app_public_encryption_key_parameter_policy" {
   path        = "/${var.environment}/lambda-parameters/"
   name_prefix = "doc-app-public-encryption-key-parameter-store-policy"
 }
+
+## Doc app public signing key parameter
 
 resource "aws_ssm_parameter" "doc_app_public_signing_key" {
   name  = "${var.environment}-doc-app-public-signing-key"
