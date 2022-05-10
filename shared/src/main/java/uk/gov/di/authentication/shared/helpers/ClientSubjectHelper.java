@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 public class ClientSubjectHelper {
 
     private static final Logger LOG = LogManager.getLogger(ClientSubjectHelper.class);
+    private static final String PAIRWISE_PREFIX = "urn:uuid:";
 
     public static Subject getSubject(
             UserProfile userProfile,
@@ -99,7 +100,7 @@ public class ClientSubjectHelper {
                 sb.append(Integer.toString((aByte & 0xff) + 0x100, 16).substring(1));
             }
 
-            return sb.toString();
+            return PAIRWISE_PREFIX + sb;
         } catch (NoSuchAlgorithmException e) {
             LOG.error("Failed to hash", e);
             throw new RuntimeException(e);

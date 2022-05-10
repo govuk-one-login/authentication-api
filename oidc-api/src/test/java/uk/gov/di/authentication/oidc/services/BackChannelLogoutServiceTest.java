@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.oidc.services;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.oidc.entity.BackChannelLogoutMessage;
@@ -28,8 +27,7 @@ class BackChannelLogoutServiceTest {
             new BackChannelLogoutService(sqs, authenticationService);
 
     @Test
-    void shouldPostBackChannelLogoutMessageToSqsForPairwiseClients()
-            throws JsonProcessingException {
+    void shouldPostBackChannelLogoutMessageToSqsForPairwiseClients() {
         var user = new UserProfile().setPublicSubjectID("public").setSubjectID("subject");
 
         when(authenticationService.getUserProfileByEmailMaybe("test@test.com"))
@@ -54,7 +52,7 @@ class BackChannelLogoutServiceTest {
         assertThat(message.getLogoutUri(), is("http://localhost:8080/back-channel-logout"));
         assertThat(
                 message.getSubjectId(),
-                is("b46381e6de5f4405ff162a3aa91223f0a3c32fbbce839802a88e25e670d9083b"));
+                is("urn:uuid:b46381e6de5f4405ff162a3aa91223f0a3c32fbbce839802a88e25e670d9083b"));
     }
 
     @Test
