@@ -83,12 +83,6 @@ resource "aws_ssm_parameter" "password_pepper" {
   value  = var.password_pepper
 }
 
-resource "aws_ssm_parameter" "ipv-capacity" {
-  name  = "${var.environment}-ipv-capacity"
-  type  = "String"
-  value = "0"
-}
-
 data "aws_iam_policy_document" "redis_parameter_policy" {
   statement {
     sid    = "AllowGetParameters"
