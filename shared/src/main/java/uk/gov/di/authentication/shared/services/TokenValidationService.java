@@ -28,13 +28,16 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import java.security.PublicKey;
 import java.security.interfaces.ECPublicKey;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class TokenValidationService {
 
+    private final Map<String, ECKey> KEY_CACHE = new HashMap<>();
     private final ConfigurationService configService;
     private final KmsConnectionService kmsConnectionService;
     private static final Logger LOG = LogManager.getLogger(TokenValidationService.class);
@@ -100,13 +103,18 @@ public class TokenValidationService {
     }
 
     public JWK getPublicJwkWithOpaqueId() {
-        var jwk = segmentedFunctionCall("createJwk", this::createJwk);
+        var jwk =
+                segmentedFunctionCall(
+                        "createJwk",
+                        () ->
+                                KEY_CACHE.computeIfAbsent(
+                                        configService.getTokenSigningKeyAlias(), this::createJwk));
 
         return segmentedFunctionCall(
                 "parseJwk",
                 () -> {
                     try {
-                        return JWK.parse(jwk.build().toString());
+                        return JWK.parse(jwk.toString());
                     } catch (java.text.ParseException e) {
                         LOG.error("Error parsing the ECKey to JWK", e);
                         throw new RuntimeException(e);
@@ -114,20 +122,9 @@ public class TokenValidationService {
                 });
     }
 
-    @Deprecated
-    public JWK getPublicJwkWithAlias() {
-        try {
-            return JWK.parse(
-                    createJwk().keyID(configService.getTokenSigningKeyAlias()).build().toString());
-        } catch (java.text.ParseException e) {
-            LOG.error("Error parsing the ECKey to JWK", e);
-            throw new RuntimeException(e);
-        }
-    }
-
-    private ECKey.Builder createJwk() {
+    private ECKey createJwk(String keyId) {
         GetPublicKeyRequest getPublicKeyRequest = new GetPublicKeyRequest();
-        getPublicKeyRequest.setKeyId(configService.getTokenSigningKeyAlias());
+        getPublicKeyRequest.setKeyId(keyId);
         GetPublicKeyResult publicKeyResult = kmsConnectionService.getPublicKey(getPublicKeyRequest);
 
         PublicKey publicKey = createPublicKey(publicKeyResult);
@@ -135,7 +132,8 @@ public class TokenValidationService {
         return new ECKey.Builder(Curve.P_256, (ECPublicKey) publicKey)
                 .keyID(hashSha256String(publicKeyResult.getKeyId()))
                 .keyUse(KeyUse.SIGNATURE)
-                .algorithm(new Algorithm(JWSAlgorithm.ES256.getName()));
+                .algorithm(new Algorithm(JWSAlgorithm.ES256.getName()))
+                .build();
     }
 
     private PublicKey createPublicKey(GetPublicKeyResult publicKeyResult) {
