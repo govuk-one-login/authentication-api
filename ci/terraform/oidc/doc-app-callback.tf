@@ -30,6 +30,7 @@ module "doc-app-callback" {
     EVENTS_SNS_TOPIC_ARN               = aws_sns_topic.events.arn
     AUDIT_SIGNING_KEY_ALIAS            = local.audit_signing_key_alias_name
     LOCALSTACK_ENDPOINT                = var.use_localstack ? var.localstack_endpoint : null
+    LOGIN_URI                          = module.dns.frontend_url
     REDIS_KEY                          = local.redis_key
     DYNAMO_ENDPOINT                    = var.use_localstack ? var.lambda_dynamo_endpoint : null
     DOC_APP_AUTHORISATION_CALLBACK_URI = var.doc_app_authorisation_callback_uri
