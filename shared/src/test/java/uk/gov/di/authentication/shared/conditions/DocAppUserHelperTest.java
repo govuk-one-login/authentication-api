@@ -9,16 +9,19 @@ import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ClientType;
+import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -35,6 +38,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.shared.conditions.DocAppUserHelper.getRequestObjectClaim;
+import static uk.gov.di.authentication.shared.conditions.DocAppUserHelper.getRequestObjectScopeClaim;
 
 class DocAppUserHelperTest {
 
@@ -42,7 +46,8 @@ class DocAppUserHelperTest {
     private static final String CLIENT_NAME = "test-client";
     private static final Session SESSION = new Session("a-session-id");
     private static final String AUDIENCE = "oidc-audience";
-    private static final String VALID_SCOPE = "openid doc-checking-app";
+    private static final Scope VALID_SCOPE =
+            new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
     private static final State STATE = new State();
     private static final String REDIRECT_URI = "https://localhost:8080";
     private static final Subject SUBJECT = new Subject();
@@ -86,7 +91,7 @@ class DocAppUserHelperTest {
                         .audience(AUDIENCE)
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", VALID_SCOPE)
+                        .claim("scope", VALID_SCOPE.toString())
                         .claim("client_id", CLIENT_ID.getValue())
                         .claim("state", STATE)
                         .issuer(CLIENT_ID.getValue())
@@ -105,7 +110,7 @@ class DocAppUserHelperTest {
                         .audience(AUDIENCE)
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", VALID_SCOPE)
+                        .claim("scope", VALID_SCOPE.toString())
                         .claim("client_id", CLIENT_ID.getValue())
                         .claim("state", STATE)
                         .issuer(CLIENT_ID.getValue())
@@ -153,9 +158,6 @@ class DocAppUserHelperTest {
                 AuthenticationRequest.parse(userContext.getClientSession().getAuthRequestParams());
 
         assertThat(
-                getRequestObjectClaim(authenticationRequest, "scope", String.class),
-                equalTo(VALID_SCOPE));
-        assertThat(
                 getRequestObjectClaim(authenticationRequest, "redirect_uri", String.class),
                 equalTo(REDIRECT_URI));
         assertThat(
@@ -163,12 +165,25 @@ class DocAppUserHelperTest {
                 equalTo(STATE.getValue()));
     }
 
+    @Test
+    void shouldReturnRequestObjectScopeClaim()
+            throws NoSuchAlgorithmException, JOSEException, ParseException {
+        JWTClaimsSet.Builder claimsSetBuilder = getBaseJWTClaimsSetBuilder();
+
+        var signedJWT = generateSignedJWT(claimsSetBuilder.build());
+        var userContext = buildUserContext(ClientType.APP, signedJWT, Optional.empty());
+        var authenticationRequest =
+                AuthenticationRequest.parse(userContext.getClientSession().getAuthRequestParams());
+
+        assertThat(getRequestObjectScopeClaim(authenticationRequest), equalTo(VALID_SCOPE));
+    }
+
     private JWTClaimsSet.Builder getBaseJWTClaimsSetBuilder() {
         return new JWTClaimsSet.Builder()
                 .audience(AUDIENCE)
                 .claim("redirect_uri", REDIRECT_URI)
                 .claim("response_type", ResponseType.CODE.toString())
-                .claim("scope", VALID_SCOPE)
+                .claim("scope", VALID_SCOPE.toString())
                 .claim("client_id", CLIENT_ID.getValue())
                 .claim("state", STATE.getValue())
                 .issuer(CLIENT_ID.getValue());

@@ -24,7 +24,9 @@ import java.net.URI;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
 
 import static java.util.Collections.singletonList;
@@ -66,12 +68,16 @@ class RequestObjectServiceTest {
 
     @Test
     void shouldSuccessfullyProcessRequestUriPayload() throws JOSEException {
+        List<String> scopes = new ArrayList<>();
+        scopes.add("openid");
+        scopes.add("doc-checking-app");
+        var scope = Scope.parse(scopes);
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(AUDIENCE)
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
+                        .claim("scope", scope.toString())
                         .claim("state", new State())
                         .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
@@ -446,6 +452,7 @@ class RequestObjectServiceTest {
     }
 
     private AuthenticationRequest generateAuthRequest(SignedJWT signedJWT, Scope scope) {
+
         AuthenticationRequest.Builder builder =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE, scope, CLIENT_ID, URI.create(REDIRECT_URI))
