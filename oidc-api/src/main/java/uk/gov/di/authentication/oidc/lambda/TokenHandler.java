@@ -243,13 +243,16 @@ public class TokenHandler
                                                 "Unable to parse Auth Request\n Auth Request Params: %s \n Exception: %s",
                                                 clientSession.getAuthRequestParams(), e));
                             }
-                            if (!authRequest
-                                    .getRedirectionURI()
-                                    .toString()
-                                    .equals(requestBody.get("redirect_uri"))) {
+
+                            var authRequestRedirectURI =
+                                    isDocCheckingAppUserWithSubjectId(clientSession)
+                                            ? getRequestObjectClaim(
+                                                    authRequest, "redirect_uri", String.class)
+                                            : authRequest.getRedirectionURI().toString();
+                            if (!authRequestRedirectURI.equals(requestBody.get("redirect_uri"))) {
                                 LOG.warn(
                                         "Redirect URI for auth request ({}) does not match redirect URI for request body ({})",
-                                        authRequest.getRedirectionURI(),
+                                        authRequestRedirectURI,
                                         requestBody.get("redirect_uri"));
                                 return generateApiGatewayProxyResponse(
                                         400,
