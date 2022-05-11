@@ -55,7 +55,6 @@ module "doc-app-callback" {
 
   authentication_vpc_arn = local.authentication_vpc_arn
   security_group_ids = [
-    local.authentication_security_group_id,
     local.authentication_oidc_redis_security_group_id,
     local.authentication_egress_security_group_id,
   ]
