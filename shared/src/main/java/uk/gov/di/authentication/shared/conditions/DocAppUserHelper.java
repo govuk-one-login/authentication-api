@@ -71,4 +71,25 @@ public class DocAppUserHelper {
                     format("Unable to read claim from RequestObject: %s", claim), e);
         }
     }
+
+    public static Scope getRequestObjectScopeClaim(AuthenticationRequest authenticationRequest) {
+        try {
+            if (authenticationRequest.getRequestObject() != null
+                    && authenticationRequest.getRequestObject().getJWTClaimsSet() != null
+                    && authenticationRequest.getRequestObject().getJWTClaimsSet().getClaim("scope")
+                            != null) {
+                return Scope.parse(
+                        authenticationRequest
+                                .getRequestObject()
+                                .getJWTClaimsSet()
+                                .getClaim("scope")
+                                .toString());
+            } else {
+                LOG.info("Claim is missing from RequestObject: {}", "scope");
+                throw new RuntimeException("Scope is missing from RequestObject");
+            }
+        } catch (java.text.ParseException e) {
+            throw new RuntimeException("Unable to read scope claim from RequestObject");
+        }
+    }
 }

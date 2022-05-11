@@ -416,7 +416,7 @@ public class TokenHandlerTest {
         when(tokenService.generateTokenResponse(
                         DOC_APP_CLIENT_ID.getValue(),
                         DOC_APP_USER_PUBLIC_SUBJECT,
-                        new Scope(DOC_CHECKING_APP),
+                        new Scope(OIDCScopeValue.OPENID, DOC_CHECKING_APP),
                         Map.of(),
                         DOC_APP_USER_PUBLIC_SUBJECT,
                         vtr.retrieveVectorOfTrustForToken(),
@@ -557,12 +557,13 @@ public class TokenHandlerTest {
 
     private static AuthorizationRequest generateRequestObjectAuthRequest() throws JOSEException {
         var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        Scope scope = new Scope(DOC_CHECKING_APP, OIDCScopeValue.OPENID);
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(AUDIENCE)
-                        .claim("redirect_uri", REDIRECT_URI.toString())
+                        .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", DOC_CHECKING_APP.toString())
+                        .claim("scope", scope.toString())
                         .claim("client_id", DOC_APP_CLIENT_ID.getValue())
                         .claim("state", STATE.getValue())
                         .issuer(CLIENT_ID)

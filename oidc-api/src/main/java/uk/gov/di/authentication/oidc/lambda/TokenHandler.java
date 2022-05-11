@@ -46,6 +46,7 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.conditions.DocAppUserHelper.getRequestObjectClaim;
+import static uk.gov.di.authentication.shared.conditions.DocAppUserHelper.getRequestObjectScopeClaim;
 import static uk.gov.di.authentication.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
@@ -284,10 +285,7 @@ public class TokenHandler
                             final OIDCClaimsRequest finalClaimsRequest = claimsRequest;
                             OIDCTokenResponse tokenResponse;
                             if (isDocCheckingAppUserWithSubjectId(clientSession)) {
-                                Scope scope =
-                                        new Scope(
-                                                getRequestObjectClaim(
-                                                        authRequest, "scope", String.class));
+                                Scope scope = new Scope(getRequestObjectScopeClaim(authRequest));
                                 tokenResponse =
                                         segmentedFunctionCall(
                                                 "generateTokenResponse",
