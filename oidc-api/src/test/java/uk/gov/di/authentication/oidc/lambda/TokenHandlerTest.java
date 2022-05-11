@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.crypto.ECDSASigner;
@@ -14,6 +13,7 @@ import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
+import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
@@ -102,7 +102,6 @@ public class TokenHandlerTest {
     private static final State STATE = new State();
     private static final String CLIENT_ID = "test-id";
     private static final ClientID DOC_APP_CLIENT_ID = new ClientID("doc-app-test-id");
-    private static final URI DOC_APP_REDIRECT_URI = URI.create("http://localhost/redirect");
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
     private static final String BASE_URI = "http://localhost";
@@ -110,7 +109,6 @@ public class TokenHandlerTest {
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final Nonce NONCE = new Nonce();
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
-    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
 
     private final BearerAccessToken accessToken = new BearerAccessToken();
     private final RefreshToken refreshToken = new RefreshToken();
@@ -400,7 +398,7 @@ public class TokenHandlerTest {
                         eq(DOC_APP_CLIENT_ID.getValue())))
                 .thenReturn(Optional.empty());
         String authCode = new AuthorizationCode().toString();
-        AuthenticationRequest authenticationRequest = generateRequestObjectAuthRequest();
+        AuthorizationRequest authenticationRequest = generateRequestObjectAuthRequest();
         VectorOfTrust vtr =
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         authenticationRequest.getCustomParameter("vtr"));
@@ -557,7 +555,7 @@ public class TokenHandlerTest {
         return kpg.generateKeyPair();
     }
 
-    private static AuthenticationRequest generateRequestObjectAuthRequest() throws JOSEException {
+    private static AuthorizationRequest generateRequestObjectAuthRequest() throws JOSEException {
         var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
@@ -573,12 +571,11 @@ public class TokenHandlerTest {
         return generateAuthRequest(signedJWT);
     }
 
-    private static AuthenticationRequest generateAuthRequest(SignedJWT signedJWT) {
+    private static AuthorizationRequest generateAuthRequest(SignedJWT signedJWT) {
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
-        AuthenticationRequest.Builder builder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE, scope, DOC_APP_CLIENT_ID, DOC_APP_REDIRECT_URI)
+        AuthorizationRequest.Builder builder =
+                new AuthorizationRequest.Builder(ResponseType.CODE, DOC_APP_CLIENT_ID)
                         .requestObject(signedJWT);
         return builder.build();
     }
