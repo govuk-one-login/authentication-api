@@ -26,7 +26,7 @@ ext {
         aws_sdk_v2_version: "2.17.176",
         aws_lambda_core_version: "1.2.1",
         aws_lambda_events_version: "3.11.0",
-        nimbusds_oauth_version: "9.34",
+        nimbusds_oauth_version: "9.35",
         nimbusds_jwt_version: "9.22",
         protobuf_version: "3.20.1",
         junit: "5.8.2",
@@ -130,7 +130,7 @@ subprojects {
                 "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${dependencyVersions.jackson_version}",
                 "org.hibernate.validator:hibernate-validator:7.0.4.Final",
                 "org.glassfish:jakarta.el:4.0.2",
-                "jakarta.xml.bind:jakarta.xml.bind-api:3.0.1",
+                "jakarta.xml.bind:jakarta.xml.bind-api:4.0.0",
                 "com.sun.xml.bind:jaxb-impl:3.0.2"
 
         nimbus "com.nimbusds:oauth2-oidc-sdk:${dependencyVersions.nimbusds_oauth_version}",
@@ -146,7 +146,7 @@ subprojects {
 
         tests "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit}",
                 "org.junit.jupiter:junit-jupiter-params:${dependencyVersions.junit}",
-                "org.mockito:mockito-core:4.4.0",
+                "org.mockito:mockito-core:4.5.1",
                 "org.awaitility:awaitility:4.2.0",
                 configurations.hamcrest
 
