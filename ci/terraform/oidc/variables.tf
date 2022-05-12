@@ -247,6 +247,11 @@ variable "ipv_authorisation_client_id" {
   default = "undefined"
 }
 
+variable "ipv_audience" {
+  type    = string
+  default = "undefined"
+}
+
 variable "ipv_backend_uri" {
   type    = string
   default = "undefined"

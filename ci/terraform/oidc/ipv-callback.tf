@@ -34,6 +34,7 @@ module "ipv-callback" {
     IPV_AUTHORISATION_CALLBACK_URI = var.ipv_authorisation_callback_uri
     IPV_AUTHORISATION_URI          = var.ipv_authorisation_uri
     IPV_BACKEND_URI                = var.ipv_backend_uri
+    IPV_AUDIENCE                   = var.ipv_audience
     LOGIN_URI                      = module.dns.frontend_url
     LOCALSTACK_ENDPOINT            = var.use_localstack ? var.localstack_endpoint : null
     OIDC_API_BASE_URL              = local.api_base_url

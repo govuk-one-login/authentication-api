@@ -195,6 +195,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return URI.create(System.getenv().getOrDefault("IPV_BACKEND_URI", ""));
     }
 
+    public String getIPVAudience() {
+        return System.getenv().getOrDefault("IPV_AUDIENCE", "");
+    }
+
     public URI getIPVAuthorisationCallbackURI() {
         return URI.create(System.getenv().getOrDefault("IPV_AUTHORISATION_CALLBACK_URI", ""));
     }

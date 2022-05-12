@@ -60,6 +60,7 @@ class IPVAuthorisationServiceTest {
     private static final Long SESSION_EXPIRY = 3600L;
     private static final String KEY_ID = "14342354354353";
     private static final String IPV_CLIENT_ID = "ipv-client-id";
+    private static final URI IPV_URI = URI.create("http://ipv/");
     private static final URI IPV_CALLBACK_URI = URI.create("http://localhost/oidc/ipv/callback");
     private static final URI IPV_AUTHORISATION_URI = URI.create("http://localhost/ipv/authorize");
     private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
@@ -81,6 +82,7 @@ class IPVAuthorisationServiceTest {
         when(configurationService.getIPVAuthorisationClientId()).thenReturn(IPV_CLIENT_ID);
         when(configurationService.getIPVAuthorisationCallbackURI()).thenReturn(IPV_CALLBACK_URI);
         when(configurationService.getIPVAuthorisationURI()).thenReturn(IPV_AUTHORISATION_URI);
+        when(configurationService.getIPVAudience()).thenReturn(IPV_URI.toString());
         var keyPair = generateRsaKeyPair();
         privateKey = keyPair.getPrivate();
         var certpem =
@@ -227,7 +229,7 @@ class IPVAuthorisationServiceTest {
         assertThat(signedJWTResponse.getJWTClaimsSet().getIssuer(), equalTo(IPV_CLIENT_ID));
         assertThat(
                 signedJWTResponse.getJWTClaimsSet().getAudience(),
-                equalTo(singletonList(IPV_AUTHORISATION_URI.toString())));
+                equalTo(singletonList(IPV_URI.toString())));
         assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("response_type"), equalTo("code"));
         assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("claims"), equalTo(claims));
     }

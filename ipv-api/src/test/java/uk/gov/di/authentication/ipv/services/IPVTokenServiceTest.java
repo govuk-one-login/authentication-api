@@ -19,7 +19,6 @@ import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.JWTID;
-import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -56,8 +55,6 @@ class IPVTokenServiceTest {
 
     private static final URI IPV_URI = URI.create("http://ipv/");
     private static final URI REDIRECT_URI = URI.create("http://redirect");
-    private static final Subject PUBLIC_SUBJECT = new Subject("public-subject");
-    private static final String BASE_URL = "https://example.com";
     private static final ClientID CLIENT_ID = new ClientID("some-client-id");
     private static final String KEY_ID = "14342354354353";
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
@@ -70,6 +67,7 @@ class IPVTokenServiceTest {
         when(configService.getIPVAuthorisationClientId()).thenReturn(CLIENT_ID.getValue());
         when(configService.getAccessTokenExpiry()).thenReturn(300L);
         when(configService.getIPVAuthorisationCallbackURI()).thenReturn(REDIRECT_URI);
+        when(configService.getIPVAudience()).thenReturn(IPV_URI.toString());
     }
 
     @Test
