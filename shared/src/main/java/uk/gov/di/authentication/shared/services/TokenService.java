@@ -102,7 +102,7 @@ public class TokenService {
             Subject internalSubject,
             Scope authRequestScopes,
             Map<String, Object> additionalTokenClaims,
-            Subject publicSubject,
+            Subject subject,
             String vot,
             List<ClientConsent> clientConsents,
             boolean isConsentRequired,
@@ -122,7 +122,7 @@ public class TokenService {
                                         clientID,
                                         internalSubject,
                                         scopesForToken,
-                                        publicSubject,
+                                        subject,
                                         claimsRequest));
         AccessTokenHash accessTokenHash =
                 segmentedFunctionCall(
@@ -134,7 +134,7 @@ public class TokenService {
                         () ->
                                 generateIDToken(
                                         clientID,
-                                        publicSubject,
+                                        subject,
                                         additionalTokenClaims,
                                         accessTokenHash,
                                         vot,
@@ -145,10 +145,7 @@ public class TokenService {
                             "generateAndStoreRefreshToken",
                             () ->
                                     generateAndStoreRefreshToken(
-                                            clientID,
-                                            internalSubject,
-                                            scopesForToken,
-                                            publicSubject));
+                                            clientID, internalSubject, scopesForToken, subject));
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, refreshToken));
         } else {
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, null));
@@ -156,11 +153,11 @@ public class TokenService {
     }
 
     public OIDCTokenResponse generateRefreshTokenResponse(
-            String clientID, Subject internalSubject, List<String> scopes, Subject publicSubject) {
+            String clientID, Subject internalSubject, List<String> scopes, Subject subject) {
         AccessToken accessToken =
-                generateAndStoreAccessToken(clientID, internalSubject, scopes, publicSubject, null);
+                generateAndStoreAccessToken(clientID, internalSubject, scopes, subject, null);
         RefreshToken refreshToken =
-                generateAndStoreRefreshToken(clientID, internalSubject, scopes, publicSubject);
+                generateAndStoreRefreshToken(clientID, internalSubject, scopes, subject);
         return new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
     }
 
@@ -273,7 +270,7 @@ public class TokenService {
 
     private SignedJWT generateIDToken(
             String clientId,
-            Subject publicSubject,
+            Subject subject,
             Map<String, Object> additionalTokenClaims,
             AccessTokenHash accessTokenHash,
             String vot,
@@ -285,7 +282,7 @@ public class TokenService {
         IDTokenClaimsSet idTokenClaims =
                 new IDTokenClaimsSet(
                         new Issuer(configService.getOidcApiBaseURL().get()),
-                        publicSubject,
+                        subject,
                         List.of(new Audience(clientId)),
                         expiryDate,
                         NowHelper.now());
@@ -307,7 +304,7 @@ public class TokenService {
             String clientId,
             Subject internalSubject,
             List<String> scopes,
-            Subject publicSubject,
+            Subject subject,
             OIDCClaimsRequest claimsRequest) {
 
         LOG.info("Generating AccessToken");
@@ -324,7 +321,7 @@ public class TokenService {
                         .expirationTime(expiryDate)
                         .issueTime(NowHelper.now())
                         .claim("client_id", clientId)
-                        .subject(publicSubject.getValue())
+                        .subject(subject.getValue())
                         .jwtID(jwtID);
 
         if (Objects.nonNull(claimsRequest)) {
@@ -340,7 +337,7 @@ public class TokenService {
 
         try {
             redisConnectionService.saveWithExpiry(
-                    ACCESS_TOKEN_PREFIX + clientId + "." + publicSubject.getValue(),
+                    ACCESS_TOKEN_PREFIX + clientId + "." + subject.getValue(),
                     objectMapper.writeValueAsString(
                             new AccessTokenStore(
                                     accessToken.getValue(), internalSubject.getValue())),
@@ -353,7 +350,7 @@ public class TokenService {
     }
 
     private RefreshToken generateAndStoreRefreshToken(
-            String clientId, Subject internalSubject, List<String> scopes, Subject publicSubject) {
+            String clientId, Subject internalSubject, List<String> scopes, Subject subject) {
         LOG.info("Generating RefreshToken");
         Date expiryDate = NowHelper.nowPlus(configService.getSessionExpiry(), ChronoUnit.SECONDS);
         var jwtId = IdGenerator.generate();
@@ -364,7 +361,7 @@ public class TokenService {
                         .expirationTime(expiryDate)
                         .issueTime(NowHelper.now())
                         .claim("client_id", clientId)
-                        .subject(publicSubject.getValue())
+                        .subject(subject.getValue())
                         .jwtID(jwtId)
                         .build();
         SignedJWT signedJWT = generateSignedJWT(claimsSet, Optional.empty());

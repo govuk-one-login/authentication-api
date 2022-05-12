@@ -10,7 +10,6 @@ import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.exceptions.UserInfoException;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
-import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.DynamoIdentityService;
 
@@ -33,10 +32,9 @@ public class UserInfoService {
         this.dynamoDocAppService = dynamoDocAppService;
     }
 
-    public UserInfo populateUserInfo(
-            AccessTokenInfo accessTokenInfo, boolean identityEnabled, String ipvDomain) {
+    public UserInfo populateUserInfo(AccessTokenInfo accessTokenInfo, boolean identityEnabled) {
         LOG.info("Populating UserInfo");
-        var userInfo = new UserInfo(new Subject(accessTokenInfo.getPublicSubject()));
+        var userInfo = new UserInfo(new Subject(accessTokenInfo.getSubject()));
         if (accessTokenInfo.getScopes().contains(CustomScopeValue.DOC_CHECKING_APP.getValue())) {
             return populateDocAppUserInfo(accessTokenInfo, userInfo);
         }
@@ -55,21 +53,17 @@ public class UserInfoService {
             userInfo.setClaim("legacy_subject_id", userProfile.getLegacySubjectID());
         }
         if (identityEnabled && Objects.nonNull(accessTokenInfo.getIdentityClaims())) {
-            var pairwiseIPVSubject =
-                    ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                            userProfile, ipvDomain, authenticationService);
-            return populateIdentityInfo(accessTokenInfo, userInfo, pairwiseIPVSubject);
+            return populateIdentityInfo(accessTokenInfo, userInfo);
         } else {
             LOG.info("No identity claims present");
             return userInfo;
         }
     }
 
-    private UserInfo populateIdentityInfo(
-            AccessTokenInfo accessTokenInfo, UserInfo userInfo, Subject pairwiseIpvSubject) {
+    private UserInfo populateIdentityInfo(AccessTokenInfo accessTokenInfo, UserInfo userInfo) {
         LOG.info("Populating IdentityInfo");
         var identityCredentials =
-                identityService.getIdentityCredentials(pairwiseIpvSubject.getValue()).orElse(null);
+                identityService.getIdentityCredentials(accessTokenInfo.getSubject()).orElse(null);
         if (Objects.isNull(identityCredentials)) {
             LOG.info("No identity credentials present");
             return userInfo;
@@ -89,7 +83,7 @@ public class UserInfoService {
 
     private UserInfo populateDocAppUserInfo(AccessTokenInfo accessTokenInfo, UserInfo userInfo) {
         return dynamoDocAppService
-                .getDocAppCredential(accessTokenInfo.getPublicSubject())
+                .getDocAppCredential(accessTokenInfo.getSubject())
                 .map(
                         docAppCredential -> {
                             userInfo.setClaim(

@@ -105,8 +105,7 @@ public class UserInfoHandler
                                 userInfo =
                                         userInfoService.populateUserInfo(
                                                 accessTokenInfo,
-                                                configurationService.isIdentityEnabled(),
-                                                configurationService.getIPVDomain());
+                                                configurationService.isIdentityEnabled());
                             } catch (AccessTokenException e) {
                                 LOG.warn(
                                         "AccessTokenException. Sending back UserInfoErrorResponse");

@@ -7,17 +7,17 @@ import java.util.List;
 public class AccessTokenInfo {
 
     private final AccessTokenStore accessTokenStore;
-    private final String publicSubject;
+    private final String subject;
     private final List<String> scopes;
     private final List<String> identityClaims;
 
     public AccessTokenInfo(
             AccessTokenStore accessTokenStore,
-            String publicSubject,
+            String subject,
             List<String> scopes,
             List<String> identityClaims) {
         this.accessTokenStore = accessTokenStore;
-        this.publicSubject = publicSubject;
+        this.subject = subject;
         this.scopes = scopes;
         this.identityClaims = identityClaims;
     }
@@ -26,8 +26,8 @@ public class AccessTokenInfo {
         return accessTokenStore;
     }
 
-    public String getPublicSubject() {
-        return publicSubject;
+    public String getSubject() {
+        return subject;
     }
 
     public List<String> getScopes() {
