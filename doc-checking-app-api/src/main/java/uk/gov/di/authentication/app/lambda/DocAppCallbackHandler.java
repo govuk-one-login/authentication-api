@@ -21,7 +21,6 @@ import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -42,7 +41,6 @@ public class DocAppCallbackHandler
     private final DocAppCriService tokenService;
     private final SessionService sessionService;
     private final ClientSessionService clientSessionService;
-    private final DynamoClientService dynamoClientService;
     private final AuditService auditService;
     private final DynamoDocAppService dynamoDocAppService;
     protected final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
@@ -58,7 +56,6 @@ public class DocAppCallbackHandler
             DocAppCriService tokenService,
             SessionService sessionService,
             ClientSessionService clientSessionService,
-            DynamoClientService dynamoClientService,
             AuditService auditService,
             DynamoDocAppService dynamoDocAppService) {
         this.configurationService = configurationService;
@@ -66,7 +63,6 @@ public class DocAppCallbackHandler
         this.tokenService = tokenService;
         this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
-        this.dynamoClientService = dynamoClientService;
         this.auditService = auditService;
         this.dynamoDocAppService = dynamoDocAppService;
     }
@@ -82,7 +78,6 @@ public class DocAppCallbackHandler
         this.tokenService = new DocAppCriService(configurationService, kmsConnectionService);
         this.sessionService = new SessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
-        this.dynamoClientService = new DynamoClientService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.dynamoDocAppService = new DynamoDocAppService(configurationService);
     }
@@ -124,13 +119,6 @@ public class DocAppCallbackHandler
                                                         clientSession.getAuthRequestParams())
                                                 .getClientID()
                                                 .getValue();
-                                var clientRegistry =
-                                        dynamoClientService.getClient(clientId).orElse(null);
-                                if (Objects.isNull(clientRegistry)) {
-                                    LOG.error("Client registry not found with given clientId");
-                                    throw new RuntimeException(
-                                            "Client registry not found with given clientId");
-                                }
 
                                 var errorObject =
                                         authorisationService.validateResponse(
