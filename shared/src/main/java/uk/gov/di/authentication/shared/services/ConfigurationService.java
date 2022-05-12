@@ -396,20 +396,23 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     private AWSSimpleSystemsManagement getSsmClient() {
         if (ssmClient == null) {
-            if (getLocalstackEndpointUri().isPresent()) {
-                LOG.info("Localstack endpoint URI is present: " + getLocalstackEndpointUri().get());
-                ssmClient =
-                        AWSSimpleSystemsManagementClient.builder()
-                                .withEndpointConfiguration(
-                                        new AwsClientBuilder.EndpointConfiguration(
-                                                getLocalstackEndpointUri().get(), getAwsRegion()))
-                                .build();
-            } else {
-                ssmClient =
-                        AWSSimpleSystemsManagementClient.builder()
-                                .withRegion(getAwsRegion())
-                                .build();
-            }
+            ssmClient =
+                    getLocalstackEndpointUri()
+                            .map(
+                                    l -> {
+                                        LOG.info("Localstack endpoint URI is present: " + l);
+                                        return AWSSimpleSystemsManagementClient.builder()
+                                                .withEndpointConfiguration(
+                                                        new AwsClientBuilder.EndpointConfiguration(
+                                                                l, getAwsRegion()))
+                                                .build();
+                                    })
+                            .orElseGet(
+                                    () -> {
+                                        return AWSSimpleSystemsManagementClient.builder()
+                                                .withRegion(getAwsRegion())
+                                                .build();
+                                    });
         }
         return ssmClient;
     }
