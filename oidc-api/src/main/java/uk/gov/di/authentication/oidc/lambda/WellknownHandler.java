@@ -103,8 +103,7 @@ public class WellknownHandler
                                                 JWSAlgorithm.HS384,
                                                 JWSAlgorithm.HS512));
                                 providerMetadata.setServiceDocsURI(
-                                        new URI(
-                                                "https://docs.sign-in.service.gov.uk/"));
+                                        new URI("https://docs.sign-in.service.gov.uk/"));
                                 providerMetadata.setEndSessionEndpointURI(
                                         buildURI(baseUrl, "/logout"));
                                 providerMetadata.setSupportsBackChannelLogout(true);
