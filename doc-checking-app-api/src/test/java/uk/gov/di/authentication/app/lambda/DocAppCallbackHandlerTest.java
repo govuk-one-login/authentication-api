@@ -3,7 +3,6 @@ package uk.gov.di.authentication.app.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.oauth2.sdk.AccessTokenResponse;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
@@ -26,13 +25,11 @@ import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.app.services.DocAppAuthorisationService;
 import uk.gov.di.authentication.app.services.DocAppCriService;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URI;
@@ -43,7 +40,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
@@ -59,14 +55,12 @@ class DocAppCallbackHandlerTest {
 
     private final Context context = mock(Context.class);
     private DocAppCallbackHandler handler;
-    private static final Subject SUBJECT = new Subject();
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final DocAppAuthorisationService responseService =
             mock(DocAppAuthorisationService.class);
     private final DocAppCriService tokenService = mock(DocAppCriService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
-    private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final DynamoDocAppService dynamoDocAppService = mock(DynamoDocAppService.class);
 
@@ -97,7 +91,6 @@ class DocAppCallbackHandlerTest {
                         tokenService,
                         sessionService,
                         clientSessionService,
-                        dynamoClientService,
                         auditService,
                         dynamoDocAppService);
         when(configService.getLoginURI()).thenReturn(LOGIN_URL);
@@ -107,9 +100,7 @@ class DocAppCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToFrontendCallbackForSuccessfulResponse()
-            throws URISyntaxException, JsonProcessingException {
-        var clientRegistry = generateClientRegistry();
+    void shouldRedirectToFrontendCallbackForSuccessfulResponse() throws URISyntaxException {
         usingValidSession();
         usingValidClientSession();
         var successfulTokenResponse =
@@ -118,8 +109,6 @@ class DocAppCallbackHandlerTest {
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
         responseHeaders.put("state", STATE.getValue());
-        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(clientRegistry));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.empty());
         when(tokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
@@ -206,8 +195,6 @@ class DocAppCallbackHandlerTest {
         responseHeaders.put("code", AUTH_CODE.getValue());
         responseHeaders.put("state", STATE.getValue());
         responseHeaders.put("error", errorObject.toString());
-        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistry()));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.of(new ErrorObject(errorObject.getCode())));
 
@@ -229,35 +216,7 @@ class DocAppCallbackHandlerTest {
     }
 
     @Test
-    void shouldThrowWhenClientRegistryIsNotFound() {
-        usingValidSession();
-        usingValidClientSession();
-        Map<String, String> responseHeaders = new HashMap<>();
-        responseHeaders.put("code", AUTH_CODE.getValue());
-        responseHeaders.put("state", STATE.getValue());
-        when(dynamoClientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.empty());
-
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(COOKIE, buildCookieString()));
-        event.setQueryStringParameters(responseHeaders);
-
-        RuntimeException expectedException =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> handler.handleRequest(event, context),
-                        "Expected to throw exception");
-
-        assertThat(
-                expectedException.getMessage(),
-                equalTo("Client registry not found with given clientId"));
-
-        verifyNoInteractions(tokenService);
-        verifyNoInteractions(auditService);
-    }
-
-    @Test
     void shouldThrowWhenTokenResponseIsNotSuccessful() {
-        var clientRegistry = generateClientRegistry();
         usingValidSession();
         usingValidClientSession();
         var unsuccessfulTokenResponse = new TokenErrorResponse(new ErrorObject("Error object"));
@@ -265,8 +224,6 @@ class DocAppCallbackHandlerTest {
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
         responseHeaders.put("state", STATE.getValue());
-        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(clientRegistry));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.empty());
         when(tokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
@@ -331,16 +288,6 @@ class DocAppCallbackHandlerTest {
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
         clientSession.setDocAppSubjectId(PAIRWISE_SUBJECT_ID);
-    }
-
-    private ClientRegistry generateClientRegistry() {
-        return new ClientRegistry()
-                .setClientID(CLIENT_ID.getValue())
-                .setConsentRequired(false)
-                .setClientName("test-client")
-                .setRedirectUrls(singletonList(REDIRECT_URI.toString()))
-                .setSectorIdentifierUri("https://test.com")
-                .setSubjectType("pairwise");
     }
 
     public static AuthenticationRequest generateAuthRequest() {
