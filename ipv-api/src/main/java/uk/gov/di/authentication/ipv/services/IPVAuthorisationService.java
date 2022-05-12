@@ -147,6 +147,7 @@ public class IPVAuthorisationService {
                         .subject(subject.getValue())
                         .issueTime(NowHelper.now())
                         .jwtID(jwtID)
+                        .notBeforeTime(NowHelper.now())
                         .claim("state", state.getValue())
                         .claim("nonce", nonce.getValue())
                         .claim(
