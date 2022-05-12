@@ -60,7 +60,7 @@ public class IPVTokenService {
         var claimsSet =
                 new JWTAuthenticationClaimsSet(
                         new ClientID(configurationService.getIPVAuthorisationClientId()),
-                        singletonList(new Audience(ipvTokenURI)),
+                        singletonList(new Audience(configurationService.getIPVAudience())),
                         NowHelper.nowPlus(PRIVATE_KEY_JWT_EXPIRY, ChronoUnit.MINUTES),
                         NowHelper.now(),
                         NowHelper.now(),

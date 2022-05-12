@@ -204,6 +204,20 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         }
 
         @Override
+        public String getIPVAudience() {
+            try {
+                return new URIBuilder()
+                        .setHost("localhost")
+                        .setPort(ipvStubExtension.getHttpPort())
+                        .setScheme("http")
+                        .build()
+                        .toString();
+            } catch (URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Override
         public String getIPVAuthorisationClientId() {
             return "ipv-client-id";
         }
