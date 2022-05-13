@@ -4,14 +4,13 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.SPOTResponse;
 import uk.gov.di.authentication.ipv.entity.SPOTStatus;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoIdentityService;
@@ -20,7 +19,7 @@ import java.util.NoSuchElementException;
 
 public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
 
-    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private final Json objectMapper = Json.jackson();
     private final DynamoIdentityService dynamoIdentityService;
     private final AuditService auditService;
 
@@ -70,7 +69,7 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
                                 .map(Object::toString)
                                 .findFirst()
                                 .orElseThrow());
-            } catch (JsonProcessingException e) {
+            } catch (JsonException e) {
                 LOG.error("Unable to deserialize SPOT response from SQS queue");
                 return null;
             } catch (NoSuchElementException e) {

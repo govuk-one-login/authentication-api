@@ -4,8 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import org.apache.logging.log4j.LogManager;
@@ -15,7 +13,8 @@ import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationSe
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -37,7 +36,7 @@ public class UpdateClientConfigHandler
     private final ClientService clientService;
     private final ClientConfigValidationService validationService;
     private final AuditService auditService;
-    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private final Json objectMapper = Json.jackson();
     private static final Logger LOG = LogManager.getLogger(UpdateClientConfigHandler.class);
 
     public UpdateClientConfigHandler(
@@ -152,7 +151,7 @@ public class UpdateClientConfigHandler
                                 LOG.info("Client updated");
                                 return generateApiGatewayProxyResponse(
                                         200, clientRegistrationResponse);
-                            } catch (JsonProcessingException | NullPointerException e) {
+                            } catch (JsonException | NullPointerException e) {
                                 auditService.submitAuditEvent(
                                         UPDATE_CLIENT_REQUEST_ERROR,
                                         context.getAwsRequestId(),

@@ -4,8 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
@@ -25,8 +23,9 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -60,7 +59,7 @@ public class IPVCallbackHandler
     private final DynamoClientService dynamoClientService;
     private final AuditService auditService;
     private final AwsSqsClient sqsClient;
-    protected final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    protected final Json objectMapper = Json.jackson();
     private static final String REDIRECT_PATH = "ipv-callback";
 
     public IPVCallbackHandler() {
@@ -293,7 +292,7 @@ public class IPVCallbackHandler
                                 LOG.info(
                                         "Cannot retrieve auth request params from client session id");
                                 throw new RuntimeException();
-                            } catch (JsonProcessingException e) {
+                            } catch (JsonException e) {
                                 LOG.error("Unable to serialize SPOTRequest when placing on queue");
                                 throw new RuntimeException(e);
                             }
@@ -323,7 +322,7 @@ public class IPVCallbackHandler
             UserProfile userProfile,
             Subject pairwiseSubject,
             UserInfo userIdentityUserInfo)
-            throws JsonProcessingException {
+            throws JsonException {
 
         var spotClaimsBuilder =
                 SPOTClaims.builder()

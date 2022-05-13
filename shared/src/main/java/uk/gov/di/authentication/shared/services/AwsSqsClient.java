@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -10,7 +9,8 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.SqsClientBuilder;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 
 import java.net.URI;
 import java.util.Optional;
@@ -48,8 +48,8 @@ public class AwsSqsClient {
         CompletableFuture.runAsync(
                 () -> {
                     try {
-                        send(ObjectMapperFactory.getInstance().writeValueAsString(message));
-                    } catch (JsonProcessingException e) {
+                        send(Json.jackson().writeValueAsString(message));
+                    } catch (JsonException e) {
                         LOG.error("Unable to serialise SQS message: " + message);
                     }
                 });

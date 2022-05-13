@@ -1,12 +1,11 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
 
 import java.util.Map;
 import java.util.Optional;
@@ -21,7 +20,7 @@ public class SessionService {
 
     private static final Logger LOG = LogManager.getLogger(SessionService.class);
 
-    private static final ObjectMapper OBJECT_MAPPER = ObjectMapperFactory.getInstance();
+    private static final Json OBJECT_MAPPER = Json.jackson();
     private static final SerializationService SERIALIZATION_SERVICE =
             SerializationService.getInstance();
 

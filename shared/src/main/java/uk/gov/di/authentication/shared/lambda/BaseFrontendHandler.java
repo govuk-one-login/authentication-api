@@ -4,8 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.ConstraintViolationException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -13,7 +11,8 @@ import uk.gov.di.authentication.shared.entity.BaseFrontendRequest;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -42,7 +41,7 @@ public abstract class BaseFrontendHandler<T>
     protected final ClientSessionService clientSessionService;
     protected final ClientService clientService;
     protected final AuthenticationService authenticationService;
-    protected final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    protected final Json objectMapper = Json.jackson();
 
     protected BaseFrontendHandler(
             Class<T> clazz,
@@ -101,7 +100,7 @@ public abstract class BaseFrontendHandler<T>
         final T request;
         try {
             request = objectMapper.readValue(input.getBody(), clazz);
-        } catch (JsonProcessingException | ConstraintViolationException e) {
+        } catch (JsonException | ConstraintViolationException e) {
             LOG.warn("Request is missing parameters.");
             onRequestValidationError(context);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);

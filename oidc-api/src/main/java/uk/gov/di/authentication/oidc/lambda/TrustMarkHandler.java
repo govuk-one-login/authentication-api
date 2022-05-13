@@ -4,13 +4,13 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.TrustMarkResponse;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
+import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Arrays;
@@ -51,7 +51,7 @@ public class TrustMarkHandler
                                 LOG.info("TrustMark request received");
                                 return generateApiGatewayProxyResponse(
                                         200, createTrustMarkResponse());
-                            } catch (JsonProcessingException | NoSuchElementException e) {
+                            } catch (JsonException | NoSuchElementException e) {
                                 LOG.warn("Unable to generate TrustMark response", e);
                                 return generateApiGatewayProxyResponse(
                                         400,
