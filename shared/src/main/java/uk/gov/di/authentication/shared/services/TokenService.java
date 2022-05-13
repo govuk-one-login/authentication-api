@@ -4,8 +4,6 @@ import com.amazonaws.services.kms.model.GetPublicKeyRequest;
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;
 import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -48,8 +46,9 @@ import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -86,7 +85,7 @@ public class TokenService {
     private static final List<String> ALLOWED_GRANTS =
             List.of(GrantType.AUTHORIZATION_CODE.getValue(), GrantType.REFRESH_TOKEN.getValue());
 
-    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private final Json objectMapper = Json.jackson();
 
     public TokenService(
             ConfigurationService configService,
@@ -342,7 +341,7 @@ public class TokenService {
                             new AccessTokenStore(
                                     accessToken.getValue(), internalSubject.getValue())),
                     configService.getAccessTokenExpiry());
-        } catch (JsonProcessingException e) {
+        } catch (JsonException e) {
             LOG.error("Unable to save access token to Redis");
             throw new RuntimeException(e);
         }
@@ -374,7 +373,7 @@ public class TokenService {
                     redisKey,
                     objectMapper.writeValueAsString(store),
                     configService.getSessionExpiry());
-        } catch (JsonProcessingException e) {
+        } catch (JsonException e) {
             throw new RuntimeException("Error serializing refresh token store", e);
         }
 

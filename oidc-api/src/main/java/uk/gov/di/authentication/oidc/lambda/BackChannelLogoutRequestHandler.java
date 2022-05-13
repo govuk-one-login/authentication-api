@@ -4,14 +4,14 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.jwt.JWTClaimsSet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.BackChannelLogoutMessage;
 import uk.gov.di.authentication.oidc.services.HttpRequestService;
 import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.TokenService;
@@ -71,8 +71,7 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
 
         try {
             var payload =
-                    ObjectMapperFactory.getInstance()
-                            .readValue(record.getBody(), BackChannelLogoutMessage.class);
+                    Json.jackson().readValue(record.getBody(), BackChannelLogoutMessage.class);
 
             var claims = generateClaims(payload);
 
@@ -81,7 +80,7 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
 
             httpRequestService.post(URI.create(payload.getLogoutUri()), "logout_token=" + body);
 
-        } catch (JsonProcessingException e) {
+        } catch (JsonException e) {
             LOG.error("Could not parse logout request payload");
         }
     }

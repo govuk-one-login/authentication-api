@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkClientException;
@@ -17,6 +16,7 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
+import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -37,8 +37,10 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CR
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.*;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
@@ -143,7 +145,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         } catch (SdkClientException ex) {
             LOG.error("Error sending message to queue");
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
-        } catch (JsonProcessingException e) {
+        } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
         } catch (ClientNotFoundException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
@@ -155,7 +157,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             NotificationType notificationType,
             Session session,
             UserContext userContext)
-            throws JsonProcessingException, ClientNotFoundException {
+            throws JsonException, ClientNotFoundException {
 
         String code = codeGeneratorService.sixDigitCode();
         NotifyRequest notifyRequest = new NotifyRequest(destination, notificationType, code);

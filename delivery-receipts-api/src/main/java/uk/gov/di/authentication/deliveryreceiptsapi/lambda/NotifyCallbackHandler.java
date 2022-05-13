@@ -4,14 +4,13 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.deliveryreceiptsapi.entity.NotifyDeliveryReceipt;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -30,7 +29,7 @@ public class NotifyCallbackHandler
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private final ConfigurationService configurationService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
-    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private final Json objectMapper = Json.jackson();
 
     private static final Logger LOG = LogManager.getLogger(NotifyCallbackHandler.class);
 
@@ -84,7 +83,7 @@ public class NotifyCallbackHandler
                                 deliveryReceipt.getStatus()));
                 LOG.info("SMS callback request processed");
             }
-        } catch (JsonProcessingException e) {
+        } catch (JsonException e) {
             LOG.error("Unable to parse Notify Delivery Receipt");
             throw new RuntimeException("Unable to parse Notify Delivery Receipt");
         }

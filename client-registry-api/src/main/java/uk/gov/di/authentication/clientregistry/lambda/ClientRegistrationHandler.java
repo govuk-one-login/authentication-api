@@ -4,8 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.logging.log4j.LogManager;
@@ -14,7 +12,8 @@ import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -32,7 +31,7 @@ public class ClientRegistrationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final ClientService clientService;
-    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private final Json objectMapper = Json.jackson();
     private final ClientConfigValidationService validationService;
     private final AuditService auditService;
     private static final Logger LOG = LogManager.getLogger(ClientRegistrationHandler.class);
@@ -148,7 +147,7 @@ public class ClientRegistrationHandler
                                 LOG.info("Generating successful Client registration response");
                                 return generateApiGatewayProxyResponse(
                                         200, clientRegistrationResponse);
-                            } catch (JsonProcessingException e) {
+                            } catch (JsonException e) {
                                 LOG.warn(
                                         "Invalid Client registration request. Missing parameters from request");
                                 auditService.submitAuditEvent(

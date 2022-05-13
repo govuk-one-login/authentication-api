@@ -4,8 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.GrantType;
@@ -25,7 +23,8 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -72,7 +71,7 @@ public class TokenHandler
     private final ClientSessionService clientSessionService;
     private final TokenValidationService tokenValidationService;
     private final RedisConnectionService redisConnectionService;
-    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private final Json objectMapper = Json.jackson();
 
     private static final String TOKEN_PATH = "token";
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
@@ -108,9 +107,7 @@ public class TokenHandler
         this.dynamoService = new DynamoService(configurationService);
         this.authorisationCodeService =
                 new AuthorisationCodeService(
-                        configurationService,
-                        redisConnectionService,
-                        ObjectMapperFactory.getInstance());
+                        configurationService, redisConnectionService, Json.jackson());
         this.clientSessionService =
                 new ClientSessionService(configurationService, redisConnectionService);
         this.tokenValidationService = new TokenValidationService(configurationService, kms);
@@ -379,7 +376,7 @@ public class TokenHandler
         RefreshTokenStore tokenStore;
         try {
             tokenStore = objectMapper.readValue(refreshToken.get(), RefreshTokenStore.class);
-        } catch (JsonProcessingException | NoSuchElementException | IllegalArgumentException e) {
+        } catch (JsonException | NoSuchElementException | IllegalArgumentException e) {
             LOG.warn("Refresh token not found with given key");
             return generateApiGatewayProxyResponse(
                     400,

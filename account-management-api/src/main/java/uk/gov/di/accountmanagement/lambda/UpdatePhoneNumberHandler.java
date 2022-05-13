@@ -4,8 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -18,10 +16,11 @@ import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -39,7 +38,7 @@ import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 public class UpdatePhoneNumberHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private final Json objectMapper = Json.jackson();
     private final DynamoService dynamoService;
     private final AwsSqsClient sqsClient;
     private final CodeStorageService codeStorageService;
@@ -138,7 +137,7 @@ public class UpdatePhoneNumberHandler
                                 LOG.info(
                                         "Message successfully added to queue. Generating successful gateway response");
                                 return generateEmptySuccessApiGatewayResponse();
-                            } catch (JsonProcessingException | IllegalArgumentException e) {
+                            } catch (JsonException | IllegalArgumentException e) {
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1001);
                             }

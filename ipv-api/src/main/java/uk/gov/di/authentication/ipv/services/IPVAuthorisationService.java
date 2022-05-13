@@ -2,8 +2,6 @@ package uk.gov.di.authentication.ipv.services;
 
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWEAlgorithm;
@@ -31,7 +29,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
@@ -52,7 +51,7 @@ public class IPVAuthorisationService {
     private final KmsConnectionService kmsConnectionService;
     public static final String STATE_STORAGE_PREFIX = "state:";
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
-    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private static final Json objectMapper = Json.jackson();
 
     public IPVAuthorisationService(
             ConfigurationService configurationService,
@@ -104,7 +103,7 @@ public class IPVAuthorisationService {
                     STATE_STORAGE_PREFIX + sessionId,
                     objectMapper.writeValueAsString(state),
                     configurationService.getSessionExpiry());
-        } catch (JsonProcessingException e) {
+        } catch (JsonException e) {
             LOG.error("Unable to save state to Redis");
             throw new RuntimeException(e);
         }
@@ -121,7 +120,7 @@ public class IPVAuthorisationService {
         State storedState;
         try {
             storedState = objectMapper.readValue(value.get(), State.class);
-        } catch (JsonProcessingException e) {
+        } catch (JsonException e) {
             LOG.info("Error when deserializing state from redis");
             return false;
         }

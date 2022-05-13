@@ -1,13 +1,12 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 
 import java.util.Optional;
 
@@ -18,12 +17,12 @@ public class AuthorisationCodeService {
 
     private final RedisConnectionService redisConnectionService;
     private final long authorisationCodeExpiry;
-    private final ObjectMapper objectMapper;
+    private final Json objectMapper;
 
     public AuthorisationCodeService(
             ConfigurationService configurationService,
             RedisConnectionService redisConnectionService,
-            ObjectMapper objectMapper) {
+            Json objectMapper) {
         this.redisConnectionService = redisConnectionService;
         this.authorisationCodeExpiry = configurationService.getAuthCodeExpiry();
         this.objectMapper = objectMapper;
@@ -37,7 +36,7 @@ public class AuthorisationCodeService {
                         configurationService.getUseRedisTLS(),
                         configurationService.getRedisPassword());
         this.authorisationCodeExpiry = configurationService.getAuthCodeExpiry();
-        this.objectMapper = ObjectMapperFactory.getInstance();
+        this.objectMapper = Json.jackson();
     }
 
     public AuthorizationCode generateAuthorisationCode(
@@ -53,7 +52,7 @@ public class AuthorisationCodeService {
                                     .setClientSession(clientSession)),
                     authorisationCodeExpiry);
             return authorizationCode;
-        } catch (JsonProcessingException e) {
+        } catch (JsonException e) {
             LOG.error("Error persisting auth code to cache");
             throw new RuntimeException(e);
         }
@@ -65,7 +64,7 @@ public class AuthorisationCodeService {
                         s -> {
                             try {
                                 return objectMapper.readValue(s, AuthCodeExchangeData.class);
-                            } catch (JsonProcessingException e) {
+                            } catch (JsonException e) {
                                 LOG.error("Error deserialising auth code data from cache");
                                 throw new RuntimeException(e);
                             }

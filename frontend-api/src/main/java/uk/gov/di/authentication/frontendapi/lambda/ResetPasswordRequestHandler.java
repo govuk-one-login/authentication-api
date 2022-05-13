@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkClientException;
@@ -18,6 +17,7 @@ import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
+import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
@@ -134,7 +134,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         } catch (SdkClientException ex) {
             LOG.error("Error sending message to queue", ex);
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
-        } catch (JsonProcessingException e) {
+        } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
         }
     }
@@ -143,7 +143,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             ResetPasswordRequest resetPasswordRequest,
             UserContext userContext,
             String persistentSessionId)
-            throws JsonProcessingException {
+            throws JsonException {
         String subjectId =
                 authenticationService
                         .getSubjectFromEmail(resetPasswordRequest.getEmail())
@@ -193,7 +193,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         return Optional.empty();
     }
 
-    private String serialiseRequest(Object request) throws JsonProcessingException {
+    private String serialiseRequest(Object request) throws JsonException {
         return objectMapper.writeValueAsString(request);
     }
 }

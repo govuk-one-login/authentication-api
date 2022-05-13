@@ -1,12 +1,11 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 
 import java.util.Map;
 import java.util.Optional;
@@ -24,7 +23,7 @@ public class ClientSessionService {
 
     private final RedisConnectionService redisConnectionService;
     private final ConfigurationService configurationService;
-    private final ObjectMapper objectMapper;
+    private final Json objectMapper;
 
     public ClientSessionService(ConfigurationService configurationService) {
         this.configurationService = configurationService;
@@ -34,7 +33,7 @@ public class ClientSessionService {
                         configurationService.getRedisPort(),
                         configurationService.getUseRedisTLS(),
                         configurationService.getRedisPassword());
-        objectMapper = ObjectMapperFactory.getInstance();
+        objectMapper = Json.jackson();
     }
 
     public ClientSessionService(
@@ -42,7 +41,7 @@ public class ClientSessionService {
             RedisConnectionService redisConnectionService) {
         this.configurationService = configurationService;
         this.redisConnectionService = redisConnectionService;
-        objectMapper = ObjectMapperFactory.getInstance();
+        objectMapper = Json.jackson();
     }
 
     public String generateClientSession(ClientSession clientSession) {
@@ -55,7 +54,7 @@ public class ClientSessionService {
                     CLIENT_SESSION_PREFIX.concat(id),
                     objectMapper.writeValueAsString(clientSession),
                     configurationService.getSessionExpiry());
-        } catch (JsonProcessingException e) {
+        } catch (JsonException e) {
             LOG.error("Error saving client session to Redis");
             throw new RuntimeException(e);
         }
@@ -77,7 +76,7 @@ public class ClientSessionService {
                 LOG.warn("Client session with given key is not present in redis");
                 return Optional.empty();
             }
-        } catch (JsonProcessingException e) {
+        } catch (JsonException e) {
             LOG.error("Unable to deserialize client session from redis");
             throw new RuntimeException(e);
         }
@@ -91,7 +90,7 @@ public class ClientSessionService {
                     CLIENT_SESSION_PREFIX.concat(clientSessionId),
                     objectMapper.writeValueAsString(clientSession),
                     configurationService.getSessionExpiry());
-        } catch (JsonProcessingException e) {
+        } catch (JsonException e) {
             LOG.error("Error saving client session to Redis");
             throw new RuntimeException(e);
         }

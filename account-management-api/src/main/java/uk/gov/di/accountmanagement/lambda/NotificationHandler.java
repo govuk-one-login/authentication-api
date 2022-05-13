@@ -4,14 +4,13 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.NotificationService;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
@@ -26,7 +25,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
     private static final Logger LOG = LogManager.getLogger(NotificationHandler.class);
     private final NotificationService notificationService;
-    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private final Json objectMapper = Json.jackson();
     private final ConfigurationService configurationService;
 
     public NotificationHandler(
@@ -158,7 +157,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                     notifyRequest.getNotificationType()),
                             e);
                 }
-            } catch (JsonProcessingException e) {
+            } catch (JsonException e) {
                 LOG.error("Error when mapping message from queue to a NotifyRequest");
                 throw new RuntimeException(
                         "Error when mapping message from queue to a NotifyRequest");
