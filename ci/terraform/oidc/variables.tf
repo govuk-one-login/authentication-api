@@ -329,3 +329,21 @@ variable "doc_app_cri_public_signing_key" {
   default     = "undefined"
   description = "The PEM encoded public key used to sign VCs from the Doc App CRI"
 }
+
+variable "spot_account_number" {
+  type        = string
+  default     = "undefined"
+  description = "The AWS account number for SPOT"
+}
+
+variable "spot_response_queue_arn" {
+  type        = string
+  default     = "undefined"
+  description = "The ARN for the SPOT response queue"
+}
+
+variable "spot_response_queue_kms_arn" {
+  type        = string
+  default     = "undefined"
+  description = "The ARN for the KMS key used by the SPOT response queue"
+}

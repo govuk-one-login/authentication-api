@@ -140,3 +140,22 @@ resource "aws_iam_policy" "doc_app_public_signing_key_parameter_policy" {
   name_prefix = "doc-app-public-signing-key-parameter-store-policy"
 }
 
+## SPOT  
+
+resource "aws_ssm_parameter" "spot_account_number" {
+  name  = "${var.environment}-spot-account-number"
+  type  = "String"
+  value = var.spot_account_number
+}
+
+resource "aws_ssm_parameter" "spot_response_queue_arn" {
+  name  = "${var.environment}-spot-response-queue-arn"
+  type  = "String"
+  value = var.spot_response_queue_arn
+}
+
+resource "aws_ssm_parameter" "spot_response_queue_kms_arn" {
+  name  = "${var.environment}-spot-response-queue-kms-arn"
+  type  = "String"
+  value = var.spot_response_queue_kms_arn
+}
