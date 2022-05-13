@@ -17,6 +17,9 @@ params:
   STATE_BUCKET: digital-identity-dev-tfstate
   TEST_CLIENT_VERIFY_EMAIL_OTP: ((test-client-verify-email-otp))
   TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP: ((test-client-verify-phone-number-otp))
+  SPOT_ACCOUNT_NUMBER: ((staging-spot-account-number))
+  SPOT_RESPONSE_QUEUE_ARN: ((staging-spot-response_queue_arn))
+  SPOT_RESPONSE_QUEUE_KMS_ARN: ((staging-spot-response_queue_kms_arn))
   TEST_CLIENTS_ENABLED: false
 inputs:
   - name: api-terraform-src
@@ -62,6 +65,9 @@ run:
         -var "test_client_verify_phone_number_otp=${TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP}" \
         -var "test_clients_enabled=${TEST_CLIENTS_ENABLED}" \
         -var "notify_test_phone_number=${NOTIFY_PHONE_NUMBER}" \
+        -var "spot_account_number=${SPOT_ACCOUNT_NUMBER}" \
+        -var "spot_response_queue_arn=${SPOT_RESPONSE_QUEUE_ARN}" \
+        -var "spot_response_queue_kms_arn=${SPOT_RESPONSE_QUEUE_KMS_ARN}" \
         -var-file "${DEPLOY_ENVIRONMENT}-overrides.tfvars" \
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-terraform-outputs.json
