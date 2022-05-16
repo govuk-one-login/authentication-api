@@ -41,6 +41,10 @@ import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.UNKNOWN;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
 public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisationRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -90,6 +94,11 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
             IPVAuthorisationRequest request,
             UserContext userContext) {
         try {
+            var persistentId =
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
+            attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentId);
+            var clientId = userContext.getClient().map(ClientRegistry::getClientID);
+            attachLogFieldToLogs(CLIENT_ID, clientId.orElse(UNKNOWN));
             LOG.info("IPVAuthorisationHandler received request");
             var authRequest =
                     AuthenticationRequest.parse(
@@ -129,15 +138,12 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                     IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
                     context.getAwsRequestId(),
                     userContext.getSession().getSessionId(),
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
+                    clientId.orElse(AuditService.UNKNOWN),
                     AuditService.UNKNOWN,
                     request.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                    persistentId);
 
             LOG.info(
                     "IPVAuthorisationHandler successfully processed request, redirect URI {}",

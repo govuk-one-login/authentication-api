@@ -8,6 +8,8 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName
 
 public class LogLineHelper {
 
+    public static final String UNKNOWN = "unknown";
+
     public enum LogFieldName {
         SESSION_ID("sessionId", true),
         CLIENT_SESSION_ID("clientSessionId", true),

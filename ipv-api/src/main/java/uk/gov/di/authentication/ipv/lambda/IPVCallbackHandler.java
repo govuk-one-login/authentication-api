@@ -47,6 +47,10 @@ import static uk.gov.di.authentication.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.authentication.shared.entity.IdentityClaims.VTM;
 import static uk.gov.di.authentication.shared.helpers.ClientSubjectHelper.getSectorIdentifierForClient;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class IPVCallbackHandler
@@ -127,9 +131,11 @@ public class IPVCallbackHandler
                                                 .readSessionFromRedis(
                                                         sessionCookiesIds.getSessionId())
                                                 .orElseThrow();
+                                attachSessionIdToLogs(session);
                                 var persistentId =
                                         PersistentIdHelper.extractPersistentIdFromCookieHeader(
                                                 input.getHeaders());
+                                attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentId);
                                 var clientSession =
                                         clientSessionService
                                                 .getClientSession(
@@ -139,6 +145,8 @@ public class IPVCallbackHandler
                                     LOG.error("ClientSession not found");
                                     throw new RuntimeException();
                                 }
+                                attachLogFieldToLogs(
+                                        CLIENT_SESSION_ID, sessionCookiesIds.getClientSessionId());
                                 var authRequest =
                                         AuthenticationRequest.parse(
                                                 clientSession.getAuthRequestParams());
@@ -263,6 +271,7 @@ public class IPVCallbackHandler
 
                                 if (configurationService.isSpotEnabled()) {
                                     if (isUserIdentityGoingToSpot(userIdentityUserInfo)) {
+                                        LOG.info("SPOT will be invoked.");
                                         var logIds =
                                                 new LogIds(
                                                         session.getSessionId(),
