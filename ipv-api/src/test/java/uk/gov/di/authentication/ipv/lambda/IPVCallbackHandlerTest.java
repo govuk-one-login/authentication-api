@@ -122,6 +122,7 @@ class IPVCallbackHandlerTest {
         when(configService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
         when(configService.isSpotEnabled()).thenReturn(true);
         when(configService.getIPVBackendURI()).thenReturn(IPV_URI);
+        when(configService.getIPVSector()).thenReturn(OIDC_BASE_URL + "/trustmark");
 
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
     }
@@ -187,6 +188,28 @@ class IPVCallbackHandlerTest {
         verifyNoMoreInteractions(auditService);
     }
 
+    @Test
+    void shouldNotInvokeSPOTAndRedirectToFrontendCallbackForSuccessfulResponseAtP2WhenVTMMismatch()
+            throws URISyntaxException, JsonProcessingException {
+
+        usingValidSession();
+        usingValidClientSession();
+
+        var response =
+                makeHandlerRequest(
+                        getApiGatewayProxyRequestEvent("P2", "http://invalid/trustmark"));
+
+        assertThat(response, hasStatus(302));
+        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("ipv-callback").build();
+        assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
+        verifyNoInteractions(awsSqsClient);
+
+        verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
+        verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
+        verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED);
+        verifyNoMoreInteractions(auditService);
+    }
+
     private void verifyAuditEvent(IPVAuditableEvent auditableEvent) {
         verify(auditService)
                 .submitAuditEvent(
@@ -202,6 +225,10 @@ class IPVCallbackHandlerTest {
     }
 
     private APIGatewayProxyRequestEvent getApiGatewayProxyRequestEvent(String vot) {
+        return getApiGatewayProxyRequestEvent(vot, OIDC_BASE_URL + "/trustmark");
+    }
+
+    private APIGatewayProxyRequestEvent getApiGatewayProxyRequestEvent(String vot, String vtm) {
         var successfulTokenResponse =
                 new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
         var tokenRequest = mock(TokenRequest.class);
@@ -219,7 +246,7 @@ class IPVCallbackHandlerTest {
         when(ipvTokenService.sendTokenRequest(tokenRequest)).thenReturn(successfulTokenResponse);
 
         var userIdentityUserInfo =
-                new UserInfo(new JSONObject(Map.of("sub", "sub-val", "vot", vot)));
+                new UserInfo(new JSONObject(Map.of("sub", "sub-val", "vot", vot, "vtm", vtm)));
         when(ipvTokenService.sendIpvUserIdentityRequest(ArgumentMatchers.any()))
                 .thenReturn(userIdentityUserInfo);
 
