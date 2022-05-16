@@ -1,13 +1,14 @@
 module "ipv_spot_response_role" {
+  count       = var.ipv_api_enabled ? 1 : 0
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "ipv-spot-response-role"
   vpc_arn     = local.authentication_vpc_arn
 
-  policies_to_attach = compact([
+  policies_to_attach = [
     aws_iam_policy.dynamo_identity_credentials_write_access_policy.arn,
-    var.ipv_api_enabled ? aws_iam_policy.spot_response_sqs_read_policy[0].arn : "",
-  ])
+    aws_iam_policy.spot_response_sqs_read_policy[0].arn,
+  ]
 }
 
 data "aws_iam_policy_document" "spot_response_policy_document" {
@@ -67,7 +68,7 @@ resource "aws_lambda_function" "spot_response_lambda" {
   count = var.ipv_api_enabled ? 1 : 0
 
   function_name = "${var.environment}-spot-response-lambda"
-  role          = module.ipv_spot_response_role.arn
+  role          = module.ipv_spot_response_role[0].arn
   handler       = "uk.gov.di.authentication.ipv.lambda.SPOTResponseHandler::handleRequest"
   timeout       = 30
   memory_size   = 512
