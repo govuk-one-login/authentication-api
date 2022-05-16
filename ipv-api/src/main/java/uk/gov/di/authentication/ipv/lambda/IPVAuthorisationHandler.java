@@ -116,10 +116,6 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
             var authRequestBuilder =
                     new AuthorizationRequest.Builder(
                                     new ResponseType(ResponseType.Value.CODE), clientID)
-                            .scope(authRequest.getScope())
-                            .customParameter("nonce", nonce.getValue())
-                            .state(state)
-                            .redirectionURI(configurationService.getIPVAuthorisationCallbackURI())
                             .endpointURI(configurationService.getIPVAuthorisationURI())
                             .requestObject(encryptedJWT);
 
