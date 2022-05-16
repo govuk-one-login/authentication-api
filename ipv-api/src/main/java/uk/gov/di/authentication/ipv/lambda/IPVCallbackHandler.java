@@ -312,6 +312,7 @@ public class IPVCallbackHandler
 
         if (!trustmark.equals(userIdentityUserInfo.getClaim(VTM.getValue()))) {
             LOG.info("IPV trustmark is invalid.");
+            return false;
         }
         return true;
     }
