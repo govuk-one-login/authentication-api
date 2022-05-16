@@ -4,10 +4,10 @@ module "ipv_spot_response_role" {
   role_name   = "ipv-spot-response-role"
   vpc_arn     = local.authentication_vpc_arn
 
-  policies_to_attach = [
+  policies_to_attach = compact([
     aws_iam_policy.dynamo_identity_credentials_write_access_policy.arn,
-    aws_iam_policy.spot_response_sqs_read_policy[0].arn,
-  ]
+    var.ipv_api_enabled ? aws_iam_policy.spot_response_sqs_read_policy[0].arn : "",
+  ])
 }
 
 data "aws_iam_policy_document" "spot_response_policy_document" {
