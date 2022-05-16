@@ -7,6 +7,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.oauth2.sdk.AccessTokenResponse;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.TokenErrorResponse;
@@ -16,6 +17,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.Tokens;
+import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -34,6 +36,7 @@ import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
+import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -89,6 +92,7 @@ class IPVCallbackHandlerTest {
     private static final String PERSISTENT_SESSION_ID = "a-persistent-id";
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final URI REDIRECT_URI = URI.create("test-uri");
+    private static final State RP_STATE = new State();
     private static final URI IPV_URI = URI.create("http://ipv/");
     private static final ClientID CLIENT_ID = new ClientID();
     private static final Subject PUBLIC_SUBJECT =
@@ -304,12 +308,11 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldThrowWhenAuthnResponseContainsError() {
+    void shouldRedirectToRpWhenAuthResponseContainsError() {
+        var errorDescription = "redirect_uri param must be provided";
         usingValidSession();
         usingValidClientSession();
-        ErrorObject errorObject =
-                new ErrorObject(
-                        "invalid_request_redirect_uri", "redirect_uri param must be provided");
+        var errorObject = new ErrorObject("invalid_request_redirect_uri", errorDescription);
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
         responseHeaders.put("state", STATE.getValue());
@@ -317,19 +320,26 @@ class IPVCallbackHandlerTest {
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(generateClientRegistry()));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
-                .thenReturn(Optional.of(new ErrorObject(errorObject.getCode())));
+                .thenReturn(Optional.of(new ErrorObject(errorObject.getCode(), errorDescription)));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
         event.setQueryStringParameters(responseHeaders);
 
-        RuntimeException expectedException =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> handler.handleRequest(event, context),
-                        "Expected to throw exception");
+        var response = handler.handleRequest(event, context);
 
-        assertThat(expectedException.getMessage(), equalTo("Error in IPV AuthorisationResponse"));
+        var expectedErrorObject = new ErrorObject(OAuth2Error.ACCESS_DENIED_CODE, errorDescription);
+        var expectedURI =
+                new AuthenticationErrorResponse(
+                                URI.create(REDIRECT_URI.toString()),
+                                expectedErrorObject,
+                                RP_STATE,
+                                null)
+                        .toURI()
+                        .toString();
+
+        assertThat(response, hasStatus(302));
+        assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), equalTo(expectedURI));
 
         verifyNoInteractions(ipvTokenService);
         verifyNoInteractions(auditService);
@@ -471,14 +481,13 @@ class IPVCallbackHandlerTest {
 
     public static AuthenticationRequest generateAuthRequest() {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        State state = new State();
         Scope scope = new Scope();
         Nonce nonce = new Nonce();
         scope.add(OIDCScopeValue.OPENID);
         scope.add("phone");
         scope.add("email");
         return new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
-                .state(state)
+                .state(RP_STATE)
                 .nonce(nonce)
                 .build();
     }
