@@ -32,7 +32,7 @@ data "aws_iam_policy_document" "spot_response_policy_document" {
     effect = "Allow"
 
     actions = [
-      "kms:GenerateDataKey",
+      "kms:Decrypt",
     ]
 
     resources = [
