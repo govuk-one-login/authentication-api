@@ -5,10 +5,11 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.serialization.Json;
 
 import static java.util.Objects.isNull;
 
-public class SerializationService {
+public class SerializationService implements Json {
 
     private static SerializationService INSTANCE;
     private static Logger LOG = LogManager.getLogger(SerializationService.class);
@@ -24,12 +25,14 @@ public class SerializationService {
                         .create();
     }
 
-    public <T> T deserialize(String jsonString, Class<T> clazz) {
+    @Override
+    public <T> T readValue(String jsonString, Class<T> clazz) {
         return gson.fromJson(jsonString, clazz);
     }
 
-    public <T> String serialize(T object, Class<T> clazz) {
-        return gson.toJson(object, clazz);
+    @Override
+    public String writeValueAsString(Object object) {
+        return gson.toJson(object);
     }
 
     public static SerializationService getInstance() {
