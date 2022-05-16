@@ -45,9 +45,21 @@ data "aws_iam_policy_document" "spot_request_queue_policy_document" {
       "sqs:ChangeMessageVisibility",
       "sqs:GetQueueAttributes",
     ]
+  }
+  statement {
+    sid    = "AllowSpotAccountToReceive"
+    effect = "Allow"
 
-    resources = [
-      aws_sqs_queue.spot_request_queue[0].arn
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${aws_ssm_parameter.spot_account_number.value}:root"]
+    }
+
+    actions = [
+      "sqs:ReceiveMessage",
+      "sqs:ChangeMessageVisibility",
+      "sqs:DeleteMessage",
+      "sqs:GetQueueAttributes",
     ]
   }
 }
@@ -94,48 +106,6 @@ resource "aws_sqs_queue_policy" "spot_request_dlq_queue_policy" {
 
   queue_url = aws_sqs_queue.spot_request_dead_letter_queue[0].id
   policy    = data.aws_iam_policy_document.spot_request_dlq_queue_policy_document[0].json
-}
-
-data "aws_iam_policy_document" "spot_request_queue_policy_document" {
-  count = var.ipv_api_enabled ? 1 : 0
-  statement {
-    sid    = "AllowSpotAccountToReceive"
-    effect = "Allow"
-
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${aws_ssm_parameter.spot_account_number.value}:root"]
-    }
-
-    actions = [
-      "sqs:ReceiveMessage",
-      "sqs:ChangeMessageVisibility",
-      "sqs:DeleteMessage",
-      "sqs:GetQueueAttributes",
-    ]
-  }
-  statement {
-    sid    = "AllowUsToDoAnything"
-    effect = "Allow"
-
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
-    }
-    actions = [
-      "sqs:*",
-    ]
-  }
-}
-
-resource "aws_sqs_queue_policy" "spot_request_read_queue_policy" {
-  count = var.ipv_api_enabled ? 1 : 0
-  depends_on = [
-    data.aws_iam_policy_document.spot_request_queue_policy_document,
-  ]
-
-  queue_url = aws_sqs_queue.spot_request_queue[0].id
-  policy    = data.aws_iam_policy_document.spot_request_queue_policy_document[0].json
 }
 
 data "aws_iam_policy_document" "spot_request_kms_key_policy" {
