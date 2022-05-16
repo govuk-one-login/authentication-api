@@ -9,6 +9,10 @@ module "ipv_spot_response_role" {
     aws_iam_policy.dynamo_identity_credentials_write_access_policy.arn,
     aws_iam_policy.spot_response_sqs_read_policy[0].arn,
   ]
+
+  depends_on = [
+    aws_iam_policy.spot_response_sqs_read_policy
+  ]
 }
 
 data "aws_iam_policy_document" "spot_response_policy_document" {
