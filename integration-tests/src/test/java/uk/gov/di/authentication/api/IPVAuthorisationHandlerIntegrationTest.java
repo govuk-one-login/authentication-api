@@ -190,7 +190,7 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         }
 
         @Override
-        public String getIPVDomain() {
+        public String getIPVSector() {
             return IPV_DOMAIN;
         }
     }

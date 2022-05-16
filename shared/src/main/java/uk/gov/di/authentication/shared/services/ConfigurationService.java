@@ -222,8 +222,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         }
     }
 
-    public String getIPVDomain() {
-        return System.getenv("IPV_DOMAIN");
+    public String getIPVSector() {
+        return System.getenv("IPV_SECTOR");
     }
 
     public URI getLoginURI() {

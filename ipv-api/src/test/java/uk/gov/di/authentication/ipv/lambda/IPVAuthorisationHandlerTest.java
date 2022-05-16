@@ -140,7 +140,7 @@ public class IPVAuthorisationHandlerTest {
         when(authenticationService.getUserProfileFromEmail(EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT.array());
-        when(configService.getIPVDomain()).thenReturn(IPV_DOMAIN);
+        when(configService.getIPVSector()).thenReturn(IPV_DOMAIN);
     }
 
     @Test
