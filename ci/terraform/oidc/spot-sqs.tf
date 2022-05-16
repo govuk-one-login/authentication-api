@@ -125,7 +125,7 @@ data "aws_iam_policy_document" "spot_request_kms_key_policy" {
   statement {
     sid = "Give SPOT permissions to SQS KMS key"
     actions = [
-      "kms:GenerateDataKey",
+      "kms:Decrypt",
     ]
     effect = "Allow"
     principals {
