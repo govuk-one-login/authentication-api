@@ -257,7 +257,7 @@ variable "ipv_backend_uri" {
   default = "undefined"
 }
 
-variable "ipv_domain" {
+variable "ipv_sector" {
   type    = string
   default = "undefined"
 }

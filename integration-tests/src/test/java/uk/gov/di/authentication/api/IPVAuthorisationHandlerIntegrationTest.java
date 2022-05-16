@@ -46,7 +46,7 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
     private static final ClientID CLIENT_ID = new ClientID("test-client");
 
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
-    private static final String IPV_DOMAIN = "https://ipv/redirect";
+    private static final String IPV_SECTOR = "https://ipv/redirect";
 
     private static final String TEST_EMAIL_ADDRESS = "test@emailtest.com";
     private static final String IPV_CLIENT_ID = "ipv-client-id";
@@ -190,8 +190,8 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         }
 
         @Override
-        public String getIPVDomain() {
-            return IPV_DOMAIN;
+        public String getIPVSector() {
+            return IPV_SECTOR;
         }
     }
 }

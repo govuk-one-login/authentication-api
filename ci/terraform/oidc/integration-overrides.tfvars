@@ -4,7 +4,7 @@ ipv_authorisation_client_id    = "authOrchestrator"
 ipv_authorisation_uri          = "https://integration-di-ipv-core-front.london.cloudapps.digital/oauth2/authorize"
 ipv_authorisation_callback_uri = "https://oidc.integration.account.gov.uk/ipv-callback"
 ipv_backend_uri                = "https://18zwbqzm0k.execute-api.eu-west-2.amazonaws.com/integration"
-ipv_domain                     = "https://ipv.account.gov.uk"
+ipv_sector                     = "https://identity.integration.account.gov.uk"
 ipv_auth_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAup9XBBawAJ99ZfahfOEu

@@ -97,7 +97,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
             var pairwiseSubject =
                     ClientSubjectHelper.getSubjectWithSectorIdentifier(
                             userContext.getUserProfile().orElseThrow(),
-                            configurationService.getIPVDomain(),
+                            configurationService.getIPVSector(),
                             authenticationService);
             var clientID = new ClientID(configurationService.getIPVAuthorisationClientId());
             var state = new State();
