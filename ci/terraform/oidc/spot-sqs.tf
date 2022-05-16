@@ -96,10 +96,10 @@ resource "aws_sqs_queue_policy" "spot_request_dlq_queue_policy" {
   policy    = data.aws_iam_policy_document.spot_request_dlq_queue_policy_document[0].json
 }
 
-data "aws_iam_policy_document" "spot_request_queue_read_policy_document" {
+data "aws_iam_policy_document" "spot_request_queue_policy_document" {
   count = var.ipv_api_enabled ? 1 : 0
   statement {
-    sid    = "Receive"
+    sid    = "AllowSpotAccountToReceive"
     effect = "Allow"
 
     principals {
@@ -113,19 +113,29 @@ data "aws_iam_policy_document" "spot_request_queue_read_policy_document" {
       "sqs:DeleteMessage",
       "sqs:GetQueueAttributes",
     ]
+  }
+  statement {
+    sid    = "AllowUsToDoAnything"
+    effect = "Allow"
 
-    resources = [aws_sqs_queue.spot_request_queue[0].arn]
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+    actions = [
+      "sqs:*",
+    ]
   }
 }
 
 resource "aws_sqs_queue_policy" "spot_request_read_queue_policy" {
   count = var.ipv_api_enabled ? 1 : 0
   depends_on = [
-    data.aws_iam_policy_document.spot_request_queue_read_policy_document,
+    data.aws_iam_policy_document.spot_request_queue_policy_document,
   ]
 
   queue_url = aws_sqs_queue.spot_request_queue[0].id
-  policy    = data.aws_iam_policy_document.spot_request_queue_read_policy_document[0].json
+  policy    = data.aws_iam_policy_document.spot_request_queue_policy_document[0].json
 }
 
 data "aws_iam_policy_document" "spot_request_kms_key_policy" {
@@ -138,12 +148,23 @@ data "aws_iam_policy_document" "spot_request_kms_key_policy" {
     effect = "Allow"
     principals {
       type        = "AWS"
-      identifiers = ["aws_ssm_parameter.spot_account_number"]
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+    resources = ["*"]
+  }
+  statement {
+    sid = "Give SPOT permissions to SQS KMS key"
+    actions = [
+      "kms:GenerateDataKey",
+    ]
+    effect = "Allow"
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${aws_ssm_parameter.spot_account_number.value}:root"]
     }
     resources = ["*"]
   }
 }
-
 
 resource "aws_kms_key" "spot_request_sqs_key" {
   description             = "KMS key for SPOT request SQS queue encryption"
