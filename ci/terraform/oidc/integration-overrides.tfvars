@@ -7,13 +7,13 @@ ipv_backend_uri                = "https://18zwbqzm0k.execute-api.eu-west-2.amazo
 ipv_sector                     = "https://identity.integration.account.gov.uk"
 ipv_auth_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAup9XBBawAJ99ZfahfOEu
-RlJtourP+dytAdLOCsvRiMREvpuhBLJJgeEXZ3GwvH8qgysj9y1fp6KU/xVNxnSw
-vj44JPyjwG7Sen7z46GjKZ2TGK21Ia7Td7kE+NA9Bs7WU2Se+MvuOvF5WqS5qSTO
-peOd/QYLrb61scdEH0qn0FkMD85aOTEcrbKu+aG7wtpcds6p7+YyL8xtod7eQS6l
-VrhX2LFvYht4l1tT1ldOg1ggyYhgXxjDjp4QHWJDUsnmEyDAg1ST0sHt+lWEh3N8
-nEgJUHjGrjO5TYDiL7+Qhl58SsO8gJQVgyWOFLwMQAHtcfC1pM89VzabA2aNNoXF
-hwIDAQAB
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzgTML6YZ+XUEPQprWBlW
+oZ9FwasmRGsdLHLgAhyNWDw4PtYaihhpSOxoI+86IeO1qAe1nfqrFGW+X37jxDBz
+clY/TxQkivEQqLCWmohuFcpn5dxz6SSC+WFhwLtedC8gXUv1JP4E0mgr7OKWh7t3
+RQcpGyTaAGXh2wywZXytVOLDcwwPb0PeFiC8MR0A8tIpYyx1yXjKcs1Aga8Xy0HF
+V9pU5gbB7a/XLl7j3CHePsfImYi4wG17y+jbN7+vF3GDpAqyRa78ctTZT9/WBWzP
+cX8yiRmHf7ID9br2MsdrTO9YyVWfI0z7OZB1GnNe5lJhGBXvd3xg4UjWbnHikliE
+NQIDAQAB
 -----END PUBLIC KEY-----
 EOT
 logging_endpoint_arns = [
