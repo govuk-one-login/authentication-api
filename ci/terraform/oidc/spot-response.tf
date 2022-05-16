@@ -7,64 +7,6 @@ module "ipv_spot_response_role" {
 
   policies_to_attach = [
     aws_iam_policy.dynamo_identity_credentials_write_access_policy.arn,
-    aws_iam_policy.spot_response_sqs_read_policy[0].arn,
-  ]
-
-  depends_on = [
-    aws_iam_policy.spot_response_sqs_read_policy
-  ]
-}
-
-data "aws_iam_policy_document" "spot_response_policy_document" {
-  count = var.ipv_api_enabled ? 1 : 0
-  statement {
-    sid    = "ReceiveSQS"
-    effect = "Allow"
-
-    actions = [
-      "sqs:ReceiveMessage",
-      "sqs:DeleteMessage",
-      "sqs:GetQueueAttributes",
-      "sqs:ChangeMessageVisibility",
-    ]
-
-    resources = [
-      aws_ssm_parameter.spot_response_queue_arn.value
-    ]
-  }
-  statement {
-    sid    = "AccessKMS"
-    effect = "Allow"
-
-    actions = [
-      "kms:Decrypt",
-    ]
-
-    resources = [
-      aws_ssm_parameter.spot_response_queue_kms_arn.value
-    ]
-  }
-
-  depends_on = [
-    time_sleep.wait_60_seconds
-  ]
-}
-
-resource "aws_iam_policy" "spot_response_sqs_read_policy" {
-  count       = var.ipv_api_enabled ? 1 : 0
-  policy      = data.aws_iam_policy_document.spot_response_policy_document[0].json
-  path        = "/${var.environment}/sqs/"
-  name_prefix = "spot-response-sqs-read-policy-policy"
-}
-
-resource "aws_lambda_event_source_mapping" "spot_response_lambda_sqs_mapping" {
-  count            = var.ipv_api_enabled ? 1 : 0
-  event_source_arn = aws_ssm_parameter.spot_response_queue_arn.value
-  function_name    = aws_lambda_function.spot_response_lambda[0].arn
-
-  depends_on = [
-    aws_lambda_function.spot_response_lambda,
-    aws_iam_policy.spot_response_sqs_read_policy
   ]
 }
 

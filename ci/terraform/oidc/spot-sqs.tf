@@ -46,22 +46,6 @@ data "aws_iam_policy_document" "spot_request_queue_policy_document" {
       "sqs:GetQueueAttributes",
     ]
   }
-  statement {
-    sid    = "AllowSpotAccountToReceive"
-    effect = "Allow"
-
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${aws_ssm_parameter.spot_account_number.value}:root"]
-    }
-
-    actions = [
-      "sqs:ReceiveMessage",
-      "sqs:ChangeMessageVisibility",
-      "sqs:DeleteMessage",
-      "sqs:GetQueueAttributes",
-    ]
-  }
 }
 
 resource "aws_sqs_queue_policy" "spot_request_queue_policy" {
@@ -119,18 +103,6 @@ data "aws_iam_policy_document" "spot_request_kms_key_policy" {
     principals {
       type        = "AWS"
       identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
-    }
-    resources = ["*"]
-  }
-  statement {
-    sid = "Give SPOT permissions to SQS KMS key"
-    actions = [
-      "kms:Decrypt",
-    ]
-    effect = "Allow"
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${aws_ssm_parameter.spot_account_number.value}:root"]
     }
     resources = ["*"]
   }
