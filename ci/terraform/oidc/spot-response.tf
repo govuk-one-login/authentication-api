@@ -16,11 +16,6 @@ data "aws_iam_policy_document" "spot_response_policy_document" {
     sid    = "ReceiveSQS"
     effect = "Allow"
 
-    principals {
-      type        = "AWS"
-      identifiers = [module.ipv_spot_response_role.arn]
-    }
-
     actions = [
       "sqs:ReceiveMessage",
       "sqs:DeleteMessage",
@@ -30,6 +25,18 @@ data "aws_iam_policy_document" "spot_response_policy_document" {
 
     resources = [
       aws_ssm_parameter.spot_response_queue_arn.value
+    ]
+  }
+  statement {
+    sid    = "AccessKMS"
+    effect = "Allow"
+
+    actions = [
+      "kms:GenerateDataKey",
+    ]
+
+    resources = [
+      aws_ssm_parameter.spot_response_queue_kms_arn.value
     ]
   }
 
