@@ -4,8 +4,10 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
@@ -40,6 +42,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
+import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static uk.gov.di.authentication.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.authentication.shared.entity.IdentityClaims.VTM;
 import static uk.gov.di.authentication.shared.helpers.ClientSubjectHelper.getSectorIdentifierForClient;
@@ -136,11 +139,11 @@ public class IPVCallbackHandler
                                     LOG.error("ClientSession not found");
                                     throw new RuntimeException();
                                 }
-                                var clientId =
+                                var authRequest =
                                         AuthenticationRequest.parse(
-                                                        clientSession.getAuthRequestParams())
-                                                .getClientID()
-                                                .getValue();
+                                                clientSession.getAuthRequestParams());
+
+                                var clientId = authRequest.getClientID().getValue();
                                 var clientRegistry =
                                         dynamoClientService.getClient(clientId).orElse(null);
                                 if (Objects.isNull(clientRegistry)) {
@@ -158,8 +161,20 @@ public class IPVCallbackHandler
                                             "Error in IPV AuthorisationResponse. ErrorCode: {}. ErrorDescription: {}",
                                             errorObject.get().getCode(),
                                             errorObject.get().getDescription());
-                                    throw new RuntimeException(
-                                            "Error in IPV AuthorisationResponse");
+                                    var errorResponse =
+                                            new AuthenticationErrorResponse(
+                                                    authRequest.getRedirectionURI(),
+                                                    new ErrorObject(
+                                                            ACCESS_DENIED_CODE,
+                                                            errorObject.get().getDescription()),
+                                                    authRequest.getState(),
+                                                    authRequest.getResponseMode());
+                                    return new APIGatewayProxyResponseEvent()
+                                            .withStatusCode(302)
+                                            .withHeaders(
+                                                    Map.of(
+                                                            ResponseHeaders.LOCATION,
+                                                            errorResponse.toURI().toString()));
                                 }
                                 var userProfile =
                                         dynamoService
