@@ -7,8 +7,9 @@ stub_rp_clients = [
     logout_urls = [
       "https://di-auth-stub-relying-party-integration.london.cloudapps.digital/signed-out",
     ]
-    test_client = "0"
-    client_type = "web"
+    test_client                     = "0"
+    client_type                     = "web"
+    identity_verification_supported = "1"
     scopes = [
       "openid",
       "email",
