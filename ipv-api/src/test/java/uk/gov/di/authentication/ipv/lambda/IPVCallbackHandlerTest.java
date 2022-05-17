@@ -132,17 +132,22 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldNotInvokeSPOTButStillRedirectToFrontendCallbackForSuccessfulResponseAtP0()
-            throws URISyntaxException {
-
+    void shouldNotInvokeSPOTAndReturnAccessDeniedErrorToRPWhenP0() {
         usingValidSession();
         usingValidClientSession();
 
         var response = makeHandlerRequest(getApiGatewayProxyRequestEvent("P0"));
+        var expectedURI =
+                new AuthenticationErrorResponse(
+                                URI.create(REDIRECT_URI.toString()),
+                                OAuth2Error.ACCESS_DENIED,
+                                RP_STATE,
+                                null)
+                        .toURI()
+                        .toString();
 
         assertThat(response, hasStatus(302));
-        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("ipv-callback").build();
-        assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
+        assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), equalTo(expectedURI));
 
         verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
         verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);

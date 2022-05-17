@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
@@ -41,6 +42,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static uk.gov.di.authentication.shared.entity.IdentityClaims.VOT;
@@ -270,7 +272,9 @@ public class IPVCallbackHandler
                                         persistentId);
 
                                 if (configurationService.isSpotEnabled()) {
-                                    if (isUserIdentityGoingToSpot(userIdentityUserInfo)) {
+                                    Optional<ErrorObject> userIdentityError =
+                                            validateUserIdentityResponse(userIdentityUserInfo);
+                                    if (userIdentityError.isEmpty()) {
                                         LOG.info("SPOT will be invoked.");
                                         var logIds =
                                                 new LogIds(
@@ -296,7 +300,19 @@ public class IPVCallbackHandler
                                                 userProfile.getPhoneNumber(),
                                                 persistentId);
                                     } else {
-                                        LOG.warn("SPOT will not be invoked.");
+                                        LOG.warn("SPOT will not be invoked. Returning Error to RP");
+                                        var errorResponse =
+                                                new AuthenticationErrorResponse(
+                                                        authRequest.getRedirectionURI(),
+                                                        userIdentityError.get(),
+                                                        authRequest.getState(),
+                                                        authRequest.getResponseMode());
+                                        return new APIGatewayProxyResponseEvent()
+                                                .withStatusCode(302)
+                                                .withHeaders(
+                                                        Map.of(
+                                                                ResponseHeaders.LOCATION,
+                                                                errorResponse.toURI().toString()));
                                     }
                                 }
                                 var redirectURI =
@@ -323,12 +339,12 @@ public class IPVCallbackHandler
                         });
     }
 
-    private boolean isUserIdentityGoingToSpot(UserInfo userIdentityUserInfo) {
+    private Optional<ErrorObject> validateUserIdentityResponse(UserInfo userIdentityUserInfo) {
         if (!LevelOfConfidence.MEDIUM_LEVEL
                 .getValue()
                 .equals(userIdentityUserInfo.getClaim(VOT.getValue()))) {
             LOG.warn("IPV missing vot or vot not P2.");
-            return false;
+            return Optional.of(OAuth2Error.ACCESS_DENIED);
         }
         var trustmark =
                 buildURI(configurationService.getOidcApiBaseURL().orElseThrow(), "/trustmark")
@@ -338,7 +354,7 @@ public class IPVCallbackHandler
             LOG.error("IPV trustmark is invalid");
             throw new RuntimeException("IPV trustmark is invalid");
         }
-        return true;
+        return Optional.empty();
     }
 
     private void queueSPOTRequest(
