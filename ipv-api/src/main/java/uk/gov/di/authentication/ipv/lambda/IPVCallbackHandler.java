@@ -296,7 +296,7 @@ public class IPVCallbackHandler
                                                 userProfile.getPhoneNumber(),
                                                 persistentId);
                                     } else {
-                                        LOG.info("SPOT will not be invoked.");
+                                        LOG.warn("SPOT will not be invoked.");
                                     }
                                 }
                                 var redirectURI =
@@ -327,7 +327,7 @@ public class IPVCallbackHandler
         if (!LevelOfConfidence.MEDIUM_LEVEL
                 .getValue()
                 .equals(userIdentityUserInfo.getClaim(VOT.getValue()))) {
-            LOG.info("IPV missing vot or vot not P2.");
+            LOG.warn("IPV missing vot or vot not P2.");
             return false;
         }
         var trustmark =
@@ -335,8 +335,8 @@ public class IPVCallbackHandler
                         .toString();
 
         if (!trustmark.equals(userIdentityUserInfo.getClaim(VTM.getValue()))) {
-            LOG.info("IPV trustmark is invalid.");
-            return false;
+            LOG.error("IPV trustmark is invalid");
+            throw new RuntimeException("IPV trustmark is invalid");
         }
         return true;
     }

@@ -193,21 +193,20 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldNotInvokeSPOTAndRedirectToFrontendCallbackForSuccessfulResponseAtP2WhenVTMMismatch()
-            throws URISyntaxException, JsonProcessingException {
-
+    void shouldNotInvokeSPOTAndThrowWhenVTMMismatch() {
         usingValidSession();
         usingValidClientSession();
+        var runtimeException =
+                assertThrows(
+                        RuntimeException.class,
+                        () ->
+                                makeHandlerRequest(
+                                        getApiGatewayProxyRequestEvent(
+                                                "P2", "http://invalid/trustmark")),
+                        "Expected to throw exception");
 
-        var response =
-                makeHandlerRequest(
-                        getApiGatewayProxyRequestEvent("P2", "http://invalid/trustmark"));
-
-        assertThat(response, hasStatus(302));
-        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("ipv-callback").build();
-        assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
+        assertThat(runtimeException.getMessage(), equalTo("IPV trustmark is invalid"));
         verifyNoInteractions(awsSqsClient);
-
         verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
         verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
         verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED);
