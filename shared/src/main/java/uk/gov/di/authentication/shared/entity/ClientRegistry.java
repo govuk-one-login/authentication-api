@@ -23,10 +23,10 @@ public class ClientRegistry {
     private boolean cookieConsentShared = false;
     private boolean consentRequired = false;
     private boolean testClient = false;
-    private List<String> requestUris = new ArrayList<>();
     private List<String> testClientEmailAllowlist = new ArrayList<>();
     private List<String> claims = new ArrayList<>();
     private String clientType;
+    private boolean identityVerificationSupported = false;
 
     @DynamoDBHashKey(attributeName = "ClientID")
     public String getClientID() {
@@ -180,16 +180,6 @@ public class ClientRegistry {
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "RequestUris")
-    public List<String> getRequestUris() {
-        return requestUris;
-    }
-
-    public ClientRegistry setRequestUris(List<String> requestUris) {
-        this.requestUris = requestUris;
-        return this;
-    }
-
     @DynamoDBAttribute(attributeName = "Claims")
     public List<String> getClaims() {
         return claims;
@@ -207,6 +197,16 @@ public class ClientRegistry {
 
     public ClientRegistry setClientType(String clientType) {
         this.clientType = clientType;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "IdentityVerificationSupported")
+    public boolean isIdentityVerificationSupported() {
+        return identityVerificationSupported;
+    }
+
+    public ClientRegistry setIdentityVerificationSupported(boolean identityVerificationSupported) {
+        this.identityVerificationSupported = identityVerificationSupported;
         return this;
     }
 }

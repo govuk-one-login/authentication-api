@@ -46,7 +46,8 @@ public class DynamoClientService implements ClientService {
             String subjectType,
             boolean consentRequired,
             List<String> claims,
-            String clientType) {
+            String clientType,
+            boolean identityVerificationSupported) {
         var clientRegistry =
                 new ClientRegistry()
                         .setClientID(clientID)
@@ -62,7 +63,8 @@ public class DynamoClientService implements ClientService {
                         .setSubjectType(subjectType)
                         .setConsentRequired(consentRequired)
                         .setClaims(claims)
-                        .setClientType(clientType);
+                        .setClientType(clientType)
+                        .setIdentityVerificationSupported(identityVerificationSupported);
         clientRegistryMapper.save(clientRegistry);
     }
 
