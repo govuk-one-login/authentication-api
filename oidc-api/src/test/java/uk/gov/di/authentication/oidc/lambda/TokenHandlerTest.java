@@ -144,20 +144,31 @@ public class TokenHandlerTest {
 
     private static Stream<Arguments> validVectorValues() {
         return Stream.of(
-                Arguments.of("Cl.Cm", true, true),
-                Arguments.of("Cl", true, true),
-                Arguments.of("P2.Cl.Cm", true, false),
-                Arguments.of("P2.Cl", true, false),
-                Arguments.of("Cl.Cm", false, false),
-                Arguments.of("Cl", false, false),
-                Arguments.of("P2.Cl.Cm", false, false),
-                Arguments.of("P2.Cl", false, false));
+                Arguments.of("Cl.Cm", true, true, true),
+                Arguments.of("Cl", true, true, true),
+                Arguments.of("P2.Cl.Cm", true, false, true),
+                Arguments.of("P2.Cl", true, false, true),
+                Arguments.of("Cl.Cm", false, false, true),
+                Arguments.of("Cl", false, false, true),
+                Arguments.of("P2.Cl.Cm", false, false, true),
+                Arguments.of("P2.Cl", false, false, false),
+                Arguments.of("Cl.Cm", true, true, false),
+                Arguments.of("Cl", true, true, false),
+                Arguments.of("P2.Cl.Cm", true, false, false),
+                Arguments.of("P2.Cl", true, false, false),
+                Arguments.of("Cl.Cm", false, false, false),
+                Arguments.of("Cl", false, false, false),
+                Arguments.of("P2.Cl.Cm", false, false, false),
+                Arguments.of("P2.Cl", false, false, false));
     }
 
     @ParameterizedTest
     @MethodSource("validVectorValues")
     public void shouldReturn200ForSuccessfulTokenRequest(
-            String vectorValue, boolean clientRegistryConsent, boolean expectedConsentRequired)
+            String vectorValue,
+            boolean clientRegistryConsent,
+            boolean expectedConsentRequired,
+            boolean clientIdInHeader)
             throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
         UserProfile userProfile = generateUserProfile();
@@ -174,6 +185,8 @@ public class TokenHandlerTest {
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
+        when(tokenService.getClientIDFromPrivateKeyJWT(anyString()))
+                .thenReturn(Optional.of(CLIENT_ID));
         when(tokenService.validatePrivateKeyJWT(
                         anyString(),
                         eq(clientRegistry.getPublicKey()),
@@ -212,7 +225,7 @@ public class TokenHandlerTest {
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
-                generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID);
+                generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID, clientIdInHeader);
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
@@ -272,7 +285,7 @@ public class TokenHandlerTest {
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(
-                        privateKeyJWT, new AuthorizationCode().toString(), CLIENT_ID);
+                        privateKeyJWT, new AuthorizationCode().toString(), CLIENT_ID, true);
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasBody(OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString()));
@@ -309,7 +322,7 @@ public class TokenHandlerTest {
 
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(
-                        privateKeyJWT, new AuthorizationCode().toString(), CLIENT_ID);
+                        privateKeyJWT, new AuthorizationCode().toString(), CLIENT_ID, true);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString()));
@@ -334,7 +347,7 @@ public class TokenHandlerTest {
                 .thenReturn(Optional.empty());
 
         APIGatewayProxyResponseEvent result =
-                generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID);
+                generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID, true);
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
     }
@@ -368,7 +381,7 @@ public class TokenHandlerTest {
 
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(
-                        privateKeyJWT, authCode, "http://invalid-redirect-uri", CLIENT_ID);
+                        privateKeyJWT, authCode, "http://invalid-redirect-uri", CLIENT_ID, true);
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
     }
@@ -427,7 +440,8 @@ public class TokenHandlerTest {
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
-                generateApiGatewayRequest(privateKeyJWT, authCode, DOC_APP_CLIENT_ID.getValue());
+                generateApiGatewayRequest(
+                        privateKeyJWT, authCode, DOC_APP_CLIENT_ID.getValue(), true);
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
@@ -488,11 +502,14 @@ public class TokenHandlerTest {
             PrivateKeyJWT privateKeyJWT,
             String authorisationCode,
             String redirectUri,
-            String clientId) {
+            String clientId,
+            boolean clientIdInHeader) {
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
                 "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
-        customParams.put("client_id", Collections.singletonList(clientId));
+        if (clientIdInHeader) {
+            customParams.put("client_id", Collections.singletonList(clientId));
+        }
         customParams.put("code", Collections.singletonList(authorisationCode));
         customParams.put("redirect_uri", Collections.singletonList(redirectUri));
         Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
@@ -519,8 +536,12 @@ public class TokenHandlerTest {
     }
 
     private APIGatewayProxyResponseEvent generateApiGatewayRequest(
-            PrivateKeyJWT privateKeyJWT, String authorisationCode, String clientId) {
-        return generateApiGatewayRequest(privateKeyJWT, authorisationCode, REDIRECT_URI, clientId);
+            PrivateKeyJWT privateKeyJWT,
+            String authorisationCode,
+            String clientId,
+            boolean clientIdInHeader) {
+        return generateApiGatewayRequest(
+                privateKeyJWT, authorisationCode, REDIRECT_URI, clientId, clientIdInHeader);
     }
 
     private AuthenticationRequest generateAuthRequest() {

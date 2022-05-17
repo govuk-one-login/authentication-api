@@ -147,16 +147,24 @@ public class TokenHandler
                             }
 
                             Map<String, String> requestBody = parseRequestBody(input.getBody());
-                            String clientID = requestBody.get("client_id");
-                            attachLogFieldToLogs(CLIENT_ID, clientID);
-                            addAnnotation("client_id", clientID);
                             addAnnotation("grant_type", requestBody.get("grant_type"));
 
+                            String clientID;
                             ClientRegistry client;
                             try {
+                                if (requestBody.get("client_id") != null) {
+                                    clientID = requestBody.get("client_id");
+                                } else {
+                                    clientID =
+                                            tokenService
+                                                    .getClientIDFromPrivateKeyJWT(input.getBody())
+                                                    .orElseThrow();
+                                }
+                                attachLogFieldToLogs(CLIENT_ID, clientID);
+                                addAnnotation("client_id", clientID);
                                 client = clientService.getClient(clientID).orElseThrow();
                             } catch (NoSuchElementException e) {
-                                LOG.warn("Client not found in Client Registry");
+                                LOG.warn("Invalid client or client not found in Client Registry");
                                 return generateApiGatewayProxyResponse(
                                         400,
                                         OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString());
