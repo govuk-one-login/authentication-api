@@ -109,8 +109,16 @@ class StartServiceTest {
             String gaTrackingId,
             boolean isDocCheckingAppUser,
             ClientType clientType,
-            SignedJWT signedJWT) {
-        var userContext = buildUserContext(vtr, clientConsentRequired, true, clientType, signedJWT);
+            SignedJWT signedJWT,
+            boolean rpSupportsIdentity) {
+        var userContext =
+                buildUserContext(
+                        vtr,
+                        clientConsentRequired,
+                        true,
+                        clientType,
+                        signedJWT,
+                        rpSupportsIdentity);
         var userStartInfo =
                 startService.buildUserStartInfo(userContext, cookieConsent, gaTrackingId);
 
@@ -129,7 +137,12 @@ class StartServiceTest {
             throws ParseException {
         var userContext =
                 buildUserContext(
-                        jsonArrayOf("Cl.Cm"), false, cookieConsentShared, clientType, signedJWT);
+                        jsonArrayOf("Cl.Cm"),
+                        false,
+                        cookieConsentShared,
+                        clientType,
+                        signedJWT,
+                        false);
 
         var clientStartInfo = startService.buildClientStartInfo(userContext);
 
@@ -232,7 +245,8 @@ class StartServiceTest {
                         null,
                         false,
                         ClientType.WEB,
-                        null),
+                        null,
+                        false),
                 Arguments.of(
                         jsonArrayOf("P2.Cl.Cm"),
                         true,
@@ -243,7 +257,8 @@ class StartServiceTest {
                         "some-ga-tracking-id",
                         false,
                         ClientType.WEB,
-                        null),
+                        null,
+                        true),
                 Arguments.of(
                         jsonArrayOf("P2.Cl.Cm"),
                         false,
@@ -254,7 +269,20 @@ class StartServiceTest {
                         "some-ga-tracking-id",
                         true,
                         ClientType.APP,
-                        generateSignedJWT()));
+                        generateSignedJWT(),
+                        false),
+                Arguments.of(
+                        jsonArrayOf("P2.Cl.Cm"),
+                        false,
+                        false,
+                        true,
+                        true,
+                        null,
+                        "some-ga-tracking-id",
+                        false,
+                        ClientType.WEB,
+                        null,
+                        false));
     }
 
     private static Stream<Arguments> clientStartInfo()
@@ -281,7 +309,8 @@ class StartServiceTest {
             boolean consentRequired,
             boolean cookieConsentShared,
             ClientType clientType,
-            SignedJWT requestObject) {
+            SignedJWT requestObject,
+            boolean identityVerificationSupport) {
         AuthorizationRequest authRequest;
         if (Objects.nonNull(requestObject)) {
             authRequest =
@@ -312,7 +341,8 @@ class StartServiceTest {
                         .setClientName(CLIENT_NAME)
                         .setConsentRequired(consentRequired)
                         .setCookieConsentShared(cookieConsentShared)
-                        .setClientType(clientType.getValue());
+                        .setClientType(clientType.getValue())
+                        .setIdentityVerificationSupported(identityVerificationSupport);
         return UserContext.builder(SESSION)
                 .withClientSession(clientSession)
                 .withClient(clientRegistry)
