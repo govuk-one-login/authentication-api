@@ -127,7 +127,8 @@ public class ClientRegistrationHandler
                                         clientRegistrationRequest.getSubjectType(),
                                         !clientRegistrationRequest.isIdentityVerificationRequired(),
                                         clientRegistrationRequest.getClaims(),
-                                        clientRegistrationRequest.getClientType());
+                                        clientRegistrationRequest.getClientType(),
+                                        clientRegistrationRequest.isIdentityVerificationRequired());
 
                                 var clientRegistrationResponse =
                                         new ClientRegistrationResponse(

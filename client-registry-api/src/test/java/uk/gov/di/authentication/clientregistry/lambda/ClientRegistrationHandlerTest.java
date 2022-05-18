@@ -118,7 +118,8 @@ class ClientRegistrationHandlerTest {
                         SUBJECT_TYPE,
                         true,
                         emptyList(),
-                        ClientType.WEB.getValue());
+                        ClientType.WEB.getValue(),
+                        false);
     }
 
     @Test
@@ -158,7 +159,8 @@ class ClientRegistrationHandlerTest {
                         SUBJECT_TYPE,
                         false,
                         emptyList(),
-                        ClientType.WEB.getValue());
+                        ClientType.WEB.getValue(),
+                        true);
     }
 
     @Test
@@ -190,7 +192,8 @@ class ClientRegistrationHandlerTest {
                         SUBJECT_TYPE,
                         true,
                         emptyList(),
-                        ClientType.WEB.getValue());
+                        ClientType.WEB.getValue(),
+                        false);
     }
 
     @Test

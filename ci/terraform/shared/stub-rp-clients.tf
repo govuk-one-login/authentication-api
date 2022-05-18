@@ -80,6 +80,9 @@ resource "aws_dynamodb_table_item" "stub_rp_client" {
     ConsentRequired = {
       N = "1"
     }
+    IdentityVerificationSupported = {
+      N = var.stub_rp_clients[count.index].identity_verification_supported
+    }
     ClientType = {
       S = var.stub_rp_clients[count.index].client_type
     }

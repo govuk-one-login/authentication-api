@@ -7,8 +7,9 @@ stub_rp_clients = [
     logout_urls = [
       "https://di-auth-stub-relying-party-build.london.cloudapps.digital/signed-out",
     ]
-    test_client = "0"
-    client_type = "web"
+    test_client                     = "0"
+    client_type                     = "web"
+    identity_verification_supported = "1"
     scopes = [
       "openid",
       "email",
@@ -23,8 +24,9 @@ stub_rp_clients = [
     logout_urls = [
       "https://di-auth-stub-relying-party-build-s2.london.cloudapps.digital/signed-out",
     ]
-    test_client = "1"
-    client_type = "web"
+    test_client                     = "1"
+    identity_verification_supported = "1"
+    client_type                     = "web"
     scopes = [
       "openid",
       "email",
@@ -39,8 +41,9 @@ stub_rp_clients = [
     logout_urls = [
       "https://di-auth-stub-relying-party-build-app.london.cloudapps.digital/signed-out",
     ]
-    test_client = "1"
-    client_type = "app"
+    test_client                     = "1"
+    identity_verification_supported = "1"
+    client_type                     = "app"
     scopes = [
       "openid",
       "doc-checking-app",

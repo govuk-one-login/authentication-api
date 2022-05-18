@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
 import uk.gov.di.authentication.ipv.lambda.IPVAuthorisationHandler;
+import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -87,6 +88,8 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "pairwise",
+                true,
+                ClientType.WEB,
                 true);
 
         var response =
