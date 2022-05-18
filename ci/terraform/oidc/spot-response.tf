@@ -7,6 +7,7 @@ module "ipv_spot_response_role" {
 
   policies_to_attach = [
     aws_iam_policy.dynamo_identity_credentials_write_access_policy.arn,
+    aws_iam_policy.dynamo_identity_credentials_read_access_policy.arn,
     aws_iam_policy.spot_response_sqs_read_policy[0].arn,
   ]
 
