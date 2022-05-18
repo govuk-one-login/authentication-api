@@ -16,8 +16,8 @@ import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.service.notify.NotificationClientException;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -52,7 +52,7 @@ public class NotificationHandlerTest {
 
     @BeforeEach
     void setUp() {
-        when(configService.getNotifyTestPhoneNumber()).thenReturn(Optional.of(NOTIFY_PHONE_NUMBER));
+        when(configService.getNotifyTestDestinations()).thenReturn(List.of(NOTIFY_PHONE_NUMBER));
         when(configService.getSmoketestBucketName()).thenReturn(BUCKET_NAME);
         when(configService.getFrontendBaseUrl()).thenReturn(FRONTEND_BASE_URL);
         when(configService.getContactUsLinkRoute()).thenReturn(CONTACT_US_LINK_ROUTE);

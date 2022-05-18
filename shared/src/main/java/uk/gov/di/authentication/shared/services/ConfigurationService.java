@@ -21,11 +21,14 @@ import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.text.MessageFormat.format;
+import static java.util.Objects.isNull;
 
 public class ConfigurationService implements BaseLambdaConfiguration, AuditPublisherConfiguration {
 
@@ -247,8 +250,11 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getSsmClient().getParameter(request).getParameter().getValue();
     }
 
-    public Optional<String> getNotifyTestPhoneNumber() {
-        return Optional.ofNullable(System.getenv("NOTIFY_TEST_PHONE_NUMBER"));
+    public List<String> getNotifyTestDestinations() {
+        var destinations = System.getenv("NOTIFY_TEST_PHONE_NUMBER");
+        return isNull(destinations)
+                ? List.of()
+                : Arrays.stream(destinations.split(",")).collect(Collectors.toList());
     }
 
     public Optional<String> getOidcApiBaseURL() {
