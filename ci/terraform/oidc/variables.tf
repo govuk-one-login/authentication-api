@@ -50,7 +50,7 @@ variable "notify_url" {
   default = null
 }
 
-variable "notify_test_phone_number" {
+variable "notify_test_destinations" {
   type    = string
   default = null
 }

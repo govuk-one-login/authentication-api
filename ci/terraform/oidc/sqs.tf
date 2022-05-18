@@ -175,7 +175,7 @@ resource "aws_lambda_function" "email_sqs_lambda" {
       CONTACT_US_LINK_ROUTE     = var.contact_us_link_route
       NOTIFY_API_KEY            = var.notify_api_key
       NOTIFY_URL                = var.notify_url
-      NOTIFY_TEST_PHONE_NUMBER  = var.notify_test_phone_number
+      NOTIFY_TEST_DESTINATIONS  = var.notify_test_destinations
       SMOKETEST_SMS_BUCKET_NAME = local.sms_bucket_name
       JAVA_TOOL_OPTIONS         = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
     })

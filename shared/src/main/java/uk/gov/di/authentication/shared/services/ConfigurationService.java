@@ -251,8 +251,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public List<String> getNotifyTestDestinations() {
-        var destinations = System.getenv("NOTIFY_TEST_PHONE_NUMBER");
-        return isNull(destinations)
+        var destinations = System.getenv("NOTIFY_TEST_DESTINATIONS");
+        return isNull(destinations) || destinations.isBlank()
                 ? List.of()
                 : Arrays.stream(destinations.split(",")).collect(Collectors.toList());
     }
