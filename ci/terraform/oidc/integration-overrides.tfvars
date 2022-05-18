@@ -5,7 +5,7 @@ ipv_authorisation_uri          = "https://identity.integration.account.gov.uk/oa
 ipv_authorisation_callback_uri = "https://oidc.integration.account.gov.uk/ipv-callback"
 ipv_backend_uri                = "https://identity.integration.account.gov.uk"
 ipv_audience                   = "https://identity.integration.account.gov.uk"
-ipv_sector                     = "https://integration.account.gov.uk"
+ipv_sector                     = "https://identity.integration.account.gov.uk"
 ipv_auth_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzgTML6YZ+XUEPQprWBlW
