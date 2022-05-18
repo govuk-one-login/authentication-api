@@ -9,6 +9,8 @@ module "ipv_spot_response_role" {
     aws_iam_policy.dynamo_identity_credentials_write_access_policy.arn,
     aws_iam_policy.dynamo_identity_credentials_read_access_policy.arn,
     aws_iam_policy.spot_response_sqs_read_policy[0].arn,
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
+    aws_iam_policy.lambda_sns_policy.arn,
   ]
 
   depends_on = [
@@ -92,10 +94,11 @@ resource "aws_lambda_function" "spot_response_lambda" {
   }
   environment {
     variables = merge({
-      ENVIRONMENT       = var.environment
-      FRONTEND_BASE_URL = module.dns.frontend_url
-      DYNAMO_ENDPOINT   = var.use_localstack ? var.lambda_dynamo_endpoint : null
-
+      AUDIT_SIGNING_KEY_ALIAS = local.audit_signing_key_alias_name
+      DYNAMO_ENDPOINT         = var.use_localstack ? var.lambda_dynamo_endpoint : null
+      ENVIRONMENT             = var.environment
+      EVENTS_SNS_TOPIC_ARN    = aws_sns_topic.events.arn
+      FRONTEND_BASE_URL       = module.dns.frontend_url
     })
   }
   kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
