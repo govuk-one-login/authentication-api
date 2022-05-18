@@ -9,6 +9,7 @@ ipv_authorisation_callback_uri     = "https://oidc.staging.account.gov.uk/ipv-ca
 ipv_audience                       = "https://identity.staging.account.gov.uk"
 ipv_backend_uri                    = "https://identity.staging.account.gov.uk"
 ipv_sector                         = "https://identity.staging.account.gov.uk"
+spot_enabled                       = true
 ipv_auth_public_encryption_key     = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyB5V0Tc9KEV5/zGUHLu0
