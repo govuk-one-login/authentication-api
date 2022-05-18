@@ -111,9 +111,11 @@ public class StartService {
         if (Boolean.FALSE.equals(docCheckingAppUser)) {
             consentRequired = ConsentHelper.userHasNotGivenConsent(userContext);
             uplift = UpliftHelper.upliftRequired(userContext);
+            var clientRegistry = userContext.getClient().orElseThrow();
             identityRequired =
                     IdentityHelper.identityRequired(
-                            userContext.getClientSession().getAuthRequestParams());
+                            userContext.getClientSession().getAuthRequestParams(),
+                            clientRegistry.isIdentityVerificationSupported());
         }
         LOG.info(
                 "Found UserStartInfo for Authenticated: {} ConsentRequired: {} UpliftRequired: {} IdentityRequired: {}. CookieConsent: {}. GATrackingId: {}. DocCheckingAppUser: {}",

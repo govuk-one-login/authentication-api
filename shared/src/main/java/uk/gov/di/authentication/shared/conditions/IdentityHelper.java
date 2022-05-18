@@ -12,7 +12,12 @@ public class IdentityHelper {
 
     private IdentityHelper() {}
 
-    public static boolean identityRequired(Map<String, List<String>> authRequestParams) {
+    public static boolean identityRequired(
+            Map<String, List<String>> authRequestParams,
+            boolean clientSupportsIdentityVerification) {
+        if (!clientSupportsIdentityVerification) {
+            return false;
+        }
         AuthenticationRequest authRequest;
         try {
             authRequest = AuthenticationRequest.parse(authRequestParams);
