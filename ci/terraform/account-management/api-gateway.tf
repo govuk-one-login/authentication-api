@@ -57,7 +57,6 @@ resource "aws_iam_role_policy" "invocation_policy" {
       "Action": "lambda:InvokeFunction",
       "Effect": "Allow",
       "Resource": [
-          "${aws_lambda_function.authorizer.arn}",
           "${aws_lambda_alias.authorizer_alias.arn}"
         ]
     }
