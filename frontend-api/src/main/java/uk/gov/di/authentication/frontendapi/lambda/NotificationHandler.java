@@ -180,17 +180,13 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     }
 
     private void writeTestClientOtpToS3(String otp, String destination) {
-        Boolean isNotifyTestNumber =
-                configurationService
-                        .getNotifyTestPhoneNumber()
-                        .map(t -> t.equals(destination))
-                        .orElse(false);
-        if (isNotifyTestNumber) {
-            LOG.info("Notify Test Number used in request. Writing to S3 bucket");
-            String key = configurationService.getNotifyTestPhoneNumber().get();
+        Boolean isNotifyDestination =
+                configurationService.getNotifyTestDestinations().contains(destination);
+        if (isNotifyDestination) {
+            LOG.info("Notify Test Destination used in request. Writing to S3 bucket");
             String bucketName = configurationService.getSmoketestBucketName();
             try {
-                s3Client.putObject(bucketName, key, otp);
+                s3Client.putObject(bucketName, destination, otp);
             } catch (Exception e) {
                 LOG.error("Exception thrown when writing to S3 bucket");
             }

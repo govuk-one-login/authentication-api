@@ -10,7 +10,7 @@ params:
   DEPLOYER_ROLE_ARN: ((deployer-role-arn-non-prod))
   DEPLOY_ENVIRONMENT: build
   NOTIFY_API_KEY: ((build-notify-api-key))
-  NOTIFY_PHONE_NUMBER: ((test-notify-phone-number))
+  NOTIFY_DESTINATIONS: ((test-notify-phone-number))
   DNS_DEPLOYER_ROLE_ARN: ((deployer-role-arn-production))
   DNS_STATE_BUCKET: ((dns-state-bucket))
   DNS_STATE_KEY: ((dns-state-key))
@@ -64,7 +64,7 @@ run:
         -var "test_client_verify_email_otp=${TEST_CLIENT_VERIFY_EMAIL_OTP}" \
         -var "test_client_verify_phone_number_otp=${TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP}" \
         -var "test_clients_enabled=${TEST_CLIENTS_ENABLED}" \
-        -var "notify_test_phone_number=${NOTIFY_PHONE_NUMBER}" \
+        -var "notify_test_destinations=${NOTIFY_DESTINATIONS}" \
         -var "spot_account_number=${SPOT_ACCOUNT_NUMBER}" \
         -var "spot_response_queue_arn=${SPOT_RESPONSE_QUEUE_ARN}" \
         -var "spot_response_queue_kms_arn=${SPOT_RESPONSE_QUEUE_KMS_ARN}" \
