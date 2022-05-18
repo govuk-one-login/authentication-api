@@ -37,6 +37,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -101,6 +103,7 @@ public class TokenHandlerTest {
     private static final String AUDIENCE = "oidc-audience";
     private static final State STATE = new State();
     private static final String CLIENT_ID = "test-id";
+    private static final String IGNORE_CLIENT_ID = "ignore-test-id";
     private static final ClientID DOC_APP_CLIENT_ID = new ClientID("doc-app-test-id");
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
@@ -231,8 +234,10 @@ public class TokenHandlerTest {
         assertTrue(result.getBody().contains(accessToken.getValue()));
     }
 
-    @Test
-    public void shouldReturn200ForSuccessfulRefreshTokenRequest()
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {CLIENT_ID})
+    public void shouldReturn200ForSuccessfulRefreshTokenRequest(String clientId)
             throws JOSEException, JsonProcessingException, ParseException {
         SignedJWT signedRefreshToken = createSignedRefreshToken();
         KeyPair keyPair = generateRsaKeyPair();
@@ -244,6 +249,8 @@ public class TokenHandlerTest {
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
+        when(tokenService.getClientIDFromPrivateKeyJWT(anyString()))
+                .thenReturn(Optional.of(CLIENT_ID));
         when(tokenService.validatePrivateKeyJWT(
                         anyString(),
                         eq(clientRegistry.getPublicKey()),
@@ -271,7 +278,7 @@ public class TokenHandlerTest {
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
-                generateApiGatewayRefreshRequest(privateKeyJWT, refreshToken.getValue());
+                generateApiGatewayRefreshRequest(privateKeyJWT, refreshToken.getValue(), clientId);
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
@@ -336,6 +343,8 @@ public class TokenHandlerTest {
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
+        when(tokenService.getClientIDFromPrivateKeyJWT(anyString()))
+                .thenReturn(Optional.of(CLIENT_ID));
         when(tokenService.validatePrivateKeyJWT(
                         anyString(),
                         eq(clientRegistry.getPublicKey()),
@@ -360,6 +369,8 @@ public class TokenHandlerTest {
         ClientRegistry clientRegistry = generateClientRegistry(keyPair, false);
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
+        when(tokenService.getClientIDFromPrivateKeyJWT(anyString()))
+                .thenReturn(Optional.of(CLIENT_ID));
         when(tokenService.validatePrivateKeyJWT(
                         anyString(),
                         eq(clientRegistry.getPublicKey()),
@@ -404,6 +415,8 @@ public class TokenHandlerTest {
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(clientService.getClient(DOC_APP_CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(clientRegistry));
+        when(tokenService.getClientIDFromPrivateKeyJWT(anyString()))
+                .thenReturn(Optional.of(DOC_APP_CLIENT_ID.getValue()));
         when(tokenService.validatePrivateKeyJWT(
                         anyString(),
                         eq(clientRegistry.getPublicKey()),
@@ -508,7 +521,7 @@ public class TokenHandlerTest {
         customParams.put(
                 "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
         if (clientIdInHeader) {
-            customParams.put("client_id", Collections.singletonList(clientId));
+            customParams.put("client_id", Collections.singletonList(IGNORE_CLIENT_ID));
         }
         customParams.put("code", Collections.singletonList(authorisationCode));
         customParams.put("redirect_uri", Collections.singletonList(redirectUri));
@@ -521,11 +534,13 @@ public class TokenHandlerTest {
     }
 
     private APIGatewayProxyResponseEvent generateApiGatewayRefreshRequest(
-            PrivateKeyJWT privateKeyJWT, String refreshToken) {
+            PrivateKeyJWT privateKeyJWT, String refreshToken, String clientId) {
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
                 "grant_type", Collections.singletonList(GrantType.REFRESH_TOKEN.getValue()));
-        customParams.put("client_id", Collections.singletonList(CLIENT_ID));
+        if (clientId != null) {
+            customParams.put("client_id", Collections.singletonList(clientId));
+        }
         customParams.put("refresh_token", Collections.singletonList(refreshToken));
         Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
         privateKeyParams.putAll(customParams);
