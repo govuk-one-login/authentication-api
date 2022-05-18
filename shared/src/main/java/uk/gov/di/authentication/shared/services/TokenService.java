@@ -162,12 +162,6 @@ public class TokenService {
 
     public Optional<ErrorObject> validateTokenRequestParams(String tokenRequestBody) {
         Map<String, String> requestBody = RequestBodyHelper.parseRequestBody(tokenRequestBody);
-        if (!requestBody.containsKey("client_id")) {
-            return Optional.of(
-                    new ErrorObject(
-                            OAuth2Error.INVALID_REQUEST_CODE,
-                            "Request is missing client_id parameter"));
-        }
         if (!requestBody.containsKey("grant_type")) {
             return Optional.of(
                     new ErrorObject(
@@ -225,6 +219,21 @@ public class TokenService {
             return Optional.of(OAuth2Error.INVALID_CLIENT);
         }
         return Optional.empty();
+    }
+
+    public Optional<String> getClientIDFromPrivateKeyJWT(String requestString) {
+        PrivateKeyJWT privateKeyJWT;
+        try {
+            privateKeyJWT = PrivateKeyJWT.parse(requestString);
+        } catch (ParseException e) {
+            LOG.warn("Could not parse Private Key JWT");
+            return Optional.empty();
+        }
+        if (Objects.isNull(privateKeyJWT.getClientID())) {
+            LOG.warn("Invalid ClientID in PrivateKeyJWT");
+            return Optional.empty();
+        }
+        return Optional.of(privateKeyJWT.getClientID().toString());
     }
 
     private List<String> calculateScopesForToken(

@@ -334,6 +334,17 @@ public class TokenServiceTest {
     }
 
     @Test
+    void shouldSuccessfullyGetClientFromPrivateKeyJWT() throws JOSEException {
+        KeyPair keyPair = generateRsaKeyPair();
+        Date expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
+        String requestParams =
+                generateSerialisedPrivateKeyJWT(keyPair, expiryDate.getTime(), CLIENT_ID);
+        assertThat(
+                tokenService.getClientIDFromPrivateKeyJWT(requestParams),
+                equalTo(Optional.of(CLIENT_ID)));
+    }
+
+    @Test
     void shouldSuccessfullyValidateTokenRequest() {
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
@@ -345,25 +356,6 @@ public class TokenServiceTest {
                 tokenService.validateTokenRequestParams(URLUtils.serializeParameters(customParams));
 
         assertThat(errorObject, equalTo(Optional.empty()));
-    }
-
-    @Test
-    void shouldReturnErrorIfClientIdIsMissingWhenValidatingTokenRequest() {
-        Map<String, List<String>> customParams = new HashMap<>();
-        customParams.put(
-                "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
-        customParams.put("code", Collections.singletonList(AUTH_CODE));
-        customParams.put("redirect_uri", Collections.singletonList(REDIRECT_URI));
-        Optional<ErrorObject> errorObject =
-                tokenService.validateTokenRequestParams(URLUtils.serializeParameters(customParams));
-
-        assertThat(
-                errorObject,
-                equalTo(
-                        Optional.of(
-                                new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE,
-                                        "Request is missing client_id parameter"))));
     }
 
     @Test
@@ -470,8 +462,14 @@ public class TokenServiceTest {
 
     private String generateSerialisedPrivateKeyJWT(KeyPair keyPair, long expiryTime)
             throws JOSEException {
+        return generateSerialisedPrivateKeyJWT(keyPair, expiryTime, CLIENT_ID);
+    }
+
+    private String generateSerialisedPrivateKeyJWT(
+            KeyPair keyPair, long expiryTime, String clientId) throws JOSEException {
+
         JWTAuthenticationClaimsSet claimsSet =
-                new JWTAuthenticationClaimsSet(new ClientID(CLIENT_ID), new Audience(TOKEN_URI));
+                new JWTAuthenticationClaimsSet(new ClientID(clientId), new Audience(TOKEN_URI));
         claimsSet.getExpirationTime().setTime(expiryTime);
         PrivateKeyJWT privateKeyJWT =
                 new PrivateKeyJWT(

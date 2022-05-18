@@ -90,23 +90,29 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static Stream<Arguments> validVectorValues() {
         return Stream.of(
-                Arguments.of(Optional.of("Cl.Cm"), "Cl.Cm"),
-                Arguments.of(Optional.of("Cl"), "Cl"),
-                Arguments.of(Optional.of("P2.Cl.Cm"), "Cl.Cm"),
-                Arguments.of(Optional.of("P2.Cl"), "Cl"),
-                Arguments.of(Optional.empty(), "Cl.Cm"));
+                Arguments.of(Optional.of("Cl.Cm"), "Cl.Cm", Optional.of(CLIENT_ID)),
+                Arguments.of(Optional.of("Cl"), "Cl", Optional.of(CLIENT_ID)),
+                Arguments.of(Optional.of("P2.Cl.Cm"), "Cl.Cm", Optional.of(CLIENT_ID)),
+                Arguments.of(Optional.of("P2.Cl"), "Cl", Optional.of(CLIENT_ID)),
+                Arguments.of(Optional.empty(), "Cl.Cm", Optional.of(CLIENT_ID)),
+                Arguments.of(Optional.of("Cl.Cm"), "Cl.Cm", Optional.empty()),
+                Arguments.of(Optional.of("Cl"), "Cl", Optional.empty()),
+                Arguments.of(Optional.of("P2.Cl.Cm"), "Cl.Cm", Optional.empty()),
+                Arguments.of(Optional.of("P2.Cl"), "Cl", Optional.empty()),
+                Arguments.of(Optional.empty(), "Cl.Cm", Optional.empty()));
     }
 
     @ParameterizedTest
     @MethodSource("validVectorValues")
     void shouldCallTokenResourceAndReturnAccessAndRefreshToken(
-            Optional<String> vtr, String expectedVotClaim) throws Exception {
+            Optional<String> vtr, String expectedVotClaim, Optional<String> clientId)
+            throws Exception {
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
         setUpDynamo(keyPair, scope, new Subject());
-        var response = generateTokenRequest(keyPair, scope, vtr, Optional.empty());
+        var response = generateTokenRequest(keyPair, scope, vtr, Optional.empty(), clientId);
 
         assertThat(response, hasStatus(200));
         JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
@@ -139,7 +145,9 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
         setUpDynamo(keyPair, scope, new Subject());
-        var response = generateTokenRequest(keyPair, scope, Optional.empty(), Optional.empty());
+        var response =
+                generateTokenRequest(
+                        keyPair, scope, Optional.empty(), Optional.empty(), Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(200));
         JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
@@ -171,7 +179,9 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
         setUpDynamo(keyPair, scope, new Subject(), "pairwise");
-        var response = generateTokenRequest(keyPair, scope, Optional.empty(), Optional.empty());
+        var response =
+                generateTokenRequest(
+                        keyPair, scope, Optional.empty(), Optional.empty(), Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(200));
         JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
@@ -205,7 +215,11 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         setUpDynamo(keyPair, scope, new Subject());
         var response =
                 generateTokenRequest(
-                        keyPair, scope, Optional.of("P2.Cl.Cm"), Optional.of(oidcClaimsRequest));
+                        keyPair,
+                        scope,
+                        Optional.of("P2.Cl.Cm"),
+                        Optional.of(oidcClaimsRequest),
+                        Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(200));
         JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
@@ -242,7 +256,9 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         Scope scope = new Scope(OIDCScopeValue.OPENID.getValue());
         setUpDynamo(keyPair, scope, new Subject());
-        var response = generateTokenRequest(keyPair, scope, Optional.empty(), Optional.empty());
+        var response =
+                generateTokenRequest(
+                        keyPair, scope, Optional.empty(), Optional.empty(), Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(200));
         JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
@@ -378,7 +394,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             KeyPair keyPair,
             Scope scope,
             Optional<String> vtr,
-            Optional<OIDCClaimsRequest> oidcClaimsRequest)
+            Optional<OIDCClaimsRequest> oidcClaimsRequest,
+            Optional<String> clientId)
             throws JOSEException, JsonProcessingException {
         PrivateKey privateKey = keyPair.getPrivate();
         Date expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
@@ -405,7 +422,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
                 "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
-        customParams.put("client_id", Collections.singletonList(CLIENT_ID));
+        clientId.map(cid -> customParams.put("client_id", Collections.singletonList(cid)));
         customParams.put("code", Collections.singletonList(code));
         customParams.put("redirect_uri", Collections.singletonList(REDIRECT_URI));
         Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
