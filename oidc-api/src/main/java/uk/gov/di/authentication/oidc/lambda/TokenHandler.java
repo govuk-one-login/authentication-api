@@ -152,14 +152,11 @@ public class TokenHandler
                             String clientID;
                             ClientRegistry client;
                             try {
-                                if (requestBody.get("client_id") != null) {
-                                    clientID = requestBody.get("client_id");
-                                } else {
-                                    clientID =
-                                            tokenService
-                                                    .getClientIDFromPrivateKeyJWT(input.getBody())
-                                                    .orElseThrow();
-                                }
+                                clientID =
+                                        tokenService
+                                                .getClientIDFromPrivateKeyJWT(input.getBody())
+                                                .orElseThrow();
+
                                 attachLogFieldToLogs(CLIENT_ID, clientID);
                                 addAnnotation("client_id", clientID);
                                 client = clientService.getClient(clientID).orElseThrow();
@@ -214,7 +211,8 @@ public class TokenHandler
                                                         requestBody,
                                                         client.getScopes(),
                                                         new RefreshToken(
-                                                                requestBody.get("refresh_token"))));
+                                                                requestBody.get("refresh_token")),
+                                                        clientID));
                             }
                             AuthCodeExchangeData authCodeExchangeData;
                             try {
@@ -347,7 +345,8 @@ public class TokenHandler
     private APIGatewayProxyResponseEvent processRefreshTokenRequest(
             Map<String, String> requestBody,
             List<String> clientScopes,
-            RefreshToken currentRefreshToken) {
+            RefreshToken currentRefreshToken,
+            String clientId) {
         boolean refreshTokenSignatureValid =
                 tokenValidationService.validateRefreshTokenSignatureAndExpiry(currentRefreshToken);
         if (!refreshTokenSignatureValid) {
@@ -376,7 +375,6 @@ public class TokenHandler
             return generateApiGatewayProxyResponse(
                     400, OAuth2Error.INVALID_SCOPE.toJSONObject().toJSONString());
         }
-        String clientId = requestBody.get("client_id");
 
         String redisKey = REFRESH_TOKEN_PREFIX + jti;
         Optional<String> refreshToken =

@@ -8,6 +8,7 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.GrantType;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.TokenResponse;
@@ -73,6 +74,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -80,6 +82,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String TOKEN_ENDPOINT = "/token";
     private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String CLIENT_ID = "test-id";
+    private static final String DIFFERENT_CLIENT_ID = "different-test-id";
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final String REDIRECT_URI = "http://localhost/redirect";
 
@@ -136,6 +139,25 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 equalTo(expectedVotClaim));
 
         assertNoAuditEventsReceived(auditTopic);
+    }
+
+    @Test
+    void shouldCallTokenResourceAndReturn400WhenClientIdParameterDoesNotMatch() throws Exception {
+        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        Scope scope =
+                new Scope(
+                        OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
+        setUpDynamo(keyPair, scope, new Subject());
+        var response =
+                generateTokenRequest(
+                        keyPair,
+                        scope,
+                        Optional.of("Cl.Cm"),
+                        Optional.empty(),
+                        Optional.of(DIFFERENT_CLIENT_ID));
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasBody(OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString()));
     }
 
     @Test
