@@ -2,7 +2,7 @@ resource "aws_sqs_queue" "spot_request_queue" {
   count                     = var.ipv_api_enabled ? 1 : 0
   name                      = "${var.environment}-spot-request-queue"
   delay_seconds             = 10
-  max_message_size          = 2048
+  max_message_size          = 256000
   message_retention_seconds = 1209600
   receive_wait_time_seconds = 10
   redrive_policy = jsonencode({
@@ -159,4 +159,32 @@ resource "aws_kms_key" "spot_request_sqs_key" {
 resource "aws_kms_alias" "spot_request_sqs_key_alias" {
   name          = "alias/${var.environment}-spot-request-sqs-queue-encryption-key"
   target_key_id = aws_kms_key.spot_request_sqs_key.id
+}
+
+data "aws_iam_policy_document" "spot_queue_encryption_policy" {
+  version = "2012-10-17"
+
+  statement {
+    sid = "SpotQueueEncryption"
+
+    effect = "Allow"
+
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:GenerateDataKey"
+    ]
+
+    resources = [
+      aws_kms_key.spot_request_sqs_key.arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "spot_queue_encryption_policy" {
+  name_prefix = "spot-request-queue-kms-key-encryption-"
+  path        = "/${var.environment}/spot/"
+  description = "IAM policy for allowing encryption while writing to SPOT request queue"
+
+  policy = data.aws_iam_policy_document.spot_queue_encryption_policy.json
 }
