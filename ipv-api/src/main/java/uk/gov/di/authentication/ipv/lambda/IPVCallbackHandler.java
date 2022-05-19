@@ -326,7 +326,7 @@ public class IPVCallbackHandler
                                                         ResponseHeaders.LOCATION,
                                                         redirectURI.toString()));
                             } catch (NoSuchElementException e) {
-                                LOG.error("Session not found");
+                                LOG.error("Session not found", e);
                                 throw new RuntimeException("Session not found", e);
                             } catch (ParseException e) {
                                 LOG.info(
