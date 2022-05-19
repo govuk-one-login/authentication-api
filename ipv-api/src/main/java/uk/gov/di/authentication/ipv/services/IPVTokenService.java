@@ -99,7 +99,7 @@ public class IPVTokenService {
                 var userIdentityUserInfo = userIdentityResponse.toSuccessResponse().getUserInfo();
                 LOG.info(
                         "THIS NEEDS TO REMOVED. THIS IS FOR DEBUGGING PURPOSES: {}",
-                        userIdentityUserInfo);
+                        userIdentityUserInfo.toJSONObject().toJSONString());
                 return userIdentityUserInfo;
             }
         } catch (IOException | ParseException e) {
