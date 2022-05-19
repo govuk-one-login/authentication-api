@@ -82,6 +82,7 @@ public class UserInfoService {
     }
 
     private UserInfo populateDocAppUserInfo(AccessTokenInfo accessTokenInfo, UserInfo userInfo) {
+        LOG.info("Populating DocAppUserInfo");
         return dynamoDocAppService
                 .getDocAppCredential(accessTokenInfo.getSubject())
                 .map(

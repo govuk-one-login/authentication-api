@@ -136,6 +136,8 @@ public class StartHandler
                                                     .get()
                                                     .setDocAppSubjectId(
                                                             new Subject(docAppSubjectId)));
+                                    LOG.info(
+                                            "Subject saved to ClientSession for DocCheckingAppUser");
                                 }
 
                                 var startResponse =
