@@ -1,10 +1,12 @@
 resource "aws_sqs_queue" "spot_request_queue" {
-  count                     = var.ipv_api_enabled ? 1 : 0
-  name                      = "${var.environment}-spot-request-queue"
-  delay_seconds             = 10
-  max_message_size          = 256000
-  message_retention_seconds = 1209600
-  receive_wait_time_seconds = 10
+  count                      = var.ipv_api_enabled ? 1 : 0
+  name                       = "${var.environment}-spot-request-queue"
+  delay_seconds              = 10
+  max_message_size           = 256000
+  message_retention_seconds  = 1209600
+  receive_wait_time_seconds  = 10
+  visibility_timeout_seconds = 60
+
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.spot_request_dead_letter_queue[0].arn
     maxReceiveCount     = 3
@@ -23,8 +25,7 @@ resource "aws_sqs_queue" "spot_request_dead_letter_queue" {
   kms_master_key_id                 = var.use_localstack ? null : aws_kms_key.spot_request_sqs_key.id
   kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
 
-  message_retention_seconds  = 3600 * 6
-  visibility_timeout_seconds = 60
+  message_retention_seconds = 3600 * 6
 
   tags = local.default_tags
 }
