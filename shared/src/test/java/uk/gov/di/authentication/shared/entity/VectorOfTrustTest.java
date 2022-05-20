@@ -183,4 +183,13 @@ class VectorOfTrustTest {
                         Collections.singletonList(jsonArrayOf(vectorString)));
         assertFalse(vectorOfTrust.containsLevelOfConfidence());
     }
+
+    @Test
+    void shouldReturnFalseWhenIdentityLevelOfConfidenceIsP0() {
+        String vectorString = "P0.Cl.Cm";
+        VectorOfTrust vectorOfTrust =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        Collections.singletonList(jsonArrayOf(vectorString)));
+        assertFalse(vectorOfTrust.containsLevelOfConfidence());
+    }
 }

@@ -17,6 +17,8 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.lambda.StartHandler;
@@ -34,6 +36,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -60,18 +63,33 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         handler = new StartHandler(TEST_CONFIGURATION_SERVICE);
     }
 
+    private static Stream<Arguments> successfulRequests() {
+        return Stream.of(
+                Arguments.of(Map.of(), false, false),
+                Arguments.of(Map.of(), false, true),
+                Arguments.of(Map.of("vtr", "[\"P0.Cl.Cm\"]"), false, false),
+                Arguments.of(Map.of("vtr", "[\"P2.Cl.Cm\"]"), true, false));
+    }
+
     @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    void shouldReturn200AndStartResponse(boolean isAuthenticated) throws IOException {
+    @MethodSource("successfulRequests")
+    void shouldReturn200AndStartResponse(
+            Map<String, String> customAuthParameters,
+            boolean identityRequired,
+            boolean isAuthenticated)
+            throws IOException {
         String sessionId = redis.createSession(isAuthenticated);
+
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
-        AuthenticationRequest authRequest =
+        var builder =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
                         .nonce(new Nonce())
-                        .state(new State())
-                        .build();
+                        .state(new State());
+        customAuthParameters.forEach(builder::customParameter);
+        var authRequest = builder.build();
+
         redis.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
 
         registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
@@ -87,7 +105,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         StartResponse startResponse =
                 objectMapper.readValue(response.getBody(), StartResponse.class);
 
-        assertThat(startResponse.getUser().isIdentityRequired(), equalTo(false));
+        assertThat(startResponse.getUser().isIdentityRequired(), equalTo(identityRequired));
         assertThat(startResponse.getUser().isConsentRequired(), equalTo(true));
         assertThat(startResponse.getUser().isUpliftRequired(), equalTo(false));
         assertThat(startResponse.getClient().getClientName(), equalTo(TEST_CLIENT_NAME));
@@ -172,7 +190,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "https://test.com",
                 "public",
                 true,
-                clientType);
+                clientType,
+                true);
     }
 
     private SignedJWT createSignedJWT(KeyPair keyPair) throws JOSEException {

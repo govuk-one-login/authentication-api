@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
+
 public class IdentityHelper {
 
     private IdentityHelper() {}
@@ -26,6 +28,7 @@ public class IdentityHelper {
         }
         List<String> vtr = authRequest.getCustomParameter("vtr");
         VectorOfTrust vectorOfTrust = VectorOfTrust.parseFromAuthRequestAttribute(vtr);
-        return Objects.nonNull(vectorOfTrust.getLevelOfConfidence());
+        return Objects.nonNull(vectorOfTrust.getLevelOfConfidence())
+                && !(vectorOfTrust.getLevelOfConfidence().equals(NONE));
     }
 }

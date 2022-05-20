@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 
+import static java.util.Objects.nonNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
@@ -23,8 +24,22 @@ class IdentityHelperTest {
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
 
     @Test
+    void shouldReturnFalseWhenVtrNotPresentInAuthRequest() {
+        var authRequest = createAuthRequest();
+
+        assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), true));
+    }
+
+    @Test
     void shouldReturnFalseWhenNoLevelOfConfidenceIsPresentInAuthRequest() {
         var authRequest = createAuthRequest("Cl.Cm");
+
+        assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), true));
+    }
+
+    @Test
+    void shouldReturnFalseWhenP0LevelOfConfidenceIsPresentInAuthRequest() {
+        var authRequest = createAuthRequest("P0.Cl.Cm");
 
         assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), true));
     }
@@ -43,12 +58,21 @@ class IdentityHelperTest {
         assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), false));
     }
 
+    private AuthenticationRequest createAuthRequest() {
+        return createAuthRequest(null);
+    }
+
     private AuthenticationRequest createAuthRequest(String vtrValue) {
-        return new AuthenticationRequest.Builder(
-                        new ResponseType(ResponseType.Value.CODE), SCOPES, CLIENT_ID, REDIRECT_URI)
-                .state(new State())
-                .nonce(new Nonce())
-                .customParameter("vtr", jsonArrayOf(vtrValue))
-                .build();
+        var builder =
+                new AuthenticationRequest.Builder(
+                                new ResponseType(ResponseType.Value.CODE),
+                                SCOPES,
+                                CLIENT_ID,
+                                REDIRECT_URI)
+                        .state(new State())
+                        .nonce(new Nonce());
+
+        if (nonNull(vtrValue)) builder.customParameter("vtr", jsonArrayOf(vtrValue));
+        return builder.build();
     }
 }
