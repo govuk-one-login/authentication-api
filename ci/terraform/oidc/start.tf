@@ -30,6 +30,7 @@ module "start" {
     ENVIRONMENT              = var.environment
     DYNAMO_ENDPOINT          = var.use_localstack ? var.lambda_dynamo_endpoint : null
     HEADERS_CASE_INSENSITIVE = var.use_localstack ? "true" : "false"
+    IDENTITY_ENABLED         = var.ipv_api_enabled
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.StartHandler::handleRequest"
 
