@@ -232,12 +232,11 @@ public class AuthCodeHandler
                                                 authenticationRequest.getClientID().getValue()));
 
                                 if (!docCheckingUser) {
-                                    LOG.info(
-                                            "isDocCheckingAppUserWithSubjectId => authenticated = false");
+                                    sessionService.save(
+                                            session.setAuthenticated(true).setNewAccount(EXISTING));
+                                } else {
+                                    LOG.info("Session not saved for DocCheckingAppUser");
                                 }
-                                sessionService.save(
-                                        session.setAuthenticated(!docCheckingUser)
-                                                .setNewAccount(EXISTING));
 
                                 auditService.submitAuditEvent(
                                         OidcAuditableEvent.AUTH_CODE_ISSUED,
