@@ -74,7 +74,10 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @ParameterizedTest
     @MethodSource("successfulRequests")
     void shouldReturn200AndStartResponse(
-            Map<String, String> customAuthParameters, boolean identityRequired, boolean isAuthenticated) throws IOException {
+            Map<String, String> customAuthParameters,
+            boolean identityRequired,
+            boolean isAuthenticated)
+            throws IOException {
         String sessionId = redis.createSession(isAuthenticated);
 
         Scope scope = new Scope();
