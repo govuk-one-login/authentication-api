@@ -83,6 +83,7 @@ class StartHandlerTest {
 
     @BeforeEach
     void beforeEach() {
+        when(configurationService.isIdentityEnabled()).thenReturn(true);
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(sessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(new Session("session-id")));
@@ -116,7 +117,7 @@ class StartHandlerTest {
         when(startService.getGATrackingId(anyMap())).thenReturn(gaTrackingId);
         when(startService.getCookieConsentValue(anyMap(), anyString()))
                 .thenReturn(cookieConsentValue);
-        when(startService.buildUserStartInfo(userContext, cookieConsentValue, gaTrackingId))
+        when(startService.buildUserStartInfo(userContext, cookieConsentValue, gaTrackingId, true))
                 .thenReturn(userStartInfo);
         usingValidClientSession();
         usingValidSession();
@@ -185,7 +186,8 @@ class StartHandlerTest {
                                 REDIRECT_URL));
         when(startService.getGATrackingId(anyMap())).thenReturn(null);
         when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
-        when(startService.buildUserStartInfo(userContext, null, null)).thenReturn(userStartInfo);
+        when(startService.buildUserStartInfo(userContext, null, null, true))
+                .thenReturn(userStartInfo);
         usingValidClientSession();
         usingValidSession();
 

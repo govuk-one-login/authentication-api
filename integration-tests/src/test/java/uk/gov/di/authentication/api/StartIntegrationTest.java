@@ -60,7 +60,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        handler = new StartHandler(TEST_CONFIGURATION_SERVICE);
+        handler = new StartHandler(new TestConfigurationService());
     }
 
     private static Stream<Arguments> successfulRequests() {
@@ -212,5 +212,24 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var signer = new RSASSASigner(keyPair.getPrivate());
         signedJWT.sign(signer);
         return signedJWT;
+    }
+
+    protected static class TestConfigurationService extends IntegrationTestConfigurationService {
+
+        @Override
+        public boolean isIdentityEnabled() {
+            return true;
+        }
+
+        public TestConfigurationService() {
+            super(
+                    auditTopic,
+                    notificationsQueue,
+                    auditSigningKey,
+                    tokenSigner,
+                    ipvPrivateKeyJwtSigner,
+                    spotQueue,
+                    docAppPrivateKeyJwtSigner);
+        }
     }
 }

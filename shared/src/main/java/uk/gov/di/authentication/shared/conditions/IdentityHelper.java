@@ -16,8 +16,9 @@ public class IdentityHelper {
 
     public static boolean identityRequired(
             Map<String, List<String>> authRequestParams,
-            boolean clientSupportsIdentityVerification) {
-        if (!clientSupportsIdentityVerification) {
+            boolean clientSupportsIdentityVerification,
+            boolean identityEnabled) {
+        if (!clientSupportsIdentityVerification || !identityEnabled) {
             return false;
         }
         AuthenticationRequest authRequest;
