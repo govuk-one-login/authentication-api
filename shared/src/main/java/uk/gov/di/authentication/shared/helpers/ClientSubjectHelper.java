@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 public class ClientSubjectHelper {
 
     private static final Logger LOG = LogManager.getLogger(ClientSubjectHelper.class);
-    private static final String PAIRWISE_PREFIX = "urn:uuid:";
+    private static final String PAIRWISE_PREFIX = "urn:fdc:gov.uk:2022:";
 
     public static Subject getSubject(
             UserProfile userProfile,
