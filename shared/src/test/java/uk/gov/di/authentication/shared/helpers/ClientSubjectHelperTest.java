@@ -118,7 +118,7 @@ class ClientSubjectHelperTest {
         var subject =
                 ClientSubjectHelper.getSubject(userProfile, clientRegistry1, authenticationService);
 
-        assertTrue(subject.getValue().startsWith("urn:uuid:"));
+        assertTrue(subject.getValue().startsWith("urn:fdc:gov.uk:2022:"));
     }
 
     @Test
@@ -134,7 +134,7 @@ class ClientSubjectHelperTest {
         var subject =
                 ClientSubjectHelper.getSubject(userProfile, clientRegistry1, authenticationService);
 
-        assertFalse(subject.getValue().startsWith("urn:uuid:"));
+        assertFalse(subject.getValue().startsWith("urn:fdc:gov.uk:2022:"));
     }
 
     @Test

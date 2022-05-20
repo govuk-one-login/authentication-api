@@ -3,6 +3,7 @@ package uk.gov.di.authentication.shared.helpers;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jose4j.base64url.Base64Url;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -16,7 +17,7 @@ import java.util.stream.Collectors;
 public class ClientSubjectHelper {
 
     private static final Logger LOG = LogManager.getLogger(ClientSubjectHelper.class);
-    private static final String PAIRWISE_PREFIX = "urn:uuid:";
+    private static final String PAIRWISE_PREFIX = "urn:fdc:gov.uk:2022:";
 
     public static Subject getSubject(
             UserProfile userProfile,
@@ -95,10 +96,7 @@ public class ClientSubjectHelper {
 
             byte[] bytes = md.digest(salt);
 
-            var sb = new StringBuilder();
-            for (byte aByte : bytes) {
-                sb.append(Integer.toString((aByte & 0xff) + 0x100, 16).substring(1));
-            }
+            var sb = Base64Url.encode(bytes);
 
             return PAIRWISE_PREFIX + sb;
         } catch (NoSuchAlgorithmException e) {
