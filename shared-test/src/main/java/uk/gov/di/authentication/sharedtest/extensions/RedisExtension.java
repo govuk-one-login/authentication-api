@@ -53,7 +53,11 @@ public class RedisExtension
     }
 
     public String createSession(String sessionId) throws IOException {
-        Session session = new Session(sessionId);
+        return createSession(sessionId, false);
+    }
+
+    private String createSession(String sessionId, boolean isAuthenticated) throws IOException {
+        Session session = new Session(sessionId).setAuthenticated(isAuthenticated);
         redis.saveWithExpiry(
                 session.getSessionId(), objectMapper.writeValueAsString(session), 3600);
         return session.getSessionId();
@@ -61,6 +65,10 @@ public class RedisExtension
 
     public String createSession() throws IOException {
         return createSession(IdGenerator.generate());
+    }
+
+    public String createSession(boolean isAuthenticated) throws IOException {
+        return createSession(IdGenerator.generate(), isAuthenticated);
     }
 
     public void addDocAppSubjectIdToClientSession(Subject subject, String clientSessionId)

@@ -110,7 +110,8 @@ class StartServiceTest {
             boolean isDocCheckingAppUser,
             ClientType clientType,
             SignedJWT signedJWT,
-            boolean rpSupportsIdentity) {
+            boolean rpSupportsIdentity,
+            boolean isAuthenticated) {
         var userContext =
                 buildUserContext(
                         vtr,
@@ -118,7 +119,8 @@ class StartServiceTest {
                         true,
                         clientType,
                         signedJWT,
-                        rpSupportsIdentity);
+                        rpSupportsIdentity,
+                        isAuthenticated);
         var userStartInfo =
                 startService.buildUserStartInfo(userContext, cookieConsent, gaTrackingId);
 
@@ -128,6 +130,11 @@ class StartServiceTest {
         assertThat(userStartInfo.getCookieConsent(), equalTo(cookieConsent));
         assertThat(userStartInfo.getGaCrossDomainTrackingId(), equalTo(gaTrackingId));
         assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(isDocCheckingAppUser));
+        if (isDocCheckingAppUser) {
+            assertThat(userStartInfo.isAuthenticated(), equalTo(false));
+        } else {
+            assertThat(userStartInfo.isAuthenticated(), equalTo(isAuthenticated));
+        }
     }
 
     @ParameterizedTest
@@ -142,6 +149,7 @@ class StartServiceTest {
                         cookieConsentShared,
                         clientType,
                         signedJWT,
+                        false,
                         false);
 
         var clientStartInfo = startService.buildClientStartInfo(userContext);
@@ -246,6 +254,7 @@ class StartServiceTest {
                         false,
                         ClientType.WEB,
                         null,
+                        false,
                         false),
                 Arguments.of(
                         jsonArrayOf("P2.Cl.Cm"),
@@ -258,6 +267,46 @@ class StartServiceTest {
                         false,
                         ClientType.WEB,
                         null,
+                        true,
+                        false),
+                Arguments.of(
+                        jsonArrayOf("P2.Cl.Cm"),
+                        false,
+                        false,
+                        false,
+                        false,
+                        null,
+                        "some-ga-tracking-id",
+                        true,
+                        ClientType.APP,
+                        generateSignedJWT(),
+                        false,
+                        false),
+                Arguments.of(
+                        jsonArrayOf("P2.Cl.Cm"),
+                        false,
+                        false,
+                        true,
+                        true,
+                        null,
+                        "some-ga-tracking-id",
+                        false,
+                        ClientType.WEB,
+                        null,
+                        false,
+                        false),
+                Arguments.of(
+                        jsonArrayOf("Cl.Cm"),
+                        false,
+                        false,
+                        false,
+                        false,
+                        "some-cookie-consent",
+                        null,
+                        false,
+                        ClientType.WEB,
+                        null,
+                        false,
                         true),
                 Arguments.of(
                         jsonArrayOf("P2.Cl.Cm"),
@@ -270,19 +319,8 @@ class StartServiceTest {
                         true,
                         ClientType.APP,
                         generateSignedJWT(),
-                        false),
-                Arguments.of(
-                        jsonArrayOf("P2.Cl.Cm"),
                         false,
-                        false,
-                        true,
-                        true,
-                        null,
-                        "some-ga-tracking-id",
-                        false,
-                        ClientType.WEB,
-                        null,
-                        false));
+                        true));
     }
 
     private static Stream<Arguments> clientStartInfo()
@@ -310,7 +348,8 @@ class StartServiceTest {
             boolean cookieConsentShared,
             ClientType clientType,
             SignedJWT requestObject,
-            boolean identityVerificationSupport) {
+            boolean identityVerificationSupport,
+            boolean isAuthenticated) {
         AuthorizationRequest authRequest;
         if (Objects.nonNull(requestObject)) {
             authRequest =
@@ -343,7 +382,7 @@ class StartServiceTest {
                         .setCookieConsentShared(cookieConsentShared)
                         .setClientType(clientType.getValue())
                         .setIdentityVerificationSupported(identityVerificationSupport);
-        return UserContext.builder(SESSION)
+        return UserContext.builder(SESSION.setAuthenticated(isAuthenticated))
                 .withClientSession(clientSession)
                 .withClient(clientRegistry)
                 .build();
