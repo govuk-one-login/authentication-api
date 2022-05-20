@@ -23,6 +23,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ClientType;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -36,6 +37,7 @@ import java.net.URI;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -97,44 +99,124 @@ class StartServiceTest {
         assertThat(userContext.getClientSession(), equalTo(clientSession));
     }
 
+    private static Stream<Arguments> userStartInfo() {
+        return Stream.of(
+                Arguments.of(jsonArrayOf("Cl"), "some-cookie-consent", null, false, false),
+                Arguments.of(jsonArrayOf("Cl.Cm"), null, "ga-tracking-id", false, true));
+    }
+
     @ParameterizedTest
     @MethodSource("userStartInfo")
     void shouldCreateUserStartInfo(
             String vtr,
-            boolean isIdentityRequired,
-            boolean isUpliftRequired,
-            boolean clientConsentRequired,
-            boolean isConsentRequired,
             String cookieConsent,
             String gaTrackingId,
-            boolean isDocCheckingAppUser,
-            ClientType clientType,
-            SignedJWT signedJWT,
             boolean rpSupportsIdentity,
             boolean isAuthenticated) {
         var userContext =
                 buildUserContext(
                         vtr,
-                        clientConsentRequired,
+                        false,
                         true,
-                        clientType,
-                        signedJWT,
+                        ClientType.WEB,
+                        null,
                         rpSupportsIdentity,
                         isAuthenticated);
         var userStartInfo =
                 startService.buildUserStartInfo(userContext, cookieConsent, gaTrackingId);
 
-        assertThat(userStartInfo.isUpliftRequired(), equalTo(isUpliftRequired));
-        assertThat(userStartInfo.isIdentityRequired(), equalTo(isIdentityRequired));
-        assertThat(userStartInfo.isConsentRequired(), equalTo(isConsentRequired));
+        assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
+        assertThat(userStartInfo.isIdentityRequired(), equalTo(false));
+        assertThat(userStartInfo.isConsentRequired(), equalTo(false));
         assertThat(userStartInfo.getCookieConsent(), equalTo(cookieConsent));
         assertThat(userStartInfo.getGaCrossDomainTrackingId(), equalTo(gaTrackingId));
-        assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(isDocCheckingAppUser));
-        if (isDocCheckingAppUser) {
-            assertThat(userStartInfo.isAuthenticated(), equalTo(false));
-        } else {
-            assertThat(userStartInfo.isAuthenticated(), equalTo(isAuthenticated));
-        }
+        assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(false));
+        assertThat(userStartInfo.isAuthenticated(), equalTo(isAuthenticated));
+    }
+
+    private static Stream<Arguments> userStartIdentityInfo() {
+        return Stream.of(
+                Arguments.of(jsonArrayOf("P2.Cl.Cm"), true, true),
+                Arguments.of(jsonArrayOf("Cl.Cm"), false, true),
+                Arguments.of(jsonArrayOf("P2.Cl.Cm"), false, false));
+    }
+
+    @ParameterizedTest
+    @MethodSource("userStartIdentityInfo")
+    void shouldCreateUserStartInfoWithCorrectIdentityRequiredValue(
+            String vtr, boolean expectedIdentityRequiredValue, boolean rpSupportsIdentity) {
+        var userContext =
+                buildUserContext(vtr, false, true, ClientType.WEB, null, rpSupportsIdentity, false);
+        var userStartInfo =
+                startService.buildUserStartInfo(
+                        userContext, "some-cookie-consent", "some-ga-tracking-id");
+
+        assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
+        assertThat(userStartInfo.isIdentityRequired(), equalTo(expectedIdentityRequiredValue));
+        assertThat(userStartInfo.isConsentRequired(), equalTo(false));
+        assertThat(userStartInfo.getCookieConsent(), equalTo("some-cookie-consent"));
+        assertThat(userStartInfo.getGaCrossDomainTrackingId(), equalTo("some-ga-tracking-id"));
+        assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(false));
+    }
+
+    private static Stream<Boolean> userStartDocAppInfo() {
+        return Stream.of(true, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("userStartDocAppInfo")
+    void shouldCreateUserStartInfoWithCorrectDocCheckingAppUserValue(boolean isAuthenticated)
+            throws NoSuchAlgorithmException, JOSEException {
+        var userContext =
+                buildUserContext(
+                        null,
+                        false,
+                        false,
+                        ClientType.APP,
+                        generateSignedJWT(),
+                        true,
+                        isAuthenticated);
+        var userStartInfo =
+                startService.buildUserStartInfo(
+                        userContext, "some-cookie-consent", "some-ga-tracking-id");
+
+        assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
+        assertThat(userStartInfo.isIdentityRequired(), equalTo(false));
+        assertThat(userStartInfo.isAuthenticated(), equalTo(false));
+        assertThat(userStartInfo.isConsentRequired(), equalTo(false));
+        assertThat(userStartInfo.getCookieConsent(), equalTo("some-cookie-consent"));
+        assertThat(userStartInfo.getGaCrossDomainTrackingId(), equalTo("some-ga-tracking-id"));
+        assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(true));
+    }
+
+    private static Stream<Arguments> userStartUpliftInfo() {
+        return Stream.of(
+                Arguments.of(jsonArrayOf("Cl.Cm"), false, CredentialTrustLevel.LOW_LEVEL, true),
+                Arguments.of(jsonArrayOf("Cl"), false, CredentialTrustLevel.LOW_LEVEL, false),
+                Arguments.of(jsonArrayOf("Cl.Cm"), false, CredentialTrustLevel.MEDIUM_LEVEL, false),
+                Arguments.of(
+                        jsonArrayOf("P2.Cl.Cm"), true, CredentialTrustLevel.MEDIUM_LEVEL, false));
+    }
+
+    @ParameterizedTest
+    @MethodSource("userStartUpliftInfo")
+    void shouldCreateUserStartInfoWithCorrectUpliftRequiredValue(
+            String vtr,
+            boolean expectedIdentityRequiredValue,
+            CredentialTrustLevel credentialTrustLevel,
+            boolean expectedUpliftRequiredValue) {
+        var userContext = buildUserContext(vtr, false, true, ClientType.WEB, null, true, false);
+        userContext.getSession().setCurrentCredentialStrength(credentialTrustLevel);
+        var userStartInfo =
+                startService.buildUserStartInfo(
+                        userContext, "some-cookie-consent", "some-ga-tracking-id");
+
+        assertThat(userStartInfo.isUpliftRequired(), equalTo(expectedUpliftRequiredValue));
+        assertThat(userStartInfo.isIdentityRequired(), equalTo(expectedIdentityRequiredValue));
+        assertThat(userStartInfo.isConsentRequired(), equalTo(false));
+        assertThat(userStartInfo.getCookieConsent(), equalTo("some-cookie-consent"));
+        assertThat(userStartInfo.getGaCrossDomainTrackingId(), equalTo("some-ga-tracking-id"));
+        assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(false));
     }
 
     @ParameterizedTest
@@ -240,89 +322,6 @@ class StartServiceTest {
                 Arguments.of("some-value", true, null));
     }
 
-    private static Stream<Arguments> userStartInfo()
-            throws NoSuchAlgorithmException, JOSEException {
-        return Stream.of(
-                Arguments.of(
-                        jsonArrayOf("Cl.Cm"),
-                        false,
-                        false,
-                        false,
-                        false,
-                        "some-cookie-consent",
-                        null,
-                        false,
-                        ClientType.WEB,
-                        null,
-                        false,
-                        false),
-                Arguments.of(
-                        jsonArrayOf("P2.Cl.Cm"),
-                        true,
-                        false,
-                        true,
-                        true,
-                        null,
-                        "some-ga-tracking-id",
-                        false,
-                        ClientType.WEB,
-                        null,
-                        true,
-                        false),
-                Arguments.of(
-                        jsonArrayOf("P2.Cl.Cm"),
-                        false,
-                        false,
-                        false,
-                        false,
-                        null,
-                        "some-ga-tracking-id",
-                        true,
-                        ClientType.APP,
-                        generateSignedJWT(),
-                        false,
-                        false),
-                Arguments.of(
-                        jsonArrayOf("P2.Cl.Cm"),
-                        false,
-                        false,
-                        true,
-                        true,
-                        null,
-                        "some-ga-tracking-id",
-                        false,
-                        ClientType.WEB,
-                        null,
-                        false,
-                        false),
-                Arguments.of(
-                        jsonArrayOf("Cl.Cm"),
-                        false,
-                        false,
-                        false,
-                        false,
-                        "some-cookie-consent",
-                        null,
-                        false,
-                        ClientType.WEB,
-                        null,
-                        false,
-                        true),
-                Arguments.of(
-                        jsonArrayOf("P2.Cl.Cm"),
-                        false,
-                        false,
-                        false,
-                        false,
-                        null,
-                        "some-ga-tracking-id",
-                        true,
-                        ClientType.APP,
-                        generateSignedJWT(),
-                        false,
-                        true));
-    }
-
     private static Stream<Arguments> clientStartInfo()
             throws NoSuchAlgorithmException, JOSEException {
         return Stream.of(
@@ -351,6 +350,7 @@ class StartServiceTest {
             boolean identityVerificationSupport,
             boolean isAuthenticated) {
         AuthorizationRequest authRequest;
+        var clientSessionVTR = VectorOfTrust.getDefaults();
         if (Objects.nonNull(requestObject)) {
             authRequest =
                     new AuthorizationRequest.Builder(
@@ -358,6 +358,9 @@ class StartServiceTest {
                             .requestObject(requestObject)
                             .build();
         } else {
+            clientSessionVTR =
+                    VectorOfTrust.parseFromAuthRequestAttribute(
+                            Collections.singletonList(vtrValue));
             authRequest =
                     new AuthenticationRequest.Builder(
                                     new ResponseType(ResponseType.Value.CODE),
@@ -371,9 +374,7 @@ class StartServiceTest {
         }
         var clientSession =
                 new ClientSession(
-                        authRequest.toParameters(),
-                        LocalDateTime.now(),
-                        VectorOfTrust.getDefaults());
+                        authRequest.toParameters(), LocalDateTime.now(), clientSessionVTR);
         var clientRegistry =
                 new ClientRegistry()
                         .setClientID(CLIENT_ID.getValue())
