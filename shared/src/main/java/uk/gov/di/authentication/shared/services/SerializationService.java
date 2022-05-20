@@ -3,6 +3,9 @@ package uk.gov.di.authentication.shared.services;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -15,6 +18,7 @@ public class SerializationService implements Json {
     private static Logger LOG = LogManager.getLogger(SerializationService.class);
 
     private final Gson gson;
+    private final Validator validator;
 
     public SerializationService() {
         gson =
@@ -23,11 +27,20 @@ public class SerializationService implements Json {
                         .serializeNulls()
                         .excludeFieldsWithoutExposeAnnotation()
                         .create();
+
+        validator = Validation.buildDefaultValidatorFactory().getValidator();
     }
 
     @Override
-    public <T> T readValue(String jsonString, Class<T> clazz) {
-        return gson.fromJson(jsonString, clazz);
+    public <T> T readValue(String jsonString, Class<T> clazz) throws JsonException {
+        T value = gson.fromJson(jsonString, clazz);
+        var violations = validator.validate(value);
+        if (violations.isEmpty()) {
+            return value;
+        }
+        violations.forEach(v -> LOG.warn("Json validation violation: {}", v.getMessage()));
+        throw new JsonException(
+                new ConstraintViolationException("JSON validation error", violations));
     }
 
     @Override
