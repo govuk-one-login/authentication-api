@@ -173,9 +173,6 @@ public class TokenHandler
                                                     () -> {
                                                         LOG.error(
                                                                 "Application was not configured with baseURL");
-                                                        // TODO - We need to come up with a strategy
-                                                        // to handle uncaught
-                                                        // exceptions
                                                         return new RuntimeException(
                                                                 "Application was not configured with baseURL");
                                                     });

@@ -96,11 +96,7 @@ public class IPVTokenService {
                 LOG.error("Response from user-identity does not indicate success");
                 throw new RuntimeException(userIdentityResponse.toErrorResponse().toString());
             } else {
-                var userIdentityUserInfo = userIdentityResponse.toSuccessResponse().getUserInfo();
-                LOG.info(
-                        "THIS NEEDS TO REMOVED. THIS IS FOR DEBUGGING PURPOSES: {}",
-                        userIdentityUserInfo.toJSONObject().toJSONString());
-                return userIdentityUserInfo;
+                return userIdentityResponse.toSuccessResponse().getUserInfo();
             }
         } catch (IOException | ParseException e) {
             LOG.error("Error when attempting to call IPV user-identity endpoint", e);
