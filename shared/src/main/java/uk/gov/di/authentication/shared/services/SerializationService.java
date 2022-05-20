@@ -11,6 +11,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.serialization.Json;
 
 import static java.util.Objects.isNull;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class SerializationService implements Json {
 
@@ -33,8 +34,14 @@ public class SerializationService implements Json {
 
     @Override
     public <T> T readValue(String jsonString, Class<T> clazz) throws JsonException {
-        T value = gson.fromJson(jsonString, clazz);
-        var violations = validator.validate(value);
+        T value =
+                segmentedFunctionCall(
+                        "SerializationService::GSON::fromJson",
+                        () -> gson.fromJson(jsonString, clazz));
+        var violations =
+                segmentedFunctionCall(
+                        "SerializationService::validator::validate",
+                        () -> validator.validate(value));
         if (violations.isEmpty()) {
             return value;
         }
@@ -45,7 +52,8 @@ public class SerializationService implements Json {
 
     @Override
     public String writeValueAsString(Object object) {
-        return gson.toJson(object);
+        return segmentedFunctionCall(
+                "SerializationService::GSON::toJson", () -> gson.toJson(object));
     }
 
     public static SerializationService getInstance() {
