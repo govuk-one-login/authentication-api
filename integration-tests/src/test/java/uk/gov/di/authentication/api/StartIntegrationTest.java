@@ -16,6 +16,8 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.lambda.StartHandler;
 import uk.gov.di.authentication.shared.entity.ClientType;
@@ -58,9 +60,10 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         handler = new StartHandler(TEST_CONFIGURATION_SERVICE);
     }
 
-    @Test
-    void shouldReturn200AndStartResponse() throws IOException {
-        String sessionId = redis.createSession();
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void shouldReturn200AndStartResponse(boolean isAuthenticated) throws IOException {
+        String sessionId = redis.createSession(isAuthenticated);
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         AuthenticationRequest authRequest =
@@ -70,7 +73,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .state(new State())
                         .build();
         redis.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
-        redis.createSession(sessionId);
 
         registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
 
@@ -95,6 +97,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(startResponse.getClient().getRedirectUri(), equalTo(REDIRECT_URI));
         assertThat(startResponse.getUser().getCookieConsent(), equalTo(null));
         assertThat(startResponse.getUser().getGaCrossDomainTrackingId(), equalTo(null));
+        assertThat(startResponse.getUser().isAuthenticated(), equalTo(isAuthenticated));
 
         assertEventTypesReceived(auditTopic, List.of(START_INFO_FOUND));
     }
@@ -109,17 +112,18 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertNoAuditEventsReceived(auditTopic);
     }
 
-    @Test
-    void shouldReturn200WhenUserIsADocCheckingAppUser() throws IOException, JOSEException {
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void shouldReturn200WhenUserIsADocCheckingAppUser(boolean isAuthenticated)
+            throws IOException, JOSEException {
         var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-        var sessionId = redis.createSession();
+        var sessionId = redis.createSession(isAuthenticated);
         var scope = new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
         var authRequest =
                 new AuthorizationRequest.Builder(ResponseType.CODE, new ClientID(CLIENT_ID))
                         .requestObject(createSignedJWT(keyPair))
                         .build();
         redis.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
-        redis.createSession(sessionId);
 
         registerClient(keyPair, ClientType.APP);
 
@@ -133,6 +137,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var startResponse = objectMapper.readValue(response.getBody(), StartResponse.class);
 
+        assertFalse(startResponse.getUser().isAuthenticated());
         assertFalse(startResponse.getUser().isIdentityRequired());
         assertFalse(startResponse.getUser().isConsentRequired());
         assertFalse(startResponse.getUser().isUpliftRequired());

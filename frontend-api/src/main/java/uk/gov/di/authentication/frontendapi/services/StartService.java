@@ -131,7 +131,7 @@ public class StartService {
                 consentRequired,
                 uplift,
                 identityRequired,
-                userContext.getSession().isAuthenticated(),
+                docCheckingAppUser ? false : userContext.getSession().isAuthenticated(),
                 cookieConsent,
                 gaTrackingId,
                 docCheckingAppUser);
