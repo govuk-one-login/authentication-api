@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public enum LevelOfConfidence {
+    NONE("P0", true),
     LOW_LEVEL("P1", false),
     MEDIUM_LEVEL("P2", true),
     HIGH_LEVEL("P3", false),
