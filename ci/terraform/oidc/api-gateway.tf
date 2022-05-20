@@ -133,6 +133,7 @@ resource "aws_api_gateway_deployment" "deployment" {
       module.ipv-capacity.method_trigger_value,
       var.doc_app_api_enabled ? module.doc-app-callback[0].integration_trigger_value : null,
       var.doc_app_api_enabled ? module.doc-app-callback[0].method_trigger_value : null,
+      var.use_robots_txt ? aws_api_gateway_integration_response.robots_txt_integration_response[0] : null,
     ]))
   }
 
@@ -414,5 +415,83 @@ resource "aws_wafv2_web_acl_logging_configuration" "waf_logging_config_oidc_api"
   }
   depends_on = [
     aws_cloudwatch_log_group.oidc_waf_logs
+  ]
+}
+
+resource "aws_api_gateway_resource" "robots_txt_resource" {
+  count       = var.use_robots_txt ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
+  path_part   = "robots.txt"
+}
+
+resource "aws_api_gateway_method" "robots_txt_method" {
+  count       = var.use_robots_txt ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.robots_txt_resource[0].id
+  http_method = "GET"
+
+  depends_on = [
+    aws_api_gateway_resource.robots_txt_resource
+  ]
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "robots_txt_integration" {
+  count       = var.use_robots_txt ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.robots_txt_resource[0].id
+  http_method = aws_api_gateway_method.robots_txt_method[0].http_method
+
+  integration_http_method = "GET"
+  type                    = "MOCK"
+
+  request_templates = {
+    "application/json" = jsonencode(
+      {
+        statusCode = 200
+      }
+    )
+  }
+
+  depends_on = [
+    aws_api_gateway_resource.robots_txt_resource,
+    aws_api_gateway_method.robots_txt_method,
+  ]
+}
+
+resource "aws_api_gateway_method_response" "robots_txt_method_response" {
+  count       = var.use_robots_txt ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.robots_txt_resource[0].id
+  http_method = aws_api_gateway_method.robots_txt_method[0].http_method
+  status_code = 200
+  response_models = {
+    "text/plain" = "Empty"
+  }
+  depends_on = [
+    aws_api_gateway_resource.robots_txt_resource,
+    aws_api_gateway_method.robots_txt_method,
+  ]
+}
+
+resource "aws_api_gateway_integration_response" "robots_txt_integration_response" {
+  count       = var.use_robots_txt ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.robots_txt_resource[0].id
+  http_method = aws_api_gateway_method.robots_txt_method[0].http_method
+
+  status_code = aws_api_gateway_method_response.robots_txt_method_response[0].status_code
+
+  response_templates = {
+    "text/plain" = <<EOF
+User-agent: *
+Disallow: /
+EOF
+  }
+
+  depends_on = [
+    aws_api_gateway_resource.robots_txt_resource,
+    aws_api_gateway_method.robots_txt_method,
   ]
 }
