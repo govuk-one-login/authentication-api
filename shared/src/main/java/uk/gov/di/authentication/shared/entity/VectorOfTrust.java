@@ -15,6 +15,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static net.minidev.json.parser.JSONParser.DEFAULT_PERMISSIVE_MODE;
+import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 
 public class VectorOfTrust {
 
@@ -48,7 +49,7 @@ public class VectorOfTrust {
     }
 
     public boolean containsLevelOfConfidence() {
-        return levelOfConfidence != null;
+        return levelOfConfidence != null && !levelOfConfidence.equals(NONE);
     }
 
     public static VectorOfTrust parseFromAuthRequestAttribute(List<String> vtr) {
