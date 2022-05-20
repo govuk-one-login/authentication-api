@@ -117,7 +117,10 @@ public class StartHandler
                                                         .getAuthRequestParams());
                                 var userStartInfo =
                                         startService.buildUserStartInfo(
-                                                userContext, cookieConsent, gaTrackingId);
+                                                userContext,
+                                                cookieConsent,
+                                                gaTrackingId,
+                                                configurationService.isIdentityEnabled());
                                 if (userStartInfo.isDocCheckingAppUser()) {
                                     var docAppSubjectId =
                                             ClientSubjectHelper.calculatePairwiseIdentifier(

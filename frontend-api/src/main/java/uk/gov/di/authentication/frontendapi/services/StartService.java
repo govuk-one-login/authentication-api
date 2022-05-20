@@ -103,7 +103,10 @@ public class StartService {
     }
 
     public UserStartInfo buildUserStartInfo(
-            UserContext userContext, String cookieConsent, String gaTrackingId) {
+            UserContext userContext,
+            String cookieConsent,
+            String gaTrackingId,
+            boolean identityEnabled) {
         var uplift = false;
         var identityRequired = false;
         var consentRequired = false;
@@ -115,7 +118,8 @@ public class StartService {
             identityRequired =
                     IdentityHelper.identityRequired(
                             userContext.getClientSession().getAuthRequestParams(),
-                            clientRegistry.isIdentityVerificationSupported());
+                            clientRegistry.isIdentityVerificationSupported(),
+                            identityEnabled);
         }
         LOG.info(
                 "Found UserStartInfo for Authenticated: {} ConsentRequired: {} UpliftRequired: {} IdentityRequired: {}. CookieConsent: {}. GATrackingId: {}. DocCheckingAppUser: {}",
