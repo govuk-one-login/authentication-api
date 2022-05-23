@@ -127,10 +127,10 @@ resource "aws_api_gateway_deployment" "deployment" {
       var.client_registry_api_enabled ? module.update[0].method_trigger_value : null,
       module.userinfo.integration_trigger_value,
       module.userinfo.method_trigger_value,
-      var.ipv_api_enabled ? module.ipv-callback[0].integration_trigger_value : null,
-      var.ipv_api_enabled ? module.ipv-callback[0].method_trigger_value : null,
-      var.ipv_api_enabled ? module.ipv-capacity[0].integration_trigger_value : null,
-      var.ipv_api_enabled ? module.ipv-capacity[0].method_trigger_value : null,
+      module.ipv-callback.integration_trigger_value,
+      module.ipv-callback.method_trigger_value,
+      module.ipv-capacity.integration_trigger_value,
+      module.ipv-capacity.method_trigger_value,
       var.doc_app_api_enabled ? module.doc-app-callback[0].integration_trigger_value : null,
       var.doc_app_api_enabled ? module.doc-app-callback[0].method_trigger_value : null,
     ]))
@@ -150,6 +150,8 @@ resource "aws_api_gateway_deployment" "deployment" {
     module.trustmarks,
     module.update,
     module.userinfo,
+    module.ipv-callback,
+    module.ipv-capacity,
   ]
 }
 
@@ -243,6 +245,7 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
     module.update,
     module.userinfo,
     module.ipv-callback,
+    module.ipv-capacity,
     aws_api_gateway_deployment.deployment,
   ]
 }

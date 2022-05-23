@@ -1,5 +1,4 @@
 resource "aws_sqs_queue" "spot_request_queue" {
-  count                      = var.ipv_api_enabled ? 1 : 0
   name                       = "${var.environment}-spot-request-queue"
   delay_seconds              = 10
   max_message_size           = 256000
@@ -8,7 +7,7 @@ resource "aws_sqs_queue" "spot_request_queue" {
   visibility_timeout_seconds = 60
 
   redrive_policy = jsonencode({
-    deadLetterTargetArn = aws_sqs_queue.spot_request_dead_letter_queue[0].arn
+    deadLetterTargetArn = aws_sqs_queue.spot_request_dead_letter_queue.arn
     maxReceiveCount     = 3
   })
 
@@ -19,8 +18,7 @@ resource "aws_sqs_queue" "spot_request_queue" {
 }
 
 resource "aws_sqs_queue" "spot_request_dead_letter_queue" {
-  count = var.ipv_api_enabled ? 1 : 0
-  name  = "${var.environment}-spot-request-dlq"
+  name = "${var.environment}-spot-request-dlq"
 
   kms_master_key_id                 = var.use_localstack ? null : aws_kms_key.spot_request_sqs_key.id
   kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
@@ -32,7 +30,6 @@ resource "aws_sqs_queue" "spot_request_dead_letter_queue" {
 
 
 data "aws_iam_policy_document" "spot_request_queue_policy_document" {
-  count = var.ipv_api_enabled ? 1 : 0
   statement {
     sid    = "SendSQS"
     effect = "Allow"
@@ -49,7 +46,7 @@ data "aws_iam_policy_document" "spot_request_queue_policy_document" {
     ]
 
     resources = [
-      aws_sqs_queue.spot_request_queue[0].arn
+      aws_sqs_queue.spot_request_queue.arn
     ]
   }
   statement {
@@ -69,23 +66,21 @@ data "aws_iam_policy_document" "spot_request_queue_policy_document" {
     ]
 
     resources = [
-      aws_sqs_queue.spot_request_queue[0].arn
+      aws_sqs_queue.spot_request_queue.arn
     ]
   }
 }
 
 resource "aws_sqs_queue_policy" "spot_request_queue_policy" {
-  count = var.ipv_api_enabled ? 1 : 0
   depends_on = [
     data.aws_iam_policy_document.spot_request_queue_policy_document,
   ]
 
-  queue_url = aws_sqs_queue.spot_request_queue[0].id
-  policy    = data.aws_iam_policy_document.spot_request_queue_policy_document[0].json
+  queue_url = aws_sqs_queue.spot_request_queue.id
+  policy    = data.aws_iam_policy_document.spot_request_queue_policy_document.json
 }
 
 data "aws_iam_policy_document" "spot_request_dlq_queue_policy_document" {
-  count = var.ipv_api_enabled ? 1 : 0
   statement {
     sid    = "SendAndReceive"
     effect = "Allow"
@@ -104,18 +99,17 @@ data "aws_iam_policy_document" "spot_request_dlq_queue_policy_document" {
       "sqs:GetQueueAttributes",
     ]
 
-    resources = [aws_sqs_queue.spot_request_dead_letter_queue[0].arn]
+    resources = [aws_sqs_queue.spot_request_dead_letter_queue.arn]
   }
 }
 
 resource "aws_sqs_queue_policy" "spot_request_dlq_queue_policy" {
-  count = var.ipv_api_enabled ? 1 : 0
   depends_on = [
     data.aws_iam_policy_document.spot_request_queue_policy_document,
   ]
 
-  queue_url = aws_sqs_queue.spot_request_dead_letter_queue[0].id
-  policy    = data.aws_iam_policy_document.spot_request_dlq_queue_policy_document[0].json
+  queue_url = aws_sqs_queue.spot_request_dead_letter_queue.id
+  policy    = data.aws_iam_policy_document.spot_request_dlq_queue_policy_document.json
 }
 
 data "aws_iam_policy_document" "spot_request_kms_key_policy" {

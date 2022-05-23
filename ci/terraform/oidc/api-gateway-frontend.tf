@@ -56,8 +56,8 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
       module.reset_password.method_trigger_value,
       module.reset-password-request.integration_trigger_value,
       module.reset-password-request.method_trigger_value,
-      var.ipv_api_enabled ? module.ipv-authorize[0].integration_trigger_value : null,
-      var.ipv_api_enabled ? module.ipv-authorize[0].method_trigger_value : null,
+      module.ipv-authorize.integration_trigger_value,
+      module.ipv-authorize.method_trigger_value,
       var.doc_app_api_enabled ? module.doc-app-authorize[0].integration_trigger_value : null,
       var.doc_app_api_enabled ? module.doc-app-authorize[0].method_trigger_value : null,
     ]))
@@ -76,7 +76,8 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
     module.userexists,
     module.verify_code,
     module.reset_password,
-    module.reset-password-request
+    module.reset-password-request,
+    module.ipv-authorize
   ]
 }
 
@@ -169,6 +170,7 @@ resource "aws_api_gateway_stage" "endpoint_frontend_stage" {
     module.verify_code,
     module.reset_password,
     module.reset-password-request,
+    module.ipv-authorize,
     aws_api_gateway_deployment.deployment,
   ]
 }

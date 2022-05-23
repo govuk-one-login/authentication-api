@@ -17,7 +17,7 @@ resource "aws_cloudwatch_metric_alarm" "sqs_deadletter_cloudwatch_alarm" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_dlq_cloudwatch_alarm" {
-  count               = var.use_localstack || !var.ipv_api_enabled ? 0 : 1
+  count               = var.use_localstack ? 0 : 1
   alarm_name          = replace("${var.environment}-spot-request-queue-dlq-alarm", ".", "")
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
@@ -28,9 +28,9 @@ resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_dlq_cloudwatch_alarm" {
   threshold           = var.dlq_alarm_threshold
 
   dimensions = {
-    QueueName = aws_sqs_queue.spot_request_dead_letter_queue[0].name
+    QueueName = aws_sqs_queue.spot_request_dead_letter_queue.name
   }
-  alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.spot_request_dead_letter_queue[0].name}"
+  alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.spot_request_dead_letter_queue.name}"
   alarm_actions     = [data.aws_sns_topic.slack_events.arn]
 }
 
