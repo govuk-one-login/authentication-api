@@ -129,6 +129,8 @@ resource "aws_api_gateway_deployment" "deployment" {
       module.userinfo.method_trigger_value,
       var.ipv_api_enabled ? module.ipv-callback[0].integration_trigger_value : null,
       var.ipv_api_enabled ? module.ipv-callback[0].method_trigger_value : null,
+      var.ipv_api_enabled ? module.ipv-capacity[0].integration_trigger_value : null,
+      var.ipv_api_enabled ? module.ipv-capacity[0].method_trigger_value : null,
       var.doc_app_api_enabled ? module.doc-app-callback[0].integration_trigger_value : null,
       var.doc_app_api_enabled ? module.doc-app-callback[0].method_trigger_value : null,
     ]))
