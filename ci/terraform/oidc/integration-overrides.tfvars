@@ -1,5 +1,5 @@
-ipv_api_enabled                = true
-ipv_capacity_allowed           = true
+ipv_api_enabled                = false
+ipv_capacity_allowed           = false
 ipv_authorisation_client_id    = "authOrchestrator"
 ipv_authorisation_uri          = "https://identity.integration.account.gov.uk/oauth2/authorize"
 ipv_authorisation_callback_uri = "https://oidc.integration.account.gov.uk/ipv-callback"
