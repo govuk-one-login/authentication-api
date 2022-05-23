@@ -1,6 +1,6 @@
 doc_app_api_enabled                = true
-ipv_capacity_allowed               = false
-ipv_api_enabled                    = false
+ipv_capacity_allowed               = true
+ipv_api_enabled                    = true
 doc_app_authorisation_client_id    = "authOrchestratorDocApp"
 doc_app_authorisation_callback_uri = "https://oidc.staging.account.gov.uk/doc-checking-app-callback"
 ipv_authorisation_client_id        = "authOrchestrator"
