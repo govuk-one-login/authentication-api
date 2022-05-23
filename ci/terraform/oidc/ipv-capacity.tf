@@ -12,7 +12,6 @@ module "ipv_capacity_role" {
 }
 
 module "ipv-capacity" {
-  count  = var.ipv_api_enabled ? 1 : 0
   source = "../modules/endpoint-module"
 
   endpoint_name   = "ipv-capacity"
