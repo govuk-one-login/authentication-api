@@ -17,7 +17,6 @@ module "ipv_authorize_role" {
 }
 
 module "ipv-authorize" {
-  count  = var.ipv_api_enabled ? 1 : 0
   source = "../modules/endpoint-module"
 
   endpoint_name   = "ipv-authorize"
