@@ -124,6 +124,10 @@ public class IPVCallbackHandler
                 .orElseGet(
                         () -> {
                             LOG.info("Request received to IPVCallbackHandler");
+                            if (!configurationService.isIdentityEnabled()) {
+                                LOG.error("Identity is not enabled");
+                                throw new RuntimeException("Identity is not enabled");
+                            }
                             try {
                                 var sessionCookiesIds =
                                         CookieHelper.parseSessionCookie(input.getHeaders())

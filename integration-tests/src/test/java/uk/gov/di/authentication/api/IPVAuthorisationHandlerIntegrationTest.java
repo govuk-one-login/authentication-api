@@ -196,5 +196,10 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         public String getIPVSector() {
             return IPV_SECTOR;
         }
+
+        @Override
+        public boolean isIdentityEnabled() {
+            return true;
+        }
     }
 }

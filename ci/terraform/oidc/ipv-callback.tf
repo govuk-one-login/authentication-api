@@ -30,6 +30,7 @@ module "ipv-callback" {
     DYNAMO_ENDPOINT                = var.use_localstack ? var.lambda_dynamo_endpoint : null
     EVENTS_SNS_TOPIC_ARN           = aws_sns_topic.events.arn
     ENVIRONMENT                    = var.environment
+    IDENTITY_ENABLED               = var.ipv_api_enabled
     IPV_TOKEN_SIGNING_KEY_ALIAS    = local.ipv_token_auth_key_alias_name
     IPV_AUTHORISATION_CLIENT_ID    = var.ipv_authorisation_client_id
     IPV_AUTHORISATION_CALLBACK_URI = var.ipv_authorisation_callback_uri
