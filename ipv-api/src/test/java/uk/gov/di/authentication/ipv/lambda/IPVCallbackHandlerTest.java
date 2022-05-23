@@ -127,8 +127,23 @@ class IPVCallbackHandlerTest {
         when(configService.isSpotEnabled()).thenReturn(true);
         when(configService.getIPVBackendURI()).thenReturn(IPV_URI);
         when(configService.getIPVSector()).thenReturn(OIDC_BASE_URL + "/trustmark");
-
+        when(configService.isIdentityEnabled()).thenReturn(true);
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
+    }
+
+    @Test
+    void shouldThrowWhenIdentityIsNotEnabled() {
+        when(configService.isIdentityEnabled()).thenReturn(false);
+        usingValidSession();
+        usingValidClientSession();
+
+        var exception =
+                assertThrows(
+                        RuntimeException.class,
+                        () -> makeHandlerRequest(getApiGatewayProxyRequestEvent("P2")),
+                        "Expected to throw exception");
+
+        assertThat(exception.getMessage(), equalTo("Identity is not enabled"));
     }
 
     @Test

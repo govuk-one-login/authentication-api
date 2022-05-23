@@ -226,5 +226,10 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         public URI getIPVAuthorisationCallbackURI() {
             return URI.create("http://localhost/redirect");
         }
+
+        @Override
+        public boolean isIdentityEnabled() {
+            return true;
+        }
     }
 }

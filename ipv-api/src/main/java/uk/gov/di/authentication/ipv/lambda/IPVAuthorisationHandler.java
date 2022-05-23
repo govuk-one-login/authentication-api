@@ -94,6 +94,10 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
             IPVAuthorisationRequest request,
             UserContext userContext) {
         try {
+            if (!configurationService.isIdentityEnabled()) {
+                LOG.error("Identity is not enabled");
+                throw new RuntimeException("Identity is not enabled");
+            }
             var persistentId =
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
             attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentId);
