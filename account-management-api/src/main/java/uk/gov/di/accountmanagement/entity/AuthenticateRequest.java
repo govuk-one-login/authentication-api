@@ -1,15 +1,17 @@
 package uk.gov.di.accountmanagement.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import jakarta.validation.constraints.NotNull;
 
 public class AuthenticateRequest {
 
-    private String email;
-    private String password;
+    @Expose @NotNull private String email;
 
-    public AuthenticateRequest(
-            @JsonProperty(required = true, value = "email") String email,
-            @JsonProperty(required = true, value = "password") String password) {
+    @Expose @NotNull private String password;
+
+    public AuthenticateRequest() {}
+
+    public AuthenticateRequest(String email, String password) {
         this.email = email;
         this.password = password;
     }

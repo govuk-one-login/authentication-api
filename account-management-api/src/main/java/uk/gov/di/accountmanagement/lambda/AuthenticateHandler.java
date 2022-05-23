@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -32,7 +33,7 @@ public class AuthenticateHandler
     private static final Logger LOG = LogManager.getLogger(AuthenticateHandler.class);
 
     private final AuthenticationService authenticationService;
-    private final Json objectMapper = Json.jackson();
+    private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService;
 
     public AuthenticateHandler(
