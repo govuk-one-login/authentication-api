@@ -66,6 +66,11 @@ class ValidationHelperTest {
         assertThat(ValidationHelper.validatePhoneNumber("07911123456"), equalTo(Optional.empty()));
     }
 
+    @Test
+    void shouldAcceptNotifyTestPhoneNumbers() {
+        assertThat(ValidationHelper.validatePhoneNumber("07700900222"), equalTo(Optional.empty()));
+    }
+
     private static Stream<Arguments> invalidPasswords() {
         return Stream.of(
                 Arguments.of("", ErrorResponse.ERROR_1005),

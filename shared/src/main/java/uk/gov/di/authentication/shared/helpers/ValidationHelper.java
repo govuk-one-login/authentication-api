@@ -6,6 +6,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -21,10 +22,12 @@ public class ValidationHelper {
             Pattern.compile("^(xn|[a-z0-9]+)(-?-[a-z0-9]+)*$", Pattern.CASE_INSENSITIVE);
     private static final Pattern TLD_PART_REGEX =
             Pattern.compile("^([a-z]{2,63}|xn--([a-z0-9]+-)*[a-z0-9]+)$", Pattern.CASE_INSENSITIVE);
+    private static final List<String> ALLOWED_TEST_NUMBERS = List.of("07700900222");
 
     private ValidationHelper() {}
 
     public static Optional<ErrorResponse> validatePhoneNumber(String phoneNumberInput) {
+        if (ALLOWED_TEST_NUMBERS.contains(phoneNumberInput)) return Optional.empty();
         if ((!phoneNumberInput.startsWith("+"))
                 && ((!phoneNumberInput.matches("[0-9]+")) || (phoneNumberInput.length() < 10))) {
             return Optional.of(ErrorResponse.ERROR_1012);
