@@ -17,7 +17,6 @@ module "ipv_callback_role" {
 }
 
 module "ipv-callback" {
-  count  = var.ipv_api_enabled ? 1 : 0
   source = "../modules/endpoint-module"
 
   endpoint_name   = "ipv-callback"
@@ -41,7 +40,7 @@ module "ipv-callback" {
     OIDC_API_BASE_URL              = local.api_base_url
     REDIS_KEY                      = local.redis_key
     SPOT_ENABLED                   = tostring(var.spot_enabled)
-    SPOT_QUEUE_URL                 = aws_sqs_queue.spot_request_queue[0].id
+    SPOT_QUEUE_URL                 = aws_sqs_queue.spot_request_queue.id
   }
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler::handleRequest"
 
