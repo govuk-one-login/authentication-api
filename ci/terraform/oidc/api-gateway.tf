@@ -150,6 +150,8 @@ resource "aws_api_gateway_deployment" "deployment" {
     module.trustmarks,
     module.update,
     module.userinfo,
+    module.ipv-capacity,
+    module.ipv-callback,
   ]
 }
 
@@ -243,6 +245,7 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
     module.update,
     module.userinfo,
     module.ipv-callback,
+    module.ipv-capacity,
     aws_api_gateway_deployment.deployment,
   ]
 }
