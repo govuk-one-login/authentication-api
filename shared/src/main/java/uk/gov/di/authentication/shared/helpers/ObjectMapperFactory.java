@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.util.Objects;
 import java.util.Set;
 
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+
 public class ObjectMapperFactory {
     private static ObjectMapper objectMapper;
 
@@ -71,7 +73,9 @@ public class ObjectMapperFactory {
         }
 
         private void validate(Object instance) {
-            Set<ConstraintViolation<Object>> violations = validator.validate(instance);
+            Set<ConstraintViolation<Object>> violations =
+                    segmentedFunctionCall(
+                            "Jackson::validator::validate", () -> validator.validate(instance));
             if (violations.size() > 0) {
                 violations.forEach(v -> LOG.warn("Json validation violation: {}", v.getMessage()));
                 throw new ConstraintViolationException("JSON validation error", violations);
