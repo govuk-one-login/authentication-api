@@ -76,8 +76,7 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
     module.userexists,
     module.verify_code,
     module.reset_password,
-    module.reset-password-request,
-    module.ipv-authorize,
+    module.reset-password-request
   ]
 }
 
@@ -170,7 +169,6 @@ resource "aws_api_gateway_stage" "endpoint_frontend_stage" {
     module.verify_code,
     module.reset_password,
     module.reset-password-request,
-    module.ipv-authorize,
     aws_api_gateway_deployment.deployment,
   ]
 }
