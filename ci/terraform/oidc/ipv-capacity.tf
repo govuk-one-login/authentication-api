@@ -34,9 +34,9 @@ module "ipv-capacity" {
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.IPVCapacityHandler::handleRequest"
 
   create_endpoint  = true
-  rest_api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
-  root_resource_id = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id
-  execution_arn    = aws_api_gateway_rest_api.di_authentication_frontend_api.execution_arn
+  rest_api_id      = aws_api_gateway_rest_api.di_authentication_api.id
+  root_resource_id = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
+  execution_arn    = aws_api_gateway_rest_api.di_authentication_api.execution_arn
   memory_size      = var.endpoint_memory_size
 
   source_bucket                  = aws_s3_bucket.source_bucket.bucket
@@ -69,7 +69,7 @@ module "ipv-capacity" {
   use_localstack = var.use_localstack
 
   depends_on = [
-    aws_api_gateway_rest_api.di_authentication_frontend_api,
+    aws_api_gateway_rest_api.di_authentication_api,
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
   ]
