@@ -16,7 +16,7 @@ dependencies {
             configurations.dynamodb
 
     implementation configurations.govuk_notify,
-            configurations.jackson,
+            configurations.gson,
             configurations.nimbus,
             configurations.cloudwatch,
             configurations.bouncycastle
