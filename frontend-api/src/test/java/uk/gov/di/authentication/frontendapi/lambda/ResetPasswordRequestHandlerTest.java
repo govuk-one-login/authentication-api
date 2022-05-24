@@ -3,8 +3,6 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,8 +17,8 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
@@ -29,6 +27,7 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -58,6 +57,7 @@ import static uk.gov.di.authentication.shared.services.CodeStorageService.PASSWO
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
+import static uk.gov.di.authentication.sharedtest.matchers.JsonArgumentMatcher.containsJsonString;
 
 class ResetPasswordRequestHandlerTest {
 
@@ -67,7 +67,7 @@ class ResetPasswordRequestHandlerTest {
             "https://localhost:8080/frontend?reset-password?code=123456.54353464565";
     private static final long CODE_EXPIRY_TIME = 900;
     private static final long BLOCKED_EMAIL_DURATION = 799;
-    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private static final Json objectMapper = SerializationService.getInstance();
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
@@ -116,8 +116,7 @@ class ResetPasswordRequestHandlerTest {
     }
 
     @Test
-    void shouldReturn200AndPutMessageOnQueueForAValidLinkFlowRequest()
-            throws JsonProcessingException {
+    void shouldReturn200AndPutMessageOnQueueForAValidLinkFlowRequest() throws Json.JsonException {
         String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
@@ -160,8 +159,7 @@ class ResetPasswordRequestHandlerTest {
     }
 
     @Test
-    void shouldReturn200AndPutMessageOnQueueForAValidCodeFlowRequest()
-            throws JsonProcessingException {
+    void shouldReturn200AndPutMessageOnQueueForAValidCodeFlowRequest() throws Json.JsonException {
         String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
@@ -182,7 +180,7 @@ class ResetPasswordRequestHandlerTest {
 
         assertEquals(204, result.getStatusCode());
 
-        verify(awsSqsClient).send(serialisedRequest);
+        verify(awsSqsClient).send(argThat(containsJsonString(serialisedRequest)));
         verify(codeStorageService)
                 .saveOtpCode(
                         TEST_EMAIL_ADDRESS,
@@ -231,7 +229,7 @@ class ResetPasswordRequestHandlerTest {
     }
 
     @Test
-    public void shouldReturn500IfMessageCannotBeSentToQueue() throws JsonProcessingException {
+    public void shouldReturn500IfMessageCannotBeSentToQueue() throws Json.JsonException {
         String persistentId = "some-persistent-id-value";
         Subject subject = new Subject("subject_1");
         when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);

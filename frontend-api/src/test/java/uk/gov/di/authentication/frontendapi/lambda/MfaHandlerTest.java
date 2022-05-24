@@ -3,8 +3,6 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -22,8 +20,8 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
@@ -32,6 +30,7 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -81,7 +80,7 @@ public class MfaHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
-    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private static final Json objectMapper = SerializationService.getInstance();
     private final Session session = new Session("a-session-id").setEmailAddress(TEST_EMAIL_ADDRESS);
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
@@ -123,7 +122,7 @@ public class MfaHandlerTest {
     }
 
     @Test
-    void shouldReturn204ForSuccessfulMfaRequest() throws JsonProcessingException {
+    void shouldReturn204ForSuccessfulMfaRequest() throws Json.JsonException {
         usingValidSession();
         String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
@@ -158,7 +157,7 @@ public class MfaHandlerTest {
     }
 
     @Test
-    void shouldReturn204AndAllowMfaRequestDuringUplift() throws JsonProcessingException {
+    void shouldReturn204AndAllowMfaRequestDuringUplift() throws Json.JsonException {
         usingValidSession();
 
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
@@ -358,7 +357,7 @@ public class MfaHandlerTest {
 
     @Test
     void shouldReturn204AndNotSendMessageForSuccessfulMfaRequestOnTestClient()
-            throws JsonProcessingException {
+            throws Json.JsonException {
         usingValidSession();
         usingValidClientSession(TEST_CLIENT_ID);
         when(configurationService.isTestClientsEnabled()).thenReturn(true);

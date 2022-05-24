@@ -4,15 +4,14 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
 import com.amazonaws.services.s3.AmazonS3;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.NotificationService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.service.notify.NotificationClientException;
 
 import java.util.HashMap;
@@ -48,7 +47,7 @@ public class NotificationHandlerTest {
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final AmazonS3 s3Client = mock(AmazonS3.class);
     private NotificationHandler handler;
-    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private static final Json objectMapper = SerializationService.getInstance();
 
     @BeforeEach
     void setUp() {
@@ -61,7 +60,7 @@ public class NotificationHandlerTest {
 
     @Test
     void shouldSuccessfullyProcessEmailMessageFromSQSQueue()
-            throws JsonProcessingException, NotificationClientException {
+            throws Json.JsonException, NotificationClientException {
 
         NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -81,7 +80,7 @@ public class NotificationHandlerTest {
 
     @Test
     void shouldSuccessfullyProcessResetPasswordConfirmationFromSQSQueue()
-            throws JsonProcessingException, NotificationClientException {
+            throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, PASSWORD_RESET_CONFIRMATION);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -100,7 +99,7 @@ public class NotificationHandlerTest {
 
     @Test
     void shouldSuccessfullyProcessResetPasswordEmailFromSQSQueue()
-            throws JsonProcessingException, NotificationClientException {
+            throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, RESET_PASSWORD, TEST_RESET_PASSWORD_LINK);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -119,7 +118,7 @@ public class NotificationHandlerTest {
 
     @Test
     void shouldSuccessfullyProcessAccountCreatedConfirmationFromSQSQueue()
-            throws JsonProcessingException, NotificationClientException {
+            throws Json.JsonException, NotificationClientException {
         String baseUrl = "http://account-management";
         var contactUsLinkUrl =
                 "https://localhost:8080/frontend/contact-us?referer=accountCreatedEmail";
@@ -141,7 +140,7 @@ public class NotificationHandlerTest {
 
     @Test
     void shouldSuccessfullyProcessPhoneMessageFromSQSQueue()
-            throws JsonProcessingException, NotificationClientException {
+            throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -172,7 +171,7 @@ public class NotificationHandlerTest {
 
     @Test
     void shouldThrowExceptionIfNotifyIsUnableToSendEmail()
-            throws JsonProcessingException, NotificationClientException {
+            throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
@@ -200,7 +199,7 @@ public class NotificationHandlerTest {
 
     @Test
     void shouldThrowExceptionIfNotifyIsUnableToSendText()
-            throws JsonProcessingException, NotificationClientException {
+            throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -225,7 +224,7 @@ public class NotificationHandlerTest {
 
     @Test
     void shouldSuccessfullyProcessPhoneMessageFromSQSQueueAndWriteToS3WhenTestClient()
-            throws JsonProcessingException, NotificationClientException {
+            throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
                 new NotifyRequest(NOTIFY_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -243,7 +242,7 @@ public class NotificationHandlerTest {
 
     @Test
     void shouldSuccessfullyProcessMfaMessageFromSQSQueue()
-            throws JsonProcessingException, NotificationClientException {
+            throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest = new NotifyRequest(TEST_PHONE_NUMBER, MFA_SMS, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
@@ -259,7 +258,7 @@ public class NotificationHandlerTest {
 
     @Test
     void shouldSuccessfullyProcessMfaMessageFromSQSQueueAndWriteToS3WhenTestClient()
-            throws JsonProcessingException, NotificationClientException {
+            throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest = new NotifyRequest(NOTIFY_PHONE_NUMBER, MFA_SMS, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
@@ -276,7 +275,7 @@ public class NotificationHandlerTest {
 
     @Test
     void shouldSuccessfullyProcessPasswordResetWithCodeMessageFromSQSQueue()
-            throws JsonProcessingException, NotificationClientException {
+            throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, RESET_PASSWORD_WITH_CODE, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
