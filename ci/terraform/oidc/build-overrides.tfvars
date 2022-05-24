@@ -5,6 +5,7 @@ doc_app_domain                     = "https://build-doc-app-cri-stub.london.clou
 doc_app_authorisation_client_id    = "authOrchestrator"
 doc_app_authorisation_callback_uri = "https://oidc.build.account.gov.uk/doc-checking-app-callback"
 doc_app_authorisation_uri          = "https://build-doc-app-cri-stub.london.cloudapps.digital/authorize"
+spot_enabled                       = false
 doc_app_auth_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvnQV8yrKnVObCMg+ZNLQ

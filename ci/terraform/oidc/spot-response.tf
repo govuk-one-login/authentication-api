@@ -58,7 +58,7 @@ resource "aws_iam_policy" "spot_response_sqs_read_policy" {
 }
 
 resource "aws_lambda_event_source_mapping" "spot_response_lambda_sqs_mapping" {
-  count            = var.ipv_api_enabled ? 1 : 0
+  count            = var.spot_enabled ? 1 : 0
   event_source_arn = aws_ssm_parameter.spot_response_queue_arn.value
   function_name    = aws_lambda_function.spot_response_lambda.arn
 
