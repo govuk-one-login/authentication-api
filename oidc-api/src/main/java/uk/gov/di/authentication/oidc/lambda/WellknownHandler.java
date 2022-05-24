@@ -117,9 +117,6 @@ public class WellknownHandler
                                 providerMetadata.setSupportsBackChannelLogout(true);
                                 providerMetadata.setCustomParameter(
                                         "trustmarks", buildURI(baseUrl, "/trustmark").toString());
-                                providerMetadata.setCustomParameter(
-                                        "identity_endpoint",
-                                        buildURI(baseUrl, "/identity").toString());
 
                                 return generateApiGatewayProxyResponse(
                                         200, providerMetadata.toString());

@@ -57,11 +57,6 @@ class WellknownHandlerTest {
                         .getCustomParameters()
                         .get("trustmarks"),
                 equalTo(expectedTrustMarkURI));
-        assertThat(
-                OIDCProviderMetadata.parse(result.getBody())
-                        .getCustomParameters()
-                        .get("identity_endpoint"),
-                equalTo(expectedIdentityURI));
     }
 
     @Test
