@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.frontendapi.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import jakarta.validation.constraints.NotNull;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 
@@ -13,11 +14,13 @@ public class VerifyCodeRequest {
         this.code = code;
     }
 
-    @JsonProperty(required = true, value = "notificationType")
+    @SerializedName("notificationType")
+    @Expose
     @NotNull
     private NotificationType notificationType;
 
-    @JsonProperty(required = true, value = "code")
+    @SerializedName("code")
+    @Expose
     @NotNull
     private String code;
 

@@ -2,8 +2,11 @@ package uk.gov.di.authentication.shared.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.JsonAdapter;
+import uk.gov.di.authentication.shared.serialization.ErrorResponseAdapter;
 
 @JsonFormat(shape = JsonFormat.Shape.OBJECT)
+@JsonAdapter(ErrorResponseAdapter.class)
 public enum ErrorResponse {
     ERROR_1000(1000, "Session-Id is missing or invalid"),
     ERROR_1001(1001, "Request is missing parameters"),

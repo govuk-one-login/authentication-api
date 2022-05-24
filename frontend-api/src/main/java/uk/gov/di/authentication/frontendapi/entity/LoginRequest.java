@@ -1,14 +1,12 @@
 package uk.gov.di.authentication.frontendapi.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
 import jakarta.validation.constraints.NotNull;
 import uk.gov.di.authentication.shared.entity.BaseFrontendRequest;
 
 public class LoginRequest extends BaseFrontendRequest {
 
-    @JsonProperty(required = true, value = "password")
-    @NotNull
-    private String password;
+    @Expose @NotNull private String password;
 
     public LoginRequest() {}
 

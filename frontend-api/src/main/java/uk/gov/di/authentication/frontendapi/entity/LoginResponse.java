@@ -1,32 +1,43 @@
 package uk.gov.di.authentication.frontendapi.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
+import jakarta.validation.constraints.NotNull;
 
 public class LoginResponse {
 
-    @JsonProperty("redactedPhoneNumber")
+    @SerializedName("redactedPhoneNumber")
+    @Expose
     private String redactedPhoneNumber;
 
-    @JsonProperty("mfaRequired")
+    @SerializedName("mfaRequired")
+    @Expose
+    @NotNull
     private boolean mfaRequired;
 
-    @JsonProperty("phoneNumberVerified")
+    @SerializedName("phoneNumberVerified")
+    @Expose
+    @NotNull
     private boolean phoneNumberVerified;
 
-    @JsonProperty(value = "latestTermsAndConditionsAccepted")
+    @SerializedName(value = "latestTermsAndConditionsAccepted")
+    @Expose
+    @NotNull
     private boolean latestTermsAndConditionsAccepted;
 
-    @JsonProperty(value = "consentRequired")
+    @SerializedName(value = "consentRequired")
+    @Expose
+    @NotNull
     private boolean consentRequired;
 
+    public LoginResponse() {}
+
     public LoginResponse(
-            @JsonProperty(value = "redactedPhoneNumber") String redactedPhoneNumber,
-            @JsonProperty(value = "mfaRequired", required = true) boolean mfaRequired,
-            @JsonProperty(value = "phoneNumberVerified", required = true)
-                    boolean phoneNumberVerified,
-            @JsonProperty(value = "latestTermsAndConditionsAccepted", required = true)
-                    boolean latestTermsAndConditionsAccepted,
-            @JsonProperty(value = "consentRequired", required = true) boolean consentRequired) {
+            String redactedPhoneNumber,
+            boolean mfaRequired,
+            boolean phoneNumberVerified,
+            boolean latestTermsAndConditionsAccepted,
+            boolean consentRequired) {
         this.redactedPhoneNumber = redactedPhoneNumber;
         this.mfaRequired = mfaRequired;
         this.phoneNumberVerified = phoneNumberVerified;

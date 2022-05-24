@@ -1,13 +1,17 @@
 package uk.gov.di.authentication.frontendapi.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import jakarta.validation.constraints.NotNull;
 
 public class ResetPasswordCompletionRequest {
-    @JsonProperty(value = "code")
+
+    @SerializedName(value = "code")
+    @Expose
     private String code;
 
-    @JsonProperty(required = true, value = "password")
+    @SerializedName("password")
+    @Expose
     @NotNull
     private String password;
 

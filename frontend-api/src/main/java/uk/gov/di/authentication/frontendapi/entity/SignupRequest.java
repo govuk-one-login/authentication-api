@@ -1,12 +1,14 @@
 package uk.gov.di.authentication.frontendapi.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import jakarta.validation.constraints.NotNull;
 import uk.gov.di.authentication.shared.entity.BaseFrontendRequest;
 
 public class SignupRequest extends BaseFrontendRequest {
 
-    @JsonProperty(required = true, value = "password")
+    @SerializedName("password")
+    @Expose
     @NotNull
     private String password;
 

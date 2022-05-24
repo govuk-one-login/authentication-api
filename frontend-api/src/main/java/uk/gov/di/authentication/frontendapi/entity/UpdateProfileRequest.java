@@ -1,16 +1,19 @@
 package uk.gov.di.authentication.frontendapi.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import jakarta.validation.constraints.NotNull;
 import uk.gov.di.authentication.shared.entity.BaseFrontendRequest;
 
 public class UpdateProfileRequest extends BaseFrontendRequest {
 
-    @JsonProperty(required = true, value = "updateProfileType")
+    @SerializedName("updateProfileType")
+    @Expose
     @NotNull
     private UpdateProfileType updateProfileType;
 
-    @JsonProperty(required = true, value = "profileInformation")
+    @SerializedName("profileInformation")
+    @Expose
     @NotNull
     private String profileInformation;
 

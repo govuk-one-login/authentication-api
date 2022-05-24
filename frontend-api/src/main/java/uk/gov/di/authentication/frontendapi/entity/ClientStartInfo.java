@@ -1,33 +1,41 @@
 package uk.gov.di.authentication.frontendapi.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 
 import java.net.URI;
 import java.util.List;
 
 public class ClientStartInfo {
 
-    @JsonProperty("clientName")
+    @SerializedName("clientName")
+    @Expose
     private String clientName;
 
-    @JsonProperty("scopes")
+    @SerializedName("scopes")
+    @Expose
     private List<String> scopes;
 
-    @JsonProperty("serviceType")
+    @SerializedName("serviceType")
+    @Expose
     private String serviceType;
 
-    @JsonProperty("cookieConsentShared")
+    @SerializedName("cookieConsentShared")
+    @Expose
     private boolean cookieConsentShared;
 
-    @JsonProperty("redirectUri")
+    @SerializedName("redirectUri")
+    @Expose
     private URI redirectUri;
 
+    public ClientStartInfo() {}
+
     public ClientStartInfo(
-            @JsonProperty(required = true, value = "clientName") String clientName,
-            @JsonProperty(required = true, value = "scopes") List<String> scopes,
-            @JsonProperty(required = true, value = "serviceType") String serviceType,
-            @JsonProperty(value = "cookieConsentShared") boolean cookieConsentShared,
-            @JsonProperty(value = "redirectUri") URI redirectUri) {
+            String clientName,
+            List<String> scopes,
+            String serviceType,
+            boolean cookieConsentShared,
+            URI redirectUri) {
         this.clientName = clientName;
         this.scopes = scopes;
         this.serviceType = serviceType;
