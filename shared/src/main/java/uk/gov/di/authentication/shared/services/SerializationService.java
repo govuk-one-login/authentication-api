@@ -34,20 +34,24 @@ public class SerializationService implements Json {
 
     @Override
     public <T> T readValue(String jsonString, Class<T> clazz) throws JsonException {
-        T value =
-                segmentedFunctionCall(
-                        "SerializationService::GSON::fromJson",
-                        () -> gson.fromJson(jsonString, clazz));
-        var violations =
-                segmentedFunctionCall(
-                        "SerializationService::validator::validate",
-                        () -> validator.validate(value));
-        if (violations.isEmpty()) {
-            return value;
+        try {
+            T value =
+                    segmentedFunctionCall(
+                            "SerializationService::GSON::fromJson",
+                            () -> gson.fromJson(jsonString, clazz));
+            var violations =
+                    segmentedFunctionCall(
+                            "SerializationService::validator::validate",
+                            () -> validator.validate(value));
+            if (violations.isEmpty()) {
+                return value;
+            }
+            violations.forEach(v -> LOG.warn("Json validation violation: {}", v.getMessage()));
+            throw new JsonException(
+                    new ConstraintViolationException("JSON validation error", violations));
+        } catch (IllegalArgumentException e) {
+            throw new JsonException(e);
         }
-        violations.forEach(v -> LOG.warn("Json validation violation: {}", v.getMessage()));
-        throw new JsonException(
-                new ConstraintViolationException("JSON validation error", violations));
     }
 
     @Override
