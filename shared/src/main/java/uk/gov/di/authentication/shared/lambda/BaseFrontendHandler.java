@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -41,7 +42,7 @@ public abstract class BaseFrontendHandler<T>
     protected final ClientSessionService clientSessionService;
     protected final ClientService clientService;
     protected final AuthenticationService authenticationService;
-    protected final Json objectMapper = Json.jackson();
+    protected final Json objectMapper = SerializationService.getInstance();
 
     protected BaseFrontendHandler(
             Class<T> clazz,
