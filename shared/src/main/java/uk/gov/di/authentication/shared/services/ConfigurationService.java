@@ -8,10 +8,10 @@ import com.amazonaws.services.simplesystemsmanagement.model.GetParametersRequest
 import com.amazonaws.services.simplesystemsmanagement.model.ParameterNotFoundException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.util.io.pem.PemReader;
 import uk.gov.di.authentication.shared.configuration.AuditPublisherConfiguration;
 import uk.gov.di.authentication.shared.configuration.BaseLambdaConfiguration;
+import uk.gov.di.authentication.shared.helpers.CryptoProviderHelper;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -434,7 +434,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
             var keySpec = new X509EncodedKeySpec(reader.readPemObject().getContent());
 
             return (ECPublicKey)
-                    KeyFactory.getInstance("EC", new BouncyCastleProvider())
+                    KeyFactory.getInstance("EC", CryptoProviderHelper.bouncyCastle())
                             .generatePublic(keySpec);
         }
     }
