@@ -310,7 +310,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public int getSessionCookieMaxAge() {
-        return Integer.parseInt(System.getenv().getOrDefault("SESSION_COOKIE_MAX_AGE", "3600"));
+        return Integer.parseInt(System.getenv().getOrDefault("SESSION_COOKIE_MAX_AGE", "7200"));
     }
 
     public int getPersistentCookieMaxAge() {
@@ -319,7 +319,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public long getSessionExpiry() {
-        return Long.parseLong(System.getenv().getOrDefault("SESSION_EXPIRY", "3600"));
+        return Long.parseLong(System.getenv().getOrDefault("SESSION_EXPIRY", "7200"));
     }
 
     public String getSmoketestBucketName() {
