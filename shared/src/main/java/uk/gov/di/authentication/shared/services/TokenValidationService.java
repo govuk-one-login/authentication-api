@@ -20,9 +20,9 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMException;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
+import uk.gov.di.authentication.shared.helpers.CryptoProviderHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import java.security.PublicKey;
@@ -142,7 +142,7 @@ public class TokenValidationService {
 
         try {
             return new JcaPEMKeyConverter()
-                    .setProvider(new BouncyCastleProvider())
+                    .setProvider(CryptoProviderHelper.bouncyCastle())
                     .getPublicKey(subjectKeyInfo);
         } catch (PEMException e) {
             LOG.error("Error getting the PublicKey using the JcaPEMKeyConverter", e);
