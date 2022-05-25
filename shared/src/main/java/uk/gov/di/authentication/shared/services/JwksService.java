@@ -14,7 +14,7 @@ import org.bouncycastle.openssl.PEMException;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
-import uk.gov.di.authentication.shared.helpers.CryptoProviderHelper;
+import uk.gov.di.authentication.shared.helpers.EnvironmentAwareCryptoProvider;
 
 import java.io.IOException;
 import java.net.URL;
@@ -94,7 +94,7 @@ public class JwksService {
 
         try {
             return new JcaPEMKeyConverter()
-                    .setProvider(CryptoProviderHelper.bouncyCastle())
+                    .setProvider(EnvironmentAwareCryptoProvider.provider())
                     .getPublicKey(subjectKeyInfo);
         } catch (PEMException e) {
             LOG.error("Error getting the PublicKey using the JcaPEMKeyConverter", e);

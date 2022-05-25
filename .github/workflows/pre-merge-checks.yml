@@ -70,7 +70,10 @@ jobs:
       - name: Run Unit Tests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew --parallel test jacocoTestReport -x integration-tests:test -x account-management-integration-tests:test -x delivery-receipts-integration-tests:test -x spotlessApply -x spotlessCheck
+          ENVIRONMENT: CI
+        run: |
+          echo $ENVIRONMENT
+          ./gradlew --stacktrace --parallel test jacocoTestReport -x integration-tests:test -x account-management-integration-tests:test -x delivery-receipts-integration-tests:test -x spotlessApply -x spotlessCheck
       - name: Upload Unit Test Reports
         uses: actions/upload-artifact@v2
         if: failure()
@@ -153,6 +156,8 @@ jobs:
             !*/build/jacoco
           key: ${{ runner.os }}-build-${{ github.sha }}
       - name: Run Integration Tests
+        env:
+          ENVIRONMENT: CI
         run: |
           ./gradlew :integration-tests:test :integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
       - name: Upload Integration Test Reports

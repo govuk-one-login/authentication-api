@@ -98,7 +98,8 @@ subprojects {
         apache "commons-codec:commons-codec:1.15",
                 "org.apache.httpcomponents:httpclient:4.5.13"
 
-        bouncycastle "org.bouncycastle:bcpkix-jdk15on:1.70"
+        bouncycastle "org.bouncycastle:bcpkix-jdk15on:1.70",
+                "software.amazon.cryptools:AmazonCorrettoCryptoProvider:1.+:linux-x86_64"
 
         cloudwatch "software.amazon.cloudwatchlogs:aws-embedded-metrics:2.0.0"
 
