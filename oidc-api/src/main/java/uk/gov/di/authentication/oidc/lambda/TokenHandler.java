@@ -33,6 +33,7 @@ import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.TokenService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
@@ -71,7 +72,7 @@ public class TokenHandler
     private final ClientSessionService clientSessionService;
     private final TokenValidationService tokenValidationService;
     private final RedisConnectionService redisConnectionService;
-    private final Json objectMapper = Json.jackson();
+    private final Json objectMapper = SerializationService.getInstance();
 
     private static final String TOKEN_PATH = "token";
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
@@ -107,7 +108,7 @@ public class TokenHandler
         this.dynamoService = new DynamoService(configurationService);
         this.authorisationCodeService =
                 new AuthorisationCodeService(
-                        configurationService, redisConnectionService, Json.jackson());
+                        configurationService, redisConnectionService, objectMapper);
         this.clientSessionService =
                 new ClientSessionService(configurationService, redisConnectionService);
         this.tokenValidationService = new TokenValidationService(configurationService, kms);

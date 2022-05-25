@@ -3,7 +3,6 @@ package uk.gov.di.authentication.oidc.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.crypto.ECDSASigner;
@@ -47,13 +46,14 @@ import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.TokenService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 import uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper;
@@ -128,6 +128,7 @@ public class TokenHandlerTest {
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
     private TokenHandler handler;
+    private Json objectMapper = SerializationService.getInstance();
 
     @BeforeEach
     public void setUp() {
@@ -238,7 +239,7 @@ public class TokenHandlerTest {
     @NullSource
     @ValueSource(strings = {CLIENT_ID})
     public void shouldReturn200ForSuccessfulRefreshTokenRequest(String clientId)
-            throws JOSEException, JsonProcessingException, ParseException {
+            throws JOSEException, ParseException, Json.JsonException {
         SignedJWT signedRefreshToken = createSignedRefreshToken();
         KeyPair keyPair = generateRsaKeyPair();
         RefreshToken refreshToken = new RefreshToken(signedRefreshToken.serialize());
@@ -264,7 +265,7 @@ public class TokenHandlerTest {
                 .thenReturn(true);
         RefreshTokenStore tokenStore =
                 new RefreshTokenStore(refreshToken.getValue(), INTERNAL_SUBJECT.getValue());
-        String tokenStoreString = ObjectMapperFactory.getInstance().writeValueAsString(tokenStore);
+        String tokenStoreString = objectMapper.writeValueAsString(tokenStore);
         when(redisConnectionService.popValue(
                         REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT.getValue()))
                 .thenReturn(null);

@@ -10,10 +10,10 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.BackChannelLogoutMessage;
 import uk.gov.di.authentication.oidc.services.HttpRequestService;
 import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
-import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.TokenService;
 
 import java.net.URI;
@@ -71,7 +71,7 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
 
         try {
             var payload =
-                    Json.jackson().readValue(record.getBody(), BackChannelLogoutMessage.class);
+                    SerializationService.getInstance().readValue(record.getBody(), BackChannelLogoutMessage.class);
 
             var claims = generateClaims(payload);
 

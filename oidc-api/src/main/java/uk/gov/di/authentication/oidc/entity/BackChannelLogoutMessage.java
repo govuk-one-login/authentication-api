@@ -1,22 +1,28 @@
 package uk.gov.di.authentication.oidc.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import jakarta.validation.constraints.NotNull;
 
 public class BackChannelLogoutMessage {
 
-    @JsonProperty("client_id")
+    @Expose
+    @NotNull
     private String clientId;
 
-    @JsonProperty("logout_uri")
+    @Expose
+    @NotNull
     private String logoutUri;
 
-    @JsonProperty("subject_id")
+    @Expose
+    @NotNull
     private String subjectId;
 
+    public BackChannelLogoutMessage() {}
+
     public BackChannelLogoutMessage(
-            @JsonProperty(required = true, value = "client_id") String clientId,
-            @JsonProperty(required = true, value = "logout_uri") String logoutUri,
-            @JsonProperty(required = true, value = "subject_id") String subjectId) {
+            String clientId,
+            String logoutUri,
+            String subjectId) {
         this.clientId = clientId;
         this.logoutUri = logoutUri;
         this.subjectId = subjectId;

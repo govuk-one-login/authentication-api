@@ -7,6 +7,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.List;
 import java.util.Map;
@@ -29,7 +30,7 @@ public class ApiGatewayResponseHelper {
     private static final String X_FRAME_OPTIONS_HEADER_VALUE = "DENY";
 
     private static final Logger LOG = LogManager.getLogger(ApiGatewayResponseHelper.class);
-    private static final Json objectMapper = Json.jackson();
+    private static final Json objectMapper = SerializationService.getInstance();
 
     public static <T> APIGatewayProxyResponseEvent generateApiGatewayProxyResponse(
             int statusCode, T body) throws JsonException {
