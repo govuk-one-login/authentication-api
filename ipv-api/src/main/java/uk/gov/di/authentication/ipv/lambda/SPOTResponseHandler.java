@@ -62,6 +62,7 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
                             spotResponse.getStatus());
                     return null;
                 }
+                LOG.info("SPOTResponse Status is Accepted. Adding CoreIdentityJWT to Dynamo");
 
                 dynamoIdentityService.addCoreIdentityJWT(
                         spotResponse.getSub(),
