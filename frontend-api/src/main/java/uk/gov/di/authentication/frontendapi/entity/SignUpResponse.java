@@ -1,14 +1,19 @@
 package uk.gov.di.authentication.frontendapi.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
+import jakarta.validation.constraints.NotNull;
 
 public class SignUpResponse {
 
-    @JsonProperty(value = "consentRequired")
+    @SerializedName("consentRequired")
+    @Expose
+    @NotNull
     private boolean consentRequired;
 
-    public SignUpResponse(
-            @JsonProperty(value = "consentRequired", required = true) boolean consentRequired) {
+    public SignUpResponse() {}
+
+    public SignUpResponse(boolean consentRequired) {
         this.consentRequired = consentRequired;
     }
 

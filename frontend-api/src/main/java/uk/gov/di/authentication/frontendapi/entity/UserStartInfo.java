@@ -1,38 +1,53 @@
 package uk.gov.di.authentication.frontendapi.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
+import jakarta.validation.constraints.NotNull;
 
 public class UserStartInfo {
 
-    @JsonProperty("consentRequired")
+    @SerializedName("consentRequired")
+    @Expose
+    @NotNull
     private boolean consentRequired;
 
-    @JsonProperty("upliftRequired")
+    @SerializedName("upliftRequired")
+    @Expose
+    @NotNull
     private boolean upliftRequired;
 
-    @JsonProperty("identityRequired")
+    @SerializedName("identityRequired")
+    @Expose
+    @NotNull
     private boolean identityRequired;
 
-    @JsonProperty("authenticated")
+    @SerializedName("authenticated")
+    @Expose
+    @NotNull
     private boolean authenticated;
 
-    @JsonProperty("cookieConsent")
+    @SerializedName("cookieConsent")
+    @Expose
     private String cookieConsent;
 
-    @JsonProperty("gaCrossDomainTrackingId")
+    @SerializedName("gaCrossDomainTrackingId")
+    @Expose
     private String gaCrossDomainTrackingId;
 
-    @JsonProperty("docCheckingAppUser")
+    @SerializedName("docCheckingAppUser")
+    @Expose
     private boolean docCheckingAppUser;
 
+    public UserStartInfo() {}
+
     public UserStartInfo(
-            @JsonProperty(required = true, value = "consentRequired") boolean consentRequired,
-            @JsonProperty(required = true, value = "upliftRequired") boolean upliftRequired,
-            @JsonProperty(required = true, value = "identityRequired") boolean identityRequired,
-            @JsonProperty(required = true, value = "authenticated") boolean authenticated,
-            @JsonProperty(value = "cookieConsent") String cookieConsent,
-            @JsonProperty(value = "gaCrossDomainTrackingId") String gaCrossDomainTrackingId,
-            @JsonProperty(value = "docCheckingAppUser") boolean docCheckingAppUser) {
+            boolean consentRequired,
+            boolean upliftRequired,
+            boolean identityRequired,
+            boolean authenticated,
+            String cookieConsent,
+            String gaCrossDomainTrackingId,
+            boolean docCheckingAppUser) {
         this.consentRequired = consentRequired;
         this.upliftRequired = upliftRequired;
         this.identityRequired = identityRequired;

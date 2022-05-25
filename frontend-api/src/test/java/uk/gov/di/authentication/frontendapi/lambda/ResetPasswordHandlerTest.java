@@ -3,8 +3,6 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
@@ -15,8 +13,8 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
@@ -24,6 +22,7 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.HashMap;
@@ -59,7 +58,7 @@ class ResetPasswordHandlerTest {
     private static final String SUBJECT = "some-subject";
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String PERSISTENT_ID = "some-persistent-id-value";
-    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private static final Json objectMapper = SerializationService.getInstance();
 
     private ResetPasswordHandler handler;
     private final Session session = new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
@@ -79,7 +78,7 @@ class ResetPasswordHandlerTest {
     }
 
     @Test
-    public void shouldReturn204ForSuccessfulRequestContainingCode() throws JsonProcessingException {
+    public void shouldReturn204ForSuccessfulRequestContainingCode() throws Json.JsonException {
         when(codeStorageService.getSubjectWithPasswordResetCode(CODE))
                 .thenReturn(Optional.of(SUBJECT));
         when(authenticationService.getUserCredentialsFromSubject(SUBJECT))
@@ -115,7 +114,7 @@ class ResetPasswordHandlerTest {
     }
 
     @Test
-    public void shouldReturn204ForSuccessfulRequestWithNoCode() throws JsonProcessingException {
+    public void shouldReturn204ForSuccessfulRequestWithNoCode() throws Json.JsonException {
 
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials());
@@ -149,7 +148,7 @@ class ResetPasswordHandlerTest {
     }
 
     @Test
-    public void shouldReturn204ForSuccessfulMigratedUserRequest() throws JsonProcessingException {
+    public void shouldReturn204ForSuccessfulMigratedUserRequest() throws Json.JsonException {
         when(codeStorageService.getSubjectWithPasswordResetCode(CODE))
                 .thenReturn(Optional.of(SUBJECT));
         when(authenticationService.getUserCredentialsFromSubject(SUBJECT))
@@ -213,8 +212,7 @@ class ResetPasswordHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfNewPasswordEqualsExistingPassword()
-            throws JsonProcessingException {
+    public void shouldReturn400IfNewPasswordEqualsExistingPassword() throws Json.JsonException {
         usingValidSession();
         when(codeStorageService.getSubjectWithPasswordResetCode(CODE))
                 .thenReturn(Optional.of(SUBJECT));

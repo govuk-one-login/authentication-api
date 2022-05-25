@@ -1,18 +1,24 @@
 package uk.gov.di.authentication.frontendapi.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
+import jakarta.validation.constraints.NotNull;
 
 public class StartResponse {
 
-    @JsonProperty("user")
+    @SerializedName("user")
+    @NotNull
+    @Expose
     private UserStartInfo user;
 
-    @JsonProperty("client")
+    @SerializedName("client")
+    @NotNull
+    @Expose
     private ClientStartInfo client;
 
-    public StartResponse(
-            @JsonProperty(required = true, value = "user") UserStartInfo user,
-            @JsonProperty(required = true, value = "client") ClientStartInfo client) {
+    public StartResponse() {}
+
+    public StartResponse(UserStartInfo user, ClientStartInfo client) {
         this.user = user;
         this.client = client;
     }

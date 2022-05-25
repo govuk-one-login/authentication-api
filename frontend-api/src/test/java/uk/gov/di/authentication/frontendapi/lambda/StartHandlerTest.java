@@ -3,8 +3,6 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -28,11 +26,12 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -67,7 +66,7 @@ class StartHandlerTest {
     public static final String SESSION_ID = "some-session-id";
     public static final String PERSISTENT_ID = "some-persistent-id-value";
     public static final URI REDIRECT_URL = URI.create("https://localhost/redirect");
-    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private static final Json objectMapper = SerializationService.getInstance();
 
     private StartHandler handler;
     private final Context context = mock(Context.class);
@@ -110,7 +109,7 @@ class StartHandlerTest {
     @ParameterizedTest
     @MethodSource("cookieConsentGaTrackingIdValues")
     void shouldReturn200WithStartResponse(String cookieConsentValue, String gaTrackingId)
-            throws JsonProcessingException, ParseException {
+            throws Json.JsonException, ParseException, Json.JsonException {
         var userStartInfo = getUserStartInfo(cookieConsentValue, gaTrackingId);
         when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
         when(startService.buildClientStartInfo(userContext)).thenReturn(getClientStartInfo());
@@ -171,7 +170,7 @@ class StartHandlerTest {
 
     @Test
     void shouldReturn200WhenDocCheckingAppUserIsPresent()
-            throws JsonProcessingException, ParseException {
+            throws Json.JsonException, ParseException, Json.JsonException {
         when(configurationService.getDocAppDomain()).thenReturn(URI.create("https://doc-app"));
         var userStartInfo = new UserStartInfo(false, false, false, false, null, null, true);
         when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
@@ -233,7 +232,7 @@ class StartHandlerTest {
     }
 
     @Test
-    void shouldReturn400WhenClientSessionIsNotFound() throws JsonProcessingException {
+    void shouldReturn400WhenClientSessionIsNotFound() throws Json.JsonException {
         usingInvalidClientSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID));
@@ -248,7 +247,7 @@ class StartHandlerTest {
     }
 
     @Test
-    void shouldReturn400WhenSessionIsNotFound() throws JsonProcessingException {
+    void shouldReturn400WhenSessionIsNotFound() throws Json.JsonException {
         usingValidClientSession();
         usingInvalidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -269,7 +268,7 @@ class StartHandlerTest {
 
     @Test
     void shouldReturn400WhenBuildClientStartInfoThrowsException()
-            throws ParseException, JsonProcessingException {
+            throws ParseException, Json.JsonException {
         when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
         when(startService.buildClientStartInfo(userContext))
                 .thenThrow(new ParseException("Unable to parse authentication request"));

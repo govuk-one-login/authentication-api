@@ -1,15 +1,26 @@
 package uk.gov.di.authentication.shared.entity;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
+import jakarta.validation.constraints.NotNull;
 
 public class NotifyRequest {
 
-    @JsonProperty private NotificationType notificationType;
+    @JsonProperty
+    @Expose
+    @SerializedName("notificationType")
+    @NotNull
+    private NotificationType notificationType;
 
-    @JsonProperty private String destination;
+    @JsonProperty @Expose @NotNull private String destination;
 
-    @JsonProperty private String code;
+    @JsonProperty @Expose private String code;
 
+    public NotifyRequest() {}
+
+    @JsonCreator
     public NotifyRequest(
             @JsonProperty(required = true, value = "destination") String destination,
             @JsonProperty(required = true, value = "notificationType")

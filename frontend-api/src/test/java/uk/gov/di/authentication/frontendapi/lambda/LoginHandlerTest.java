@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -30,14 +29,15 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -75,7 +75,7 @@ class LoginHandlerTest {
             new UserCredentials().setEmail(EMAIL).setPassword(PASSWORD);
     private static final String PHONE_NUMBER = "01234567890";
     private static final ClientID CLIENT_ID = new ClientID();
-    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private static final Json objectMapper = SerializationService.getInstance();
 
     private LoginHandler handler;
     private final Context context = mock(Context.class);
@@ -128,7 +128,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    void shouldReturn200IfLoginIsSuccessful() throws JsonProcessingException {
+    void shouldReturn200IfLoginIsSuccessful() throws JsonProcessingException, Json.JsonException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
@@ -173,7 +173,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldReturn200IfLoginIsSuccessfulAndTermsAndConditionsNotAccepted()
-            throws JsonProcessingException {
+            throws JsonProcessingException, Json.JsonException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("2.0");
         String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
@@ -222,7 +222,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldReturn200IfMigratedUserHasBeenProcessesSuccessfully()
-            throws JsonProcessingException {
+            throws JsonProcessingException, Json.JsonException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         String legacySubjectId = new Subject().getValue();
         UserProfile userProfile = generateUserProfile(legacySubjectId);
@@ -252,7 +252,8 @@ class LoginHandlerTest {
     }
 
     @Test
-    void shouldReturn200IfPasswordIsEnteredAgain() throws JsonProcessingException {
+    void shouldReturn200IfPasswordIsEnteredAgain()
+            throws JsonProcessingException, Json.JsonException {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -331,7 +332,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldRemoveIncorrectPasswordCountRemovesUponSuccessfulLogin()
-            throws JsonProcessingException {
+            throws JsonProcessingException, Json.JsonException {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));

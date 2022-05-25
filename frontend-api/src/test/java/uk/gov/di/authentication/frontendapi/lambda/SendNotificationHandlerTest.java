@@ -3,8 +3,6 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -25,7 +23,7 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -33,6 +31,7 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -96,7 +95,7 @@ class SendNotificationHandlerTest {
                                     "jb2@digital.cabinet-office.gov.uk"));
 
     private final Context context = mock(Context.class);
-    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private static final Json objectMapper = SerializationService.getInstance();
 
     private final Session session =
             new Session(IdGenerator.generate()).setEmailAddress(TEST_EMAIL_ADDRESS);
@@ -144,7 +143,7 @@ class SendNotificationHandlerTest {
 
     @Test
     void shouldReturn204AndPutMessageOnQueueForAValidVerifyEmailRequest()
-            throws JsonProcessingException {
+            throws Json.JsonException {
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_SIX_DIGIT_CODE);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
@@ -170,7 +169,7 @@ class SendNotificationHandlerTest {
 
     @Test
     void shouldReturn204AndNotPutMessageOnQueueForAValidRequestUsingTestClientWithAllowedEmail()
-            throws JsonProcessingException {
+            throws Json.JsonException {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_SIX_DIGIT_CODE);
@@ -225,7 +224,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    void shouldReturn500IfMessageCannotBeSentToQueue() throws JsonProcessingException {
+    void shouldReturn500IfMessageCannotBeSentToQueue() throws Json.JsonException {
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_SIX_DIGIT_CODE);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
@@ -408,7 +407,7 @@ class SendNotificationHandlerTest {
     }
 
     @Test
-    void shouldReturn204WhenSendingAccountCreationEmail() throws JsonProcessingException {
+    void shouldReturn204WhenSendingAccountCreationEmail() throws Json.JsonException {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -427,7 +426,7 @@ class SendNotificationHandlerTest {
 
     @Test
     void shouldReturn204AndNotSendAccountCreationEmailForTestClientAndTestUser()
-            throws JsonProcessingException {
+            throws Json.JsonException {
         usingValidSession();
         usingValidClientSession(TEST_CLIENT_ID);
         when(configurationService.isTestClientsEnabled()).thenReturn(true);

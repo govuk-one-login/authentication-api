@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,13 +13,14 @@ import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -56,7 +56,7 @@ class CheckUserExistsHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
 
     private CheckUserExistsHandler handler;
-    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private static final Json objectMapper = SerializationService.getInstance();
 
     private final Session session = new Session(IdGenerator.generate());
 
@@ -85,7 +85,7 @@ class CheckUserExistsHandlerTest {
     }
 
     @Test
-    void shouldReturn200IfUserExists() throws JsonProcessingException {
+    void shouldReturn200IfUserExists() throws JsonProcessingException, Json.JsonException {
         usingValidSession();
         String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
@@ -121,7 +121,7 @@ class CheckUserExistsHandlerTest {
     }
 
     @Test
-    void shouldReturn200IfUserDoesNotExist() throws JsonProcessingException {
+    void shouldReturn200IfUserDoesNotExist() throws JsonProcessingException, Json.JsonException {
         usingValidSession();
         when(authenticationService.userExists(eq("joe.bloggs@digital.cabinet-office.gov.uk")))
                 .thenReturn(false);

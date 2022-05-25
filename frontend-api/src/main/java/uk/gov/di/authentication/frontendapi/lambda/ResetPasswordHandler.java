@@ -19,7 +19,6 @@ import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
-import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -46,7 +45,6 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
     private final AwsSqsClient sqsClient;
     private final CodeStorageService codeStorageService;
     private final AuditService auditService;
-    private final Json objectMapper = Json.jackson();
 
     private static final Logger LOG = LogManager.getLogger(ResetPasswordHandler.class);
 
