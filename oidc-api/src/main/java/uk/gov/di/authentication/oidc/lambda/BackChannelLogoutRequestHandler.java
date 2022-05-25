@@ -71,7 +71,8 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
 
         try {
             var payload =
-                    SerializationService.getInstance().readValue(record.getBody(), BackChannelLogoutMessage.class);
+                    SerializationService.getInstance()
+                            .readValue(record.getBody(), BackChannelLogoutMessage.class);
 
             var claims = generateClaims(payload);
 

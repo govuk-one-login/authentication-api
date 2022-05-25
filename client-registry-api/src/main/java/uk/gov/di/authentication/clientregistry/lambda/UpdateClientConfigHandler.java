@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.Optional;
 
@@ -36,7 +37,7 @@ public class UpdateClientConfigHandler
     private final ClientService clientService;
     private final ClientConfigValidationService validationService;
     private final AuditService auditService;
-    private final Json objectMapper = Json.jackson();
+    private final Json objectMapper = SerializationService.getInstance();
     private static final Logger LOG = LogManager.getLogger(UpdateClientConfigHandler.class);
 
     public UpdateClientConfigHandler(

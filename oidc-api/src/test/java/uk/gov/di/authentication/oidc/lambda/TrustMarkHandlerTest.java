@@ -38,7 +38,8 @@ class TrustMarkHandlerTest {
     }
 
     @Test
-    public void shouldReturn200WhenRequestIsSuccessful() throws JsonProcessingException, Json.JsonException {
+    public void shouldReturn200WhenRequestIsSuccessful()
+            throws JsonProcessingException, Json.JsonException {
         TrustMarkResponse trustMarkResponse =
                 new TrustMarkResponse(
                         configurationService.getOidcApiBaseURL().orElseThrow(),
@@ -53,7 +54,8 @@ class TrustMarkHandlerTest {
 
         assertThat(result, hasStatus(200));
 
-        TrustMarkResponse response = objectMapper.readValue(result.getBody(), TrustMarkResponse.class);
+        TrustMarkResponse response =
+                objectMapper.readValue(result.getBody(), TrustMarkResponse.class);
 
         assertEquals(response.getIdp(), trustMarkResponse.getIdp());
         assertEquals(response.getTrustMark(), trustMarkResponse.getTrustMark());

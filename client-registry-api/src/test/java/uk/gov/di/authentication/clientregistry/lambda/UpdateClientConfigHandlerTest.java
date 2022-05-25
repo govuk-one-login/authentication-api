@@ -3,8 +3,6 @@ package uk.gov.di.authentication.clientregistry.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,9 +13,10 @@ import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationSe
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.List;
@@ -51,7 +50,7 @@ class UpdateClientConfigHandlerTest {
     private static final String CLIENT_NAME = "client-name-one";
     private static final List<String> SCOPES = singletonList("openid");
     private static final String SERVICE_TYPE = String.valueOf(MANDATORY);
-    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private static final Json objectMapper = SerializationService.getInstance();
 
     private final Context context = mock(Context.class);
     private final ClientService clientService = mock(ClientService.class);
@@ -78,7 +77,7 @@ class UpdateClientConfigHandlerTest {
     }
 
     @Test
-    public void shouldReturn200ForAValidRequest() throws JsonProcessingException {
+    public void shouldReturn200ForAValidRequest() throws Json.JsonException {
         when(clientService.isValidClient(CLIENT_ID)).thenReturn(true);
         when(clientValidationService.validateClientUpdateConfig(
                         any(UpdateClientConfigRequest.class)))

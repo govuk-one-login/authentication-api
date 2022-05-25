@@ -5,9 +5,7 @@ import jakarta.validation.constraints.NotNull;
 
 public class AuthCodeResponse {
 
-    @Expose
-    @NotNull
-    private String location;
+    @Expose @NotNull private String location;
 
     public AuthCodeResponse() {}
 

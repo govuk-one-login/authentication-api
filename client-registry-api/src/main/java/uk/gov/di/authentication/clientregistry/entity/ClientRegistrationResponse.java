@@ -1,51 +1,77 @@
 package uk.gov.di.authentication.clientregistry.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
 
 public class ClientRegistrationResponse {
 
-    @JsonProperty(required = true, value = "client_name")
+    @SerializedName("client_name")
+    @Expose
+    @NotNull
     private String clientName;
 
-    @JsonProperty(required = true, value = "client_id")
+    @SerializedName("client_id")
+    @Expose
+    @NotNull
     private String clientId;
 
-    @JsonProperty(required = true, value = "redirect_uris")
+    @SerializedName("redirect_uris")
+    @Expose
+    @NotNull
     private List<String> redirectUris;
 
-    @JsonProperty(required = true, value = "contacts")
+    @SerializedName("contacts")
+    @Expose
+    @NotNull
     private List<String> contacts;
 
-    @JsonProperty(required = true, value = "scopes")
+    @SerializedName("scopes")
+    @Expose
+    @NotNull
     private List<String> scopes;
 
-    @JsonProperty(value = "post_logout_redirect_uris")
+    @SerializedName("post_logout_redirect_uris")
+    @Expose
+    @NotNull
     private List<String> postLogoutRedirectUris;
 
-    @JsonProperty(value = "back_channel_logout_uri")
+    @SerializedName("back_channel_logout_uri")
+    @Expose
     private String backChannelLogoutUri;
 
-    @JsonProperty(required = true, value = "subject_type")
+    @SerializedName("subject_type")
+    @Expose
+    @NotNull
     private String subjectType;
 
-    @JsonProperty(required = true, value = "token_endpoint_auth_method")
+    @SerializedName("token_endpoint_auth_method")
+    @Expose
+    @NotNull
     private final String tokenAuthMethod = "private_key_jwt";
 
-    @JsonProperty(required = true, value = "response_type")
+    @SerializedName("response_type")
+    @Expose
+    @NotNull
     private final String responseType = "code";
 
-    @JsonProperty(required = true, value = "service_type")
+    @SerializedName("service_type")
+    @Expose
+    @NotNull
     private String serviceType;
 
-    @JsonProperty(value = "claims")
+    @SerializedName("claims")
+    @Expose
     private List<String> claims;
 
-    @JsonProperty("sector_identifier_uri")
+    @SerializedName("sector_identifier_uri")
+    @Expose
     private String sectorIdentifierUri;
 
-    @JsonProperty("client_type")
+    @SerializedName("client_type")
+    @Expose
     private String clientType;
 
     public ClientRegistrationResponse(

@@ -30,11 +30,7 @@ public class TrustMarkResponse {
 
     public TrustMarkResponse() {}
 
-    public TrustMarkResponse(
-            String idp,
-            String trustMark,
-            List<String> c,
-            List<String> p) {
+    public TrustMarkResponse(String idp, String trustMark, List<String> c, List<String> p) {
         this.idp = idp;
         this.trustMark = trustMark;
         this.c = c;

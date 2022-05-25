@@ -1,6 +1,8 @@
 package uk.gov.di.authentication.clientregistry.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
+import jakarta.validation.constraints.NotNull;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 
@@ -10,61 +12,81 @@ import java.util.Objects;
 
 public class ClientRegistrationRequest {
 
-    @JsonProperty("client_name")
+    @SerializedName("client_name")
+    @Expose
+    @NotNull
     private String clientName;
 
-    @JsonProperty("redirect_uris")
+    @SerializedName("redirect_uris")
+    @Expose
+    @NotNull
     private List<String> redirectUris;
 
-    @JsonProperty("contacts")
+    @SerializedName("contacts")
+    @Expose
+    @NotNull
     private List<String> contacts;
 
-    @JsonProperty("public_key")
+    @SerializedName("public_key")
+    @Expose
+    @NotNull
     private String publicKey;
 
-    @JsonProperty("scopes")
+    @SerializedName("scopes")
+    @Expose
+    @NotNull
     private List<String> scopes;
 
-    @JsonProperty("post_logout_redirect_uris")
+    @SerializedName("post_logout_redirect_uris")
+    @Expose
     private List<String> postLogoutRedirectUris = new ArrayList<>();
 
-    @JsonProperty("back_channel_logout_uri")
-    private final String backChannelLogoutUri;
+    @SerializedName("back_channel_logout_uri")
+    @Expose
+    private String backChannelLogoutUri;
 
-    @JsonProperty("service_type")
-    private String serviceType;
+    @SerializedName("service_type")
+    @Expose
+    private String serviceType = String.valueOf(ServiceType.MANDATORY);
 
-    @JsonProperty("sector_identifier_uri")
+    @SerializedName("sector_identifier_uri")
+    @Expose
+    @NotNull
     private String sectorIdentifierUri;
 
-    @JsonProperty("subject_type")
+    @SerializedName("subject_type")
+    @Expose
+    @NotNull
     private String subjectType;
 
-    @JsonProperty("identity_verification_required")
+    @SerializedName("identity_verification_required")
+    @Expose
     private boolean identityVerificationRequired;
 
-    @JsonProperty("claims")
+    @SerializedName("claims")
+    @Expose
     private List<String> claims = new ArrayList<>();
 
-    @JsonProperty("client_type")
-    private String clientType;
+    @SerializedName("client_type")
+    @Expose
+    private String clientType = ClientType.WEB.getValue();
+
+    public ClientRegistrationRequest() {}
 
     public ClientRegistrationRequest(
-            @JsonProperty(required = true, value = "client_name") String clientName,
-            @JsonProperty(required = true, value = "redirect_uris") List<String> redirectUris,
-            @JsonProperty(required = true, value = "contacts") List<String> contacts,
-            @JsonProperty(required = true, value = "public_key") String publicKey,
-            @JsonProperty(required = true, value = "scopes") List<String> scopes,
-            @JsonProperty(value = "post_logout_redirect_uris") List<String> postLogoutRedirectUris,
-            @JsonProperty(value = "back_channel_logout_uri") String backChannelLogoutUri,
-            @JsonProperty(value = "service_type") String serviceType,
-            @JsonProperty(required = true, value = "sector_identifier_uri")
-                    String sectorIdentifierUri,
-            @JsonProperty(required = true, value = "subject_type") String subjectType,
-            @JsonProperty(value = "identity_verification_required")
-                    boolean identityVerificationRequired,
-            @JsonProperty(value = "claims") List<String> claims,
-            @JsonProperty(value = "client_type") String clientType) {
+            String clientName,
+            List<String> redirectUris,
+            List<String> contacts,
+            String publicKey,
+            List<String> scopes,
+            List<String> postLogoutRedirectUris,
+            String backChannelLogoutUri,
+            String serviceType,
+            String sectorIdentifierUri,
+            String subjectType,
+            boolean identityVerificationRequired,
+            List<String> claims,
+            String clientType) {
         this.clientName = clientName;
         this.redirectUris = redirectUris;
         this.contacts = contacts;

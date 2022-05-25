@@ -14,6 +14,7 @@ dependencies {
             configurations.dynamodb
 
     implementation configurations.nimbus,
+            configurations.gson,
             'commons-validator:commons-validator:1.7'
 
     implementation project(":shared")
