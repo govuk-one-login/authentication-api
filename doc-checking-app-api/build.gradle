@@ -12,6 +12,7 @@ dependencies {
             configurations.sns
 
     implementation configurations.jackson,
+            configurations.gson,
             configurations.nimbus,
             configurations.bouncycastle
 
