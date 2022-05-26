@@ -9,6 +9,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.BackChannelLogoutMessage;
 import uk.gov.di.authentication.oidc.services.HttpRequestService;
+import uk.gov.di.authentication.shared.helpers.LogLineHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -25,6 +26,7 @@ import java.util.UUID;
 
 import static java.util.Collections.emptyMap;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
 public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent, Object> {
 
@@ -72,6 +74,8 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
         try {
             var payload =
                     Json.jackson().readValue(record.getBody(), BackChannelLogoutMessage.class);
+
+            attachLogFieldToLogs(LogLineHelper.LogFieldName.CLIENT_ID, payload.getClientId());
 
             var claims = generateClaims(payload);
 
