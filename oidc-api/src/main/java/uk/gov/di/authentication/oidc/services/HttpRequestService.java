@@ -2,13 +2,13 @@ package uk.gov.di.authentication.oidc.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.ThreadContext;
+import org.apache.logging.log4j.message.ObjectMessage;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse.BodyHandlers;
-import java.util.List;
+import java.util.Map;
 
 import static java.net.http.HttpClient.newHttpClient;
 import static java.net.http.HttpRequest.BodyPublishers.ofString;
@@ -24,12 +24,14 @@ public class HttpRequestService {
         try {
             var response = newHttpClient().send(request, BodyHandlers.discarding());
 
-            ThreadContext.put("uri", uri.toString());
-            ThreadContext.put("response-code", Integer.toString(response.statusCode()));
+            var logMessage =
+                    Map.of(
+                            "uri",
+                            uri.toString(),
+                            "response-code",
+                            Integer.toString(response.statusCode()));
 
-            LOG.info("Executed POST request");
-
-            ThreadContext.removeAll(List.of("uri", "response-code"));
+            LOG.info(new ObjectMessage(logMessage));
 
         } catch (IOException e) {
             LOG.error("Unable to execute POST request successfully");
