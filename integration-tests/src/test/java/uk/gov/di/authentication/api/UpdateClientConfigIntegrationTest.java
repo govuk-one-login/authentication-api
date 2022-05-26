@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.api;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -8,6 +7,7 @@ import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse
 import uk.gov.di.authentication.clientregistry.lambda.UpdateClientConfigHandler;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.util.List;
@@ -33,7 +33,7 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
     }
 
     @Test
-    public void shouldUpdateClientNameSuccessfully() throws JsonProcessingException {
+    public void shouldUpdateClientNameSuccessfully() throws Json.JsonException {
         clientStore.registerClient(
                 CLIENT_ID,
                 "The test client",

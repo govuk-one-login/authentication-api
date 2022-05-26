@@ -1,7 +1,10 @@
 package uk.gov.di.authentication.shared.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.JsonAdapter;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import uk.gov.di.authentication.shared.serialization.LocalDateTimeAdapter;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -10,18 +13,24 @@ import java.util.Map;
 public class ClientSession {
 
     @JsonProperty("auth_request_params")
+    @Expose
     private Map<String, List<String>> authRequestParams;
 
     @JsonProperty("id_token_hint")
+    @Expose
     private String idTokenHint;
 
     @JsonProperty("creation_date")
+    @Expose
+    @JsonAdapter(LocalDateTimeAdapter.class)
     private LocalDateTime creationDate;
 
     @JsonProperty("effective_vector_of_trust")
+    @Expose
     private VectorOfTrust effectiveVectorOfTrust;
 
     @JsonProperty("doc_app_subject_id")
+    @Expose
     private Subject docAppSubjectId;
 
     public ClientSession(

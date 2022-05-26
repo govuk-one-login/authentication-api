@@ -13,6 +13,7 @@ import uk.gov.di.authentication.frontendapi.entity.SignUpResponse;
 import uk.gov.di.authentication.frontendapi.entity.SignupRequest;
 import uk.gov.di.authentication.frontendapi.lambda.SignUpHandler;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.io.IOException;
@@ -50,7 +51,8 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @ParameterizedTest
     @MethodSource("consentValues")
-    void shouldReturn200WhenValidSignUpRequest(boolean consentRequired) throws IOException {
+    void shouldReturn200WhenValidSignUpRequest(boolean consentRequired)
+            throws IOException, Json.JsonException {
         String sessionId = redis.createSession();
 
         Map<String, String> headers = new HashMap<>();

@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
 import uk.gov.di.authentication.oidc.lambda.AuthCodeHandler;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
@@ -43,7 +44,8 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    public void shouldReturn302WithSuccessfulAuthorisationResponse() throws IOException {
+    public void shouldReturn302WithSuccessfulAuthorisationResponse()
+            throws IOException, Json.JsonException {
         String sessionId = "some-session-id";
         String clientSessionId = "some-client-session-id";
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();

@@ -2,6 +2,7 @@ package uk.gov.di.authentication.shared.entity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
 import net.minidev.json.JSONArray;
 import net.minidev.json.parser.JSONParser;
 import org.apache.logging.log4j.LogManager;
@@ -22,14 +23,18 @@ public class VectorOfTrust {
     private static final Logger LOG = LogManager.getLogger(VectorOfTrust.class);
 
     @JsonProperty("credential_trust_level")
-    private final CredentialTrustLevel credentialTrustLevel;
+    @Expose
+    private CredentialTrustLevel credentialTrustLevel;
 
     @JsonProperty("level_of_confidence")
-    private final LevelOfConfidence levelOfConfidence;
+    @Expose
+    private LevelOfConfidence levelOfConfidence;
 
     private VectorOfTrust(CredentialTrustLevel credentialTrustLevel) {
         this(credentialTrustLevel, null);
     }
+
+    public VectorOfTrust() {}
 
     @JsonCreator
     private VectorOfTrust(

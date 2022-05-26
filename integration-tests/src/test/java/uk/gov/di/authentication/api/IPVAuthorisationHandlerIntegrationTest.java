@@ -15,6 +15,7 @@ import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
 import uk.gov.di.authentication.ipv.lambda.IPVAuthorisationHandler;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.IPVStubExtension;
@@ -74,7 +75,7 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
     }
 
     @Test
-    void shouldReturn200WithValidIPVAuthorisationRequest() throws IOException {
+    void shouldReturn200WithValidIPVAuthorisationRequest() throws Json.JsonException {
         userStore.signUp(TEST_EMAIL_ADDRESS, "password-1");
         clientStore.registerClient(
                 CLIENT_ID.getValue(),

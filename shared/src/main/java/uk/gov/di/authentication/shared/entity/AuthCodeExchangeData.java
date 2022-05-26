@@ -1,14 +1,22 @@
 package uk.gov.di.authentication.shared.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 
 public class AuthCodeExchangeData {
 
-    @JsonProperty private String clientSessionId;
+    @JsonProperty
+    @Expose
+    @SerializedName("clientSessionId")
+    private String clientSessionId;
 
-    @JsonProperty private String email;
+    @JsonProperty @Expose private String email;
 
-    @JsonProperty private ClientSession clientSession;
+    @JsonProperty
+    @Expose
+    @SerializedName("clientSession")
+    private ClientSession clientSession;
 
     public String getClientSessionId() {
         return clientSessionId;

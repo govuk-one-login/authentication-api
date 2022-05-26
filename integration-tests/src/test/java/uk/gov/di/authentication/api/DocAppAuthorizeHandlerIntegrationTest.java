@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.app.entity.DocAppAuthorisationResponse;
 import uk.gov.di.authentication.app.lambda.DocAppAuthorizeHandler;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
@@ -61,7 +62,7 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
     }
 
     @Test
-    void shouldReturn200WithValidDocAppAuthRequest() throws IOException {
+    void shouldReturn200WithValidDocAppAuthRequest() throws IOException, Json.JsonException {
         redis.addDocAppSubjectIdToClientSession(new Subject(), CLIENT_SESSION_ID);
         var response =
                 makeRequest(

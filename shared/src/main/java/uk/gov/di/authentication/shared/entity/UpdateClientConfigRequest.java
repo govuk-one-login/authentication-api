@@ -1,42 +1,54 @@
 package uk.gov.di.authentication.shared.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 
 import java.util.List;
 
 public class UpdateClientConfigRequest {
 
-    @JsonProperty("client_id")
+    @SerializedName("client_id")
+    @Expose
     private String clientId;
 
-    @JsonProperty("client_name")
+    @SerializedName("client_name")
+    @Expose
     private String clientName;
 
-    @JsonProperty("redirect_uris")
+    @SerializedName("redirect_uris")
+    @Expose
     private List<String> redirectUris;
 
-    @JsonProperty("contacts")
+    @SerializedName("contacts")
+    @Expose
     private List<String> contacts;
 
-    @JsonProperty("public_key")
+    @SerializedName("public_key")
+    @Expose
     private String publicKey;
 
-    @JsonProperty("scopes")
+    @SerializedName("scopes")
+    @Expose
     private List<String> scopes;
 
-    @JsonProperty("post_logout_redirect_uris")
+    @SerializedName("post_logout_redirect_uris")
+    @Expose
     private List<String> postLogoutRedirectUris;
 
-    @JsonProperty("service_type")
+    @SerializedName("service_type")
+    @Expose
     private String serviceType;
 
-    @JsonProperty("claims")
+    @SerializedName("claims")
+    @Expose
     private List<String> claims;
 
-    @JsonProperty("sector_identifier_uri")
+    @SerializedName("sector_identifier_uri")
+    @Expose
     private String sectorIdentifierUri;
 
-    @JsonProperty("client_type")
+    @SerializedName("client_type")
+    @Expose
     private String clientType;
 
     public UpdateClientConfigRequest() {}
