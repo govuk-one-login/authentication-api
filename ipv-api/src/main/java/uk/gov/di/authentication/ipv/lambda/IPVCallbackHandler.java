@@ -37,6 +37,7 @@ import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.Map;
@@ -68,7 +69,7 @@ public class IPVCallbackHandler
     private final DynamoClientService dynamoClientService;
     private final AuditService auditService;
     private final AwsSqsClient sqsClient;
-    protected final Json objectMapper = Json.jackson();
+    protected final Json objectMapper = SerializationService.getInstance();
     private static final String REDIRECT_PATH = "ipv-callback";
 
     public IPVCallbackHandler() {

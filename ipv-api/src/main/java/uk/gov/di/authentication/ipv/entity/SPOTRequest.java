@@ -1,27 +1,37 @@
 package uk.gov.di.authentication.ipv.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.JsonAdapter;
+import com.google.gson.annotations.SerializedName;
+import uk.gov.di.authentication.shared.serialization.Base64ByteArrayAdapter;
 
 import java.util.Map;
 
 public class SPOTRequest {
 
-    @JsonProperty(value = "in_claims")
+    @SerializedName(value = "in_claims")
+    @Expose
     private Map<String, Object> spotClaims;
 
-    @JsonProperty(value = "in_local_account_id")
+    @SerializedName(value = "in_local_account_id")
+    @Expose
     private String localAccountId;
 
-    @JsonProperty(value = "in_salt")
+    @SerializedName(value = "in_salt")
+    @Expose
+    @JsonAdapter(Base64ByteArrayAdapter.class)
     private byte[] salt;
 
-    @JsonProperty(value = "in_rp_sector_id")
+    @SerializedName(value = "in_rp_sector_id")
+    @Expose
     private String rpSectorId;
 
-    @JsonProperty(value = "out_sub")
+    @SerializedName(value = "out_sub")
+    @Expose
     private String sub;
 
-    @JsonProperty(value = "log_ids")
+    @SerializedName(value = "log_ids")
+    @Expose
     private LogIds logIds;
 
     public SPOTRequest(

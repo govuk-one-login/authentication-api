@@ -1,9 +1,8 @@
 package uk.gov.di.authentication.ipv.entity;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.Base64;
 import java.util.List;
@@ -13,15 +12,16 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class SPOTRequestTest {
 
+    private Json objectMapper = SerializationService.getInstance();
+
     @Test
-    void shouldReadSPOTRequestFromJson() throws JsonProcessingException {
+    void shouldReadSPOTRequestFromJson() throws Json.JsonException {
 
         String saltString =
                 Base64.getEncoder()
                         .encodeToString("Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes());
         String spotRequestJson = buildSpotRequestJson("P2", "/trustmark", saltString);
 
-        ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
         SPOTRequest spotRequest = objectMapper.readValue(spotRequestJson, SPOTRequest.class);
 
         assertNotNull(spotRequest);

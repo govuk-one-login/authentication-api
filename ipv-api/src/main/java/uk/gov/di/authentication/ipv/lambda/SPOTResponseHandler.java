@@ -14,12 +14,13 @@ import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoIdentityService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.NoSuchElementException;
 
 public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
 
-    private final Json objectMapper = Json.jackson();
+    private final Json objectMapper = SerializationService.getInstance();
     private final DynamoIdentityService dynamoIdentityService;
     private final AuditService auditService;
 

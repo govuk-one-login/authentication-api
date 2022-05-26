@@ -1,20 +1,16 @@
 package uk.gov.di.authentication.ipv.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
 
 public class LogIds {
 
-    @JsonProperty(value = "session_id")
-    private String sessionId;
+    @Expose private String sessionId;
 
-    @JsonProperty(value = "persistent_session_id")
-    private String persistentSessionId;
+    @Expose private String persistentSessionId;
 
-    @JsonProperty(value = "request_id")
-    private String requestId;
+    @Expose private String requestId;
 
-    @JsonProperty(value = "client_id")
-    private String clientId;
+    @Expose private String clientId;
 
     public LogIds(String sessionId, String persistentSessionId, String requestId, String clientId) {
         this.sessionId = sessionId;
