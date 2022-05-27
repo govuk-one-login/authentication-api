@@ -90,7 +90,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
         this.auditService = new AuditService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
     @Override

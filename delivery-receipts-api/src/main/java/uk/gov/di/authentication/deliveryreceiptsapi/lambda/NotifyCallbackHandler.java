@@ -41,7 +41,7 @@ public class NotifyCallbackHandler
     }
 
     public NotifyCallbackHandler(ConfigurationService configurationService) {
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.configurationService = configurationService;
     }
 
