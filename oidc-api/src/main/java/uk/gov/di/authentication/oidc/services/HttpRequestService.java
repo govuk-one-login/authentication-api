@@ -12,6 +12,7 @@ import java.util.Map;
 
 import static java.net.http.HttpClient.newHttpClient;
 import static java.net.http.HttpRequest.BodyPublishers.ofString;
+import static uk.gov.di.authentication.shared.services.CloudwatchMetricsService.putEmbeddedValue;
 
 public class HttpRequestService {
 
@@ -32,6 +33,11 @@ public class HttpRequestService {
                             Integer.toString(response.statusCode()));
 
             LOG.info(new ObjectMessage(logMessage));
+
+            putEmbeddedValue(
+                    "BackChannelLogoutRequest",
+                    1,
+                    Map.of("StatusCode", Integer.toString(response.statusCode())));
 
         } catch (IOException e) {
             LOG.error("Unable to execute POST request successfully");
