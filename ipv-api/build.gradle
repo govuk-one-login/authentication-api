@@ -13,8 +13,7 @@ dependencies {
             configurations.sns,
             configurations.dynamodb
 
-    implementation configurations.jackson,
-            configurations.gson,
+    implementation configurations.gson,
             configurations.nimbus
 
     implementation project(":shared")

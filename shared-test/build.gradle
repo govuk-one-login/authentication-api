@@ -10,7 +10,6 @@ dependencies {
             configurations.lambda,
             configurations.glassfish,
             configurations.nimbus,
-            configurations.jackson,
             configurations.lettuce,
             configurations.dynamodb,
             configurations.sns,

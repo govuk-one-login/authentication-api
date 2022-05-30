@@ -10,7 +10,6 @@ dependencies {
 
     implementation configurations.lambda,
             configurations.nimbus,
-            configurations.jackson,
             configurations.bouncycastle,
             configurations.govuk_notify,
             configurations.dynamodb,
