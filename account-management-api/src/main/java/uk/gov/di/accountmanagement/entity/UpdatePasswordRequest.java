@@ -1,11 +1,16 @@
 package uk.gov.di.accountmanagement.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 
 public class UpdatePasswordRequest {
 
-    private final String email;
-    private final String newPassword;
+    @Expose private String email;
+
+    @Expose
+    @SerializedName("newPassword")
+    private String newPassword;
 
     public UpdatePasswordRequest(
             @JsonProperty(required = true, value = "email") String email,

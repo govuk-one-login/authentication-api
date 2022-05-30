@@ -1,14 +1,19 @@
 package uk.gov.di.accountmanagement.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 
 public class NotifyRequest {
 
-    @JsonProperty private NotificationType notificationType;
+    @Expose
+    @SerializedName("notificationType")
+    @JsonProperty
+    private NotificationType notificationType;
 
-    @JsonProperty private String destination;
+    @Expose @JsonProperty private String destination;
 
-    @JsonProperty private String code;
+    @Expose @JsonProperty private String code;
 
     public NotifyRequest(
             @JsonProperty(required = true, value = "destination") String destination,
