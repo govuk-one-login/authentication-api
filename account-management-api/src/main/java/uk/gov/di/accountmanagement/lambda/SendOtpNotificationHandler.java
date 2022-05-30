@@ -24,6 +24,7 @@ import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.Optional;
 
@@ -48,7 +49,7 @@ public class SendOtpNotificationHandler
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
     private final DynamoService dynamoService;
-    private final Json objectMapper = Json.jackson();
+    private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService;
 
     public SendOtpNotificationHandler(

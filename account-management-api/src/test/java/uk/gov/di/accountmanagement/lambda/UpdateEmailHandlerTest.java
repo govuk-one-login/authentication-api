@@ -3,8 +3,6 @@ package uk.gov.di.accountmanagement.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,10 +13,11 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -49,8 +48,8 @@ class UpdateEmailHandlerTest {
     private static final String INVALID_EMAIL_ADDRESS = "igital.cabinet-office.gov.uk";
     private static final String OTP = "123456";
     private static final Subject SUBJECT = new Subject();
-    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
 
+    private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService = mock(AuditService.class);
 
     @BeforeEach
@@ -60,7 +59,7 @@ class UpdateEmailHandlerTest {
     }
 
     @Test
-    void shouldReturn204ForValidUpdateEmailRequest() throws JsonProcessingException {
+    void shouldReturn204ForValidUpdateEmailRequest() throws Json.JsonException {
         String persistentIdValue = "some-persistent-session-id";
         UserProfile userProfile = new UserProfile().setPublicSubjectID(SUBJECT.getValue());
         when(dynamoService.getUserProfileByEmail(EXISTING_EMAIL_ADDRESS)).thenReturn(userProfile);
@@ -101,7 +100,7 @@ class UpdateEmailHandlerTest {
     }
 
     @Test
-    void shouldReturn400WhenReplacementEmailAlreadyExists() throws JsonProcessingException {
+    void shouldReturn400WhenReplacementEmailAlreadyExists() throws Json.JsonException {
         when(dynamoService.getSubjectFromEmail(EXISTING_EMAIL_ADDRESS)).thenReturn(SUBJECT);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
@@ -144,7 +143,7 @@ class UpdateEmailHandlerTest {
     }
 
     @Test
-    public void shouldReturnErrorWhenOtpCodeIsNotValid() throws JsonProcessingException {
+    public void shouldReturnErrorWhenOtpCodeIsNotValid() throws Json.JsonException {
         when(dynamoService.getSubjectFromEmail(EXISTING_EMAIL_ADDRESS)).thenReturn(SUBJECT);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
@@ -170,7 +169,7 @@ class UpdateEmailHandlerTest {
     }
 
     @Test
-    void shouldReturn400AndNotUpdateEmailWhenEmailIsInvalid() throws JsonProcessingException {
+    void shouldReturn400AndNotUpdateEmailWhenEmailIsInvalid() throws Json.JsonException {
         when(dynamoService.getSubjectFromEmail(EXISTING_EMAIL_ADDRESS)).thenReturn(SUBJECT);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(

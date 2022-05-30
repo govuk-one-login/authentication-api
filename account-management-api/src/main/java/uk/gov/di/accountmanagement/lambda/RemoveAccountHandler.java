@@ -24,6 +24,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.Map;
 
@@ -42,7 +43,7 @@ public class RemoveAccountHandler
     private final AuthenticationService authenticationService;
     private final AwsSqsClient sqsClient;
     private final AuditService auditService;
-    private final Json objectMapper = Json.jackson();
+    private final Json objectMapper = SerializationService.getInstance();
 
     public RemoveAccountHandler(
             AuthenticationService authenticationService,

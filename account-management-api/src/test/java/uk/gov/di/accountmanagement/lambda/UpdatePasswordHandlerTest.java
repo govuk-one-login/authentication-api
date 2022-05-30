@@ -3,8 +3,6 @@ package uk.gov.di.accountmanagement.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,10 +14,11 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -47,7 +46,7 @@ class UpdatePasswordHandlerTest {
     private static final String NEW_PASSWORD = "password2";
     private static final String CURRENT_PASSWORD = "password1";
     private static final Subject SUBJECT = new Subject();
-    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private final Json objectMapper = SerializationService.getInstance();
 
     @BeforeEach
     public void setUp() {
@@ -55,7 +54,7 @@ class UpdatePasswordHandlerTest {
     }
 
     @Test
-    public void shouldReturn204ForValidRequest() throws JsonProcessingException {
+    public void shouldReturn204ForValidRequest() throws Json.JsonException {
         String persistentIdValue = "some-persistent-session-id";
         UserProfile userProfile = new UserProfile().setPublicSubjectID(SUBJECT.getValue());
         UserCredentials userCredentials = new UserCredentials().setPassword(CURRENT_PASSWORD);
@@ -117,8 +116,7 @@ class UpdatePasswordHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenNewPasswordEqualsExistingPassword()
-            throws JsonProcessingException {
+    public void shouldReturn400WhenNewPasswordEqualsExistingPassword() throws Json.JsonException {
         UserProfile userProfile = new UserProfile().setPublicSubjectID(SUBJECT.getValue());
         UserCredentials userCredentials =
                 new UserCredentials().setPassword(Argon2EncoderHelper.argon2Hash(NEW_PASSWORD));

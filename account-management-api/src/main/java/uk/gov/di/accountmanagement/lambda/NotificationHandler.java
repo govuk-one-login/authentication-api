@@ -12,6 +12,7 @@ import uk.gov.di.accountmanagement.services.NotificationService;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
@@ -25,7 +26,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
     private static final Logger LOG = LogManager.getLogger(NotificationHandler.class);
     private final NotificationService notificationService;
-    private final Json objectMapper = Json.jackson();
+    private final Json objectMapper = SerializationService.getInstance();
     private final ConfigurationService configurationService;
 
     public NotificationHandler(

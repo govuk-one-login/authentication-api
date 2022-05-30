@@ -3,8 +3,6 @@ package uk.gov.di.accountmanagement.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,10 +10,11 @@ import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -35,7 +34,7 @@ class RemoveAccountHandlerTest {
 
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final Subject SUBJECT = new Subject();
-    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private final Json objectMapper = SerializationService.getInstance();
 
     private RemoveAccountHandler handler;
     private final Context context = mock(Context.class);
@@ -49,7 +48,7 @@ class RemoveAccountHandlerTest {
     }
 
     @Test
-    public void shouldReturn204IfAccountRemovalIsSuccessful() throws JsonProcessingException {
+    public void shouldReturn204IfAccountRemovalIsSuccessful() throws Json.JsonException {
         String persistentIdValue = "some-persistent-session-id";
         UserProfile userProfile = new UserProfile().setPublicSubjectID(SUBJECT.getValue());
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
