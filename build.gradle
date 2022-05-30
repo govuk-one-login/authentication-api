@@ -28,7 +28,7 @@ ext {
         aws_lambda_events_version: "3.11.0",
         gson: "2.9.0",
         nimbusds_oauth_version: "9.35",
-        nimbusds_jwt_version: "9.22",
+        nimbusds_jwt_version: "9.23",
         protobuf_version: "3.21.0",
         junit: "5.8.2",
         jackson_version: "2.13.3",
@@ -99,8 +99,7 @@ subprojects {
     dependencies {
         bouncycastle "org.bouncycastle:bcpkix-jdk15on:1.70"
 
-        cloudwatch "software.amazon.awssdk:cloudwatch:${dependencyVersions.aws_sdk_v2_version}",
-                "software.amazon.cloudwatchlogs:aws-embedded-metrics:1.0.6"
+        cloudwatch "software.amazon.cloudwatchlogs:aws-embedded-metrics:1.0.6"
 
         dynamodb "com.amazonaws:aws-java-sdk-dynamodb:${dependencyVersions.aws_sdk_version}"
 
