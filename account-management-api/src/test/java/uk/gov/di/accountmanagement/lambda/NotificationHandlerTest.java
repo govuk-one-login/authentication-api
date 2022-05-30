@@ -3,15 +3,14 @@ package uk.gov.di.accountmanagement.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.NotificationService;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.service.notify.NotificationClientException;
 
 import java.util.HashMap;
@@ -41,7 +40,7 @@ public class NotificationHandlerTest {
     private final NotificationService notificationService = mock(NotificationService.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private NotificationHandler handler;
-    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private final Json objectMapper = SerializationService.getInstance();
 
     @BeforeEach
     public void setUp() {
@@ -52,7 +51,7 @@ public class NotificationHandlerTest {
 
     @Test
     public void shouldSuccessfullyProcessVerifyEmailMessageFromSQSQueue()
-            throws JsonProcessingException, NotificationClientException {
+            throws Json.JsonException, NotificationClientException {
         when(notificationService.getNotificationTemplateId(VERIFY_EMAIL)).thenReturn(TEMPLATE_ID);
 
         NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321");
@@ -73,7 +72,7 @@ public class NotificationHandlerTest {
 
     @Test
     public void shouldSuccessfullyProcessVerifyPhoneMessageFromSQSQueue()
-            throws JsonProcessingException, NotificationClientException {
+            throws Json.JsonException, NotificationClientException {
         when(notificationService.getNotificationTemplateId(VERIFY_PHONE_NUMBER))
                 .thenReturn(TEMPLATE_ID);
 
@@ -92,7 +91,7 @@ public class NotificationHandlerTest {
 
     @Test
     public void shouldSuccessfullyProcessUpdateEmailMessageFromSQSQueue()
-            throws JsonProcessingException, NotificationClientException {
+            throws Json.JsonException, NotificationClientException {
         when(notificationService.getNotificationTemplateId(EMAIL_UPDATED)).thenReturn(TEMPLATE_ID);
 
         NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, EMAIL_UPDATED);
@@ -112,7 +111,7 @@ public class NotificationHandlerTest {
 
     @Test
     public void shouldSuccessfullyProcessUpdatePasswordMessageFromSQSQueue()
-            throws JsonProcessingException, NotificationClientException {
+            throws Json.JsonException, NotificationClientException {
         when(notificationService.getNotificationTemplateId(PASSWORD_UPDATED))
                 .thenReturn(TEMPLATE_ID);
 
@@ -132,7 +131,7 @@ public class NotificationHandlerTest {
 
     @Test
     public void shouldSuccessfullyProcessUpdatePhoneNumberMessageFromSQSQueue()
-            throws JsonProcessingException, NotificationClientException {
+            throws Json.JsonException, NotificationClientException {
         when(notificationService.getNotificationTemplateId(PHONE_NUMBER_UPDATED))
                 .thenReturn(TEMPLATE_ID);
 
@@ -152,7 +151,7 @@ public class NotificationHandlerTest {
 
     @Test
     public void shouldSuccessfullyProcessDeleteAccountMessageFromSQSQueue()
-            throws JsonProcessingException, NotificationClientException {
+            throws Json.JsonException, NotificationClientException {
         when(notificationService.getNotificationTemplateId(DELETE_ACCOUNT)).thenReturn(TEMPLATE_ID);
 
         NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, DELETE_ACCOUNT);
@@ -185,7 +184,7 @@ public class NotificationHandlerTest {
 
     @Test
     public void shouldThrowExceptionIfNotifyIsUnableToSendEmail()
-            throws JsonProcessingException, NotificationClientException {
+            throws Json.JsonException, NotificationClientException {
         when(notificationService.getNotificationTemplateId(VERIFY_EMAIL)).thenReturn(TEMPLATE_ID);
 
         NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321");
@@ -216,7 +215,7 @@ public class NotificationHandlerTest {
 
     @Test
     public void shouldThrowExceptionIfNotifyIsUnableToSendText()
-            throws JsonProcessingException, NotificationClientException {
+            throws Json.JsonException, NotificationClientException {
         when(notificationService.getNotificationTemplateId(VERIFY_PHONE_NUMBER))
                 .thenReturn(TEMPLATE_ID);
 

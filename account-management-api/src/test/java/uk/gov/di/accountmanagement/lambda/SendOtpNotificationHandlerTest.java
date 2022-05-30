@@ -3,8 +3,6 @@ package uk.gov.di.accountmanagement.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -15,12 +13,13 @@ import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.Map;
 
@@ -49,8 +48,8 @@ class SendOtpNotificationHandlerTest {
     private static final String TEST_SIX_DIGIT_CODE = "123456";
     private static final String TEST_PHONE_NUMBER = "07755551084";
     private static final long CODE_EXPIRY_TIME = 900;
-    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
 
+    private final Json objectMapper = SerializationService.getInstance();
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
@@ -75,7 +74,7 @@ class SendOtpNotificationHandlerTest {
     }
 
     @Test
-    void shouldReturn204AndPutMessageOnQueueForAValidEmailRequest() throws JsonProcessingException {
+    void shouldReturn204AndPutMessageOnQueueForAValidEmailRequest() throws Json.JsonException {
         String persistentIdValue = "some-persistent-session-id";
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_SIX_DIGIT_CODE);
@@ -112,7 +111,7 @@ class SendOtpNotificationHandlerTest {
     }
 
     @Test
-    void shouldReturn204AndPutMessageOnQueueForAValidPhoneRequest() throws JsonProcessingException {
+    void shouldReturn204AndPutMessageOnQueueForAValidPhoneRequest() throws Json.JsonException {
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, TEST_SIX_DIGIT_CODE);
 
@@ -199,7 +198,7 @@ class SendOtpNotificationHandlerTest {
     }
 
     @Test
-    void shouldReturn500IfMessageCannotBeSentToQueue() throws JsonProcessingException {
+    void shouldReturn500IfMessageCannotBeSentToQueue() throws Json.JsonException {
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_SIX_DIGIT_CODE);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);

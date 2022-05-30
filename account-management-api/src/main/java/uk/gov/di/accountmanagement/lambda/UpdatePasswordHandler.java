@@ -24,6 +24,7 @@ import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.Map;
 
@@ -37,7 +38,7 @@ import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 public class UpdatePasswordHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private final Json objectMapper = Json.jackson();
+    private final Json objectMapper = SerializationService.getInstance();
     private final DynamoService dynamoService;
     private final AwsSqsClient sqsClient;
     private final AuditService auditService;
