@@ -99,8 +99,7 @@ subprojects {
     dependencies {
         bouncycastle "org.bouncycastle:bcpkix-jdk15on:1.70"
 
-        cloudwatch "software.amazon.awssdk:cloudwatch:${dependencyVersions.aws_sdk_v2_version}",
-                "software.amazon.cloudwatchlogs:aws-embedded-metrics:1.0.6"
+        cloudwatch "software.amazon.cloudwatchlogs:aws-embedded-metrics:1.0.6"
 
         dynamodb "com.amazonaws:aws-java-sdk-dynamodb:${dependencyVersions.aws_sdk_version}"
 

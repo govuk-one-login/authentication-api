@@ -86,7 +86,7 @@ public class AuthCodeHandler
         authorizationService = new AuthorizationService(configurationService);
         clientSessionService = new ClientSessionService(configurationService);
         auditService = new AuditService(configurationService);
-        cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        cloudwatchMetricsService = new CloudwatchMetricsService();
         this.configurationService = configurationService;
     }
 

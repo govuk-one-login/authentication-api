@@ -8,23 +8,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import uk.gov.di.authentication.deliveryreceiptsapi.entity.DeliveryMetricStatus;
 import uk.gov.di.authentication.deliveryreceiptsapi.entity.NotifyDeliveryReceipt;
 import uk.gov.di.authentication.deliveryreceiptsapi.lambda.NotifyCallbackHandler;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.sharedtest.extensions.CloudwatchMetricsExtension;
 import uk.gov.di.authentication.sharedtest.extensions.ParameterStoreExtension;
 
 import java.util.Date;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
-import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.Is.is;
 import static org.mockito.Mockito.mock;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -35,10 +30,6 @@ public class NotifyCallbackHandlerIntegrationTest {
 
     private final Context context = mock(Context.class);
     private NotifyCallbackHandler handler;
-
-    @RegisterExtension
-    private static final CloudwatchMetricsExtension cloudwatchMetrics =
-            new CloudwatchMetricsExtension();
 
     @RegisterExtension
     private static final ParameterStoreExtension configurationParameters =
@@ -66,13 +57,6 @@ public class NotifyCallbackHandlerIntegrationTest {
                                 1),
                         Map.of("Authorization", "Bearer " + BEARER_TOKEN));
 
-        await().atMost(5, TimeUnit.SECONDS)
-                .untilAsserted(
-                        () ->
-                                assertThat(
-                                        cloudwatchMetrics.getLastValue(
-                                                DeliveryMetricStatus.SMS_DELIVERED.toString()),
-                                        is(1.0)));
         assertThat(response, hasStatus(204));
     }
 
