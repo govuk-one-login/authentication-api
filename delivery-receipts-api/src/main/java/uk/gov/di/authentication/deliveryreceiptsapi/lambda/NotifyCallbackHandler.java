@@ -13,6 +13,7 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.Map;
 import java.util.Objects;
@@ -29,7 +30,7 @@ public class NotifyCallbackHandler
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private final ConfigurationService configurationService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
-    private final Json objectMapper = Json.jackson();
+    private final Json objectMapper = SerializationService.getInstance();
 
     private static final Logger LOG = LogManager.getLogger(NotifyCallbackHandler.class);
 

@@ -9,7 +9,7 @@ version "unspecified"
 dependencies {
     implementation configurations.govuk_notify,
             configurations.lambda,
-            configurations.jackson,
+            configurations.gson,
             configurations.libphonenumber,
             configurations.cloudwatch
 
