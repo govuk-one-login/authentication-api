@@ -24,6 +24,7 @@ import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.CriStubExtension;
@@ -33,7 +34,6 @@ import uk.gov.di.authentication.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.interfaces.ECPublicKey;
@@ -114,7 +114,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     }
 
     @Test
-    void shouldRedirectToLoginWhenSuccessfullyProcessedIpvResponse() throws IOException {
+    void shouldRedirectToLoginWhenSuccessfullyProcessedIpvResponse() throws Json.JsonException {
         setupSession();
 
         var response =
@@ -138,7 +138,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     }
 
     @Test
-    void shouldThrowIfInvalidResponseReceivedFromCriProtectedEndpoint() throws IOException {
+    void shouldThrowIfInvalidResponseReceivedFromCriProtectedEndpoint() throws Json.JsonException {
         setupSession();
 
         criStub.register("/protected-resource", 200, "application/jwt", "invalid-response");
@@ -161,7 +161,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     }
 
     @Test
-    void shouldThrowIfErrorReceivedFromCriProtectedEndpoint() throws IOException {
+    void shouldThrowIfErrorReceivedFromCriProtectedEndpoint() throws Json.JsonException {
         setupSession();
 
         criStub.register("/protected-resource", 400, "application/jwt", "error");
@@ -185,7 +185,8 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     }
 
     @Test
-    void shouldThrowIfErrorBadlySignedCriResponseReceived() throws IOException, JOSEException {
+    void shouldThrowIfErrorBadlySignedCriResponseReceived()
+            throws Json.JsonException, JOSEException {
         setupSession();
         var badPrivateKey = new ECKeyGenerator(Curve.P_256).keyID("bad-key-id").generate();
 
@@ -209,7 +210,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                         DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED));
     }
 
-    private void setupSession() throws IOException {
+    private void setupSession() throws Json.JsonException {
         var authRequestBuilder =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE,

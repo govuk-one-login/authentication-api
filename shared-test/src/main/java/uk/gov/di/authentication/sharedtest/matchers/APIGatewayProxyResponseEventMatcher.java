@@ -4,7 +4,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.net.URI;
 import java.util.function.Function;
@@ -70,7 +70,7 @@ public class APIGatewayProxyResponseEventMatcher<T, M extends Matcher>
     public static APIGatewayProxyResponseEventMatcher<String, Matcher<String>> hasJsonBody(
             Object body) {
         var expectedValue =
-                unchecked(ObjectMapperFactory.getInstance()::writeValueAsString).apply(body);
+                unchecked(SerializationService.getInstance()::writeValueAsString).apply(body);
 
         return new APIGatewayProxyResponseEventMatcher<>(
                 "body", APIGatewayProxyResponseEvent::getBody, equalTo(expectedValue));

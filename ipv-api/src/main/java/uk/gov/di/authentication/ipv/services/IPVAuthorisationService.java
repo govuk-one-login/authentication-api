@@ -34,6 +34,7 @@ import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.nio.ByteBuffer;
 import java.security.interfaces.RSAPublicKey;
@@ -51,7 +52,7 @@ public class IPVAuthorisationService {
     private final KmsConnectionService kmsConnectionService;
     public static final String STATE_STORAGE_PREFIX = "state:";
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
-    private static final Json objectMapper = Json.jackson();
+    private static final Json objectMapper = SerializationService.getInstance();
 
     public IPVAuthorisationService(
             ConfigurationService configurationService,

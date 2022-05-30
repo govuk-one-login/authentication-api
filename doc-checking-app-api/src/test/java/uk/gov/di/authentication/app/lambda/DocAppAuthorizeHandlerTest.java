@@ -3,8 +3,6 @@ package uk.gov.di.authentication.app.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWEAlgorithm;
@@ -32,11 +30,12 @@ import uk.gov.di.authentication.app.services.DocAppAuthorisationService;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URI;
@@ -74,7 +73,7 @@ class DocAppAuthorizeHandlerTest {
     private static final String SESSION_ID = "a-session-id";
     private static final String PERSISTENT_SESSION_ID = "a-persistent-session-id";
     private static final Subject DOC_APP_SUBJECT_ID = new Subject();
-    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private static final Json objectMapper = SerializationService.getInstance();
 
     private final Context context = mock(Context.class);
     private final SessionService sessionService = mock(SessionService.class);
@@ -107,7 +106,7 @@ class DocAppAuthorizeHandlerTest {
 
     @Test
     void shouldReturn200ForSuccessfulRequest()
-            throws ParseException, JOSEException, JsonProcessingException {
+            throws ParseException, JOSEException, Json.JsonException {
         var encryptedJWT = createEncryptedJWT();
         when(authorisationService.constructRequestJWT(any(State.class), any(Subject.class)))
                 .thenReturn(encryptedJWT);

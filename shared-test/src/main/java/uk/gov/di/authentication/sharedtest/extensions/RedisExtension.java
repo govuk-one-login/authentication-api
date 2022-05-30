@@ -1,7 +1,5 @@
 package uk.gov.di.authentication.sharedtest.extensions;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import io.lettuce.core.RedisClient;
@@ -18,11 +16,11 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -43,36 +41,37 @@ public class RedisExtension
             System.getenv().getOrDefault("REDIS_HOST", "localhost");
     private static final Optional<String> REDIS_PASSWORD =
             Optional.ofNullable(System.getenv("REDIS_PASSWORD"));
-    private final ObjectMapper objectMapper;
+    private final Json objectMapper;
 
     private RedisConnectionService redis;
     private RedisClient client;
 
-    public RedisExtension(ObjectMapper objectMapper) {
+    public RedisExtension(Json objectMapper) {
         this.objectMapper = objectMapper;
     }
 
-    public String createSession(String sessionId) throws IOException {
+    public String createSession(String sessionId) throws Json.JsonException {
         return createSession(sessionId, false);
     }
 
-    private String createSession(String sessionId, boolean isAuthenticated) throws IOException {
+    private String createSession(String sessionId, boolean isAuthenticated)
+            throws Json.JsonException {
         Session session = new Session(sessionId).setAuthenticated(isAuthenticated);
         redis.saveWithExpiry(
                 session.getSessionId(), objectMapper.writeValueAsString(session), 3600);
         return session.getSessionId();
     }
 
-    public String createSession() throws IOException {
+    public String createSession() throws Json.JsonException {
         return createSession(IdGenerator.generate());
     }
 
-    public String createSession(boolean isAuthenticated) throws IOException {
+    public String createSession(boolean isAuthenticated) throws Json.JsonException {
         return createSession(IdGenerator.generate(), isAuthenticated);
     }
 
     public void addDocAppSubjectIdToClientSession(Subject subject, String clientSessionId)
-            throws JsonProcessingException {
+            throws Json.JsonException {
         ClientSession clientSession =
                 objectMapper.readValue(
                         redis.getValue(CLIENT_SESSION_PREFIX.concat(clientSessionId)),
@@ -84,12 +83,12 @@ public class RedisExtension
                 3600);
     }
 
-    public void addStateToRedis(State state, String sessionId) throws JsonProcessingException {
+    public void addStateToRedis(State state, String sessionId) throws Json.JsonException {
         redis.saveWithExpiry("state:" + sessionId, objectMapper.writeValueAsString(state), 3600);
     }
 
     public void addClientSessionIdToSession(String clientSessionId, String sessionId)
-            throws JsonProcessingException {
+            throws Json.JsonException {
         Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
         session.addClientSession(clientSessionId);
         redis.saveWithExpiry(
@@ -98,7 +97,7 @@ public class RedisExtension
 
     public void addAuthRequestToSession(
             String clientSessionId, String sessionId, Map<String, List<String>> authRequest)
-            throws JsonProcessingException {
+            throws Json.JsonException {
         Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
         session.addClientSession(clientSessionId);
         redis.saveWithExpiry(
@@ -112,7 +111,7 @@ public class RedisExtension
     }
 
     public void addIDTokenToSession(String clientSessionId, String idTokenHint)
-            throws JsonProcessingException {
+            throws Json.JsonException {
         ClientSession clientSession =
                 objectMapper.readValue(
                         redis.getValue(CLIENT_SESSION_PREFIX.concat(clientSessionId)),
@@ -124,8 +123,7 @@ public class RedisExtension
                 3600);
     }
 
-    public void addEmailToSession(String sessionId, String emailAddress)
-            throws JsonProcessingException {
+    public void addEmailToSession(String sessionId, String emailAddress) throws Json.JsonException {
         Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
         session.setEmailAddress(emailAddress);
         redis.saveWithExpiry(
@@ -133,15 +131,14 @@ public class RedisExtension
     }
 
     public void setSessionCredentialTrustLevel(
-            String sessionId, CredentialTrustLevel credentialTrustLevel)
-            throws JsonProcessingException {
+            String sessionId, CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
         Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
         session.setCurrentCredentialStrength(credentialTrustLevel);
         redis.saveWithExpiry(
                 session.getSessionId(), objectMapper.writeValueAsString(session), 3600);
     }
 
-    public Session getSession(String sessionId) throws JsonProcessingException {
+    public Session getSession(String sessionId) throws Json.JsonException {
         return objectMapper.readValue(redis.getValue(sessionId), Session.class);
     }
 
@@ -192,7 +189,7 @@ public class RedisExtension
             String email,
             Map<String, List<String>> authRequest,
             VectorOfTrust vtr)
-            throws JsonProcessingException {
+            throws Json.JsonException {
         var clientSession = new ClientSession(authRequest, LocalDateTime.now(), vtr);
         redis.saveWithExpiry(
                 AUTH_CODE_PREFIX.concat(authCode),
@@ -209,7 +206,7 @@ public class RedisExtension
     }
 
     public void createClientSession(String clientSessionId, Map<String, List<String>> authRequest)
-            throws JsonProcessingException {
+            throws Json.JsonException {
         redis.saveWithExpiry(
                 CLIENT_SESSION_PREFIX.concat(clientSessionId),
                 objectMapper.writeValueAsString(
@@ -222,13 +219,13 @@ public class RedisExtension
         try {
             var result = redis.getValue(CLIENT_SESSION_PREFIX.concat(clientSessionId));
             return objectMapper.readValue(result, ClientSession.class);
-        } catch (JsonProcessingException e) {
+        } catch (Json.JsonException e) {
             throw new RuntimeException(e);
         }
     }
 
     public void createClientSession(String clientSessionId, ClientSession clientSession)
-            throws JsonProcessingException {
+            throws Json.JsonException {
         redis.saveWithExpiry(
                 CLIENT_SESSION_PREFIX.concat(clientSessionId),
                 objectMapper.writeValueAsString(clientSession),

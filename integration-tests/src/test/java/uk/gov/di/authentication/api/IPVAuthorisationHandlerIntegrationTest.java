@@ -20,7 +20,6 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.IPVStubExtension;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.KeyPair;
@@ -64,7 +63,7 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             new IPVTestConfigurationService(ipvStub);
 
     @BeforeEach
-    void setup() throws IOException {
+    void setup() throws Json.JsonException {
         ipvStub.init();
         handler = new IPVAuthorisationHandler(configurationService);
         redis.createSession(SESSION_ID);

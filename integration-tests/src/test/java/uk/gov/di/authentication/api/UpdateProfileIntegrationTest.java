@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.api;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -17,9 +16,9 @@ import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
-import java.io.IOException;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -64,7 +63,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
     @ParameterizedTest
     @MethodSource("phoneNumbers")
     public void shouldCallUpdateProfileEndpointToUpdatePhoneNumberAndReturn204(String phonenumber)
-            throws IOException {
+            throws Json.JsonException {
         String sessionId = redis.createSession();
         String clientSessionId = IdGenerator.generate();
         setUpTest(sessionId, clientSessionId);
@@ -85,7 +84,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
-    public void shouldCallUpdateProfileToUpdateConsentAndReturn200() throws IOException {
+    public void shouldCallUpdateProfileToUpdateConsentAndReturn200() throws Json.JsonException {
         String sessionId = redis.createSession();
         String clientSessionId = IdGenerator.generate();
         AuthenticationRequest authRequest = setUpTest(sessionId, clientSessionId);
@@ -117,7 +116,8 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
-    public void shouldCallUpdateProfileToApproveTermsAndConditonsAndReturn200() throws IOException {
+    public void shouldCallUpdateProfileToApproveTermsAndConditonsAndReturn200()
+            throws Json.JsonException {
         String sessionId = redis.createSession();
         String clientSessionId = IdGenerator.generate();
         setUpTest(sessionId, clientSessionId);
@@ -138,7 +138,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     private AuthenticationRequest setUpTest(String sessionId, String clientSessionId)
-            throws JsonProcessingException {
+            throws Json.JsonException {
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         scope.add(OIDCScopeValue.EMAIL);

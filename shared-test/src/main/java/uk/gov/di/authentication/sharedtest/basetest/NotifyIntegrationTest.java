@@ -1,16 +1,15 @@
 package uk.gov.di.authentication.sharedtest.basetest;
 
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.extensions.NotifyStubExtension;
 
 import java.security.SecureRandom;
@@ -21,7 +20,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 public abstract class NotifyIntegrationTest {
-    protected static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    protected static final Json objectMapper = SerializationService.getInstance();
 
     @RegisterExtension
     public static final NotifyStubExtension notifyStub = new NotifyStubExtension(objectMapper);
@@ -57,7 +56,7 @@ public abstract class NotifyIntegrationTest {
                                         message.setEventSourceArn(
                                                 "arn:aws:sqs:eu-west-2:123456789012:queue-name");
                                         return message;
-                                    } catch (JsonProcessingException e) {
+                                    } catch (Json.JsonException e) {
                                         throw new RuntimeException(e);
                                     }
                                 })

@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.api;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -44,6 +43,7 @@ import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
@@ -418,7 +418,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             Optional<String> vtr,
             Optional<OIDCClaimsRequest> oidcClaimsRequest,
             Optional<String> clientId)
-            throws JOSEException, JsonProcessingException {
+            throws JOSEException, Json.JsonException {
         PrivateKey privateKey = keyPair.getPrivate();
         Date expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
         JWTAuthenticationClaimsSet claimsSet =

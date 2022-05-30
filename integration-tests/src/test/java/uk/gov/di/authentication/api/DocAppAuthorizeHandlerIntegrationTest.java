@@ -16,7 +16,6 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
-import java.io.IOException;
 import java.net.URI;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -52,7 +51,7 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
             new DocAppTestConfigurationService();
 
     @BeforeEach
-    void setup() throws IOException {
+    void setup() throws Json.JsonException {
         handler = new DocAppAuthorizeHandler(configurationService);
         redis.createSession(SESSION_ID);
         redis.addAuthRequestToSession(
@@ -62,7 +61,7 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
     }
 
     @Test
-    void shouldReturn200WithValidDocAppAuthRequest() throws IOException, Json.JsonException {
+    void shouldReturn200WithValidDocAppAuthRequest() throws Json.JsonException {
         redis.addDocAppSubjectIdToClientSession(new Subject(), CLIENT_SESSION_ID);
         var response =
                 makeRequest(

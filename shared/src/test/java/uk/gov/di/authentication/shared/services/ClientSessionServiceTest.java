@@ -1,15 +1,12 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.time.LocalDateTime;
@@ -32,8 +29,7 @@ class ClientSessionServiceTest {
 
     private final RedisConnectionService redis = mock(RedisConnectionService.class);
     private final ConfigurationService configuration = mock(ConfigurationService.class);
-    private final ObjectMapper objectMapper =
-            JsonMapper.builder().addModule(new JavaTimeModule()).build();
+    private final Json objectMapper = SerializationService.getInstance();
 
     private final ClientSessionService clientSessionService =
             new ClientSessionService(configuration, redis);
@@ -52,7 +48,7 @@ class ClientSessionServiceTest {
     }
 
     @Test
-    void shouldRetrieveClientSessionUsingRequestHeaders() throws JsonProcessingException {
+    void shouldRetrieveClientSessionUsingRequestHeaders() throws Json.JsonException {
         when(redis.getValue("client-session-" + clientSessionId))
                 .thenReturn(generateSerialisedClientSession());
         when(redis.keyExists("client-session-" + clientSessionId)).thenReturn(true);
@@ -70,7 +66,7 @@ class ClientSessionServiceTest {
     }
 
     @Test
-    void shouldNotRetrieveClientSessionUsingNullRequestHeaders() throws JsonProcessingException {
+    void shouldNotRetrieveClientSessionUsingNullRequestHeaders() throws Json.JsonException {
         when(redis.getValue(clientSessionId)).thenReturn(generateSerialisedClientSession());
 
         Optional<ClientSession> clientSessionInRedis =
@@ -80,7 +76,7 @@ class ClientSessionServiceTest {
     }
 
     @Test
-    void shouldNotRetrieveClientSessionForLowerCaseHeaderName() throws JsonProcessingException {
+    void shouldNotRetrieveClientSessionForLowerCaseHeaderName() throws Json.JsonException {
         when(redis.getValue(clientSessionId)).thenReturn(generateSerialisedClientSession());
 
         Optional<ClientSession> clientSessionInRedis =
@@ -91,7 +87,7 @@ class ClientSessionServiceTest {
     }
 
     @Test
-    void shouldNotRetrieveClientSessionWithNoHeaders() throws JsonProcessingException {
+    void shouldNotRetrieveClientSessionWithNoHeaders() throws Json.JsonException {
         when(redis.getValue(clientSessionId)).thenReturn(generateSerialisedClientSession());
 
         Optional<ClientSession> clientSessionInRedis =
@@ -101,7 +97,7 @@ class ClientSessionServiceTest {
     }
 
     @Test
-    void shouldNotRetrieveClientSessionWithMissingHeader() throws JsonProcessingException {
+    void shouldNotRetrieveClientSessionWithMissingHeader() throws Json.JsonException {
         when(redis.getValue(clientSessionId)).thenReturn(generateSerialisedClientSession());
 
         Optional<ClientSession> clientSessionInRedis =
@@ -118,7 +114,7 @@ class ClientSessionServiceTest {
         assertTrue(clientSessionService.getClientSession(clientSessionId).isEmpty());
     }
 
-    private String generateSerialisedClientSession() throws JsonProcessingException {
+    private String generateSerialisedClientSession() throws Json.JsonException {
         return objectMapper.writeValueAsString(
                 new ClientSession(
                         Map.of("authparam", List.of("v1", "v2")),

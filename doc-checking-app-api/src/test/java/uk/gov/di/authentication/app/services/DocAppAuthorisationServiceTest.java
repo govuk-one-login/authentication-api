@@ -2,8 +2,6 @@ package uk.gov.di.authentication.app.services;
 
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -22,10 +20,11 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -61,7 +60,7 @@ class DocAppAuthorisationServiceTest {
             URI.create("http://localhost/oidc/doc-app/callback");
     private static final URI DOC_APP_AUTHORISATION_URI =
             URI.create("http://localhost/doc-app/authorize");
-    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private static final Json objectMapper = SerializationService.getInstance();
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final RedisConnectionService redisConnectionService =
@@ -73,7 +72,7 @@ class DocAppAuthorisationServiceTest {
     private PrivateKey privateKey;
 
     @BeforeEach
-    void setUp() throws JsonProcessingException {
+    void setUp() throws Json.JsonException {
         when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
         when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + SESSION_ID))
                 .thenReturn(objectMapper.writeValueAsString(STATE));
@@ -158,7 +157,7 @@ class DocAppAuthorisationServiceTest {
 
     @Test
     void shouldReturnErrorObjectWhenStateInResponseIsDifferentToStoredState()
-            throws JsonProcessingException {
+            throws Json.JsonException {
         State differentState = new State();
         when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + SESSION_ID))
                 .thenReturn(objectMapper.writeValueAsString(STATE));
@@ -176,7 +175,7 @@ class DocAppAuthorisationServiceTest {
     }
 
     @Test
-    void shouldSaveStateToRedis() throws JsonProcessingException {
+    void shouldSaveStateToRedis() throws Json.JsonException {
         var sessionId = "session-id";
         authorisationService.storeState(sessionId, STATE);
 

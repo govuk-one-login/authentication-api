@@ -36,7 +36,7 @@ public class AuthorisationCodeService {
                         configurationService.getUseRedisTLS(),
                         configurationService.getRedisPassword());
         this.authorisationCodeExpiry = configurationService.getAuthCodeExpiry();
-        this.objectMapper = Json.jackson();
+        this.objectMapper = SerializationService.getInstance();
     }
 
     public AuthorizationCode generateAuthorisationCode(

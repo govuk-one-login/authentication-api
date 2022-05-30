@@ -5,9 +5,9 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
 import uk.gov.di.authentication.frontendapi.lambda.ResetPasswordRequestHandler;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -29,7 +29,7 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
     }
 
     @Test
-    public void shouldCallResetPasswordEndpointAndReturn200() throws IOException {
+    public void shouldCallResetPasswordEndpointAndReturn200() throws Json.JsonException {
         String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         String password = "password-1";
         String phoneNumber = "01234567890";
@@ -63,7 +63,8 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
     }
 
     @Test
-    public void shouldCallResetPasswordEndpointAndReturn200ForCodeFlowRequest() throws IOException {
+    public void shouldCallResetPasswordEndpointAndReturn200ForCodeFlowRequest()
+            throws Json.JsonException {
         String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         String password = "password-1";
         String phoneNumber = "01234567890";

@@ -4,7 +4,6 @@ import com.amazonaws.services.kms.model.KeyUsageType;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -108,7 +107,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
 
     @RegisterExtension
     protected static final RedisExtension redis =
-            new RedisExtension(ObjectMapperFactory.getInstance());
+            new RedisExtension(SerializationService.getInstance());
 
     @RegisterExtension
     protected static final UserStoreExtension userStore = new UserStoreExtension();
