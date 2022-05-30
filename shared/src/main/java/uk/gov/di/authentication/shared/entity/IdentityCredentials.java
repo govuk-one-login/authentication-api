@@ -3,10 +3,13 @@ package uk.gov.di.authentication.shared.entity;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 
+import java.util.Map;
+
 public class IdentityCredentials {
 
     private String subjectID;
     private String coreIdentityJWT;
+    private Map<String, String> additionalClaims;
     private long timeToExist;
 
     public IdentityCredentials() {}
@@ -38,6 +41,16 @@ public class IdentityCredentials {
 
     public IdentityCredentials setTimeToExist(long timeToExist) {
         this.timeToExist = timeToExist;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "AdditionalClaims")
+    public Map<String, String> getAdditionalClaims() {
+        return additionalClaims;
+    }
+
+    public IdentityCredentials setAdditionalClaims(Map<String, String> additionalClaims) {
+        this.additionalClaims = additionalClaims;
         return this;
     }
 }

@@ -16,9 +16,11 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler;
+import uk.gov.di.authentication.shared.entity.IdentityCredentials;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -40,6 +42,7 @@ import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SPOT_REQUESTED;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED;
@@ -120,6 +123,8 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED,
                         IPV_SPOT_REQUESTED));
+        var pairwiseIdentifier =
+                calculatePairwiseIdentifier(INTERNAL_SUBJECT.getValue(), "test.com", salt);
         SpotQueueAssertionHelper.assertSpotRequestReceived(
                 spotQueue,
                 List.of(
@@ -132,14 +137,25 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 INTERNAL_SUBJECT.getValue(),
                                 salt,
                                 sectorId,
-                                calculatePairwiseIdentifier(
-                                        INTERNAL_SUBJECT.getValue(), "test.com", salt),
+                                pairwiseIdentifier,
                                 new LogIds(
                                         sessionId, persistentSessionId, "request-i", CLIENT_ID))));
+
+        var identityCredentials = identityStore.getIdentityCredentials(pairwiseIdentifier);
+
+        assertTrue(
+                identityCredentials
+                        .map(IdentityCredentials::getAdditionalClaims)
+                        .filter(t -> t.containsKey(ValidClaims.ADDRESS.getValue()))
+                        .filter(
+                                t ->
+                                        t.get(ValidClaims.ADDRESS.getValue())
+                                                .equals("some-address-claim"))
+                        .isPresent());
     }
 
-    private String setUpDynamo() {
-        var publicSubject = userStore.signUp(TEST_EMAIL_ADDRESS, "password", INTERNAL_SUBJECT);
+    private void setUpDynamo() {
+        userStore.signUp(TEST_EMAIL_ADDRESS, "password", INTERNAL_SUBJECT);
         clientStore.registerClient(
                 CLIENT_ID,
                 "test-client",
@@ -153,7 +169,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 "https://test.com",
                 "pairwise",
                 true);
-        return publicSubject;
     }
 
     private byte[] addSalt() {

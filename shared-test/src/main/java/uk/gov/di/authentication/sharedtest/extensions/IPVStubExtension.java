@@ -36,7 +36,8 @@ public class IPVStubExtension extends HttpStubExtension {
                         + "  \"sub\": \"740e5834-3a29-46b4-9a6f-16142fde533a\","
                         + "  \"vot\": \"P2\","
                         + "  \"vtm\": \"http://localhost/trustmark\","
-                        + "  \"https://vocab.sign-in.service.gov.uk/v1/verifiableIdentityCredential\": \"some-encoded-credential\""
+                        + "  \"https://vocab.account.gov.uk/v1/coreIdentityJWT\": \"some-encoded-credential\","
+                        + "  \"https://vocab.account.gov.uk/v1/address\": \"some-address-claim\""
                         + "}");
     }
 }

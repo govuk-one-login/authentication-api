@@ -23,6 +23,7 @@ import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
@@ -34,12 +35,14 @@ import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
+import uk.gov.di.authentication.shared.services.DynamoIdentityService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -69,6 +72,7 @@ public class IPVCallbackHandler
     private final DynamoClientService dynamoClientService;
     private final AuditService auditService;
     private final AwsSqsClient sqsClient;
+    private final DynamoIdentityService dynamoIdentityService;
     protected final Json objectMapper = SerializationService.getInstance();
     private static final String REDIRECT_PATH = "ipv-callback";
 
@@ -85,7 +89,8 @@ public class IPVCallbackHandler
             ClientSessionService clientSessionService,
             DynamoClientService dynamoClientService,
             AuditService auditService,
-            AwsSqsClient sqsClient) {
+            AwsSqsClient sqsClient,
+            DynamoIdentityService dynamoIdentityService) {
         this.configurationService = configurationService;
         this.ipvAuthorisationService = responseService;
         this.ipvTokenService = ipvTokenService;
@@ -95,6 +100,7 @@ public class IPVCallbackHandler
         this.dynamoClientService = dynamoClientService;
         this.auditService = auditService;
         this.sqsClient = sqsClient;
+        this.dynamoIdentityService = dynamoIdentityService;
     }
 
     public IPVCallbackHandler(ConfigurationService configurationService) {
@@ -116,6 +122,7 @@ public class IPVCallbackHandler
                         configurationService.getAwsRegion(),
                         configurationService.getSpotQueueUri(),
                         configurationService.getSqsEndpointUri());
+        this.dynamoIdentityService = new DynamoIdentityService(configurationService);
     }
 
     @Override
@@ -320,6 +327,7 @@ public class IPVCallbackHandler
                                                                 errorResponse.toURI().toString()));
                                     }
                                 }
+                                saveAdditionalClaimsToDynamo(pairwiseSubject, userIdentityUserInfo);
                                 var redirectURI =
                                         ConstructUriHelper.buildURI(
                                                 configurationService.getLoginURI().toString(),
@@ -342,6 +350,25 @@ public class IPVCallbackHandler
                                 throw new RuntimeException(e);
                             }
                         });
+    }
+
+    private void saveAdditionalClaimsToDynamo(
+            Subject pairwiseIdentifier, UserInfo userIdentityUserInfo) {
+        LOG.info("Checking for additional identity claims to save to dynamo");
+        var additionalClaims = new HashMap<String, String>();
+        ValidClaims.getAllValidClaims().stream()
+                .filter(t -> !t.equals(ValidClaims.CORE_IDENTITY_JWT.getValue()))
+                .filter(claim -> Objects.nonNull(userIdentityUserInfo.toJSONObject().get(claim)))
+                .forEach(
+                        finalClaim ->
+                                additionalClaims.put(
+                                        finalClaim,
+                                        userIdentityUserInfo
+                                                .toJSONObject()
+                                                .get(finalClaim)
+                                                .toString()));
+        LOG.info("Additional identity claims present: {}", !additionalClaims.isEmpty());
+        dynamoIdentityService.addAdditionalClaims(pairwiseIdentifier.getValue(), additionalClaims);
     }
 
     private Optional<ErrorObject> validateUserIdentityResponse(UserInfo userIdentityUserInfo) {
@@ -372,7 +399,12 @@ public class IPVCallbackHandler
 
         var spotClaimsBuilder =
                 SPOTClaims.builder()
-                        .withClaims(userIdentityUserInfo.toJSONObject())
+                        .withClaim(VOT.getValue(), userIdentityUserInfo.getClaim(VOT.getValue()))
+                        .withClaim(
+                                ValidClaims.CORE_IDENTITY_JWT.getValue(),
+                                userIdentityUserInfo
+                                        .toJSONObject()
+                                        .get(ValidClaims.CORE_IDENTITY_JWT.getValue()))
                         .withVtm(
                                 buildURI(
                                                 configurationService
