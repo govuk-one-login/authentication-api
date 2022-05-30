@@ -78,6 +78,11 @@ public class UserInfoService {
                     ValidClaims.CORE_IDENTITY_JWT.getValue(),
                     identityCredentials.getCoreIdentityJWT());
         }
+        if (Objects.nonNull(identityCredentials.getAdditionalClaims())) {
+            identityCredentials.getAdditionalClaims().entrySet().stream()
+                    .filter(t -> accessTokenInfo.getIdentityClaims().contains(t.getKey()))
+                    .forEach(t -> userInfo.setClaim(t.getKey(), t.getValue()));
+        }
         return userInfo;
     }
 
