@@ -23,7 +23,7 @@ ext {
     dependencyVersions = [
         jackson_version: "2.13.3",
         aws_sdk_version: "1.12.224",
-        aws_sdk_v2_version: "2.17.195",
+        aws_sdk_v2_version: "2.17.201",
         aws_lambda_core_version: "1.2.1",
         aws_lambda_events_version: "3.11.0",
         gson: "2.9.0",
@@ -128,7 +128,7 @@ subprojects {
         lettuce "org.apache.commons:commons-pool2:2.11.1",
                 "io.lettuce:lettuce-core:6.1.8.RELEASE"
 
-        libphonenumber "com.googlecode.libphonenumber:libphonenumber:8.12.48"
+        libphonenumber "com.googlecode.libphonenumber:libphonenumber:8.12.49"
 
         logging_runtime "com.amazonaws:aws-lambda-java-log4j2:1.5.0",
                 "org.slf4j:slf4j-nop:1.7.36"
