@@ -2,21 +2,21 @@ package uk.gov.di.accountmanagement.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import jakarta.validation.constraints.NotNull;
+import uk.gov.di.authentication.shared.validation.Required;
 
 public class UpdateEmailRequest {
 
     @Expose
     @SerializedName("existingEmailAddress")
-    @NotNull
+    @Required
     private String existingEmailAddress;
 
     @Expose
     @SerializedName("replacementEmailAddress")
-    @NotNull
+    @Required
     private String replacementEmailAddress;
 
-    @Expose @NotNull private String otp;
+    @Expose @Required private String otp;
 
     public UpdateEmailRequest() {}
 

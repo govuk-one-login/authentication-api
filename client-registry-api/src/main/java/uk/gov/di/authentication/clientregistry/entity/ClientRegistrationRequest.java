@@ -2,9 +2,9 @@ package uk.gov.di.authentication.clientregistry.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import jakarta.validation.constraints.NotNull;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.validation.Required;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,27 +14,27 @@ public class ClientRegistrationRequest {
 
     @SerializedName("client_name")
     @Expose
-    @NotNull
+    @Required
     private String clientName;
 
     @SerializedName("redirect_uris")
     @Expose
-    @NotNull
+    @Required
     private List<String> redirectUris;
 
     @SerializedName("contacts")
     @Expose
-    @NotNull
+    @Required
     private List<String> contacts;
 
     @SerializedName("public_key")
     @Expose
-    @NotNull
+    @Required
     private String publicKey;
 
     @SerializedName("scopes")
     @Expose
-    @NotNull
+    @Required
     private List<String> scopes;
 
     @SerializedName("post_logout_redirect_uris")
@@ -51,12 +51,12 @@ public class ClientRegistrationRequest {
 
     @SerializedName("sector_identifier_uri")
     @Expose
-    @NotNull
+    @Required
     private String sectorIdentifierUri;
 
     @SerializedName("subject_type")
     @Expose
-    @NotNull
+    @Required
     private String subjectType;
 
     @SerializedName("identity_verification_required")

@@ -2,15 +2,15 @@ package uk.gov.di.accountmanagement.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import jakarta.validation.constraints.NotNull;
+import uk.gov.di.authentication.shared.validation.Required;
 
 public class UpdatePasswordRequest {
 
-    @Expose @NotNull private String email;
+    @Expose @Required private String email;
 
     @Expose
     @SerializedName("newPassword")
-    @NotNull
+    @Required
     private String newPassword;
 
     public UpdatePasswordRequest() {}

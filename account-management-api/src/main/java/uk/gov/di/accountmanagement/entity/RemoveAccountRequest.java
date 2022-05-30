@@ -1,10 +1,10 @@
 package uk.gov.di.accountmanagement.entity;
 
 import com.google.gson.annotations.Expose;
-import jakarta.validation.constraints.NotNull;
+import uk.gov.di.authentication.shared.validation.Required;
 
 public class RemoveAccountRequest {
-    @Expose @NotNull private String email;
+    @Expose @Required private String email;
 
     public RemoveAccountRequest() {}
 

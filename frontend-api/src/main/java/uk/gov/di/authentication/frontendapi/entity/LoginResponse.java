@@ -2,7 +2,7 @@ package uk.gov.di.authentication.frontendapi.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import jakarta.validation.constraints.NotNull;
+import uk.gov.di.authentication.shared.validation.Required;
 
 public class LoginResponse {
 
@@ -12,22 +12,22 @@ public class LoginResponse {
 
     @SerializedName("mfaRequired")
     @Expose
-    @NotNull
+    @Required
     private boolean mfaRequired;
 
     @SerializedName("phoneNumberVerified")
     @Expose
-    @NotNull
+    @Required
     private boolean phoneNumberVerified;
 
     @SerializedName(value = "latestTermsAndConditionsAccepted")
     @Expose
-    @NotNull
+    @Required
     private boolean latestTermsAndConditionsAccepted;
 
     @SerializedName(value = "consentRequired")
     @Expose
-    @NotNull
+    @Required
     private boolean consentRequired;
 
     public LoginResponse() {}

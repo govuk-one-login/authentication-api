@@ -2,14 +2,14 @@ package uk.gov.di.authentication.oidc.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import jakarta.validation.constraints.NotNull;
+import uk.gov.di.authentication.shared.validation.Required;
 
 public class IdentityResponse {
 
-    @Expose @NotNull private String sub;
+    @Expose @Required private String sub;
 
     @Expose
-    @NotNull
+    @Required
     @SerializedName("identityCredential")
     private String identityCredential;
 

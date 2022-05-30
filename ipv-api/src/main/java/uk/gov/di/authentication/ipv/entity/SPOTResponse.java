@@ -2,7 +2,7 @@ package uk.gov.di.authentication.ipv.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import jakarta.validation.constraints.NotNull;
+import uk.gov.di.authentication.shared.validation.Required;
 
 import java.util.Map;
 
@@ -12,9 +12,9 @@ public class SPOTResponse {
     @SerializedName("claims")
     private Map<String, Object> claims;
 
-    @Expose @NotNull private String sub;
+    @Expose @Required private String sub;
 
-    @Expose @NotNull private SPOTStatus status;
+    @Expose @Required private SPOTStatus status;
 
     public SPOTResponse() {}
 

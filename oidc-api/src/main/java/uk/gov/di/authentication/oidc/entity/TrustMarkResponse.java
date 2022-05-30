@@ -2,26 +2,26 @@ package uk.gov.di.authentication.oidc.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import jakarta.validation.constraints.NotNull;
+import uk.gov.di.authentication.shared.validation.Required;
 
 import java.util.List;
 
 public class TrustMarkResponse {
-    @Expose @NotNull private String idp;
+    @Expose @Required private String idp;
 
     @SerializedName("trustmark_provider")
     @Expose
-    @NotNull
+    @Required
     private String trustMark;
 
     @SerializedName("C")
     @Expose
-    @NotNull
+    @Required
     private List<String> c;
 
     @SerializedName("P")
     @Expose
-    @NotNull
+    @Required
     private List<String> p;
 
     public TrustMarkResponse() {}

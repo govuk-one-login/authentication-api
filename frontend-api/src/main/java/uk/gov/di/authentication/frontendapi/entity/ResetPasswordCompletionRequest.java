@@ -2,7 +2,7 @@ package uk.gov.di.authentication.frontendapi.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import jakarta.validation.constraints.NotNull;
+import uk.gov.di.authentication.shared.validation.Required;
 
 public class ResetPasswordCompletionRequest {
 
@@ -12,7 +12,7 @@ public class ResetPasswordCompletionRequest {
 
     @SerializedName("password")
     @Expose
-    @NotNull
+    @Required
     private String password;
 
     public ResetPasswordCompletionRequest() {}

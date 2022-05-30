@@ -2,13 +2,13 @@ package uk.gov.di.authentication.ipv.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import jakarta.validation.constraints.NotNull;
+import uk.gov.di.authentication.shared.validation.Required;
 
 public class IPVAuthorisationResponse {
 
     @SerializedName("redirectUri")
     @Expose
-    @NotNull
+    @Required
     private String redirectUri;
 
     public IPVAuthorisationResponse() {}

@@ -2,19 +2,19 @@ package uk.gov.di.authentication.frontendapi.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import jakarta.validation.constraints.NotNull;
 import uk.gov.di.authentication.shared.entity.BaseFrontendRequest;
+import uk.gov.di.authentication.shared.validation.Required;
 
 public class UpdateProfileRequest extends BaseFrontendRequest {
 
     @SerializedName("updateProfileType")
     @Expose
-    @NotNull
+    @Required
     private UpdateProfileType updateProfileType;
 
     @SerializedName("profileInformation")
     @Expose
-    @NotNull
+    @Required
     private String profileInformation;
 
     public UpdateProfileRequest() {}
