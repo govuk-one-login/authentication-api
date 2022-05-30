@@ -1,50 +1,43 @@
 package uk.gov.di.authentication.deliveryreceiptsapi.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import jakarta.validation.constraints.NotNull;
 
 public class NotifyDeliveryReceipt {
 
-    @JsonProperty("id")
-    private String id;
+    @Expose @NotNull private String id;
 
-    @JsonProperty("reference")
-    private String reference;
+    @Expose private String reference;
 
-    @JsonProperty("to")
-    private String to;
+    @Expose @NotNull private String to;
 
-    @JsonProperty("status")
-    private String status;
+    @Expose @NotNull private String status;
 
-    @JsonProperty("created_at")
-    private String createdAt;
+    @Expose @NotNull private String createdAt;
 
-    @JsonProperty("completed_at")
-    private String completedAt;
+    @Expose @NotNull private String completedAt;
 
-    @JsonProperty("sent_at")
-    private String sentAt;
+    @Expose @NotNull private String sentAt;
 
-    @JsonProperty("notification_type")
-    private String notificationType;
+    @Expose @NotNull private String notificationType;
 
-    @JsonProperty("template_id")
-    private String templateId;
+    @Expose @NotNull private String templateId;
 
-    @JsonProperty("template_version")
-    private int templateVersion;
+    @Expose @NotNull private int templateVersion;
+
+    public NotifyDeliveryReceipt() {}
 
     public NotifyDeliveryReceipt(
-            @JsonProperty(required = true, value = "id") String id,
-            @JsonProperty(required = true, value = "reference") String reference,
-            @JsonProperty(required = true, value = "to") String to,
-            @JsonProperty(required = true, value = "status") String status,
-            @JsonProperty(required = true, value = "created_at") String createdAt,
-            @JsonProperty(required = true, value = "completed_at") String completedAt,
-            @JsonProperty(required = true, value = "sent_at") String sentAt,
-            @JsonProperty(required = true, value = "notification_type") String notificationType,
-            @JsonProperty(required = true, value = "template_id") String templateId,
-            @JsonProperty(required = true, value = "template_version") int templateVersion) {
+            String id,
+            String reference,
+            String to,
+            String status,
+            String createdAt,
+            String completedAt,
+            String sentAt,
+            String notificationType,
+            String templateId,
+            int templateVersion) {
         this.id = id;
         this.reference = reference;
         this.to = to;

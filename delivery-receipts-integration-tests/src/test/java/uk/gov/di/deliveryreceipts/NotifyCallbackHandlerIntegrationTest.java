@@ -3,16 +3,15 @@ package uk.gov.di.deliveryreceipts;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.deliveryreceiptsapi.entity.NotifyDeliveryReceipt;
 import uk.gov.di.authentication.deliveryreceiptsapi.lambda.NotifyCallbackHandler;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.extensions.ParameterStoreExtension;
 
 import java.util.Date;
@@ -26,7 +25,7 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 public class NotifyCallbackHandlerIntegrationTest {
 
     private static final String BEARER_TOKEN = "notify-test-@bearer-token";
-    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private static final Json objectMapper = SerializationService.getInstance();
 
     private final Context context = mock(Context.class);
     private NotifyCallbackHandler handler;
@@ -70,7 +69,7 @@ public class NotifyCallbackHandlerIntegrationTest {
 
         try {
             request.withBody(objectMapper.writeValueAsString(body));
-        } catch (JsonProcessingException e) {
+        } catch (Json.JsonException e) {
             throw new RuntimeException("Could not serialise test body", e);
         }
         return handler.handleRequest(request, context);

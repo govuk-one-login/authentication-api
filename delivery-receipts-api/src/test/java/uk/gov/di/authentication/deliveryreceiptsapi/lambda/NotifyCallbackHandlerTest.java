@@ -2,8 +2,6 @@ package uk.gov.di.authentication.deliveryreceiptsapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -11,9 +9,10 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.deliveryreceiptsapi.entity.NotifyDeliveryReceipt;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.Collections;
 import java.util.Date;
@@ -41,7 +40,7 @@ class NotifyCallbackHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
-    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private final Json objectMapper = SerializationService.getInstance();
 
     @BeforeEach
     void setup() {
@@ -77,7 +76,7 @@ class NotifyCallbackHandlerTest {
     @MethodSource("phoneNumbers")
     void shouldCallCloudwatchMetricServiceWhenSmsReceiptIsReceived(
             String number, String expectedCountryCode, String status, String counterName)
-            throws JsonProcessingException {
+            throws Json.JsonException {
         var deliveryReceipt = createDeliveryReceipt(number, status, "sms");
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN));
@@ -99,7 +98,7 @@ class NotifyCallbackHandlerTest {
     }
 
     @Test
-    void shouldNotCallCloudwatchMetricWithEmailNotificationType() throws JsonProcessingException {
+    void shouldNotCallCloudwatchMetricWithEmailNotificationType() throws Json.JsonException {
         var deliveryReceipt = createDeliveryReceipt("jim@test.com", "delivered", "email");
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN));
