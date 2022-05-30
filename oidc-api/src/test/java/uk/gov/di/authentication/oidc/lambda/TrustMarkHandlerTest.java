@@ -9,8 +9,9 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.entity.TrustMarkResponse;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.List;
 import java.util.Optional;
@@ -27,6 +28,7 @@ class TrustMarkHandlerTest {
     private final Context context = mock(Context.class);
     private static final String BASE_URL = "https://example.com";
     private TrustMarkHandler handler;
+    private Json objectMapper = SerializationService.getInstance();
 
     @BeforeEach
     public void setUp() {
@@ -36,7 +38,8 @@ class TrustMarkHandlerTest {
     }
 
     @Test
-    public void shouldReturn200WhenRequestIsSuccessful() throws JsonProcessingException {
+    public void shouldReturn200WhenRequestIsSuccessful()
+            throws JsonProcessingException, Json.JsonException {
         TrustMarkResponse trustMarkResponse =
                 new TrustMarkResponse(
                         configurationService.getOidcApiBaseURL().orElseThrow(),
@@ -52,8 +55,7 @@ class TrustMarkHandlerTest {
         assertThat(result, hasStatus(200));
 
         TrustMarkResponse response =
-                ObjectMapperFactory.getInstance()
-                        .readValue(result.getBody(), TrustMarkResponse.class);
+                objectMapper.readValue(result.getBody(), TrustMarkResponse.class);
 
         assertEquals(response.getIdp(), trustMarkResponse.getIdp());
         assertEquals(response.getTrustMark(), trustMarkResponse.getTrustMark());

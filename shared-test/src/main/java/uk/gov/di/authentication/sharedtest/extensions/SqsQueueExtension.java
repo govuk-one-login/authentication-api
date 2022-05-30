@@ -8,11 +8,10 @@ import com.amazonaws.services.sqs.model.PurgeQueueRequest;
 import com.amazonaws.services.sqs.model.QueueAttributeName;
 import com.amazonaws.services.sqs.model.QueueDoesNotExistException;
 import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.List;
 import java.util.Optional;
@@ -26,7 +25,7 @@ public class SqsQueueExtension extends BaseAwsResourceExtension implements Befor
 
     private final String queueNameSuffix;
     private final AmazonSQS sqsClient;
-    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private final Json objectMapper = SerializationService.getInstance();
 
     private String queueUrl;
 
@@ -64,7 +63,7 @@ public class SqsQueueExtension extends BaseAwsResourceExtension implements Befor
                         m -> {
                             try {
                                 return objectMapper.readValue(m.getBody(), messageClass);
-                            } catch (JsonProcessingException e) {
+                            } catch (Json.JsonException e) {
                                 throw new RuntimeException(e);
                             }
                         })

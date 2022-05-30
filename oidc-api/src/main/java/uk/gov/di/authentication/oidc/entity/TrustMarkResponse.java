@@ -1,27 +1,36 @@
 package uk.gov.di.authentication.oidc.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
 
 public class TrustMarkResponse {
     @JsonProperty("idp")
+    @Expose
+    @NotNull
     private String idp;
 
-    @JsonProperty("trustmark_provider")
+    @SerializedName("trustmark_provider")
+    @Expose
+    @NotNull
     private String trustMark;
 
-    @JsonProperty("C")
+    @SerializedName("C")
+    @Expose
+    @NotNull
     private List<String> c;
 
-    @JsonProperty("P")
+    @SerializedName("P")
+    @Expose
+    @NotNull
     private List<String> p;
 
-    public TrustMarkResponse(
-            @JsonProperty(required = true, value = "idp") String idp,
-            @JsonProperty(required = true, value = "trustmark_provider") String trustMark,
-            @JsonProperty(required = true, value = "C") List<String> c,
-            @JsonProperty(required = true, value = "P") List<String> p) {
+    public TrustMarkResponse() {}
+
+    public TrustMarkResponse(String idp, String trustMark, List<String> c, List<String> p) {
         this.idp = idp;
         this.trustMark = trustMark;
         this.c = c;

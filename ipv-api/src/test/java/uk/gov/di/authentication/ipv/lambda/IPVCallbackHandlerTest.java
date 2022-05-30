@@ -3,7 +3,6 @@ package uk.gov.di.authentication.ipv.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.oauth2.sdk.AccessTokenResponse;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
@@ -40,13 +39,14 @@ import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URI;
@@ -108,6 +108,8 @@ class IPVCallbackHandlerTest {
 
     private final ClientSession clientSession =
             new ClientSession(generateAuthRequest().toParameters(), null, null);
+
+    private final Json objectMapper = SerializationService.getInstance();
 
     @BeforeEach
     void setUp() {
@@ -172,7 +174,7 @@ class IPVCallbackHandlerTest {
 
     @Test
     void shouldInvokeSPOTAndRedirectToFrontendCallbackForSuccessfulResponseAtP2()
-            throws URISyntaxException, JsonProcessingException {
+            throws URISyntaxException, Json.JsonException {
 
         usingValidSession();
         usingValidClientSession();
@@ -186,24 +188,21 @@ class IPVCallbackHandlerTest {
                 ClientSubjectHelper.getSubject(userProfile, clientRegistry, dynamoService);
         verify(awsSqsClient)
                 .send(
-                        ObjectMapperFactory.getInstance()
-                                .writeValueAsString(
-                                        new SPOTRequest(
-                                                SPOTClaims.builder()
-                                                        .withVot(
-                                                                LevelOfConfidence.MEDIUM_LEVEL
-                                                                        .getValue())
-                                                        .withVtm(OIDC_BASE_URL + "/trustmark")
-                                                        .build(),
-                                                SUBJECT.getValue(),
-                                                salt,
-                                                sectorId,
-                                                expectedPairwiseSub.getValue(),
-                                                new LogIds(
-                                                        session.getSessionId(),
-                                                        PERSISTENT_SESSION_ID,
-                                                        REQUEST_ID,
-                                                        CLIENT_ID.getValue()))));
+                        objectMapper.writeValueAsString(
+                                new SPOTRequest(
+                                        SPOTClaims.builder()
+                                                .withVot(LevelOfConfidence.MEDIUM_LEVEL.getValue())
+                                                .withVtm(OIDC_BASE_URL + "/trustmark")
+                                                .build(),
+                                        SUBJECT.getValue(),
+                                        salt,
+                                        sectorId,
+                                        expectedPairwiseSub.getValue(),
+                                        new LogIds(
+                                                session.getSessionId(),
+                                                PERSISTENT_SESSION_ID,
+                                                REQUEST_ID,
+                                                CLIENT_ID.getValue()))));
 
         verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
         verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);

@@ -1,13 +1,15 @@
 package uk.gov.di.authentication.oidc.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import jakarta.validation.constraints.NotNull;
 
 public class AuthCodeResponse {
 
-    @JsonProperty("location")
-    private String location;
+    @Expose @NotNull private String location;
 
-    public AuthCodeResponse(@JsonProperty(required = true, value = "location") String location) {
+    public AuthCodeResponse() {}
+
+    public AuthCodeResponse(String location) {
         this.location = location;
     }
 

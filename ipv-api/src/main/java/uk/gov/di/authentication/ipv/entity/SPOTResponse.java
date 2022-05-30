@@ -1,21 +1,24 @@
 package uk.gov.di.authentication.ipv.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.Map;
 
 public class SPOTResponse {
 
-    @JsonProperty private Map<String, Object> claims;
+    @Expose
+    @SerializedName("claims")
+    private Map<String, Object> claims;
 
-    @JsonProperty private String sub;
+    @Expose @NotNull private String sub;
 
-    @JsonProperty private SPOTStatus status;
+    @Expose @NotNull private SPOTStatus status;
 
-    public SPOTResponse(
-            @JsonProperty(value = "claim") Map<String, Object> claims,
-            @JsonProperty(required = true, value = "sub") String sub,
-            @JsonProperty(required = true, value = "status") SPOTStatus status) {
+    public SPOTResponse() {}
+
+    public SPOTResponse(Map<String, Object> claims, String sub, SPOTStatus status) {
         this.claims = claims;
         this.sub = sub;
         this.status = status;

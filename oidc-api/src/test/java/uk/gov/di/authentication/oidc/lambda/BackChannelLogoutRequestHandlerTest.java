@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.entity.BackChannelLogoutMessage;
 import uk.gov.di.authentication.oidc.services.HttpRequestService;
 import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.TokenService;
 
 import java.net.URI;
@@ -124,7 +124,7 @@ class BackChannelLogoutRequestHandlerTest {
     private SQSEvent inputEvent(BackChannelLogoutMessage payload) {
         var messages =
                 Optional.ofNullable(payload)
-                        .map(unchecked(ObjectMapperFactory.getInstance()::writeValueAsString))
+                        .map(unchecked(SerializationService.getInstance()::writeValueAsString))
                         .map(
                                 body -> {
                                     var message = new SQSEvent.SQSMessage();

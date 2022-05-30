@@ -2,7 +2,6 @@ package uk.gov.di.authentication.queuehandlers;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.entity.SPOTResponse;
 import uk.gov.di.authentication.ipv.entity.SPOTStatus;
 import uk.gov.di.authentication.ipv.lambda.SPOTResponseHandler;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
 
 import java.util.Arrays;
@@ -72,7 +72,7 @@ public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent
                                         message.setEventSourceArn(
                                                 "arn:aws:sqs:eu-west-2:123456789012:queue-name");
                                         return message;
-                                    } catch (JsonProcessingException e) {
+                                    } catch (Json.JsonException e) {
                                         throw new RuntimeException(e);
                                     }
                                 })

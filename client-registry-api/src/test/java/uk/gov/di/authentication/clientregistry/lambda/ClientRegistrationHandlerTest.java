@@ -3,8 +3,6 @@ package uk.gov.di.authentication.clientregistry.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import org.junit.jupiter.api.AfterEach;
@@ -18,9 +16,10 @@ import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse
 import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.List;
@@ -62,7 +61,7 @@ class ClientRegistrationHandlerTest {
     private final ClientConfigValidationService configValidationService =
             mock(ClientConfigValidationService.class);
     private final AuditService auditService = mock(AuditService.class);
-    private final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private final Json objectMapper = SerializationService.getInstance();
     private ClientRegistrationHandler handler;
 
     @BeforeEach
@@ -83,7 +82,7 @@ class ClientRegistrationHandlerTest {
     }
 
     @Test
-    void shouldReturn200IfClientRegistrationRequestIsSuccessful() throws JsonProcessingException {
+    void shouldReturn200IfClientRegistrationRequestIsSuccessful() throws Json.JsonException {
         when(configValidationService.validateClientRegistrationConfig(
                         any(ClientRegistrationRequest.class)))
                 .thenReturn(Optional.empty());
@@ -124,7 +123,7 @@ class ClientRegistrationHandlerTest {
 
     @Test
     void shouldSetConsentRequiredToFalseWhenIdentityVerificationIsRequired()
-            throws JsonProcessingException {
+            throws Json.JsonException {
         when(configValidationService.validateClientRegistrationConfig(
                         any(ClientRegistrationRequest.class)))
                 .thenReturn(Optional.empty());
@@ -253,8 +252,7 @@ class ClientRegistrationHandlerTest {
 
     @ParameterizedTest
     @MethodSource("clientTypes")
-    void shouldReturnExpectedClientTypeInResponse(String clientType)
-            throws JsonProcessingException {
+    void shouldReturnExpectedClientTypeInResponse(String clientType) throws Json.JsonException {
         when(configValidationService.validateClientRegistrationConfig(
                         any(ClientRegistrationRequest.class)))
                 .thenReturn(Optional.empty());

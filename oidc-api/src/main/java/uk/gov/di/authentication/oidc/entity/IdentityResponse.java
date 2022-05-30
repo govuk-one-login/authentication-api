@@ -1,19 +1,22 @@
 package uk.gov.di.authentication.oidc.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
+import jakarta.validation.constraints.NotNull;
 
 public class IdentityResponse {
 
-    @JsonProperty("sub")
-    private String sub;
+    @Expose @NotNull private String sub;
 
-    @JsonProperty("identityCredential")
+    @Expose
+    @NotNull
+    @SerializedName("identityCredential")
     private String identityCredential;
 
-    public IdentityResponse(
-            @JsonProperty(required = true, value = "sub") String sub,
-            @JsonProperty(required = true, value = "identityCredential")
-                    String identityCredential) {
+    public IdentityResponse() {}
+    ;
+
+    public IdentityResponse(String sub, String identityCredential) {
         this.sub = sub;
         this.identityCredential = identityCredential;
     }

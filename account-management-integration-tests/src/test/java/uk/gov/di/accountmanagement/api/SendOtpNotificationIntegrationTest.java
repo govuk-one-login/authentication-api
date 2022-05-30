@@ -1,6 +1,5 @@
 package uk.gov.di.accountmanagement.api;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,6 +9,7 @@ import uk.gov.di.accountmanagement.entity.SendNotificationRequest;
 import uk.gov.di.accountmanagement.lambda.SendOtpNotificationHandler;
 import uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.util.Collections;
@@ -122,7 +122,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
     }
 
     @Test
-    void shouldReturn400WhenPhoneNumberIsInvalid() throws JsonProcessingException {
+    void shouldReturn400WhenPhoneNumberIsInvalid() throws Json.JsonException {
         String badPhoneNumber = "This is not a valid phone number";
 
         var response =

@@ -1,12 +1,20 @@
 package uk.gov.di.accountmanagement.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 
 public class UpdateEmailRequest {
 
-    private final String existingEmailAddress;
-    private final String replacementEmailAddress;
-    private final String otp;
+    @Expose
+    @SerializedName("existingEmailAddress")
+    private String existingEmailAddress;
+
+    @Expose
+    @SerializedName("replacementEmailAddress")
+    private String replacementEmailAddress;
+
+    @Expose private String otp;
 
     public UpdateEmailRequest(
             @JsonProperty(required = true, value = "existingEmailAddress")

@@ -2,7 +2,7 @@ package uk.gov.di.authentication.sharedtest.basetest;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import uk.gov.di.authentication.shared.serialization.Json;
 
 import java.util.Collections;
 import java.util.Map;
@@ -47,7 +47,7 @@ public abstract class ApiGatewayHandlerIntegrationTest
                     } else {
                         try {
                             request.withBody(objectMapper.writeValueAsString(o));
-                        } catch (JsonProcessingException e) {
+                        } catch (Json.JsonException e) {
                             throw new RuntimeException("Could not serialise test body", e);
                         }
                     }

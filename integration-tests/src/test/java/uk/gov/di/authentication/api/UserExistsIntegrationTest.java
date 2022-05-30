@@ -6,6 +6,7 @@ import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.frontendapi.lambda.CheckUserExistsHandler;
 import uk.gov.di.authentication.shared.entity.BaseFrontendRequest;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.io.IOException;
@@ -31,7 +32,7 @@ public class UserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     @Test
     public void shouldCallUserExistsEndpointAndReturnAuthenticationRequestStateWhenUserExists()
-            throws IOException {
+            throws IOException, Json.JsonException {
         String emailAddress = "joe.bloggs+1@digital.cabinet-office.gov.uk";
         String sessionId = redis.createSession();
         userStore.signUp(emailAddress, "password-1");
@@ -52,7 +53,7 @@ public class UserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     @Test
     public void shouldCallUserExistsEndpointAndReturnUserNotFoundStateWhenUserDoesNotExist()
-            throws IOException {
+            throws IOException, Json.JsonException {
         String emailAddress = "joe.bloggs+2@digital.cabinet-office.gov.uk";
         String sessionId = redis.createSession();
         BaseFrontendRequest request = new CheckUserExistsRequest(emailAddress);

@@ -3,6 +3,7 @@ package uk.gov.di.authentication.shared.services;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSyntaxException;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
@@ -49,7 +50,7 @@ public class SerializationService implements Json {
             violations.forEach(v -> LOG.warn("Json validation violation: {}", v.getMessage()));
             throw new JsonException(
                     new ConstraintViolationException("JSON validation error", violations));
-        } catch (IllegalArgumentException e) {
+        } catch (JsonSyntaxException | IllegalArgumentException e) {
             throw new JsonException(e);
         }
     }

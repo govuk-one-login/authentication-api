@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.api;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -20,6 +19,7 @@ import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.authentication.sharedtest.helper.SignedCredentialHelper;
@@ -71,8 +71,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    void shouldCallUserInfoWithAccessTokenAndReturn200()
-            throws JsonProcessingException, ParseException {
+    void shouldCallUserInfoWithAccessTokenAndReturn200() throws Json.JsonException, ParseException {
         var claimsSet =
                 new JWTClaimsSet.Builder()
                         .claim("scope", SCOPES)
@@ -132,7 +131,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturn200WhenIdentityIsEnabledAndIdentityClaimsArePresent()
-            throws JsonProcessingException, ParseException {
+            throws Json.JsonException, ParseException {
         var configurationService = new UserInfoIntegrationTest.UserInfoConfigurationService();
         handler = new UserInfoHandler(configurationService);
         var claimsSetRequest =
@@ -194,7 +193,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldCallUserInfoWithAccessTokenAndReturn200ForDocAppUser()
-            throws JsonProcessingException, ParseException {
+            throws Json.JsonException, ParseException {
 
         documentAppCredentialStore.addCredential(
                 DOC_APP_PUBLIC_SUBJECT.getValue(), DOC_APP_CREDENTIAL);

@@ -3,10 +3,11 @@ package uk.gov.di.authentication.sharedtest.basetest;
 import com.amazonaws.services.kms.model.KeyUsageType;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.extensions.AuditSnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.ClientStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.DocumentAppCredentialStoreExtension;
@@ -102,7 +103,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
                     docAppPrivateKeyJwtSigner);
 
     protected RequestHandler<Q, S> handler;
-    protected final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    protected final Json objectMapper = SerializationService.getInstance();
     protected final Context context = mock(Context.class);
 
     @RegisterExtension

@@ -16,6 +16,7 @@ import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.lambda.LoginHandler;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.io.IOException;
@@ -55,7 +56,8 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @ParameterizedTest
     @MethodSource("vectorOfTrust")
     void shouldSuccessfullyProcessLoginRequestForDifferentVectorOfTrusts(
-            CredentialTrustLevel level, String termsAndConditionsVersion) throws IOException {
+            CredentialTrustLevel level, String termsAndConditionsVersion)
+            throws IOException, Json.JsonException {
         String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         String password = "password-1";
         String phoneNumber = "01234567890";

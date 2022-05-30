@@ -25,6 +25,7 @@ import uk.gov.di.authentication.frontendapi.lambda.StartHandler;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
@@ -77,7 +78,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             Map<String, String> customAuthParameters,
             boolean identityRequired,
             boolean isAuthenticated)
-            throws IOException {
+            throws IOException, Json.JsonException {
         String sessionId = redis.createSession(isAuthenticated);
 
         Scope scope = new Scope();
@@ -133,7 +134,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void shouldReturn200WhenUserIsADocCheckingAppUser(boolean isAuthenticated)
-            throws IOException, JOSEException {
+            throws IOException, JOSEException, Json.JsonException {
         var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         var sessionId = redis.createSession(isAuthenticated);
         var scope = new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
