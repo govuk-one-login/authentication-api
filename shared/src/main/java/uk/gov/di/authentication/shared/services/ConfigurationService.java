@@ -6,6 +6,7 @@ import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagement
 import com.amazonaws.services.simplesystemsmanagement.model.GetParameterRequest;
 import com.amazonaws.services.simplesystemsmanagement.model.GetParametersRequest;
 import com.amazonaws.services.simplesystemsmanagement.model.ParameterNotFoundException;
+import io.lettuce.core.RedisURI;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.bouncycastle.util.io.pem.PemReader;
@@ -21,6 +22,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +31,7 @@ import java.util.stream.Collectors;
 
 import static java.text.MessageFormat.format;
 import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 
 public class ConfigurationService implements BaseLambdaConfiguration, AuditPublisherConfiguration {
 
@@ -282,6 +285,11 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .get(format("{0}-{1}-redis-master-host", getEnvironment(), getRedisKey()));
     }
 
+    public String getRedisReplicaHost() {
+        return getSsmRedisParameters()
+                .get(format("{0}-{1}-redis-replica-host", getEnvironment(), getRedisKey()));
+    }
+
     public Optional<String> getRedisPassword() {
         return Optional.ofNullable(
                 getSsmRedisParameters()
@@ -298,6 +306,35 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Boolean.parseBoolean(
                 getSsmRedisParameters()
                         .get(format("{0}-{1}-redis-tls", getEnvironment(), getRedisKey())));
+    }
+
+    public List<RedisURI> getRedisNodes() {
+        List<RedisURI> nodes = new ArrayList<>();
+
+        nodes.add(
+                redisUriBuild(
+                        getRedisHost(), getRedisPort(), getUseRedisTLS(), getRedisPassword()));
+        if (nonNull(getRedisReplicaHost())) {
+            nodes.add(
+                    redisUriBuild(
+                            getRedisReplicaHost(),
+                            getRedisPort(),
+                            getUseRedisTLS(),
+                            getRedisPassword()));
+        }
+
+        return nodes;
+    }
+
+    private RedisURI redisUriBuild(String host, int port, boolean ssl, Optional<String> password) {
+        RedisURI.Builder uri =
+                RedisURI.builder()
+                        .withHost(getRedisHost())
+                        .withPort(getRedisPort())
+                        .withSsl(getUseRedisTLS());
+        getRedisPassword().ifPresent(s -> uri.withPassword(s.toCharArray()));
+
+        return uri.build();
     }
 
     public String getResetPasswordRoute() {
@@ -385,6 +422,9 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                             .withNames(
                                     format(
                                             "{0}-{1}-redis-master-host",
+                                            getEnvironment(), getRedisKey()),
+                                    format(
+                                            "{0}-{1}-redis-replica-host",
                                             getEnvironment(), getRedisKey()),
                                     format(
                                             "{0}-{1}-redis-password",

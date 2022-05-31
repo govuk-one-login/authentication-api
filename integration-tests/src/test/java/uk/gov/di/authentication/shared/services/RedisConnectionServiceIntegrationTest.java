@@ -1,7 +1,10 @@
 package uk.gov.di.authentication.shared.services;
 
+import io.lettuce.core.RedisURI;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,10 +26,18 @@ class RedisConnectionServiceIntegrationTest {
 
     private String testKey = "int-test-key-" + UUID.randomUUID();
 
+    private static List<RedisURI> NODES;
+
+    @BeforeAll
+    static void setupRedisNodes() {
+        var builder = RedisURI.builder().withHost(REDIS_HOST).withPort(6379).withSsl(false);
+        REDIS_PASSWORD.ifPresent(s -> builder.withPassword(s.toCharArray()));
+        NODES = List.of(builder.build());
+    }
+
     @Test
     void shouldSuccessfullySaveAndRetrieveIfRedisAvailable() {
-        try (RedisConnectionService redis =
-                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false)) {
+        try (RedisConnectionService redis = new RedisConnectionService(NODES, false)) {
             redis.saveWithExpiry(testKey, TEST_VALUE, TEN_SECOND_EXPIRY);
 
             assertThat(redis.getValue(testKey), equalTo(TEST_VALUE));
@@ -35,8 +46,7 @@ class RedisConnectionServiceIntegrationTest {
 
     @Test
     void shouldSuccessfullyCreateAValueThatExpires() {
-        try (RedisConnectionService redis =
-                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false)) {
+        try (RedisConnectionService redis = new RedisConnectionService(NODES, false)) {
             redis.saveWithExpiry(testKey, TEST_VALUE, 1);
             await().atMost(2, SECONDS)
                     .untilAsserted(() -> assertThat(redis.getValue(testKey), is(nullValue())));
@@ -45,8 +55,7 @@ class RedisConnectionServiceIntegrationTest {
 
     @Test
     void keyExistsShouldCorrectlyReturnTrueWhenKeyExists() {
-        try (RedisConnectionService redis =
-                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false)) {
+        try (RedisConnectionService redis = new RedisConnectionService(NODES, false)) {
             redis.saveWithExpiry(testKey, TEST_VALUE, TEN_SECOND_EXPIRY);
 
             assertThat(redis.keyExists(testKey), is(true));
@@ -55,16 +64,14 @@ class RedisConnectionServiceIntegrationTest {
 
     @Test
     void keyExistsShouldCorrectlyReturnFalseWhenKeyExists() {
-        try (RedisConnectionService redis =
-                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false)) {
+        try (RedisConnectionService redis = new RedisConnectionService(NODES, false)) {
             assertThat(redis.keyExists(testKey), is(false));
         }
     }
 
     @Test
     void popValueShouldReturnValueAndClearKeyWhenItExists() {
-        try (RedisConnectionService redis =
-                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false)) {
+        try (RedisConnectionService redis = new RedisConnectionService(NODES, false)) {
             redis.saveWithExpiry(testKey, TEST_VALUE, TEN_SECOND_EXPIRY);
 
             assertThat(redis.popValue(testKey), equalTo(TEST_VALUE));
@@ -74,16 +81,14 @@ class RedisConnectionServiceIntegrationTest {
 
     @Test
     void getValueReturnsNullIfKeyDoesNotExist() {
-        try (RedisConnectionService redis =
-                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false)) {
+        try (RedisConnectionService redis = new RedisConnectionService(NODES, false)) {
             assertThat(redis.getValue(testKey), is(nullValue()));
         }
     }
 
     @Test
     void deleteValueRemovesValueFromRedisIfExists() {
-        try (RedisConnectionService redis =
-                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false)) {
+        try (RedisConnectionService redis = new RedisConnectionService(NODES, false)) {
             redis.saveWithExpiry(testKey, TEST_VALUE, TEN_SECOND_EXPIRY);
             redis.deleteValue(testKey);
             assertThat(redis.keyExists(testKey), is(false));
@@ -92,8 +97,7 @@ class RedisConnectionServiceIntegrationTest {
 
     @Test
     void deleteValueDoesNotErrorIfKeyDoesNotExist() {
-        try (RedisConnectionService redis =
-                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false)) {
+        try (RedisConnectionService redis = new RedisConnectionService(NODES, false)) {
             redis.deleteValue(testKey);
             assertThat(redis.keyExists(testKey), is(false));
         }
@@ -101,8 +105,9 @@ class RedisConnectionServiceIntegrationTest {
 
     @Test
     void shouldThrowRedisConnectionExceptionIfRedisUnavailable() {
+        var builder = RedisURI.builder().withHost("bad-host-name").withPort(6379).withSsl(false);
         try (RedisConnectionService redis =
-                new RedisConnectionService("bad-host-name", 6379, false, REDIS_PASSWORD, false)) {
+                new RedisConnectionService(List.of(builder.build()), false)) {
             assertThrows(
                     RedisConnectionService.RedisConnectionException.class,
                     () -> redis.saveWithExpiry(testKey, TEST_VALUE, TEN_SECOND_EXPIRY));
