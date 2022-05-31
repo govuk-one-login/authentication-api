@@ -1,21 +1,17 @@
 package uk.gov.di.authentication.shared.services;
 
-import io.lettuce.core.ReadFrom;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.TransactionResult;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
 import io.lettuce.core.api.sync.RedisServerCommands;
-import io.lettuce.core.codec.StringCodec;
-import io.lettuce.core.masterreplica.MasterReplica;
-import io.lettuce.core.masterreplica.StatefulRedisMasterReplicaConnection;
-import io.lettuce.core.support.ConnectionPoolSupport;
-import org.apache.commons.pool2.impl.SoftReferenceObjectPool;
+import org.apache.commons.pool2.impl.GenericObjectPool;
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 
-import java.util.List;
 import java.util.Optional;
 
+import static io.lettuce.core.support.ConnectionPoolSupport.createGenericObjectPool;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class RedisConnectionService implements AutoCloseable {
@@ -23,31 +19,21 @@ public class RedisConnectionService implements AutoCloseable {
     public static final String REDIS_CONNECTION_ERROR = "Error getting Redis connection";
     private final RedisClient client;
 
-    private final SoftReferenceObjectPool<StatefulRedisMasterReplicaConnection<String, String>>
-            pool;
+    private final GenericObjectPool<StatefulRedisConnection<String, String>> pool;
 
-    public RedisConnectionService(List<RedisURI> nodes, boolean warmup) {
-        this.client = RedisClient.create();
-        this.pool =
-                ConnectionPoolSupport.createSoftReferenceObjectPool(
-                        () -> {
-                            var connection = MasterReplica.connect(client, StringCodec.UTF8, nodes);
-                            connection.setReadFrom(ReadFrom.REPLICA_PREFERRED);
-                            return connection;
-                        });
+    public RedisConnectionService(
+            String host, int port, boolean useSsl, Optional<String> password, boolean warmup) {
+        RedisURI.Builder builder = RedisURI.builder().withHost(host).withPort(port).withSsl(useSsl);
+        password.ifPresent(s -> builder.withPassword(s.toCharArray()));
+        RedisURI redisURI = builder.build();
+        this.client = RedisClient.create(redisURI);
+        this.pool = createGenericObjectPool(client::connect, new GenericObjectPoolConfig<>());
         if (warmup) warmUp();
     }
 
     public RedisConnectionService(
             String host, int port, boolean useSsl, Optional<String> password) {
-        var builder = RedisURI.builder().withHost(host).withPort(port).withSsl(useSsl);
-        password.ifPresent(s -> builder.withPassword(s.toCharArray()));
-        RedisURI redisURI = builder.build();
-
-        this.client = RedisClient.create();
-        this.pool =
-                ConnectionPoolSupport.createSoftReferenceObjectPool(
-                        () -> MasterReplica.connect(client, StringCodec.UTF8, List.of(redisURI)));
+        this(host, port, useSsl, password, true);
     }
 
     public RedisConnectionService(ConfigurationService configurationService) {
