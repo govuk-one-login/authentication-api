@@ -95,7 +95,7 @@ resource "aws_api_gateway_method_settings" "api_gateway_delivery_receipts_loggin
   method_path = "*/*"
 
   settings {
-    metrics_enabled    = false
+    metrics_enabled    = true
     data_trace_enabled = false
     logging_level      = "INFO"
   }

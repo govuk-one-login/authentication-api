@@ -183,7 +183,7 @@ resource "aws_api_gateway_method_settings" "api_gateway_frontend_logging_setting
   method_path = "*/*"
 
   settings {
-    metrics_enabled    = false
+    metrics_enabled    = true
     data_trace_enabled = var.enable_api_gateway_execution_request_tracing && local.request_tracing_allowed
     logging_level      = "INFO"
   }
