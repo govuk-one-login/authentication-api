@@ -1,29 +1,29 @@
 package uk.gov.di.authentication.deliveryreceiptsapi.entity;
 
 import com.google.gson.annotations.Expose;
-import jakarta.validation.constraints.NotNull;
+import uk.gov.di.authentication.shared.validation.Required;
 
 public class NotifyDeliveryReceipt {
 
-    @Expose @NotNull private String id;
+    @Expose @Required private String id;
 
     @Expose private String reference;
 
-    @Expose @NotNull private String to;
+    @Expose @Required private String to;
 
-    @Expose @NotNull private String status;
+    @Expose @Required private String status;
 
-    @Expose @NotNull private String createdAt;
+    @Expose @Required private String createdAt;
 
-    @Expose @NotNull private String completedAt;
+    @Expose @Required private String completedAt;
 
-    @Expose @NotNull private String sentAt;
+    @Expose @Required private String sentAt;
 
-    @Expose @NotNull private String notificationType;
+    @Expose @Required private String notificationType;
 
-    @Expose @NotNull private String templateId;
+    @Expose @Required private String templateId;
 
-    @Expose @NotNull private int templateVersion;
+    @Expose @Required private int templateVersion;
 
     public NotifyDeliveryReceipt() {}
 

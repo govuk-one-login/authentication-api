@@ -2,8 +2,8 @@ package uk.gov.di.authentication.frontendapi.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import jakarta.validation.constraints.NotNull;
 import uk.gov.di.authentication.shared.entity.NotificationType;
+import uk.gov.di.authentication.shared.validation.Required;
 
 public class VerifyCodeRequest {
 
@@ -16,12 +16,12 @@ public class VerifyCodeRequest {
 
     @SerializedName("notificationType")
     @Expose
-    @NotNull
+    @Required
     private NotificationType notificationType;
 
     @SerializedName("code")
     @Expose
-    @NotNull
+    @Required
     private String code;
 
     public NotificationType getNotificationType() {

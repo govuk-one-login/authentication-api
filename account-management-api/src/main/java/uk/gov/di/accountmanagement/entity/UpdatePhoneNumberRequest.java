@@ -2,18 +2,18 @@ package uk.gov.di.accountmanagement.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import jakarta.validation.constraints.NotNull;
+import uk.gov.di.authentication.shared.validation.Required;
 
 public class UpdatePhoneNumberRequest {
 
-    @Expose @NotNull private String email;
+    @Expose @Required private String email;
 
     @Expose
     @SerializedName("phoneNumber")
-    @NotNull
+    @Required
     private String phoneNumber;
 
-    @Expose @NotNull private String otp;
+    @Expose @Required private String otp;
 
     public UpdatePhoneNumberRequest() {}
 

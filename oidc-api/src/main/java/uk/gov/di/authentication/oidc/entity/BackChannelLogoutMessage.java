@@ -1,15 +1,15 @@
 package uk.gov.di.authentication.oidc.entity;
 
 import com.google.gson.annotations.Expose;
-import jakarta.validation.constraints.NotNull;
+import uk.gov.di.authentication.shared.validation.Required;
 
 public class BackChannelLogoutMessage {
 
-    @Expose @NotNull private String clientId;
+    @Expose @Required private String clientId;
 
-    @Expose @NotNull private String logoutUri;
+    @Expose @Required private String logoutUri;
 
-    @Expose @NotNull private String subjectId;
+    @Expose @Required private String subjectId;
 
     public BackChannelLogoutMessage() {}
 

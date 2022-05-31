@@ -2,20 +2,20 @@ package uk.gov.di.accountmanagement.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import jakarta.validation.constraints.NotNull;
+import uk.gov.di.authentication.shared.validation.Required;
 
 public class SendNotificationRequest {
 
     @Expose
     @SerializedName("notificationType")
-    @NotNull
+    @Required
     private NotificationType notificationType;
 
     @Expose
     @SerializedName("phoneNumber")
     private String phoneNumber;
 
-    @Expose @NotNull private String email;
+    @Expose @Required private String email;
 
     public SendNotificationRequest() {}
 

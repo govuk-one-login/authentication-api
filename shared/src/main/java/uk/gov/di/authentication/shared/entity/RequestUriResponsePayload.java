@@ -2,7 +2,7 @@ package uk.gov.di.authentication.shared.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import jakarta.validation.constraints.NotNull;
+import uk.gov.di.authentication.shared.validation.Required;
 
 import java.util.List;
 import java.util.Map;
@@ -10,7 +10,7 @@ import java.util.Map;
 public class RequestUriResponsePayload {
 
     @Expose
-    @NotNull
+    @Required
     @SerializedName("successfulRequest")
     private boolean successfulRequest;
 

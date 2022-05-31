@@ -2,16 +2,16 @@ package uk.gov.di.accountmanagement.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import jakarta.validation.constraints.NotNull;
+import uk.gov.di.authentication.shared.validation.Required;
 
 public class NotifyRequest {
 
     @Expose
     @SerializedName("notificationType")
-    @NotNull
+    @Required
     private NotificationType notificationType;
 
-    @Expose @NotNull private String destination;
+    @Expose @Required private String destination;
 
     @Expose private String code;
 

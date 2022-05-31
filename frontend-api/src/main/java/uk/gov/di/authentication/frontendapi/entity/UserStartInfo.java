@@ -2,28 +2,28 @@ package uk.gov.di.authentication.frontendapi.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import jakarta.validation.constraints.NotNull;
+import uk.gov.di.authentication.shared.validation.Required;
 
 public class UserStartInfo {
 
     @SerializedName("consentRequired")
     @Expose
-    @NotNull
+    @Required
     private boolean consentRequired;
 
     @SerializedName("upliftRequired")
     @Expose
-    @NotNull
+    @Required
     private boolean upliftRequired;
 
     @SerializedName("identityRequired")
     @Expose
-    @NotNull
+    @Required
     private boolean identityRequired;
 
     @SerializedName("authenticated")
     @Expose
-    @NotNull
+    @Required
     private boolean authenticated;
 
     @SerializedName("cookieConsent")

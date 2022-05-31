@@ -1,11 +1,11 @@
 package uk.gov.di.authentication.oidc.entity;
 
 import com.google.gson.annotations.Expose;
-import jakarta.validation.constraints.NotNull;
+import uk.gov.di.authentication.shared.validation.Required;
 
 public class AuthCodeResponse {
 
-    @Expose @NotNull private String location;
+    @Expose @Required private String location;
 
     public AuthCodeResponse() {}
 

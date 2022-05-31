@@ -2,7 +2,7 @@ package uk.gov.di.authentication.clientregistry.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import jakarta.validation.constraints.NotNull;
+import uk.gov.di.authentication.shared.validation.Required;
 
 import java.util.List;
 
@@ -10,32 +10,32 @@ public class ClientRegistrationResponse {
 
     @SerializedName("client_name")
     @Expose
-    @NotNull
+    @Required
     private String clientName;
 
     @SerializedName("client_id")
     @Expose
-    @NotNull
+    @Required
     private String clientId;
 
     @SerializedName("redirect_uris")
     @Expose
-    @NotNull
+    @Required
     private List<String> redirectUris;
 
     @SerializedName("contacts")
     @Expose
-    @NotNull
+    @Required
     private List<String> contacts;
 
     @SerializedName("scopes")
     @Expose
-    @NotNull
+    @Required
     private List<String> scopes;
 
     @SerializedName("post_logout_redirect_uris")
     @Expose
-    @NotNull
+    @Required
     private List<String> postLogoutRedirectUris;
 
     @SerializedName("back_channel_logout_uri")
@@ -44,22 +44,22 @@ public class ClientRegistrationResponse {
 
     @SerializedName("subject_type")
     @Expose
-    @NotNull
+    @Required
     private String subjectType;
 
     @SerializedName("token_endpoint_auth_method")
     @Expose
-    @NotNull
+    @Required
     private final String tokenAuthMethod = "private_key_jwt";
 
     @SerializedName("response_type")
     @Expose
-    @NotNull
+    @Required
     private final String responseType = "code";
 
     @SerializedName("service_type")
     @Expose
-    @NotNull
+    @Required
     private String serviceType;
 
     @SerializedName("claims")

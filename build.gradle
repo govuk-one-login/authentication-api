@@ -107,12 +107,7 @@ subprojects {
 
         govuk_notify "uk.gov.service.notify:notifications-java-client:3.17.3-RELEASE"
 
-        gson "com.google.code.gson:gson:${dependencyVersions.gson}",
-                "org.hibernate.validator:hibernate-validator:7.0.4.Final",
-                "org.glassfish:jakarta.el:4.0.2",
-                "jakarta.xml.bind:jakarta.xml.bind-api:4.0.0",
-                "com.sun.xml.bind:jaxb-impl:3.0.2"
-
+        gson "com.google.code.gson:gson:${dependencyVersions.gson}"
 
         hamcrest "org.hamcrest:hamcrest:2.2"
 

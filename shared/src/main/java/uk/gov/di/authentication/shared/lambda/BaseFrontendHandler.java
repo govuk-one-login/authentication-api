@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import jakarta.validation.ConstraintViolationException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.BaseFrontendRequest;
@@ -101,7 +100,7 @@ public abstract class BaseFrontendHandler<T>
         final T request;
         try {
             request = objectMapper.readValue(input.getBody(), clazz);
-        } catch (JsonException | ConstraintViolationException e) {
+        } catch (JsonException e) {
             LOG.warn("Request is missing parameters.");
             onRequestValidationError(context);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);

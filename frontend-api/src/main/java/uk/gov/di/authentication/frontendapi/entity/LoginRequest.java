@@ -1,12 +1,12 @@
 package uk.gov.di.authentication.frontendapi.entity;
 
 import com.google.gson.annotations.Expose;
-import jakarta.validation.constraints.NotNull;
 import uk.gov.di.authentication.shared.entity.BaseFrontendRequest;
+import uk.gov.di.authentication.shared.validation.Required;
 
 public class LoginRequest extends BaseFrontendRequest {
 
-    @Expose @NotNull private String password;
+    @Expose @Required private String password;
 
     public LoginRequest() {}
 

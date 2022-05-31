@@ -3,17 +3,17 @@ package uk.gov.di.authentication.shared.entity;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import jakarta.validation.constraints.NotNull;
+import uk.gov.di.authentication.shared.validation.Required;
 
 public class RequestUriPayload {
 
     @Expose
-    @NotNull
+    @Required
     @SerializedName("clientRegistry")
     private ClientRegistry clientRegistry;
 
     @Expose
-    @NotNull
+    @Required
     @SerializedName("authRequest")
     private AuthenticationRequest authRequest;
 
