@@ -6,6 +6,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.lang.reflect.Modifier.isStatic;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
@@ -29,13 +30,18 @@ public class RequiredFieldValidator implements Validator {
     private List<String> validateRequiredFields(Object object, Class clazz) {
         List<String> violations = new ArrayList<>();
         for (var field : clazz.getDeclaredFields()) {
-            try {
-                field.setAccessible(true);
-                if (field.isAnnotationPresent(Required.class) && isNull(field.get(object))) {
-                    violations.add(field.getName());
+            if (!isStatic(field.getModifiers())) {
+                var accessible = field.canAccess(object);
+                try {
+                    if (!accessible) field.setAccessible(true);
+                    if (field.isAnnotationPresent(Required.class) && isNull(field.get(object))) {
+                        violations.add(field.getName());
+                    }
+                } catch (IllegalAccessException e) {
+                    LOG.warn("Could not validate field: {}", field.getName());
+                } finally {
+                    if (!accessible) field.setAccessible(false);
                 }
-            } catch (IllegalAccessException e) {
-                LOG.warn("Could not validate field: {}", field.getName());
             }
         }
         return violations;
