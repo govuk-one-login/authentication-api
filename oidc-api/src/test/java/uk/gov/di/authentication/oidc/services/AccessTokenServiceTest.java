@@ -1,7 +1,5 @@
 package uk.gov.di.authentication.oidc.services;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.crypto.ECDSASigner;
@@ -26,9 +24,10 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
@@ -68,7 +67,7 @@ class AccessTokenServiceTest {
     private static final String BASE_URL = "https://example.com";
     private static final String KEY_ID = "14342354354353";
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
-    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private static final Json objectMapper = SerializationService.getInstance();
 
     private final ClaimsSetRequest claimsSetRequest =
             new ClaimsSetRequest()
@@ -104,7 +103,7 @@ class AccessTokenServiceTest {
     @ParameterizedTest
     @MethodSource("identityEnabled")
     void shouldReturnAccessTokenInfoWhenAccessTokenIsValid(boolean identityEndpoint)
-            throws JsonProcessingException, AccessTokenException {
+            throws Json.JsonException, AccessTokenException {
         List<String> expectedIdentityClaims = null;
         if (identityEndpoint) {
             accessToken = createSignedAccessToken(oidcValidClaimsRequest, false);
@@ -209,7 +208,7 @@ class AccessTokenServiceTest {
     }
 
     @Test
-    void shouldThrowExceptionWhenIdentityClaimsAreInvalid() throws JsonProcessingException {
+    void shouldThrowExceptionWhenIdentityClaimsAreInvalid() throws Json.JsonException {
         var claimsSetRequest =
                 new ClaimsSetRequest().add("email").add(ValidClaims.ADDRESS.getValue());
         var invalidClaimsRequest =
@@ -261,7 +260,7 @@ class AccessTokenServiceTest {
     @ParameterizedTest
     @MethodSource("identityEnabled")
     void shouldThrowExceptionWhenAccessTokenSentIsNotTheSameAsInRedis(boolean identityEndpoint)
-            throws JsonProcessingException {
+            throws Json.JsonException {
         if (identityEndpoint) {
             accessToken = createSignedAccessToken(oidcValidClaimsRequest, false);
         }

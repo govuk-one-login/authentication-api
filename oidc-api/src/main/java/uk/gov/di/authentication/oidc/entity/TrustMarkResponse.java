@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.oidc.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import jakarta.validation.constraints.NotNull;
@@ -8,10 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
 public class TrustMarkResponse {
-    @JsonProperty("idp")
-    @Expose
-    @NotNull
-    private String idp;
+    @Expose @NotNull private String idp;
 
     @SerializedName("trustmark_provider")
     @Expose

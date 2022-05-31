@@ -30,7 +30,6 @@ public class LocalDateTimeAdapter extends TypeAdapter<LocalDateTime> {
                 in.endArray();
                 return LocalDateTime.of(year, month, day, hour, minute, seconds, nanos);
             case STRING:
-                in.nextString();
                 return LocalDateTime.parse(in.nextString());
             default:
                 throw new MalformedJsonException(

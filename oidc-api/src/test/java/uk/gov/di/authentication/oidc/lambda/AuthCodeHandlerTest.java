@@ -3,8 +3,6 @@ package uk.gov.di.authentication.oidc.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
@@ -39,13 +37,14 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
@@ -92,7 +91,7 @@ class AuthCodeHandlerTest {
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String AUDIENCE = "oidc-audience";
     private static final State STATE = new State();
-    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private static final Json objectMapper = SerializationService.getInstance();
 
     private final AuthorizationService authorizationService = mock(AuthorizationService.class);
     private final AuthorisationCodeService authorisationCodeService =
@@ -166,8 +165,7 @@ class AuthCodeHandlerTest {
             CredentialTrustLevel requestedLevel,
             CredentialTrustLevel finalLevel,
             boolean docAppJourney)
-            throws ClientNotFoundException, URISyntaxException, JsonProcessingException,
-                    JOSEException {
+            throws ClientNotFoundException, URISyntaxException, Json.JsonException, JOSEException {
         AuthorizationCode authorizationCode = new AuthorizationCode();
         AuthenticationRequest authRequest =
                 generateValidSessionAndAuthRequest(requestedLevel, docAppJourney);
@@ -255,7 +253,7 @@ class AuthCodeHandlerTest {
 
     @Test
     void shouldGenerateErrorResponseWhenClientIsNotFound()
-            throws ClientNotFoundException, JsonProcessingException, JOSEException {
+            throws ClientNotFoundException, Json.JsonException, JOSEException {
         AuthenticationErrorResponse authenticationErrorResponse =
                 new AuthenticationErrorResponse(
                         REDIRECT_URI, OAuth2Error.INVALID_CLIENT, null, null);
@@ -284,7 +282,7 @@ class AuthCodeHandlerTest {
     }
 
     @Test
-    void shouldGenerateErrorResponseIfUnableToParseAuthRequest() throws JsonProcessingException {
+    void shouldGenerateErrorResponseIfUnableToParseAuthRequest() throws Json.JsonException {
         AuthenticationErrorResponse authenticationErrorResponse =
                 new AuthenticationErrorResponse(
                         REDIRECT_URI, OAuth2Error.INVALID_REQUEST, null, null);

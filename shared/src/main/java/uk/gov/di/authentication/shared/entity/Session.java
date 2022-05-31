@@ -1,7 +1,5 @@
 package uk.gov.di.authentication.shared.entity;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.gson.annotations.Expose;
 
 import java.util.ArrayList;
@@ -15,41 +13,23 @@ public class Session {
         UNKNOWN
     }
 
-    @JsonProperty("session_id")
-    @Expose
-    private String sessionId;
+    @Expose private String sessionId;
 
-    @JsonProperty("client_sessions")
-    @Expose
-    private List<String> clientSessions;
+    @Expose private List<String> clientSessions;
 
-    @JsonProperty("email_address")
-    @Expose
-    private String emailAddress;
+    @Expose private String emailAddress;
 
-    @JsonProperty("retry_count")
-    @Expose
-    private int retryCount;
+    @Expose private int retryCount;
 
-    @JsonProperty("password_reset_count")
-    @Expose
-    private int passwordResetCount;
+    @Expose private int passwordResetCount;
 
-    @JsonProperty("code_request_count")
-    @Expose
-    private int codeRequestCount;
+    @Expose private int codeRequestCount;
 
-    @JsonProperty("current_credential_strength")
-    @Expose
-    private CredentialTrustLevel currentCredentialStrength;
+    @Expose private CredentialTrustLevel currentCredentialStrength;
 
-    @JsonProperty("is_new_account")
-    @Expose
-    private AccountState isNewAccount;
+    @Expose private AccountState isNewAccount;
 
-    @JsonProperty("authenticated")
-    @Expose
-    private boolean authenticated;
+    @Expose private boolean authenticated;
 
     public Session(String sessionId) {
         this.sessionId = sessionId;
@@ -57,11 +37,7 @@ public class Session {
         this.isNewAccount = AccountState.UNKNOWN;
     }
 
-    @JsonCreator
-    public Session(
-            @JsonProperty("session_id") String sessionId,
-            @JsonProperty("client_sessions") List<String> clientSessions,
-            @JsonProperty("email_address") String emailAddress) {
+    public Session(String sessionId, List<String> clientSessions, String emailAddress) {
         this.sessionId = sessionId;
         this.clientSessions = clientSessions;
         this.emailAddress = emailAddress;

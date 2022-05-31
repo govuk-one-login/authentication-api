@@ -4,12 +4,14 @@ import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
+import com.nimbusds.oauth2.sdk.id.State;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.serialization.StateAdapter;
 
 import static java.util.Objects.isNull;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -28,6 +30,7 @@ public class SerializationService implements Json {
                         .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
                         .serializeNulls()
                         .excludeFieldsWithoutExposeAnnotation()
+                        .registerTypeAdapter(State.class, new StateAdapter())
                         .create();
 
         validator = Validation.buildDefaultValidatorFactory().getValidator();

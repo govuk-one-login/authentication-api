@@ -1,17 +1,14 @@
 package uk.gov.di.authentication.frontendapi.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
 public class CheckUserExistsResponse {
 
-    @JsonProperty("email")
     @SerializedName("email")
     @Expose
     private String email;
 
-    @JsonProperty("doesUserExist")
     @SerializedName("doesUserExist")
     @Expose
     private boolean doesUserExist;

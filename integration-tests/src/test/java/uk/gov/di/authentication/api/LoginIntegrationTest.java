@@ -19,7 +19,6 @@ import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
-import java.io.IOException;
 import java.net.URI;
 import java.util.Base64;
 import java.util.HashMap;
@@ -57,7 +56,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @MethodSource("vectorOfTrust")
     void shouldSuccessfullyProcessLoginRequestForDifferentVectorOfTrusts(
             CredentialTrustLevel level, String termsAndConditionsVersion)
-            throws IOException, Json.JsonException {
+            throws Json.JsonException {
         String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         String password = "password-1";
         String phoneNumber = "01234567890";
@@ -127,7 +126,8 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    void shouldCallLoginEndpointAndReturn401henUserHasInvalidCredentials() throws IOException {
+    void shouldCallLoginEndpointAndReturn401henUserHasInvalidCredentials()
+            throws Json.JsonException {
         String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
         String password = "password-1";
         userStore.signUp(email, "wrong-password");

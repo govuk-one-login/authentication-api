@@ -21,7 +21,6 @@ apply plugin: "idea"
 
 ext {
     dependencyVersions = [
-        jackson_version: "2.13.3",
         aws_sdk_version: "1.12.224",
         aws_sdk_v2_version: "2.17.195",
         aws_lambda_core_version: "1.2.1",
@@ -31,7 +30,6 @@ ext {
         nimbusds_jwt_version: "9.23",
         protobuf_version: "3.21.1",
         junit: "5.8.2",
-        jackson_version: "2.13.3",
         glassfish_version: "3.0.4",
         xray: "2.11.1"
     ]
@@ -74,7 +72,6 @@ subprojects {
         govuk_notify
         gson
         hamcrest
-        jackson
         lambda
         lambda_tests
         lettuce
@@ -132,15 +129,6 @@ subprojects {
 
         logging_runtime "com.amazonaws:aws-lambda-java-log4j2:1.5.0",
                 "org.slf4j:slf4j-nop:1.7.36"
-
-        jackson "com.fasterxml.jackson.core:jackson-core:${dependencyVersions.jackson_version}",
-                "com.fasterxml.jackson.core:jackson-databind:${dependencyVersions.jackson_version}",
-                "com.fasterxml.jackson.core:jackson-annotations:${dependencyVersions.jackson_version}",
-                "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${dependencyVersions.jackson_version}",
-                "org.hibernate.validator:hibernate-validator:7.0.4.Final",
-                "org.glassfish:jakarta.el:4.0.2",
-                "jakarta.xml.bind:jakarta.xml.bind-api:4.0.0",
-                "com.sun.xml.bind:jaxb-impl:3.0.2"
 
         nimbus "com.nimbusds:oauth2-oidc-sdk:${dependencyVersions.nimbusds_oauth_version}",
                 "com.nimbusds:nimbus-jose-jwt:${dependencyVersions.nimbusds_jwt_version}"

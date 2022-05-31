@@ -18,9 +18,9 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.lambda.LogoutHandler;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
-import java.io.IOException;
 import java.net.URI;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
@@ -54,7 +54,8 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    void shouldReturn302AndRedirectToSpecifiedClientLogoutUri() throws IOException, ParseException {
+    void shouldReturn302AndRedirectToSpecifiedClientLogoutUri()
+            throws Json.JsonException, ParseException {
         var signedJWT = setupClientAndSession(SESSION_ID, CLIENT_SESSION_ID);
         var response =
                 makeRequest(
@@ -82,7 +83,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldRedirectToSpecifiedClientLogoutUriAndNotThrowIfClientSessionHasExpired()
-            throws IOException, ParseException {
+            throws Json.JsonException, ParseException {
         var signedJWT = setupClientAndSession(SESSION_ID, CLIENT_SESSION_ID);
         redis.addClientSessionIdToSession("expired-client-session-id", SESSION_ID);
         var response =
@@ -111,7 +112,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturn302AndRedirectToDefaultLogoutUriWhenNoRedirectSpecified()
-            throws IOException, ParseException {
+            throws Json.JsonException, ParseException {
         var signedJWT = setupClientAndSession(SESSION_ID, CLIENT_SESSION_ID);
         var response =
                 makeRequest(
@@ -133,7 +134,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturn302AndRedirectToDefaultLogoutUriWhenInvalidRedirectSpecified()
-            throws IOException, ParseException {
+            throws Json.JsonException, ParseException {
         var signedJWT = setupClientAndSession(SESSION_ID, CLIENT_SESSION_ID);
         var response =
                 makeRequest(
@@ -162,7 +163,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private SignedJWT setupClientAndSession(String sessionId, String clientSessionId)
-            throws ParseException, IOException {
+            throws ParseException, Json.JsonException {
         Nonce nonce = new Nonce();
         Date expiryDate = NowHelper.nowPlus(10, ChronoUnit.MINUTES);
         IDTokenClaimsSet idTokenClaims =

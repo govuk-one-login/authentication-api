@@ -10,13 +10,13 @@ dependencies {
     testImplementation configurations.bouncycastle,
             configurations.nimbus,
             configurations.glassfish,
+            configurations.gson,
             configurations.tests,
             configurations.sqs,
             configurations.dynamodb,
             configurations.lambda,
             configurations.lettuce,
             configurations.libphonenumber,
-            "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${dependencyVersions.jackson_version}",
             "com.google.protobuf:protobuf-java:${dependencyVersions.protobuf_version}"
     testImplementation project(":shared"), noXray
     testImplementation project(":account-management-api"), noXray

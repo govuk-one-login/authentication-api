@@ -20,6 +20,7 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
 import java.text.ParseException;
@@ -37,7 +38,7 @@ public class AccessTokenService {
     private final RedisConnectionService redisConnectionService;
     private final DynamoClientService clientService;
     private final TokenValidationService tokenValidationService;
-    private final Json objectMapper = Json.jackson();
+    private final Json objectMapper = SerializationService.getInstance();
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
     private static final String INVALID_ACCESS_TOKEN = "Invalid Access Token";
 

@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.shared.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.JsonAdapter;
 import com.nimbusds.oauth2.sdk.id.Subject;
@@ -12,33 +11,22 @@ import java.util.Map;
 
 public class ClientSession {
 
-    @JsonProperty("auth_request_params")
-    @Expose
-    private Map<String, List<String>> authRequestParams;
+    @Expose private Map<String, List<String>> authRequestParams;
 
-    @JsonProperty("id_token_hint")
-    @Expose
-    private String idTokenHint;
+    @Expose private String idTokenHint;
 
-    @JsonProperty("creation_date")
     @Expose
     @JsonAdapter(LocalDateTimeAdapter.class)
     private LocalDateTime creationDate;
 
-    @JsonProperty("effective_vector_of_trust")
-    @Expose
-    private VectorOfTrust effectiveVectorOfTrust;
+    @Expose private VectorOfTrust effectiveVectorOfTrust;
 
-    @JsonProperty("doc_app_subject_id")
-    @Expose
-    private Subject docAppSubjectId;
+    @Expose private Subject docAppSubjectId;
 
     public ClientSession(
-            @JsonProperty(required = true, value = "auth_request_params")
-                    Map<String, List<String>> authRequestParams,
-            @JsonProperty(required = true, value = "creation_date") LocalDateTime creationDate,
-            @JsonProperty(required = true, value = "effective_vector_of_trust")
-                    VectorOfTrust effectiveVectorOfTrust) {
+            Map<String, List<String>> authRequestParams,
+            LocalDateTime creationDate,
+            VectorOfTrust effectiveVectorOfTrust) {
         this.authRequestParams = authRequestParams;
         this.creationDate = creationDate;
         this.effectiveVectorOfTrust = effectiveVectorOfTrust;

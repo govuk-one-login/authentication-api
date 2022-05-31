@@ -1,14 +1,20 @@
 package uk.gov.di.authentication.shared.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import jakarta.validation.constraints.NotNull;
 
 public class RequestUriPayload {
 
-    @JsonProperty(required = true)
+    @Expose
+    @NotNull
+    @SerializedName("clientRegistry")
     private ClientRegistry clientRegistry;
 
-    @JsonProperty(required = true)
+    @Expose
+    @NotNull
+    @SerializedName("authRequest")
     private AuthenticationRequest authRequest;
 
     public RequestUriPayload(ClientRegistry clientRegistry, AuthenticationRequest authRequest) {

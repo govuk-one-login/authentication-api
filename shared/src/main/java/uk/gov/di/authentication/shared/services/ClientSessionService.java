@@ -33,7 +33,7 @@ public class ClientSessionService {
                         configurationService.getRedisPort(),
                         configurationService.getUseRedisTLS(),
                         configurationService.getRedisPassword());
-        objectMapper = Json.jackson();
+        objectMapper = SerializationService.getInstance();
     }
 
     public ClientSessionService(
@@ -41,7 +41,7 @@ public class ClientSessionService {
             RedisConnectionService redisConnectionService) {
         this.configurationService = configurationService;
         this.redisConnectionService = redisConnectionService;
-        objectMapper = Json.jackson();
+        objectMapper = SerializationService.getInstance();
     }
 
     public String generateClientSession(ClientSession clientSession) {

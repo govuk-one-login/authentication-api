@@ -9,6 +9,7 @@ version "unspecified"
 dependencies {
     testImplementation configurations.tests,
             configurations.glassfish,
+            configurations.gson,
             configurations.nimbus,
             configurations.bouncycastle,
             configurations.sqs,
@@ -16,7 +17,6 @@ dependencies {
             configurations.dynamodb,
             configurations.lettuce,
             configurations.lambda,
-            "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${dependencyVersions.jackson_version}",
             "com.google.protobuf:protobuf-java:${dependencyVersions.protobuf_version}"
 
     implementation project(":shared"), noXray

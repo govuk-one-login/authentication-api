@@ -4,8 +4,6 @@ import com.amazonaws.services.kms.model.GetPublicKeyRequest;
 import com.amazonaws.services.kms.model.GetPublicKeyResult;
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -46,7 +44,7 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.helpers.ObjectMapperFactory;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -114,7 +112,7 @@ public class TokenServiceTest {
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
 
-    private static final ObjectMapper objectMapper = ObjectMapperFactory.getInstance();
+    private static final Json objectMapper = SerializationService.getInstance();
 
     @RegisterExtension
     public final CaptureLoggingExtension logging = new CaptureLoggingExtension(TokenService.class);
@@ -139,7 +137,7 @@ public class TokenServiceTest {
 
     @Test
     void shouldGenerateTokenResponseWithRefreshToken()
-            throws ParseException, JOSEException, JsonProcessingException {
+            throws ParseException, JOSEException, Json.JsonException {
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
         createSignedIdToken();
         createSignedAccessToken();
@@ -187,7 +185,7 @@ public class TokenServiceTest {
 
     @Test
     void shouldOnlyIncludeIdentityClaimsInAccessTokenWhenRequested()
-            throws ParseException, JOSEException, JsonProcessingException,
+            throws ParseException, JOSEException, Json.JsonException,
                     com.nimbusds.oauth2.sdk.ParseException {
         var claimsSetRequest = new ClaimsSetRequest().add("nickname").add("birthdate");
         var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
@@ -255,7 +253,7 @@ public class TokenServiceTest {
 
     @Test
     void shouldGenerateTokenResponseWithoutRefreshTokenWhenOfflineAccessScopeIsMissing()
-            throws ParseException, JOSEException, JsonProcessingException {
+            throws ParseException, JOSEException, Json.JsonException {
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
         createSignedIdToken();
@@ -541,7 +539,7 @@ public class TokenServiceTest {
     }
 
     private void assertSuccessfullTokenResponse(OIDCTokenResponse tokenResponse)
-            throws ParseException, JsonProcessingException {
+            throws ParseException, Json.JsonException {
         String accessTokenKey = ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT;
         assertNotNull(tokenResponse.getOIDCTokens().getAccessToken());
         AccessTokenStore accessTokenStore =

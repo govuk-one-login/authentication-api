@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.Map;
@@ -42,7 +43,7 @@ public class DocAppCallbackHandler
     private final ClientSessionService clientSessionService;
     private final AuditService auditService;
     private final DynamoDocAppService dynamoDocAppService;
-    protected final Json objectMapper = Json.jackson();
+    protected final Json objectMapper = SerializationService.getInstance();
     private static final String REDIRECT_PATH = "doc-checking-app-callback";
 
     public DocAppCallbackHandler() {

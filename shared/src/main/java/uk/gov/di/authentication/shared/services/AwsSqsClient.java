@@ -9,8 +9,6 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.SqsClientBuilder;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
-import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 
 import java.net.URI;
 import java.util.Optional;
@@ -46,12 +44,6 @@ public class AwsSqsClient {
 
     public <T> void sendAsync(final T message) throws SdkClientException {
         CompletableFuture.runAsync(
-                () -> {
-                    try {
-                        send(Json.jackson().writeValueAsString(message));
-                    } catch (JsonException e) {
-                        LOG.error("Unable to serialise SQS message: " + message);
-                    }
-                });
+                () -> send(SerializationService.getInstance().writeValueAsString(message)));
     }
 }

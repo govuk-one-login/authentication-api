@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.api;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -17,9 +16,9 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
-import java.io.IOException;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -52,7 +51,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     }
 
     @Test
-    void shouldCallVerifyCodeEndpointToVerifyEmailCodeAndReturn204() throws IOException {
+    void shouldCallVerifyCodeEndpointToVerifyEmailCodeAndReturn204() throws Json.JsonException {
         String sessionId = redis.createSession();
         setUpTestWithoutSignUp(sessionId, withScope());
         String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
@@ -70,7 +69,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     @Test
     void shouldCallVerifyCodeEndpointAndReturn400WhenEmailCodeHasExpired()
-            throws IOException, InterruptedException {
+            throws InterruptedException, Json.JsonException {
         String sessionId = redis.createSession();
         setUpTestWithoutSignUp(sessionId, withScope());
 
@@ -93,7 +92,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     @Test
     void shouldReturn400WithErrorWhenUserTriesEmailCodeThatTheyHaveAlreadyUsed()
-            throws IOException {
+            throws Json.JsonException {
         String sessionId = redis.createSession();
         setUpTestWithoutSignUp(sessionId, withScope());
         String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
@@ -120,7 +119,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     }
 
     @Test
-    void shouldCallVerifyCodeEndpointToVerifyPhoneCodeAndReturn204() throws IOException {
+    void shouldCallVerifyCodeEndpointToVerifyPhoneCodeAndReturn204() throws Json.JsonException {
         String sessionId = redis.createSession();
         Scope scope = withScope();
         setUpTestWithoutClientConsent(sessionId, scope);
@@ -145,7 +144,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     @Test
     void shouldCallVerifyCodeEndpointAndReturn400WithErrorWhenPhoneNumberCodeHasExpired()
-            throws IOException, InterruptedException {
+            throws InterruptedException, Json.JsonException {
         String sessionId = redis.createSession();
         setUpTestWithoutSignUp(sessionId, withScope());
 
@@ -168,7 +167,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     }
 
     @Test
-    void shouldReturnMaxCodesReachedIfPhoneNumberCodeIsBlocked() throws IOException {
+    void shouldReturnMaxCodesReachedIfPhoneNumberCodeIsBlocked() throws Json.JsonException {
         String sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
         redis.blockPhoneCode(EMAIL_ADDRESS);
@@ -187,7 +186,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     }
 
     @Test
-    void shouldReturnMaxCodesReachedIfEmailCodeIsBlocked() throws IOException {
+    void shouldReturnMaxCodesReachedIfEmailCodeIsBlocked() throws Json.JsonException {
         String sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
         redis.blockPhoneCode(EMAIL_ADDRESS);
@@ -233,8 +232,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));
     }
 
-    private void setUpTestWithoutSignUp(String sessionId, Scope scope)
-            throws JsonProcessingException {
+    private void setUpTestWithoutSignUp(String sessionId, Scope scope) throws Json.JsonException {
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
@@ -262,7 +260,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     }
 
     private void setUpTestWithoutClientConsent(String sessionId, Scope scope)
-            throws JsonProcessingException {
+            throws Json.JsonException {
         setUpTestWithoutSignUp(sessionId, scope);
         userStore.signUp(EMAIL_ADDRESS, "password");
     }

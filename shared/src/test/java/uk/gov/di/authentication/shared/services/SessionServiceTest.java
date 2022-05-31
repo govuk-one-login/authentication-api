@@ -1,13 +1,10 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 
 import java.util.Collections;
 import java.util.Map;
@@ -30,13 +27,12 @@ class SessionServiceTest {
 
     private final RedisConnectionService redis = mock(RedisConnectionService.class);
     private final ConfigurationService configuration = mock(ConfigurationService.class);
-    private final ObjectMapper objectMapper =
-            JsonMapper.builder().addModule(new JavaTimeModule()).build();
+    private final Json objectMapper = SerializationService.getInstance();
 
     private final SessionService sessionService = new SessionService(configuration, redis);
 
     @Test
-    void shouldPersistSessionToRedisWithExpiry() throws JsonProcessingException {
+    void shouldPersistSessionToRedisWithExpiry() throws Json.JsonException {
         when(configuration.getSessionExpiry()).thenReturn(1234L);
 
         var session = new Session("session-id").addClientSession("client-session-id");
@@ -48,7 +44,7 @@ class SessionServiceTest {
     }
 
     @Test
-    void shouldRetrieveSessionUsingRequestHeaders() throws JsonProcessingException {
+    void shouldRetrieveSessionUsingRequestHeaders() throws Json.JsonException {
         when(redis.keyExists("session-id")).thenReturn(true);
         when(redis.getValue("session-id")).thenReturn(generateSearlizedSession());
 
@@ -61,7 +57,7 @@ class SessionServiceTest {
     }
 
     @Test
-    void shouldNotRetrieveSessionForLowerCaseHeaderName() throws JsonProcessingException {
+    void shouldNotRetrieveSessionForLowerCaseHeaderName() throws Json.JsonException {
         when(redis.keyExists("session-id")).thenReturn(true);
         when(redis.getValue("session-id")).thenReturn(generateSearlizedSession());
 
@@ -110,7 +106,7 @@ class SessionServiceTest {
 
     @Test
     void shouldReturnSessionFromSessionCookieCalledWithValidCookieHeaderValues()
-            throws JsonProcessingException {
+            throws Json.JsonException {
         when(redis.keyExists("session-id")).thenReturn(true);
         when(redis.getValue("session-id")).thenReturn(generateSearlizedSession());
 
@@ -157,7 +153,7 @@ class SessionServiceTest {
         verify(redis).deleteValue("session-id");
     }
 
-    private String generateSearlizedSession() throws JsonProcessingException {
+    private String generateSearlizedSession() throws Json.JsonException {
         var session = new Session("session-id").addClientSession("client-session-id");
 
         return objectMapper.writeValueAsString(session);

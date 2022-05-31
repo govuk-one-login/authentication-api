@@ -1,11 +1,8 @@
 package uk.gov.di.authentication.shared.entity;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.gson.annotations.JsonAdapter;
 import uk.gov.di.authentication.shared.serialization.ErrorResponseAdapter;
 
-@JsonFormat(shape = JsonFormat.Shape.OBJECT)
 @JsonAdapter(ErrorResponseAdapter.class)
 public enum ErrorResponse {
     ERROR_1000(1000, "Session-Id is missing or invalid"),
@@ -49,15 +46,11 @@ public enum ErrorResponse {
     ERROR_1038(1038, "Invalid Authentication Request"),
     ERROR_1039(1039, "User entered invalid password reset code too many times");
 
-    @JsonProperty("code")
     private int code;
 
-    @JsonProperty("message")
     private String message;
 
-    ErrorResponse(
-            @JsonProperty(required = true, value = "code") int code,
-            @JsonProperty(required = true, value = "message") String message) {
+    ErrorResponse(int code, String message) {
         this.code = code;
         this.message = message;
     }

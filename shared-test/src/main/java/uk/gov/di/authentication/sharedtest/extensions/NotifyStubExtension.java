@@ -1,8 +1,7 @@
 package uk.gov.di.authentication.sharedtest.extensions;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.JsonElement;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.httpstub.HttpStubExtension;
 
 import static java.lang.String.format;
@@ -13,14 +12,14 @@ import static org.hamcrest.Matchers.equalTo;
 
 public class NotifyStubExtension extends HttpStubExtension {
 
-    private final ObjectMapper objectMapper;
+    private final Json objectMapper;
 
-    public NotifyStubExtension(int port, ObjectMapper objectMapper) {
+    public NotifyStubExtension(int port, Json objectMapper) {
         super(port);
         this.objectMapper = objectMapper;
     }
 
-    public NotifyStubExtension(ObjectMapper objectMapper) {
+    public NotifyStubExtension(Json objectMapper) {
         super();
         this.objectMapper = objectMapper;
     }
@@ -69,10 +68,10 @@ public class NotifyStubExtension extends HttpStubExtension {
                         getHttpPort()));
     }
 
-    public JsonNode waitForRequest(int timeoutInSeconds) throws JsonProcessingException {
+    public JsonElement waitForRequest(int timeoutInSeconds) throws Json.JsonException {
         await().atMost(timeoutInSeconds, SECONDS)
                 .untilAsserted(() -> assertThat(getCountOfRequests(), equalTo(1)));
 
-        return objectMapper.readTree(getLastRequest().getEntity());
+        return objectMapper.readValue(getLastRequest().getEntity(), JsonElement.class);
     }
 }

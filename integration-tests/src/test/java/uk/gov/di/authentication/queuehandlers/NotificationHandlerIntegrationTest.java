@@ -1,11 +1,10 @@
 package uk.gov.di.authentication.queuehandlers;
 
 import com.amazonaws.services.lambda.runtime.Context;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.lambda.NotificationHandler;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.sharedtest.basetest.NotifyIntegrationTest;
 
@@ -36,18 +35,18 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
     public final String CODE = format("%06d", new SecureRandom().nextInt(999999));
 
     @Test
-    void shouldCallNotifyWhenValidEmailRequestIsAddedToQueue() throws JsonProcessingException {
+    void shouldCallNotifyWhenValidEmailRequestIsAddedToQueue() throws Json.JsonException {
 
         handler.handleRequest(
                 createSqsEvent(new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, CODE)),
                 mock(Context.class));
 
-        JsonNode request = notifyStub.waitForRequest(60);
+        var request = notifyStub.waitForRequest(60);
 
         assertThat(request, hasFieldWithValue("email_address", equalTo(TEST_EMAIL_ADDRESS)));
         assertThat(request, hasField("personalisation"));
 
-        JsonNode personalisation = request.get("personalisation");
+        var personalisation = request.getAsJsonObject().get("personalisation");
         assertThat(
                 personalisation, hasFieldWithValue("email-address", equalTo(TEST_EMAIL_ADDRESS)));
         assertThat(personalisation, hasFieldWithValue("validation-code", equalTo(CODE)));
@@ -58,17 +57,16 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
     }
 
     @Test
-    void shouldCallNotifyWhenValidPhoneNumberRequestIsAddedToQueue()
-            throws JsonProcessingException {
+    void shouldCallNotifyWhenValidPhoneNumberRequestIsAddedToQueue() throws Json.JsonException {
         handler.handleRequest(
                 createSqsEvent(new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, CODE)),
                 mock(Context.class));
 
-        JsonNode request = notifyStub.waitForRequest(60);
+        var request = notifyStub.waitForRequest(60);
         assertThat(request, hasFieldWithValue("phone_number", equalTo(TEST_PHONE_NUMBER)));
         assertThat(request, hasField("personalisation"));
 
-        JsonNode personalisation = request.get("personalisation");
+        var personalisation = request.getAsJsonObject().get("personalisation");
         assertThat(personalisation, hasFieldWithValue("validation-code", equalTo(CODE)));
         assertThat(
                 personalisation,
@@ -77,16 +75,16 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
     }
 
     @Test
-    void shouldCallNotifyWhenValidMfaRequestIsAddedToQueue() throws JsonProcessingException {
+    void shouldCallNotifyWhenValidMfaRequestIsAddedToQueue() throws Json.JsonException {
         handler.handleRequest(
                 createSqsEvent(new NotifyRequest(TEST_PHONE_NUMBER, MFA_SMS, CODE)),
                 mock(Context.class));
 
-        JsonNode request = notifyStub.waitForRequest(60);
+        var request = notifyStub.waitForRequest(60);
         assertThat(request, hasFieldWithValue("phone_number", equalTo(TEST_PHONE_NUMBER)));
         assertThat(request, hasField("personalisation"));
 
-        JsonNode personalisation = request.get("personalisation");
+        var personalisation = request.getAsJsonObject().get("personalisation");
         assertThat(personalisation, hasFieldWithValue("validation-code", equalTo(CODE)));
         assertThat(
                 personalisation,
@@ -95,8 +93,7 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
     }
 
     @Test
-    void shouldCallNotifyWhenValidResetPasswordRequestIsAddedToQueue()
-            throws JsonProcessingException {
+    void shouldCallNotifyWhenValidResetPasswordRequestIsAddedToQueue() throws Json.JsonException {
         String code = new CodeGeneratorService().twentyByteEncodedRandomCode();
         String resetPasswordLink = "http://localhost:3000/reset-password?code=" + code;
 
@@ -105,12 +102,12 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
                         new NotifyRequest(TEST_EMAIL_ADDRESS, RESET_PASSWORD, resetPasswordLink)),
                 mock(Context.class));
 
-        JsonNode request = notifyStub.waitForRequest(60);
+        var request = notifyStub.waitForRequest(60);
 
         assertThat(request, hasFieldWithValue("email_address", equalTo(TEST_EMAIL_ADDRESS)));
         assertThat(request, hasField("personalisation"));
 
-        JsonNode personalisation = request.get("personalisation");
+        var personalisation = request.getAsJsonObject().get("personalisation");
         assertThat(
                 personalisation,
                 hasFieldWithValue("reset-password-link", startsWith(resetPasswordLink)));
@@ -118,18 +115,17 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
     }
 
     @Test
-    void shouldCallNotifyWhenValidAccountCreatedRequestIsAddedToQueue()
-            throws JsonProcessingException {
+    void shouldCallNotifyWhenValidAccountCreatedRequestIsAddedToQueue() throws Json.JsonException {
         handler.handleRequest(
                 createSqsEvent(new NotifyRequest(TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION)),
                 mock(Context.class));
 
-        JsonNode request = notifyStub.waitForRequest(60);
+        var request = notifyStub.waitForRequest(60);
 
         assertThat(request, hasFieldWithValue("email_address", equalTo(TEST_EMAIL_ADDRESS)));
         assertThat(request, hasField("personalisation"));
 
-        JsonNode personalisation = request.get("personalisation");
+        var personalisation = request.getAsJsonObject().get("personalisation");
         assertThat(
                 personalisation,
                 hasFieldWithValue(

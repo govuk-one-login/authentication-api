@@ -6,9 +6,9 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordCompletionRequest;
 import uk.gov.di.authentication.frontendapi.lambda.ResetPasswordHandler;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -33,7 +33,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
-    public void shouldUpdatePasswordAndReturn204ForRequestWithCode() throws IOException {
+    public void shouldUpdatePasswordAndReturn204ForRequestWithCode() throws Json.JsonException {
         String subject = "new-subject";
         String sessionId = redis.createSession();
         userStore.signUp(EMAIL_ADDRESS, "password-1", new Subject(subject));
@@ -57,7 +57,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
-    public void shouldUpdatePasswordAndReturn204ForRequestWithNoCode() throws IOException {
+    public void shouldUpdatePasswordAndReturn204ForRequestWithNoCode() throws Json.JsonException {
         String subject = "new-subject";
         String sessionId = redis.createSession();
         userStore.signUp(EMAIL_ADDRESS, "password-1", new Subject(subject));
