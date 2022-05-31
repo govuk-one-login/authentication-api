@@ -8,6 +8,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import static org.apache.logging.log4j.util.Strings.isBlank;
 import static uk.gov.di.authentication.shared.helpers.ClientSubjectHelper.getSubject;
@@ -62,6 +63,6 @@ public class BackChannelLogoutService {
                         clientRegistry.getBackChannelLogoutUri(),
                         subjectId);
 
-        awsSqsClient.sendAsync(message);
+        awsSqsClient.send(SerializationService.getInstance().writeValueAsString(message));
     }
 }
