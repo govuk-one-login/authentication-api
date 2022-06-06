@@ -20,6 +20,7 @@ import uk.gov.di.authentication.ipv.entity.SPOTClaims;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
+import uk.gov.di.authentication.shared.entity.IdentityClaims;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -401,10 +402,15 @@ public class IPVCallbackHandler
                 SPOTClaims.builder()
                         .withClaim(VOT.getValue(), userIdentityUserInfo.getClaim(VOT.getValue()))
                         .withClaim(
-                                ValidClaims.CORE_IDENTITY_JWT.getValue(),
+                                IdentityClaims.CREDENTIAL_JWT.getValue(),
                                 userIdentityUserInfo
                                         .toJSONObject()
-                                        .get(ValidClaims.CORE_IDENTITY_JWT.getValue()))
+                                        .get(IdentityClaims.CREDENTIAL_JWT.getValue()))
+                        .withClaim(
+                                IdentityClaims.CORE_IDENTITY.getValue(),
+                                userIdentityUserInfo
+                                        .toJSONObject()
+                                        .get(IdentityClaims.CORE_IDENTITY.getValue()))
                         .withVtm(
                                 buildURI(
                                                 configurationService

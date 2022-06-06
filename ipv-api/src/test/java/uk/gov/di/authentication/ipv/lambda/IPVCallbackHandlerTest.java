@@ -37,6 +37,7 @@ import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.IdentityClaims;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -106,6 +107,9 @@ class IPVCallbackHandlerTest {
     private static final String ADDRESS_CLAIM = "some-address-claim";
     private static final String PASSPORT_CLAIM = "some-passport-claim";
     private static final String CORE_IDENTITY_CLAIM = "some-core-identity-jwt";
+
+    private static final String CREDENTIAL_JWT_CLAIM = "some-credential-jwt";
+
     private static final Subject PUBLIC_SUBJECT =
             new Subject("TsEVC7vg0NPAmzB33vRUFztL2c0-fecKWKcc73fuDhc");
     private static final State STATE = new State();
@@ -220,8 +224,10 @@ class IPVCallbackHandlerTest {
                                 "P2",
                                 "vtm",
                                 OIDC_BASE_URL + "/trustmark",
-                                ValidClaims.CORE_IDENTITY_JWT.getValue(),
-                                CORE_IDENTITY_CLAIM));
+                                "https://vocab.account.gov.uk/v1/coreIdentity",
+                                CORE_IDENTITY_CLAIM,
+                                "https://vocab.account.gov.uk/v1/credentialJWT",
+                                CREDENTIAL_JWT_CLAIM));
         claims.putAll(additionalClaims);
 
         var response =
@@ -241,8 +247,11 @@ class IPVCallbackHandlerTest {
                                                 .withVot(LevelOfConfidence.MEDIUM_LEVEL.getValue())
                                                 .withVtm(OIDC_BASE_URL + "/trustmark")
                                                 .withClaim(
-                                                        ValidClaims.CORE_IDENTITY_JWT.getValue(),
+                                                        IdentityClaims.CORE_IDENTITY.getValue(),
                                                         CORE_IDENTITY_CLAIM)
+                                                .withClaim(
+                                                        IdentityClaims.CREDENTIAL_JWT.getValue(),
+                                                        CREDENTIAL_JWT_CLAIM)
                                                 .build(),
                                         SUBJECT.getValue(),
                                         salt,
