@@ -24,6 +24,8 @@ import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -47,6 +49,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_AUTHORISATION_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED;
@@ -60,6 +63,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     public static final String CLIENT_SESSION_ID = "some-client-session-id";
     public static final Scope SCOPE = new Scope(OIDCScopeValue.OPENID);
     public static final State STATE = new State();
+    public static Subject docAppSubjectId;
     private static ECKey privateKey;
     private static ECKey publicKey;
 
@@ -97,6 +101,12 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     void setup() throws JOSEException {
         criStub.init(privateKey);
         handler = new DocAppCallbackHandler(configurationService);
+        docAppSubjectId =
+                new Subject(
+                        ClientSubjectHelper.calculatePairwiseIdentifier(
+                                new Subject().getValue(),
+                                "https://test.com",
+                                SaltHelper.generateNewSalt()));
         clientStore.registerClient(
                 CLIENT_ID,
                 "test-client",
@@ -135,6 +145,9 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                         DOC_APP_AUTHORISATION_RESPONSE_RECEIVED,
                         DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED));
+
+        assertTrue(
+                documentAppCredentialStore.getCredential(docAppSubjectId.getValue()).isPresent());
     }
 
     @Test
@@ -225,7 +238,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                         authRequestBuilder.build().toParameters(),
                         LocalDateTime.now(),
                         VectorOfTrust.getDefaults());
-        clientSession.setDocAppSubjectId(new Subject());
+        clientSession.setDocAppSubjectId(docAppSubjectId);
         redis.createClientSession(CLIENT_SESSION_ID, clientSession);
         redis.addStateToRedis(STATE, SESSION_ID);
     }

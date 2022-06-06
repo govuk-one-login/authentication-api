@@ -6,8 +6,11 @@ import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
 import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import uk.gov.di.authentication.app.entity.DocAppCredential;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
+
+import java.util.Optional;
 
 import static com.amazonaws.services.dynamodbv2.model.KeyType.HASH;
 import static com.amazonaws.services.dynamodbv2.model.ScalarAttributeType.S;
@@ -59,5 +62,9 @@ public class DocumentAppCredentialStoreExtension extends DynamoExtension
 
     public void addCredential(String subjectId, String credential) {
         dynamoDocAppService.addDocAppCredential(subjectId, credential);
+    }
+
+    public Optional<DocAppCredential> getCredential(String subjectId) {
+        return dynamoDocAppService.getDocAppCredential(subjectId);
     }
 }

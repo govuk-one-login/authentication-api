@@ -72,7 +72,7 @@ public class RedisExtension
 
     public void addDocAppSubjectIdToClientSession(Subject subject, String clientSessionId)
             throws Json.JsonException {
-        ClientSession clientSession =
+        var clientSession =
                 objectMapper.readValue(
                         redis.getValue(CLIENT_SESSION_PREFIX.concat(clientSessionId)),
                         ClientSession.class);
