@@ -123,10 +123,11 @@ public class StartHandler
                                                 configurationService.isIdentityEnabled());
                                 if (userStartInfo.isDocCheckingAppUser()) {
                                     var docAppSubjectId =
-                                            ClientSubjectHelper.calculatePairwiseIdentifier(
-                                                    new Subject().getValue(),
-                                                    configurationService.getDocAppDomain(),
-                                                    SaltHelper.generateNewSalt());
+                                            new Subject(
+                                                    ClientSubjectHelper.calculatePairwiseIdentifier(
+                                                            new Subject().getValue(),
+                                                            configurationService.getDocAppDomain(),
+                                                            SaltHelper.generateNewSalt()));
                                     var clientSessionId =
                                             getHeaderValueFromHeaders(
                                                     input.getHeaders(),
@@ -137,10 +138,10 @@ public class StartHandler
                                             clientSessionId,
                                             clientSession
                                                     .get()
-                                                    .setDocAppSubjectId(
-                                                            new Subject(docAppSubjectId)));
+                                                    .setDocAppSubjectId(docAppSubjectId));
                                     LOG.info(
-                                            "Subject saved to ClientSession for DocCheckingAppUser");
+                                            "Subject saved to ClientSession for DocCheckingAppUser: {}",
+                                            docAppSubjectId);
                                 }
 
                                 var startResponse =
