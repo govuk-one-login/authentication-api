@@ -8,13 +8,17 @@ notify_template_map = {
   RESET_PASSWORD_WITH_CODE_TEMPLATE_ID     = "59114c22-a2f1-40c8-a530-f337112415ef"
 }
 
-cloudwatch_log_retention    = 5
-lambda_min_concurrency      = 50
-client_registry_api_enabled = false
-ipv_api_enabled             = false
-ipv_capacity_allowed        = false
-spot_enabled                = true
-
+cloudwatch_log_retention       = 5
+lambda_min_concurrency         = 50
+client_registry_api_enabled    = false
+spot_enabled                   = true
+ipv_api_enabled                = false
+ipv_capacity_allowed           = false
+ipv_authorisation_uri          = "https://identity.account.gov.uk/oauth2/authorize"
+ipv_authorisation_callback_uri = "https://oidc.account.gov.uk/ipv-callback"
+ipv_backend_uri                = "https://api.identity.account.gov.uk"
+ipv_audience                   = "https://identity.account.gov.uk"
+ipv_sector                     = "https://identity.account.gov.uk"
 ipv_authorisation_client_id    = "authOrchestrator"
 ipv_auth_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
