@@ -18,7 +18,7 @@ import static uk.gov.di.accountmanagement.testsupport.matchers.NotifyRequestMatc
 
 public class NotificationAssertionHelper {
 
-    private static final int NOTIFICATIONS_TIMEOUT = 5;
+    private static final int NOTIFICATIONS_TIMEOUT = 1;
     public static final int NOTIFICATIONS_TIMEOUT_MILLIS = NOTIFICATIONS_TIMEOUT * 1000;
 
     public static void assertNoNotificationsReceived(SqsQueueExtension notificationsQueue) {

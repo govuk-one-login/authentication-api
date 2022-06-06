@@ -6,22 +6,23 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.sqs.SqsAsyncClient;
-import software.amazon.awssdk.services.sqs.SqsAsyncClientBuilder;
+import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.sqs.SqsClientBuilder;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
 import java.net.URI;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 public class AwsSqsClient {
 
     private static Logger LOG = LogManager.getLogger(AwsSqsClient.class);
 
-    private final SqsAsyncClient client;
+    private final SqsClient client;
     private final String queueUrl;
 
     public AwsSqsClient(String region, String queueUrl, Optional<String> sqsEndpoint) {
-        SqsAsyncClientBuilder amazonSqsBuilder = SqsAsyncClient.builder().region(Region.of(region));
+        SqsClientBuilder amazonSqsBuilder = SqsClient.builder().region(Region.of(region));
 
         if (sqsEndpoint.isPresent()) {
             amazonSqsBuilder
@@ -39,5 +40,10 @@ public class AwsSqsClient {
                 SendMessageRequest.builder().queueUrl(queueUrl).messageBody(event).build();
 
         client.sendMessage(messageRequest);
+    }
+
+    public <T> void sendAsync(final T message) throws SdkClientException {
+        CompletableFuture.runAsync(
+                () -> send(SerializationService.getInstance().writeValueAsString(message)));
     }
 }

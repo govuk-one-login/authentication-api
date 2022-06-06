@@ -5,10 +5,8 @@ import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.oidc.entity.BackChannelLogoutMessage;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
-import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -29,7 +27,7 @@ class BackChannelLogoutServiceTest {
             new BackChannelLogoutService(sqs, authenticationService);
 
     @Test
-    void shouldPostBackChannelLogoutMessageToSqsForPairwiseClients() throws Json.JsonException {
+    void shouldPostBackChannelLogoutMessageToSqsForPairwiseClients() {
         var user = new UserProfile().setPublicSubjectID("public").setSubjectID("subject");
 
         when(authenticationService.getUserProfileByEmailMaybe("test@test.com"))
@@ -44,19 +42,16 @@ class BackChannelLogoutServiceTest {
                         .setBackChannelLogoutUri("http://localhost:8080/back-channel-logout"),
                 "test@test.com");
 
-        var captor = ArgumentCaptor.forClass(String.class);
+        var captor = ArgumentCaptor.forClass(BackChannelLogoutMessage.class);
 
-        verify(sqs).send(captor.capture());
+        verify(sqs).sendAsync(captor.capture());
 
         var message = captor.getValue();
 
-        var request =
-                SerializationService.getInstance()
-                        .readValue(message, BackChannelLogoutMessage.class);
-        assertThat(request.getClientId(), is("client-id"));
-        assertThat(request.getLogoutUri(), is("http://localhost:8080/back-channel-logout"));
+        assertThat(message.getClientId(), is("client-id"));
+        assertThat(message.getLogoutUri(), is("http://localhost:8080/back-channel-logout"));
         assertThat(
-                request.getSubjectId(),
+                message.getSubjectId(),
                 is("urn:fdc:gov.uk:2022:tGOB5t5fRAX_Fio6qRIj8KPDL7vOg5gCqI4l5nDZCDs"));
     }
 
