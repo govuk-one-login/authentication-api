@@ -12,8 +12,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasLength;
@@ -49,28 +47,19 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
 
         assertThat(response, hasStatus(204));
 
-        await().atMost(10, SECONDS)
-                .untilAsserted(
-                        () -> {
-                            List<NotifyRequest> requests =
-                                    notificationsQueue.getMessages(NotifyRequest.class);
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
 
-                            assertThat(requests, hasSize(1));
-                            assertThat(requests.get(0).getDestination(), equalTo(email));
-                            assertThat(
-                                    requests.get(0).getNotificationType(), equalTo(RESET_PASSWORD));
-                            assertTrue(
-                                    requests.get(0)
-                                            .getCode()
-                                            .startsWith(
-                                                    "http://localhost:3000/reset-password?code="));
+        assertThat(requests, hasSize(1));
+        assertThat(requests.get(0).getDestination(), equalTo(email));
+        assertThat(requests.get(0).getNotificationType(), equalTo(RESET_PASSWORD));
+        assertTrue(
+                requests.get(0).getCode().startsWith("http://localhost:3000/reset-password?code="));
 
-                            String[] resetLinkSplit = requests.get(0).getCode().split("\\.");
+        String[] resetLinkSplit = requests.get(0).getCode().split("\\.");
 
-                            assertThat(resetLinkSplit.length, equalTo(4));
-                            assertThat(resetLinkSplit[2], equalTo(sessionId));
-                            assertThat(resetLinkSplit[3], equalTo(persistentSessionId));
-                        });
+        assertThat(resetLinkSplit.length, equalTo(4));
+        assertThat(resetLinkSplit[2], equalTo(sessionId));
+        assertThat(resetLinkSplit[3], equalTo(persistentSessionId));
     }
 
     @Test
@@ -93,18 +82,11 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
 
         assertThat(response, hasStatus(204));
 
-        await().atMost(10, SECONDS)
-                .untilAsserted(
-                        () -> {
-                            List<NotifyRequest> requests =
-                                    notificationsQueue.getMessages(NotifyRequest.class);
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
 
-                            assertThat(requests, hasSize(1));
-                            assertThat(requests.get(0).getDestination(), equalTo(email));
-                            assertThat(
-                                    requests.get(0).getNotificationType(),
-                                    equalTo(RESET_PASSWORD_WITH_CODE));
-                            assertThat(requests.get(0).getCode(), hasLength(6));
-                        });
+        assertThat(requests, hasSize(1));
+        assertThat(requests.get(0).getDestination(), equalTo(email));
+        assertThat(requests.get(0).getNotificationType(), equalTo(RESET_PASSWORD_WITH_CODE));
+        assertThat(requests.get(0).getCode(), hasLength(6));
     }
 }

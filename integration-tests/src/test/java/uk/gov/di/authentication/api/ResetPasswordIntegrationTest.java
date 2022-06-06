@@ -13,8 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
@@ -49,18 +47,11 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         assertThat(response, hasStatus(204));
 
-        await().atMost(10, SECONDS)
-                .untilAsserted(
-                        () -> {
-                            List<NotifyRequest> requests =
-                                    notificationsQueue.getMessages(NotifyRequest.class);
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
 
-                            assertThat(requests, hasSize(1));
-                            assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
-                            assertThat(
-                                    requests.get(0).getNotificationType(),
-                                    equalTo(PASSWORD_RESET_CONFIRMATION));
-                        });
+        assertThat(requests, hasSize(1));
+        assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
+        assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
 
         assertEventTypesReceived(auditTopic, List.of(PASSWORD_RESET_SUCCESSFUL));
     }
@@ -80,18 +71,11 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         assertThat(response, hasStatus(204));
 
-        await().atMost(10, SECONDS)
-                .untilAsserted(
-                        () -> {
-                            List<NotifyRequest> requests =
-                                    notificationsQueue.getMessages(NotifyRequest.class);
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
 
-                            assertThat(requests, hasSize(1));
-                            assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
-                            assertThat(
-                                    requests.get(0).getNotificationType(),
-                                    equalTo(PASSWORD_RESET_CONFIRMATION));
-                        });
+        assertThat(requests, hasSize(1));
+        assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
+        assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
 
         assertEventTypesReceived(auditTopic, List.of(PASSWORD_RESET_SUCCESSFUL));
     }
