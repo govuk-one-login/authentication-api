@@ -139,7 +139,8 @@ public class DocAppAuthorizeHandler
                                         PersistentIdHelper.extractPersistentIdFromHeaders(
                                                 input.getHeaders()));
                                 LOG.info(
-                                        "DocAppAuthorizeHandler successfully processed request, redirect URI {}",
+                                        "DocAppAuthorizeHandler successfully processed request with SubjectID: {}, redirect URI {}",
+                                        clientSession.getDocAppSubjectId(),
                                         authorisationRequest.toURI().toString());
 
                                 return generateApiGatewayProxyResponse(
