@@ -31,6 +31,7 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -47,11 +48,12 @@ class UserInfoServiceTest {
 
     private UserInfoService userInfoService;
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
-    private final DynamoIdentityService spotService = mock(DynamoIdentityService.class);
+    private final DynamoIdentityService identityService = mock(DynamoIdentityService.class);
     private final DynamoDocAppService dynamoDocAppService = mock(DynamoDocAppService.class);
-
     private static final Subject INTERNAL_SUBJECT = new Subject("internal-subject");
     private static final Subject SUBJECT = new Subject("some-subject");
+    private static final String ADDRESS_CLAIM = "some-address-claim";
+    private static final String PASSPORT_CLAIM = "some-passport-claim";
     private static final List<String> SCOPES =
             List.of(
                     OIDCScopeValue.OPENID.getValue(),
@@ -63,14 +65,13 @@ class UserInfoServiceTest {
     private static final String BASE_URL = "https://example.com";
     private static final String KEY_ID = "14342354354353";
     private final ClaimsSetRequest claimsSetRequest =
-            new ClaimsSetRequest().add(ValidClaims.CORE_IDENTITY_JWT.getValue());
+            new ClaimsSetRequest()
+                    .add(ValidClaims.CORE_IDENTITY_JWT.getValue())
+                    .add(ValidClaims.ADDRESS.getValue())
+                    .add(ValidClaims.PASSPORT.getValue());
     private final OIDCClaimsRequest oidcValidClaimsRequest =
             new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
     private final String coreIdentityJWT = SignedCredentialHelper.generateCredential().serialize();
-    private final IdentityCredentials identityCredentials =
-            new IdentityCredentials()
-                    .setSubjectID(SUBJECT.getValue())
-                    .setCoreIdentityJWT(coreIdentityJWT);
     private AccessToken accessToken;
 
     @RegisterExtension
@@ -87,7 +88,7 @@ class UserInfoServiceTest {
     @BeforeEach
     void setUp() {
         userInfoService =
-                new UserInfoService(authenticationService, spotService, dynamoDocAppService);
+                new UserInfoService(authenticationService, identityService, dynamoDocAppService);
     }
 
     @Test
@@ -159,10 +160,56 @@ class UserInfoServiceTest {
     @Test
     void shouldPopulateIdentityClaimsWhenClaimsArePresentAndIdentityIsEnabled()
             throws JOSEException {
+        var identityCredentials =
+                new IdentityCredentials()
+                        .setSubjectID(SUBJECT.getValue())
+                        .setCoreIdentityJWT(coreIdentityJWT)
+                        .setAdditionalClaims(
+                                Map.of(
+                                        ValidClaims.ADDRESS.getValue(),
+                                        ADDRESS_CLAIM,
+                                        ValidClaims.PASSPORT.getValue(),
+                                        PASSPORT_CLAIM));
         accessToken = createSignedAccessToken(oidcValidClaimsRequest);
         when(authenticationService.getUserProfileFromSubject(INTERNAL_SUBJECT.getValue()))
                 .thenReturn(generateUserprofile());
-        when(spotService.getIdentityCredentials(SUBJECT.getValue()))
+        when(identityService.getIdentityCredentials(SUBJECT.getValue()))
+                .thenReturn(Optional.of(identityCredentials));
+
+        var accessTokenStore =
+                new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
+        var accessTokenInfo =
+                new AccessTokenInfo(
+                        accessTokenStore,
+                        SUBJECT.getValue(),
+                        SCOPES,
+                        oidcValidClaimsRequest.getUserInfoClaimsRequest().getEntries().stream()
+                                .map(ClaimsSetRequest.Entry::getClaimName)
+                                .collect(Collectors.toList()));
+
+        var userInfo = userInfoService.populateUserInfo(accessTokenInfo, true);
+        assertThat(userInfo.getEmailAddress(), equalTo(EMAIL));
+        assertThat(userInfo.getEmailVerified(), equalTo(true));
+        assertThat(userInfo.getPhoneNumber(), equalTo(PHONE_NUMBER));
+        assertThat(userInfo.getPhoneNumberVerified(), equalTo(true));
+        assertThat(
+                userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()),
+                equalTo(coreIdentityJWT));
+        assertThat(userInfo.getClaim(ValidClaims.ADDRESS.getValue()), equalTo(ADDRESS_CLAIM));
+        assertThat(userInfo.getClaim(ValidClaims.PASSPORT.getValue()), equalTo(PASSPORT_CLAIM));
+    }
+
+    @Test
+    void shouldPopulateIdentityClaimsWhenClaimsArePresentButNoAdditionalClaimsArePresent()
+            throws JOSEException {
+        var identityCredentials =
+                new IdentityCredentials()
+                        .setSubjectID(SUBJECT.getValue())
+                        .setCoreIdentityJWT(coreIdentityJWT);
+        accessToken = createSignedAccessToken(oidcValidClaimsRequest);
+        when(authenticationService.getUserProfileFromSubject(INTERNAL_SUBJECT.getValue()))
+                .thenReturn(generateUserprofile());
+        when(identityService.getIdentityCredentials(SUBJECT.getValue()))
                 .thenReturn(Optional.of(identityCredentials));
 
         var accessTokenStore =

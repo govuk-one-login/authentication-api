@@ -45,6 +45,8 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
+    private static final String ADDRESS_CLAIM = "some-address-claim";
+    private static final String PASSPORT_CLAIM = "some-passport-claim";
     private static final String TEST_PHONE_NUMBER = "01234567890";
     private static final String FORMATTED_PHONE_NUMBER = "+441234567890";
     private static final String TEST_PASSWORD = "password-1";
@@ -91,7 +93,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT,
                 accessTokenStoreString,
                 300L);
-        setUpDynamo(null);
+        setUpDynamo(null, null);
 
         var response =
                 makeRequest(
@@ -168,7 +170,13 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 objectMapper.writeValueAsString(accessTokenStore),
                 300L);
         var signedCredential = SignedCredentialHelper.generateCredential();
-        setUpDynamo(signedCredential.serialize());
+        setUpDynamo(
+                signedCredential.serialize(),
+                Map.of(
+                        ValidClaims.ADDRESS.getValue(),
+                        ADDRESS_CLAIM,
+                        ValidClaims.PASSPORT.getValue(),
+                        PASSPORT_CLAIM));
 
         var response =
                 makeRequest(
@@ -184,9 +192,14 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(userInfoResponse.getPhoneNumberVerified(), equalTo(true));
         assertThat(userInfoResponse.getSubject(), equalTo(PUBLIC_SUBJECT));
         assertThat(
+                userInfoResponse.getClaim(ValidClaims.ADDRESS.getValue()), equalTo(ADDRESS_CLAIM));
+        assertThat(
+                userInfoResponse.getClaim(ValidClaims.PASSPORT.getValue()),
+                equalTo(PASSPORT_CLAIM));
+        assertThat(
                 userInfoResponse.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()),
                 equalTo(signedCredential.serialize()));
-        assertThat(userInfoResponse.toJWTClaimsSet().getClaims().size(), equalTo(6));
+        assertThat(userInfoResponse.toJWTClaimsSet().getClaims().size(), equalTo(8));
 
         assertNoAuditEventsReceived(auditTopic);
     }
@@ -217,7 +230,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 ACCESS_TOKEN_PREFIX + APP_CLIENT_ID + "." + DOC_APP_PUBLIC_SUBJECT,
                 accessTokenStoreString,
                 300L);
-        setUpDynamo(null);
+        setUpDynamo(null, null);
 
         var response =
                 makeRequest(
@@ -235,7 +248,10 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertNoAuditEventsReceived(auditTopic);
     }
 
-    private void setUpDynamo(String coreIdentityJWT) {
+    private void setUpDynamo(String coreIdentityJWT, Map<String, String> additionalClaims) {
+        if (Objects.nonNull(additionalClaims)) {
+            identityStore.addAdditionalClaims(PUBLIC_SUBJECT.getValue(), additionalClaims);
+        }
         if (Objects.nonNull(coreIdentityJWT)) {
             identityStore.addCoreIdentityJWT(PUBLIC_SUBJECT.getValue(), coreIdentityJWT);
         }

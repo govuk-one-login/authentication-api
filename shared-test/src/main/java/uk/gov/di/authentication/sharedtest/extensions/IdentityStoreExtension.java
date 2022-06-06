@@ -10,6 +10,7 @@ import uk.gov.di.authentication.shared.entity.IdentityCredentials;
 import uk.gov.di.authentication.shared.services.DynamoIdentityService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static com.amazonaws.services.dynamodbv2.model.KeyType.HASH;
@@ -51,6 +52,10 @@ public class IdentityStoreExtension extends DynamoExtension implements AfterEach
 
     public void addCoreIdentityJWT(String subjectID, String coreIdentityJWT) {
         dynamoService.addCoreIdentityJWT(subjectID, coreIdentityJWT);
+    }
+
+    public void addAdditionalClaims(String subjectID, Map<String, String> additionalClaims) {
+        dynamoService.addAdditionalClaims(subjectID, additionalClaims);
     }
 
     public Optional<IdentityCredentials> getIdentityCredentials(String subjectID) {
