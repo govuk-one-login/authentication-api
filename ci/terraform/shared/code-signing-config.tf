@@ -8,6 +8,6 @@ resource "aws_lambda_code_signing_config" "code_signing_config" {
   description = "${var.environment}-code-signing-config"
 
   policies {
-    untrusted_artifact_on_deployment = "Enforce"
+    untrusted_artifact_on_deployment = var.enforce_code_signing ? "Enforce" : "Warn"
   }
 }
