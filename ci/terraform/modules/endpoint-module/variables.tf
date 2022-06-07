@@ -194,3 +194,7 @@ variable "code_signing_config_arn" {
 variable "memory_size" {
   type = number
 }
+
+variable "provisioned_concurrency" {
+  default = 0
+}

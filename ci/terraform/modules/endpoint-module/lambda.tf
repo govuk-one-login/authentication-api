@@ -64,3 +64,12 @@ resource "aws_lambda_alias" "endpoint_lambda" {
   function_name    = aws_lambda_function.endpoint_lambda.arn
   function_version = aws_lambda_function.endpoint_lambda.version
 }
+
+resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda_concurrency_config" {
+  count = var.provisioned_concurrency == 0 ? 0 : 1
+
+  function_name = aws_lambda_function.endpoint_lambda.function_name
+  qualifier     = aws_lambda_alias.endpoint_lambda.name
+
+  provisioned_concurrent_executions = var.provisioned_concurrency
+}
