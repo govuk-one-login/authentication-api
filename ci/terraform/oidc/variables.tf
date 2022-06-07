@@ -277,6 +277,11 @@ variable "spot_queue_url" {
   type    = string
 }
 
+variable "identity_trace_logging_enabled" {
+  default = false
+  type    = bool
+}
+
 variable "ipv_auth_public_encryption_key" {
   type    = string
   default = "undefined"
