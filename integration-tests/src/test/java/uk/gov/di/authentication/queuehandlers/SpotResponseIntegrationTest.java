@@ -18,8 +18,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static java.util.Collections.emptyMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
@@ -52,6 +54,20 @@ public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent
                         .get()
                         .getCoreIdentityJWT(),
                 equalTo(signedCredential));
+    }
+
+    @Test
+    void shouldDeleteIdentityCredentialFromDBForInvalidResponse() {
+        var pairwiseIdentifier = new Subject();
+        identityStore.addAdditionalClaims(pairwiseIdentifier.getValue(), emptyMap());
+        handler.handleRequest(
+                createSqsEvent(
+                        new SPOTResponse(
+                                emptyMap(), pairwiseIdentifier.getValue(), SPOTStatus.REJECTED)),
+                mock(Context.class));
+
+        assertFalse(
+                identityStore.getIdentityCredentials(pairwiseIdentifier.getValue()).isPresent());
     }
 
     private <T> SQSEvent createSqsEvent(T... request) {

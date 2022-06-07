@@ -223,7 +223,7 @@ resource "aws_iam_policy" "dynamo_identity_credentials_read_access_policy" {
   policy = data.aws_iam_policy_document.dynamo_identity_read_access_policy_document.json
 }
 
-resource "aws_iam_policy" "dynamo_spot_delete_access_policy" {
+resource "aws_iam_policy" "dynamo_identity_credentials_delete_access_policy" {
   name_prefix = "dynamo-access-policy"
   path        = "/${var.environment}/oidc-default/"
   description = "IAM policy for managing delete permissions to the Dynamo Identity credentials table"

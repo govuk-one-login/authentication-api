@@ -59,8 +59,9 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
                 var spotResponse = objectMapper.readValue(msg.getBody(), SPOTResponse.class);
                 if (spotResponse.getStatus() != SPOTStatus.ACCEPTED) {
                     LOG.warn(
-                            "SPOTResponse Status is not Accepted. Actual Status: {}",
+                            "SPOTResponse Status is not Accepted. Deleting Identity Credential. Actual Status: {}",
                             spotResponse.getStatus());
+                    dynamoIdentityService.deleteIdentityCredentials(spotResponse.getSub());
                     return null;
                 }
                 LOG.info("SPOTResponse Status is Accepted. Adding CoreIdentityJWT to Dynamo");

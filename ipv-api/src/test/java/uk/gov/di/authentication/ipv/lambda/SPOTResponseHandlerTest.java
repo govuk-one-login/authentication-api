@@ -31,7 +31,7 @@ class SPOTResponseHandlerTest {
     }
 
     @Test
-    void shouldWriteToDynamoForSuccesssfulSPOTResponse() {
+    void shouldWriteToDynamoForSuccessfulSPOTResponse() {
         String json =
                 "{\"sub\":\"some-pairwise-identifier\",\"status\":\"ACCEPTED\","
                         + "\"claims\":{\"http://something/v1/verifiableIdentityJWT\":\"random-searalized-credential\"}}";
@@ -74,14 +74,14 @@ class SPOTResponseHandlerTest {
     }
 
     @Test
-    void shouldNotWriteToDynamoWhenSPOTResponseStatusIsNotOK() {
+    void shouldDeleteIdentityCredentialWhenSPOTResponseStatusIsNotACCEPTED() {
         String json =
                 "{\"sub\":\"some-pairwise-identifier\",\"status\":\"REJECTED\","
                         + "\"claims\":{\"http://something/v1/verifiableIdentityJWT\":\"random-searalized-credential\"}}";
 
         handler.handleRequest(generateSQSEvent(json), context);
 
-        verifyNoInteractions(dynamoIdentityService);
+        verify(dynamoIdentityService).deleteIdentityCredentials("some-pairwise-identifier");
 
         verify(auditService)
                 .submitAuditEvent(
@@ -97,7 +97,7 @@ class SPOTResponseHandlerTest {
     }
 
     @Test
-    void shouldNotWriteToDynamoWhenStatusIsOKButNoCredentialIsPresent() {
+    void shouldNotWriteToDynamoWhenStatusIsACCEPTEDButNoCredentialIsPresent() {
         String json =
                 "{\"sub\":\"some-pairwise-identifier\",\"status\":\"ACCEPTED\"," + "\"claims\":{}}";
 
