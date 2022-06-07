@@ -272,6 +272,10 @@ public class IPVCallbackHandler
                                 if (Objects.isNull(userIdentityUserInfo)) {
                                     LOG.error("IPV UserIdentityRequest failed.");
                                     throw new RuntimeException("IPV UserIdentityRequest failed.");
+                                } else {
+                                    LOG.info(
+                                            "IPV UserIdentityRequest succeeded: {}",
+                                            userIdentityUserInfo.toJSONObject().toJSONString());
                                 }
                                 auditService.submitAuditEvent(
                                         IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED,
