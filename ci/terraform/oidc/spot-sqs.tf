@@ -1,6 +1,5 @@
 resource "aws_sqs_queue" "spot_request_queue" {
   name                       = "${var.environment}-spot-request-queue"
-  delay_seconds              = 10
   max_message_size           = 256000
   message_retention_seconds  = 1209600
   receive_wait_time_seconds  = 10
