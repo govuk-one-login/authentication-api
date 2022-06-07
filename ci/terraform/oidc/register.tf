@@ -34,7 +34,9 @@ module "register" {
   root_resource_id       = aws_api_gateway_resource.register_resource.id
   execution_arn          = aws_api_gateway_rest_api.di_authentication_api.execution_arn
   authentication_vpc_arn = local.authentication_vpc_arn
-  memory_size            = var.endpoint_memory_size
+
+  memory_size             = lookup(var.performance_tuning, "register", local.default_performance_parameters).memory
+  provisioned_concurrency = lookup(var.performance_tuning, "register", local.default_performance_parameters).concurrency
 
   source_bucket                  = aws_s3_bucket.source_bucket.bucket
   lambda_zip_file                = aws_s3_bucket_object.client_api_release_zip.key

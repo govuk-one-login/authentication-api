@@ -347,3 +347,19 @@ variable "spot_response_queue_kms_arn" {
   default     = "undefined"
   description = "The ARN for the KMS key used by the SPOT response queue"
 }
+
+variable "performance_tuning" {
+  type = map(object({
+    memory : number,
+    concurrency : number,
+  }))
+  description = "A map of performance tuning parameters per lambda"
+  default     = {}
+}
+
+locals {
+  default_performance_parameters = {
+    memory      = var.endpoint_memory_size
+    concurrency = var.keep_lambdas_warm ? 0 : 1
+  }
+}
