@@ -1,6 +1,5 @@
 resource "aws_sqs_queue" "back_channel_logout_queue" {
   name                      = "${var.environment}-back-channel-logout-queue"
-  delay_seconds             = 10
   max_message_size          = 2048
   message_retention_seconds = 1209600
   receive_wait_time_seconds = 10
