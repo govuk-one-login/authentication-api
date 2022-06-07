@@ -50,6 +50,14 @@ public class DynamoIdentityService {
                 identityCredentialsMapper.load(IdentityCredentials.class, subjectID));
     }
 
+    public void deleteIdentityCredentials(String subjectID) {
+        var identityCredentials =
+                identityCredentialsMapper.load(IdentityCredentials.class, subjectID);
+        if (Objects.nonNull(identityCredentials)) {
+            identityCredentialsMapper.delete(identityCredentials);
+        }
+    }
+
     public void addAdditionalClaims(String subjectID, Map<String, String> additionalClaims) {
         var identityCredentials =
                 new IdentityCredentials()
