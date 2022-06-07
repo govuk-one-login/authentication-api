@@ -153,3 +153,8 @@ variable "tools_account_id" {
   description = "AWS Account for the corresponding tools account to this environment"
   type        = string
 }
+
+variable "enforce_code_signing" {
+  default     = true
+  description = "Whether the code signing policy will reject unsigned code. (only set to false in sandpit environments)"
+}
