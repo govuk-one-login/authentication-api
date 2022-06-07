@@ -20,7 +20,12 @@ public class HttpRequestService {
 
     public void post(URI uri, String body) {
 
-        var request = HttpRequest.newBuilder().uri(uri).POST(ofString(body)).build();
+        var request =
+                HttpRequest.newBuilder()
+                        .uri(uri)
+                        .POST(ofString(body))
+                        .header("Content-Type", "application/x-www-form-urlencoded")
+                        .build();
 
         try {
             var response = newHttpClient().send(request, BodyHandlers.discarding());
