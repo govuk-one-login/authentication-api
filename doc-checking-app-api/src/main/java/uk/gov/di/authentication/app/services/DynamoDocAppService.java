@@ -3,8 +3,10 @@ package uk.gov.di.authentication.app.services;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import uk.gov.di.authentication.app.entity.DocAppCredential;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoClient;
@@ -31,7 +33,8 @@ public class DynamoDocAppService {
                 new DocAppCredential()
                         .setSubjectID(subjectID)
                         .setCredential(credential)
-                        .setTimeToExist(timeToExist);
+                        .setTimeToExist(
+                                NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS).getTime());
 
         docAppCredentialMapper.save(docAppCredential);
     }
