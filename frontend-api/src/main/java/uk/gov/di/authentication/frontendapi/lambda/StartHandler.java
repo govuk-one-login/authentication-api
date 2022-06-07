@@ -123,11 +123,10 @@ public class StartHandler
                                                 configurationService.isIdentityEnabled());
                                 if (userStartInfo.isDocCheckingAppUser()) {
                                     var docAppSubjectId =
-                                            new Subject(
-                                                    ClientSubjectHelper.calculatePairwiseIdentifier(
-                                                            new Subject().getValue(),
-                                                            configurationService.getDocAppDomain(),
-                                                            SaltHelper.generateNewSalt()));
+                                            ClientSubjectHelper.calculatePairwiseIdentifier(
+                                                    new Subject().getValue(),
+                                                    configurationService.getDocAppDomain(),
+                                                    SaltHelper.generateNewSalt());
                                     var clientSessionId =
                                             getHeaderValueFromHeaders(
                                                     input.getHeaders(),
@@ -138,10 +137,10 @@ public class StartHandler
                                             clientSessionId,
                                             clientSession
                                                     .get()
-                                                    .setDocAppSubjectId(docAppSubjectId));
+                                                    .setDocAppSubjectId(
+                                                            new Subject(docAppSubjectId)));
                                     LOG.info(
-                                            "Subject saved to ClientSession for DocCheckingAppUser: {}",
-                                            docAppSubjectId);
+                                            "Subject saved to ClientSession for DocCheckingAppUser");
                                 }
 
                                 var startResponse =

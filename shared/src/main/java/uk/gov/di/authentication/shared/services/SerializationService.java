@@ -5,12 +5,17 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.serialization.LocalDateTimeAdapter;
 import uk.gov.di.authentication.shared.serialization.StateAdapter;
+import uk.gov.di.authentication.shared.serialization.SubjectAdapter;
 import uk.gov.di.authentication.shared.validation.RequiredFieldValidator;
 import uk.gov.di.authentication.shared.validation.Validator;
+
+import java.time.LocalDateTime;
 
 import static java.util.Objects.isNull;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -30,6 +35,8 @@ public class SerializationService implements Json {
                         .serializeNulls()
                         .excludeFieldsWithoutExposeAnnotation()
                         .registerTypeAdapter(State.class, new StateAdapter())
+                        .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
+                        .registerTypeAdapter(Subject.class, new SubjectAdapter())
                         .create();
     }
 

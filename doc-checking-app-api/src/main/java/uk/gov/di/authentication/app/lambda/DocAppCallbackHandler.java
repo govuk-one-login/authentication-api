@@ -198,9 +198,6 @@ public class DocAppCallbackHandler
                                             AuditService.UNKNOWN,
                                             AuditService.UNKNOWN,
                                             AuditService.UNKNOWN);
-                                    LOG.info(
-                                            "Adding DocAppCredential to DB with Subject: {}",
-                                            clientSession.getDocAppSubjectId());
                                     dynamoDocAppService.addDocAppCredential(
                                             clientSession.getDocAppSubjectId().getValue(),
                                             credential);

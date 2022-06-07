@@ -1,9 +1,7 @@
 package uk.gov.di.authentication.shared.entity;
 
 import com.google.gson.annotations.Expose;
-import com.google.gson.annotations.JsonAdapter;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import uk.gov.di.authentication.shared.serialization.LocalDateTimeAdapter;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -15,9 +13,7 @@ public class ClientSession {
 
     @Expose private String idTokenHint;
 
-    @Expose
-    @JsonAdapter(LocalDateTimeAdapter.class)
-    private LocalDateTime creationDate;
+    @Expose private LocalDateTime creationDate;
 
     @Expose private VectorOfTrust effectiveVectorOfTrust;
 
