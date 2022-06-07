@@ -4,7 +4,9 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper;
 import uk.gov.di.authentication.shared.entity.IdentityCredentials;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -36,12 +38,14 @@ public class DynamoIdentityService {
                     new IdentityCredentials()
                             .setSubjectID(subjectID)
                             .setCoreIdentityJWT(coreIdentityJWT)
-                            .setTimeToExist(timeToExist));
+                            .setTimeToExist(
+                                    NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS).getTime()));
         } else {
             identityCredentialsMapper.save(
                     identityCredentials
                             .setCoreIdentityJWT(coreIdentityJWT)
-                            .setTimeToExist(timeToExist));
+                            .setTimeToExist(
+                                    NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS).getTime()));
         }
     }
 
@@ -63,7 +67,8 @@ public class DynamoIdentityService {
                 new IdentityCredentials()
                         .setSubjectID(subjectID)
                         .setAdditionalClaims(additionalClaims)
-                        .setTimeToExist(timeToExist);
+                        .setTimeToExist(
+                                NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS).getTime());
 
         identityCredentialsMapper.save(identityCredentials);
     }
