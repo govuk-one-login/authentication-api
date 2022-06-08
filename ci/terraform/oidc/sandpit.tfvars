@@ -1,5 +1,4 @@
 environment                    = "sandpit"
-keep_lambdas_warm              = false
 dns_state_bucket               = null
 dns_state_key                  = null
 dns_state_role                 = null
@@ -14,3 +13,8 @@ logging_endpoint_arns          = []
 
 enable_api_gateway_execution_request_tracing = true
 spot_enabled                                 = false
+
+lambda_max_concurrency = 0
+lambda_min_concurrency = 0
+keep_lambdas_warm      = false
+endpoint_memory_size   = 1024

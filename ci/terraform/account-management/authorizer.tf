@@ -12,6 +12,14 @@ module "account_management_api_authorizer_role" {
   ]
 }
 
+locals {
+  authorizer_memory_size                 = lookup(var.performance_tuning, "authorizer", local.default_performance_parameters).memory
+  authorizer_provisioned_concurrency     = lookup(var.performance_tuning, "authorizer", local.default_performance_parameters).concurrency
+  authorizer_max_provisioned_concurrency = lookup(var.performance_tuning, "authorizer", local.default_performance_parameters).max_concurrency
+  authorizer_scaling_trigger             = lookup(var.performance_tuning, "authorizer", local.default_performance_parameters).scaling_trigger
+
+}
+
 resource "aws_lambda_function" "authorizer" {
   function_name = "${var.environment}-api_gateway_authorizer"
   role          = module.account_management_api_authorizer_role.arn
@@ -26,7 +34,8 @@ resource "aws_lambda_function" "authorizer" {
 
   publish     = true
   timeout     = 30
-  memory_size = 2048
+  memory_size = local.authorizer_memory_size
+
   vpc_config {
     security_group_ids = [local.allow_egress_security_group_id]
     subnet_ids         = local.private_subnet_ids
@@ -39,6 +48,8 @@ resource "aws_lambda_function" "authorizer" {
     }
   }
   kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
+
+  tags = local.default_tags
 }
 
 resource "aws_api_gateway_authorizer" "di_account_management_api" {
@@ -54,4 +65,40 @@ resource "aws_lambda_alias" "authorizer_alias" {
   description      = "Alias pointing at active version of Lambda"
   function_name    = aws_lambda_function.authorizer.arn
   function_version = aws_lambda_function.authorizer.version
+}
+
+resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda_concurrency_config" {
+  count = var.keep_lambdas_warm ? 0 : 1
+
+  function_name = aws_lambda_function.authorizer.function_name
+  qualifier     = aws_lambda_alias.authorizer_alias.name
+
+  provisioned_concurrent_executions = local.authorizer_provisioned_concurrency
+}
+
+resource "aws_appautoscaling_target" "lambda_target" {
+  count = local.authorizer_max_provisioned_concurrency > local.authorizer_provisioned_concurrency ? 1 : 0
+
+  max_capacity       = local.authorizer_max_provisioned_concurrency
+  min_capacity       = local.authorizer_provisioned_concurrency
+  resource_id        = "function:${aws_lambda_function.authorizer.function_name}:${aws_lambda_alias.authorizer_alias.name}"
+  scalable_dimension = "lambda:function:ProvisionedConcurrency"
+  service_namespace  = "lambda"
+}
+
+resource "aws_appautoscaling_policy" "provisioned-concurrency-policy" {
+  count = local.authorizer_max_provisioned_concurrency > local.authorizer_provisioned_concurrency ? 1 : 0
+
+  name               = "LambdaProvisonedConcurrency:${aws_lambda_function.authorizer.function_name}"
+  resource_id        = aws_appautoscaling_target.lambda_target[0].resource_id
+  scalable_dimension = aws_appautoscaling_target.lambda_target[0].scalable_dimension
+  service_namespace  = aws_appautoscaling_target.lambda_target[0].service_namespace
+  policy_type        = "TargetTrackingScaling"
+
+  target_tracking_scaling_policy_configuration {
+    target_value = local.authorizer_scaling_trigger
+    predefined_metric_specification {
+      predefined_metric_type = "LambdaProvisionedConcurrencyUtilization"
+    }
+  }
 }
