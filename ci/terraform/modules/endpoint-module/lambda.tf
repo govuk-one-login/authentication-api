@@ -65,6 +65,12 @@ resource "aws_lambda_alias" "endpoint_lambda" {
   function_version = aws_lambda_function.endpoint_lambda.version
 }
 
+resource "time_sleep" "wait_60_seconds" {
+  depends_on = [aws_lambda_alias.endpoint_lambda]
+
+  create_duration = "30s"
+}
+
 resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda_concurrency_config" {
   count = var.provisioned_concurrency == 0 ? 0 : 1
 
@@ -72,4 +78,31 @@ resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda_concurrenc
   qualifier     = aws_lambda_alias.endpoint_lambda.name
 
   provisioned_concurrent_executions = var.provisioned_concurrency
+}
+
+resource "aws_appautoscaling_target" "lambda_target" {
+  count = var.max_provisioned_concurrency > var.provisioned_concurrency ? 1 : 0
+
+  max_capacity       = var.max_provisioned_concurrency
+  min_capacity       = var.provisioned_concurrency
+  resource_id        = "function:${aws_lambda_function.endpoint_lambda.function_name}:${aws_lambda_alias.endpoint_lambda.name}"
+  scalable_dimension = "lambda:function:ProvisionedConcurrency"
+  service_namespace  = "lambda"
+}
+
+resource "aws_appautoscaling_policy" "provisioned-concurrency-policy" {
+  count = var.max_provisioned_concurrency > var.provisioned_concurrency ? 1 : 0
+
+  name               = "LambdaProvisonedConcurrency:${aws_lambda_function.endpoint_lambda.function_name}"
+  resource_id        = aws_appautoscaling_target.lambda_target[0].resource_id
+  scalable_dimension = aws_appautoscaling_target.lambda_target[0].scalable_dimension
+  service_namespace  = aws_appautoscaling_target.lambda_target[0].service_namespace
+  policy_type        = "TargetTrackingScaling"
+
+  target_tracking_scaling_policy_configuration {
+    target_value = var.scaling_trigger
+    predefined_metric_specification {
+      predefined_metric_type = "LambdaProvisionedConcurrencyUtilization"
+    }
+  }
 }

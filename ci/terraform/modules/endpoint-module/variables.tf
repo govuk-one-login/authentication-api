@@ -198,3 +198,11 @@ variable "memory_size" {
 variable "provisioned_concurrency" {
   default = 0
 }
+
+variable "max_provisioned_concurrency" {
+  default = 5
+}
+
+variable "scaling_trigger" {
+  default = 0.7
+}

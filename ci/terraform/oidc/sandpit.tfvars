@@ -1,5 +1,4 @@
 environment                    = "sandpit"
-keep_lambdas_warm              = false
 dns_state_bucket               = null
 dns_state_key                  = null
 dns_state_role                 = null
@@ -11,19 +10,11 @@ ipv_authorisation_uri          = ""
 ipv_authorisation_client_id    = ""
 logging_endpoint_enabled       = false
 logging_endpoint_arns          = []
-endpoint_memory_size           = 512
 
 enable_api_gateway_execution_request_tracing = true
 spot_enabled                                 = false
 
-performance_tuning = {
-  register = {
-    memory      = 512
-    concurrency = 0
-  }
-
-  update = {
-    memory      = 512
-    concurrency = 0
-  }
-}
+lambda_max_concurrency = 0
+lambda_min_concurrency = 0
+keep_lambdas_warm      = false
+endpoint_memory_size   = 1024

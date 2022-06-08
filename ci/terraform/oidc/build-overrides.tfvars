@@ -30,3 +30,24 @@ logging_endpoint_arns = [
   "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod",
   "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"
 ]
+
+endpoint_memory_size   = 1024
+lambda_min_concurrency = 1
+lambda_max_concurrency = 1
+keep_lambdas_warm      = false
+
+performance_tuning = {
+  register = {
+    memory          = 512
+    concurrency     = 0
+    max_concurrency = 0
+    scaling_trigger = 0
+  }
+
+  update = {
+    memory          = 512
+    concurrency     = 0
+    max_concurrency = 0
+    scaling_trigger = 0
+  }
+}

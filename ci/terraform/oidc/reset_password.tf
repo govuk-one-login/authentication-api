@@ -39,8 +39,10 @@ module "reset_password" {
   root_resource_id = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id
   execution_arn    = aws_api_gateway_rest_api.di_authentication_frontend_api.execution_arn
 
-  memory_size             = lookup(var.performance_tuning, "reset-password", local.default_performance_parameters).memory
-  provisioned_concurrency = lookup(var.performance_tuning, "reset-password", local.default_performance_parameters).concurrency
+  memory_size                 = lookup(var.performance_tuning, "reset-password", local.default_performance_parameters).memory
+  provisioned_concurrency     = lookup(var.performance_tuning, "reset-password", local.default_performance_parameters).concurrency
+  max_provisioned_concurrency = lookup(var.performance_tuning, "reset-password", local.default_performance_parameters).max_concurrency
+  scaling_trigger             = lookup(var.performance_tuning, "reset-password", local.default_performance_parameters).scaling_trigger
 
   source_bucket                  = aws_s3_bucket.source_bucket.bucket
   lambda_zip_file                = aws_s3_bucket_object.frontend_api_release_zip.key
