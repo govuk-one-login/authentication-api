@@ -1,7 +1,7 @@
-module "frontend_api_processing_identity_role" {
+module "ipv_processing_identity_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
-  role_name   = "frontend-api-processing-identity-role"
+  role_name   = "ipv-processing-identity-role"
   vpc_arn     = local.authentication_vpc_arn
 
   policies_to_attach = [
@@ -32,7 +32,7 @@ module "processing-identity" {
     LOCALSTACK_ENDPOINT      = var.use_localstack ? var.localstack_endpoint : null
     REDIS_KEY                = local.redis_key
   }
-  handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.ProcessingIdentityHandler::handleRequest"
+  handler_function_name = "uk.gov.di.authentication.ipv.lambda.ProcessingIdentityHandler::handleRequest"
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
   root_resource_id = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id
@@ -40,8 +40,8 @@ module "processing-identity" {
   memory_size      = var.endpoint_memory_size
 
   source_bucket                  = aws_s3_bucket.source_bucket.bucket
-  lambda_zip_file                = aws_s3_bucket_object.frontend_api_release_zip.key
-  lambda_zip_file_version        = aws_s3_bucket_object.frontend_api_release_zip.version_id
+  lambda_zip_file                = aws_s3_bucket_object.ipv_api_release_zip.key
+  lambda_zip_file_version        = aws_s3_bucket_object.ipv_api_release_zip.version_id
   warmer_lambda_zip_file         = aws_s3_bucket_object.warmer_release_zip.key
   warmer_lambda_zip_file_version = aws_s3_bucket_object.warmer_release_zip.version_id
   code_signing_config_arn        = local.lambda_code_signing_configuration_arn
@@ -52,7 +52,7 @@ module "processing-identity" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = local.authentication_subnet_ids
-  lambda_role_arn                        = module.frontend_api_processing_identity_role.arn
+  lambda_role_arn                        = module.ipv_processing_identity_role.arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
@@ -66,6 +66,10 @@ module "processing-identity" {
   warmer_handler_environment_variables = {
     LAMBDA_MIN_CONCURRENCY = var.lambda_min_concurrency
   }
+
+  depends_on = [
+    aws_api_gateway_rest_api.di_authentication_frontend_api,
+  ]
 
   use_localstack = var.use_localstack
 }

@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.frontendapi.entity;
+package uk.gov.di.authentication.ipv.entity;
 
 public enum ProcessingIdentityStatus {
     COMPLETED,

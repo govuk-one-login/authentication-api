@@ -1,16 +1,21 @@
-package uk.gov.di.authentication.frontendapi.lambda;
+package uk.gov.di.authentication.ipv.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.authentication.frontendapi.entity.ProcessingIdentityRequest;
-import uk.gov.di.authentication.frontendapi.entity.ProcessingIdentityResponse;
-import uk.gov.di.authentication.frontendapi.entity.ProcessingIdentityStatus;
+import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
+import uk.gov.di.authentication.ipv.entity.ProcessingIdentityRequest;
+import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
+import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
@@ -27,12 +32,14 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIdentityRequest> {
 
     private final DynamoIdentityService dynamoIdentityService;
+    private final AuditService auditService;
 
     private static final Logger LOG = LogManager.getLogger(ProcessingIdentityHandler.class);
 
     public ProcessingIdentityHandler(ConfigurationService configurationService) {
         super(ProcessingIdentityRequest.class, configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
+        this.auditService = new AuditService(configurationService);
     }
 
     public ProcessingIdentityHandler() {
@@ -45,7 +52,8 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             ClientSessionService clientSessionService,
             DynamoClientService dynamoClientService,
             DynamoService dynamoService,
-            ConfigurationService configurationService) {
+            ConfigurationService configurationService,
+            AuditService auditService) {
         super(
                 ProcessingIdentityRequest.class,
                 configurationService,
@@ -54,6 +62,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                 dynamoClientService,
                 dynamoService);
         this.dynamoIdentityService = dynamoIdentityService;
+        this.auditService = auditService;
     }
 
     @Override
@@ -78,6 +87,19 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             } else if (Objects.nonNull(identityCredentials.get().getCoreIdentityJWT())) {
                 processingStatus = ProcessingIdentityStatus.COMPLETED;
             }
+            auditService.submitAuditEvent(
+                    IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST,
+                    context.getAwsRequestId(),
+                    userContext.getSession().getSessionId(),
+                    userContext.getClient().get().getClientID(),
+                    AuditService.UNKNOWN,
+                    userContext
+                            .getUserProfile()
+                            .map(UserProfile::getEmail)
+                            .orElse(AuditService.UNKNOWN),
+                    IpAddressHelper.extractIpAddress(input),
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    AuditService.UNKNOWN);
             LOG.info(
                     "Generating ProcessingIdentityResponse with ProcessingIdentityStatus: {}",
                     processingStatus);
