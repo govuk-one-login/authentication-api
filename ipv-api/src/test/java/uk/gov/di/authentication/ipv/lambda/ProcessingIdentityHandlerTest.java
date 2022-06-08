@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.frontendapi.lambda;
+package uk.gov.di.authentication.ipv.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
@@ -10,8 +10,8 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.frontendapi.entity.ProcessingIdentityResponse;
-import uk.gov.di.authentication.frontendapi.entity.ProcessingIdentityStatus;
+import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
+import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
@@ -75,6 +76,7 @@ class ProcessingIdentityHandlerTest {
     private final DynamoIdentityService dynamoIdentityService = mock(DynamoIdentityService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
+    private final AuditService auditService = mock(AuditService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final Session session = new Session(SESSION_ID);
     private final APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -102,7 +104,8 @@ class ProcessingIdentityHandlerTest {
                         clientSessionService,
                         dynamoClientService,
                         dynamoService,
-                        configurationService);
+                        configurationService,
+                        auditService);
     }
 
     @Test

@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.frontendapi.entity;
+package uk.gov.di.authentication.ipv.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
