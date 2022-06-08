@@ -29,7 +29,6 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
-import java.io.IOException;
 import java.net.URI;
 import java.security.KeyPair;
 import java.util.Base64;
@@ -78,16 +77,16 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             Map<String, String> customAuthParameters,
             boolean identityRequired,
             boolean isAuthenticated)
-            throws IOException, Json.JsonException {
+            throws Json.JsonException {
         String sessionId = redis.createSession(isAuthenticated);
-
+        var state = new State();
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         var builder =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
                         .nonce(new Nonce())
-                        .state(new State());
+                        .state(state);
         customAuthParameters.forEach(builder::customParameter);
         var authRequest = builder.build();
 
@@ -114,6 +113,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(startResponse.getClient().getCookieConsentShared(), equalTo(false));
         assertThat(startResponse.getClient().getScopes(), equalTo(scope.toStringList()));
         assertThat(startResponse.getClient().getRedirectUri(), equalTo(REDIRECT_URI));
+        assertThat(startResponse.getClient().getState().getValue(), equalTo(state.getValue()));
         assertThat(startResponse.getUser().getCookieConsent(), equalTo(null));
         assertThat(startResponse.getUser().getGaCrossDomainTrackingId(), equalTo(null));
         assertThat(startResponse.getUser().isAuthenticated(), equalTo(isAuthenticated));
@@ -134,13 +134,14 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void shouldReturn200WhenUserIsADocCheckingAppUser(boolean isAuthenticated)
-            throws IOException, JOSEException, Json.JsonException {
+            throws JOSEException, Json.JsonException {
         var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        var state = new State();
         var sessionId = redis.createSession(isAuthenticated);
         var scope = new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
         var authRequest =
                 new AuthorizationRequest.Builder(ResponseType.CODE, new ClientID(CLIENT_ID))
-                        .requestObject(createSignedJWT(keyPair))
+                        .requestObject(createSignedJWT(keyPair, state))
                         .build();
         redis.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
 
@@ -169,6 +170,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertFalse(startResponse.getClient().getCookieConsentShared());
         assertThat(startResponse.getClient().getScopes(), equalTo(scope.toStringList()));
         assertThat(startResponse.getClient().getRedirectUri(), equalTo(REDIRECT_URI));
+        assertThat(startResponse.getClient().getState().getValue(), equalTo(state.getValue()));
 
         var clientSession = redis.getClientSession(CLIENT_SESSION_ID);
 
@@ -195,7 +197,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 true);
     }
 
-    private SignedJWT createSignedJWT(KeyPair keyPair) throws JOSEException {
+    private SignedJWT createSignedJWT(KeyPair keyPair, State state) throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience("http://localhost")
@@ -206,6 +208,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP)
                                         .toString())
                         .claim("client_id", CLIENT_ID)
+                        .claim("state", state.getValue())
                         .issuer(CLIENT_ID)
                         .build();
         var jwsHeader = new JWSHeader(JWSAlgorithm.RS256);

@@ -7,6 +7,7 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
@@ -64,6 +65,7 @@ class StartHandlerTest {
     public static final String SESSION_ID_HEADER = "Session-Id";
     public static final String CLIENT_SESSION_ID = "known-client-session-id";
     public static final String SESSION_ID = "some-session-id";
+    public static final State STATE = new State();
     public static final String PERSISTENT_ID = "some-persistent-id-value";
     public static final URI REDIRECT_URL = URI.create("https://localhost/redirect");
     private static final Json objectMapper = SerializationService.getInstance();
@@ -109,7 +111,7 @@ class StartHandlerTest {
     @ParameterizedTest
     @MethodSource("cookieConsentGaTrackingIdValues")
     void shouldReturn200WithStartResponse(String cookieConsentValue, String gaTrackingId)
-            throws Json.JsonException, ParseException, Json.JsonException {
+            throws ParseException, Json.JsonException {
         var userStartInfo = getUserStartInfo(cookieConsentValue, gaTrackingId);
         when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
         when(startService.buildClientStartInfo(userContext)).thenReturn(getClientStartInfo());
@@ -170,7 +172,7 @@ class StartHandlerTest {
 
     @Test
     void shouldReturn200WhenDocCheckingAppUserIsPresent()
-            throws Json.JsonException, ParseException, Json.JsonException {
+            throws ParseException, Json.JsonException {
         when(configurationService.getDocAppDomain()).thenReturn(URI.create("https://doc-app"));
         var userStartInfo = new UserStartInfo(false, false, false, false, null, null, true);
         when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
@@ -182,7 +184,8 @@ class StartHandlerTest {
                                 scope.toStringList(),
                                 "MANDATORY",
                                 false,
-                                REDIRECT_URL));
+                                REDIRECT_URL,
+                                STATE));
         when(startService.getGATrackingId(anyMap())).thenReturn(null);
         when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
         when(startService.buildUserStartInfo(userContext, null, null, true))
@@ -329,7 +332,7 @@ class StartHandlerTest {
         Scope scope = new Scope(OIDCScopeValue.OPENID.getValue());
 
         return new ClientStartInfo(
-                TEST_CLIENT_NAME, scope.toStringList(), "MANDATORY", false, REDIRECT_URL);
+                TEST_CLIENT_NAME, scope.toStringList(), "MANDATORY", false, REDIRECT_URL, STATE);
     }
 
     private UserStartInfo getUserStartInfo(String cookieConsent, String gaCrossDomainTrackingId) {

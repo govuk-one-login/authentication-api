@@ -2,6 +2,7 @@ package uk.gov.di.authentication.frontendapi.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
+import com.nimbusds.oauth2.sdk.id.State;
 
 import java.net.URI;
 import java.util.List;
@@ -28,6 +29,10 @@ public class ClientStartInfo {
     @Expose
     private URI redirectUri;
 
+    @SerializedName("state")
+    @Expose
+    private State state;
+
     public ClientStartInfo() {}
 
     public ClientStartInfo(
@@ -35,12 +40,14 @@ public class ClientStartInfo {
             List<String> scopes,
             String serviceType,
             boolean cookieConsentShared,
-            URI redirectUri) {
+            URI redirectUri,
+            State state) {
         this.clientName = clientName;
         this.scopes = scopes;
         this.serviceType = serviceType;
         this.cookieConsentShared = cookieConsentShared;
         this.redirectUri = redirectUri;
+        this.state = state;
     }
 
     public String getClientName() {
@@ -61,5 +68,9 @@ public class ClientStartInfo {
 
     public URI getRedirectUri() {
         return redirectUri;
+    }
+
+    public State getState() {
+        return state;
     }
 }

@@ -2,6 +2,7 @@ package uk.gov.di.authentication.frontendapi.services;
 
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -68,6 +69,7 @@ public class StartService {
     public ClientStartInfo buildClientStartInfo(UserContext userContext) throws ParseException {
         List<String> scopes;
         URI redirectURI;
+        State state;
         try {
             var authenticationRequest =
                     AuthenticationRequest.parse(
@@ -76,9 +78,11 @@ public class StartService {
                 var claimSet = authenticationRequest.getRequestObject().getJWTClaimsSet();
                 scopes = Scope.parse((String) claimSet.getClaim("scope")).toStringList();
                 redirectURI = URI.create((String) claimSet.getClaim("redirect_uri"));
+                state = State.parse((String) claimSet.getClaim("state"));
             } else {
                 scopes = authenticationRequest.getScope().toStringList();
                 redirectURI = authenticationRequest.getRedirectionURI();
+                state = authenticationRequest.getState();
             }
         } catch (ParseException e) {
             throw new ParseException("Unable to parse authentication request");
@@ -92,7 +96,8 @@ public class StartService {
                         scopes,
                         clientRegistry.getServiceType(),
                         clientRegistry.isCookieConsentShared(),
-                        redirectURI);
+                        redirectURI,
+                        state);
         LOG.info(
                 "Found ClientStartInfo for ClientName: {} Scopes: {} ServiceType: {}",
                 clientRegistry.getClientName(),
