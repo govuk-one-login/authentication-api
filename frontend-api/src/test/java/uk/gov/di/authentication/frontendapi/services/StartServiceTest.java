@@ -245,6 +245,7 @@ class StartServiceTest {
         assertThat(clientStartInfo.getCookieConsentShared(), equalTo(cookieConsentShared));
         assertThat(clientStartInfo.getClientName(), equalTo(CLIENT_NAME));
         assertThat(clientStartInfo.getRedirectUri(), equalTo(REDIRECT_URI));
+        assertThat(clientStartInfo.getState().getValue(), equalTo(STATE.getValue()));
 
         var expectedScopes = SCOPES;
         if (Objects.nonNull(signedJWT)) {
@@ -373,7 +374,7 @@ class StartServiceTest {
                                     SCOPES,
                                     CLIENT_ID,
                                     REDIRECT_URI)
-                            .state(new State())
+                            .state(STATE)
                             .nonce(new Nonce())
                             .customParameter("vtr", vtrValue)
                             .build();
@@ -403,7 +404,7 @@ class StartServiceTest {
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", DOC_APP_SCOPES.toString())
                         .claim("client_id", CLIENT_ID.getValue())
-                        .claim("state", STATE)
+                        .claim("state", STATE.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var keyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
