@@ -1,8 +1,6 @@
 package uk.gov.di.authentication.shared.validation;
 
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 
