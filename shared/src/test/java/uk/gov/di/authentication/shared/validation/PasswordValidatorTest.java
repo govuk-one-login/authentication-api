@@ -41,8 +41,6 @@ class PasswordValidatorTest {
     @ParameterizedTest
     @MethodSource("invalidPasswords")
     void shouldRejectInvalidPasswords(String password, ErrorResponse expectedResponse) {
-/*        Optional<ErrorResponse> check = validator.validate("TestCommonPassword1");
-        assertEquals(Optional.of(ErrorResponse.ERROR_1040), check);*/
         assertEquals(Optional.of(expectedResponse), validator.validate(password));
     }
 

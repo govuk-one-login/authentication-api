@@ -11,7 +11,6 @@ import java.util.regex.Pattern;
 
 public class PasswordValidator {
 
-    private static Logger LOG = LogManager.getLogger(PasswordValidator.class);
     private static final Pattern PASSWORD_REGEX = Pattern.compile(".*\\d.*");
     private CommonPasswordsService commonPasswordsService;
 
