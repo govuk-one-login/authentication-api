@@ -9,7 +9,6 @@ notify_template_map = {
 }
 
 cloudwatch_log_retention       = 5
-lambda_min_concurrency         = 50
 client_registry_api_enabled    = false
 spot_enabled                   = true
 ipv_api_enabled                = false
@@ -31,3 +30,24 @@ rbeA0zSUxxfdffFH/L0cTgzdTQtv6iGQrkfHnTTk1TQe0+wxJEQz5FlcXYl6qSrh
 swIDAQAB
 -----END PUBLIC KEY-----
 EOT
+
+performance_tuning = {
+  register = {
+    memory          = 512
+    concurrency     = 0
+    max_concurrency = 0
+    scaling_trigger = 0
+  }
+
+  update = {
+    memory          = 512
+    concurrency     = 0
+    max_concurrency = 0
+    scaling_trigger = 0
+  }
+}
+lambda_max_concurrency = 0
+lambda_min_concurrency = 50
+keep_lambdas_warm      = true
+endpoint_memory_size   = 4096
+scaling_trigger        = 0.6
