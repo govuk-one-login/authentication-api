@@ -23,9 +23,11 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.shared.validation.PasswordValidator;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -46,6 +48,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
     private static final Logger LOG = LogManager.getLogger(SignUpHandler.class);
 
     private final AuditService auditService;
+    private final CommonPasswordsService commonPasswordsService;
 
     public SignUpHandler(
             ConfigurationService configurationService,
@@ -53,7 +56,8 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
-            AuditService auditService) {
+            AuditService auditService,
+            CommonPasswordsService commonPasswordsService) {
         super(
                 SignupRequest.class,
                 configurationService,
@@ -62,6 +66,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                 clientService,
                 authenticationService);
         this.auditService = auditService;
+        this.commonPasswordsService = commonPasswordsService;
     }
 
     public SignUpHandler() {
@@ -71,6 +76,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
     public SignUpHandler(ConfigurationService configurationService) {
         super(SignupRequest.class, configurationService);
         this.auditService = new AuditService(configurationService);
+        this.commonPasswordsService = new CommonPasswordsService(configurationService);
     }
 
     @Override
@@ -89,8 +95,12 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
         LOG.info("Received request");
 
-        Optional<ErrorResponse> passwordValidationErrors =
-                ValidationHelper.validatePassword(request.getPassword());
+        PasswordValidator passwordValidator = new PasswordValidator(commonPasswordsService);
+
+        Optional<ErrorResponse> passwordValidationErrors = passwordValidator.validate(request.getPassword());
+
+/*        Optional<ErrorResponse> passwordValidationErrors =
+                ValidationHelper.validatePassword(request.getPassword());*/
 
         if (passwordValidationErrors.isEmpty()) {
             if (authenticationService.userExists(request.getEmail())) {
