@@ -199,3 +199,31 @@ resource "aws_dynamodb_table" "doc_app_credential_table" {
 
   tags = local.default_tags
 }
+
+resource "aws_dynamodb_table" "common_passwords_table" {
+  name         = "${var.environment}-common-passwords"
+  billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
+  hash_key     = "Password"
+
+  read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
+  write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
+
+  attribute {
+    name = "Password"
+    type = "S"
+  }
+
+  server_side_encryption {
+    enabled = !var.use_localstack
+  }
+
+  point_in_time_recovery {
+    enabled = !var.use_localstack
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  tags = local.default_tags
+}
