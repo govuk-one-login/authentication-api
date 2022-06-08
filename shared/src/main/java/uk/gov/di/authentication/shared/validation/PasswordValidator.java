@@ -15,7 +15,7 @@ public class PasswordValidator {
     private static final Pattern PASSWORD_REGEX = Pattern.compile(".*\\d.*");
     private CommonPasswordsService commonPasswordsService;
 
-    PasswordValidator(CommonPasswordsService commonPasswordsService){
+    public PasswordValidator(CommonPasswordsService commonPasswordsService){
         this.commonPasswordsService = commonPasswordsService;
     }
 
