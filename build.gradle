@@ -31,7 +31,7 @@ ext {
         protobuf_version: "3.21.1",
         junit: "5.8.2",
         glassfish_version: "3.0.4",
-        xray: "2.11.1"
+        xray: "2.11.2"
     ]
 
     terraformEnvironment = project.properties["terraformEnvironment"] ?: "localstack"
@@ -138,7 +138,7 @@ subprojects {
 
         tests "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit}",
                 "org.junit.jupiter:junit-jupiter-params:${dependencyVersions.junit}",
-                "org.mockito:mockito-core:4.5.1",
+                "org.mockito:mockito-core:4.6.1",
                 "org.awaitility:awaitility:4.2.0",
                 configurations.hamcrest
 
