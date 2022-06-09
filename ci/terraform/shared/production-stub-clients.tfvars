@@ -8,6 +8,7 @@ stub_rp_clients = [
       "https://di-auth-stub-relying-party-production.london.cloudapps.digital/signed-out",
     ]
     test_client                     = "0"
+    consent_required                = "0"
     client_type                     = "web"
     identity_verification_supported = "1"
     scopes = [
