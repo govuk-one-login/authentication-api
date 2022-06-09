@@ -157,9 +157,9 @@ public class StartHandler
                                                 .map(UserProfile::getEmail)
                                                 .orElse(AuditService.UNKNOWN),
                                         IpAddressHelper.extractIpAddress(input),
+                                        AuditService.UNKNOWN,
                                         PersistentIdHelper.extractPersistentIdFromHeaders(
-                                                input.getHeaders()),
-                                        AuditService.UNKNOWN);
+                                                input.getHeaders()));
 
                                 return generateApiGatewayProxyResponse(200, startResponse);
 
