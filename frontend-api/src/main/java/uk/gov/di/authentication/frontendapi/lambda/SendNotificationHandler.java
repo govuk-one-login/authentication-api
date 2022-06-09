@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -28,12 +29,14 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1011;
 import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
@@ -168,6 +171,18 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 notificationType);
         sessionService.save(session.incrementCodeRequestCount());
         if (notTestClientWithValidTestEmail(userContext, notificationType)) {
+
+            if (notificationType == VERIFY_PHONE_NUMBER) {
+                CloudwatchMetricsService.putEmbeddedValue(
+                        "SendingSms",
+                        1,
+                        Map.of(
+                                "Environment",
+                                configurationService.getEnvironment(),
+                                "Country",
+                                PhoneNumberHelper.getCountry(destination)));
+            }
+
             sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
             LOG.info("Successfully processed request");
         }
