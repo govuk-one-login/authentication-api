@@ -9,8 +9,8 @@ notify_template_map = {
 
 cloudwatch_log_retention = 5
 
-lambda_max_concurrency = 0
-lambda_min_concurrency = 25
-keep_lambdas_warm      = true
+lambda_max_concurrency = 10
+lambda_min_concurrency = 3
+keep_lambdas_warm      = false
 endpoint_memory_size   = 4096
 scaling_trigger        = 0.6
